@@ -14,6 +14,7 @@
 
 namespace DataMachine\Core\Database\Jobs;
 
+use DataMachine\Engine\Actions\Cache;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -167,12 +168,13 @@ class JobsStatus {
         if ( empty( $job_id ) ) {
             return null;
         }
-        $cache_key = 'dm_job_status_' . $job_id;
+        $cache_key = Cache::JOB_STATUS_CACHE_KEY . $job_id;
         $cached_result = get_transient( $cache_key );
 
         if ( false === $cached_result ) {
-            $job = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE job_id = %d", $job_id ), OBJECT );
-            set_transient( $cache_key, $job, 30 ); // Very short 30s cache for job status
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            $job = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE job_id = %d", $this->table_name, $job_id ), OBJECT );
+            do_action('dm_cache_set', $cache_key, $job, 30, 'jobs'); // Very short 30s cache for job status
             $cached_result = $job;
         } else {
             $job = $cached_result;

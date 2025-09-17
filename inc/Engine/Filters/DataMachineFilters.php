@@ -244,6 +244,22 @@ function dm_register_utility_filters() {
         
         return $pipeline_step_id . '_' . $flow_id;
     }, 10, 3);
+
+    add_filter('dm_split_pipeline_step_id', function($default, $pipeline_step_id) {
+        if (empty($pipeline_step_id) || strpos($pipeline_step_id, '_') === false) {
+            return null; // Old UUID4 format or invalid
+        }
+
+        $parts = explode('_', $pipeline_step_id, 2);
+        if (count($parts) !== 2) {
+            return null;
+        }
+
+        return [
+            'pipeline_id' => $parts[0],
+            'uuid' => $parts[1]
+        ];
+    }, 10, 2);
     /**
      * Flat parameter system using single filter architecture
      * 
@@ -258,52 +274,8 @@ function dm_register_utility_filters() {
      * - Additional parameters: Added by filters as needed (source_url, image_url, content, etc.)
      */
     add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
-        // FilesRepository-based parameter extraction (no data packet dependency)
-        $repositories = apply_filters('dm_files_repository', []);
-        $repository = $repositories['files'] ?? null;
-
-        if ($repository && $flow_step_id) {
-            $files = $repository->get_all_files($flow_step_id);
-
-            // If files exist for this flow step, extract parameters for vision processing
-            if (!empty($files)) {
-                // Get the most recent file (for cases like Reddit images)
-                $latest_file = end($files);
-
-                if ($latest_file && !empty($latest_file['path']) && file_exists($latest_file['path'])) {
-                    $parameters['file_path'] = $latest_file['path'];
-                    $parameters['file_name'] = $latest_file['filename'] ?? '';
-                    $parameters['file_size'] = $latest_file['size'] ?? 0;
-
-                    // Determine MIME type from file extension or file info
-                    $mime_type = '';
-                    if (function_exists('mime_content_type')) {
-                        $mime_type = mime_content_type($latest_file['path']);
-                    } else {
-                        $extension = strtolower(pathinfo($latest_file['filename'], PATHINFO_EXTENSION));
-                        $mime_map = [
-                            'jpg' => 'image/jpeg',
-                            'jpeg' => 'image/jpeg',
-                            'png' => 'image/png',
-                            'webp' => 'image/webp',
-                            'gif' => 'image/gif'
-                        ];
-                        $mime_type = $mime_map[$extension] ?? 'application/octet-stream';
-                    }
-                    $parameters['mime_type'] = $mime_type;
-
-                    do_action('dm_log', 'debug', 'Engine: File parameters extracted via FilesRepository', [
-                        'flow_step_id' => $flow_step_id,
-                        'step_type' => $step_type,
-                        'file_path' => $parameters['file_path'],
-                        'mime_type' => $parameters['mime_type'],
-                        'file_count' => count($files)
-                    ]);
-                }
-            }
-        }
-
         // Simple flat structure - no arbitrary nesting
+        // Fetch steps and other filters can add parameters directly to flat array
         return $parameters;
     }, 10, 5);
     

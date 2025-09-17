@@ -29,27 +29,8 @@ function dm_register_ai_filters() {
             return [];
         }
         
-        $all_databases = apply_filters('dm_db', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        
-        if (!$db_pipelines) {
-            do_action('dm_log', 'error', 'AI Config: Pipeline database service not available');
-            return [];
-        }
-        
-        $pipelines = $db_pipelines->get_all_pipelines();
-        $step_config = null;
-        
-        foreach ($pipelines as $pipeline) {
-            $pipeline_config = is_string($pipeline['pipeline_config']) 
-                ? json_decode($pipeline['pipeline_config'], true) 
-                : ($pipeline['pipeline_config'] ?? []);
-                
-            if (!empty($pipeline_step_id) && is_scalar($pipeline_step_id) && isset($pipeline_config[$pipeline_step_id])) {
-                $step_config = $pipeline_config[$pipeline_step_id];
-                break;
-            }
-        }
+        // Use existing filter instead of manual pipeline search
+        $step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
         
         if (empty($step_config)) {
             do_action('dm_log', 'debug', 'AI Config: No step configuration found in pipeline database', [

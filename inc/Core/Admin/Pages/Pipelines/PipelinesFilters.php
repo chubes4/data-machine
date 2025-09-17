@@ -191,7 +191,7 @@ function dm_register_pipelines_admin_page_filters() {
     });
     
     // Register authentication AJAX handlers
-    PipelineAuthAjax::register();
+    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineAuthAjax::register();
     
     
     

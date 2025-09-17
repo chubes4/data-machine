@@ -1,12 +1,8 @@
 <?php
 /**
- * WordPress Post Reader - AI tool for retrieving complete WordPress post content by URL.
- *
- * Extracts full post content, metadata, and publication details for AI analysis.
- * No configuration required - works with any accessible WordPress post URL.
+ * WordPress Post Reader - AI tool for retrieving WordPress post content by URL.
  *
  * @package DataMachine
- * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\AI\Tools;
@@ -21,10 +17,6 @@ class WordPressPostReader {
 
     /**
      * Handle AI tool call to read WordPress post content.
-     *
-     * @param array $parameters Tool parameters containing 'source_url' (required), 'include_meta' (optional)
-     * @param array $tool_def Tool definition (unused)
-     * @return array Success response with post data or error response
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
 
@@ -89,7 +81,6 @@ class WordPressPostReader {
             'featured_image' => $featured_image_url
         ];
 
-        // Include public meta fields if requested (excludes private fields starting with _)
         if ($include_meta) {
             $meta_fields = get_post_meta($post_id);
             $clean_meta = [];
@@ -113,8 +104,6 @@ class WordPressPostReader {
 
     /**
      * Check if tool is configured and available.
-     *
-     * @return bool Always true - no configuration required
      */
     public static function is_configured(): bool {
         return true;
@@ -122,12 +111,6 @@ class WordPressPostReader {
 
     /**
      * Format success message for WordPress post reading results.
-     *
-     * @param string $message Default message
-     * @param string $tool_name Tool name
-     * @param array $tool_result Tool execution result
-     * @param array $tool_parameters Tool parameters
-     * @return string Formatted success message
      */
     public function format_success_message($message, $tool_name, $tool_result, $tool_parameters) {
         if ($tool_name !== 'wordpress_post_reader') {

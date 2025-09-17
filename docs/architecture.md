@@ -16,10 +16,29 @@ Three-action execution cycle:
 3. `dm_schedule_next_step` - Continues to next step or completes
 
 ### Database Schema
-- `wp_dm_pipelines` - Pipeline templates (reusable)  
+- `wp_dm_pipelines` - Pipeline templates (reusable)
 - `wp_dm_flows` - Flow instances (scheduled + configured)
 - `wp_dm_jobs` - Job executions with status tracking
 - `wp_dm_processed_items` - Deduplication tracking per execution
+
+### Cache Management System
+**Centralized Architecture**: Actions/Cache.php provides WordPress action-based cache clearing system, replacing previous DatabaseCache.php architecture.
+
+**Cache Operations**:
+- `dm_clear_pipeline_cache($pipeline_id)` - Clear pipeline + flows + jobs
+- `dm_clear_flow_cache($flow_id)` - Clear flow-specific caches
+- `dm_clear_jobs_cache()` - Clear all job-related caches
+- `dm_clear_all_cache()` - Complete cache reset
+- `dm_cache_set($key, $data, $timeout, $group)` - Standardized cache storage
+
+**Key Features**:
+- Pattern-based clearing with wildcard support (dm_pipeline_*, dm_flow_*, dm_job_*)
+- WordPress transient integration for native storage
+- Comprehensive logging for all cache operations
+- Granular cache invalidation for optimal performance
+
+### Migration System
+**PipelineStepIdMigration**: One-time migration system for optimizing pipeline step ID format to improve database performance with direct lookups. Provides admin interface for guided migration process.
 
 ### Step Types
 - **Fetch**: Data retrieval (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API)

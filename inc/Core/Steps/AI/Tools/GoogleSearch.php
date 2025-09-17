@@ -8,7 +8,7 @@ namespace DataMachine\Core\Steps\AI\Tools;
 defined('ABSPATH') || exit;
 
 /**
- * Google Custom Search API integration for web search results
+ * Google Custom Search API integration for web search results.
  */
 class GoogleSearch {
 
@@ -17,7 +17,7 @@ class GoogleSearch {
     }
 
     /**
-     * Execute Google search with site restrictions and result limiting
+     * Execute Google search with site restrictions and result limiting.
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         
@@ -40,12 +40,10 @@ class GoogleSearch {
             ];
         }
 
-        // Extract parameters with defaults
         $query = sanitize_text_field($parameters['query']);
         $max_results = min(max(intval($parameters['max_results'] ?? 5), 1), 10); // Limit 1-10 results
         $site_restrict = !empty($parameters['site_restrict']) ? sanitize_text_field($parameters['site_restrict']) : '';
         
-        // Build search request
         $search_url = 'https://www.googleapis.com/customsearch/v1';
         $search_params = [
             'key' => $google_config['api_key'],

@@ -443,29 +443,31 @@ class ThreadsAuth {
      * Called via the unified OAuth rewrite system at /dm-oauth/threads/.
      */
     public function handle_oauth_callback() {
-        // 1. Verify admin capability
+        // 1. Extract parameters (OAuth callbacks cannot use nonce verification)
+        $state = sanitize_key(wp_unslash($_GET['state'] ?? '')); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $code = sanitize_text_field(wp_unslash($_GET['code'] ?? '')); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $error = sanitize_key(wp_unslash($_GET['error'] ?? '')); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $error_description = sanitize_text_field(wp_unslash($_GET['error_description'] ?? '')); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+        // 2. Verify admin capability
         if (!current_user_can('manage_options')) {
              wp_die('Permission denied.');
         }
 
         // Check for error response first (user might deny access)
-        if (isset($_GET['error'])) {
-            $error = sanitize_text_field(wp_unslash($_GET['error']));
-            $error_description = isset($_GET['error_description']) ? sanitize_text_field(wp_unslash($_GET['error_description'])) : 'No description provided.';
-            do_action('dm_log', 'error', 'Threads OAuth Error (Callback Init): User denied access or error occurred.', ['error' => $error, 'description' => $error_description]);
+        if (!empty($error)) {
+            $error_desc = !empty($error_description) ? $error_description : 'No description provided.';
+            do_action('dm_log', 'error', 'Threads OAuth Error (Callback Init): User denied access or error occurred.', ['error' => $error, 'description' => $error_desc]);
             wp_redirect(add_query_arg('auth_error', 'threads_oauth_error', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
         // Check for required parameters
-        if (!isset($_GET['code']) || !isset($_GET['state'])) {
-            do_action('dm_log', 'error', 'Threads OAuth Error: Missing code or state in callback.', ['query_params' => $_GET]);
+        if (empty($code) || empty($state)) {
+            do_action('dm_log', 'error', 'Threads OAuth Error: Missing code or state in callback.');
             wp_redirect(add_query_arg('auth_error', 'missing_params', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
-
-        $code = sanitize_text_field(wp_unslash($_GET['code']));
-        $state = sanitize_text_field(wp_unslash($_GET['state']));
 
         // Retrieve stored app credentials from global options
         $config = apply_filters('dm_retrieve_oauth_keys', [], 'threads');

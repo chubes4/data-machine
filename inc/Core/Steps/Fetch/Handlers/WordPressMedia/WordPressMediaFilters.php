@@ -48,7 +48,39 @@ function dm_register_wordpress_media_fetch_filters() {
         return $all_settings;
     });
     
-    // WordPress Media-specific parameter injection removed - now handled by engine-level extraction
+    // Metadata parameter injection - WordPress Media specific
+    add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
+        // Only process for steps that come after wordpress_media fetch
+        if (empty($data) || !is_array($data)) {
+            return $parameters;
+        }
+
+        $latest_entry = $data[0] ?? [];
+        $metadata = $latest_entry['metadata'] ?? [];
+        $source_type = $metadata['source_type'] ?? '';
+
+        // Only inject WordPress Media metadata
+        if ($source_type === 'wordpress_media') {
+            // Add WordPress Media specific parameters to flat structure
+            $parameters['source_url'] = $metadata['source_url'] ?? '';
+            $parameters['image_url'] = $metadata['image_url'] ?? '';
+            $parameters['file_path'] = $metadata['file_path'] ?? '';
+            $parameters['mime_type'] = $metadata['mime_type'] ?? '';
+            $parameters['original_title'] = $metadata['original_title'] ?? '';
+            $parameters['original_id'] = $metadata['original_id'] ?? '';
+            $parameters['file_size'] = $metadata['file_size'] ?? 0;
+
+            do_action('dm_log', 'debug', 'WordPress Media: Metadata injected into engine parameters', [
+                'flow_step_id' => $flow_step_id,
+                'source_url' => $parameters['source_url'],
+                'image_url' => $parameters['image_url'],
+                'file_path' => $parameters['file_path'],
+                'mime_type' => $parameters['mime_type']
+            ]);
+        }
+
+        return $parameters;
+    }, 10, 5);
     
     // Modal registrations removed - now handled by generic modal system via pure discovery
     

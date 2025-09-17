@@ -8,7 +8,7 @@ namespace DataMachine\Core\Steps\AI\Tools;
 defined('ABSPATH') || exit;
 
 /**
- * WordPress site search for AI context gathering and content discovery
+ * WordPress site search for AI context gathering.
  */
 class LocalSearch {
 
@@ -17,7 +17,7 @@ class LocalSearch {
     }
 
     /**
-     * Execute local WordPress search with configurable parameters
+     * Execute local WordPress search.
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         
@@ -38,7 +38,6 @@ class LocalSearch {
         }
         $post_types = array_map('sanitize_text_field', $post_types);
         
-        // Build WP_Query arguments for search
         $query_args = [
             's' => $query, // WordPress search parameter
             'post_type' => $post_types,
@@ -51,7 +50,6 @@ class LocalSearch {
             'update_post_term_cache' => false, // Performance optimization
         ];
         
-        // Execute search query
         $wp_query = new \WP_Query($query_args);
         
         if (is_wp_error($wp_query)) {
@@ -62,7 +60,6 @@ class LocalSearch {
             ];
         }
         
-        // Process search results
         $results = [];
         if ($wp_query->have_posts()) {
             while ($wp_query->have_posts()) {
@@ -71,10 +68,8 @@ class LocalSearch {
                 $post = get_post();
                 $permalink = get_permalink($post->ID);
                 
-                // Get excerpt or truncated content
                 $excerpt = get_the_excerpt($post->ID);
                 if (empty($excerpt)) {
-                    // Generate excerpt from content if none exists
                     $content = wp_strip_all_tags(get_the_content('', false, $post));
                     $excerpt = wp_trim_words($content, 25, '...');
                 }
@@ -89,11 +84,9 @@ class LocalSearch {
                 ];
             }
             
-            // Reset global post data
             wp_reset_postdata();
         }
         
-        // Get search statistics
         $total_results = $wp_query->found_posts;
         $results_count = count($results);
         
@@ -112,20 +105,14 @@ class LocalSearch {
     }
     
     /**
-     * Check if Local Search tool is available
-     * 
-     * Local search is always available since it uses WordPress core functionality
-     * 
-     * @return bool Always true - no configuration required
+     * Check if Local Search tool is available.
      */
     public static function is_configured(): bool {
-        return true; // Always available, no configuration needed
+        return true;
     }
     
     /**
-     * Get available post types for search
-     * 
-     * @return array List of public post types available for search
+     * Get available post types for search.
      */
     public static function get_searchable_post_types(): array {
         $post_types = get_post_types([
@@ -137,13 +124,7 @@ class LocalSearch {
     }
     
     /**
-     * Format success message for local search results
-     * 
-     * @param string $message Default message
-     * @param string $tool_name Tool name
-     * @param array $tool_result Tool execution result
-     * @param array $tool_parameters Tool parameters
-     * @return string Formatted success message
+     * Format success message for local search results.
      */
     public function format_success_message($message, $tool_name, $tool_result, $tool_parameters) {
         if ($tool_name !== 'local_search') {

@@ -9,6 +9,7 @@
 
 namespace DataMachine\Core\Database\Pipelines;
 
+use DataMachine\Engine\Actions\Cache;
 
 defined('ABSPATH') || exit;
 
@@ -90,12 +91,13 @@ class Pipelines {
 			return null;
 		}
 
-		$cache_key = 'dm_pipeline_' . $pipeline_id;
+		$cache_key = Cache::PIPELINE_CACHE_KEY . $pipeline_id;
 		$cached_result = get_transient( $cache_key );
 
 		if ( false === $cached_result ) {
-			$pipeline = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM {$this->table_name} WHERE pipeline_id = %d", $pipeline_id ), ARRAY_A );
-			set_transient( $cache_key, $pipeline, 0 );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$pipeline = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE pipeline_id = %d", $this->table_name, $pipeline_id ), ARRAY_A );
+			do_action('dm_cache_set', $cache_key, $pipeline, 0, 'pipelines');
 			$cached_result = $pipeline;
 		} else {
 			$pipeline = $cached_result;
@@ -110,15 +112,42 @@ class Pipelines {
 	 */
 	public function get_all_pipelines(): array {
 
-		$cache_key = 'dm_all_pipelines';
+		$cache_key = Cache::ALL_PIPELINES_CACHE_KEY;
 		$cached_result = get_transient( $cache_key );
 
 		if ( false === $cached_result ) {
 			$results = $this->wpdb->get_results(
-				"SELECT * FROM {$this->table_name} ORDER BY pipeline_name ASC",
+				"SELECT * FROM %i ORDER BY pipeline_name ASC", $this->table_name,
 				ARRAY_A
 			);
-			set_transient( $cache_key, $results, 0 );
+			do_action('dm_cache_set', $cache_key, $results, 0, 'pipelines');
+			$cached_result = $results;
+		} else {
+			$results = $cached_result;
+		}
+
+		return $results ?: [];
+	}
+
+	/**
+	 * Get lightweight pipelines list for dropdown population
+	 *
+	 * Returns only pipeline_id and pipeline_name without heavy pipeline_config data.
+	 * Optimized for initial page load performance.
+	 *
+	 * @return array Array of lightweight pipeline records
+	 */
+	public function get_pipelines_list(): array {
+
+		$cache_key = Cache::PIPELINES_LIST_CACHE_KEY;
+		$cached_result = get_transient( $cache_key );
+
+		if ( false === $cached_result ) {
+			$results = $this->wpdb->get_results(
+				"SELECT pipeline_id, pipeline_name FROM %i ORDER BY pipeline_name ASC", $this->table_name,
+				ARRAY_A
+			);
+			do_action('dm_cache_set', $cache_key, $results, 0, 'pipelines');
 			$cached_result = $results;
 		} else {
 			$results = $cached_result;
@@ -259,12 +288,13 @@ class Pipelines {
 			return [];
 		}
 
-		$cache_key = 'dm_pipeline_config_' . $pipeline_id;
+		$cache_key = Cache::PIPELINE_CONFIG_CACHE_KEY . $pipeline_id;
 		$cached_result = get_transient( $cache_key );
 
 		if ( false === $cached_result ) {
-			$pipeline_config_json = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT pipeline_config FROM {$this->table_name} WHERE pipeline_id = %d", $pipeline_id ) );
-			set_transient( $cache_key, $pipeline_config_json, 0 );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$pipeline_config_json = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT pipeline_config FROM %i WHERE pipeline_id = %d", $this->table_name, $pipeline_id ) );
+			do_action('dm_cache_set', $cache_key, $pipeline_config_json, 0, 'pipelines');
 			$cached_result = $pipeline_config_json;
 		} else {
 			$pipeline_config_json = $cached_result;
@@ -286,14 +316,14 @@ class Pipelines {
 	 */
 	public function get_pipelines_count(): int {
 
-		$cache_key = 'dm_pipeline_count';
+		$cache_key = Cache::PIPELINE_COUNT_CACHE_KEY;
 		$cached_result = get_transient( $cache_key );
 
 		if ( false === $cached_result ) {
 			$count = $this->wpdb->get_var(
-				"SELECT COUNT(pipeline_id) FROM {$this->table_name}"
+				"SELECT COUNT(pipeline_id) FROM %i", $this->table_name
 			);
-			set_transient( $cache_key, $count, 300 ); // 5 min cache for counts
+			do_action('dm_cache_set', $cache_key, $count, 300, 'pipelines'); // 5 min cache for counts
 			$cached_result = $count;
 		} else {
 			$count = $cached_result;
@@ -325,13 +355,15 @@ class Pipelines {
 			$orderby = 'pipeline_id';
 		}
 
-		$cache_key = 'dm_pipeline_export';
+		$cache_key = Cache::PIPELINE_EXPORT_CACHE_KEY;
 		$cached_result = get_transient( $cache_key );
 
 		if ( false === $cached_result ) {
-			$sql = "SELECT * FROM {$this->table_name} ORDER BY $orderby $order";
-			$results = $this->wpdb->get_results( $this->wpdb->prepare( $sql . " LIMIT %d OFFSET %d", $per_page, $offset ), ARRAY_A );
-			set_transient( $cache_key, $results, 300 ); // 5 min cache for exports
+			$query = sprintf( "SELECT * FROM %%i ORDER BY %s %s LIMIT %%d OFFSET %%d", $orderby, $order );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$sql = $this->wpdb->prepare( $query, $this->table_name, $per_page, $offset );
+			$results = $this->wpdb->get_results( $sql, ARRAY_A );
+			do_action('dm_cache_set', $cache_key, $results, 300, 'pipelines'); // 5 min cache for exports
 			$cached_result = $results;
 		} else {
 			$results = $cached_result;

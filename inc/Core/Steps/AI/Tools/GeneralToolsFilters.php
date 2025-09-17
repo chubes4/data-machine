@@ -1,22 +1,14 @@
 <?php
 /**
- * General AI Tools Registration
- * 
- * Registers universal AI tools available to all AI steps regardless of next step handler.
- * General tools lack 'handler' property, distinguishing them from handler-specific tools.
+ * General AI tools registration.
  *
  * @package DataMachine\Core\Steps\AI\Tools
- * @author Chris Huber <https://chubes.net>
  */
 
 defined('ABSPATH') || exit;
 
 /**
- * General tools lack 'handler' property, making them available to all AI steps.
- * Handler-specific tools include 'handler' property and appear only for matching next steps.
- */
-/**
- * Google Search Tool - Web search with configurable restrictions
+ * Google Search Tool - Web search with configurable restrictions.
  */
 add_filter('ai_tools', function($tools) {
     $tools['google_search'] = [
@@ -47,7 +39,7 @@ add_filter('ai_tools', function($tools) {
 });
 
 /**
- * Local Search Tool - WordPress content discovery
+ * Local Search Tool - WordPress content discovery.
  */
 add_filter('ai_tools', function($tools) {
     $tools['local_search'] = [
@@ -78,7 +70,7 @@ add_filter('ai_tools', function($tools) {
 });
 
 /**
- * Web Fetch Tool - Retrieve and process web page content
+ * Web Fetch Tool - Retrieve and process web page content.
  */
 add_filter('ai_tools', function($tools) {
     $tools['web_fetch'] = [
@@ -99,7 +91,7 @@ add_filter('ai_tools', function($tools) {
 });
 
 /**
- * WordPress Post Reader Tool - Read specific WordPress posts by URL for detailed content analysis
+ * WordPress Post Reader Tool - Read specific WordPress posts by URL.
  */
 add_filter('ai_tools', function($tools) {
     $tools['wordpress_post_reader'] = [
@@ -127,7 +119,7 @@ add_filter('ai_tools', function($tools) {
 
 
 /**
- * Check tool configuration status for UI enablement
+ * Check tool configuration status for UI enablement.
  */
 add_filter('dm_tool_configured', function($configured, $tool_id) {
     switch ($tool_id) {
@@ -137,13 +129,13 @@ add_filter('dm_tool_configured', function($configured, $tool_id) {
             return !empty($google_config['api_key']) && !empty($google_config['search_engine_id']);
         
         case 'local_search':
-            return true; // Always configured - no setup required
+            return true;
 
         case 'web_fetch':
-            return true; // Always configured - no setup required
+            return true;
 
         case 'wordpress_post_reader':
-            return true; // Always configured - no setup required
+            return true;
 
         default:
             return $configured;
@@ -151,7 +143,7 @@ add_filter('dm_tool_configured', function($configured, $tool_id) {
 }, 10, 2);
 
 /**
- * Retrieve stored tool configuration
+ * Retrieve stored tool configuration.
  */
 add_filter('dm_get_tool_config', function($config, $tool_id) {
     switch ($tool_id) {
@@ -165,12 +157,11 @@ add_filter('dm_get_tool_config', function($config, $tool_id) {
 }, 10, 2);
 
 /**
- * Save tool configuration with validation
+ * Save tool configuration with validation.
  */
 add_action('dm_save_tool_config', function($tool_id, $config_data) {
     switch ($tool_id) {
         case 'google_search':
-            // Validate required Google Search fields
             $api_key = sanitize_text_field($config_data['api_key'] ?? '');
             $search_engine_id = sanitize_text_field($config_data['search_engine_id'] ?? '');
             
@@ -179,14 +170,12 @@ add_action('dm_save_tool_config', function($tool_id, $config_data) {
                 return;
             }
             
-            // Update Google Search configuration
             $stored_config = get_option('dm_search_config', []);
             $stored_config['google_search'] = [
                 'api_key' => $api_key,
                 'search_engine_id' => $search_engine_id
             ];
             
-            // Persist configuration
             if (update_option('dm_search_config', $stored_config)) {
                 wp_send_json_success([
                     'message' => __('Google Search configuration saved successfully', 'data-machine'),

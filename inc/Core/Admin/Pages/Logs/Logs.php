@@ -176,7 +176,11 @@ class Logs
     public function handle_form_actions()
     {
         $nonce = sanitize_text_field(wp_unslash($_POST['dm_logs_nonce'] ?? ''));
-        if (!isset($_POST['dm_logs_action']) || !wp_verify_nonce($nonce, 'dm_logs_action')) {
+        if (!wp_verify_nonce($nonce, 'dm_logs_action')) {
+            return;
+        }
+
+        if (!isset($_POST['dm_logs_action'])) {
             return;
         }
 

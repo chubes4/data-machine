@@ -44,8 +44,15 @@ function run_data_machine() {
     
     \DataMachine\Engine\Filters\Create::register();
     
-    \DataMachine\Core\Admin\Pages\Pipelines\PipelinePageAjax::register();
-    \DataMachine\Core\Admin\Pages\Pipelines\PipelineModalAjax::register();
+    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelinePageAjax::register();
+    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineModalAjax::register();
+    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineSwitcherAjax::register();
+    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineDeleteAjax::register();
+    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineImportExportAjax::register();
+    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineAutoSaveAjax::register();
+    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineReorderAjax::register();
+    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineFlowCreateAjax::register();
+    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineFileUploadAjax::register();
 }
 
 

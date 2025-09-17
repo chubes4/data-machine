@@ -263,6 +263,9 @@ class Update {
             'flow_steps_saved' => $flow_steps_saved
         ]);
 
+        // Clear pipeline cache after successful auto-save - ensures fresh data on page loads
+        do_action('dm_clear_pipeline_cache', $pipeline_id);
+
         return true;
     }
 
@@ -350,11 +353,14 @@ class Update {
             ]);
             return false;
         }
-        
+
+        // Clear flow cache before auto-save
+        do_action('dm_clear_flow_cache', $flow_id);
+
         // Trigger auto-save for the pipeline
         do_action('dm_auto_save', $flow['pipeline_id']);
-        
-        
+
+
         return true;
     }
 
@@ -439,8 +445,8 @@ class Update {
             return false;
         }
 
-        // Clear cache after successful flow configuration update
-        do_action('dm_clear_cache', $flow['pipeline_id']);
+        // Clear flow cache after successful flow configuration update
+        do_action('dm_clear_flow_cache', $flow_id);
 
         do_action('dm_log', 'debug', 'Flow steps sync completed successfully', [
             'flow_id' => $flow_id,
@@ -534,6 +540,11 @@ class Update {
             return false;
         }
 
+        // Clear flow cache before auto-save to prevent stale data overwrite
+        do_action('dm_clear_flow_cache', $flow_id);
+
+        // Trigger auto-save for the pipeline
+        do_action('dm_auto_save', $flow['pipeline_id']);
 
         return true;
     }
@@ -571,31 +582,31 @@ class Update {
             return false;
         }
 
-        // Find pipeline containing this step
-        $pipelines = $db_pipelines->get_all_pipelines();
-        $target_pipeline = null;
-        
-        foreach ($pipelines as $pipeline) {
-            $pipeline_config = is_string($pipeline['pipeline_config']) 
-                ? json_decode($pipeline['pipeline_config'], true) 
-                : ($pipeline['pipeline_config'] ?? []);
-                
-            if (isset($pipeline_config[$pipeline_step_id])) {
-                $target_pipeline = $pipeline;
-                break;
-            }
-        }
-        
-        if (!$target_pipeline) {
+        // Get step configuration using existing filter
+        $step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
+
+        if (empty($step_config) || empty($step_config['pipeline_id'])) {
             do_action('dm_log', 'error', 'System prompt update failed - pipeline step not found', [
                 'pipeline_step_id' => $pipeline_step_id
             ]);
             return false;
         }
 
+        $pipeline_id = $step_config['pipeline_id'];
+
+        // Get the complete pipeline data
+        $target_pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
+        if (!$target_pipeline) {
+            do_action('dm_log', 'error', 'System prompt update failed - pipeline not found', [
+                'pipeline_id' => $pipeline_id,
+                'pipeline_step_id' => $pipeline_step_id
+            ]);
+            return false;
+        }
+
         // Update step configuration
-        $pipeline_config = is_string($target_pipeline['pipeline_config']) 
-            ? json_decode($target_pipeline['pipeline_config'], true) 
+        $pipeline_config = is_string($target_pipeline['pipeline_config'])
+            ? json_decode($target_pipeline['pipeline_config'], true)
             : ($target_pipeline['pipeline_config'] ?? []);
             
         if (!is_array($pipeline_config)) {
@@ -621,6 +632,8 @@ class Update {
             return false;
         }
 
+        // Clear pipeline cache before auto-save to prevent stale data overwrite
+        do_action('dm_clear_pipeline_cache', $target_pipeline['pipeline_id']);
 
         // Trigger auto-save for complete pipeline persistence consistency
         do_action('dm_auto_save', $target_pipeline['pipeline_id']);

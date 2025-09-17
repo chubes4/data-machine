@@ -1,12 +1,8 @@
 <?php
 /**
- * Centralized Cache Clearing Actions
- *
- * WordPress actions-based cache clearing system that replaces DatabaseCache.php.
- * Provides centralized cache management through WordPress native action hooks.
+ * Cache clearing actions via WordPress hooks.
  *
  * @package DataMachine\Engine\Actions
- * @since 1.0.0
  */
 
 namespace DataMachine\Engine\Actions;
@@ -17,23 +13,18 @@ if (!defined('WPINC')) {
 }
 
 /**
- * Cache clearing actions handler
- *
- * Centralized cache management using WordPress transients and action hooks.
- * Eliminates scattered cache clearing throughout the codebase.
+ * Cache management using WordPress transients and action hooks.
  */
 class Cache {
 
     /**
-     * Centralized cache key patterns used throughout the Data Machine plugin
-     *
-     * These constants define ALL cache keys that need to be cleared when
-     * pipeline operations occur. Based on actual usage in database classes.
+     * Cache key patterns for bulk clearing operations.
      */
 
     // Pipeline cache keys
     const PIPELINE_CACHE_KEY = 'dm_pipeline_';
     const ALL_PIPELINES_CACHE_KEY = 'dm_all_pipelines';
+    const PIPELINES_LIST_CACHE_KEY = 'dm_pipelines_list';
     const PIPELINE_CONFIG_CACHE_KEY = 'dm_pipeline_config_';
     const PIPELINE_COUNT_CACHE_KEY = 'dm_pipeline_count';
     const PIPELINE_EXPORT_CACHE_KEY = 'dm_pipeline_export';
@@ -50,6 +41,10 @@ class Cache {
     const JOB_STATUS_CACHE_KEY = 'dm_job_status_';
     const TOTAL_JOBS_COUNT_CACHE_KEY = 'dm_total_jobs_count';
     const FLOW_JOBS_CACHE_KEY = 'dm_flow_jobs_';
+    const RECENT_JOBS_CACHE_KEY = 'dm_recent_jobs_';
+
+    // Flow utility cache keys
+    const DUE_FLOWS_CACHE_KEY = 'dm_due_flows_';
 
     // Cache patterns for bulk clearing
     const PIPELINE_PATTERN = 'dm_pipeline_*';
@@ -59,30 +54,25 @@ class Cache {
     const FLOW_JOBS_PATTERN = 'dm_flow_jobs*';
 
     /**
-     * Register cache clearing action hooks
+     * Register cache clearing action hooks.
      */
     public static function register() {
         $instance = new self();
 
-        // Primary cache clearing actions
-        add_action('dm_clear_cache', [$instance, 'handle_clear_cache'], 10, 1);
+        // Cache clearing actions
+        add_action('dm_clear_flow_cache', [$instance, 'handle_clear_flow_cache'], 10, 1);
+        add_action('dm_clear_pipeline_cache', [$instance, 'handle_clear_pipeline_cache'], 10, 1);
+        add_action('dm_clear_jobs_cache', [$instance, 'handle_clear_jobs_cache'], 10, 0);
         add_action('dm_clear_all_cache', [$instance, 'handle_clear_all_cache'], 10, 0);
 
-        // Cache clearing is handled explicitly where needed, not on auto-save
+        // Cache storage action
+        add_action('dm_cache_set', [$instance, 'handle_cache_set'], 10, 4);
     }
 
     /**
-     * Handle cache clearing for specific pipeline
-     *
-     * Clears all caches related to a specific pipeline including:
-     * - Pipeline configuration cache
-     * - Flow configuration cache
-     * - Pipeline flows cache
-     * - Flow step cache
-     *
-     * @param int $pipeline_id Pipeline ID to clear cache for
+     * Clear all caches related to a specific pipeline.
      */
-    public function handle_clear_cache($pipeline_id) {
+    public function handle_clear_pipeline_cache($pipeline_id) {
         if (empty($pipeline_id)) {
             do_action('dm_log', 'warning', 'Cache clear requested with empty pipeline ID');
             return;
@@ -90,7 +80,7 @@ class Cache {
 
         do_action('dm_log', 'debug', 'Starting cache clear for pipeline', ['pipeline_id' => $pipeline_id]);
 
-        // Clear all related caches for this pipeline
+        // Clear related caches
         $this->clear_pipeline_cache($pipeline_id);
         $this->clear_flow_cache($pipeline_id);
         $this->clear_job_cache();
@@ -99,15 +89,62 @@ class Cache {
     }
 
     /**
-     * Handle complete cache clearing
-     *
-     * Clears all Data Machine related caches.
-     * Use sparingly - only when necessary for complete reset.
+     * Clear all caches related to a specific flow.
+     */
+    public function handle_clear_flow_cache($flow_id) {
+        if (empty($flow_id)) {
+            do_action('dm_log', 'warning', 'Flow cache clear requested with empty flow ID');
+            return;
+        }
+
+        do_action('dm_log', 'debug', 'Starting flow cache clear', ['flow_id' => $flow_id]);
+
+        // Get flow data to find pipeline_id
+        $all_databases = apply_filters('dm_db', []);
+        $db_flows = $all_databases['flows'] ?? null;
+
+        if ($db_flows) {
+            $flow = $db_flows->get_flow($flow_id);
+            $pipeline_id = $flow['pipeline_id'] ?? null;
+
+            delete_transient(self::FLOW_CONFIG_CACHE_KEY . $flow_id);
+            delete_transient(self::FLOW_SCHEDULING_CACHE_KEY . $flow_id);
+
+            if ($pipeline_id) {
+                delete_transient(self::PIPELINE_FLOWS_CACHE_KEY . $pipeline_id);
+                delete_transient(self::MAX_DISPLAY_ORDER_CACHE_KEY . $pipeline_id);
+            }
+
+            delete_transient(self::ALL_ACTIVE_FLOWS_CACHE_KEY);
+
+            do_action('dm_log', 'debug', 'Flow cache clear completed', [
+                'flow_id' => $flow_id,
+                'pipeline_id' => $pipeline_id
+            ]);
+        } else {
+            do_action('dm_log', 'warning', 'Could not clear flow cache - flows database not available', [
+                'flow_id' => $flow_id
+            ]);
+        }
+    }
+
+    /**
+     * Clear all job-related caches.
+     */
+    public function handle_clear_jobs_cache() {
+        do_action('dm_log', 'debug', 'Starting jobs cache clear');
+
+        $this->clear_job_cache();
+
+        do_action('dm_log', 'debug', 'Jobs cache clear completed');
+    }
+
+    /**
+     * Clear all Data Machine caches.
      */
     public function handle_clear_all_cache() {
         do_action('dm_log', 'debug', 'Starting complete cache clear');
 
-        // Clear all Data Machine cache patterns using centralized constants
         $cache_patterns = [
             self::PIPELINE_PATTERN,
             self::FLOW_PATTERN,
@@ -120,8 +157,8 @@ class Cache {
             $this->clear_cache_pattern($pattern);
         }
 
-        // Clear individual global caches that don't match patterns
         delete_transient(self::ALL_PIPELINES_CACHE_KEY);
+        delete_transient(self::PIPELINES_LIST_CACHE_KEY);
         delete_transient(self::PIPELINE_COUNT_CACHE_KEY);
         delete_transient(self::PIPELINE_EXPORT_CACHE_KEY);
         delete_transient(self::ALL_ACTIVE_FLOWS_CACHE_KEY);
@@ -131,12 +168,35 @@ class Cache {
     }
 
     /**
-     * Clear pipeline configuration cache
-     *
-     * @param int $pipeline_id Pipeline ID
+     * Standardized cache storage with logging.
+     */
+    public function handle_cache_set($key, $data, $timeout = 0, $group = null) {
+        if (empty($key)) {
+            do_action('dm_log', 'warning', 'Cache set requested with empty key');
+            return false;
+        }
+
+        do_action('dm_log', 'debug', 'Setting cache', [
+            'cache_key' => $key,
+            'timeout' => $timeout,
+            'group' => $group,
+            'data_type' => gettype($data),
+            'data_size' => is_array($data) ? count($data) : (is_string($data) ? strlen($data) : 'unknown')
+        ]);
+
+        $result = set_transient($key, $data, $timeout);
+
+        if (!$result) {
+            do_action('dm_log', 'warning', 'Cache set failed', ['cache_key' => $key]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Clear pipeline configuration cache.
      */
     private function clear_pipeline_cache($pipeline_id) {
-        // Clear all pipeline-specific cache keys
         $cache_keys = [
             self::PIPELINE_CACHE_KEY . $pipeline_id,
             self::PIPELINE_CONFIG_CACHE_KEY . $pipeline_id,
@@ -147,33 +207,21 @@ class Cache {
         foreach ($cache_keys as $key) {
             delete_transient($key);
         }
-
-        // Clear global pipeline caches
-        delete_transient(self::ALL_PIPELINES_CACHE_KEY);
-        delete_transient(self::PIPELINE_COUNT_CACHE_KEY);
-        delete_transient(self::PIPELINE_EXPORT_CACHE_KEY);
     }
 
     /**
-     * Clear flow configuration cache
-     *
-     * @param int $pipeline_id Pipeline ID to clear flow caches for
+     * Clear flow configuration cache.
      */
     private function clear_flow_cache($pipeline_id) {
-        // Clear pipeline-specific flow cache
         delete_transient(self::PIPELINE_FLOWS_CACHE_KEY . $pipeline_id);
 
-        // Clear global flow caches
         delete_transient(self::ALL_ACTIVE_FLOWS_CACHE_KEY);
 
-        // Clear all flow-specific caches using pattern (flow_config_, flow_scheduling_, etc.)
         $this->clear_cache_pattern(self::FLOW_PATTERN);
     }
 
     /**
-     * Clear flow step cache
-     *
-     * @param string $flow_step_id Flow step ID
+     * Clear flow step cache.
      */
     public function clear_flow_step_cache($flow_step_id) {
         if (empty($flow_step_id)) {
@@ -191,49 +239,34 @@ class Cache {
     }
 
     /**
-     * Clear job-related caches
-     *
-     * Clears all caches related to job operations including counts,
-     * recent jobs lists, and flow-specific job caches.
+     * Clear job-related caches.
      */
     private function clear_job_cache() {
-        // Clear global job caches
         delete_transient(self::TOTAL_JOBS_COUNT_CACHE_KEY);
 
-        // Clear job patterns (covers recent jobs, flow jobs, etc.)
         $this->clear_cache_pattern(self::JOB_PATTERN);
         $this->clear_cache_pattern(self::RECENT_JOBS_PATTERN);
         $this->clear_cache_pattern(self::FLOW_JOBS_PATTERN);
     }
 
     /**
-     * Clear cache by pattern
-     *
-     * Clears all transients matching a given pattern.
-     * Uses WordPress database queries to find matching transient keys.
-     *
-     * @param string $pattern Pattern to match (e.g., 'dm_pipeline_*')
+     * Clear cache by pattern using WordPress database queries.
      */
     private function clear_cache_pattern($pattern) {
         global $wpdb;
 
-        // Convert pattern to SQL LIKE pattern
         $sql_pattern = str_replace('*', '%', $pattern);
 
-        // Find all transients matching the pattern
         $transient_keys = $wpdb->get_col($wpdb->prepare(
             "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
             '_transient_' . $sql_pattern
         ));
 
-        // Delete each matching transient
         foreach ($transient_keys as $transient_key) {
-            // Remove '_transient_' prefix to get the actual transient name
             $transient_name = str_replace('_transient_', '', $transient_key);
             delete_transient($transient_name);
         }
 
-        // Also clear timeout transients
         $timeout_keys = $wpdb->get_col($wpdb->prepare(
             "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
             '_transient_timeout_' . $sql_pattern

@@ -49,7 +49,8 @@ Data Machine uses a Pipeline+Flow architecture where:
 
 - **Multi-Provider Support** - OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 - **Tool-First Architecture** - AI agents can call tools to interact with publish handlers
-- **5-Tier AI Directive System** - Structured system messages via auto-registering directive classes:
+- **6-Tier AI Directive System** - Structured system messages via auto-registering directive classes:
+  - **Priority 5**: Plugin Core Directive (foundational AI agent identity and core behavioral principles)
   - **Priority 10**: Global System Prompt (foundational AI behavior)
   - **Priority 20**: Pipeline System Prompt (workflow structure visualization)
   - **Priority 30**: Tool Definitions (usage instructions and workflow context)
@@ -79,7 +80,7 @@ Data Machine uses a Pipeline+Flow architecture where:
 
 ## Quick Start
 
-1. **Install Requirements** - PHP 8.0+, WordPress 6.0+
+1. **Install Requirements** - PHP 8.0+, WordPress 6.2+
 2. **Configure AI Provider** - Add API keys in WordPress Settings → Data Machine
 3. **Create Pipeline** - Use visual builder with drag-and-drop steps
 4. **Configure Authentication** - Set up OAuth for external services
@@ -109,9 +110,22 @@ docs/
 └── api-reference/       # Filters, actions, functions
 ```
 
+## System Features
+
+### Cache Management
+- **Centralized Cache System** - Actions/Cache.php provides WordPress action-based cache clearing
+- **Granular Invalidation** - Separate actions for pipeline, flow, and job cache clearing
+- **Pattern-Based Clearing** - Supports wildcard patterns for efficient bulk operations
+- **WordPress Transients** - Native WordPress caching integration with comprehensive logging
+
+### Migration System
+- **PipelineStepIdMigration** - One-time optimization system for pipeline step ID format
+- **Performance Enhancement** - Improves database performance through direct lookup optimization
+- **Admin Interface** - Guided migration process with progress tracking and preview
+
 ## Requirements
 
 - **PHP** 8.0 or higher
 - **WordPress** 6.0 or higher
-- **Composer Dependencies** - Automatically managed
+- **Composer Dependencies** - Automatically managed including ai-http-client
 - **Admin Capabilities** - `manage_options` required for all operations

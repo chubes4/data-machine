@@ -13,7 +13,8 @@ if (!defined('WPINC')) {
     die;
 }
 
-$all_pipelines = apply_filters('dm_get_pipelines', []);
+// Get lightweight pipelines list for dropdown (optimization: only IDs and names)
+$pipelines_list = apply_filters('dm_get_pipelines_list', []);
 
 // Get selected pipeline ID with priority: URL parameter → saved preference → newest pipeline
 $selected_pipeline_id = '';
@@ -26,17 +27,27 @@ if (empty($selected_pipeline_id)) {
     $selected_pipeline_id = get_user_meta(get_current_user_id(), 'dm_selected_pipeline_id', true);
 }
 
-if (empty($selected_pipeline_id) && !empty($all_pipelines)) {
-    // Default to newest pipeline (first in reversed array)
-    $selected_pipeline_id = $all_pipelines[0]['pipeline_id'];
+if (empty($selected_pipeline_id) && !empty($pipelines_list)) {
+    // Default to first pipeline in alphabetical list
+    $selected_pipeline_id = $pipelines_list[0]['pipeline_id'];
 }
 
 // Validate that the selected pipeline ID actually exists in available pipelines
-if (!empty($selected_pipeline_id) && !empty($all_pipelines)) {
-    $valid_pipeline_ids = array_column($all_pipelines, 'pipeline_id');
+if (!empty($selected_pipeline_id) && !empty($pipelines_list)) {
+    $valid_pipeline_ids = array_column($pipelines_list, 'pipeline_id');
     if (!in_array($selected_pipeline_id, $valid_pipeline_ids, true)) {
         // Selected pipeline doesn't exist, fall back to first available pipeline
-        $selected_pipeline_id = $all_pipelines[0]['pipeline_id'];
+        $selected_pipeline_id = $pipelines_list[0]['pipeline_id'];
+    }
+}
+
+// Load only the selected pipeline's full data (optimization: single pipeline load)
+$selected_pipeline = null;
+$selected_pipeline_flows = [];
+if (!empty($selected_pipeline_id)) {
+    $selected_pipeline = apply_filters('dm_get_pipelines', [], $selected_pipeline_id);
+    if ($selected_pipeline) {
+        $selected_pipeline_flows = apply_filters('dm_get_pipeline_flows', [], $selected_pipeline_id);
     }
 }
 
@@ -60,9 +71,9 @@ if (!empty($selected_pipeline_id) && !empty($all_pipelines)) {
     </div>
     
     <div class="dm-pipeline-page-header">
-        <select class="dm-pipeline-dropdown <?php echo empty($all_pipelines) ? 'dm-hidden' : ''; ?>" id="dm-pipeline-selector">
-            <?php foreach ($all_pipelines as $pipeline): ?>
-                <option value="<?php echo esc_attr($pipeline['pipeline_id']); ?>" 
+        <select class="dm-pipeline-dropdown <?php echo empty($pipelines_list) ? 'dm-hidden' : ''; ?>" id="dm-pipeline-selector">
+            <?php foreach ($pipelines_list as $pipeline): ?>
+                <option value="<?php echo esc_attr($pipeline['pipeline_id']); ?>"
                     <?php selected($selected_pipeline_id, $pipeline['pipeline_id']); ?>>
                     <?php echo esc_html($pipeline['pipeline_name']); ?>
                 </option>
@@ -76,28 +87,27 @@ if (!empty($selected_pipeline_id) && !empty($all_pipelines)) {
 
     <div class="dm-pipeline-cards-container">
         <div class="dm-pipelines-list">
-            <?php if (!empty($all_pipelines)): ?>
-                <?php foreach ($all_pipelines as $pipeline): ?>
-                    <?php 
-                    $pipeline_id = $pipeline['pipeline_id'];
-                    $is_selected = ($pipeline_id === $selected_pipeline_id);
-                    
-                    // Only show selected pipeline, hide others
-                    $hidden_class = $is_selected ? '' : 'dm-hidden';
-                    
-                    // Load flows for this pipeline
-                    $existing_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
+            <?php if (!empty($selected_pipeline)): ?>
+                <div class="dm-pipeline-wrapper" data-pipeline-id="<?php echo esc_attr($selected_pipeline_id); ?>">
+                    <?php
+                    echo wp_kses(apply_filters('dm_render_template', '', 'page/pipeline-card', [
+                        'pipeline' => $selected_pipeline,
+                        'existing_flows' => $selected_pipeline_flows,
+                        'pipelines_instance' => null
+                    ]), dm_allowed_html());
                     ?>
-                    <div class="dm-pipeline-wrapper <?php echo esc_attr($hidden_class); ?>" data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>">
-                        <?php
-                        echo wp_kses(apply_filters('dm_render_template', '', 'page/pipeline-card', [
-                            'pipeline' => $pipeline,
-                            'existing_flows' => $existing_flows,
-                            'pipelines_instance' => null
-                        ]), dm_allowed_html());
-                        ?>
-                    </div>
-                <?php endforeach; ?>
+                </div>
+            <?php elseif (!empty($pipelines_list)): ?>
+                <div class="dm-pipeline-loading">
+                    <?php esc_html_e('Loading pipeline...', 'data-machine'); ?>
+                </div>
+            <?php else: ?>
+                <div class="dm-no-pipelines">
+                    <p><?php esc_html_e('No pipelines found.', 'data-machine'); ?></p>
+                    <button type="button" class="button button-primary dm-modal-open" data-template="pipeline-templates">
+                        <?php esc_html_e('Create Your First Pipeline', 'data-machine'); ?>
+                    </button>
+                </div>
             <?php endif; ?>
         </div>
     </div>

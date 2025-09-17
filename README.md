@@ -1,7 +1,7 @@
 === Data Machine ===
 Contributors: chubes4
 Tags: ai, automation, content, workflow, pipeline
-Requires at least: 6.0
+Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.0
 Stable tag: 0.1.0
@@ -12,13 +12,13 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 
 ## Architecture
 
-[![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue)](https://wordpress.org/)
+[![WordPress](https://img.shields.io/badge/WordPress-6.2%2B-blue)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
 **Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), 6-Tier AI Directive Priority System, AIStepConversationManager with Turn Tracking, AIStepToolParameters, Pipeline Workflow Context, Site Context Integration, Three-Layer Tool Management, Social Publishing, OAuth System, Headless Mode, Universal Handler Settings Template
 
-**Requirements**: WordPress 6.0+, PHP 8.0+, Composer
+**Requirements**: WordPress 6.2+, PHP 8.0+, Composer
 
 **Pipeline+Flow**: Pipelines are reusable templates, Flows are configured instances
 
@@ -151,7 +151,7 @@ composer install    # Development setup
 ./build.sh         # Production build
 ```
 
-**Architecture**: PSR-4 autoloading, filter-based service discovery, flat parameter architecture via `dm_engine_parameters` filter, 6-tier AI directive system with auto-registration (PluginCoreDirective, GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, DataPacketStructureDirective, SiteContextDirective), AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution, universal handler settings template system eliminating modal code duplication, Composer-managed ai-http-client dependency. See `CLAUDE.md` for complete technical specifications.
+**Architecture**: PSR-4 autoloading, filter-based service discovery, flat parameter architecture via `dm_engine_parameters` filter, centralized cache system via Actions/Cache.php, 6-tier AI directive system with auto-registration (PluginCoreDirective, GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, DataPacketStructureDirective, SiteContextDirective), AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution, universal handler settings template system eliminating modal code duplication, Composer-managed ai-http-client dependency. See `CLAUDE.md` for complete technical specifications.
 
 ## License
 

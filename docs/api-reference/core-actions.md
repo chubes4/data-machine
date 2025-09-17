@@ -201,7 +201,7 @@ do_action('dm_cleanup_old_files');
 
 ## Cache Management Actions
 
-### `dm_clear_cache`
+### `dm_clear_pipeline_cache`
 
 **Purpose**: Clear caches for a specific pipeline
 
@@ -210,23 +210,74 @@ do_action('dm_cleanup_old_files');
 
 **Usage**:
 ```php
-do_action('dm_clear_cache', $pipeline_id);
+do_action('dm_clear_pipeline_cache', $pipeline_id);
 ```
 
 **Process**:
 1. Clears pipeline-specific caches (configuration, steps)
 2. Clears flow caches related to the pipeline
-3. Clears pipeline flows cache
-4. Uses pattern-based clearing for broader cache invalidation
+3. Clears job caches
+4. Uses centralized cache constants for consistency
 
 **Cache Types Cleared**:
 - `dm_pipeline_{id}` - Pipeline configuration
-- `dm_pipeline_steps_{id}` - Pipeline steps
 - `dm_pipeline_config_{id}` - Pipeline configuration
 - `dm_pipeline_flows_{id}` - Pipeline flows
-- `dm_flow_*` - All flow-related caches
+- `dm_max_display_order_{id}` - Display order cache
+- Flow and job related caches
 
-**Automatic Triggering**: Automatically triggered on `dm_auto_save` action
+### `dm_clear_flow_cache`
+
+**Purpose**: Clear caches for a specific flow
+
+**Parameters**:
+- `$flow_id` (int) - Flow ID to clear caches for
+
+**Usage**:
+```php
+do_action('dm_clear_flow_cache', $flow_id);
+```
+
+**Process**:
+1. Retrieves flow data to find pipeline_id
+2. Clears flow-specific caches
+3. Clears pipeline flow aggregation cache
+4. Clears global flow caches
+
+### `dm_clear_jobs_cache`
+
+**Purpose**: Clear all job-related caches
+
+**Usage**:
+```php
+do_action('dm_clear_jobs_cache');
+```
+
+**Process**:
+1. Clears job data and status caches
+2. Clears recent jobs cache
+3. Clears flow jobs cache
+4. Uses pattern-based clearing for efficiency
+
+### `dm_cache_set`
+
+**Purpose**: Standardized cache storage with logging
+
+**Parameters**:
+- `$key` (string) - Cache key
+- `$data` (mixed) - Data to cache
+- `$timeout` (int) - Cache timeout in seconds (0 = no expiration)
+- `$group` (string|null) - Optional cache group
+
+**Usage**:
+```php
+do_action('dm_cache_set', $key, $data, $timeout, $group);
+```
+
+**Features**:
+- Comprehensive logging of cache operations
+- WordPress transient integration
+- Data size and type tracking
 
 ### `dm_clear_all_cache`
 

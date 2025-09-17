@@ -62,8 +62,11 @@ do_action('dm_cleanup_old_files'); // File repository maintenance via Action Sch
 $files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
 
 // Cache Management
-do_action('dm_clear_cache', $pipeline_id); // Clear specific pipeline cache
+do_action('dm_clear_pipeline_cache', $pipeline_id); // Clear specific pipeline cache
+do_action('dm_clear_flow_cache', $flow_id); // Clear specific flow cache
+do_action('dm_clear_jobs_cache'); // Clear all job caches
 do_action('dm_clear_all_cache'); // Clear all Data Machine caches
+do_action('dm_cache_set', $key, $data, $timeout, $group); // Standardized cache storage
 ```
 
 ## Architecture
@@ -139,6 +142,12 @@ wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, proc
 - `pipeline_step_id`: UUID4 for cross-flow step referencing
 - `flow_step_id`: `{pipeline_step_id}_{flow_id}` composite for flow-specific tracking
 - `status`: `pending`, `running`, `completed`, `failed`, `completed_no_items`
+
+**Migration System**:
+- **PipelineStepIdMigration**: One-time migration system for optimizing pipeline step ID format
+- **Performance Optimization**: Migrates old UUID4 step IDs to pipeline-prefixed format for direct lookups
+- **Admin Interface**: Provides admin notice and AJAX migration process with progress tracking
+- **Backward Compatibility**: Maintains existing functionality during and after migration
 
 ## AI Integration
 
@@ -688,6 +697,36 @@ apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' =>
 
 > **Critical**: Update steps require `source_url` from fetch metadata to identify target content. WordPress Local/API fetch handlers provide this automatically. AI agents discover handler tools for immediate next step only.
 
+## Cache System
+
+**Centralized Cache Management**: Actions/Cache.php provides WordPress action-based cache clearing system that replaces the previous DatabaseCache.php architecture.
+
+**Cache Actions**:
+```php
+// Granular cache clearing
+do_action('dm_clear_pipeline_cache', $pipeline_id); // Pipeline + flows + jobs
+do_action('dm_clear_flow_cache', $flow_id); // Flow-specific caches
+do_action('dm_clear_jobs_cache'); // All job-related caches
+do_action('dm_clear_all_cache'); // Complete cache reset
+
+// Standardized cache storage
+do_action('dm_cache_set', $key, $data, $timeout, $group);
+```
+
+**Cache Architecture**:
+- **Pipeline Cache**: Configuration, flows aggregation, step definitions
+- **Flow Cache**: Configuration, scheduling data, display order
+- **Job Cache**: Status tracking, recent jobs, flow-specific job lists
+- **Pattern-Based Clearing**: Supports wildcard patterns (dm_pipeline_*, dm_flow_*, dm_job_*)
+- **Logging Integration**: All cache operations logged via dm_log action
+- **WordPress Transients**: Uses native WordPress transient system for storage
+
+**Key Features**:
+- Eliminates scattered cache clearing throughout codebase
+- Centralized cache key constants for consistency
+- Granular cache invalidation for performance
+- Comprehensive logging for debugging cache operations
+
 ## Development
 
 ```bash
@@ -698,7 +737,7 @@ composer install && composer test
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths
 **Filter Registration**: 40+ `*Filters.php` files auto-loaded via composer.json
 **Key Classes**: Directive classes, `AIStepToolParameters`, `AIStepConversationManager`
-**AI HTTP Client**: `chubes4/ai-http-client` provides unified HTTP interface
+**AI HTTP Client**: `chubes4/ai-http-client` Composer dependency provides unified HTTP interface
 
 ### Engine Filter Architecture
 

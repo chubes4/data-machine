@@ -263,7 +263,7 @@ class Delete {
         do_action('dm_flow_deleted', $pipeline_id, $flow_id);
 
         // Clear pipeline cache before response (flow deletion affects pipeline)
-        do_action('dm_clear_cache', $pipeline_id);
+        do_action('dm_clear_pipeline_cache', $pipeline_id);
 
         wp_send_json_success([
             'message' => sprintf(
@@ -355,8 +355,8 @@ class Delete {
             ]);
         }
 
-        // Clear cache immediately after flow updates (before auto-save)
-        do_action('dm_clear_cache', $pipeline_id);
+        // Clear pipeline cache immediately after flow updates (before auto-save)
+        do_action('dm_clear_pipeline_cache', $pipeline_id);
 
         // Trigger auto-save hooks for database persistence
         do_action('dm_auto_save', $pipeline_id);
@@ -480,9 +480,9 @@ class Delete {
             $jobs_table = $wpdb->prefix . 'dm_jobs';
             
             if ($clear_type === 'failed') {
-                $job_ids_to_delete = $wpdb->get_col("SELECT job_id FROM {$jobs_table} WHERE status = 'failed'"); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+                $job_ids_to_delete = $wpdb->get_col($wpdb->prepare("SELECT job_id FROM %i WHERE status = %s", $jobs_table, 'failed')); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
             } else {
-                $job_ids_to_delete = $wpdb->get_col("SELECT job_id FROM {$jobs_table}"); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+                $job_ids_to_delete = $wpdb->get_col($wpdb->prepare("SELECT job_id FROM %i", $jobs_table)); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
             }
             
         }

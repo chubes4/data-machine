@@ -42,7 +42,6 @@ wp_cache_flush();
 // Drop custom tables - WordPress compliant approach
 // Check for proper capabilities (should be admin-only in uninstall context)
 if ( current_user_can( 'delete_plugins' ) || defined( 'WP_UNINSTALL_PLUGIN' ) ) {
-    error_log( 'Data Machine: Starting database cleanup during uninstall' );
 
     // Drop tables in reverse dependency order
     $tables_to_drop = [
@@ -54,14 +53,11 @@ if ( current_user_can( 'delete_plugins' ) || defined( 'WP_UNINSTALL_PLUGIN' ) ) 
 
     foreach ( $tables_to_drop as $table_name ) {
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange
-        $wpdb->query( "DROP TABLE IF EXISTS {$table_name}" );
-        error_log( "Data Machine: Dropped table {$table_name}" );
+        $wpdb->query( $wpdb->prepare( "DROP TABLE IF EXISTS %i", $table_name ) );
     }
 
     // Clear all WordPress caches to ensure clean state
     wp_cache_flush();
-
-    error_log( 'Data Machine: Database cleanup completed' );
 }
 
 

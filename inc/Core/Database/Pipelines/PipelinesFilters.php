@@ -22,14 +22,14 @@ if (!defined('ABSPATH')) {
 
 /**
  * Register all Pipelines Database component filters
- * 
+ *
  * Complete self-registration pattern following "plugins within plugins" architecture.
  * Engine discovers Pipelines Database capabilities purely through filter-based discovery.
- * 
+ *
  * @since 0.1.0
  */
 function dm_register_pipelines_database_filters() {
-    
+
     // Database service registration - Pure discovery pattern (collection building)
     add_filter('dm_db', function($services) {
         if (!isset($services['pipelines'])) {
@@ -37,6 +37,9 @@ function dm_register_pipelines_database_filters() {
         }
         return $services;
     });
+
+    // Register pipeline step ID migration system
+    PipelineStepIdMigration::register();
 }
 
 // Auto-register when file loads - achieving complete self-containment

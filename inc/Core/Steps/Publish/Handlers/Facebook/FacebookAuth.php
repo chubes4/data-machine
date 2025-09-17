@@ -160,16 +160,9 @@ class FacebookAuth {
     public function handle_callback(string $code, string $state): bool|\WP_Error {
         do_action('dm_log', 'debug', 'Handling Facebook OAuth callback.');
 
-        // 1. Verify state - use admin-global transient verification
-        $stored_state = get_transient('dm_facebook_oauth_state');
-        delete_transient('dm_facebook_oauth_state');
-        
-        if (empty($stored_state) || !wp_verify_nonce($state, 'dm_facebook_oauth_state')) {
-            do_action('dm_log', 'error', 'Facebook OAuth Error: State mismatch or expired.');
-            return new \WP_Error('facebook_oauth_state_mismatch', __('Invalid or expired state parameter during Facebook authentication.', 'data-machine'));
-        }
+        // Note: State nonce verification is now done in handle_oauth_callback() before calling this method
 
-        // 2. Exchange code for access token
+        // 1. Exchange code for access token
         $config = apply_filters('dm_retrieve_oauth_keys', [], 'facebook');
         $token_params = [
             'client_id'     => $config['app_id'] ?? '',
@@ -629,29 +622,47 @@ class FacebookAuth {
      * Called via the unified OAuth rewrite system at /dm-oauth/facebook/.
      */
     public function handle_oauth_callback() {
-        // 1. Verify admin capability
+        // 1. Extract parameters using null coalescing to avoid nonce warnings
+        $state = sanitize_text_field(wp_unslash($_GET['state'] ?? ''));
+        $code = sanitize_text_field(wp_unslash($_GET['code'] ?? ''));
+        $error = sanitize_text_field(wp_unslash($_GET['error'] ?? ''));
+        $error_description = sanitize_text_field(wp_unslash($_GET['error_description'] ?? ''));
+
+        // 2. Verify admin capability
         if (!current_user_can('manage_options')) {
              wp_die('Permission denied.');
         }
 
+        // 3. Verify nonce state
+        if (empty($state)) {
+            do_action('dm_log', 'error', 'Facebook OAuth Error: Missing state parameter.');
+            wp_redirect(add_query_arg('auth_error', 'facebook_missing_state', admin_url('admin.php?page=dm-pipelines')));
+            exit;
+        }
+
+        $stored_state = get_transient('dm_facebook_oauth_state');
+        delete_transient('dm_facebook_oauth_state');
+
+        if (empty($stored_state) || false === wp_verify_nonce($state, 'dm_facebook_oauth_state')) {
+            do_action('dm_log', 'error', 'Facebook OAuth Error: State mismatch or expired.');
+            wp_redirect(add_query_arg('auth_error', 'facebook_state_mismatch', admin_url('admin.php?page=dm-pipelines')));
+            exit;
+        }
+
         // Check for error parameter first (user might deny access)
-        if (isset($_GET['error'])) {
-            $error = sanitize_text_field(wp_unslash($_GET['error']));
-            $error_description = isset($_GET['error_description']) ? sanitize_text_field(wp_unslash($_GET['error_description'])) : 'User denied access or an error occurred.';
-            do_action('dm_log', 'warning', 'Facebook OAuth Error in callback:', ['error' => $error, 'description' => $error_description]);
+        if (!empty($error)) {
+            $error_desc = !empty($error_description) ? $error_description : 'User denied access or an error occurred.';
+            do_action('dm_log', 'warning', 'Facebook OAuth Error in callback:', ['error' => $error, 'description' => $error_desc]);
             wp_redirect(add_query_arg('auth_error', $error, admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
         // Check for required parameters
-        if (!isset($_GET['code']) || !isset($_GET['state'])) {
-            do_action('dm_log', 'error', 'Facebook OAuth Error: Missing code or state in callback.', ['query_params' => $_GET]);
+        if (empty($code)) {
+            do_action('dm_log', 'error', 'Facebook OAuth Error: Missing code in callback.');
             wp_redirect(add_query_arg('auth_error', 'missing_params', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
-
-        $code = sanitize_text_field(wp_unslash($_GET['code']));
-        $state = sanitize_text_field(wp_unslash($_GET['state']));
 
         // Retrieve stored app credentials from global options
         $config = apply_filters('dm_retrieve_oauth_keys', [], 'facebook');

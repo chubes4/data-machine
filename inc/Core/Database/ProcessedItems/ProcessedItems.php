@@ -58,12 +58,8 @@ class ProcessedItems {
             return $cached_result > 0;
         }
 
-        $count = $this->wpdb->get_var( $this->wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table_name} WHERE flow_step_id = %s AND source_type = %s AND item_identifier = %s",
-            $flow_step_id,
-            $source_type,
-            $item_identifier
-        ) );
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE flow_step_id = %s AND source_type = %s AND item_identifier = %s", $this->table_name, $flow_step_id, $source_type, $item_identifier ) );
 
         set_transient( $cache_key, $count, 0 );
 
@@ -177,10 +173,8 @@ class ProcessedItems {
         // Handle flow_id (needs LIKE query since flow_step_id contains it)
         if (!empty($criteria['flow_id']) && empty($criteria['flow_step_id'])) {
             $pattern = '%_' . $criteria['flow_id'];
-            $result = $this->wpdb->query( $this->wpdb->prepare(
-                "DELETE FROM {$this->table_name} WHERE flow_step_id LIKE %s",
-                $pattern
-            ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            $result = $this->wpdb->query( $this->wpdb->prepare( "DELETE FROM %i WHERE flow_step_id LIKE %s", $this->table_name, $pattern ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 
             // Clear processed items cache after deletion
             if ( $result !== false ) {
@@ -208,10 +202,8 @@ class ProcessedItems {
             // Execute individual DELETE queries for each pattern
             $total_deleted = 0;
             foreach ($flow_patterns as $pattern) {
-                $deleted = $this->wpdb->query( $this->wpdb->prepare(
-                    "DELETE FROM {$this->table_name} WHERE flow_step_id LIKE %s",
-                    $pattern
-                ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                $deleted = $this->wpdb->query( $this->wpdb->prepare( "DELETE FROM %i WHERE flow_step_id LIKE %s", $this->table_name, $pattern ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
                 if ($deleted !== false) {
                     $total_deleted += $deleted;
                 }
@@ -231,45 +223,26 @@ class ProcessedItems {
             if ( false === $cached_count ) {
                 // Handle specific WHERE combinations without dynamic SQL building
                 if (isset($where['job_id']) && isset($where['flow_step_id']) && isset($where['source_type'])) {
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$this->table_name} WHERE job_id = %d AND flow_step_id = %s AND source_type = %s",
-                        $where['job_id'],
-                        $where['flow_step_id'],
-                        $where['source_type']
-                    ) );
+                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE job_id = %d AND flow_step_id = %s AND source_type = %s", $this->table_name, $where['job_id'], $where['flow_step_id'], $where['source_type'] ) );
                 } elseif (isset($where['job_id']) && isset($where['flow_step_id'])) {
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$this->table_name} WHERE job_id = %d AND flow_step_id = %s",
-                        $where['job_id'],
-                        $where['flow_step_id']
-                    ) );
+                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE job_id = %d AND flow_step_id = %s", $this->table_name, $where['job_id'], $where['flow_step_id'] ) );
                 } elseif (isset($where['job_id']) && isset($where['source_type'])) {
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$this->table_name} WHERE job_id = %d AND source_type = %s",
-                        $where['job_id'],
-                        $where['source_type']
-                    ) );
+                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE job_id = %d AND source_type = %s", $this->table_name, $where['job_id'], $where['source_type'] ) );
                 } elseif (isset($where['flow_step_id']) && isset($where['source_type'])) {
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$this->table_name} WHERE flow_step_id = %s AND source_type = %s",
-                        $where['flow_step_id'],
-                        $where['source_type']
-                    ) );
+                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE flow_step_id = %s AND source_type = %s", $this->table_name, $where['flow_step_id'], $where['source_type'] ) );
                 } elseif (isset($where['job_id'])) {
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$this->table_name} WHERE job_id = %d",
-                        $where['job_id']
-                    ) );
+                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE job_id = %d", $this->table_name, $where['job_id'] ) );
                 } elseif (isset($where['flow_step_id'])) {
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$this->table_name} WHERE flow_step_id = %s",
-                        $where['flow_step_id']
-                    ) );
+                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE flow_step_id = %s", $this->table_name, $where['flow_step_id'] ) );
                 } elseif (isset($where['source_type'])) {
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$this->table_name} WHERE source_type = %s",
-                        $where['source_type']
-                    ) );
+                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE source_type = %s", $this->table_name, $where['source_type'] ) );
                 } else {
                     $count = 0;
                 }
@@ -329,10 +302,8 @@ class ProcessedItems {
     private function clear_cache_pattern( $pattern ) {
 
         // Get all transient keys matching the pattern
-        $transient_keys = $this->wpdb->get_col( $this->wpdb->prepare(
-            "SELECT option_name FROM {$this->wpdb->options} WHERE option_name LIKE %s",
-            '_transient_' . $pattern
-        ) );
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $transient_keys = $this->wpdb->get_col( $this->wpdb->prepare( "SELECT option_name FROM %i WHERE option_name LIKE %s", $this->wpdb->options, '_transient_' . $pattern ) );
 
         $cleared_count = 0;
         foreach ( $transient_keys as $transient_key ) {

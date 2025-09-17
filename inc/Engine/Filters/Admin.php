@@ -181,6 +181,9 @@ add_action('init', function() {
     require_once DATA_MACHINE_PATH . 'inc/Core/Admin/Settings/SettingsFilters.php';
 }, 1);
 
+/**
+ * Get Data Machine settings with defaults.
+ */
 function dm_get_data_machine_settings() {
     return get_option('data_machine_settings', [
         'engine_mode' => false,
@@ -194,35 +197,41 @@ function dm_get_data_machine_settings() {
     ]);
 }
 
+/**
+ * Get enabled admin pages based on settings.
+ */
 function dm_get_enabled_admin_pages() {
     $settings = dm_get_data_machine_settings();
-    
+
     if ($settings['engine_mode']) {
         return [];
     }
-    
+
     $all_pages = apply_filters('dm_admin_pages', []);
-    
+
     if (empty($settings['enabled_pages'])) {
         return $all_pages;
     }
-    
+
     $enabled_keys = array_keys(array_filter($settings['enabled_pages']));
     return array_intersect_key($all_pages, array_flip($enabled_keys));
 }
 
+/**
+ * Get enabled general AI tools (non-handler-specific).
+ */
 function dm_get_enabled_general_tools() {
     $settings = dm_get_data_machine_settings();
     $all_tools = apply_filters('ai_tools', []);
-    
+
     $general_tools = array_filter($all_tools, function($tool_config) {
         return !isset($tool_config['handler']);
     });
-    
+
     if (empty($settings['enabled_tools'])) {
         return $general_tools;
     }
-    
+
     return array_intersect_key($general_tools, array_filter($settings['enabled_tools']));
 }
 

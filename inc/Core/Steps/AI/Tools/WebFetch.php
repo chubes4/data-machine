@@ -16,10 +16,6 @@ class WebFetch {
 
     /**
      * Handle web fetch tool call from AI agents.
-     *
-     * @param array $parameters Parameters from AI tool call
-     * @param array $tool_def Tool definition (unused)
-     * @return array Success/error response with fetched content
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
 
@@ -119,10 +115,7 @@ class WebFetch {
     }
 
     /**
-     * Extract readable content from HTML.
-     *
-     * @param string $html_content Raw HTML content
-     * @return array Array with 'title' and 'content' keys
+     * Extract readable content from HTML using regex processing.
      */
     private function extract_readable_content(string $html_content): array {
 
@@ -163,12 +156,6 @@ class WebFetch {
 
     /**
      * Format success message for web fetch results.
-     *
-     * @param string $message Default message
-     * @param string $tool_name Tool name
-     * @param array $tool_result Tool execution result
-     * @param array $tool_parameters Tool parameters
-     * @return string Formatted success message
      */
     public function format_success_message($message, $tool_name, $tool_result, $tool_parameters) {
         if ($tool_name !== 'web_fetch') {

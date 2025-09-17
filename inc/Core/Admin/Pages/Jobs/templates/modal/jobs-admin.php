@@ -22,8 +22,8 @@ $db_pipelines = $all_databases['pipelines'] ?? null;
 
 $pipelines = [];
 if ($db_pipelines) {
-    $all_pipelines = $db_pipelines->get_all_pipelines();
-    foreach ($all_pipelines as $pipeline) {
+    $pipelines_list = $db_pipelines->get_pipelines_list();
+    foreach ($pipelines_list as $pipeline) {
         $pipelines[$pipeline['pipeline_id']] = $pipeline['pipeline_name'];
     }
 }

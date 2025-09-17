@@ -156,8 +156,15 @@ class TwitterAuth {
             // 6. Store Request Token Secret temporarily
             set_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $request_token['oauth_token'], $request_token['oauth_token_secret'], 15 * MINUTE_IN_SECONDS);
 
-            // 7. Return Authorization URL
-            return $connection->url('oauth/authenticate', ['oauth_token' => $request_token['oauth_token']]);
+            // 6b. Generate and store state nonce for verification
+            $state = wp_create_nonce('dm_twitter_oauth_state');
+            set_transient('dm_twitter_oauth_state', $state, 15 * MINUTE_IN_SECONDS);
+
+            // 7. Return Authorization URL with state parameter
+            return $connection->url('oauth/authenticate', [
+                'oauth_token' => $request_token['oauth_token'],
+                'state' => $state
+            ]);
 
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'Twitter OAuth Exception: ' . $e->getMessage(), [
@@ -173,31 +180,43 @@ class TwitterAuth {
      * Called via the unified OAuth rewrite system at /dm-oauth/twitter/.
      */
     public function handle_oauth_callback() {
-        // --- 1. Initial Checks --- 
+        // --- 1. Extract parameters using null coalescing to avoid nonce warnings ---
+        $denied = sanitize_text_field(wp_unslash($_GET['denied'] ?? ''));
+        $oauth_token = sanitize_text_field(wp_unslash($_GET['oauth_token'] ?? ''));
+        $oauth_verifier = sanitize_text_field(wp_unslash($_GET['oauth_verifier'] ?? ''));
+        $state = sanitize_text_field(wp_unslash($_GET['state'] ?? ''));
+
+        // --- 2. Initial Checks ---
         if (!current_user_can('manage_options')) {
              wp_redirect(add_query_arg('auth_error', 'twitter_permission_denied', admin_url('admin.php?page=dm-pipelines')));
              exit;
         }
 
         // Check if user denied access
-        if (isset($_GET['denied'])) {
-            $denied_token = sanitize_text_field(wp_unslash($_GET['denied']));
+        if (!empty($denied)) {
             // Clean up transient if we can identify it (optional)
-            delete_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $denied_token);
-            do_action('dm_log', 'warning', 'Twitter OAuth Warning: User denied access.', ['denied_token' => $denied_token]);
+            delete_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $denied);
+            do_action('dm_log', 'warning', 'Twitter OAuth Warning: User denied access.', ['denied_token' => $denied]);
             wp_redirect(add_query_arg('auth_error', 'twitter_access_denied', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
         // Check for required parameters
-        if (!isset($_GET['oauth_token']) || !isset($_GET['oauth_verifier'])) {
-            do_action('dm_log', 'error', 'Twitter OAuth Error: Missing oauth_token or oauth_verifier in callback.', ['query_params' => $_GET]);
+        if (empty($oauth_token) || empty($oauth_verifier) || empty($state)) {
+            do_action('dm_log', 'error', 'Twitter OAuth Error: Missing oauth_token, oauth_verifier, or state in callback.');
             wp_redirect(add_query_arg('auth_error', 'twitter_missing_callback_params', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
-        $oauth_token = sanitize_text_field(wp_unslash($_GET['oauth_token']));
-        $oauth_verifier = sanitize_text_field(wp_unslash($_GET['oauth_verifier']));
+        // Verify state nonce
+        $stored_state = get_transient('dm_twitter_oauth_state');
+        delete_transient('dm_twitter_oauth_state');
+
+        if (empty($stored_state) || false === wp_verify_nonce($state, 'dm_twitter_oauth_state')) {
+            do_action('dm_log', 'error', 'Twitter OAuth Error: State mismatch or expired.');
+            wp_redirect(add_query_arg('auth_error', 'twitter_state_mismatch', admin_url('admin.php?page=dm-pipelines')));
+            exit;
+        }
 
         // --- 2. Retrieve Temp Secret & Credentials --- 
         $oauth_token_secret = get_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $oauth_token);

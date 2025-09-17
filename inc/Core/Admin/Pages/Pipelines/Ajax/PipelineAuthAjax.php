@@ -9,7 +9,7 @@
  * @since 1.0.0
  */
 
-namespace DataMachine\Core\Admin\Pages\Pipelines;
+namespace DataMachine\Core\Admin\Pages\Pipelines\Ajax;
 
 // If this file is called directly, abort.
 if (!defined('WPINC')) {

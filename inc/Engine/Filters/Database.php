@@ -1,4 +1,8 @@
 <?php
+/**
+ * Database access filters for centralized data operations
+ */
+
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
@@ -58,7 +62,7 @@ function dm_register_database_filters() {
     add_filter('dm_get_pipelines', function($default, $pipeline_id = null) {
         $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
-        
+
         if (!$db_pipelines) {
             $context = $pipeline_id ? "individual pipeline (ID: {$pipeline_id})" : 'all pipelines';
             do_action('dm_log', 'error', "Pipeline access failed - database service unavailable for {$context}");
@@ -71,33 +75,58 @@ function dm_register_database_filters() {
             return $db_pipelines->get_all_pipelines();
         }
     }, 10, 2);
-    
-    add_filter('dm_get_pipeline_step_config', function($default, $pipeline_step_id) {
+
+    add_filter('dm_get_pipelines_list', function($default) {
         $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
-        
+
         if (!$db_pipelines) {
-            do_action('dm_log', 'error', 'Pipeline step config access failed - database service unavailable', ['pipeline_step_id' => $pipeline_step_id]);
+            do_action('dm_log', 'error', 'Pipelines list access failed - database service unavailable');
             return [];
         }
-        
+
+        return $db_pipelines->get_pipelines_list();
+    }, 10, 1);
+    
+    add_filter('dm_get_pipeline_step_config', function($default, $pipeline_step_id) {
         if (empty($pipeline_step_id)) {
             return [];
         }
-        
-        $pipelines = $db_pipelines->get_all_pipelines();
-        foreach ($pipelines as $pipeline) {
-            $pipeline_config = is_string($pipeline['pipeline_config']) 
-                ? json_decode($pipeline['pipeline_config'], true) 
-                : ($pipeline['pipeline_config'] ?? []);
-                
-            if (isset($pipeline_config[$pipeline_step_id])) {
-                return $pipeline_config[$pipeline_step_id];
-            }
+
+        // Extract pipeline_id from pipeline-prefixed step ID
+        $parts = apply_filters('dm_split_pipeline_step_id', null, $pipeline_step_id);
+        if (!$parts || empty($parts['pipeline_id'])) {
+            do_action('dm_log', 'error', 'Invalid pipeline step ID format', ['pipeline_step_id' => $pipeline_step_id]);
+            return [];
         }
-        
-        do_action('dm_log', 'debug', 'Pipeline step not found in any pipeline', ['pipeline_step_id' => $pipeline_step_id]);
-        return [];
+
+        $pipeline_id = $parts['pipeline_id'];
+        $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
+
+        if (!$pipeline) {
+            do_action('dm_log', 'error', 'Pipeline not found', [
+                'pipeline_step_id' => $pipeline_step_id,
+                'pipeline_id' => $pipeline_id
+            ]);
+            return [];
+        }
+
+        $pipeline_config = is_string($pipeline['pipeline_config'])
+            ? json_decode($pipeline['pipeline_config'], true)
+            : ($pipeline['pipeline_config'] ?? []);
+
+        if (!isset($pipeline_config[$pipeline_step_id])) {
+            do_action('dm_log', 'error', 'Pipeline step not found in pipeline config', [
+                'pipeline_step_id' => $pipeline_step_id,
+                'pipeline_id' => $pipeline_id
+            ]);
+            return [];
+        }
+
+        $step_config = $pipeline_config[$pipeline_step_id];
+        $step_config['pipeline_id'] = $pipeline_id;
+
+        return $step_config;
     }, 10, 2);
     
     add_filter('dm_get_flow_step_config', function($default, $flow_step_id) {

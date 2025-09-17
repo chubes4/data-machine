@@ -95,11 +95,18 @@ docs/
 - Job management and status tracking
 - Error handling and failure recovery
 
-**Database Operations**  
+**Database Operations**
 - Pipelines (reusable templates)
 - Flows (scheduled instances)
 - Jobs (individual executions)
 - Processed Items (deduplication tracking)
+- PipelineStepIdMigration (one-time optimization system)
+
+**Cache Management**
+- Centralized cache system via Actions/Cache.php
+- WordPress action-based cache clearing (dm_clear_pipeline_cache, dm_clear_flow_cache, dm_clear_jobs_cache, dm_clear_all_cache)
+- Pattern-based cache invalidation with wildcard support
+- Standardized cache storage via dm_cache_set action
 
 ### ✅ Fetch Handlers (7 handlers)
 
@@ -228,7 +235,7 @@ AI with Google Search and Local Search tools for comprehensive content analysis
 ## Integration Notes
 
 ### WordPress Compatibility
-- Requires PHP 8.0+, WordPress 6.0+
+- Requires PHP 8.0+, WordPress 6.2+
 - Uses WordPress core functions and standards  
 - Integrates with WordPress admin, users, and permissions
 - Compatible with multisite installations

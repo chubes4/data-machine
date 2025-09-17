@@ -119,10 +119,21 @@ class Create {
             }
         }
 
-        // Generate UUIDs and build complete pipeline configuration
+        // Create pipeline first to get pipeline_id
+        $pipeline_data = [
+            'pipeline_name' => $pipeline_name,
+            'pipeline_config' => '{}' // Temporary empty config
+        ];
+
+        $pipeline_id = $db_pipelines->create_pipeline($pipeline_data);
+        if (!$pipeline_id) {
+            return false;
+        }
+
+        // Generate pipeline-prefixed step IDs and build complete pipeline configuration
         $pipeline_config = [];
         foreach ($steps as $step) {
-            $pipeline_step_id = wp_generate_uuid4();
+            $pipeline_step_id = $pipeline_id . '_' . wp_generate_uuid4();
             $step_type = $step['step_type'];
             $step_config = $all_steps[$step_type] ?? [];
 
@@ -150,13 +161,15 @@ class Create {
             }
         }
 
-        // Create pipeline with complete configuration
-        $pipeline_data = [
-            'pipeline_name' => $pipeline_name,
+        // Update pipeline with complete configuration
+        $success = $db_pipelines->update_pipeline($pipeline_id, [
             'pipeline_config' => json_encode($pipeline_config)
-        ];
+        ]);
 
-        $pipeline_id = $db_pipelines->create_pipeline($pipeline_data);
+        if (!$success) {
+            do_action('dm_log', 'error', 'Failed to update pipeline configuration', ['pipeline_id' => $pipeline_id]);
+            return false;
+        }
         if (!$pipeline_id) {
             do_action('dm_log', 'error', 'Failed to create complete pipeline', ['pipeline_name' => $pipeline_name]);
             return false;
@@ -328,7 +341,7 @@ class Create {
         $new_step = [
             'step_type' => $step_type,
             'execution_order' => $next_execution_order,
-            'pipeline_step_id' => wp_generate_uuid4(),
+            'pipeline_step_id' => $pipeline_id . '_' . wp_generate_uuid4(),
             'label' => $step_config['label'] ?? ucfirst(str_replace('_', ' ', $step_type))
         ];
         
@@ -357,7 +370,10 @@ class Create {
             $flow_id = $flow['flow_id'];
             do_action('dm_sync_steps_to_flow', $flow_id, [$new_step], ['context' => 'add_step']);
         }
-        
+
+        // Clear cache before auto-save to prevent stale data overwrite
+        do_action('dm_clear_pipeline_cache', $pipeline_id);
+
         // Trigger auto-save
         do_action('dm_auto_save', $pipeline_id);
 
@@ -373,9 +389,6 @@ class Create {
             // Get step configuration for comprehensive response
             $all_steps = apply_filters('dm_steps', []);
             $step_config = $all_steps[$step_type] ?? [];
-
-            // Clear pipeline cache before response (step creation affects pipeline)
-            do_action('dm_clear_cache', $pipeline_id);
 
             wp_send_json_success([
                 /* translators: %s: Step type or label */
@@ -475,7 +488,7 @@ class Create {
             $flow_data = $db_flows->get_flow($flow_id);
 
             // Clear pipeline cache before response (flow creation affects pipeline)
-            do_action('dm_clear_cache', $pipeline_id);
+            do_action('dm_clear_pipeline_cache', $pipeline_id);
 
             wp_send_json_success([
                 /* translators: %s: Flow name */
@@ -581,7 +594,7 @@ class Create {
             $duplicated_flow_data = $db_flows->get_flow($new_flow_id);
 
             // Clear pipeline cache before response (flow duplication affects pipeline)
-            do_action('dm_clear_cache', $source_flow['pipeline_id']);
+            do_action('dm_clear_pipeline_cache', $source_flow['pipeline_id']);
 
             wp_send_json_success([
                 /* translators: %s: Duplicated flow name */
