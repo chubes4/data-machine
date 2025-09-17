@@ -1,25 +1,25 @@
 <?php
-namespace DataMachine\Engine\Filters;
-
 /**
- * Centralized creation operations with comprehensive validation and permission checking
+ * Centralized creation operations with atomic workflows and permission validation.
+ *
+ * Handles pipeline, flow, and step creation with comprehensive validation,
+ * cache management, and AJAX response formatting.
+ *
+ * @package DataMachine\Engine\Filters
  */
 
-// If this file is called directly, abort.
-if ( ! defined( 'WPINC' ) ) {
-	die;
-}
+namespace DataMachine\Engine\Filters;
+
+defined('WPINC') || exit;
 
 /**
- * Centralized Creation Operations
- *
- * Atomic creation workflows with comprehensive validation, permission checking,
- * and filter-based service discovery for pipelines, flows, steps, and jobs.
- *
- * @since 1.0.0
+ * Atomic creation workflows for Data Machine entities.
  */
 class Create {
 
+    /**
+     * Register creation filters for pipeline, flow, step, and template operations.
+     */
     public static function register() {
         $instance = new self();
         add_filter('dm_create_pipeline', [$instance, 'handle_create_pipeline'], 10, 2);
@@ -30,6 +30,13 @@ class Create {
     }
 
 
+    /**
+     * Create pipeline with automatic mode detection (simple vs complete).
+     *
+     * @param mixed $default Unused filter default
+     * @param array $data Pipeline creation data
+     * @return int|false Pipeline ID on success, false on failure
+     */
     public function handle_create_pipeline($default, $data = []) {
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for pipeline creation');
@@ -48,7 +55,6 @@ class Create {
             return false;
         }
 
-        // Detect creation mode based on input data structure
         $is_complete_mode = isset($data['steps']) && is_array($data['steps']) && !empty($data['steps']);
 
         if ($is_complete_mode) {
@@ -65,6 +71,9 @@ class Create {
         }
     }
 
+    /**
+     * Create basic pipeline with default flow.
+     */
     private function create_simple_pipeline($data, $db_pipelines, $db_flows) {
         $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : 'Pipeline';
 
@@ -98,6 +107,9 @@ class Create {
         return $this->finalize_pipeline_creation($pipeline_id, $pipeline_name, $flow_id, $db_pipelines, $db_flows);
     }
 
+    /**
+     * Create pipeline with predefined steps and configuration.
+     */
     private function create_complete_pipeline($data, $db_pipelines, $db_flows) {
         $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : 'Pipeline';
         $steps = $data['steps'];
@@ -247,6 +259,9 @@ class Create {
         return $this->finalize_pipeline_creation($pipeline_id, $pipeline_name, $flow_id, $db_pipelines, $db_flows, 'complete');
     }
 
+    /**
+     * Complete pipeline creation with cache clearing and AJAX response.
+     */
     private function finalize_pipeline_creation($pipeline_id, $pipeline_name, $flow_id, $db_pipelines, $db_flows, $creation_type = 'simple') {
         do_action('dm_log', 'info', 'Pipeline created successfully', [
             'pipeline_id' => $pipeline_id,
@@ -269,8 +284,8 @@ class Create {
                 ? __('Complete pipeline created successfully', 'data-machine')
                 : __('Pipeline created successfully', 'data-machine');
 
-            // Clear all caches before response (new pipeline affects everything)
-            do_action('dm_clear_all_cache');
+            // Clear pipelines list cache (new pipeline affects dropdown lists)
+            do_action('dm_clear_pipelines_list_cache');
 
             wp_send_json_success([
                 'message' => $message,
@@ -287,6 +302,13 @@ class Create {
         return $pipeline_id;
     }
 
+    /**
+     * Add new step to pipeline with automatic flow synchronization.
+     *
+     * @param mixed $default Unused filter default
+     * @param array $data Step creation data
+     * @return string|false Pipeline step ID on success, false on failure
+     */
     public function handle_create_step($default, $data = []) {
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for step creation');
@@ -397,6 +419,13 @@ class Create {
         return $new_step['pipeline_step_id'];
     }
 
+    /**
+     * Create new flow instance for existing pipeline.
+     *
+     * @param mixed $default Unused filter default
+     * @param array $data Flow creation data
+     * @return int|false Flow ID on success, false on failure
+     */
     public function handle_create_flow($default, $data = []) {
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for flow creation');
@@ -496,6 +525,13 @@ class Create {
         return $flow_id;
     }
 
+    /**
+     * Duplicate existing flow with remapped step IDs.
+     *
+     * @param mixed $default Unused filter default
+     * @param int $source_flow_id Flow to duplicate
+     * @return int|false New flow ID on success, false on failure
+     */
     public function handle_duplicate_flow($default, int $source_flow_id) {
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for flow duplication');
@@ -584,7 +620,10 @@ class Create {
             // Get complete duplicated flow data
             $duplicated_flow_data = $db_flows->get_flow($new_flow_id);
 
-            // Clear pipeline cache before response (flow duplication affects pipeline)
+            // Get pipeline steps for template rendering
+            $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $source_flow['pipeline_id']);
+
+            // Clear pipeline cache to ensure all flow caches are invalidated
             do_action('dm_clear_pipeline_cache', $source_flow['pipeline_id']);
 
             wp_send_json_success([
@@ -595,6 +634,7 @@ class Create {
                 'flow_name' => $duplicate_flow_name,
                 'pipeline_id' => $source_flow['pipeline_id'],
                 'flow_data' => $duplicated_flow_data,
+                'pipeline_steps' => $pipeline_steps,
                 'created_type' => 'duplicate_flow'
             ]);
         }
@@ -603,6 +643,9 @@ class Create {
         return $new_flow_id;
     }
 
+    /**
+     * Remap flow step IDs from old flow to new flow for duplication.
+     */
     private function remap_flow_step_ids(array $source_config, int $old_flow_id, int $new_flow_id): array {
         $remapped_config = [];
 
@@ -637,6 +680,14 @@ class Create {
         return $remapped_config;
     }
 
+    /**
+     * Create pipeline from predefined template configuration.
+     *
+     * @param mixed $default Unused filter default
+     * @param string $template_id Template identifier
+     * @param array $options Template customization options
+     * @return int|false Pipeline ID on success, false on failure
+     */
     public function handle_create_pipeline_from_template($default, $template_id, $options = []) {
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for template pipeline creation');

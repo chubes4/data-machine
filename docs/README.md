@@ -91,9 +91,10 @@ docs/
 **Engine Execution**
 - Three-action cycle (run_flow_now → execute_step → schedule_next_step)
 - Action Scheduler integration
-- Data packet processing
+- Data packet processing with clean content (no URL pollution)
 - Job management and status tracking
 - Error handling and failure recovery
+- AutoSave actions with pipeline synchronization and cache management
 
 **Database Operations**
 - Pipelines (reusable templates)
@@ -104,8 +105,9 @@ docs/
 **Cache Management**
 - Centralized cache system via Actions/Cache.php
 - WordPress action-based cache clearing (dm_clear_pipeline_cache, dm_clear_flow_cache, dm_clear_jobs_cache, dm_clear_all_cache)
-- Pattern-based cache invalidation with wildcard support
+- Pattern-based cache invalidation with wildcard support (dm_pipeline_*, dm_flow_*, dm_job_*)
 - Standardized cache storage via dm_cache_set action
+- Comprehensive logging for cache operations
 
 ### ✅ Fetch Handlers (7 handlers)
 
@@ -115,8 +117,8 @@ docs/
 - Files - Local and remote file processing
 
 **External Sources**
-- RSS - Feed parsing with deduplication
-- Reddit - OAuth2 subreddit fetching
+- RSS - Feed parsing with deduplication and clean content processing
+- Reddit - OAuth2 subreddit fetching with clean content processing
 - Google Sheets - OAuth2 spreadsheet data extraction
 - WordPress API - External WordPress sites via REST API
 
@@ -129,7 +131,7 @@ docs/
 - Threads - OAuth2, 500 char limit, Meta integration
 
 **Content Platforms**
-- WordPress - Local post creation with taxonomy support
+- WordPress - Local post creation with enhanced handler system (FeaturedImageHandler, SourceUrlHandler, TaxonomyHandler)
 - Google Sheets - OAuth2 row insertion and data management
 
 ### ✅ Update Handlers (1 handler)

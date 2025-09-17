@@ -255,3 +255,30 @@ try {
 - **Lightweight Step Instances** - Parameter-less constructors
 - **Minimal Data Retention** - Only current step data in memory
 - **Garbage Collection** - Automatic cleanup after completion
+
+## AutoSave System
+
+### Centralized Auto-Save Operations
+
+**Action**: `dm_auto_save`
+**Purpose**: Complete pipeline persistence with synchronization and cache management
+
+**Features**:
+- **Complete Pipeline Persistence** - Saves pipeline data, all flows, flow configurations, and scheduling
+- **Execution Order Synchronization** - Synchronizes execution_order between pipeline and flow steps
+- **Data Consistency** - Ensures all related data remains synchronized
+- **Cache Integration** - Automatic cache clearing after successful auto-save operations
+
+**Usage**:
+```php
+do_action('dm_auto_save', $pipeline_id);
+```
+
+**Process**:
+1. Validates database services availability
+2. Retrieves current pipeline data and configuration
+3. Saves pipeline data using database services
+4. Iterates through all flows for the pipeline
+5. Synchronizes execution_order from pipeline to flow steps
+6. Updates flow configurations and scheduling data
+7. Clears pipeline cache for fresh data on subsequent loads

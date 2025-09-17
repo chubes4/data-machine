@@ -15,7 +15,7 @@ defined('ABSPATH') || exit;
 class AIStepToolParameters {
     
     /**
-     * Build flat parameter structure for AI tool execution.
+     * Build flat parameter structure merging AI parameters with engine context.
      */
     public static function buildParameters(
         array $ai_tool_parameters,
@@ -39,7 +39,7 @@ class AIStepToolParameters {
     }
     
     /**
-     * Extract content from data packets for tools requiring content parameter.
+     * Extract content from latest data packet entry.
      */
     private static function extractContent(array $data_packet, array $tool_definition): ?string {
         $tool_params = $tool_definition['parameters'] ?? [];
@@ -53,7 +53,7 @@ class AIStepToolParameters {
     }
     
     /**
-     * Extract title from data packets for tools requiring title parameter.
+     * Extract title from latest data packet entry.
      */
     private static function extractTitle(array $data_packet, array $tool_definition): ?string {
         $tool_params = $tool_definition['parameters'] ?? [];
@@ -67,7 +67,7 @@ class AIStepToolParameters {
     }
     
     /**
-     * Build flat parameter structure for handler tools with engine context.
+     * Build parameters for handler tools with additional engine context.
      */
     public static function buildForHandlerTool(
         array $ai_tool_parameters,

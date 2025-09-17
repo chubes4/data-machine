@@ -1,17 +1,16 @@
 <?php
 /**
- * Universal modal AJAX handler using dm_modals filter system
+ * Universal modal AJAX handler with filter-based routing.
+ *
+ * @package DataMachine\Core\Admin\Modal
  */
 
 namespace DataMachine\Core\Admin\Modal;
 
-// Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
-}
+defined('ABSPATH') || exit;
 
 /**
- * Single AJAX endpoint for all modal content via filter system
+ * Single AJAX endpoint for all modal content via dm_modals filter system.
  */
 class ModalAjax
 {

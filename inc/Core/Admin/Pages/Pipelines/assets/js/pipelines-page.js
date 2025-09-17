@@ -201,16 +201,17 @@
                         // Get the duplicated flow data
                         const newFlowData = response.data.flow_data;
                         const pipelineId = response.data.pipeline_id;
+                        const pipelineSteps = response.data.pipeline_steps || [];
 
                         // Find the pipeline flows container
                         const $pipelineCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineId}"]`);
-                        const $flowsContainer = $pipelineCard.find('.dm-flows-container');
+                        const $flowsContainer = $pipelineCard.find('.dm-flows-list');
 
                         if ($flowsContainer.length) {
-                            // Request new flow card template
+                            // Request new flow card template with complete data
                             this.requestTemplate('page/flow-instance-card', {
                                 flow: newFlowData,
-                                pipeline_steps: [] // Will be populated by template
+                                pipeline_steps: pipelineSteps
                             }).then((flowCardHtml) => {
                                 // Add new flow card at the top of flows container
                                 $flowsContainer.prepend(flowCardHtml);
@@ -228,17 +229,11 @@
                                 }, 2000);
 
                             }).catch((error) => {
-                                this.showNotice('Duplicated flow created but failed to display: ' + error, 'warning');
-                                // Refresh page as fallback
-                                setTimeout(() => {
-                                    window.location.reload();
-                                }, 2000);
+                                this.showNotice('Duplicated flow created but failed to display in UI. Refresh the page to see the new flow.', 'warning');
+                                console.error('Template rendering error:', error);
                             });
                         } else {
-                            // Fallback: refresh page to show new flow
-                            setTimeout(() => {
-                                window.location.reload();
-                            }, 1000);
+                            this.showNotice('Pipeline container not found in UI. Refresh the page to see the duplicated flow.', 'warning');
                         }
                     } else {
                         this.showNotice(response.data.message || 'Failed to duplicate flow', 'error');

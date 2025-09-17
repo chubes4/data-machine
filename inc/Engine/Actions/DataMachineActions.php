@@ -172,6 +172,7 @@ function dm_register_core_actions() {
     // Register organized action classes - static WordPress-native pattern
     \DataMachine\Engine\Actions\Delete::register();
     \DataMachine\Engine\Actions\Update::register();
+    \DataMachine\Engine\Actions\AutoSave::register();
     \DataMachine\Engine\Actions\ImportExport::register();
     \DataMachine\Engine\Actions\Cache::register();
     

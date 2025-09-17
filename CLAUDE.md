@@ -430,13 +430,14 @@ $data = AIStepTools->get_tools_data($pipeline_step_id);
 [
     'type' => 'fetch|ai|update|publish',
     'handler' => 'rss|twitter|etc', // Optional for AI
-    'content' => ['title' => $title, 'body' => $content],
-    'metadata' => ['source_type' => $type, 'pipeline_id' => $id, /*...*/],
+    'content' => ['title' => $title, 'body' => $content], // Clean content without URL injection
+    'metadata' => ['source_type' => $type, 'pipeline_id' => $id, 'source_url' => $url /*...*/],
     'timestamp' => time()
 ]
 ```
 
 **Processing**: Each step adds entry to array front → accumulates complete workflow history
+**Clean Content**: Fetch handlers (RSS, Reddit) provide clean content without URL pollution; source URLs maintained in metadata only
 
 ## Step Configuration Persistence
 

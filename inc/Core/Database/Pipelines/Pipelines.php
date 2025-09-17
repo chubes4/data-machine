@@ -15,14 +15,10 @@ defined('ABSPATH') || exit;
 
 class Pipelines {
 
-	/**
-	 * @var string Database table name
-	 */
+	/** @var string Database table name */
 	private $table_name;
 
-	/**
-	 * @var \wpdb WordPress database instance
-	 */
+	/** @var \wpdb WordPress database instance */
 	private $wpdb;
 
 	public function __construct() {
@@ -105,9 +101,7 @@ class Pipelines {
 	}
 
 	/**
-	 * Get all pipelines
-	 *
-	 * @return array Array of pipelines
+	 * Get all pipelines with decoded configuration.
 	 */
 	public function get_all_pipelines(): array {
 
@@ -139,12 +133,7 @@ class Pipelines {
 	}
 
 	/**
-	 * Get lightweight pipelines list for dropdown population
-	 *
-	 * Returns only pipeline_id and pipeline_name without heavy pipeline_config data.
-	 * Optimized for initial page load performance.
-	 *
-	 * @return array Array of lightweight pipeline records
+	 * Get lightweight pipelines list for UI dropdowns.
 	 */
 	public function get_pipelines_list(): array {
 
@@ -170,11 +159,7 @@ class Pipelines {
 	}
 
 	/**
-	 * Update pipeline
-	 *
-	 * @param int $pipeline_id Pipeline ID
-	 * @param array $pipeline_data Update data
-	 * @return bool Success status
+	 * Update pipeline with validation and caching.
 	 */
 	public function update_pipeline( int $pipeline_id, array $pipeline_data ): bool {
 
@@ -241,10 +226,7 @@ class Pipelines {
 	}
 
 	/**
-	 * Delete pipeline
-	 *
-	 * @param int $pipeline_id Pipeline ID
-	 * @return bool Success status
+	 * Delete pipeline with logging.
 	 */
 	public function delete_pipeline( int $pipeline_id ): bool {
 
@@ -290,10 +272,7 @@ class Pipelines {
 
 
 	/**
-	 * Get pipeline configuration
-	 *
-	 * @param int $pipeline_id Pipeline ID
-	 * @return array Configuration data
+	 * Get decoded pipeline configuration.
 	 */
 	public function get_pipeline_config( int $pipeline_id ): array {
 
@@ -324,9 +303,7 @@ class Pipelines {
 
 
 	/**
-	 * Get pipeline count
-	 *
-	 * @return int Total count
+	 * Get cached pipeline count.
 	 */
 	public function get_pipelines_count(): int {
 
@@ -346,10 +323,7 @@ class Pipelines {
 	}
 
 	/**
-	 * Get pipelines for list display
-	 *
-	 * @param array $args Query arguments
-	 * @return array Pipeline records
+	 * Get pipelines for admin list table with ordering.
 	 */
 	public function get_pipelines_for_list_table( array $args ): array {
 
@@ -393,7 +367,7 @@ class Pipelines {
 	}
 
 	/**
-	 * Create database table
+	 * Create pipelines database table.
 	 */
 	public static function create_table() {
 		global $wpdb;

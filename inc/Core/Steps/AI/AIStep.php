@@ -11,17 +11,9 @@ if (!defined('ABSPATH')) {
 require_once __DIR__ . '/AIStepTools.php';
 
 /**
- * AI Step Processor - Multi-turn conversational AI agent with tool execution capabilities.
- *
- * Features:
- * - Multi-turn conversation management with turn tracking
- * - Dynamic tool discovery and execution
- * - Handler tool completion detection
- * - 6-tier AI directive system integration
- * - Conversation state preservation across turns
+ * Multi-turn conversational AI agent with tool execution and completion detection.
  *
  * @package DataMachine
- * @since 1.0.0
  */
 class AIStep {
 

@@ -46,8 +46,8 @@ class PipelineSwitcherAjax
             wp_send_json_error(['message' => __('Pipeline ID required', 'data-machine')]);
         }
 
-        // Get all pipelines to validate selection
-        $all_pipelines = apply_filters('dm_get_pipelines', []);
+        // Get pipeline list to validate selection
+        $all_pipelines = apply_filters('dm_get_pipelines_list', []);
         $selected_pipeline = null;
 
         foreach ($all_pipelines as $pipeline) {
@@ -61,6 +61,9 @@ class PipelineSwitcherAjax
             wp_send_json_error(['message' => __('Invalid pipeline ID', 'data-machine')]);
         }
 
+        // Get full pipeline data for response
+        $full_pipeline_data = apply_filters('dm_get_pipelines', [], $selected_pipeline_id);
+
         // Get flows for the selected pipeline
         $existing_flows = apply_filters('dm_get_pipeline_flows', [], $selected_pipeline_id);
 
@@ -68,7 +71,7 @@ class PipelineSwitcherAjax
         wp_send_json_success([
             'message' => __('Pipeline switched successfully', 'data-machine'),
             'pipeline_id' => $selected_pipeline_id,
-            'pipeline_data' => $selected_pipeline,
+            'pipeline_data' => $full_pipeline_data,
             'existing_flows' => $existing_flows
         ]);
     }
@@ -91,7 +94,7 @@ class PipelineSwitcherAjax
         }
 
         // Validate pipeline exists
-        $all_pipelines = apply_filters('dm_get_pipelines', []);
+        $all_pipelines = apply_filters('dm_get_pipelines_list', []);
         $pipeline_exists = false;
 
         foreach ($all_pipelines as $pipeline) {

@@ -213,8 +213,8 @@ class Delete {
         // Trigger action for comprehensive cache invalidation
         do_action('dm_pipeline_deleted', $pipeline_id, $flow_count);
 
-        // Clear all caches before response (pipeline deletion affects everything)
-        do_action('dm_clear_all_cache');
+        // Clear pipelines list cache (pipeline deletion affects dropdown lists)
+        do_action('dm_clear_pipelines_list_cache');
 
         wp_send_json_success([
             'message' => sprintf(
@@ -522,7 +522,7 @@ class Delete {
 
         // Clear job-related caches before response
         if ($deleted_count > 0) {
-            do_action('dm_clear_all_cache');
+            do_action('dm_clear_jobs_cache');
         }
 
         wp_send_json_success([

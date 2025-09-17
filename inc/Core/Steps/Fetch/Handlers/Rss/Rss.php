@@ -1,9 +1,8 @@
 <?php
 /**
- * RSS/Atom feed handler with timeframe filtering, search capabilities, and item deduplication
+ * RSS/Atom feed handler with filtering, search, and deduplication.
  *
  * @package DataMachine\Core\Steps\Fetch\Handlers\Rss
- * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Rss;
@@ -226,9 +225,6 @@ class Rss {
 
     /**
      * Extract title from RSS/Atom item.
-     *
-     * @param object $item SimpleXML item object.
-     * @return string Item title.
      */
     private function extract_item_title($item): string {
         if (isset($item->title)) {
@@ -239,9 +235,6 @@ class Rss {
 
     /**
      * Extract description/content from RSS/Atom item.
-     *
-     * @param object $item SimpleXML item object.
-     * @return string Item description/content.
      */
     private function extract_item_description($item): string {
         // Try various content fields
@@ -264,9 +257,6 @@ class Rss {
 
     /**
      * Extract link from RSS/Atom item.
-     *
-     * @param object $item SimpleXML item object.
-     * @return string Item link.
      */
     private function extract_item_link($item): string {
         if (isset($item->link)) {
@@ -282,9 +272,6 @@ class Rss {
 
     /**
      * Extract publication date from RSS/Atom item.
-     *
-     * @param object $item SimpleXML item object.
-     * @return string|null Item publication date.
      */
     private function extract_item_date($item): ?string {
         if (isset($item->pubDate)) {
@@ -305,11 +292,7 @@ class Rss {
     }
 
     /**
-     * Extract GUID from RSS/Atom item.
-     *
-     * @param object $item SimpleXML item object.
-     * @param string $item_link Item link to use as GUID.
-     * @return string Item GUID.
+     * Extract GUID from RSS/Atom item with fallback to link.
      */
     private function extract_item_guid($item, string $item_link): string {
         if (isset($item->guid)) {
@@ -323,9 +306,6 @@ class Rss {
 
     /**
      * Extract author from RSS/Atom item.
-     *
-     * @param object $item SimpleXML item object.
-     * @return string|null Item author.
      */
     private function extract_item_author($item): ?string {
         if (isset($item->author)) {
@@ -346,9 +326,6 @@ class Rss {
 
     /**
      * Extract categories from RSS/Atom item.
-     *
-     * @param object $item SimpleXML item object.
-     * @return array Item categories.
      */
     private function extract_item_categories($item): array {
         $categories = [];
@@ -370,9 +347,6 @@ class Rss {
 
     /**
      * Extract enclosure URL from RSS item.
-     *
-     * @param object $item SimpleXML item object.
-     * @return string|null Enclosure URL.
      */
     private function extract_item_enclosure($item): ?string {
         if (isset($item->enclosure) && isset($item->enclosure['url'])) {
@@ -383,9 +357,6 @@ class Rss {
 
     /**
      * Guess MIME type from URL extension.
-     *
-     * @param string $url File URL.
-     * @return string Guessed MIME type.
      */
     private function guess_mime_type_from_url(string $url): string {
         $extension = strtolower(pathinfo(wp_parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
@@ -408,9 +379,7 @@ class Rss {
 
 
     /**
-     * Get the user-friendly label for this handler.
-     *
-     * @return string Handler label.
+     * Get handler label.
      */
     public static function get_label(): string {
         return __('RSS/Atom Feed', 'data-machine');

@@ -1,8 +1,8 @@
 <?php
 /**
- * Universal Handler Settings Template
+ * Universal handler settings template with dynamic field rendering.
  *
- * Unified configuration template supporting all handler types through Settings classes.
+ * @package DataMachine\Core\Admin\Pages\Pipelines\Templates\Modal
  */
 
 if (!defined('WPINC')) {
@@ -119,7 +119,6 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts'
         </div>
 
         <?php
-        // Global settings notification for WordPress handlers
         if (in_array($handler_slug, ['wordpress_publish', 'wordpress_posts'])) {
             $all_settings = get_option('data_machine_settings', []);
             $wp_settings = $all_settings['wordpress_settings'] ?? [];

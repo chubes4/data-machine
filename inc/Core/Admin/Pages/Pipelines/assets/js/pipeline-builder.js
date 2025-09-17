@@ -220,44 +220,15 @@
 
 
         /**
-         * Add new pipeline card to the page (newest-first positioning)
+         * Add new pipeline to dropdown and switch to it (single-pipeline architecture)
          */
         addNewPipelineCardToPage: function(pipelineData) {
-            const $pipelinesList = $('.dm-pipelines-list');
-            
-            // Request pipeline card template
-            PipelinesPage.requestTemplate('page/pipeline-card', {
-                pipeline: pipelineData.pipeline_data,
-                existing_flows: pipelineData.existing_flows,
-                pipelines_instance: null
-            }).then((pipelineCardHtml) => {
-                // Wrap new pipeline card for dropdown functionality
-                const wrappedHtml = `<div class="dm-pipeline-wrapper dm-hidden" data-pipeline-id="${pipelineData.pipeline_id}">${pipelineCardHtml}</div>`;
-                
-                // Insert new pipeline at top of list
-                const $firstPipelineWrapper = $pipelinesList.find('.dm-pipeline-wrapper').first();
-                
-                if ($firstPipelineWrapper.length) {
-                    // Insert before the first existing pipeline
-                    $firstPipelineWrapper.before(wrappedHtml);
-                } else {
-                    // No existing pipelines, prepend to the list
-                    $pipelinesList.prepend(wrappedHtml);
-                }
-                
-                // Add new pipeline to dropdown
-                const optionHtml = `<option value="${pipelineData.pipeline_id}">${pipelineData.pipeline_data.pipeline_name}</option>`;
-                $('#dm-pipeline-selector').append(optionHtml).show();
-                
-                // Auto-select the new pipeline
-                PipelinesPage.autoSelectNewPipeline(pipelineData.pipeline_id);
-                
-                // Focus on the pipeline name input in the new card
-                const $newCard = $(`.dm-pipeline-card[data-pipeline-id="${pipelineData.pipeline_id}"]`);
-                $newCard.find('.dm-pipeline-title-input').focus().select();
-            }).catch((error) => {
-                // Failed to render pipeline card template
-            });
+            // Add new pipeline to dropdown
+            const optionHtml = `<option value="${pipelineData.pipeline_id}">${pipelineData.pipeline_data.pipeline_name}</option>`;
+            $('#dm-pipeline-selector').append(optionHtml).show();
+
+            // Use existing switching mechanism (consistent with single-pipeline architecture)
+            PipelinesPage.autoSelectNewPipeline(pipelineData.pipeline_id);
         },
 
         /**
@@ -424,11 +395,8 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        // Add the new pipeline card to the page
+                        // Add the new pipeline to dropdown and switch to it
                         this.addNewPipelineCardToPage(response.data.pipeline);
-
-                        // Auto-select the new pipeline
-                        PipelinesPage.autoSelectNewPipeline(response.data.pipeline_id);
 
                         this.showNotice(response.data.message || 'Pipeline created from template successfully', 'success');
                     } else {

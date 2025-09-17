@@ -175,34 +175,6 @@ class Flows {
         return $cached_result;
     }
 
-    /**
-     * Get all active flows (flows with active scheduling)
-     */
-    public function get_all_active_flows(): array {
-        
-        $cache_key = Cache::ALL_ACTIVE_FLOWS_CACHE_KEY;
-        $cached_result = get_transient( $cache_key );
-
-        if ( false === $cached_result ) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $flows = $this->wpdb->get_results($this->wpdb->prepare("SELECT * FROM %i WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual' ORDER BY flow_id DESC", $this->table_name), ARRAY_A);
-
-            if ($flows === null) {
-                do_action('dm_log', 'debug', 'No active flows found');
-                return [];
-            }
-
-            foreach ($flows as &$flow) {
-                $flow['flow_config'] = json_decode($flow['flow_config'], true) ?: [];
-                $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true) ?: [];
-            }
-
-            do_action('dm_cache_set', $cache_key, $flows, 300, 'flows'); // Cache decoded arrays
-            return $flows;
-        }
-
-        return $cached_result;
-    }
 
     /**
      * Update a flow

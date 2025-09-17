@@ -1,6 +1,6 @@
 # Reddit Subreddit Fetch Handler
 
-Fetches posts from Reddit subreddits using OAuth2 authentication with automatic token refresh, content filtering, and comment integration.
+Fetches posts from Reddit subreddits using OAuth2 authentication with automatic token refresh, content filtering, comment integration, and clean content processing without URL pollution.
 
 ## Authentication
 

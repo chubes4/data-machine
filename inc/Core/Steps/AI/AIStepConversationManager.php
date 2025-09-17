@@ -15,7 +15,7 @@ defined('ABSPATH') || exit;
 class AIStepConversationManager {
 
     /**
-     * Generate contextual success messages for tool execution results.
+     * Generate tool execution success message with filtering support.
      */
     public static function generateSuccessMessage(string $tool_name, array $tool_result, array $tool_parameters): string {
         $success = $tool_result['success'] ?? false;
@@ -25,14 +25,14 @@ class AIStepConversationManager {
             $error = $tool_result['error'] ?? 'Unknown error occurred';
             return "TOOL FAILED: {$tool_name} execution failed - {$error}";
         }
-        
+
         $default_message = "SUCCESS: " . ucwords(str_replace('_', ' ', $tool_name)) . " completed successfully. The requested operation has been finished as requested.";
-        
+
         return apply_filters('dm_tool_success_message', $default_message, $tool_name, $tool_result, $tool_parameters);
     }
 
     /**
-     * Update data packet messages in conversation for multi-turn context preservation.
+     * Update data packet messages within conversation history.
      */
     public static function updateDataPacketMessages(array $conversation_messages, array $data): array {
         if (empty($conversation_messages) || empty($data)) {
@@ -57,7 +57,7 @@ class AIStepConversationManager {
     }
 
     /**
-     * Build standardized conversation message structure.
+     * Build conversation message with role and content.
      */
     public static function buildConversationMessage(string $role, string $content): array {
         return [
@@ -67,7 +67,7 @@ class AIStepConversationManager {
     }
 
     /**
-     * Format AI tool call action record with temporal context.
+     * Format AI tool call message with turn tracking.
      */
     public static function formatToolCallMessage(string $tool_name, array $tool_parameters, int $turn_count): array {
         $tool_display = ucwords(str_replace('_', ' ', $tool_name));
@@ -89,7 +89,7 @@ class AIStepConversationManager {
     }
 
     /**
-     * Format tool execution results with temporal context for AI feedback.
+     * Format tool result message with turn tracking.
      */
     public static function formatToolResultMessage(string $tool_name, array $tool_result, array $tool_parameters, bool $is_handler_tool = false, int $turn_count = 0): array {
         $success_message = self::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
@@ -106,7 +106,7 @@ class AIStepConversationManager {
     }
 
     /**
-     * Generate standardized failure messages for tool execution errors.
+     * Generate tool execution failure message.
      */
     public static function generateFailureMessage(string $tool_name, string $error_message): string {
         $tool_display = ucwords(str_replace('_', ' ', $tool_name));
@@ -114,14 +114,14 @@ class AIStepConversationManager {
     }
 
     /**
-     * Log conversation management actions for debugging.
+     * Log conversation actions for debugging.
      */
     public static function logConversationAction(string $action, array $context = []): void {
         do_action('dm_log', 'debug', "ConversationManager: {$action}", $context);
     }
 
     /**
-     * Validate tool call against conversation history to prevent duplicates.
+     * Validate tool call for duplicate prevention.
      */
     public static function validateToolCall(string $tool_name, array $tool_parameters, array $conversation_messages): array {
         if (empty($conversation_messages)) {
@@ -165,7 +165,7 @@ class AIStepConversationManager {
     }
 
     /**
-     * Extract tool call information from formatted conversation message.
+     * Extract tool call data from conversation message.
      */
     public static function extractToolCallFromMessage(array $message): ?array {
         if ($message['role'] !== 'assistant' || !isset($message['content'])) {
@@ -213,7 +213,7 @@ class AIStepConversationManager {
     }
 
     /**
-     * Generate gentle correction message for duplicate tool calls.
+     * Generate duplicate tool call correction message.
      */
     public static function generateDuplicateToolCallMessage(string $tool_name): array {
         $tool_display = ucwords(str_replace('_', ' ', $tool_name));

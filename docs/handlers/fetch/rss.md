@@ -1,6 +1,6 @@
 # RSS Feed Fetch Handler
 
-Fetches and processes RSS/Atom feed data with automatic deduplication, timeframe filtering, and content search capabilities.
+Fetches and processes RSS/Atom feed data with automatic deduplication, timeframe filtering, content search capabilities, and clean content processing without URL pollution.
 
 ## Feed Format Support
 

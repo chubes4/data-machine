@@ -89,8 +89,8 @@ class PipelineReorderAjax
             wp_send_json_error(['message' => __('Failed to save step order', 'data-machine')]);
         }
 
-        // Trigger auto-save
-        do_action('dm_auto_save', $pipeline_id);
+        // Clear pipeline cache after successful step reorder
+        do_action('dm_clear_pipeline_cache', $pipeline_id);
 
         wp_send_json_success([
             'message' => __('Step order updated successfully', 'data-machine'),

@@ -1,6 +1,6 @@
 # WordPress Publish Handler
 
-Creates posts in the local WordPress installation using native WordPress functions with taxonomy assignment and content sanitization.
+Creates posts in the local WordPress installation using native WordPress functions with enhanced handler system for featured images, source URLs, taxonomy management, and content sanitization.
 
 ## Local WordPress Integration
 
@@ -9,6 +9,11 @@ Creates posts in the local WordPress installation using native WordPress functio
 **No Authentication**: Direct local database access without OAuth or API requirements.
 
 **Content Sanitization**: Applies WordPress security functions (`wp_kses_post`, `sanitize_text_field`) to ensure safe content.
+
+**Enhanced Handler System**: Modular handler system with specialized components:
+- **FeaturedImageHandler**: Manages featured image downloads and WordPress media library integration
+- **SourceUrlHandler**: Processes source URL attribution with Gutenberg block generation
+- **TaxonomyHandler**: Handles dynamic taxonomy assignment and term creation
 
 ## Required Configuration
 

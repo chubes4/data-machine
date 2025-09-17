@@ -78,11 +78,17 @@ function dm_register_reddit_fetch_filters() {
             $parameters['is_self_post'] = $metadata['is_self_post'] ?? false;
 
             // Extract file parameters for image posts (for vision processing)
-            if (!empty($metadata['file_path'])) {
-                $parameters['file_path'] = $metadata['file_path'];
-                $parameters['file_name'] = $metadata['file_name'] ?? '';
-                $parameters['mime_type'] = $metadata['mime_type'] ?? '';
-                $parameters['file_size'] = $metadata['file_size'] ?? 0;
+            // File info is stored at top level of data packet, not in metadata
+            if (!empty($latest_entry['file_path'])) {
+                $parameters['file_path'] = $latest_entry['file_path'];
+                $parameters['file_name'] = $latest_entry['file_name'] ?? '';
+                $parameters['mime_type'] = $latest_entry['mime_type'] ?? '';
+                $parameters['file_size'] = $latest_entry['file_size'] ?? 0;
+
+                // Add image URL for WordPress featured image handling
+                if (!empty($latest_entry['image_url'])) {
+                    $parameters['image_url'] = $latest_entry['image_url'];
+                }
             }
 
             do_action('dm_log', 'debug', 'Reddit: Metadata injected into engine parameters', [
@@ -90,7 +96,8 @@ function dm_register_reddit_fetch_filters() {
                 'source_url' => $parameters['source_url'],
                 'subreddit' => $parameters['subreddit'],
                 'upvotes' => $parameters['upvotes'],
-                'has_image' => !empty($parameters['file_path'])
+                'has_image' => !empty($parameters['file_path']),
+                'has_image_url' => !empty($parameters['image_url'])
             ]);
         }
 

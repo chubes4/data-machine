@@ -22,16 +22,16 @@ Data Machine uses a Pipeline+Flow architecture where:
 
 ### Data Flow
 
-**DataPacket Structure**: Each step receives and returns a **DataPacket** array with chronological ordering (newest packets at index 0):
+**DataPacket Structure**: Each step receives and returns a **DataPacket** array with chronological ordering (newest packets at index 0). Fetch handlers now provide clean content without URL pollution:
 
 ```php
 [
     'type' => 'fetch|ai|update|publish',
     'handler' => 'twitter|rss|wordpress|etc',
-    'content' => ['title' => $title, 'body' => $content],
+    'content' => ['title' => $title, 'body' => $content], // Clean content without URL injection
     'metadata' => [
         'source_type' => $type,
-        'source_url' => $url,
+        'source_url' => $url, // URLs maintained in metadata only
         'image_source_url' => $image_url,
         'original_title' => $title
     ],
@@ -114,9 +114,16 @@ docs/
 
 ### Cache Management
 - **Centralized Cache System** - Actions/Cache.php provides WordPress action-based cache clearing
-- **Granular Invalidation** - Separate actions for pipeline, flow, and job cache clearing
-- **Pattern-Based Clearing** - Supports wildcard patterns for efficient bulk operations
+- **Granular Invalidation** - Separate actions for pipeline, flow, and job cache clearing (dm_clear_pipeline_cache, dm_clear_flow_cache, dm_clear_jobs_cache, dm_clear_all_cache)
+- **Pattern-Based Clearing** - Supports wildcard patterns for efficient bulk operations (dm_pipeline_*, dm_flow_*, dm_job_*)
 - **WordPress Transients** - Native WordPress caching integration with comprehensive logging
+- **Standardized Storage** - dm_cache_set action for consistent cache management
+
+### AutoSave System
+- **Centralized Auto-Save** - AutoSave actions handle complete pipeline persistence via dm_auto_save
+- **Pipeline Synchronization** - Synchronizes execution_order between pipeline and flow steps
+- **Data Consistency** - Ensures pipeline data, flows, configurations, and scheduling remain synchronized
+- **Cache Integration** - Automatic cache clearing after successful auto-save operations
 
 ## Requirements
 
