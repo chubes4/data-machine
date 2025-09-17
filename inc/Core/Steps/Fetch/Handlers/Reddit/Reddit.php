@@ -366,9 +366,6 @@ class Reddit {
 					$content_string .= "Content:\n" . trim($body) . "\n";
 				}
 
-				if (!($item_data['is_self'] ?? false) && !empty($item_data['url'])) {
-					$content_string .= "\nSource URL: " . $item_data['url'];
-				}
 
 				if ($comment_count_setting > 0 && !empty($item_data['permalink'])) {
 					$comments_url = 'https://oauth.reddit.com' . $item_data['permalink'] . '.json?limit=' . $comment_count_setting . '&sort=top';
@@ -508,6 +505,7 @@ class Reddit {
 						'file_name' => $stored_image['filename'],
 						'mime_type' => $image_info['mime_type'],
 						'file_size' => $stored_image['size'],
+						'image_url' => $stored_image['url'], // Public URL for WordPress featured image
 						'data' => [
 							'content_string' => $content_string
 						],

@@ -178,9 +178,6 @@ class Rss {
             if (!empty($description)) {
                 $content_string .= "Content:\n" . $description . "\n";
             }
-            if (!empty($link)) {
-                $content_string .= "\nSource URL: " . $link;
-            }
 
             // Create metadata
             $metadata = [
