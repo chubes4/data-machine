@@ -17,7 +17,7 @@ Data Machine uses a Pipeline+Flow architecture where:
 
 1. **Fetch Steps** - Retrieve content from various sources (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API)
 2. **AI Steps** - Process content using AI providers (OpenAI, Anthropic, Google, Grok, OpenRouter) with available tools (Google Search, Local Search, WebFetch, WordPress Post Reader, handler-specific tools)
-3. **Publish Steps** - Distribute content to platforms (Twitter, Facebook, Bluesky, Threads, WordPress, Google Sheets)
+3. **Publish Steps** - Distribute content to platforms (Twitter, Facebook, Bluesky, Threads, WordPress with modular handler architecture, Google Sheets)
 4. **Update Steps** - Modify existing content (WordPress posts/pages)
 
 ### Data Flow
@@ -120,14 +120,14 @@ docs/
 - **Standardized Storage** - dm_cache_set action for consistent cache management
 
 ### AutoSave System
-- **Centralized Auto-Save** - AutoSave actions handle complete pipeline persistence via dm_auto_save
-- **Pipeline Synchronization** - Synchronizes execution_order between pipeline and flow steps
-- **Data Consistency** - Ensures pipeline data, flows, configurations, and scheduling remain synchronized
-- **Cache Integration** - Automatic cache clearing after successful auto-save operations
+- **Complete Pipeline Persistence** - AutoSave system handles all pipeline-related data via single `dm_auto_save` action
+- **Flow Synchronization** - Synchronizes execution_order between pipeline and flow steps automatically
+- **Comprehensive Data Management** - Saves pipeline data, all flows, flow configurations, scheduling, and handler settings
+- **Cache Integration** - Automatic cache clearing after successful auto-save for data consistency
 
 ## Requirements
 
 - **PHP** 8.0 or higher
-- **WordPress** 6.0 or higher
+- **WordPress** 6.2 or higher
 - **Composer Dependencies** - Automatically managed including ai-http-client
 - **Admin Capabilities** - `manage_options` required for all operations

@@ -1,16 +1,10 @@
 <?php
 /**
- * Taxonomy Handler for WordPress Publish Operations
- *
- * Centralized taxonomy processing module handling:
- * - Configuration-based taxonomy selection (skip, AI-decided, pre-selected)
- * - Dynamic term creation and assignment
- * - AI parameter extraction and validation
- * - WordPress taxonomy operations with comprehensive error handling
+ * Centralized taxonomy processing for WordPress publish operations.
+ * Handles configuration-based taxonomy selection, dynamic term creation, and AI parameter extraction.
  *
  * @package DataMachine
  * @subpackage Core\Steps\Publish\Handlers\WordPress
- * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
@@ -22,7 +16,7 @@ if (!defined('ABSPATH')) {
 class TaxonomyHandler {
 
     /**
-     * Process taxonomies for WordPress post based on configuration
+     * Process taxonomies for WordPress post based on configuration.
      *
      * @param int $post_id WordPress post ID
      * @param array $parameters Tool parameters including AI-decided taxonomy values
@@ -67,7 +61,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Get all public taxonomies excluding system taxonomies
+     * Get all public taxonomies excluding system taxonomies.
      *
      * @return array WordPress taxonomy objects
      */
@@ -76,7 +70,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Check if taxonomy should be skipped from processing
+     * Check if taxonomy should be skipped from processing.
      *
      * @param string $taxonomy_name Taxonomy name to check
      * @return bool True if taxonomy should be skipped
@@ -87,7 +81,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Check if selection indicates AI-decided taxonomy
+     * Check if selection indicates AI-decided taxonomy.
      *
      * @param string $selection Selection value from configuration
      * @return bool True if AI should decide taxonomy terms
@@ -97,7 +91,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Check if selection indicates pre-selected taxonomy
+     * Check if selection indicates pre-selected taxonomy.
      *
      * @param string $selection Selection value from configuration
      * @return bool True if taxonomy has pre-selected term ID
@@ -107,7 +101,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Process AI-decided taxonomy assignment
+     * Process AI-decided taxonomy assignment.
      *
      * @param int $post_id WordPress post ID
      * @param object $taxonomy WordPress taxonomy object
@@ -134,7 +128,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Get parameter name for taxonomy
+     * Get parameter name for taxonomy.
      *
      * @param string $taxonomy_name WordPress taxonomy name
      * @return string Corresponding parameter name for AI tools
@@ -150,7 +144,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Process pre-selected taxonomy assignment
+     * Process pre-selected taxonomy assignment.
      *
      * @param int $post_id WordPress post ID
      * @param string $taxonomy_name Taxonomy name
@@ -181,7 +175,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Assign taxonomy terms with dynamic term creation
+     * Assign taxonomy terms with dynamic term creation.
      *
      * @param int $post_id WordPress post ID
      * @param string $taxonomy_name Taxonomy name
@@ -207,7 +201,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Validate that taxonomy exists
+     * Validate that taxonomy exists.
      *
      * @param string $taxonomy_name Taxonomy name to validate
      * @return bool True if taxonomy exists
@@ -217,7 +211,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Process array of terms and return term IDs
+     * Process array of terms and return term IDs.
      *
      * @param array $terms Array of term names
      * @param string $taxonomy_name Taxonomy name
@@ -242,7 +236,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Find existing term or create new one
+     * Find existing term or create new one.
      *
      * @param string $term_name Term name to find or create
      * @param string $taxonomy_name Taxonomy name
@@ -255,7 +249,6 @@ class TaxonomyHandler {
             return $term->term_id;
         }
 
-        // Term doesn't exist, create it
         $term_result = wp_insert_term($term_name, $taxonomy_name);
         if (is_wp_error($term_result)) {
             $this->logTaxonomyOperation('warning', 'Failed to create taxonomy term', [
@@ -270,7 +263,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Set taxonomy terms for post
+     * Set taxonomy terms for post.
      *
      * @param int $post_id WordPress post ID
      * @param array $term_ids Array of term IDs
@@ -282,7 +275,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Create success result array
+     * Create success result array.
      *
      * @param string $taxonomy_name Taxonomy name
      * @param array $terms Array of term names
@@ -299,7 +292,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Create error result array
+     * Create error result array.
      *
      * @param string $error_message Error message
      * @return array Error result structure
@@ -312,7 +305,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Log taxonomy operation with consistent formatting
+     * Log taxonomy operation with consistent formatting.
      *
      * @param string $level Log level (debug, info, warning, error)
      * @param string $message Log message

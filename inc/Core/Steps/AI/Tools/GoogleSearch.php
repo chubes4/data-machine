@@ -14,6 +14,17 @@ class GoogleSearch {
 
     public function __construct() {
         add_filter('dm_tool_success_message', [$this, 'format_success_message'], 10, 4);
+        $this->register_configuration();
+    }
+
+    /**
+     * Register configuration filters for self-registration
+     */
+    private function register_configuration() {
+        add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
+        add_filter('dm_tool_configured', [$this, 'check_configuration'], 10, 2);
+        add_filter('dm_get_tool_config', [$this, 'get_configuration'], 10, 2);
+        add_action('dm_save_tool_config', [$this, 'save_configuration'], 10, 2);
     }
 
     /**
@@ -127,7 +138,38 @@ class GoogleSearch {
             'tool_name' => 'google_search'
         ];
     }
-    
+
+    /**
+     * Register tool in ai_tools filter
+     */
+    public function register_tool($tools) {
+        $tools['google_search'] = [
+            'class' => __CLASS__,
+            'method' => 'handle_tool_call',
+            'description' => 'Search Google and return structured JSON results with titles, links, and snippets from external websites. Use for external information, current events, and fact-checking. Returns complete web search data in JSON format with title, link, snippet for each result.',
+            'requires_config' => true,
+            'parameters' => [
+                'query' => [
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'Search query for external web information. Returns JSON with "results" array containing web search results.'
+                ],
+                'max_results' => [
+                    'type' => 'integer',
+                    'required' => false,
+                    'description' => 'Maximum number of results to return (1-10, default: 5). Limit to reduce response size.'
+                ],
+                'site_restrict' => [
+                    'type' => 'string',
+                    'required' => false,
+                    'description' => 'Restrict search to specific domain (e.g., "wikipedia.org" for Wikipedia only)'
+                ]
+            ]
+        ];
+
+        return $tools;
+    }
+
     /**
      * Check if Google Search tool is properly configured
      * 
@@ -142,12 +184,88 @@ class GoogleSearch {
     
     /**
      * Get current configuration
-     * 
+     *
      * @return array Configuration array
      */
     public static function get_config(): array {
         $config = get_option('dm_search_config', []);
         return $config['google_search'] ?? [];
+    }
+
+    /**
+     * Filter handler for dm_tool_configured
+     */
+    public function check_configuration($configured, $tool_id) {
+        if ($tool_id !== 'google_search') {
+            return $configured;
+        }
+
+        return self::is_configured();
+    }
+
+    /**
+     * Filter handler for dm_get_tool_config
+     */
+    public function get_configuration($config, $tool_id) {
+        if ($tool_id !== 'google_search') {
+            return $config;
+        }
+
+        return self::get_config();
+    }
+
+    /**
+     * Action handler for dm_save_tool_config
+     */
+    public function save_configuration($tool_id, $config_data) {
+        if ($tool_id !== 'google_search') {
+            return;
+        }
+
+        $api_key = sanitize_text_field($config_data['api_key'] ?? '');
+        $search_engine_id = sanitize_text_field($config_data['search_engine_id'] ?? '');
+
+        if (empty($api_key) || empty($search_engine_id)) {
+            wp_send_json_error(['message' => __('API Key and Search Engine ID are required', 'data-machine')]);
+            return;
+        }
+
+        $stored_config = get_option('dm_search_config', []);
+        $stored_config['google_search'] = [
+            'api_key' => $api_key,
+            'search_engine_id' => $search_engine_id
+        ];
+
+        if (update_option('dm_search_config', $stored_config)) {
+            wp_send_json_success([
+                'message' => __('Google Search configuration saved successfully', 'data-machine'),
+                'configured' => true
+            ]);
+        } else {
+            wp_send_json_error(['message' => __('Failed to save configuration', 'data-machine')]);
+        }
+    }
+
+    /**
+     * Get configuration fields for UI generation
+     */
+    public function get_config_fields(): array {
+        return [
+            'api_key' => [
+                'type' => 'text',
+                'label' => __('Google Search API Key', 'data-machine'),
+                'placeholder' => __('Enter your Google Search API key', 'data-machine'),
+                'required' => true,
+                'description' => __('Get your API key from Google Cloud Console → APIs & Services → Credentials', 'data-machine')
+            ],
+            'search_engine_id' => [
+                'type' => 'text',
+                'label' => __('Custom Search Engine ID', 'data-machine'),
+                'placeholder' => __('Enter your Search Engine ID', 'data-machine'),
+                'required' => true,
+                'description' => __('Create a Custom Search Engine and copy the Search Engine ID (cx parameter)', 'data-machine')
+            ]
+        ];
     }
     
     /**
@@ -176,3 +294,6 @@ class GoogleSearch {
         return "SEARCH COMPLETE: Found {$result_count} results for \"{$query}\".\nSearch Results:";
     }
 }
+
+// Self-register the tool
+new GoogleSearch();

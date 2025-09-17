@@ -49,13 +49,7 @@ class WordPressAPISettings {
                 'type' => 'select',
                 'label' => __('Post Status', 'data-machine'),
                 'description' => __('Select the post status to fetch.', 'data-machine'),
-                'options' => [
-                    'publish' => __('Published', 'data-machine'),
-                    'draft' => __('Draft', 'data-machine'),
-                    'pending' => __('Pending', 'data-machine'),
-                    'private' => __('Private', 'data-machine'),
-                    'any' => __('Any', 'data-machine'),
-                ],
+                'options' => array_merge(get_post_statuses(), ['any' => __('Any', 'data-machine')]),
             ],
             'orderby' => [
                 'type' => 'select',

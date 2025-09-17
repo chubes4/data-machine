@@ -422,24 +422,6 @@ class Flows {
         return $this->update_flow_scheduling($flow_id, $current_config);
     }
 
-    /**
-     * Get next display order for a pipeline's flows
-     */
-    public function get_next_display_order(int $pipeline_id): int {
-        $cache_key = Cache::MAX_DISPLAY_ORDER_CACHE_KEY . $pipeline_id;
-        $cached_result = get_transient( $cache_key );
-
-        if ( false === $cached_result ) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $max_order = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT MAX(display_order) FROM %i WHERE pipeline_id = %d", $this->table_name, $pipeline_id ) );
-            do_action('dm_cache_set', $cache_key, $max_order, 300, 'flows'); // 5 min cache for display order
-            $cached_result = $max_order;
-        } else {
-            $max_order = $cached_result;
-        }
-        
-        return ($max_order !== null) ? (int)$max_order + 1 : 0;
-    }
 
     /**
      * Increment display_order for all existing flows in a pipeline by 1

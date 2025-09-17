@@ -12,6 +12,15 @@ class WebFetch {
 
     public function __construct() {
         add_filter('dm_tool_success_message', [$this, 'format_success_message'], 10, 4);
+        $this->register_configuration();
+    }
+
+    /**
+     * Register configuration filters for self-registration
+     */
+    private function register_configuration() {
+        add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
+        add_filter('dm_tool_configured', [$this, 'check_configuration'], 10, 2);
     }
 
     /**
@@ -115,6 +124,45 @@ class WebFetch {
     }
 
     /**
+     * Register tool in ai_tools filter
+     */
+    public function register_tool($tools) {
+        $tools['web_fetch'] = [
+            'class' => __CLASS__,
+            'method' => 'handle_tool_call',
+            'description' => 'Fetch and extract readable content from web pages. Use after Google Search to retrieve full article content. Returns page title and cleaned text content from any HTTP/HTTPS URL.',
+            'requires_config' => false,
+            'parameters' => [
+                'url' => [
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'Full HTTP/HTTPS URL to fetch content from. Must be a valid web address.'
+                ]
+            ]
+        ];
+
+        return $tools;
+    }
+
+    /**
+     * Check if Web Fetch tool is available.
+     */
+    public static function is_configured(): bool {
+        return true;
+    }
+
+    /**
+     * Filter handler for dm_tool_configured
+     */
+    public function check_configuration($configured, $tool_id) {
+        if ($tool_id !== 'web_fetch') {
+            return $configured;
+        }
+
+        return self::is_configured();
+    }
+
+    /**
      * Extract readable content from HTML using regex processing.
      */
     private function extract_readable_content(string $html_content): array {
@@ -175,3 +223,6 @@ class WebFetch {
         return "FETCH COMPLETE: Retrieved content from \"{$url}\".{$title_text}\nContent Length: {$content_length} characters";
     }
 }
+
+// Self-register the tool
+new WebFetch();

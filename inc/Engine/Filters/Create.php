@@ -2,9 +2,6 @@
 /**
  * Centralized creation operations with atomic workflows and permission validation.
  *
- * Handles pipeline, flow, and step creation with comprehensive validation,
- * cache management, and AJAX response formatting.
- *
  * @package DataMachine\Engine\Filters
  */
 
@@ -12,9 +9,6 @@ namespace DataMachine\Engine\Filters;
 
 defined('WPINC') || exit;
 
-/**
- * Atomic creation workflows for Data Machine entities.
- */
 class Create {
 
     /**
@@ -125,10 +119,9 @@ class Create {
             }
         }
 
-        // Create pipeline first to get pipeline_id
         $pipeline_data = [
             'pipeline_name' => $pipeline_name,
-            'pipeline_config' => '{}' // Temporary empty config
+            'pipeline_config' => '{}'
         ];
 
         $pipeline_id = $db_pipelines->create_pipeline($pipeline_data);
@@ -136,7 +129,6 @@ class Create {
             return false;
         }
 
-        // Generate pipeline-prefixed step IDs and build complete pipeline configuration
         $pipeline_config = [];
         foreach ($steps as $step) {
             $pipeline_step_id = $pipeline_id . '_' . wp_generate_uuid4();
@@ -150,7 +142,6 @@ class Create {
                 'label' => $step['label'] ?? $step_config['label'] ?? ucfirst(str_replace('_', ' ', $step_type))
             ];
 
-            // Add AI-specific configuration if provided
             if ($step_type === 'ai') {
                 if (isset($step['provider'])) {
                     $pipeline_config[$pipeline_step_id]['provider'] = $step['provider'];
@@ -167,7 +158,6 @@ class Create {
             }
         }
 
-        // Update pipeline with complete configuration
         $success = $db_pipelines->update_pipeline($pipeline_id, [
             'pipeline_config' => json_encode($pipeline_config)
         ]);
@@ -181,16 +171,14 @@ class Create {
             return false;
         }
 
-        // Create flow with step synchronization
         $flow_config_data = isset($data['flow_config']) ? $data['flow_config'] : [];
         $flow_name = $flow_config_data['flow_name'] ?? 'Flow';
         $scheduling_config = $flow_config_data['scheduling_config'] ?? ['interval' => 'manual'];
 
-        // Create initial flow
         $flow_data = [
             'pipeline_id' => $pipeline_id,
             'flow_name' => $flow_name,
-            'flow_config' => json_encode([]), // Start empty, will be populated below
+            'flow_config' => json_encode([]),
             'scheduling_config' => json_encode($scheduling_config)
         ];
 
@@ -200,7 +188,6 @@ class Create {
             return false;
         }
 
-        // Build complete flow configuration with proper flow step IDs
         $flow_config = [];
         foreach ($pipeline_config as $pipeline_step_id => $step_config) {
             $flow_step_id = apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
@@ -215,17 +202,14 @@ class Create {
             ];
         }
 
-        // Update flow with complete configuration
         $update_success = $db_flows->update_flow($flow_id, [
             'flow_config' => json_encode($flow_config)
         ]);
 
         if (!$update_success) {
             do_action('dm_log', 'error', "Failed to update flow config for complete pipeline {$pipeline_id}");
-            // Continue anyway, pipeline was created successfully
         }
 
-        // Configure handlers if provided - maintain execution order mapping
         $step_order_map = [];
         foreach ($pipeline_config as $pipeline_step_id => $step_config) {
             $execution_order = $step_config['execution_order'];
@@ -271,12 +255,10 @@ class Create {
         ]);
 
 
-        // Trigger action for cache invalidation listeners
         do_action('dm_pipeline_created', $pipeline_id);
 
-        // For AJAX context, provide comprehensive response data for immediate UI updates
+        // Handle AJAX response
         if (wp_doing_ajax()) {
-            // Get complete pipeline data
             $pipeline = $db_pipelines->get_pipeline($pipeline_id);
             $existing_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
 
@@ -284,7 +266,6 @@ class Create {
                 ? __('Complete pipeline created successfully', 'data-machine')
                 : __('Pipeline created successfully', 'data-machine');
 
-            // Clear pipelines list cache (new pipeline affects dropdown lists)
             do_action('dm_clear_pipelines_list_cache');
 
             wp_send_json_success([
@@ -298,7 +279,6 @@ class Create {
             ]);
         }
 
-        // For non-AJAX contexts, return pipeline_id
         return $pipeline_id;
     }
 
@@ -315,7 +295,6 @@ class Create {
             return false;
         }
         
-        // Validate required parameters
         $pipeline_id = isset($data['pipeline_id']) ? (int)sanitize_text_field(wp_unslash($data['pipeline_id'])) : 0;
         $step_type = isset($data['step_type']) ? sanitize_text_field(wp_unslash($data['step_type'])) : '';
         
@@ -358,7 +337,6 @@ class Create {
             'label' => $step_config['label'] ?? ucfirst(str_replace('_', ' ', $step_type))
         ];
         
-        // Add to pipeline using associative array with pipeline_step_id as key
         $pipeline_config = [];
         foreach ($current_steps as $step) {
             $pipeline_config[$step['pipeline_step_id']] = $step;
@@ -377,17 +355,14 @@ class Create {
             return false;
         }
         
-        // Sync to all existing flows using centralized action
         $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         foreach ($flows as $flow) {
             $flow_id = $flow['flow_id'];
             do_action('dm_sync_steps_to_flow', $flow_id, [$new_step], ['context' => 'add_step']);
         }
 
-        // Clear cache before auto-save to prevent stale data overwrite
         do_action('dm_clear_pipeline_cache', $pipeline_id);
 
-        // Trigger auto-save
         do_action('dm_auto_save', $pipeline_id);
 
         do_action('dm_log', 'info', 'Step created successfully', [
@@ -397,9 +372,8 @@ class Create {
             'execution_order' => $next_execution_order
         ]);
 
-        // For AJAX context, provide comprehensive response data for immediate UI updates
+        // Handle AJAX response
         if (wp_doing_ajax()) {
-            // Get step configuration for comprehensive response
             $all_steps = apply_filters('dm_steps', []);
             $step_config = $all_steps[$step_type] ?? [];
 
@@ -415,7 +389,6 @@ class Create {
             ]);
         }
         
-        // For non-AJAX contexts, return pipeline_step_id
         return $new_step['pipeline_step_id'];
     }
 
@@ -458,10 +431,8 @@ class Create {
             return false;
         }
         
-        // Use provided flow name or fallback  
         $flow_name = isset($data['flow_name']) ? sanitize_text_field(wp_unslash($data['flow_name'])) : 'Flow';
-        
-        // Increment existing flow orders to place new flow at top
+
         $increment_success = $db_flows->increment_existing_flow_orders($pipeline_id);
         if (!$increment_success) {
             do_action('dm_log', 'error', 'Failed to increment existing flow orders for new flow creation', [
@@ -470,14 +441,13 @@ class Create {
             ]);
             return false;
         }
-        
-        // Create flow with display_order = 0 (top position)
+
         $flow_data = [
             'pipeline_id' => $pipeline_id,
             'flow_name' => $flow_name,
             'flow_config' => json_encode([]),
             'scheduling_config' => json_encode(['interval' => 'manual']),
-            'display_order' => 0 // New flows always appear at top
+            'display_order' => 0
         ];
         
         $flow_id = $db_flows->create_flow($flow_data);
@@ -488,8 +458,7 @@ class Create {
             ]);
             return false;
         }
-        
-        // Sync existing pipeline steps to new flow using centralized action
+
         $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         if (!empty($pipeline_steps)) {
             do_action('dm_sync_steps_to_flow', $flow_id, $pipeline_steps, ['context' => 'create_flow']);
@@ -501,13 +470,9 @@ class Create {
             'pipeline_id' => $pipeline_id,
             'synced_steps' => count($pipeline_steps)
         ]);
-        
-        // For AJAX context, provide comprehensive response data for immediate UI updates
-        if (wp_doing_ajax()) {
-            // Get complete flow data
-            $flow_data = $db_flows->get_flow($flow_id);
 
-            // Clear pipeline cache before response (flow creation affects pipeline)
+        if (wp_doing_ajax()) {
+            $flow_data = $db_flows->get_flow($flow_id);
             do_action('dm_clear_pipeline_cache', $pipeline_id);
 
             wp_send_json_success([
@@ -520,8 +485,7 @@ class Create {
                 'created_type' => 'flow'
             ]);
         }
-        
-        // For non-AJAX contexts, return flow_id
+
         return $flow_id;
     }
 
@@ -559,7 +523,6 @@ class Create {
         /* translators: %s: Original flow name */
         $duplicate_flow_name = sprintf(__('Copy of %s', 'data-machine'), $source_flow['flow_name']);
 
-        // Increment existing flow orders to place new flow at top
         $increment_success = $db_flows->increment_existing_flow_orders($source_flow['pipeline_id']);
         if (!$increment_success) {
             do_action('dm_log', 'error', 'Failed to increment existing flow orders for flow duplication', [
@@ -569,13 +532,12 @@ class Create {
             return false;
         }
 
-        // Create new flow data with duplicated configuration
         $flow_data = [
-            'pipeline_id' => $source_flow['pipeline_id'], // Same pipeline
+            'pipeline_id' => $source_flow['pipeline_id'],
             'flow_name' => $duplicate_flow_name,
-            'flow_config' => json_encode($source_flow['flow_config']), // Copy exact configuration
-            'scheduling_config' => json_encode(['interval' => 'manual']), // Set to manual for safety
-            'display_order' => 0 // New flows always appear at top
+            'flow_config' => json_encode($source_flow['flow_config']),
+            'scheduling_config' => json_encode(['interval' => 'manual']),
+            'display_order' => 0
         ];
 
         $new_flow_id = $db_flows->create_flow($flow_data);
@@ -588,10 +550,8 @@ class Create {
             return false;
         }
 
-        // Remap flow step IDs from {pipeline_step_id}_{old_flow_id} to {pipeline_step_id}_{new_flow_id}
         $remapped_config = $this->remap_flow_step_ids($source_flow['flow_config'], $source_flow_id, $new_flow_id);
 
-        // Update flow with remapped configuration
         $update_success = $db_flows->update_flow($new_flow_id, [
             'flow_config' => json_encode($remapped_config)
         ]);
@@ -601,7 +561,6 @@ class Create {
                 'new_flow_id' => $new_flow_id,
                 'source_flow_id' => $source_flow_id
             ]);
-            // Don't return false here, flow was created successfully, just config wasn't remapped
         }
 
         do_action('dm_log', 'info', 'Flow duplicated successfully', [
@@ -612,18 +571,11 @@ class Create {
         ]);
 
 
-        // Trigger action for cache invalidation listeners
         do_action('dm_flow_duplicated', $source_flow['pipeline_id']);
 
-        // For AJAX context, provide comprehensive response data for immediate UI updates
         if (wp_doing_ajax()) {
-            // Get complete duplicated flow data
             $duplicated_flow_data = $db_flows->get_flow($new_flow_id);
-
-            // Get pipeline steps for template rendering
             $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $source_flow['pipeline_id']);
-
-            // Clear pipeline cache to ensure all flow caches are invalidated
             do_action('dm_clear_pipeline_cache', $source_flow['pipeline_id']);
 
             wp_send_json_success([
@@ -639,7 +591,6 @@ class Create {
             ]);
         }
 
-        // For non-AJAX contexts, return new flow_id
         return $new_flow_id;
     }
 
@@ -650,13 +601,11 @@ class Create {
         $remapped_config = [];
 
         foreach ($source_config as $old_flow_step_id => $step_config) {
-            // Extract pipeline_step_id by removing the old flow_id suffix
             $old_suffix = '_' . $old_flow_id;
             if (strpos($old_flow_step_id, $old_suffix) !== false) {
                 $pipeline_step_id = str_replace($old_suffix, '', $old_flow_step_id);
                 $new_flow_step_id = $pipeline_step_id . '_' . $new_flow_id;
             } else {
-                // Fallback if pattern doesn't match expected format
                 $new_flow_step_id = $old_flow_step_id . '_' . $new_flow_id;
                 do_action('dm_log', 'warning', 'Unexpected flow step ID format during duplication', [
                     'old_flow_step_id' => $old_flow_step_id,
@@ -666,7 +615,6 @@ class Create {
                 ]);
             }
 
-            // Copy step configuration with new flow step ID
             $remapped_config[$new_flow_step_id] = $step_config;
         }
 
@@ -704,12 +652,10 @@ class Create {
 
         $template = $templates[$template_id];
 
-        // Convert template to complete pipeline data structure
         $pipeline_data = [
             'pipeline_name' => $options['pipeline_name'] ?? $template['name']
         ];
 
-        // Add steps if template has them
         if (!empty($template['steps'])) {
             $pipeline_data['steps'] = [];
             foreach ($template['steps'] as $index => $step) {
@@ -721,7 +667,6 @@ class Create {
             }
         }
 
-        // Add custom flow configuration if provided
         if (isset($options['flow_config'])) {
             $pipeline_data['flow_config'] = $options['flow_config'];
         }
@@ -732,7 +677,6 @@ class Create {
             'steps_count' => count($template['steps'] ?? [])
         ]);
 
-        // Use enhanced filter for atomic creation (complete mode will be triggered by presence of 'steps')
         $pipeline_id = $this->handle_create_pipeline(false, $pipeline_data);
 
         if (!$pipeline_id) {
@@ -749,9 +693,6 @@ class Create {
             'template_name' => $template['name'],
             'steps_count' => count($template['steps'] ?? [])
         ]);
-
-        // AJAX response is handled by handle_create_pipeline in complete mode
-        // No additional AJAX handling needed here
 
         return $pipeline_id;
     }

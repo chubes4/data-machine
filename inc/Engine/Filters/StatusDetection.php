@@ -117,16 +117,21 @@ function dm_handle_red_flow_statuses($default_status, $context, $data) {
         if (!$handler_slug) {
             return 'red'; // No handler slug provided
         }
-        
-        // Check if handler has authentication data
-        $auth_data = apply_filters('dm_retrieve_oauth_account', [], $handler_slug);
-        
-        if (empty($auth_data)) {
-            return 'red'; // No authentication data
+
+        // Get auth provider to determine authentication type
+        $all_auth = apply_filters('dm_auth_providers', []);
+        $auth_provider = $all_auth[$handler_slug] ?? null;
+
+        if (!$auth_provider) {
+            return $default_status; // No auth provider, let other filters handle
         }
-        
-        // Handler is authenticated
-        return 'green';
+
+        // Use the auth provider's is_configured method for proper authentication check
+        if (method_exists($auth_provider, 'is_configured') && $auth_provider->is_configured()) {
+            return 'green';
+        }
+
+        return 'red'; // Authentication not configured
     }
     
     // Files Handler Critical Issues

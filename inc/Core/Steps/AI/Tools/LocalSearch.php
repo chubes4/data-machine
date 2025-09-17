@@ -14,6 +14,15 @@ class LocalSearch {
 
     public function __construct() {
         add_filter('dm_tool_success_message', [$this, 'format_success_message'], 10, 4);
+        $this->register_configuration();
+    }
+
+    /**
+     * Register configuration filters for self-registration
+     */
+    private function register_configuration() {
+        add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
+        add_filter('dm_tool_configured', [$this, 'check_configuration'], 10, 2);
     }
 
     /**
@@ -103,12 +112,54 @@ class LocalSearch {
             'tool_name' => 'local_search'
         ];
     }
-    
+
+    /**
+     * Register tool in ai_tools filter
+     */
+    public function register_tool($tools) {
+        $tools['local_search'] = [
+            'class' => __CLASS__,
+            'method' => 'handle_tool_call',
+            'description' => 'Search this WordPress site and return structured JSON results with post titles, excerpts, permalinks, and metadata. Use ONCE to find existing content before creating new content. Returns complete search data in JSON format - avoid calling multiple times for the same query.',
+            'requires_config' => false,
+            'parameters' => [
+                'query' => [
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'Search terms to find relevant posts. Returns JSON with "results" array containing title, link, excerpt, post_type, publish_date, author for each match.'
+                ],
+                'max_results' => [
+                    'type' => 'integer',
+                    'required' => false,
+                    'description' => 'Maximum results to return (1-20, default: 10). Limit to reduce response size.'
+                ],
+                'post_types' => [
+                    'type' => 'array',
+                    'required' => false,
+                    'description' => 'Post types to search (default: ["post", "page"]). Available types depend on site configuration.'
+                ]
+            ]
+        ];
+
+        return $tools;
+    }
+
     /**
      * Check if Local Search tool is available.
      */
     public static function is_configured(): bool {
         return true;
+    }
+
+    /**
+     * Filter handler for dm_tool_configured
+     */
+    public function check_configuration($configured, $tool_id) {
+        if ($tool_id !== 'local_search') {
+            return $configured;
+        }
+
+        return self::is_configured();
     }
     
     /**
@@ -143,3 +194,6 @@ class LocalSearch {
         return "SEARCH COMPLETE: Found {$result_count} WordPress posts matching \"{$query}\".\nSearch Results:";
     }
 }
+
+// Self-register the tool
+new LocalSearch();

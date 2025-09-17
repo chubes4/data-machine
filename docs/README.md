@@ -94,7 +94,7 @@ docs/
 - Data packet processing with clean content (no URL pollution)
 - Job management and status tracking
 - Error handling and failure recovery
-- AutoSave actions with pipeline synchronization and cache management
+- AutoSave system with complete pipeline persistence, flow synchronization, and cache invalidation
 
 **Database Operations**
 - Pipelines (reusable templates)
@@ -131,7 +131,7 @@ docs/
 - Threads - OAuth2, 500 char limit, Meta integration
 
 **Content Platforms**
-- WordPress - Local post creation with enhanced handler system (FeaturedImageHandler, SourceUrlHandler, TaxonomyHandler)
+- WordPress - Modular post creation with specialized components (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`) and configuration hierarchy
 - Google Sheets - OAuth2 row insertion and data management
 
 ### ✅ Update Handlers (1 handler)

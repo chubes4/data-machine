@@ -1,12 +1,8 @@
 <?php
 /**
- * AutoSave Actions
- *
- * Centralized auto-save operations for pipelines, flows, and related data.
- * Handles complete pipeline persistence, flow synchronization, and data consistency.
+ * Centralized auto-save operations for pipelines and flows.
  *
  * @package DataMachine\Engine\Actions
- * @since 1.0.0
  */
 
 namespace DataMachine\Engine\Actions;
@@ -24,19 +20,16 @@ class AutoSave
     public static function register() {
         $instance = new self();
 
-        // Central pipeline auto-save hook - eliminates database service discovery duplication
+        // Central pipeline auto-save hook
         add_action('dm_auto_save', [$instance, 'handle_pipeline_auto_save'], 10, 1);
     }
 
     /**
      * Handle complete pipeline auto-save operations.
+     * Saves pipeline data, flows, configurations, scheduling, and synchronizes execution order.
      *
-     * Saves EVERYTHING for a pipeline: pipeline data, all flows, flow configurations,
-     * flow scheduling, and handler settings. Simple interface - just call with pipeline_id.
-     *
-     * @param int $pipeline_id Pipeline ID to auto-save everything for
+     * @param int $pipeline_id Pipeline ID to auto-save
      * @return bool Success status
-     * @since 1.0.0
      */
     public function handle_pipeline_auto_save($pipeline_id) {
         // Get database services
@@ -53,7 +46,6 @@ class AutoSave
             return false;
         }
 
-        // Get current pipeline data
         $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
         if (!$pipeline) {
             do_action('dm_log', 'error', 'Pipeline not found for auto-save', [
@@ -62,7 +54,6 @@ class AutoSave
             return false;
         }
 
-        // Save pipeline data (existing functionality)
         $pipeline_name = $pipeline['pipeline_name'];
         $pipeline_config = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
 
@@ -78,7 +69,6 @@ class AutoSave
             return false;
         }
 
-        // Save all flows for this pipeline with synchronized execution_order
         $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         $flows_saved = 0;
         $flow_steps_saved = 0;
@@ -87,12 +77,11 @@ class AutoSave
             $flow_id = $flow['flow_id'];
             $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
 
-            // Synchronize execution_order from pipeline steps to flow steps
+            // Synchronize execution_order from pipeline to flow steps
             foreach ($flow_config as $flow_step_id => $flow_step) {
                 $pipeline_step_id = $flow_step['pipeline_step_id'] ?? null;
                 if ($pipeline_step_id && isset($pipeline_config[$pipeline_step_id])) {
-                    // Update flow step execution_order to match pipeline step
-                    $flow_config[$flow_step_id]['execution_order'] = $pipeline_config[$pipeline_step_id]['execution_order'];
+                        $flow_config[$flow_step_id]['execution_order'] = $pipeline_config[$pipeline_step_id]['execution_order'];
                 }
             }
 
@@ -114,7 +103,7 @@ class AutoSave
             'flow_steps_saved' => $flow_steps_saved
         ]);
 
-        // Clear pipeline cache after successful auto-save - ensures fresh data on page loads
+        // Clear pipeline cache after successful save
         do_action('dm_clear_pipeline_cache', $pipeline_id);
 
         return true;

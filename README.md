@@ -16,7 +16,7 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-**Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), 6-Tier AI Directive Priority System, AIStepConversationManager with Turn Tracking, AIStepToolParameters, Clean Content Processing, Centralized Cache Management, WordPress Publish Handler Improvements, Universal Handler Settings Template, AutoSave Actions, Three-Layer Tool Management
+**Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), 6-Tier AI Directive Priority System, AIStepConversationManager with Turn Tracking, AIStepToolParameters, Clean Content Processing, Centralized Cache Management, Modular WordPress Publish Handler, Universal Handler Settings Template, AutoSave System, Three-Layer Tool Management
 
 **Requirements**: WordPress 6.2+, PHP 8.0+, Composer
 
@@ -112,10 +112,10 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 **General Tools**: Google Search, Local Search, WebFetch (50K character limit), WordPress Post Reader
 
 **Recent Improvements**:
-- **Clean Content Processing**: Fixed URL injection in fetch handlers (Reddit, RSS) preventing AI content pollution
-- **WordPress Publish Handler Enhancements**: New FeaturedImageHandler, SourceUrlHandler, TaxonomyHandler for improved post creation
-- **AutoSave Actions**: Centralized auto-save operations with pipeline synchronization and cache management
-- **Enhanced Cache System**: WordPress action-based cache clearing with granular invalidation
+- **Modular WordPress Publish Handler**: Refactored into specialized components - `FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler` with configuration hierarchy (system defaults override handler config)
+- **AutoSave System**: Complete pipeline auto-save with flow synchronization, execution_order updates, and cache invalidation via single `dm_auto_save` action
+- **Enhanced Cache System**: WordPress action-based cache clearing with granular invalidation and pattern support
+- **Clean Content Processing**: Fixed URL injection in fetch handlers (Reddit, RSS) preventing AI content pollution - source URLs maintained in metadata only
 
 *All handlers are fully functional with OAuth authentication where required and comprehensive error handling*
 
@@ -157,7 +157,7 @@ composer install    # Development setup
 ./build.sh         # Production build
 ```
 
-**Architecture**: PSR-4 autoloading, filter-based service discovery, flat parameter architecture via `dm_engine_parameters` filter, centralized cache system via Actions/Cache.php with WordPress action-based clearing, 6-tier AI directive system with auto-registration (PluginCoreDirective, GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, DataPacketStructureDirective, SiteContextDirective), AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution, AutoSave actions with pipeline synchronization, clean content processing eliminating URL pollution, WordPress publish handler improvements (FeaturedImageHandler, SourceUrlHandler, TaxonomyHandler), universal handler settings template system eliminating modal code duplication, Composer-managed ai-http-client dependency. See `CLAUDE.md` for complete technical specifications.
+**Architecture**: PSR-4 autoloading, filter-based service discovery, flat parameter architecture via `dm_engine_parameters` filter, centralized cache system via Actions/Cache.php with WordPress action-based clearing, 6-tier AI directive system with auto-registration (PluginCoreDirective, GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, DataPacketStructureDirective, SiteContextDirective), AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution, AutoSave system with complete pipeline persistence and flow synchronization, clean content processing eliminating URL pollution, modular WordPress publish handler (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`) with configuration hierarchy, universal handler settings template system eliminating modal code duplication, Composer-managed ai-http-client dependency. See `CLAUDE.md` for complete technical specifications.
 
 ## License
 

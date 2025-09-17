@@ -157,7 +157,6 @@ class ToolDefinitionsDirective {
         $directive .= "TOOL USAGE STRATEGY:\n";
         $directive .= "- Use research tools to gather additional context when beneficial\n";
         $directive .= "- Use handler tools to produce pipeline outputs and advance workflow\n";
-        $directive .= "- Multiple tool interactions are encouraged when they improve results\n";
         $directive .= "- Balance thoroughness with efficiency based on content requirements\n";
 
         
@@ -313,7 +312,7 @@ class ToolDefinitionsDirective {
             // Success criteria
             $directive .= "\nSuccess Criteria: ";
             if (!empty($handler_tools)) {
-                $directive .= "Workflow objective achieved through effective tool usage and quality output";
+                $directive .= "Workflow objective achieved when handler tools complete successfully. Stop after successful handler tool execution.";
             } else {
                 $directive .= "Content processed and enhanced for optimal next step performance";
             }

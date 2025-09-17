@@ -1,16 +1,9 @@
 <?php
 /**
- * Featured Image Handler for WordPress Publish Operations
- *
- * Centralized featured image processing module handling:
- * - Configuration management and validation
- * - Image download and WordPress media library integration
- * - Featured image assignment and error handling
- * - Comprehensive logging throughout the process
+ * Centralized featured image processing for WordPress publish operations.
  *
  * @package DataMachine
  * @subpackage Core\Steps\Publish\Handlers\WordPress
- * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
@@ -22,7 +15,7 @@ if (!defined('ABSPATH')) {
 class FeaturedImageHandler {
 
     /**
-     * Process featured image for WordPress post
+     * Process featured image for WordPress post.
      *
      * @param int $post_id WordPress post ID
      * @param array $parameters Tool parameters including image_url
@@ -43,7 +36,7 @@ class FeaturedImageHandler {
     }
 
     /**
-     * Check if image handling is enabled based on configuration hierarchy
+     * Check if image handling is enabled based on configuration hierarchy.
      *
      * @param array $handler_config Handler configuration
      * @return bool True if image handling is enabled
@@ -52,7 +45,7 @@ class FeaturedImageHandler {
         $all_settings = get_option('data_machine_settings', []);
         $wp_settings = $all_settings['wordpress_settings'] ?? [];
 
-        // System default ALWAYS overrides handler config when set (isset check for boolean values)
+        // System default overrides handler config when set
         if (isset($wp_settings['default_enable_images'])) {
             return (bool) $wp_settings['default_enable_images'];
         }
@@ -62,7 +55,7 @@ class FeaturedImageHandler {
     }
 
     /**
-     * Validate image URL format
+     * Validate image URL format.
      *
      * @param string $image_url Image URL to validate
      * @return bool True if URL is valid
@@ -72,7 +65,7 @@ class FeaturedImageHandler {
     }
 
     /**
-     * Download image and create WordPress attachment
+     * Download image and create WordPress attachment.
      *
      * @param int $post_id WordPress post ID
      * @param string $image_url Image URL to download
@@ -133,7 +126,7 @@ class FeaturedImageHandler {
     }
 
     /**
-     * Set featured image for WordPress post
+     * Set featured image for WordPress post.
      *
      * @param int $post_id WordPress post ID
      * @param int $attachment_id Attachment ID to set as featured image
@@ -144,7 +137,7 @@ class FeaturedImageHandler {
     }
 
     /**
-     * Clean up temporary files
+     * Clean up temporary files.
      *
      * @param string $temp_file Path to temporary file
      * @return void
@@ -156,7 +149,7 @@ class FeaturedImageHandler {
     }
 
     /**
-     * Log image operation with consistent formatting
+     * Log image operation with consistent formatting.
      *
      * @param string $level Log level (debug, info, warning, error)
      * @param string $message Log message

@@ -2,9 +2,6 @@
 /**
  * WordPress publish handler with modular component system.
  *
- * Features enhanced components for featured images, taxonomy management,
- * source URL handling, and Gutenberg block validation.
- *
  * @package DataMachine\Core\Steps\Publish\Handlers\WordPress
  */
 
@@ -31,7 +28,7 @@ class WordPress {
     }
 
     /**
-     * Handle AI tool call for WordPress post creation with component processing.
+     * Handle AI tool call for WordPress post creation.
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         

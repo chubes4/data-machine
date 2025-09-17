@@ -1,9 +1,7 @@
 <?php
 /**
  * Multi-turn conversation state management for AI workflows.
- *
- * Provides turn-based conversation tracking, message formatting, and tool execution
- * context preservation with chronological ordering and duplicate prevention.
+ * Handles turn-based tracking, message formatting, and duplicate prevention.
  *
  * @package DataMachine
  */

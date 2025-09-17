@@ -70,8 +70,7 @@ class AIStep {
                     'content' => json_encode(['data_packets' => $data], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
                 ];
             }
-            
-            
+
             if (empty($flow_step_config['pipeline_step_id'])) {
                 do_action('dm_log', 'error', 'AI Agent: Missing required pipeline_step_id from pipeline configuration', [
                     'flow_step_id' => $flow_step_id,
@@ -106,7 +105,7 @@ class AIStep {
                 ]);
                 throw new \Exception($error_message);
             }
-            // Format tools for AI provider API
+
             $ai_provider_tools = [];
             foreach ($available_tools as $tool_name => $tool_config) {
                 $ai_provider_tools[] = [
@@ -128,8 +127,7 @@ class AIStep {
                 if ($turn_count > 1) {
                     $conversation_messages = AIStepConversationManager::updateDataPacketMessages($conversation_messages, $data);
                 }
-                
-                
+
                 $current_request = [
                     'messages' => $conversation_messages,
                     'model' => $step_ai_config['model'] ?? null
@@ -213,13 +211,11 @@ class AIStep {
                             continue;
                         }
 
-                        // Validate for duplicate tool calls with identical parameters
                         $validation_result = AIStepConversationManager::validateToolCall(
                             $tool_name, $tool_parameters, $conversation_messages
                         );
 
                         if ($validation_result['is_duplicate']) {
-                            // Add gentle correction message and skip tool execution
                             $correction_message = AIStepConversationManager::generateDuplicateToolCallMessage($tool_name);
                             array_push($conversation_messages, $correction_message);
 
@@ -230,7 +226,7 @@ class AIStep {
                                 'duplicate_prevention' => 'soft_rejection_applied'
                             ]);
 
-                            continue; // Skip this tool execution, let AI try again
+                            continue;
                         }
 
                         $tool_call_message = AIStepConversationManager::formatToolCallMessage(
@@ -238,7 +234,6 @@ class AIStep {
                         );
                         array_push($conversation_messages, $tool_call_message);
 
-                        // Build unified parameters - handler tools get engine parameters, general tools get clean parameters
                         $unified_parameters = [
                             'data' => $data,
                             'flow_step_config' => $flow_step_config,

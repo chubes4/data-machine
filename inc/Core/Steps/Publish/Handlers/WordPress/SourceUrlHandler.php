@@ -1,16 +1,10 @@
 <?php
 /**
- * Source URL Handler for WordPress Publish Operations
- *
- * Centralized source URL processing module handling:
- * - Configuration management for source URL inclusion
- * - URL validation and sanitization
- * - Gutenberg block generation for source attribution
- * - Content appending with proper formatting
+ * Centralized source URL processing for WordPress publish operations.
+ * Handles configuration-based source URL inclusion and Gutenberg block generation.
  *
  * @package DataMachine
  * @subpackage Core\Steps\Publish\Handlers\WordPress
- * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
@@ -22,7 +16,7 @@ if (!defined('ABSPATH')) {
 class SourceUrlHandler {
 
     /**
-     * Process source URL and append to content if enabled
+     * Process source URL and append to content if enabled.
      *
      * @param string $content Current post content
      * @param array $parameters Tool parameters including source_url
@@ -44,7 +38,7 @@ class SourceUrlHandler {
     }
 
     /**
-     * Check if source URL inclusion is enabled based on configuration hierarchy
+     * Check if source URL inclusion is enabled based on configuration hierarchy.
      *
      * @param array $handler_config Handler configuration
      * @return bool True if source inclusion is enabled
@@ -53,7 +47,7 @@ class SourceUrlHandler {
         $all_settings = get_option('data_machine_settings', []);
         $wp_settings = $all_settings['wordpress_settings'] ?? [];
 
-        // System default ALWAYS overrides handler config when set (isset check for boolean values)
+        // System default overrides handler config when set
         if (isset($wp_settings['default_include_source'])) {
             return (bool) $wp_settings['default_include_source'];
         }
@@ -63,7 +57,7 @@ class SourceUrlHandler {
     }
 
     /**
-     * Validate source URL format
+     * Validate source URL format.
      *
      * @param string|null $source_url Source URL to validate
      * @return bool True if URL is valid
@@ -77,7 +71,7 @@ class SourceUrlHandler {
     }
 
     /**
-     * Generate Gutenberg blocks for source attribution
+     * Generate Gutenberg blocks for source attribution.
      *
      * @param string $source_url Validated source URL
      * @return string Complete Gutenberg block structure
@@ -90,7 +84,7 @@ class SourceUrlHandler {
     }
 
     /**
-     * Create separator Gutenberg block
+     * Create separator Gutenberg block.
      *
      * @return string Separator block markup
      */
@@ -99,7 +93,7 @@ class SourceUrlHandler {
     }
 
     /**
-     * Create paragraph Gutenberg block with source link
+     * Create paragraph Gutenberg block with source link.
      *
      * @param string $source_url Source URL to include
      * @return string Paragraph block markup with source link
@@ -110,7 +104,7 @@ class SourceUrlHandler {
     }
 
     /**
-     * Sanitize source URL for safe output
+     * Sanitize source URL for safe output.
      *
      * @param string $source_url Raw source URL
      * @return string Sanitized and escaped URL
@@ -120,7 +114,7 @@ class SourceUrlHandler {
     }
 
     /**
-     * Append source block to existing content
+     * Append source block to existing content.
      *
      * @param string $content Current post content
      * @param string $source_block Generated source block

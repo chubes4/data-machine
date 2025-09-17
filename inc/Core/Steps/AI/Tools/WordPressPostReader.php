@@ -13,6 +13,15 @@ class WordPressPostReader {
 
     public function __construct() {
         add_filter('dm_tool_success_message', [$this, 'format_success_message'], 10, 4);
+        $this->register_configuration();
+    }
+
+    /**
+     * Register configuration filters for self-registration
+     */
+    private function register_configuration() {
+        add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
+        add_filter('dm_tool_configured', [$this, 'check_configuration'], 10, 2);
     }
 
     /**
@@ -103,10 +112,48 @@ class WordPressPostReader {
     }
 
     /**
+     * Register tool in ai_tools filter
+     */
+    public function register_tool($tools) {
+        $tools['wordpress_post_reader'] = [
+            'class' => __CLASS__,
+            'method' => 'handle_tool_call',
+            'name' => 'WordPress Post Reader',
+            'description' => 'Read full content from specific WordPress posts by URL for detailed analysis. Use after Local Search to get complete post content instead of excerpts. Perfect for content analysis before WordPress Update operations.',
+            'requires_config' => false,
+            'parameters' => [
+                'source_url' => [
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'WordPress post URL to retrieve content from (use URLs from Local Search results)'
+                ],
+                'include_meta' => [
+                    'type' => 'boolean',
+                    'required' => false,
+                    'description' => 'Include custom fields in response (default: false)'
+                ]
+            ]
+        ];
+
+        return $tools;
+    }
+
+    /**
      * Check if tool is configured and available.
      */
     public static function is_configured(): bool {
         return true;
+    }
+
+    /**
+     * Filter handler for dm_tool_configured
+     */
+    public function check_configuration($configured, $tool_id) {
+        if ($tool_id !== 'wordpress_post_reader') {
+            return $configured;
+        }
+
+        return self::is_configured();
     }
 
     /**
@@ -131,3 +178,6 @@ class WordPressPostReader {
         return "READ COMPLETE: Retrieved WordPress post from \"{$source_url}\".{$title_text}\nContent Length: {$content_length} characters ({$word_count} words)";
     }
 }
+
+// Self-register the tool
+new WordPressPostReader();

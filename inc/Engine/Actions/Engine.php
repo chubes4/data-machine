@@ -1,21 +1,9 @@
 <?php
 /**
- * Pipeline Execution Engine - Three-action execution cycle for Data Machine workflows.
- *
- * Core execution cycle:
- * 1. dm_run_flow_now - Initialize flow execution with job creation
- * 2. dm_execute_step - Execute individual steps with parameter building
- * 3. dm_schedule_next_step - Schedule next step via Action Scheduler
- *
- * Features:
- * - Job-based flow execution tracking
- * - Data packet storage and retrieval
- * - Global execution context for AI directives
- * - Comprehensive error handling and logging
- * - Action Scheduler integration for async execution
+ * Pipeline execution engine implementing three-action execution cycle.
+ * Core cycle: dm_run_flow_now → dm_execute_step → dm_schedule_next_step
  *
  * @package DataMachine\Engine\Actions
- * @since 1.0.0
  */
 
 defined('ABSPATH') || exit;
@@ -23,15 +11,10 @@ defined('ABSPATH') || exit;
 
 /**
  * Register Data Machine execution engine actions.
- *
- * Registers three core actions for pipeline execution:
- * - dm_run_flow_now: Flow initialization with job creation
- * - dm_execute_step: Individual step execution with error handling
- * - dm_schedule_next_step: Next step scheduling via Action Scheduler
+ * Registers three core actions for the pipeline execution cycle.
  */
 function dm_register_execution_engine() {
 
-    // Flow initialization action
     add_action('dm_run_flow_now', function($flow_id) {
         $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
@@ -66,7 +49,6 @@ function dm_register_execution_engine() {
         }
         $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
 
-        // Find first step in execution order (execution_order = 0)
         $first_flow_step_id = null;
         foreach ($flow_config as $flow_step_id => $config) {
             if (($config['execution_order'] ?? -1) === 0) {
@@ -95,7 +77,6 @@ function dm_register_execution_engine() {
     });
 
 
-    // Step execution action with comprehensive error handling
     add_action( 'dm_execute_step', function( $job_id, $flow_step_id, $data = null ) {
 
         try {
@@ -155,13 +136,12 @@ function dm_register_execution_engine() {
                 'data' => $data ?: []
             ], $data ?: [], $flow_step_config, $step_type, $flow_step_id);
             
-            // Set global execution context for AI directives
+            // Set global execution context
             add_filter('dm_current_flow_step_id', function() use ($flow_step_id) { return $flow_step_id; }, 100);
             add_filter('dm_current_job_id', function() use ($job_id) { return $job_id; }, 100);
 
             $data = $flow_step->execute($parameters);
 
-            // Clear global execution context
             remove_all_filters('dm_current_flow_step_id', 100);
             remove_all_filters('dm_current_job_id', 100);
             
@@ -213,7 +193,6 @@ function dm_register_execution_engine() {
         }
     }, 10, 3 );
 
-    // Next step scheduling action with Action Scheduler integration
     add_action('dm_schedule_next_step', function($job_id, $flow_step_id, $data = []) {
         if (!function_exists('as_schedule_single_action')) {
             do_action('dm_log', 'error', 'Action Scheduler not available for step scheduling', [
@@ -226,7 +205,6 @@ function dm_register_execution_engine() {
         $repositories = apply_filters('dm_files_repository', []);
         $repository = $repositories['files'] ?? null;
         
-        // Store data packet or use direct reference
         if ($repository) {
             $data_reference = $repository->store_data_packet($data, $job_id, $flow_step_id);
         } else {

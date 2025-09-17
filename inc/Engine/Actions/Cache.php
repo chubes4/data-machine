@@ -1,6 +1,6 @@
 <?php
 /**
- * Cache clearing actions via WordPress hooks.
+ * Centralized cache management using WordPress transients and action hooks.
  *
  * @package DataMachine\Engine\Actions
  */
@@ -12,9 +12,6 @@ if (!defined('WPINC')) {
     die;
 }
 
-/**
- * Cache management using WordPress transients and action hooks.
- */
 class Cache {
 
     /**
@@ -52,14 +49,12 @@ class Cache {
     public static function register() {
         $instance = new self();
 
-        // Cache clearing actions
         add_action('dm_clear_flow_cache', [$instance, 'handle_clear_flow_cache'], 10, 1);
         add_action('dm_clear_pipeline_cache', [$instance, 'handle_clear_pipeline_cache'], 10, 1);
         add_action('dm_clear_pipelines_list_cache', [$instance, 'handle_clear_pipelines_list_cache'], 10, 0);
         add_action('dm_clear_jobs_cache', [$instance, 'handle_clear_jobs_cache'], 10, 0);
         add_action('dm_clear_all_cache', [$instance, 'handle_clear_all_cache'], 10, 0);
 
-        // Cache storage action
         add_action('dm_cache_set', [$instance, 'handle_cache_set'], 10, 4);
     }
 
@@ -74,7 +69,6 @@ class Cache {
 
         do_action('dm_log', 'debug', 'Starting cache clear for pipeline', ['pipeline_id' => $pipeline_id]);
 
-        // Clear related caches
         $this->clear_pipeline_cache($pipeline_id);
         $this->clear_flow_cache($pipeline_id);
         $this->clear_job_cache();
@@ -93,7 +87,6 @@ class Cache {
 
         do_action('dm_log', 'debug', 'Starting flow cache clear', ['flow_id' => $flow_id]);
 
-        // Get flow data to find pipeline_id
         $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
 
@@ -166,7 +159,6 @@ class Cache {
         delete_transient(self::PIPELINE_EXPORT_CACHE_KEY);
         delete_transient(self::TOTAL_JOBS_COUNT_CACHE_KEY);
 
-        // Clear object cache systems (Redis, Memcached, etc.)
         if (function_exists('wp_cache_flush')) {
             wp_cache_flush();
             do_action('dm_log', 'debug', 'Object cache flushed');

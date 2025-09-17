@@ -40,7 +40,7 @@ Three-action execution cycle:
 ### Step Types
 - **Fetch**: Data retrieval with clean content processing (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API)
 - **AI**: Content processing with multi-provider support (OpenAI, Anthropic, Google, Grok)
-- **Publish**: Content distribution with enhanced handler system (Twitter, Facebook, Threads, Bluesky, WordPress)
+- **Publish**: Content distribution with modular handler architecture (Twitter, Facebook, Threads, Bluesky, WordPress with specialized components)
 - **Update**: Content modification (WordPress posts/pages)
 
 ### Authentication System
@@ -68,11 +68,38 @@ All components self-register via WordPress filters:
 - `dm_auth_providers` - Register authentication providers
 - `dm_steps` - Register custom step types
 
+### WordPress Publish Handler Architecture
+**Modular Component System**: The WordPress publish handler is refactored into specialized processing modules for enhanced maintainability and extensibility.
+
+**Core Components**:
+- **FeaturedImageHandler**: Centralized featured image processing with configuration hierarchy (system defaults override handler config)
+- **TaxonomyHandler**: Configuration-based taxonomy processing with three selection modes (skip, AI-decided, pre-selected)
+- **SourceUrlHandler**: Source URL attribution with Gutenberg block generation and configuration hierarchy
+
+**Configuration Hierarchy**: System-wide defaults ALWAYS override handler-specific configuration when set, providing consistent behavior across all WordPress publish operations.
+
+**Features**:
+- Specialized component isolation for maintainability
+- Configuration validation and error handling per component
+- WordPress native function integration for optimal performance
+- Comprehensive logging throughout all components
+
 ### File Management
 Flow-isolated UUID storage with automatic cleanup:
 - Files organized by flow instance
 - Automatic purging on job completion
 - Support for local and remote file processing
+
+### AutoSave System
+**Complete Pipeline Persistence**: Centralized auto-save operations handle all pipeline-related data in a single action.
+
+**Features**:
+- **Single Action Interface**: `dm_auto_save` action handles everything
+- **Complete Data Management**: Saves pipeline data, all flows, flow configurations, and scheduling
+- **Execution Order Synchronization**: Updates flow step execution_order to match pipeline steps
+- **Cache Integration**: Automatic cache clearing after successful auto-save operations
+- **Database Service Integration**: Uses filter-based database service discovery
+- **Error Handling**: Validates services and data before processing
 
 ### Cache Management
 Centralized WordPress transient-based cache system:

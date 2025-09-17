@@ -113,6 +113,8 @@ dm_register_twitter_filters(); // Auto-execute at file load
 - **Database**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`
 - **Files Repository**: Flow-isolated UUID storage with cleanup
 - **Handlers**: Fetch (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API) | Publish (Twitter, Bluesky, Threads, Facebook, Google Sheets, WordPress) | Update (WordPress content updates) | AI (OpenAI, Anthropic, Google, Grok, OpenRouter)
+- **WordPress Publish Components**: Modular handler architecture with `FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler` for specialized processing
+- **AutoSave System**: Complete pipeline auto-save with flow synchronization and cache invalidation
 - **Admin**: `manage_options` only, zero user dependencies
 
 ## Database Schema
@@ -408,7 +410,7 @@ $data = AIStepTools->get_tools_data($pipeline_step_id);
 | Bluesky | App Password | 300 chars | Media upload, AT Protocol integration |
 | Threads | OAuth2 | 500 chars | Media upload |
 | Facebook | OAuth2 | No limit | Comment mode, link handling |
-| WordPress | Required Config | No limit | Post creation, Gutenberg blocks, dynamic taxonomy management, content sanitization, configurable post settings |
+| WordPress | Required Config | No limit | Modular post creation with `FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`, Gutenberg blocks, configuration hierarchy (system defaults override handler config) |
 | Google Sheets | OAuth2 | No limit | Row insertion |
 
 | **Update** | **Auth** | **Features** |
@@ -438,6 +440,119 @@ $data = AIStepTools->get_tools_data($pipeline_step_id);
 
 **Processing**: Each step adds entry to array front → accumulates complete workflow history
 **Clean Content**: Fetch handlers (RSS, Reddit) provide clean content without URL pollution; source URLs maintained in metadata only
+
+## WordPress Publish Handler Architecture
+
+**Modular Components**: The WordPress publish handler is refactored into specialized processing modules for maintainability and extensibility.
+
+### FeaturedImageHandler
+```php
+// Configuration hierarchy - system defaults override handler config
+$image_handler = new FeaturedImageHandler();
+$result = $image_handler->processImage($post_id, $parameters, $handler_config);
+
+// Configuration hierarchy
+if (isset($wp_settings['default_enable_images'])) {
+    return (bool) $wp_settings['default_enable_images'];  // System default ALWAYS overrides
+}
+return (bool) ($handler_config['enable_images'] ?? true);  // Fallback to handler config
+```
+
+**Features**:
+- Configuration hierarchy validation (system defaults override handler settings)
+- Image URL validation and sanitization
+- WordPress media library integration with `media_handle_sideload()`
+- Featured image assignment with comprehensive error handling
+- Temporary file cleanup and logging
+
+### TaxonomyHandler
+```php
+// Configuration-based taxonomy processing
+$taxonomy_handler = new TaxonomyHandler();
+$results = $taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config);
+
+// Three selection modes per taxonomy:
+// 1. 'skip' - No processing
+// 2. 'ai_decides' - Use AI-provided parameters
+// 3. numeric ID - Pre-selected term assignment
+```
+
+**Features**:
+- Configuration-based taxonomy selection (skip, AI-decided, pre-selected)
+- Dynamic term creation with `wp_insert_term()` for non-existing terms
+- AI parameter extraction with standard naming (`category`, `tags`, custom taxonomy names)
+- WordPress taxonomy operations with comprehensive validation
+- Public taxonomy discovery excluding system taxonomies (`post_format`, `nav_menu`, `link_category`)
+
+### SourceUrlHandler
+```php
+// Source URL processing with Gutenberg block generation
+$source_handler = new SourceUrlHandler();
+$content = $source_handler->processSourceUrl($content, $parameters, $handler_config);
+
+// Configuration hierarchy - same pattern as image handler
+if (isset($wp_settings['default_include_source'])) {
+    return (bool) $wp_settings['default_include_source'];  // System override
+}
+return (bool) ($handler_config['include_source'] ?? false);  // Handler fallback
+```
+
+**Features**:
+- Configuration hierarchy validation for source inclusion
+- URL validation and sanitization with `esc_url()`
+- Gutenberg block generation (separator + paragraph with source link)
+- Content appending with proper formatting
+- Clean source attribution without content pollution
+
+### Handler Integration
+```php
+// Main WordPress handler uses modular components
+class WordPress {
+    private $featured_image_handler;
+    private $taxonomy_handler;
+    private $source_url_handler;
+
+    public function handle_tool_call(array $parameters, array $tool_def = []): array {
+        // Create post first, then process components
+        $post_id = $this->create_wordpress_post($content, $handler_config);
+
+        // Process featured image
+        $image_result = $this->featured_image_handler->processImage($post_id, $parameters, $handler_config);
+
+        // Process taxonomies
+        $taxonomy_results = $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config);
+
+        // Process source URL in content
+        $final_content = $this->source_url_handler->processSourceUrl($content, $parameters, $handler_config);
+
+        return ['success' => true, 'data' => ['id' => $post_id, 'url' => $url]];
+    }
+}
+```
+
+## AutoSave System
+
+**Complete Pipeline Persistence**: Centralized auto-save operations handle all pipeline-related data in a single action.
+
+```php
+// Single action saves everything
+do_action('dm_auto_save', $pipeline_id);
+
+// AutoSave system handles:
+// 1. Pipeline data and configuration
+// 2. All flows for the pipeline
+// 3. Flow configurations and scheduling
+// 4. execution_order synchronization from pipeline steps to flow steps
+// 5. Cache invalidation after successful save
+```
+
+**AutoSave Features**:
+- **Complete Data Persistence**: Saves pipeline data, all flows, flow configurations, scheduling, and handler settings
+- **execution_order Synchronization**: Updates flow step execution_order to match pipeline step order
+- **Cache Invalidation**: Clears pipeline cache after successful auto-save for data consistency
+- **Database Service Discovery**: Uses filter-based database service access
+- **Comprehensive Logging**: Debug logs for all auto-save operations with context data
+- **Error Handling**: Validates database services and pipeline existence before processing
 
 ## Step Configuration Persistence
 

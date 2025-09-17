@@ -43,13 +43,19 @@ class WordPressSettings {
         // Get available post types
         $post_type_options = [];
         $post_types = get_post_types(['public' => true], 'objects');
-        $common_types = ['post' => 'Post', 'page' => 'Page'];
-        foreach ($common_types as $slug => $label) {
+
+        // Remove attachment post type as it's not suitable for content publishing
+        unset($post_types['attachment']);
+
+        // Prioritize common post types first, but use WordPress's actual labels
+        $common_type_order = ['post', 'page'];
+        foreach ($common_type_order as $slug) {
             if (isset($post_types[$slug])) {
-                $post_type_options[$slug] = $label;
+                $post_type_options[$slug] = $post_types[$slug]->label;
                 unset($post_types[$slug]);
             }
         }
+        // Add remaining post types
         foreach ($post_types as $pt) {
             $post_type_options[$pt->name] = $pt->label;
         }
@@ -76,12 +82,7 @@ class WordPressSettings {
                 'type' => 'select',
                 'label' => __('Post Status', 'data-machine'),
                 'description' => __('Select the status for the newly created post.', 'data-machine'),
-                'options' => [
-                    'draft' => __('Draft', 'data-machine'),
-                    'publish' => __('Publish', 'data-machine'),
-                    'pending' => __('Pending Review', 'data-machine'),
-                    'private' => __('Private', 'data-machine'),
-                ],
+                'options' => get_post_statuses(),
             ],
             'post_author' => [
                 'type' => 'select',

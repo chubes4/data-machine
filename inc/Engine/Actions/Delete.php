@@ -34,59 +34,8 @@ class Delete {
         // Central deletion action hook - eliminates code duplication across deletion types
         add_action('dm_delete', [$instance, 'handle_delete'], 10, 3);
         
-        // Pipeline utility action for resequencing execution_order values
-        add_action('dm_resequence_pipeline_steps', [$instance, 'resequence_pipeline_steps'], 10, 1);
     }
     
-    /**
-     * Resequence execution_order values for a pipeline to ensure sequential ordering
-     * 
-     * Utility function to fix corrupted execution_order values by resequencing
-     * all steps to have sequential values (0, 1, 2, etc.) based on their current order.
-     * 
-     * @param int $pipeline_id Pipeline ID to resequence
-     * @return bool Success status
-     * @since 1.0.0
-     */
-    public function resequence_pipeline_steps($pipeline_id) {
-        if (!current_user_can('manage_options')) {
-            return false;
-        }
-        
-        $all_databases = apply_filters('dm_db', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        
-        if (!$db_pipelines) {
-            return false;
-        }
-        
-        $current_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
-        if (empty($current_steps)) {
-            return true; // Nothing to resequence
-        }
-        
-        // Sort steps by current execution_order to maintain relative positioning
-        $steps_array = array_values($current_steps);
-        usort($steps_array, function($a, $b) {
-            $order_a = $a['execution_order'] ?? 0;
-            $order_b = $b['execution_order'] ?? 0;
-            return $order_a - $order_b;
-        });
-        
-        // Resequence with clean sequential values
-        $updated_steps = [];
-        foreach ($steps_array as $index => $step) {
-            $step['execution_order'] = $index; // Reset to 0, 1, 2, etc.
-            $updated_steps[$step['pipeline_step_id']] = $step;
-        }
-        
-        $success = $db_pipelines->update_pipeline($pipeline_id, [
-            'pipeline_config' => json_encode($updated_steps)
-        ]);
-        
-        
-        return $success;
-    }
 
     /**
      * Handle universal delete operations for all entity types.
