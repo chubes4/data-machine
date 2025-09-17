@@ -44,6 +44,7 @@ class RedditSettings {
                     'new' => 'New',
                     'top' => 'Top',
                     'rising' => 'Rising',
+                    'controversial' => 'Controversial',
                 ],
             ],
             'timeframe_limit' => [
@@ -97,7 +98,7 @@ class RedditSettings {
         $sanitized = [];
         $subreddit = sanitize_text_field($raw_settings['subreddit'] ?? '');
         $sanitized['subreddit'] = (preg_match('/^[a-zA-Z0-9_]+$/', $subreddit)) ? $subreddit : '';
-        $valid_sorts = ['hot', 'new', 'top', 'rising'];
+        $valid_sorts = ['hot', 'new', 'top', 'rising', 'controversial'];
         $sort_by = sanitize_text_field($raw_settings['sort_by'] ?? 'hot');
         if (!in_array($sort_by, $valid_sorts)) {
             do_action('dm_log', 'error', 'Reddit Settings: Invalid sort parameter provided in settings.', ['sort_by' => $sort_by]);

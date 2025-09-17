@@ -180,7 +180,7 @@ class Reddit {
 			if (in_array($sort, ['top', 'controversial']) && $timeframe_limit !== 'all_time') {
 				$reddit_time_map = [
 					'24_hours' => 'day',
-					'72_hours' => 'day',    // Reddit's closest option
+					'72_hours' => 'week',   // Reddit's closest option (no native 72h support)
 					'7_days'   => 'week',
 					'30_days'  => 'month'
 				];
