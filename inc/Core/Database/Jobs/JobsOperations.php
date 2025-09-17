@@ -3,13 +3,7 @@
  * Jobs database CRUD operations component.
  *
  * Handles basic database operations for jobs: create, read, update, delete.
- * Part of the modular Jobs architecture following single responsibility principle.
- *
  * Pipeline → Flow architecture implementation.
- *
- * @package    Data_Machine
- * @subpackage Core\Database\Jobs
- * @since      0.15.0
  */
 
 namespace DataMachine\Core\Database\Jobs;
@@ -22,20 +16,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class JobsOperations {
 
-    /**
-     * The name of the jobs database table.
-     * @var string
-     */
     private $table_name;
 
-    /**
-     * @var \wpdb WordPress database instance
-     */
     private $wpdb;
 
-    /**
-     * Initialize the operations component.
-     */
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
@@ -44,16 +28,12 @@ class JobsOperations {
 
     /**
      * Create a new pipeline+flow-based job record.
-     *
-     * @param array $job_data Job data with pipeline_id, flow_id.
-     * @return int|false The job ID on success, false on failure.
      */
     public function create_job(array $job_data): int|false {
         
         $pipeline_id = absint($job_data['pipeline_id'] ?? 0);
         $flow_id = absint($job_data['flow_id'] ?? 0);
         
-        // Validate required fields
         if (empty($pipeline_id) || empty($flow_id)) {
             do_action('dm_log', 'error', 'Invalid pipeline+flow-based job data', [
                 'pipeline_id' => $pipeline_id,
@@ -87,12 +67,6 @@ class JobsOperations {
         return $job_id;
     }
 
-    /**
-     * Get a specific job record by its ID.
-     *
-     * @param int $job_id The job ID.
-     * @return object|null The job data as an object, or null if not found.
-     */
     public function get_job( int $job_id ): ?object {
         if ( empty( $job_id ) ) {
             return null;
@@ -113,10 +87,6 @@ class JobsOperations {
 
     /**
      * Get jobs count for list table pagination.
-     * 
-     * Used by JobsListTable for filter-based architecture compliance.
-     *
-     * @return int Total number of jobs
      */
     public function get_jobs_count(): int {
         
@@ -137,11 +107,6 @@ class JobsOperations {
 
     /**
      * Get jobs for list table display.
-     * 
-     * Used by JobsListTable for filter-based architecture compliance.
-     *
-     * @param array $args Arguments including orderby, order, per_page, offset
-     * @return array Array of job records with pipeline and flow names
      */
     public function get_jobs_for_list_table(array $args): array {
         
@@ -150,12 +115,10 @@ class JobsOperations {
         $per_page = (int) ($args['per_page'] ?? 20);
         $offset = (int) ($args['offset'] ?? 0);
         
-        // Validate order direction
         if (!in_array($order, ['ASC', 'DESC'])) {
             $order = 'DESC';
         }
         
-        // Validate orderby column to prevent SQL injection
         $allowed_orderby = ['j.job_id', 'j.pipeline_id', 'j.flow_id', 'j.status', 'j.started_at', 'j.completed_at', 'p.pipeline_name', 'f.flow_name'];
         if (!in_array($orderby, $allowed_orderby)) {
             $orderby = 'j.job_id';
@@ -182,29 +145,23 @@ class JobsOperations {
 
     /**
      * Get all jobs for a specific pipeline (for deletion impact analysis).
-     *
-     * @param int $pipeline_id The pipeline ID.
-     * @return array Array of job records.
      */
     public function get_jobs_for_pipeline( int $pipeline_id ): array {
         if ( $pipeline_id <= 0 ) {
             return [];
         }
         
-        // Get flows service using filter-based discovery
         $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {
             return [];
         }
         
-        // Get all flows for this pipeline
         $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         if (empty($flows)) {
             return [];
         }
         
-        // Aggregate jobs from all flows
         $all_jobs = [];
         foreach ($flows as $flow) {
             $flow_id = $flow['flow_id'];
@@ -212,7 +169,6 @@ class JobsOperations {
             $all_jobs = array_merge($all_jobs, $flow_jobs);
         }
         
-        // Sort by created_at DESC (most recent first)
         if (!empty($all_jobs)) {
             usort($all_jobs, function($a, $b) {
                 $time_a = is_array($a) ? $a['created_at'] : $a->created_at;
@@ -226,9 +182,6 @@ class JobsOperations {
 
     /**
      * Get all jobs for a specific flow.
-     *
-     * @param int $flow_id The ID of the flow.
-     * @return array Array of job records.
      */
     public function get_jobs_for_flow(int $flow_id): array {
         
@@ -253,14 +206,8 @@ class JobsOperations {
     
     /**
      * Delete jobs based on criteria.
-     * 
-     * Provides flexible deletion of jobs by status or all jobs.
-     * Used for cleanup operations and maintenance tasks.
      *
-     * @param array $criteria Deletion criteria with keys:
-     *                        - 'all': Delete all jobs
-     *                        - 'failed': Delete only failed jobs
-     * @return int|false Number of rows deleted or false on error
+     * Provides flexible deletion of jobs by status or all jobs.
      */
     public function delete_jobs(array $criteria = []): int|false {
         
@@ -273,7 +220,6 @@ class JobsOperations {
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             $result = $this->wpdb->query( $this->wpdb->prepare( "DELETE FROM %i WHERE status = %s", $this->table_name, 'failed' ) );
         } else {
-            // For 'all' - delete all records
             $result = $this->wpdb->query(
                 "DELETE FROM %i", $this->table_name
             );

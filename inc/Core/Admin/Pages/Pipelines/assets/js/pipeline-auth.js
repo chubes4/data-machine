@@ -63,7 +63,6 @@
                     eventDetail.error = errorDetails || 'Authentication failed';
                 }
                 
-                console.log('Data Machine OAuth: Firing event', eventType, eventDetail);
                 
                 // Fire custom event on parent window
                 window.opener.dispatchEvent(new CustomEvent(eventType, {

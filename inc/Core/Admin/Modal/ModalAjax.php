@@ -73,7 +73,7 @@ class ModalAjax
                 $content = $modal_data['content'];
             } elseif (isset($modal_data['template'])) {
                 // Dynamic content via dm_render_template (has access to AJAX context)
-                $context_raw = wp_unslash($_POST['context'] ?? []);
+                $context_raw = wp_unslash($_POST['context'] ?? []); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
                 $context = is_string($context_raw)
                     ? array_map('sanitize_text_field', json_decode($context_raw, true) ?: [])
                     : array_map('sanitize_text_field', $context_raw);

@@ -33,6 +33,7 @@ if ( ! class_exists( 'ActionScheduler' ) ) {
 // AI HTTP Client auto-loads via Composer (vendor/chubes4/ai-http-client)
 
 function run_data_machine() {
+
     dm_register_database_service_system();
     dm_register_database_filters();
     dm_register_utility_filters();

@@ -132,31 +132,6 @@ class WordPress {
         ];
     }
 
-    /**
-     * Legacy method - prepend image to content (unused in current implementation)
-     */
-    private function prepend_image_if_available(string $content, array $input_metadata): string {
-        if (!empty($input_metadata['image_url'])) {
-            $image_url = esc_url($input_metadata['image_url']);
-            $content = "![Image]({$image_url})\n\n" . $content;
-        }
-        return $content;
-    }
-
-    /**
-     * Legacy method - append source to content (unused in current implementation)
-     */
-    private function append_source_if_available(string $content, array $input_metadata): string {
-        if (!empty($input_metadata['source_url'])) {
-            $source_url = esc_url($input_metadata['source_url']);
-            $content .= "\n\n---\n\n" . sprintf(
-                /* translators: %s: source URL */
-                __('Source: %s', 'data-machine'),
-                "[{$source_url}]({$source_url})"
-            );
-        }
-        return $content;
-    }
 
     public static function get_label(): string {
         return __('WordPress', 'data-machine');

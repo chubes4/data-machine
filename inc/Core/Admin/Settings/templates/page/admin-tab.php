@@ -115,4 +115,27 @@ $all_pages = apply_filters('dm_admin_pages', []);
             </fieldset>
         </td>
     </tr>
+
+    <tr>
+        <th scope="row"><?php esc_html_e('Cache', 'data-machine'); ?></th>
+        <td>
+            <fieldset <?php echo esc_attr($disabled_attr); ?>>
+                <button type="button"
+                        id="dm-clear-cache-btn"
+                        class="button button-secondary"
+                        <?php echo esc_attr($disabled_attr); ?>>
+                    <?php esc_html_e('Clear Now', 'data-machine'); ?>
+                </button>
+                <p class="description">
+                    <?php esc_html_e('Clear all cached pipeline and flow configurations. Use this to resolve cache inconsistencies or after database modifications.', 'data-machine'); ?>
+                </p>
+                <div id="dm-cache-clear-result" class="dm-admin-notice dm-hidden"></div>
+                <?php if ($engine_mode): ?>
+                    <p class="description">
+                        <?php esc_html_e('Cache controls are disabled when Engine Mode is active.', 'data-machine'); ?>
+                    </p>
+                <?php endif; ?>
+            </fieldset>
+        </td>
+    </tr>
 </table>

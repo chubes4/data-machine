@@ -1,6 +1,9 @@
 <?php
 /**
- * AI tool parameter builder for unified tool execution.
+ * Centralized flat parameter building for AI tool execution.
+ *
+ * Creates unified flat parameter structures compatible with all handler tool call methods,
+ * merging AI-provided parameters with engine context and extracting content from data packets.
  *
  * @package DataMachine
  */

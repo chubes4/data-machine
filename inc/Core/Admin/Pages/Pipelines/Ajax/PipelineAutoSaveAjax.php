@@ -160,12 +160,6 @@ class PipelineAutoSaveAjax
         // Use centralized flow user message update action with validation
         $success = apply_filters('dm_update_flow_user_message_result', false, $flow_step_id, $user_message);
 
-        // If no filter handled it, fall back to action (for backwards compatibility)
-        if (!$success) {
-            do_action('dm_update_flow_user_message', $flow_step_id, $user_message);
-            $success = true; // Assume success since action doesn't return values
-        }
-
         if ($success) {
             // Extract flow_id from flow_step_id to get pipeline_id for cache clearing
             $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
@@ -219,12 +213,6 @@ class PipelineAutoSaveAjax
 
         // Use centralized system prompt update action with validation
         $success = apply_filters('dm_update_system_prompt_result', false, $pipeline_step_id, $system_prompt);
-
-        // If no filter handled it, fall back to action (for backwards compatibility)
-        if (!$success) {
-            do_action('dm_update_system_prompt', $pipeline_step_id, $system_prompt);
-            $success = true; // Assume success since action doesn't return values
-        }
 
         if ($success) {
             // Get pipeline_id from pipeline_step_id for cache clearing

@@ -31,61 +31,78 @@
         // Handle copy logs button
         $('.dm-copy-logs').on('click', function(e) {
             e.preventDefault();
-            
+
             const $button = $(this);
             const targetSelector = $button.data('copy-target');
             const $logViewer = $(targetSelector);
-            
+
             if (!$logViewer.length) {
                 alert('No log content found to copy.');
                 return;
             }
-            
+
             const logContent = $logViewer.text();
             const originalText = $button.text();
-            
-            // Try modern clipboard API first
+
+            // Copy text to clipboard with fallback for local development
+            // Modern clipboard API requires HTTPS, so we provide legacy fallback for local HTTP testing
             if (navigator.clipboard && navigator.clipboard.writeText) {
+                // Use modern clipboard API (production HTTPS environments)
                 navigator.clipboard.writeText(logContent).then(function() {
-                    // Success feedback
-                    $button.text('Copied!').addClass('dm-copy-success');
-                    setTimeout(function() {
-                        $button.text(originalText).removeClass('dm-copy-success');
-                    }, 2000);
+                    showCopySuccess($button, originalText);
                 }).catch(function(err) {
-                    // Fallback on error
-                    copyWithFallback(logContent, $button, originalText);
+                    showCopyError($button, originalText);
                 });
             } else {
-                // Use fallback for older browsers
-                copyWithFallback(logContent, $button, originalText);
+                // Fallback for local development environments without HTTPS
+                try {
+                    copyTextFallback(logContent);
+                    showCopySuccess($button, originalText);
+                } catch (err) {
+                    showCopyError($button, originalText);
+                }
             }
         });
     }
 
     /**
-     * Fallback copy method for older browsers
+     * Fallback copy method for local development environments without HTTPS
+     * Uses legacy document.execCommand approach for local HTTP testing
      */
-    function copyWithFallback(text, $button, originalText) {
-        const $temp = $('<textarea>');
-        $('body').append($temp);
-        $temp.val(text).select();
-        
-        try {
-            const successful = document.execCommand('copy');
-            if (successful) {
-                $button.text('Copied!').addClass('dm-copy-success');
-            } else {
-                $button.text('Copy Failed').addClass('dm-copy-error');
-            }
-        } catch (err) {
-            $button.text('Copy Failed').addClass('dm-copy-error');
+    function copyTextFallback(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-999999px';
+        textarea.style.top = '-999999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+
+        if (!document.execCommand('copy')) {
+            throw new Error('Legacy copy method failed');
         }
-        
-        $temp.remove();
-        
+
+        document.body.removeChild(textarea);
+    }
+
+    /**
+     * Show success feedback for copy operation
+     */
+    function showCopySuccess($button, originalText) {
+        $button.text('Copied!').addClass('dm-copy-success');
         setTimeout(function() {
-            $button.text(originalText).removeClass('dm-copy-success dm-copy-error');
+            $button.text(originalText).removeClass('dm-copy-success');
+        }, 2000);
+    }
+
+    /**
+     * Show error feedback for copy operation
+     */
+    function showCopyError($button, originalText) {
+        $button.text('Copy Failed').addClass('dm-copy-error');
+        setTimeout(function() {
+            $button.text(originalText).removeClass('dm-copy-error');
         }, 2000);
     }
 

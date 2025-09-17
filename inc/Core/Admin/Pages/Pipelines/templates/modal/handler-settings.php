@@ -3,10 +3,6 @@
  * Universal Handler Settings Template
  *
  * Unified configuration template supporting all handler types through Settings classes.
- * Features dynamic field rendering, authentication integration, and context-aware configuration.
- *
- * @package DataMachine\Core\Admin\Pages\Pipelines\Templates
- * @since 1.0.0
  */
 
 if (!defined('WPINC')) {
@@ -61,9 +57,7 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts'
 ?>
 <div class="dm-handler-settings-container">
     <div class="dm-handler-settings-header">
-        <?php /* translators: %s: Handler name/label */ ?>
         <h3><?php echo esc_html(sprintf(__('Configure %s Handler', 'data-machine'), $handler_label)); ?></h3>
-        <?php /* translators: %s: Handler name/label */ ?>
         <p><?php echo esc_html(sprintf(__('Set up your %s integration settings below.', 'data-machine'), $handler_label)); ?></p>
     </div>
     
@@ -71,7 +65,6 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts'
         <div class="dm-auth-link-section">
             <div class="dm-auth-link-info">
                 <span class="dashicons dashicons-admin-network"></span>
-                <?php /* translators: %s: Handler name/label */ ?>
                 <span><?php echo esc_html(sprintf(__('%s requires authentication to function properly.', 'data-machine'), $handler_label)); ?></span>
             </div>
             <button type="button" class="button button-secondary dm-modal-content" 
@@ -135,7 +128,6 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts'
             if (!empty($wp_settings['default_author_id'])) {
                 $user = get_userdata($wp_settings['default_author_id']);
                 $author_name = $user ? $user->display_name : 'Unknown';
-                /* translators: %s: Author display name */
                 $global_settings[] = sprintf(__('Author: %s', 'data-machine'), $author_name);
             }
 
@@ -146,19 +138,16 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts'
                     'private' => __('Private', 'data-machine')
                 ];
                 $status_label = $status_labels[$wp_settings['default_post_status']] ?? ucfirst($wp_settings['default_post_status']);
-                /* translators: %s: Post status label */
                 $global_settings[] = sprintf(__('Post Status: %s', 'data-machine'), $status_label);
             }
 
             if (isset($wp_settings['default_include_source'])) {
                 $setting_label = $wp_settings['default_include_source'] ? __('Enabled', 'data-machine') : __('Disabled', 'data-machine');
-                /* translators: %s: Setting status (Enabled/Disabled) */
                 $global_settings[] = sprintf(__('Include Source: %s', 'data-machine'), $setting_label);
             }
 
             if (isset($wp_settings['default_enable_images'])) {
                 $setting_label = $wp_settings['default_enable_images'] ? __('Enabled', 'data-machine') : __('Disabled', 'data-machine');
-                /* translators: %s: Setting status (Enabled/Disabled) */
                 $global_settings[] = sprintf(__('Featured Images: %s', 'data-machine'), $setting_label);
             }
 

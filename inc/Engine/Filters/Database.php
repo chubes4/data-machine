@@ -35,7 +35,7 @@ function dm_register_database_filters() {
             return [];
         }
 
-        return is_string($flow['flow_config']) ? json_decode($flow['flow_config'], true) : $flow['flow_config'];
+        return $flow['flow_config'];
     }, 10, 2);
     add_filter('dm_get_pipeline_flows', function($default, $pipeline_id) {
         $all_databases = apply_filters('dm_db', []);
@@ -111,9 +111,7 @@ function dm_register_database_filters() {
             return [];
         }
 
-        $pipeline_config = is_string($pipeline['pipeline_config'])
-            ? json_decode($pipeline['pipeline_config'], true)
-            : ($pipeline['pipeline_config'] ?? []);
+        $pipeline_config = $pipeline['pipeline_config'] ?? [];
 
         if (!isset($pipeline_config[$pipeline_step_id])) {
             do_action('dm_log', 'error', 'Pipeline step not found in pipeline config', [

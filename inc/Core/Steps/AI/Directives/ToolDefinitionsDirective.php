@@ -220,25 +220,29 @@ class ToolDefinitionsDirective {
         
         // Use flow context when available, otherwise fall back to pipeline context
         if ($flow_step_id) {
-            // Get current flow step configuration
             $current_flow_step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
-            if (empty($current_flow_step_config)) {
-                do_action('dm_log', 'warning', 'Flow context unavailable, falling back to pipeline context', [
-                    'flow_step_id' => $flow_step_id,
-                    'pipeline_step_id' => $pipeline_step_id
-                ]);
-                return self::generate_pipeline_fallback_context($pipeline_step_id, $handler_tools, $general_tools);
-            }
-            
             $flow_id = $current_flow_step_config['flow_id'] ?? null;
-            if (!$flow_id) {
-                return self::generate_pipeline_fallback_context($pipeline_step_id, $handler_tools, $general_tools);
-            }
-            
-            // Get complete flow configuration with all steps
-            $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
-            if (empty($flow_config)) {
-                return self::generate_pipeline_fallback_context($pipeline_step_id, $handler_tools, $general_tools);
+            $flow_config = $flow_id ? apply_filters('dm_get_flow_config', [], $flow_id) : [];
+
+            // Missing flow data indicates a serious system error
+            if (empty($current_flow_step_config) || !$flow_id || empty($flow_config)) {
+                do_action('dm_log', 'error', 'SYSTEM ERROR: Missing flow context during AI execution', [
+                    'flow_step_id' => $flow_step_id,
+                    'pipeline_step_id' => $pipeline_step_id,
+                    'missing_flow_step_config' => empty($current_flow_step_config),
+                    'missing_flow_id' => !$flow_id,
+                    'missing_flow_config' => empty($flow_config)
+                ]);
+
+                $job_id = apply_filters('dm_current_job_id', null);
+                if ($job_id) {
+                    do_action('dm_fail_job', $job_id, 'missing_flow_context', [
+                        'flow_step_id' => $flow_step_id,
+                        'pipeline_step_id' => $pipeline_step_id
+                    ]);
+                }
+
+                return "SYSTEM ERROR: Flow context missing during execution. This indicates a serious system bug.";
             }
             
             // Sort flow steps by execution order
@@ -318,122 +322,22 @@ class ToolDefinitionsDirective {
             return $directive;
             
         } else {
-            // No flow context available - use pipeline fallback
-            return self::generate_pipeline_fallback_context($pipeline_step_id, $handler_tools, $general_tools);
+            // AI steps should always have flow context
+            do_action('dm_log', 'error', 'SYSTEM ERROR: AI directive called without flow step ID', [
+                'pipeline_step_id' => $pipeline_step_id
+            ]);
+
+            $job_id = apply_filters('dm_current_job_id', null);
+            if ($job_id) {
+                do_action('dm_fail_job', $job_id, 'missing_flow_step_id', [
+                    'pipeline_step_id' => $pipeline_step_id
+                ]);
+            }
+
+            return "SYSTEM ERROR: AI directive called without flow context. This indicates a serious system bug.";
         }
     }
     
-    /**
-     * Generate workflow context using pipeline data as fallback.
-     *
-     * @param string $pipeline_step_id Pipeline step ID
-     * @param array $handler_tools Available handler tools
-     * @param array $general_tools Available general tools
-     * @return string Workflow context directive
-     */
-    private static function generate_pipeline_fallback_context($pipeline_step_id, $handler_tools, $general_tools): string {
-        $step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
-        if (empty($step_config)) {
-            $job_id = apply_filters('dm_current_job_id', null);
-            if ($job_id) {
-                do_action('dm_fail_job', $job_id, 'missing_step_config', ['pipeline_step_id' => $pipeline_step_id]);
-            }
-            return 'ERROR: Missing pipeline step configuration.';
-        }
-
-        $pipeline_id = $step_config['pipeline_id'] ?? null;
-        if (!$pipeline_id) {
-            $job_id = apply_filters('dm_current_job_id', null);
-            if ($job_id) {
-                do_action('dm_fail_job', $job_id, 'missing_pipeline_id', ['pipeline_step_id' => $pipeline_step_id]);
-            }
-            return 'ERROR: Missing pipeline ID for step.';
-        }
-
-        $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
-        if (empty($pipeline_steps)) {
-            $job_id = apply_filters('dm_current_job_id', null);
-            if ($job_id) {
-                do_action('dm_fail_job', $job_id, 'missing_pipeline_steps', ['pipeline_step_id' => $pipeline_step_id]);
-            }
-            return 'ERROR: Pipeline steps not found.';
-        }
-
-        uasort($pipeline_steps, function($a, $b) {
-            $order_a = $a['execution_order'] ?? 999;
-            $order_b = $b['execution_order'] ?? 999;
-            return $order_a <=> $order_b;
-        });
-
-        $directive = "WORKFLOW CONTEXT:\n\n";
-        
-        $workflow_steps = [];
-        $current_position = 0;
-        $step_counter = 1;
-        
-        foreach ($pipeline_steps as $step_id => $step_data) {
-            $step_type = $step_data['step_type'] ?? 'Unknown';
-            $handler_info = $step_data['handler'] ?? [];
-            $handler_slug = $handler_info['handler_slug'] ?? '';
-            
-            $step_description = self::get_readable_step_description($step_type, $handler_slug);
-            $workflow_steps[] = $step_description;
-            
-            if ($step_id === $pipeline_step_id) {
-                $current_position = $step_counter;
-            }
-            $step_counter++;
-        }
-        
-        $directive .= "Pipeline Flow: " . implode(' → ', $workflow_steps) . "\n";
-        $directive .= "Current Position: Step {$current_position} of " . count($workflow_steps) . "\n\n";
-        
-        // Previous step context
-        if ($current_position > 1) {
-            $previous_steps = array_slice($pipeline_steps, 0, $current_position - 1, true);
-            $last_previous = array_slice($previous_steps, -1, 1, true);
-            if (!empty($last_previous)) {
-                $prev_step = reset($last_previous);
-                $prev_description = self::get_readable_step_description(
-                    $prev_step['step_type'] ?? 'Unknown',
-                    $prev_step['handler']['handler_slug'] ?? ''
-                );
-                $directive .= "Previous Step: {$prev_description} completed\n";
-            }
-        }
-        
-        // Current step objective
-        if (!empty($handler_tools)) {
-            $tool_names = array_keys($handler_tools);
-            $directive .= "Your Objective: Execute " . implode(', ', $tool_names) . " tool(s)\n";
-        } else {
-            $directive .= "Your Objective: Process content for next step\n";
-        }
-        
-        // Next step context
-        if ($current_position < count($workflow_steps)) {
-            $remaining_steps = array_slice($pipeline_steps, $current_position, null, true);
-            if (!empty($remaining_steps)) {
-                $next_step = reset($remaining_steps);
-                $next_description = self::get_readable_step_description(
-                    $next_step['step_type'] ?? 'Unknown',
-                    $next_step['handler']['handler_slug'] ?? ''
-                );
-                $directive .= "Next Step: {$next_description} awaiting your output\n";
-            }
-        }
-        
-        // Success criteria
-        $directive .= "\nSuccess Criteria: ";
-        if (!empty($handler_tools)) {
-            $directive .= "Workflow objective achieved through effective tool usage and quality output";
-        } else {
-            $directive .= "Content processed and enhanced for optimal next step performance";
-        }
-        $directive .= "\n";
-        
-        return $directive;
-    }
     
     /**
      * Generate general tool usage directives.

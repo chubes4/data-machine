@@ -157,13 +157,6 @@ class JobsStatus {
 
 
 
-    /**
-     * Get a specific job record by its ID.
-     * Helper method for status management operations.
-     *
-     * @param int $job_id The job ID.
-     * @return object|null The job data as an object, or null if not found.
-     */
     private function get_job( int $job_id ): ?object {
         if ( empty( $job_id ) ) {
             return null;

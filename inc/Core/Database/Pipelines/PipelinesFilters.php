@@ -37,9 +37,6 @@ function dm_register_pipelines_database_filters() {
         }
         return $services;
     });
-
-    // Register pipeline step ID migration system
-    PipelineStepIdMigration::register();
 }
 
 // Auto-register when file loads - achieving complete self-containment

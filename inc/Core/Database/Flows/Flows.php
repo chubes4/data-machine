@@ -6,34 +6,15 @@ use DataMachine\Engine\Actions\Cache;
 
 /**
  * Flows Database Class
- * 
+ *
  * Manages flow instances that execute pipeline configurations with specific handler settings
- * and scheduling. Each flow represents a configured instance of a pipeline with its own
- * handler settings and scheduling configuration.
- * 
- * Flow-Level Scheduling Architecture:
- * - ALL scheduling happens at the flow level only
- * - No pipeline-level scheduling whatsoever
- * - scheduling_config JSON contains: interval, status, last_run_at
- * 
- * Admin-Only Architecture:
- * - No user_id field - flows are admin-only in this implementation
- * - All flows are created and managed by admin users only
- * 
- * @package DataMachine\Core\Database
+ * and scheduling. Flow-level scheduling only - no pipeline-level scheduling.
+ * Admin-only implementation.
  */
 class Flows {
 
-    /**
-     * Database table name
-     * @var string
-     */
     private $table_name;
 
-    /**
-     * WordPress database instance
-     * @var \wpdb
-     */
     private $wpdb;
 
     public function __construct() {
@@ -44,8 +25,6 @@ class Flows {
 
     /**
      * Create the flows table
-     *
-     * Called during plugin activation to create the database table structure.
      */
     public static function create_table(): void {
         global $wpdb;
@@ -76,15 +55,9 @@ class Flows {
         ]);
     }
 
-    /**
-     * Create a new flow
-     * 
-     * @param array $flow_data Flow data including pipeline_id, flow_name, flow_config, scheduling_config
-     * @return int|false Flow ID on success, false on failure
-     */
     public function create_flow(array $flow_data) {
         
-        // Validate required fields (user_id removed - admin-only plugin)
+        // Validate required fields
         $required_fields = ['pipeline_id', 'flow_name', 'flow_config', 'scheduling_config'];
         foreach ($required_fields as $field) {
             if (!isset($flow_data[$field])) {
@@ -96,7 +69,6 @@ class Flows {
             }
         }
         
-        // Ensure JSON fields are properly encoded
         $flow_config = is_string($flow_data['flow_config']) ? 
             $flow_data['flow_config'] : 
             wp_json_encode($flow_data['flow_config']);
@@ -119,7 +91,6 @@ class Flows {
             '%s'  // scheduling_config
         ];
         
-        // Add display_order if provided
         if (isset($flow_data['display_order'])) {
             $insert_data['display_order'] = intval($flow_data['display_order']);
             $insert_format[] = '%d';
@@ -150,12 +121,6 @@ class Flows {
         return $flow_id;
     }
 
-    /**
-     * Get a flow by ID
-     * 
-     * @param int $flow_id Flow ID
-     * @return array|null Flow data or null if not found
-     */
     public function get_flow(int $flow_id): ?array {
         
         $cache_key = Cache::FLOW_CONFIG_CACHE_KEY . $flow_id;
@@ -172,7 +137,6 @@ class Flows {
                 return null;
             }
 
-            // Decode JSON fields immediately after database retrieval
             $flow['flow_config'] = json_decode($flow['flow_config'], true) ?: [];
             $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true) ?: [];
 
@@ -183,12 +147,6 @@ class Flows {
         return $cached_result;
     }
 
-    /**
-     * Get all flows for a specific pipeline
-     * 
-     * @param int $pipeline_id Pipeline ID
-     * @return array Array of flows
-     */
     public function get_flows_for_pipeline(int $pipeline_id): array {
         
         $cache_key = Cache::PIPELINE_FLOWS_CACHE_KEY . $pipeline_id;
@@ -205,7 +163,6 @@ class Flows {
                 return [];
             }
 
-            // Decode JSON fields immediately after database retrieval
             foreach ($flows as &$flow) {
                 $flow['flow_config'] = json_decode($flow['flow_config'], true) ?: [];
                 $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true) ?: [];
@@ -216,17 +173,10 @@ class Flows {
         }
 
         return $cached_result;
-        }
-        
-        // Flows retrieved successfully - no logging needed for routine database queries
-        
-        return $flows;
     }
 
     /**
      * Get all active flows (flows with active scheduling)
-     * 
-     * @return array Array of active flows
      */
     public function get_all_active_flows(): array {
         
@@ -234,48 +184,31 @@ class Flows {
         $cached_result = get_transient( $cache_key );
 
         if ( false === $cached_result ) {
-            $flows = $this->wpdb->get_results(
-                // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-                $this->wpdb->prepare(
-                    "SELECT * FROM %i WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual' ORDER BY flow_id DESC",
-                    $this->table_name
-                ),
-                ARRAY_A
-            );
-            do_action('dm_cache_set', $cache_key, $flows, 300, 'flows'); // 5 min cache for active flows
-            $cached_result = $flows;
-        } else {
-            $flows = $cached_result;
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            $flows = $this->wpdb->get_results($this->wpdb->prepare("SELECT * FROM %i WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual' ORDER BY flow_id DESC", $this->table_name), ARRAY_A);
+
+            if ($flows === null) {
+                do_action('dm_log', 'debug', 'No active flows found');
+                return [];
+            }
+
+            foreach ($flows as &$flow) {
+                $flow['flow_config'] = json_decode($flow['flow_config'], true) ?: [];
+                $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true) ?: [];
+            }
+
+            do_action('dm_cache_set', $cache_key, $flows, 300, 'flows'); // Cache decoded arrays
+            return $flows;
         }
-        
-        if ($flows === null) {
-            do_action('dm_log', 'debug', 'No active flows found');
-            return [];
-        }
-        
-        // Decode JSON fields for all flows
-        foreach ($flows as &$flow) {
-            $flow['flow_config'] = json_decode($flow['flow_config'], true);
-            $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true);
-        }
-        
-        do_action('dm_log', 'debug', 'Retrieved active flows', [
-            'active_flow_count' => count($flows)
-        ]);
-        
-        return $flows;
+
+        return $cached_result;
     }
 
     /**
      * Update a flow
-     * 
-     * @param int $flow_id Flow ID
-     * @param array $flow_data Updated flow data
-     * @return bool True on success, false on failure
      */
     public function update_flow(int $flow_id, array $flow_data): bool {
         
-        // Build update data and format arrays
         $update_data = [];
         $update_formats = [];
         
@@ -328,9 +261,6 @@ class Flows {
 
     /**
      * Delete a flow
-     * 
-     * @param int $flow_id Flow ID
-     * @return bool True on success, false on failure
      */
     public function delete_flow(int $flow_id): bool {
         
@@ -364,10 +294,6 @@ class Flows {
 
     /**
      * Update flow scheduling configuration
-     * 
-     * @param int $flow_id Flow ID
-     * @param array $scheduling_config Scheduling configuration
-     * @return bool True on success, false on failure
      */
     public function update_flow_scheduling(int $flow_id, array $scheduling_config): bool {
         
@@ -392,12 +318,6 @@ class Flows {
         return true;
     }
 
-    /**
-     * Get flow scheduling configuration
-     * 
-     * @param int $flow_id Flow ID
-     * @return array|null Scheduling configuration or null if not found
-     */
     public function get_flow_scheduling(int $flow_id): ?array {
         
         $cache_key = Cache::FLOW_SCHEDULING_CACHE_KEY . $flow_id;
@@ -405,37 +325,35 @@ class Flows {
 
         if ( false === $cached_result ) {
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $scheduling_config = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT scheduling_config FROM %i WHERE flow_id = %d", $this->table_name, $flow_id ) );
-            do_action('dm_cache_set', $cache_key, $scheduling_config, 0, 'flows');
-            $cached_result = $scheduling_config;
-        } else {
-            $scheduling_config = $cached_result;
+            $scheduling_config_json = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT scheduling_config FROM %i WHERE flow_id = %d", $this->table_name, $flow_id ) );
+
+            if ($scheduling_config_json === null) {
+                do_action('dm_log', 'warning', 'Flow scheduling configuration not found', [
+                    'flow_id' => $flow_id
+                ]);
+                return null;
+            }
+
+            // Decode JSON immediately after database retrieval
+            $decoded_config = json_decode($scheduling_config_json, true);
+
+            if ($decoded_config === null) {
+                do_action('dm_log', 'error', 'Failed to decode flow scheduling configuration', [
+                    'flow_id' => $flow_id,
+                    'raw_config' => $scheduling_config_json
+                ]);
+                return null;
+            }
+
+            do_action('dm_cache_set', $cache_key, $decoded_config, 0, 'flows');
+            return $decoded_config;
         }
-        
-        if ($scheduling_config === null) {
-            do_action('dm_log', 'warning', 'Flow scheduling configuration not found', [
-                'flow_id' => $flow_id
-            ]);
-            return null;
-        }
-        
-        $decoded_config = json_decode($scheduling_config, true);
-        
-        if ($decoded_config === null) {
-            do_action('dm_log', 'error', 'Failed to decode flow scheduling configuration', [
-                'flow_id' => $flow_id,
-                'raw_config' => $scheduling_config
-            ]);
-            return null;
-        }
-        
-        return $decoded_config;
+
+        return $cached_result;
     }
 
     /**
      * Get flows ready for execution based on scheduling
-     * 
-     * @return array Array of flows ready for execution
      */
     public function get_flows_ready_for_execution(): array {
         
@@ -479,10 +397,6 @@ class Flows {
 
     /**
      * Check if a flow is ready for execution based on its scheduling configuration
-     * 
-     * @param array $scheduling_config Scheduling configuration
-     * @param string $current_time Current timestamp
-     * @return bool True if ready for execution
      */
     private function is_flow_ready_for_execution(array $scheduling_config, string $current_time): bool {
         if (!isset($scheduling_config['interval'])) {
@@ -519,10 +433,6 @@ class Flows {
 
     /**
      * Update the last run time for a flow
-     * 
-     * @param int $flow_id Flow ID
-     * @param string $timestamp Timestamp (defaults to current time)
-     * @return bool True on success, false on failure
      */
     public function update_flow_last_run(int $flow_id, ?string $timestamp = null): bool {
         if ($timestamp === null) {
@@ -530,13 +440,11 @@ class Flows {
         }
         
         
-        // Get current scheduling config
         $current_config = $this->get_flow_scheduling($flow_id);
         if ($current_config === null) {
             return false;
         }
         
-        // Update last_run_at
         $current_config['last_run_at'] = $timestamp;
         
         return $this->update_flow_scheduling($flow_id, $current_config);
@@ -544,9 +452,6 @@ class Flows {
 
     /**
      * Get next display order for a pipeline's flows
-     * 
-     * @param int $pipeline_id Pipeline ID
-     * @return int Next display order value
      */
     public function get_next_display_order(int $pipeline_id): int {
         $cache_key = Cache::MAX_DISPLAY_ORDER_CACHE_KEY . $pipeline_id;
@@ -567,9 +472,6 @@ class Flows {
     /**
      * Increment display_order for all existing flows in a pipeline by 1
      * Used when inserting a new flow at the top (display_order = 0)
-     * 
-     * @param int $pipeline_id Pipeline ID
-     * @return bool True on success, false on failure
      */
     public function increment_existing_flow_orders(int $pipeline_id): bool {
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
@@ -593,10 +495,6 @@ class Flows {
 
     /**
      * Update display orders for multiple flows in a pipeline
-     * 
-     * @param int $pipeline_id Pipeline ID
-     * @param array $flow_orders Array of flow_id => display_order pairs
-     * @return bool True on success, false on failure
      */
     public function update_flow_display_orders(int $pipeline_id, array $flow_orders): bool {
         if (empty($flow_orders)) {
@@ -640,13 +538,9 @@ class Flows {
 
     /**
      * Move a flow up in the display order (swap with previous flow)
-     * 
-     * @param int $flow_id Flow ID to move up
-     * @return bool True on success, false on failure
      */
     public function move_flow_up(int $flow_id): bool {
 
-        // Get the current flow
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
         $current_flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT flow_id, pipeline_id, display_order FROM %i WHERE flow_id = %d", $this->table_name, $flow_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
         
@@ -654,7 +548,6 @@ class Flows {
             return false;
         }
         
-        // Find the previous flow (next lower display_order in same pipeline)
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
         $prev_flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT flow_id, display_order FROM %i WHERE pipeline_id = %d AND display_order < %d ORDER BY display_order DESC LIMIT 1", $this->table_name, $current_flow['pipeline_id'], $current_flow['display_order'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 
@@ -662,19 +555,14 @@ class Flows {
             return false; // Already at the top
         }
         
-        // Swap display orders
         return $this->swap_flow_positions($current_flow, $prev_flow);
     }
 
     /**
      * Move a flow down in the display order (swap with next flow)
-     * 
-     * @param int $flow_id Flow ID to move down
-     * @return bool True on success, false on failure  
      */
     public function move_flow_down(int $flow_id): bool {
 
-        // Get the current flow
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
         $current_flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT flow_id, pipeline_id, display_order FROM %i WHERE flow_id = %d", $this->table_name, $flow_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
         
@@ -682,7 +570,6 @@ class Flows {
             return false;
         }
         
-        // Find the next flow (next higher display_order in same pipeline)
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
         $next_flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT flow_id, display_order FROM %i WHERE pipeline_id = %d AND display_order > %d ORDER BY display_order ASC LIMIT 1", $this->table_name, $current_flow['pipeline_id'], $current_flow['display_order'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
         
@@ -690,25 +577,18 @@ class Flows {
             return false; // Already at the bottom
         }
         
-        // Swap display orders
         return $this->swap_flow_positions($current_flow, $next_flow);
     }
 
     /**
      * Swap the display_order values of two flows
-     * 
-     * @param array $flow1 First flow data
-     * @param array $flow2 Second flow data  
-     * @return bool True on success, false on failure
      */
     private function swap_flow_positions(array $flow1, array $flow2): bool {
         
-        // Start transaction
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
         $this->wpdb->query('START TRANSACTION');
         
         try {
-            // Update first flow
             $result1 = $this->wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
                 $this->table_name,
                 ['display_order' => $flow2['display_order']],
@@ -717,7 +597,6 @@ class Flows {
                 ['%d']
             );
             
-            // Update second flow
             $result2 = $this->wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
                 $this->table_name,
                 ['display_order' => $flow1['display_order']],
@@ -738,7 +617,6 @@ class Flows {
                 return false;
             }
             
-            // Commit transaction
             $this->wpdb->query('COMMIT'); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
             
             do_action('dm_log', 'debug', 'Successfully swapped flow positions', [

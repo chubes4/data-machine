@@ -66,13 +66,11 @@ class Create {
     }
 
     private function create_simple_pipeline($data, $db_pipelines, $db_flows) {
-        // Use provided pipeline name or fallback
         $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : 'Pipeline';
 
-        // Create pipeline with empty configuration
         $pipeline_data = [
             'pipeline_name' => $pipeline_name,
-            'pipeline_config' => '{}' // Empty JSON object
+            'pipeline_config' => '{}'
         ];
 
         $pipeline_id = $db_pipelines->create_pipeline($pipeline_data);
@@ -81,7 +79,6 @@ class Create {
             return false;
         }
 
-        // Auto-create flow (maintains existing behavior)
         $flow_config = isset($data['flow_config']) ? $data['flow_config'] : [];
         $flow_name = $flow_config['flow_name'] ?? 'Flow';
         $scheduling_config = $flow_config['scheduling_config'] ?? ['interval' => 'manual'];
@@ -102,11 +99,8 @@ class Create {
     }
 
     private function create_complete_pipeline($data, $db_pipelines, $db_flows) {
-        // Use provided pipeline name or fallback
         $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : 'Pipeline';
         $steps = $data['steps'];
-
-        // Validate step types exist
         $all_steps = apply_filters('dm_steps', []);
         foreach ($steps as $step) {
             $step_type = $step['step_type'] ?? '';
@@ -325,7 +319,6 @@ class Create {
             return false;
         }
         
-        // Validate step type exists
         $all_steps = apply_filters('dm_steps', []);
         $step_config = $all_steps[$step_type] ?? null;
         if (!$step_config) {
@@ -333,11 +326,9 @@ class Create {
             return false;
         }
         
-        // Get current pipeline steps for execution order
         $current_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         $next_execution_order = count($current_steps);
         
-        // Create new step data
         $new_step = [
             'step_type' => $step_type,
             'execution_order' => $next_execution_order,

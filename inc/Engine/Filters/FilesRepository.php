@@ -267,7 +267,7 @@ class FilesRepository {
                 'flow_step_id' => $flow_step_id,
                 'data_entries' => count($accumulated_data)
             ]);
-            return ['data' => $accumulated_data]; // Fallback to direct data passing
+            return false;
         }
 
         // Create temporary file and store in repository
@@ -277,7 +277,7 @@ class FilesRepository {
                 'job_id' => $job_id,
                 'temp_file' => $temp_file
             ]);
-            return ['data' => $accumulated_data]; // Fallback to direct data passing
+            return false;
         }
 
         // Store in repository with job namespace (will overwrite existing file)
@@ -293,7 +293,7 @@ class FilesRepository {
                 'job_id' => $job_id,
                 'filename' => $filename
             ]);
-            return ['data' => $accumulated_data]; // Fallback to direct data passing
+            return false;
         }
 
 

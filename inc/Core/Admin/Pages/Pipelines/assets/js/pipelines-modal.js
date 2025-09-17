@@ -146,7 +146,6 @@
          * @param {CustomEvent} event The dm-auth-success event
          */
         handleAuthSuccess: function(event) {
-            console.log('Data Machine Modal: Auth success received', event.detail);
             
             const provider = event.detail.provider;
             
@@ -167,7 +166,6 @@
          * @param {CustomEvent} event The dm-auth-error event
          */
         handleAuthError: function(event) {
-            console.log('Data Machine Modal: Auth error received', event.detail);
             
             const provider = event.detail.provider;
             const error = event.detail.error;
@@ -188,7 +186,6 @@
                 ? `${provider.charAt(0).toUpperCase() + provider.slice(1)} connected successfully!`
                 : `${provider.charAt(0).toUpperCase() + provider.slice(1)} connection failed: ${error || 'Unknown error'}`;
             
-            console.log('Data Machine: ' + message);
             
             // Could add visual notification here if desired
             // For now, the modal refresh and flow card updates provide the visual feedback

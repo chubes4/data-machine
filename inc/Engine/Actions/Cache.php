@@ -164,6 +164,18 @@ class Cache {
         delete_transient(self::ALL_ACTIVE_FLOWS_CACHE_KEY);
         delete_transient(self::TOTAL_JOBS_COUNT_CACHE_KEY);
 
+        // Clear object cache systems (Redis, Memcached, etc.)
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
+            do_action('dm_log', 'debug', 'Object cache flushed');
+        }
+
+        // Clear transient-specific object cache if available
+        if (function_exists('wp_cache_delete_group')) {
+            wp_cache_delete_group('transients');
+            do_action('dm_log', 'debug', 'Transient object cache group cleared');
+        }
+
         do_action('dm_log', 'debug', 'Complete cache clear finished');
     }
 

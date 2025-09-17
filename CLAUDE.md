@@ -143,12 +143,6 @@ wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, proc
 - `flow_step_id`: `{pipeline_step_id}_{flow_id}` composite for flow-specific tracking
 - `status`: `pending`, `running`, `completed`, `failed`, `completed_no_items`
 
-**Migration System**:
-- **PipelineStepIdMigration**: One-time migration system for optimizing pipeline step ID format
-- **Performance Optimization**: Migrates old UUID4 step IDs to pipeline-prefixed format for direct lookups
-- **Admin Interface**: Provides admin notice and AJAX migration process with progress tracking
-- **Backward Compatibility**: Maintains existing functionality during and after migration
-
 ## AI Integration
 
 **Tool-First Architecture**: All publish handlers use `handle_tool_call()` method for agentic execution.
@@ -699,7 +693,7 @@ apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' =>
 
 ## Cache System
 
-**Centralized Cache Management**: Actions/Cache.php provides WordPress action-based cache clearing system that replaces the previous DatabaseCache.php architecture.
+**Centralized Cache Management**: Actions/Cache.php provides WordPress action-based cache clearing system for comprehensive cache management throughout the codebase.
 
 **Cache Actions**:
 ```php

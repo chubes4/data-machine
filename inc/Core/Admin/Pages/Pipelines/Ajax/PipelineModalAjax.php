@@ -211,8 +211,8 @@ class PipelineModalAjax
         if (!isset($_POST['context'])) {
             wp_send_json_error(['message' => __('Context data is required', 'data-machine')]);
         }
-        
-        $context_raw = wp_unslash($_POST['context'] ?? []);
+
+        $context_raw = wp_unslash($_POST['context'] ?? []); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
         $context = is_string($context_raw)
             ? array_map('sanitize_text_field', json_decode($context_raw, true) ?: [])
             : array_map('sanitize_text_field', $context_raw);
@@ -373,13 +373,7 @@ class PipelineModalAjax
                     }
                     
                     // Get current step configuration
-                    $pipeline_config = is_string($pipeline['pipeline_config']) 
-                        ? json_decode($pipeline['pipeline_config'], true) 
-                        : ($pipeline['pipeline_config'] ?? []);
-                    
-                    if (!is_array($pipeline_config)) {
-                        $pipeline_config = [];
-                    }
+                    $pipeline_config = $pipeline['pipeline_config'] ?? [];
                     
                     // Merge with existing step configuration to preserve provider-specific models
                     if (isset($pipeline_config[$pipeline_step_id])) {
@@ -480,9 +474,9 @@ class PipelineModalAjax
             'has_nonce' => isset($_POST['handler_settings_nonce']),
             'user_can_manage' => current_user_can('manage_options')
         ]);
-        
+
         // Handle both context-based (add handler) and direct form data (save settings) scenarios
-        $context_raw = wp_unslash($_POST['context'] ?? []);
+        $context_raw = wp_unslash($_POST['context'] ?? []); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
         $context = is_string($context_raw)
             ? array_map('sanitize_text_field', json_decode($context_raw, true) ?: [])
             : array_map('sanitize_text_field', $context_raw);

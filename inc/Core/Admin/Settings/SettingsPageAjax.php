@@ -22,8 +22,9 @@ class SettingsPageAjax
      */
     public static function register() {
         $instance = new self();
-        
+
         add_action('wp_ajax_dm_save_tool_config', [$instance, 'handle_save_tool_config']);
+        add_action('wp_ajax_dm_clear_cache', [$instance, 'handle_clear_cache']);
     }
 
     /**
@@ -64,5 +65,29 @@ class SettingsPageAjax
         do_action('dm_save_tool_config', $tool_id, $config_data);
         
         wp_send_json_error(['message' => __('Tool configuration handler not found', 'data-machine')]);
+    }
+
+    /**
+     * Handle cache clearing requests with security validation.
+     *
+     * Clears all Data Machine cache entries via dm_clear_all_cache action.
+     *
+     * @return void Sends JSON response via wp_send_json_*
+     */
+    public function handle_clear_cache()
+    {
+        if (!check_ajax_referer('dm_ajax_actions', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+
+        do_action('dm_clear_all_cache');
+
+        wp_send_json_success([
+            'message' => __('All cache has been cleared successfully.', 'data-machine')
+        ]);
     }
 }

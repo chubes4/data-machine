@@ -246,9 +246,7 @@ class Update {
             $flow_success = $db_flows->update_flow($flow_id, [
                 'flow_name' => $flow['flow_name'],
                 'flow_config' => wp_json_encode($flow_config),
-                'scheduling_config' => is_string($flow['scheduling_config']) ? 
-                    $flow['scheduling_config'] : 
-                    wp_json_encode($flow['scheduling_config'])
+                'scheduling_config' => wp_json_encode($flow['scheduling_config'])
             ]);
             
             if ($flow_success) {
@@ -509,10 +507,8 @@ class Update {
             return false;
         }
 
-        // Decode flow configuration
-        $flow_config = is_string($flow['flow_config']) 
-            ? json_decode($flow['flow_config'], true) 
-            : ($flow['flow_config'] ?? []);
+        // Get flow configuration
+        $flow_config = $flow['flow_config'] ?? [];
 
         // Update user message in the specific flow step
         if (!isset($flow_config[$flow_step_id])) {
@@ -605,13 +601,7 @@ class Update {
         }
 
         // Update step configuration
-        $pipeline_config = is_string($target_pipeline['pipeline_config'])
-            ? json_decode($target_pipeline['pipeline_config'], true)
-            : ($target_pipeline['pipeline_config'] ?? []);
-            
-        if (!is_array($pipeline_config)) {
-            $pipeline_config = [];
-        }
+        $pipeline_config = $target_pipeline['pipeline_config'] ?? [];
 
         // Update system_prompt field
         if (!isset($pipeline_config[$pipeline_step_id])) {

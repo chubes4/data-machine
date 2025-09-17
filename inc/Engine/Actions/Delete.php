@@ -80,7 +80,6 @@ class Delete {
             $updated_steps[$step['pipeline_step_id']] = $step;
         }
         
-        // Update pipeline configuration
         $success = $db_pipelines->update_pipeline($pipeline_id, [
             'pipeline_config' => json_encode($updated_steps)
         ]);
@@ -195,7 +194,6 @@ class Delete {
         $affected_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         $flow_count = count($affected_flows);
 
-        // Delete all flows first (cascade)
         foreach ($affected_flows as $flow) {
             $flow_id = $flow['flow_id'];
             $success = $db_flows->delete_flow($flow_id);
@@ -327,7 +325,6 @@ class Delete {
             return;
         }
 
-        // Update pipeline configuration
         $success = $db_pipelines->update_pipeline($pipeline_id, [
             'pipeline_config' => json_encode($updated_steps)
         ]);

@@ -33,10 +33,13 @@
         bindEvents: function() {
             // Tool configuration save handler - intercepts data-template clicks
             $(document).on('click', '[data-template="tool-config-save"]', this.handleToolConfigSave.bind(this));
-            
+
+            // Cache clearing handler
+            $(document).on('click', '#dm-clear-cache-btn', this.handleClearCache.bind(this));
+
             // Tab navigation handlers
             $('.dm-nav-tab-wrapper .nav-tab').on('click', this.handleTabClick.bind(this));
-            
+
             // Form submission handler to preserve tab state
             $('.dm-settings-form').on('submit', this.handleFormSubmit.bind(this));
         },
@@ -169,7 +172,61 @@
                 }
             });
         },
-        
+
+        /**
+         * Handle cache clearing action
+         */
+        handleClearCache: function(e) {
+            e.preventDefault();
+
+            const $button = $(e.currentTarget);
+            const $result = $('#dm-cache-clear-result');
+
+            // Show confirmation dialog
+            if (!confirm('Are you sure you want to clear all cache? This will force Data Machine to reload all configurations from the database.')) {
+                return;
+            }
+
+            // Show loading state
+            const originalText = $button.text();
+            $button.text('Clearing...').prop('disabled', true);
+            $result.removeClass('dm-hidden notice-success notice-error').text('');
+
+            // Send AJAX request
+            $.ajax({
+                url: dmSettings.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'dm_clear_cache',
+                    nonce: dmSettings.dm_ajax_nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        $result.addClass('notice-success').text(response.data.message).removeClass('dm-hidden');
+                        // Hide success message after 3 seconds
+                        setTimeout(() => {
+                            $result.fadeOut(300, () => {
+                                $result.addClass('dm-hidden').show();
+                            });
+                        }, 3000);
+                    } else {
+                        const errorMessage = response.data && response.data.message ?
+                            response.data.message : 'Cache clearing failed';
+                        $result.addClass('notice-error').text(errorMessage).removeClass('dm-hidden');
+                    }
+                },
+                error: () => {
+                    $result.addClass('notice-error')
+                           .text('Network error: Unable to clear cache')
+                           .removeClass('dm-hidden');
+                },
+                complete: () => {
+                    // Restore button state
+                    $button.prop('disabled', false).text(originalText);
+                }
+            });
+        },
+
         /**
          * Show error message in modal
          */

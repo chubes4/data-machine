@@ -100,7 +100,6 @@ docs/
 - Flows (scheduled instances)
 - Jobs (individual executions)
 - Processed Items (deduplication tracking)
-- PipelineStepIdMigration (one-time optimization system)
 
 **Cache Management**
 - Centralized cache system via Actions/Cache.php

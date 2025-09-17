@@ -8,9 +8,6 @@
  * - URL handling (append/reply modes)
  * - Chunked upload for large images
  * - X API v2 for tweet posting
- *
- * @package DataMachine
- * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
@@ -21,8 +18,6 @@ class Twitter {
 
     /**
      * OAuth 1.0a authentication handler.
-     *
-     * @var TwitterAuth
      */
     private $auth;
 
@@ -37,10 +32,6 @@ class Twitter {
 
     /**
      * Handle AI tool call for Twitter publishing.
-     *
-     * @param array $parameters Flat parameter array with content, handler_config, etc.
-     * @param array $tool_def Tool definition array (unused)
-     * @return array Success response with tweet data or error response
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
 
@@ -189,12 +180,6 @@ class Twitter {
 
     /**
      * Post reply tweet with URL.
-     *
-     * @param object $connection TwitterOAuth connection instance
-     * @param string $original_tweet_id Tweet ID to reply to
-     * @param string $source_url URL for reply tweet content
-     * @param string $screen_name Twitter username
-     * @return array Reply posting result with success/error status
      */
     private function post_reply_tweet($connection, string $original_tweet_id, string $source_url, string $screen_name): array {
         do_action('dm_log', 'debug', 'Twitter Tool: Posting URL as reply tweet', [
@@ -263,11 +248,6 @@ class Twitter {
 
     /**
      * Upload image to Twitter using v1.1 media API.
-     *
-     * @param object $connection TwitterOAuth connection instance
-     * @param string $image_url Remote image URL to download and upload
-     * @param string $alt_text Alt text for accessibility (currently unused)
-     * @return string|null Media ID string for tweet attachment or null on failure
      */
     private function upload_image_to_twitter($connection, string $image_url, string $alt_text): ?string {
         do_action('dm_log', 'debug', 'Attempting to upload image to Twitter using v1.1 media API.', ['image_url' => $image_url]);
@@ -363,11 +343,6 @@ class Twitter {
 
     /**
      * Simple image upload for files < 1MB
-     *
-     * @param object $connection Twitter connection (v1.1 API)
-     * @param string $temp_image_path Local file path
-     * @param string $mime_type MIME type
-     * @return string|null Media ID or null
      */
     private function upload_image_simple($connection, string $temp_image_path, string $mime_type): ?string {
         do_action('dm_log', 'debug', 'Twitter: Attempting simple image upload using TwitterOAuth.', [
@@ -418,11 +393,6 @@ class Twitter {
 
     /**
      * Chunked upload for large files (INIT→APPEND→FINALIZE)
-     *
-     * @param object $connection Twitter connection (v1.1 API)
-     * @param string $temp_image_path Local file path
-     * @param string $mime_type MIME type
-     * @return string|null Media ID or null
      */
     private function upload_image_chunked($connection, string $temp_image_path, string $mime_type): ?string {
         do_action('dm_log', 'debug', 'Twitter: Starting chunked image upload.', [
@@ -574,8 +544,6 @@ class Twitter {
 
     /**
      * User-friendly label for handler
-     *
-     * @return string Handler label
      */
     public static function get_label(): string {
         return __('Post to Twitter', 'data-machine');
@@ -584,9 +552,6 @@ class Twitter {
 
     /**
      * Check image URL accessibility
-     *
-     * @param string $image_url Image URL to check
-     * @return bool True if accessible
      */
     private function is_image_accessible(string $image_url): bool {
         $problematic_patterns = [

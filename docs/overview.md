@@ -118,11 +118,6 @@ docs/
 - **Pattern-Based Clearing** - Supports wildcard patterns for efficient bulk operations
 - **WordPress Transients** - Native WordPress caching integration with comprehensive logging
 
-### Migration System
-- **PipelineStepIdMigration** - One-time optimization system for pipeline step ID format
-- **Performance Enhancement** - Improves database performance through direct lookup optimization
-- **Admin Interface** - Guided migration process with progress tracking and preview
-
 ## Requirements
 
 - **PHP** 8.0 or higher

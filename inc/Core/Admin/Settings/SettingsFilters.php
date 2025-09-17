@@ -66,7 +66,18 @@ function dm_register_settings_admin_page_filters() {
                 ],
                 'dm-settings-page' => [
                     'src' => 'assets/js/settings-page.js',
-                    'deps' => ['jquery', 'dm-core-modal']
+                    'deps' => ['jquery', 'dm-core-modal'],
+                    'localize' => [
+                        'object' => 'dmSettings',
+                        'data' => [
+                            'ajax_url' => admin_url('admin-ajax.php'),
+                            'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
+                            'strings' => [
+                                'saving' => __('Saving...', 'data-machine'),
+                                'clearing' => __('Clearing...', 'data-machine')
+                            ]
+                        ]
+                    ]
                 ]
             ];
         }
@@ -112,7 +123,10 @@ function dm_enqueue_settings_assets($hook) {
     
     foreach ($assets['css'] ?? [] as $handle => $css_config) {
         $css_url = DATA_MACHINE_URL . 'inc/Core/Admin/Settings/' . $css_config['src'];
-        $css_version = $css_config['version'] ?? DATA_MACHINE_VERSION;
+
+        // Use file modification time for cache busting in development
+        $css_file_path = DATA_MACHINE_PATH . 'inc/Core/Admin/Settings/' . $css_config['src'];
+        $css_version = file_exists($css_file_path) ? filemtime($css_file_path) : DATA_MACHINE_VERSION;
         
         wp_enqueue_style(
             $handle,
@@ -125,7 +139,10 @@ function dm_enqueue_settings_assets($hook) {
     
     foreach ($assets['js'] ?? [] as $handle => $js_config) {
         $js_url = DATA_MACHINE_URL . 'inc/Core/Admin/Settings/' . $js_config['src'];
-        $js_version = $js_config['version'] ?? DATA_MACHINE_VERSION;
+
+        // Use file modification time for cache busting in development
+        $js_file_path = DATA_MACHINE_PATH . 'inc/Core/Admin/Settings/' . $js_config['src'];
+        $js_version = file_exists($js_file_path) ? filemtime($js_file_path) : DATA_MACHINE_VERSION;
         
         wp_enqueue_script(
             $handle,

@@ -79,12 +79,6 @@ class Pipelines {
 		return $pipeline_id;
 	}
 
-	/**
-	 * Get pipeline by ID
-	 *
-	 * @param int $pipeline_id Pipeline ID
-	 * @return array|null Pipeline data or null
-	 */
 	public function get_pipeline( int $pipeline_id ): ?array {
 
 		if ( empty( $pipeline_id ) ) {
@@ -97,12 +91,17 @@ class Pipelines {
 		if ( false === $cached_result ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$pipeline = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE pipeline_id = %d", $this->table_name, $pipeline_id ), ARRAY_A );
+
+			if ($pipeline && !empty($pipeline['pipeline_config'])) {
+				// Decode JSON field immediately after database retrieval
+				$pipeline['pipeline_config'] = json_decode($pipeline['pipeline_config'], true) ?: [];
+			}
+
 			do_action('dm_cache_set', $cache_key, $pipeline, 0, 'pipelines');
-			$cached_result = $pipeline;
-		} else {
-			$pipeline = $cached_result;
+			return $pipeline;
 		}
-		return $pipeline;
+
+		return $cached_result;
 	}
 
 	/**
@@ -116,17 +115,27 @@ class Pipelines {
 		$cached_result = get_transient( $cache_key );
 
 		if ( false === $cached_result ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$results = $this->wpdb->get_results(
-				"SELECT * FROM %i ORDER BY pipeline_name ASC", $this->table_name,
+				$this->wpdb->prepare(
+					"SELECT * FROM %i ORDER BY pipeline_name ASC",
+					$this->table_name
+				),
 				ARRAY_A
 			);
+
+			// Decode JSON fields immediately after database retrieval
+			foreach ($results as &$pipeline) {
+				if (!empty($pipeline['pipeline_config'])) {
+					$pipeline['pipeline_config'] = json_decode($pipeline['pipeline_config'], true) ?: [];
+				}
+			}
+
 			do_action('dm_cache_set', $cache_key, $results, 0, 'pipelines');
-			$cached_result = $results;
-		} else {
-			$results = $cached_result;
+			return $results ?: [];
 		}
 
-		return $results ?: [];
+		return $cached_result;
 	}
 
 	/**
@@ -143,8 +152,12 @@ class Pipelines {
 		$cached_result = get_transient( $cache_key );
 
 		if ( false === $cached_result ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$results = $this->wpdb->get_results(
-				"SELECT pipeline_id, pipeline_name FROM %i ORDER BY pipeline_name ASC", $this->table_name,
+				$this->wpdb->prepare(
+					"SELECT pipeline_id, pipeline_name FROM %i ORDER BY pipeline_name ASC",
+					$this->table_name
+				),
 				ARRAY_A
 			);
 			do_action('dm_cache_set', $cache_key, $results, 0, 'pipelines');
@@ -294,18 +307,19 @@ class Pipelines {
 		if ( false === $cached_result ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$pipeline_config_json = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT pipeline_config FROM %i WHERE pipeline_id = %d", $this->table_name, $pipeline_id ) );
-			do_action('dm_cache_set', $cache_key, $pipeline_config_json, 0, 'pipelines');
-			$cached_result = $pipeline_config_json;
-		} else {
-			$pipeline_config_json = $cached_result;
+
+			if ( empty( $pipeline_config_json ) ) {
+				return [];
+			}
+
+			// Decode JSON immediately after database retrieval
+			$pipeline_config = json_decode( $pipeline_config_json, true ) ?: [];
+
+			do_action('dm_cache_set', $cache_key, $pipeline_config, 0, 'pipelines');
+			return $pipeline_config;
 		}
 
-		if ( empty( $pipeline_config_json ) ) {
-			return [];
-		}
-
-		$pipeline_config = json_decode( $pipeline_config_json, true );
-		return is_array( $pipeline_config ) ? $pipeline_config : [];
+		return $cached_result;
 	}
 
 
@@ -363,13 +377,19 @@ class Pipelines {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$sql = $this->wpdb->prepare( $query, $this->table_name, $per_page, $offset );
 			$results = $this->wpdb->get_results( $sql, ARRAY_A );
-			do_action('dm_cache_set', $cache_key, $results, 300, 'pipelines'); // 5 min cache for exports
-			$cached_result = $results;
-		} else {
-			$results = $cached_result;
+
+			// Decode JSON fields immediately after database retrieval
+			foreach ($results as &$pipeline) {
+				if (!empty($pipeline['pipeline_config'])) {
+					$pipeline['pipeline_config'] = json_decode($pipeline['pipeline_config'], true) ?: [];
+				}
+			}
+
+			do_action('dm_cache_set', $cache_key, $results, 300, 'pipelines'); // Cache decoded arrays
+			return $results;
 		}
 
-		return $results;
+		return $cached_result;
 	}
 
 	/**

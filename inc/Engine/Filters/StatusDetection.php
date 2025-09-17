@@ -1,20 +1,11 @@
 <?php
 /**
  * Status detection system with RED/YELLOW/GREEN priority architecture.
- *
- * Centralized filter-based status detection for pipeline viability, step configuration,
- * handler authentication, and flow-level issues.
- *
- * @package DataMachine\Engine\Filters
- * @since 1.0.0
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
-/**
- * Register status detection filters with RED/YELLOW/GREEN priority hierarchy.
- */
 function dm_register_status_detection_filters() {
     
     // RED Status Filters (Critical - Blocks Execution)

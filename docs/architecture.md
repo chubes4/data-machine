@@ -22,7 +22,7 @@ Three-action execution cycle:
 - `wp_dm_processed_items` - Deduplication tracking per execution
 
 ### Cache Management System
-**Centralized Architecture**: Actions/Cache.php provides WordPress action-based cache clearing system, replacing previous DatabaseCache.php architecture.
+**Centralized Architecture**: Actions/Cache.php provides WordPress action-based cache clearing system for comprehensive cache management.
 
 **Cache Operations**:
 - `dm_clear_pipeline_cache($pipeline_id)` - Clear pipeline + flows + jobs
@@ -36,9 +36,6 @@ Three-action execution cycle:
 - WordPress transient integration for native storage
 - Comprehensive logging for all cache operations
 - Granular cache invalidation for optimal performance
-
-### Migration System
-**PipelineStepIdMigration**: One-time migration system for optimizing pipeline step ID format to improve database performance with direct lookups. Provides admin interface for guided migration process.
 
 ### Step Types
 - **Fetch**: Data retrieval (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API)
