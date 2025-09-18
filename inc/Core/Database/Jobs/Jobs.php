@@ -27,16 +27,10 @@ class Jobs {
     }
 
 
-    /**
-     * Create new job record.
-     */
     public function create_job(array $job_data): int|false {
         return $this->operations->create_job($job_data);
     }
 
-    /**
-     * Get job by ID.
-     */
     public function get_job(int $job_id): ?object {
         return $this->operations->get_job($job_id);
     }
@@ -73,16 +67,10 @@ class Jobs {
         return $this->operations->delete_jobs($criteria);
     }
 
-    /**
-     * Store engine parameters for fetch handler data separation.
-     */
     public function store_engine_data(int $job_id, array $data): bool {
         return $this->operations->store_engine_data($job_id, $data);
     }
 
-    /**
-     * Retrieve stored engine parameters for Engine.php injection.
-     */
     public function retrieve_engine_data(int $job_id): array {
         return $this->operations->retrieve_engine_data($job_id);
     }
@@ -90,9 +78,6 @@ class Jobs {
 
 
 
-    /**
-     * Create the jobs database table on plugin activation.
-     */
     public static function create_table() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'dm_jobs';

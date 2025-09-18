@@ -15,17 +15,11 @@ class WebFetch {
         $this->register_configuration();
     }
 
-    /**
-     * Register configuration filters for self-registration
-     */
     private function register_configuration() {
         add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
         add_filter('dm_tool_configured', [$this, 'check_configuration'], 10, 2);
     }
 
-    /**
-     * Handle web fetch tool call from AI agents.
-     */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
 
         $url = $parameters['url'] ?? '';
@@ -112,9 +106,6 @@ class WebFetch {
         ];
     }
 
-    /**
-     * Register tool in ai_tools filter
-     */
     public function register_tool($tools) {
         $tools['web_fetch'] = [
             'class' => __CLASS__,
@@ -133,16 +124,10 @@ class WebFetch {
         return $tools;
     }
 
-    /**
-     * Check if Web Fetch tool is available.
-     */
     public static function is_configured(): bool {
         return true;
     }
 
-    /**
-     * Filter handler for dm_tool_configured
-     */
     public function check_configuration($configured, $tool_id) {
         if ($tool_id !== 'web_fetch') {
             return $configured;
@@ -151,9 +136,6 @@ class WebFetch {
         return self::is_configured();
     }
 
-    /**
-     * Extract readable content from HTML using regex processing.
-     */
     private function extract_readable_content(string $html_content): array {
 
         $title = '';
@@ -179,8 +161,8 @@ class WebFetch {
 
         $content = html_entity_decode($content, ENT_QUOTES, 'UTF-8');
 
-        $content = preg_replace('/\n\s*\n/', "\n\n", $content); // Multiple newlines to double newlines
-        $content = preg_replace('/[ \t]+/', ' ', $content); // Multiple spaces/tabs to single space
+        $content = preg_replace('/\n\s*\n/', "\n\n", $content);
+        $content = preg_replace('/[ \t]+/', ' ', $content);
         $content = trim($content);
 
         $content = preg_replace('/\n{3,}/', "\n\n", $content);
@@ -191,9 +173,6 @@ class WebFetch {
         ];
     }
 
-    /**
-     * Format success message for web fetch results.
-     */
     public function format_success_message($message, $tool_name, $tool_result, $tool_parameters) {
         if ($tool_name !== 'web_fetch') {
             return $message;

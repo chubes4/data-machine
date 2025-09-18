@@ -60,7 +60,7 @@ class AIStep {
             if (!empty($user_message)) {
                 $messages[] = [
                     'role' => 'user',
-                    'content' => 'ORIGINAL REQUEST (for context): ' . $user_message
+                    'content' => $user_message
                 ];
             }
             
@@ -106,12 +106,15 @@ class AIStep {
                 throw new \Exception($error_message);
             }
 
+            // Preserve associative keys and handler metadata for directive + provider
             $ai_provider_tools = [];
             foreach ($available_tools as $tool_name => $tool_config) {
-                $ai_provider_tools[] = [
+                $ai_provider_tools[$tool_name] = [
                     'name' => $tool_name,
                     'description' => $tool_config['description'] ?? '',
-                    'parameters' => $tool_config['parameters'] ?? []
+                    'parameters' => $tool_config['parameters'] ?? [],
+                    'handler' => $tool_config['handler'] ?? null,
+                    'handler_config' => $tool_config['handler_config'] ?? []
                 ];
             }
             

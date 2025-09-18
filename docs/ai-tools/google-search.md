@@ -40,12 +40,6 @@ Searches Google for current information, facts, and external context. Provides r
 
 ### Optional Parameters
 
-**max_results** (integer)
-- Default: 5
-- Range: 1-10
-- Purpose: Limit number of search results returned
-- Performance: Fewer results = faster response
-
 **site_restrict** (string)
 - Default: None (searches entire web)
 - Format: Domain name (e.g., `"wikipedia.org"`)
@@ -105,21 +99,11 @@ $result = $google_search_tool->handle_tool_call([
 ]);
 ```
 
-### Limited Results
-
-```php
-$result = $google_search_tool->handle_tool_call([
-    'query' => 'SEO best practices 2024',
-    'max_results' => 3
-]);
-```
-
 ### Domain-Restricted Search
 
 ```php
 $result = $google_search_tool->handle_tool_call([
     'query' => 'machine learning algorithms',
-    'max_results' => 5,
     'site_restrict' => 'wikipedia.org'
 ]);
 ```
@@ -178,7 +162,6 @@ $result = $google_search_tool->handle_tool_call([
 - 10 queries per second maximum
 
 **Optimization Strategies**:
-- Use `max_results` parameter to limit response size
 - Combine related searches into single query
 - Consider site restrictions for targeted results
 

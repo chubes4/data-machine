@@ -127,12 +127,11 @@ Complete extension system for custom handlers and tools:
 
 ### AI Integration
 - Multiple provider support (200+ models via OpenRouter)
-- 6-tier AI directive priority system with standardized spacing for extensibility:
-  - **Priority 5**: PluginCoreDirective (foundational AI agent identity)
-  - **Priority 10**: GlobalSystemPromptDirective (foundational AI behavior)
-  - **Priority 20**: PipelineSystemPromptDirective (workflow structure visualization)
-  - **Priority 30**: ToolDefinitionsDirective (tool definitions + workflow context)
-  - **Priority 40**: DataPacketStructureDirective (JSON structure explanation)
+- 5-tier AI directive priority system with standardized spacing for extensibility:
+  - **Priority 10**: PluginCoreDirective (foundational AI agent identity)
+  - **Priority 20**: GlobalSystemPromptDirective (foundational AI behavior)
+  - **Priority 30**: PipelineSystemPromptDirective (workflow structure visualization)
+  - **Priority 40**: ToolDefinitionsDirective (tool definitions + workflow context)
   - **Priority 50**: SiteContextDirective (WordPress environment info)
 - AIStepConversationManager for centralized conversation state management:
   - Turn-based conversation loops with chronological message ordering
@@ -152,7 +151,7 @@ Complete extension system for custom handlers and tools:
 - **Explicit Data Separation Architecture**: Clean data packets for AI processing vs engine parameters for handlers
 - **Database Storage + Filter Injection**: Fetch handlers store engine_data (source_url, image_url) in database; Engine.php retrieves and injects via `dm_engine_parameters` filter
 - DataPacket structure for consistent data flow with chronological ordering
-- DataPacketStructureDirective explains JSON format to AI agents:
+- Clear data packet structure for AI agents with chronological ordering:
   - Root wrapper with data_packets array
   - Index 0 = newest packet (chronological ordering)
   - Type-specific fields (handler, attachments, tool_name)

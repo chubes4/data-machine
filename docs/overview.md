@@ -48,7 +48,7 @@ $engine_parameters = [
 ];
 ```
 
-**DataPacketStructureDirective**: AI agents receive automatic explanation of the JSON structure including:
+**Data Packet Structure**: AI agents work with clean data packet structure including:
 - Root wrapper with data_packets array
 - Chronological ordering (index 0 = newest)
 - Type-specific fields and workflow dynamics
@@ -58,12 +58,11 @@ $engine_parameters = [
 
 - **Multi-Provider Support** - OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 - **Tool-First Architecture** - AI agents can call tools to interact with publish handlers
-- **6-Tier AI Directive System** - Structured system messages via auto-registering directive classes:
-  - **Priority 5**: Plugin Core Directive (foundational AI agent identity and core behavioral principles)
-  - **Priority 10**: Global System Prompt (foundational AI behavior)
-  - **Priority 20**: Pipeline System Prompt (workflow structure visualization)
-  - **Priority 30**: Tool Definitions (usage instructions and workflow context)
-  - **Priority 40**: Data Packet Structure (JSON format explanation for AI agents)
+- **5-Tier AI Directive System** - Structured system messages via auto-registering directive classes:
+  - **Priority 10**: Plugin Core Directive (foundational AI agent identity and core behavioral principles)
+  - **Priority 20**: Global System Prompt (foundational AI behavior)
+  - **Priority 30**: Pipeline System Prompt (workflow structure visualization)
+  - **Priority 40**: Tool Definitions (usage instructions and workflow context)
   - **Priority 50**: Site Context (WordPress environment info)
 - **AIStepConversationManager** - Centralized conversation state management:
   - Turn-based conversation loops with chronological message ordering

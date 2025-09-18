@@ -189,12 +189,11 @@ docs/
 
 ### AI Integration
 - Multi-provider support (OpenAI, Anthropic, Google, Grok, OpenRouter)
-- 6-tier AI directive system with auto-registration:
-  - PluginCoreDirective (Priority 5 - foundational AI agent identity)
-  - GlobalSystemPromptDirective (Priority 10 - foundational behavior)
-  - PipelineSystemPromptDirective (Priority 20 - workflow visualization)
-  - ToolDefinitionsDirective (Priority 30 - usage instructions)
-  - DataPacketStructureDirective (Priority 40 - JSON format explanation)
+- 5-tier AI directive system with auto-registration:
+  - PluginCoreDirective (Priority 10 - foundational AI agent identity)
+  - GlobalSystemPromptDirective (Priority 20 - foundational behavior)
+  - PipelineSystemPromptDirective (Priority 30 - workflow visualization)
+  - ToolDefinitionsDirective (Priority 40 - usage instructions)
   - SiteContextDirective (Priority 50 - WordPress environment)
 - AIStepConversationManager for centralized conversation state management:
   - Turn-based conversation loops with chronological message ordering

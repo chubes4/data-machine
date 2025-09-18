@@ -219,33 +219,17 @@ All tool results flow through AIStepConversationManager for consistent conversat
 ```php
 class GoogleSearch {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        // Get configuration
         $config = apply_filters('dm_get_tool_config', [], 'google_search');
         $api_key = $config['api_key'] ?? '';
         $search_engine_id = $config['search_engine_id'] ?? '';
-        
-        // Validate configuration
         if (empty($api_key) || empty($search_engine_id)) {
-            return [
-                'success' => false,
-                'error' => 'Google Search not configured',
-                'tool_name' => 'google_search'
-            ];
+            return [ 'success' => false, 'error' => 'Google Search not configured', 'tool_name' => 'google_search' ];
         }
-        
-        // Execute search
         $query = $parameters['query'];
-        $max_results = $parameters['max_results'] ?? 5;
-        
-        $results = $this->perform_search($query, $api_key, $search_engine_id, $max_results);
-        
+        $results = $this->perform_search($query, $api_key, $search_engine_id, 10); // Fixed size
         return [
             'success' => true,
-            'data' => [
-                'results' => $results,
-                'query' => $query,
-                'total_results' => count($results)
-            ],
+            'data' => [ 'results' => $results, 'query' => $query, 'total_results' => count($results) ],
             'tool_name' => 'google_search'
         ];
     }

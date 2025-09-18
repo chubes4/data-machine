@@ -22,9 +22,6 @@ class GoogleSearch {
         $this->register_configuration();
     }
 
-    /**
-     * Register configuration filters for self-registration
-     */
     private function register_configuration() {
         add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
         add_filter('dm_tool_configured', [$this, 'check_configuration'], 10, 2);
@@ -62,7 +59,7 @@ class GoogleSearch {
         }
 
         $query = sanitize_text_field($parameters['query']);
-        $max_results = min(max(intval($parameters['max_results'] ?? 5), 1), 10); // Limit 1-10 results
+        $max_results = 10;
         $site_restrict = !empty($parameters['site_restrict']) ? sanitize_text_field($parameters['site_restrict']) : '';
         
         $search_url = 'https://www.googleapis.com/customsearch/v1';
@@ -74,14 +71,12 @@ class GoogleSearch {
             'safe' => 'active' // Enable safe search
         ];
         
-        // Add site restriction if specified
         if ($site_restrict) {
             $search_params['siteSearch'] = $site_restrict;
         }
         
         $request_url = add_query_arg($search_params, $search_url);
         
-        // Execute search request
         $response = wp_remote_get($request_url, [
             'timeout' => 10,
             'headers' => [
@@ -118,7 +113,6 @@ class GoogleSearch {
             ];
         }
         
-        // Process search results
         $results = [];
         if (!empty($search_data['items'])) {
             foreach ($search_data['items'] as $item) {
@@ -131,7 +125,6 @@ class GoogleSearch {
             }
         }
         
-        // Get search information
         $search_info = $search_data['searchInformation'] ?? [];
         $total_results = $search_info['totalResults'] ?? '0';
         $search_time = $search_info['searchTime'] ?? 0;
@@ -149,9 +142,6 @@ class GoogleSearch {
         ];
     }
 
-    /**
-     * Register tool in ai_tools filter
-     */
     public function register_tool($tools) {
         $tools['google_search'] = [
             'class' => __CLASS__,
@@ -164,11 +154,6 @@ class GoogleSearch {
                     'required' => true,
                     'description' => 'Search query for external web information. Returns JSON with "results" array containing web search results.'
                 ],
-                'max_results' => [
-                    'type' => 'integer',
-                    'required' => false,
-                    'description' => 'Maximum number of results to return (1-10, default: 5). Limit to reduce response size.'
-                ],
                 'site_restrict' => [
                     'type' => 'string',
                     'required' => false,
@@ -180,11 +165,6 @@ class GoogleSearch {
         return $tools;
     }
 
-    /**
-     * Check if Google Search tool is properly configured
-     * 
-     * @return bool True if configured, false otherwise
-     */
     public static function is_configured(): bool {
         $config = get_option('dm_search_config', []);
         $google_config = $config['google_search'] ?? [];
@@ -192,19 +172,11 @@ class GoogleSearch {
         return !empty($google_config['api_key']) && !empty($google_config['search_engine_id']);
     }
     
-    /**
-     * Get current configuration
-     *
-     * @return array Configuration array
-     */
     public static function get_config(): array {
         $config = get_option('dm_search_config', []);
         return $config['google_search'] ?? [];
     }
 
-    /**
-     * Filter handler for dm_tool_configured
-     */
     public function check_configuration($configured, $tool_id) {
         if ($tool_id !== 'google_search') {
             return $configured;
@@ -213,9 +185,6 @@ class GoogleSearch {
         return self::is_configured();
     }
 
-    /**
-     * Filter handler for dm_get_tool_config
-     */
     public function get_configuration($config, $tool_id) {
         if ($tool_id !== 'google_search') {
             return $config;
@@ -224,9 +193,6 @@ class GoogleSearch {
         return self::get_config();
     }
 
-    /**
-     * Action handler for dm_save_tool_config
-     */
     public function save_configuration($tool_id, $config_data) {
         if ($tool_id !== 'google_search') {
             return;
@@ -256,9 +222,6 @@ class GoogleSearch {
         }
     }
 
-    /**
-     * Get configuration fields for UI generation
-     */
     public function get_config_fields(): array {
         return [
             'api_key' => [

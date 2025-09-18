@@ -113,13 +113,12 @@ $tools['tool_name'] = [
 
 **Return**: Array with AI response
 
-**6-Tier Directive System**: System messages automatically injected via separate directive classes in priority order:
+**5-Tier Directive System**: System messages automatically injected via separate directive classes in priority order:
 
-**Priority 5**: Plugin core directive (`PluginCoreDirective`) - foundational AI agent identity
-**Priority 10**: Global system prompt (`GlobalSystemPromptDirective`) - background guidance
-**Priority 20**: Pipeline system prompt (`PipelineSystemPromptDirective`) - user configuration
-**Priority 30**: Tool definitions and directives (`ToolDefinitionsDirective`) - usage instructions
-**Priority 40**: Data packet structure (`DataPacketStructureDirective`) - JSON format explanation
+**Priority 10**: Plugin core directive (`PluginCoreDirective`) - foundational AI agent identity
+**Priority 20**: Global system prompt (`GlobalSystemPromptDirective`) - background guidance
+**Priority 30**: Pipeline system prompt (`PipelineSystemPromptDirective`) - user configuration
+**Priority 40**: Tool definitions and directives (`ToolDefinitionsDirective`) - usage instructions
 **Priority 50**: WordPress site context (`SiteContextDirective`) - environment info
 
 **Request Structure**:
@@ -133,22 +132,19 @@ $request = [
 ];
 ```
 
-**6-Tier Auto-Registration**: Each directive class automatically registers with the ai_request filter:
+**5-Tier Auto-Registration**: Each directive class automatically registers with the ai_request filter:
 ```php
-// Priority 5: Plugin core directive (foundational AI agent identity)
-add_filter('ai_request', [PluginCoreDirective::class, 'inject'], 5, 5);
+// Priority 10: Plugin core directive (foundational AI agent identity)
+add_filter('ai_request', [PluginCoreDirective::class, 'inject'], 10, 5);
 
-// Priority 10: Global system prompt (background guidance)
-add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 10, 5);
+// Priority 20: Global system prompt (background guidance)
+add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 20, 5);
 
-// Priority 20: Pipeline system prompt (user configuration)
-add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 20, 5);
+// Priority 30: Pipeline system prompt (user configuration)
+add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 30, 5);
 
-// Priority 30: Tool definitions and directives (how to use available tools)
-add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 30, 5);
-
-// Priority 40: Data packet structure (JSON format and ordering explanation)
-add_filter('ai_request', [DataPacketStructureDirective::class, 'inject'], 40, 5);
+// Priority 40: Tool definitions and directives (how to use available tools)
+add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 40, 5);
 
 // Priority 50: WordPress site context (environment info - lowest priority)
 add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);

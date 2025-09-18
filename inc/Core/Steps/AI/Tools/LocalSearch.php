@@ -17,17 +17,11 @@ class LocalSearch {
         $this->register_configuration();
     }
 
-    /**
-     * Register tool via filters for self-discovery.
-     */
     private function register_configuration() {
         add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
         add_filter('dm_tool_configured', [$this, 'check_configuration'], 10, 2);
     }
 
-    /**
-     * Execute WordPress search with structured results.
-     */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         
         if (empty($parameters['query'])) {
@@ -39,7 +33,7 @@ class LocalSearch {
         }
 
         $query = sanitize_text_field($parameters['query']);
-        $max_results = min(max(intval($parameters['max_results'] ?? 10), 1), 20);
+        $max_results = 10;
         $post_types = $parameters['post_types'] ?? ['post', 'page'];
         
         if (!is_array($post_types)) {
@@ -48,15 +42,15 @@ class LocalSearch {
         $post_types = array_map('sanitize_text_field', $post_types);
         
         $query_args = [
-            's' => $query, // WordPress search parameter
+            's' => $query,
             'post_type' => $post_types,
             'post_status' => 'publish',
             'posts_per_page' => $max_results,
-            'orderby' => 'relevance', // WordPress search relevance ranking
+            'orderby' => 'relevance',
             'order' => 'DESC',
-            'no_found_rows' => false, // We need total count
-            'update_post_meta_cache' => false, // Performance optimization
-            'update_post_term_cache' => false, // Performance optimization
+            'no_found_rows' => false,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
         ];
         
         $wp_query = new \WP_Query($query_args);
@@ -113,9 +107,6 @@ class LocalSearch {
         ];
     }
 
-    /**
-     * Register tool in ai_tools filter
-     */
     public function register_tool($tools) {
         $tools['local_search'] = [
             'class' => __CLASS__,
@@ -128,11 +119,6 @@ class LocalSearch {
                     'required' => true,
                     'description' => 'Search terms to find relevant posts. Returns JSON with "results" array containing title, link, excerpt, post_type, publish_date, author for each match.'
                 ],
-                'max_results' => [
-                    'type' => 'integer',
-                    'required' => false,
-                    'description' => 'Maximum results to return (1-20, default: 10). Limit to reduce response size.'
-                ],
                 'post_types' => [
                     'type' => 'array',
                     'required' => false,
@@ -144,16 +130,10 @@ class LocalSearch {
         return $tools;
     }
 
-    /**
-     * Check tool availability (always true).
-     */
     public static function is_configured(): bool {
         return true;
     }
 
-    /**
-     * Handle dm_tool_configured filter.
-     */
     public function check_configuration($configured, $tool_id) {
         if ($tool_id !== 'local_search') {
             return $configured;
@@ -162,9 +142,6 @@ class LocalSearch {
         return self::is_configured();
     }
     
-    /**
-     * Get searchable post types.
-     */
     public static function get_searchable_post_types(): array {
         $post_types = get_post_types([
             'public' => true,
@@ -174,9 +151,6 @@ class LocalSearch {
         return array_values($post_types);
     }
     
-    /**
-     * Format tool success message.
-     */
     public function format_success_message($message, $tool_name, $tool_result, $tool_parameters) {
         if ($tool_name !== 'local_search') {
             return $message;

@@ -180,24 +180,29 @@ class WordPress {
      * Processes individual blocks to prevent corruption of block delimiters.
      */
     private function sanitize_block_content(string $content): string {
-        // Parse blocks first to maintain structure integrity
-        $blocks = parse_blocks($content);
+        // Detect obvious malformed Gutenberg block starts (unterminated JSON) for logging (future enhancement)
+        if (preg_match('/<!--\s*wp:[^\n\r{}]+\{[^}]*$/', $content)) {
+            do_action('dm_log', 'debug', 'WordPress Publish: Detected potentially unterminated block JSON', [
+                'content_preview' => substr($content, 0, 200)
+            ]);
+        }
 
-        // Apply WordPress core block filtering to each block individually
-        $filtered_blocks = array_map(function($block) {
-            if (function_exists('filter_block_kses')) {
-                // Use WordPress core block filtering function when available
-                return filter_block_kses($block, wp_kses_allowed_html('post'), ['http', 'https']);
-            }
-            // Fallback: apply wp_kses_post only to inner content, preserving block structure
-            if (isset($block['innerHTML']) && !empty($block['innerHTML'])) {
+        $blocks = parse_blocks($content);
+        $sanitized = array_map(function($block) {
+            if (isset($block['innerHTML']) && $block['innerHTML'] !== '') {
                 $block['innerHTML'] = wp_kses_post($block['innerHTML']);
+            }
+            if (!empty($block['innerBlocks']) && is_array($block['innerBlocks'])) {
+                $block['innerBlocks'] = array_map(function($inner) {
+                    if (isset($inner['innerHTML']) && $inner['innerHTML'] !== '') {
+                        $inner['innerHTML'] = wp_kses_post($inner['innerHTML']);
+                    }
+                    return $inner;
+                }, $block['innerBlocks']);
             }
             return $block;
         }, $blocks);
-
-        // Serialize filtered blocks back to content
-        return serialize_blocks($filtered_blocks);
+        return serialize_blocks($sanitized);
     }
 }
 

@@ -96,18 +96,23 @@ function dm_get_wordpress_base_tool(): array {
             'content' => [
                 'type' => 'string',
                 'required' => true,
-                'description' => 'Post content formatted as WordPress Gutenberg blocks. Wrap ALL URLs in anchor tags like <a href="URL">Link Text</a>. Use <strong>bold</strong> and <em>italic</em> for formatting.
+                'description' => 'Post content MUST be valid Gutenberg blocks.
 
-HEADINGS - Use proper heading hierarchy:
-• H2: <!-- wp:heading --><h2 class="wp-block-heading">Section Title</h2><!-- /wp:heading -->
-• H3: <!-- wp:heading {"level":3} --><h3 class="wp-block-heading">Subsection Title</h3><!-- /wp:heading -->
-• H4: <!-- wp:heading {"level":4} --><h4 class="wp-block-heading">Sub-subsection Title</h4><!-- /wp:heading -->
+RULES (keep it simple and exact):
+1) Always wrap blocks with opening and closing comments. Structure:
+   <!-- wp:block {"attrs":...} -->[inner HTML]<!-- /wp:block -->
+   - If you include {"attrs":...}, close it with } --> on the same line.
+   - Use straight quotes in JSON, no trailing commas.
+2) Use only core blocks needed here: heading, paragraph, list, separator, image, quote.
+3) No Markdown, no raw HTML outside blocks. Wrap ALL URLs in <a href="URL">Text</a>.
+4) Heading levels: default H2, or set {"level":3} for H3, {"level":4} for H4.
 
-LISTS - Use correct block syntax:
-• Unordered lists: <!-- wp:list --><ul class="wp-block-list"><li>Item 1</li><li>Item 2</li></ul><!-- /wp:list -->
-• Ordered lists (recipes/steps): <!-- wp:list {"ordered":true} --><ol class="wp-block-list"><li>Step 1</li><li>Step 2</li></ol><!-- /wp:list -->
-
-PARAGRAPHS: <!-- wp:paragraph --><p>Content with <a href="https://example.com">proper links</a></p><!-- /wp:paragraph -->'
+EXAMPLES:
+- H2: <!-- wp:heading --><h2 class="wp-block-heading">Section Title</h2><!-- /wp:heading -->
+- H3: <!-- wp:heading {"level":3} --><h3 class="wp-block-heading">Subsection</h3><!-- /wp:heading -->
+- Paragraph: <!-- wp:paragraph --><p>Text with <a href="https://example.com">link</a>.</p><!-- /wp:paragraph -->
+- Unordered list: <!-- wp:list --><ul class="wp-block-list"><li>Item 1</li><li>Item 2</li></ul><!-- /wp:list -->
+- Ordered list: <!-- wp:list {"ordered":true} --><ol class="wp-block-list"><li>Step 1</li><li>Step 2</li></ol><!-- /wp:list -->'
             ]
         ]
     ];

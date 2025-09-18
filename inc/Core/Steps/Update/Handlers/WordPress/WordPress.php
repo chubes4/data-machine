@@ -363,33 +363,22 @@ class WordPress {
         // Process each block while preserving block structure
         $filtered_blocks = array_map(function($block) {
             // Only sanitize the innerHTML content, not the block structure
-            if (isset($block['innerHTML']) && !empty($block['innerHTML'])) {
-                $block['innerHTML'] = wp_kses($block['innerHTML'], dm_allowed_html());
+            if (isset($block['innerHTML']) && $block['innerHTML'] !== '') {
+                $block['innerHTML'] = wp_kses_post($block['innerHTML']);
             }
             // Recursively process inner blocks if they exist
-            if (isset($block['innerBlocks']) && is_array($block['innerBlocks'])) {
-                $block['innerBlocks'] = array_map([$this, 'sanitizeBlock'], $block['innerBlocks']);
+            if (!empty($block['innerBlocks']) && is_array($block['innerBlocks'])) {
+                $block['innerBlocks'] = array_map(function($inner) {
+                    if (isset($inner['innerHTML']) && $inner['innerHTML'] !== '') {
+                        $inner['innerHTML'] = wp_kses_post($inner['innerHTML']);
+                    }
+                    return $inner;
+                }, $block['innerBlocks']);
             }
             return $block;
         }, $blocks);
 
         return serialize_blocks($filtered_blocks);
-    }
-
-    /**
-     * Helper method for recursive block sanitization.
-     *
-     * @param array $block Block data to sanitize
-     * @return array Sanitized block data
-     */
-    private function sanitizeBlock($block) {
-        if (isset($block['innerHTML']) && !empty($block['innerHTML'])) {
-            $block['innerHTML'] = wp_kses($block['innerHTML'], dm_allowed_html());
-        }
-        if (isset($block['innerBlocks']) && is_array($block['innerBlocks'])) {
-            $block['innerBlocks'] = array_map([$this, 'sanitizeBlock'], $block['innerBlocks']);
-        }
-        return $block;
     }
 }
 

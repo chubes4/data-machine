@@ -16,17 +16,11 @@ class WordPressPostReader {
         $this->register_configuration();
     }
 
-    /**
-     * Register tool via filters for self-discovery.
-     */
     private function register_configuration() {
         add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
         add_filter('dm_tool_configured', [$this, 'check_configuration'], 10, 2);
     }
 
-    /**
-     * Read WordPress post content from URL.
-     */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
 
         if (empty($parameters['source_url'])) {
@@ -111,9 +105,6 @@ class WordPressPostReader {
         ];
     }
 
-    /**
-     * Register tool in ai_tools filter
-     */
     public function register_tool($tools) {
         $tools['wordpress_post_reader'] = [
             'class' => __CLASS__,
@@ -138,16 +129,10 @@ class WordPressPostReader {
         return $tools;
     }
 
-    /**
-     * Check if tool is configured and available.
-     */
     public static function is_configured(): bool {
         return true;
     }
 
-    /**
-     * Filter handler for dm_tool_configured
-     */
     public function check_configuration($configured, $tool_id) {
         if ($tool_id !== 'wordpress_post_reader') {
             return $configured;
@@ -156,9 +141,6 @@ class WordPressPostReader {
         return self::is_configured();
     }
 
-    /**
-     * Format success message for WordPress post reading results.
-     */
     public function format_success_message($message, $tool_name, $tool_result, $tool_parameters) {
         if ($tool_name !== 'wordpress_post_reader') {
             return $message;

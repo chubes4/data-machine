@@ -3,7 +3,7 @@
  * AI integration filters bridging pipeline system with AI HTTP Client.
  *
  * Provides step-aware AI configuration from pipeline database with support
- * for multi-turn conversation management and 6-tier directive system.
+ * for multi-turn conversation management and 5-tier directive system.
  *
  * @package DataMachine\Engine\Filters
  */

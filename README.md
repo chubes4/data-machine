@@ -16,7 +16,7 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-**Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), 6-Tier AI Directive Priority System, AIStepConversationManager with Turn Tracking, AIStepToolParameters, Clean Content Processing, Centralized Cache Management, Modular WordPress Publish Handler, Universal Handler Settings Template, AutoSave System, Three-Layer Tool Management
+**Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), 5-Tier AI Directive Priority System, AIStepConversationManager with Turn Tracking, AIStepToolParameters, Clean Content Processing, Centralized Cache Management, Modular WordPress Publish Handler, Universal Handler Settings Template, AutoSave System, Three-Layer Tool Management
 
 **Requirements**: WordPress 6.2+, PHP 8.0+, Composer
 
@@ -143,7 +143,7 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 - Site Context toggle (WordPress info injection)
 - Job data cleanup on failure toggle (debugging)
 - File retention settings (1-90 days)
-- 6-Tier AI Directive Priority System: Plugin Core Directive → Global system prompt → Pipeline prompts → Tool definitions → Data packet structure → Site context
+- 5-Tier AI Directive Priority System: Plugin Core Directive → Global system prompt → Pipeline prompts → Tool definitions → Site context
 - AIStepConversationManager for multi-turn conversation state management with turn tracking and chronological message ordering
 - AIStepToolParameters flat parameter architecture with content extraction
 - Tool configuration (API keys, OAuth)
@@ -159,7 +159,7 @@ composer install    # Development setup
 ./build.sh         # Production build
 ```
 
-**Architecture**: PSR-4 autoloading, filter-based service discovery, hybrid database storage + filter injection architecture with clean AI data packets and structured engine parameters, centralized cache system via Actions/Cache.php with WordPress action-based clearing, 6-tier AI directive system with auto-registration (PluginCoreDirective, GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, DataPacketStructureDirective, SiteContextDirective), AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution, AutoSave system with complete pipeline persistence and flow synchronization, database storage by fetch handlers + Engine.php filter injection system, modular WordPress publish handler (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`) with configuration hierarchy, universal handler settings template system eliminating modal code duplication, Composer-managed ai-http-client dependency. See `CLAUDE.md` for complete technical specifications.
+**Architecture**: PSR-4 autoloading, filter-based service discovery, hybrid database storage + filter injection architecture with clean AI data packets and structured engine parameters, centralized cache system via Actions/Cache.php with WordPress action-based clearing, 5-tier AI directive system with auto-registration (PluginCoreDirective, GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, SiteContextDirective), AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution, AutoSave system with complete pipeline persistence and flow synchronization, database storage by fetch handlers + Engine.php filter injection system, modular WordPress publish handler (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`) with configuration hierarchy, universal handler settings template system eliminating modal code duplication, Composer-managed ai-http-client dependency. See `CLAUDE.md` for complete technical specifications.
 
 ## License
 

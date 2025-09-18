@@ -91,5 +91,5 @@ class SiteContextDirective {
     }
 }
 
-// Self-register (Priority 50 = lowest priority in 6-tier directive system)
+// Self-register (Priority 50 = lowest priority in 5-tier directive system)
 add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);

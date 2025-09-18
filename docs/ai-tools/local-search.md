@@ -13,7 +13,6 @@ Enables AI models to search the current WordPress site for context gathering, re
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `query` | string | Yes | Search query terms |
-| `max_results` | integer | No | Maximum results to return (1-20, default: 10) |
 | `post_types` | array | No | Post types to search (default: `['post', 'page']`) |
 
 ## Usage Examples
@@ -29,7 +28,6 @@ $parameters = [
 ```php
 $parameters = [
     'query' => 'product launch',
-    'max_results' => 15,
     'post_types' => ['post', 'page', 'product']
 ];
 ```

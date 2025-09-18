@@ -28,9 +28,6 @@ if ( ! defined( 'WPINC' ) ) {
  */
 function dm_register_importexport_filters() {
     
-    /**
-     * Register import/export modal
-     */
     add_filter('dm_modals', function($modals) {
         $modals['import-export'] = [
             'title' => __('Import / Export Pipelines', 'data-machine'),
@@ -43,7 +40,7 @@ function dm_register_importexport_filters() {
     add_filter('dm_importer', function($service) {
         if ($service === null) {
             require_once DATA_MACHINE_PATH . 'inc/Engine/Actions/ImportExport.php';
-            return new \DataMachine\Engine\Actions\ImportExportActions();
+            return new \DataMachine\Engine\Actions\ImportExport();
         }
         return $service;
     }, 10, 1);
@@ -62,7 +59,6 @@ dm_register_importexport_filters();
  * Key Filters:
  * - dm_auth_providers: Authentication provider discovery
  * - dm_handler_settings: Handler configuration discovery  
- * - dm_handler_directives: AI directive discovery
  * - dm_request: WordPress HTTP request wrapper
  * - dm_scheduler_intervals: Scheduler interval definitions
  * - dm_step_settings: Step configuration discovery
@@ -274,7 +270,6 @@ function dm_register_utility_filters() {
         return $default;
     }, 5, 1);
     
-    // Load DataPacket filter for centralized data packet management
     require_once __DIR__ . '/DataPacket.php';
     
     
