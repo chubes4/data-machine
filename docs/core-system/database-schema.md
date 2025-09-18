@@ -70,6 +70,7 @@ CREATE TABLE wp_dm_jobs (
     pipeline_id bigint(20) unsigned NOT NULL,
     status enum('pending','running','completed','failed','completed_no_items') NOT NULL DEFAULT 'pending',
     job_data_json longtext NULL,
+    engine_data longtext NULL,
     started_at datetime NULL,
     completed_at datetime NULL,
     error_message text NULL,
@@ -90,6 +91,7 @@ CREATE TABLE wp_dm_jobs (
 - `pipeline_id` - Reference to source pipeline
 - `status` - Current execution status
 - `job_data_json` - Execution data and results
+- `engine_data` - Engine parameters (source_url, image_url) stored by fetch handlers for downstream use
 - `started_at` - Execution start timestamp
 - `completed_at` - Completion timestamp
 - `error_message` - Error details if failed

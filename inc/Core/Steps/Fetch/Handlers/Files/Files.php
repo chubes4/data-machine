@@ -27,6 +27,16 @@ class Files {
 		return $repositories['files'] ?? null;
 	}
 
+	/**
+	 * Fetch file data with clean content for AI processing.
+	 * Returns processed items while storing engine data (image_url for images) in database.
+	 *
+	 * @param int $pipeline_id Pipeline ID for logging context.
+	 * @param array $handler_config Handler configuration including flow_step_id and file settings.
+	 * @param string|null $job_id Job ID for deduplication tracking.
+	 * @return array Array with 'processed_items' containing clean data for AI processing.
+	 *               Engine parameters (image_url for images) are stored in database via store_engine_data().
+	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         $repository = $this->get_repository();
         $flow_step_id = $handler_config['flow_step_id'] ?? null;

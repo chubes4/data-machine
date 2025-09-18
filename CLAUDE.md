@@ -329,16 +329,21 @@ class Twitter {
     ]
 ]
 
-// Explicit engine parameters (handler-visible)
-$engine_parameters = apply_filters('dm_engine_parameters', [
-    'source_url' => $source_url,    // For Update handlers
-    'image_url' => $image_url,      // For media handling
-], [$data], $handler_config, 'fetch', $flow_step_id);
+// Engine parameters stored in database by fetch handlers
+if ($job_id) {
+    $all_databases = apply_filters('dm_db', []);
+    $db_jobs = $all_databases['jobs'] ?? null;
+    if ($db_jobs) {
+        $db_jobs->store_engine_data($job_id, [
+            'source_url' => $source_url,    // For Update handlers
+            'image_url' => $image_url,      // For media handling
+        ]);
+    }
+}
 
-// Return structure from fetch handlers
+// Return structure from fetch handlers (engine parameters stored separately in database)
 return [
-    'processed_items' => [$clean_data],
-    'engine_parameters' => $engine_parameters
+    'processed_items' => [$clean_data]
 ];
 ```
 

@@ -187,7 +187,7 @@ class WordPress {
 
 
     /**
-     * Convergence method for single post processing with explicit parameter generation.
+     * Convergence method for single post processing with database parameter storage.
      * Eliminates code duplication between URL-specific and query-based fetching paths.
      * Generates clean content for AI while storing engine data in database.
      *

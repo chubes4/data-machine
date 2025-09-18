@@ -3,7 +3,7 @@
  * WordPress Update handler with engine parameter dependency.
  *
  * Updates existing WordPress posts/pages via source_url parameter provided through
- * explicit engine parameter generation by fetch handlers. Handles title, content,
+ * database storage by fetch handlers and injection by Engine.php. Handles title, content,
  * and taxonomy modifications using wp_update_post().
  *
  * Engine Parameter Requirements:
