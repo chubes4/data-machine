@@ -47,40 +47,6 @@ function dm_register_rss_fetch_filters() {
         return $all_settings;
     });
     
-    // Metadata parameter injection - RSS specific
-    add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
-        // Only process for steps that come after RSS fetch
-        if (empty($data) || !is_array($data)) {
-            return $parameters;
-        }
-
-        $latest_entry = $data[0] ?? [];
-        $metadata = $latest_entry['metadata'] ?? [];
-        $source_type = $metadata['source_type'] ?? '';
-
-        // Only inject RSS metadata
-        if ($source_type === 'rss') {
-            // Add RSS specific parameters to flat structure
-            $parameters['source_url'] = $metadata['source_url'] ?? '';
-            $parameters['original_id'] = $metadata['original_id'] ?? '';
-            $parameters['original_title'] = $metadata['original_title'] ?? '';
-            $parameters['original_date_gmt'] = $metadata['original_date_gmt'] ?? '';
-            $parameters['author'] = $metadata['author'] ?? '';
-            $parameters['categories'] = $metadata['categories'] ?? [];
-            $parameters['feed_url'] = $metadata['feed_url'] ?? '';
-            $parameters['image_urls'] = $metadata['image_urls'] ?? [];
-
-            do_action('dm_log', 'debug', 'RSS: Metadata injected into engine parameters', [
-                'flow_step_id' => $flow_step_id,
-                'source_url' => $parameters['source_url'],
-                'original_title' => $parameters['original_title'],
-                'feed_url' => $parameters['feed_url']
-            ]);
-        }
-
-        return $parameters;
-    }, 10, 5);
-    
     // Modal registrations removed - now handled by generic modal system via pure discovery
     
 }

@@ -188,9 +188,7 @@ class Logs
 
         switch ($action) {
             case 'clear_all':
-                do_action('dm_log', 'debug', 'Clear logs: About to call dm_log clear_all action');
                 do_action('dm_log', 'clear_all');
-                do_action('dm_log', 'debug', 'Clear logs: dm_log clear_all action completed');
                 $this->add_admin_notice(
                     __('Logs cleared successfully.', 'data-machine'),
                     'success'

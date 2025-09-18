@@ -1,7 +1,17 @@
 <?php
 /**
- * AI step tool management with three-layer enablement: global → modal → configuration validation.
- * Handles handler-specific tools (context-aware) and general tools (universal).
+ * AI step tool management with three-layer enablement architecture.
+ *
+ * Implements comprehensive tool discovery and validation:
+ * 1. Global Settings: Admin toggles tools site-wide
+ * 2. Modal Selection: Per-step tool activation in pipeline configuration
+ * 3. Configuration Validation: Runtime checks for tools requiring API keys
+ *
+ * Tool Categories:
+ * - Handler Tools: Step-specific (twitter_publish, wordpress_update) available when next step matches
+ * - General Tools: Universal (Google Search, Local Search, WebFetch) available to all AI agents
+ *
+ * @package DataMachine\Core\Steps\AI
  */
 
 namespace DataMachine\Core\Steps\AI;
@@ -15,7 +25,10 @@ if (!defined('WPINC')) {
 class AIStepTools {
     
     /**
-     * Get available general tools (no handler property).
+     * Get available general tools (universal tools without handler property).
+     * Filters ai_tools for tools without 'handler' key.
+     *
+     * @return array General tools available to all AI agents
      */
     public function get_global_enabled_tools(): array {
         $all_tools = apply_filters('ai_tools', []);
@@ -31,7 +44,11 @@ class AIStepTools {
     }
     
     /**
-     * Get enabled tools for pipeline step.
+     * Get enabled tools for pipeline step from modal selection.
+     * Retrieves user-selected tools from pipeline step configuration.
+     *
+     * @param string $pipeline_step_id Pipeline step UUID
+     * @return array Array of enabled tool IDs for this step
      */
     public function get_step_enabled_tools(string $pipeline_step_id): array {
         if (empty($pipeline_step_id)) {
@@ -45,7 +62,12 @@ class AIStepTools {
     }
     
     /**
-     * Save tool selections from form submission.
+     * Save tool selections from form submission with validation.
+     * Validates against global enabled tools and configuration requirements.
+     *
+     * @param string $pipeline_step_id Pipeline step UUID
+     * @param array $post_data Raw POST data from form
+     * @return array Validated array of enabled tool IDs
      */
     public function save_tool_selections(string $pipeline_step_id, array $post_data): array {
         if (isset($post_data['enabled_tools']) && is_array($post_data['enabled_tools'])) {
@@ -75,7 +97,11 @@ class AIStepTools {
     }
     
     /**
-     * Get tools data for template rendering.
+     * Get tools data for modal template rendering.
+     * Combines global enabled tools with step-specific selections.
+     *
+     * @param string $pipeline_step_id Pipeline step UUID
+     * @return array Tools data for modal template including enablement states
      */
     public function get_tools_data(string $pipeline_step_id): array {
         $global_enabled_tools = $this->get_global_enabled_tools();
@@ -95,8 +121,14 @@ class AIStepTools {
     
     
     /**
-     * Get available tools from adjacent pipeline steps.
-     * Handler tools available when adjacent step matches handler type.
+     * Get available tools from adjacent pipeline steps with context awareness.
+     * Handler tools become available when adjacent step matches handler type.
+     * Combines previous step tools, next step tools, and general tools.
+     *
+     * @param array|null $previous_step_config Previous step configuration
+     * @param array|null $next_step_config Next step configuration
+     * @param string|null $current_pipeline_step_id Current pipeline step UUID
+     * @return array Combined available tools with context-aware filtering
      */
     public static function getAvailableTools(?array $previous_step_config = null, ?array $next_step_config = null, ?string $current_pipeline_step_id = null): array {
         $available_tools = [];
@@ -131,7 +163,13 @@ class AIStepTools {
     }
 
     /**
-     * Filter tools based on enablement and configuration.
+     * Filter tools based on enablement and configuration validation.
+     * Applies three-layer enablement: global → modal → configuration.
+     *
+     * @param array $all_tools All available tools
+     * @param string|null $handler_slug Handler slug for context filtering
+     * @param string|null $pipeline_step_id Pipeline step UUID for modal filtering
+     * @return array Filtered tools meeting all enablement requirements
      */
     private static function getAllowedTools(array $all_tools, ?string $handler_slug, ?string $pipeline_step_id = null): array {
         $allowed_tools = [];
@@ -164,7 +202,11 @@ class AIStepTools {
     }
 
     /**
-     * Check if general tool is enabled globally.
+     * Check if general tool is enabled globally with configuration validation.
+     * Tools requiring configuration must pass dm_tool_configured filter.
+     *
+     * @param string $tool_name Tool identifier
+     * @return bool True if tool is globally enabled and configured
      */
     private static function isGeneralToolEnabled(string $tool_name): bool {
         $tool_configured = apply_filters('dm_tool_configured', false, $tool_name);
@@ -177,6 +219,15 @@ class AIStepTools {
 
     /**
      * Execute tool using flat parameter structure built by AIStepToolParameters.
+     * Instantiates tool class and calls handle_tool_call() with comprehensive error handling.
+     *
+     * @param string $tool_name Tool identifier
+     * @param array $tool_parameters AI-provided tool parameters
+     * @param array $available_tools Available tools array
+     * @param array $data Data packet array
+     * @param string $flow_step_id Flow step ID for logging
+     * @param array $unified_parameters Engine parameters for tool execution
+     * @return array Tool execution result with success/error status
      */
     public static function executeTool(string $tool_name, array $tool_parameters, array $available_tools, array $data, string $flow_step_id, array $unified_parameters): array {
         $tool_def = $available_tools[$tool_name] ?? null;
@@ -195,12 +246,6 @@ class AIStepTools {
                 $tool_def
             );
             
-            do_action('dm_log', 'debug', 'AIStepTools: Using unified parameter building', [
-                'flow_step_id' => $flow_step_id,
-                'tool_name' => $tool_name,
-                'handler' => $tool_def['handler'] ?? null,
-                'has_metadata' => !empty($unified_parameters['metadata'])
-            ]);
             
             $class_name = $tool_def['class'];
             if (!class_exists($class_name)) {

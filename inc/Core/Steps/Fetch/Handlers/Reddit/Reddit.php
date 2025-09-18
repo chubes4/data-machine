@@ -2,10 +2,16 @@
 /**
  * Reddit Fetch Handler - OAuth2-authenticated subreddit content fetcher.
  *
+ * Provides clean content processing without URL pollution - source URLs maintained
+ * in metadata only. Features comprehensive filtering, deduplication tracking,
+ * and flow-isolated image storage.
+ *
  * Features:
- * - Subreddit posts and comments retrieval
- * - Image download and flow-isolated storage
- * - Deduplication tracking per execution
+ * - OAuth2 authentication with automatic token refresh
+ * - Subreddit posts and comments retrieval with filtering
+ * - Clean content extraction without URL injection
+ * - Flow-isolated image storage in files repository
+ * - Comprehensive deduplication tracking per execution
  * - Reddit-specific rate limiting and error handling
  *
  * @package DataMachine
@@ -28,7 +34,7 @@ class Reddit {
 	}
 
 	/**
-	 * Get files repository instance.
+	 * Get files repository instance for flow-isolated file storage.
 	 *
 	 * @return \DataMachine\Engine\FilesRepository|null Repository instance or null if unavailable
 	 */
@@ -39,11 +45,12 @@ class Reddit {
 
 	/**
 	 * Download and store Reddit image in flow-isolated repository.
+	 * Uses Reddit-specific user agent and comprehensive error handling.
 	 *
 	 * @param string $image_url Remote image URL to download
 	 * @param string $flow_step_id Flow step ID for isolation
 	 * @param string $item_id Reddit item ID for filename generation
-	 * @return array|null Image attachment data or null on failure
+	 * @return array|null Image attachment data with path/filename/size or null on failure
 	 */
 	private function store_reddit_image(string $image_url, string $flow_step_id, string $item_id): ?array {
 		$repository = $this->get_repository();
@@ -73,7 +80,13 @@ class Reddit {
 
 
 	/**
-	 * Fetch Reddit posts with OAuth authentication, filtering, and deduplication
+	 * Fetch Reddit content with explicit data/parameter separation.
+	 * Returns clean content for AI consumption and separate engine parameters for handlers.
+	 *
+	 * @param int $pipeline_id Pipeline ID for logging context.
+	 * @param array $handler_config Handler configuration including subreddit, filters, flow_step_id.
+	 * @param string|null $job_id Job ID for deduplication tracking.
+	 * @return array Array with 'processed_items' (clean data) and 'engine_parameters' (source_url, image_url).
 	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
@@ -480,12 +493,11 @@ class Reddit {
 					$stored_image = $this->store_reddit_image($image_info['url'], $flow_step_id, $current_item_id);
 				}
 
-				// Format metadata (without image URLs that go to AI)
+				// Create clean metadata for AI consumption (URLs removed - available via engine parameters)
 				$metadata = [
 					'source_type' => 'reddit',
 					'item_identifier_to_log' => (string) $current_item_id,
 					'original_id' => $current_item_id,
-					'source_url' => 'https://www.reddit.com' . ($item_data['permalink'] ?? ''),
 					'original_title' => $title,
 					'original_date_gmt' => gmdate('Y-m-d\TH:i:s\Z', (int)($item_data['created_utc'] ?? time())),
 					'subreddit' => $subreddit,
@@ -493,9 +505,7 @@ class Reddit {
 					'comment_count' => $item_data['num_comments'] ?? 0,
 					'author' => $item_data['author'] ?? '[deleted]',
 					'is_self_post' => $item_data['is_self'] ?? false,
-					'external_url' => (!($item_data['is_self'] ?? false) && !empty($item_data['url'])) ? $item_data['url'] : null,
 				];
-				$metadata['raw_reddit_data'] = $item_data;
 
 				// Create data packet matching FetchStep expectations
 				if ($stored_image) {
@@ -505,7 +515,6 @@ class Reddit {
 						'file_name' => $stored_image['filename'],
 						'mime_type' => $image_info['mime_type'],
 						'file_size' => $stored_image['size'],
-						'image_url' => $stored_image['url'], // Public URL for WordPress featured image
 						'data' => [
 							'content_string' => $content_string
 						],
@@ -530,10 +539,37 @@ class Reddit {
 						])
 					];
 				}
-				// Found first eligible item - return immediately
-				return [
-					'processed_items' => [$input_data]
-				];
+
+				// Store URLs in engine_data for centralized parameter injection
+				if ($job_id) {
+					$engine_data = [
+						'source_url' => $item_data['permalink'] ? 'https://www.reddit.com' . $item_data['permalink'] : ''
+					];
+
+					// Add image URL if file was stored
+					if ($stored_image && $flow_step_id) {
+						$repositories = apply_filters('dm_files_repository', []);
+						$file_repository = $repositories['files'] ?? null;
+						if ($file_repository && !empty($stored_image['filename'])) {
+							$engine_data['image_url'] = trailingslashit($file_repository->get_repository_url($flow_step_id)) . $stored_image['filename'];
+						}
+					}
+
+					// Store engine_data via database service
+					$all_databases = apply_filters('dm_db', []);
+					$db_jobs = $all_databases['jobs'] ?? null;
+					if ($db_jobs) {
+						$db_jobs->store_engine_data($job_id, $engine_data);
+						do_action('dm_log', 'debug', 'Reddit: Stored URLs in engine_data', [
+							'job_id' => $job_id,
+							'source_url' => $engine_data['source_url'],
+							'has_image_url' => !empty($engine_data['image_url'])
+						]);
+					}
+				}
+
+				// Return clean data packet (no URLs in metadata for AI)
+				return ['processed_items' => [$input_data]];
 			} // End foreach ($response_data...)
 
 			if ($batch_hit_time_limit) {
@@ -562,7 +598,11 @@ class Reddit {
 
 
 	/**
-	 * Sanitize Reddit handler settings with validation
+	 * Sanitize Reddit handler settings with comprehensive validation.
+	 * Validates subreddit names, sort parameters, timeframes, and numeric filters.
+	 *
+	 * @param array $raw_settings Raw handler settings from user input
+	 * @return array Sanitized settings or empty array on validation failure
 	 */
 	public function sanitize_settings(array $raw_settings): array {
 		$sanitized = [];

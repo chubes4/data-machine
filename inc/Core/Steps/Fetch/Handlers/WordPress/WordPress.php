@@ -3,7 +3,7 @@
  * WordPress Local fetch handler.
  *
  * Fetches post/page content from local WordPress installation using WP_Query.
- * Provides source_url in metadata for Update step compatibility. For media files, use WordPressMedia handler.
+ * Generates clean content for AI and source_url via engine parameters for Update step compatibility.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers\WordPress
@@ -26,13 +26,13 @@ class WordPress {
 
 
     /**
-     * Fetches and prepares WordPress fetch data from various sources into a standardized format.
+     * Fetch WordPress content with explicit data/parameter separation.
+     * Returns clean content for AI consumption and separate engine parameters for handlers.
      *
-     * @param int $pipeline_id The pipeline ID for this execution context.
-     * @param array  $handler_config Decoded handler configuration for the specific pipeline run.
-     * @param string|null $job_id The job ID for processed items tracking.
-     * @return array Array with 'processed_items' key containing eligible items.
-     * @throws Exception If fetch data is invalid or cannot be retrieved.
+     * @param int $pipeline_id Pipeline ID for logging context.
+     * @param array $handler_config Handler configuration including flow_step_id and WordPress settings.
+     * @param string|null $job_id Job ID for deduplication tracking.
+     * @return array Array with 'processed_items' (clean data) and 'engine_parameters' (URLs/metadata).
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
@@ -54,30 +54,37 @@ class WordPress {
         $config = $handler_config['wordpress_posts'] ?? [];
         
         // Fetch from local WordPress installation
-        $items = $this->fetch_local_data($pipeline_id, $config, $user_id, $flow_step_id, $job_id);
-        
-        return ['processed_items' => $items];
+        $result = $this->fetch_local_data($pipeline_id, $config, $user_id, $flow_step_id, $job_id, $handler_config);
+
+        // Check if result is already in new format with engine_parameters
+        if (isset($result['processed_items']) && isset($result['engine_parameters'])) {
+            return $result; // Return complete result with separated data
+        }
+
+        // Legacy format - wrap in processed_items for compatibility
+        return ['processed_items' => $result];
     }
 
     /**
-     * Fetch data from local WordPress installation.
+     * Fetch WordPress content using convergence pattern for both URL-specific and query-based access.
+     * Implements explicit data/parameter separation architecture.
      *
-     * @param int   $pipeline_id Module ID for tracking processed items.
-     * @param array $config Configuration array.
-     * @param int   $user_id User ID for context.
-     * @param string|null $flow_step_id Flow step ID for processed items tracking.
+     * @param int $pipeline_id Pipeline ID for logging context.
+     * @param array $config WordPress-specific configuration (post_type, status, timeframe, etc.).
+     * @param int $user_id User ID for WordPress query context.
+     * @param string|null $flow_step_id Flow step ID for deduplication tracking.
      * @param string|null $job_id Job ID for processed items tracking.
-     * @return array Array of item data packets.
-     * @throws Exception If data cannot be retrieved.
+     * @param array $handler_config Complete handler configuration for engine parameter generation.
+     * @return array Array with 'processed_items' and 'engine_parameters' separation.
      */
-    private function fetch_local_data(int $pipeline_id, array $config, int $user_id, ?string $flow_step_id = null, ?string $job_id = null): array {
+    private function fetch_local_data(int $pipeline_id, array $config, int $user_id, ?string $flow_step_id = null, ?string $job_id = null, array $handler_config = []): array {
         $source_url = sanitize_url($config['source_url'] ?? '');
         
-        // If specific post URL is provided, fetch only that post
+        // Path 1: URL-specific access - convergence to process_single_post()
         if (!empty($source_url)) {
             $post_id = url_to_postid($source_url);
             if ($post_id > 0) {
-                return $this->fetch_specific_post($post_id, $flow_step_id, $job_id);
+                return $this->process_single_post($post_id, $flow_step_id, $job_id, $handler_config);
             } else {
                 do_action('dm_log', 'warning', 'WordPress Fetch: Could not extract post ID from URL', [
                     'source_url' => $source_url
@@ -86,7 +93,7 @@ class WordPress {
             }
         }
         
-        // Otherwise continue with normal query-based fetching
+        // Path 2: Query-based fetching - will also converge to process_single_post()
         $post_type = sanitize_text_field($config['post_type'] ?? 'post');
         $post_status = sanitize_text_field($config['post_status'] ?? 'publish');
         
@@ -158,94 +165,66 @@ class WordPress {
         $posts = $wp_query->posts;
 
         if (empty($posts)) {
-            return [];
+            return ['processed_items' => []];
         }
 
-        // Find first unprocessed post
+        // Query-based processing - find first eligible post and converge to single processing method
         foreach ($posts as $post) {
             $post_id = $post->ID;
             $is_processed = ($flow_step_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_step_id, 'wordpress_local', $post_id) : false;
             if ($is_processed) {
                 continue;
             }
-            
-            // Found first eligible item - mark as processed and return
-            if ($flow_step_id) {
-                do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_local', $post_id, $job_id);
-            }
 
-            $title = $post->post_title ?: 'N/A';
-            $content = $post->post_content ?: '';
-            $source_link = get_permalink($post_id);
-            $image_url = $this->extract_image_url($post_id);
-
-            // Extract source name
-            $site_name = get_bloginfo('name');
-            $source_name = $site_name ?: 'Local WordPress';
-            $content_string = "Source: " . $source_name . "\n\nTitle: " . $title . "\n\n" . $content;
-
-            // Create standardized packet and return immediately
-            $input_data = [
-                'data' => [
-                    'content_string' => $content_string,
-                    'file_info' => null
-                ],
-                'metadata' => [
-                    'source_type' => 'wordpress_local',
-                    'item_identifier_to_log' => $post_id,
-                    'original_id' => $post_id,
-                    'source_url' => $source_link,
-                    'original_title' => $title,
-                    'image_url' => $image_url,
-                    'original_date_gmt' => $post->post_date_gmt
-                ]
-            ];
-            
-            // Return first eligible item immediately
-            return [$input_data];
+            // Converge to single processing method - eliminates code duplication
+            return $this->process_single_post($post_id, $flow_step_id, $job_id, $handler_config);
         }
 
         // No eligible items found
-        return [];
+        return ['processed_items' => []];
     }
 
+
     /**
-     * Fetch a specific post by ID (used for direct post targeting).
+     * Convergence method for single post processing with explicit parameter generation.
+     * Eliminates code duplication between URL-specific and query-based fetching paths.
+     * Generates clean content for AI and separate engine parameters for publish/update handlers.
      *
-     * @param int $post_id Specific post ID to fetch.
-     * @param string|null $flow_step_id Flow step ID for processed items tracking.
+     * @param int $post_id WordPress post ID to process.
+     * @param string|null $flow_step_id Flow step ID for deduplication tracking.
      * @param string|null $job_id Job ID for processed items tracking.
-     * @return array Array of item data packets (single post).
+     * @param array $handler_config Handler configuration for engine parameter generation.
+     * @return array Explicit separation: processed_items (clean) + engine_parameters (source_url, image_url).
      */
-    private function fetch_specific_post(int $post_id, ?string $flow_step_id = null, ?string $job_id = null): array {
-        // Get the specific post
+    private function process_single_post(int $post_id, ?string $flow_step_id, ?string $job_id, array $handler_config): array {
+        // Get the post
         $post = get_post($post_id);
-        
+
         if (!$post || $post->post_status === 'trash') {
-            do_action('dm_log', 'warning', 'WordPress fetch: Specific post not found or trashed', [
+            do_action('dm_log', 'warning', 'WordPress fetch: Post not found or trashed', [
                 'post_id' => $post_id,
                 'flow_step_id' => $flow_step_id
             ]);
-            return [];
+            return ['processed_items' => []];
         }
-        
-        // Skip processed items checking when targeting specific post ID - always process the target
+
         // Mark as processed for deduplication tracking
         if ($flow_step_id) {
             do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_local', $post_id, $job_id);
         }
 
+        // Extract post data
         $title = $post->post_title ?: 'N/A';
         $content = $post->post_content ?: '';
         $source_link = get_permalink($post_id);
-        $image_url = $this->extract_image_url($post_id, $content);
+        $image_url = $this->extract_image_url($post_id);
 
         // Extract source name
         $site_name = get_bloginfo('name');
         $source_name = $site_name ?: 'Local WordPress';
         $content_string = "Source: " . $source_name . "\n\nTitle: " . $title . "\n\n" . $content;
 
-        // Create standardized packet
+        // Create clean data packet for AI consumption (URLs removed)
         $input_data = [
             'data' => [
                 'content_string' => $content_string,
@@ -255,14 +234,37 @@ class WordPress {
                 'source_type' => 'wordpress_local',
                 'item_identifier_to_log' => $post_id,
                 'original_id' => $post_id,
-                'source_url' => $source_link,
                 'original_title' => $title,
-                'image_url' => $image_url,
-                'original_date_gmt' => $post->post_date_gmt
+                'original_date_gmt' => $post->post_date_gmt,
+                'post_type' => $post->post_type,
+                'post_status' => $post->post_status
             ]
         ];
-        
-        return [$input_data];
+
+        // Store URLs in engine_data for centralized parameter injection
+        if ($job_id) {
+            $engine_data = [
+                'source_url' => get_permalink($post_id) ?: '',
+                'image_url' => $image_url ?: ''
+            ];
+
+            // Store engine_data via database service
+            $all_databases = apply_filters('dm_db', []);
+            $db_jobs = $all_databases['jobs'] ?? null;
+            if ($db_jobs) {
+                $db_jobs->store_engine_data($job_id, $engine_data);
+                do_action('dm_log', 'debug', 'WordPress Local: Stored URLs in engine_data', [
+                    'job_id' => $job_id,
+                    'source_url' => $engine_data['source_url'],
+                    'has_image_url' => !empty($engine_data['image_url']),
+                    'post_id' => $post_id
+                ]);
+            }
+        }
+
+        return [
+            'processed_items' => [$input_data]
+        ];
     }
 
     /**

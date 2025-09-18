@@ -21,6 +21,7 @@
         },
         "files": [
             "inc/Engine/Filters/DataMachineFilters.php",
+            "inc/Engine/Filters/Engine.php",
             "inc/Engine/Filters/Database.php",
             "inc/Engine/Filters/Admin.php",
             "inc/Engine/Filters/Logger.php",

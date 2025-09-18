@@ -395,11 +395,6 @@ class Twitter {
      * Chunked upload for large files (INIT→APPEND→FINALIZE)
      */
     private function upload_image_chunked($connection, string $temp_image_path, string $mime_type): ?string {
-        do_action('dm_log', 'debug', 'Twitter: Starting chunked image upload.', [
-            'temp_image_path' => $temp_image_path,
-            'mime_type' => $mime_type,
-            'file_size' => filesize($temp_image_path)
-        ]);
 
         try {
             $file_size = filesize($temp_image_path);

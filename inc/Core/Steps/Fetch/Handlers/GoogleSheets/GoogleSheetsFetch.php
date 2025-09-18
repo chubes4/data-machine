@@ -41,7 +41,6 @@ class GoogleSheetsFetch {
      * @throws Exception If data cannot be retrieved or is invalid.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
-        do_action('dm_log', 'debug', 'Google Sheets Fetch: Starting Google Sheets data processing.', ['pipeline_id' => $pipeline_id]);
 
         if (empty($pipeline_id)) {
             do_action('dm_log', 'error', 'Google Sheets Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
@@ -214,7 +213,6 @@ class GoogleSheetsFetch {
         $metadata = [
             'source_type' => 'googlesheets_fetch',
             'processing_mode' => 'full_spreadsheet',
-            'source_url' => "https://docs.google.com/spreadsheets/d/{$spreadsheet_id}/edit",
             'spreadsheet_id' => $spreadsheet_id,
             'worksheet_name' => $worksheet_name,
             'headers' => $headers,
@@ -230,12 +228,21 @@ class GoogleSheetsFetch {
             'metadata' => $metadata
         ];
 
+        // Generate explicit engine parameters for publish/update handlers (no URLs for spreadsheet data)
+        $engine_parameters = apply_filters('dm_engine_parameters', [
+            'source_url' => '', // No meaningful source URL for spreadsheet data
+            'image_url' => '',   // No images in spreadsheet context
+        ], [$fetch_data], $handler_config, 'fetch', $flow_step_id);
+
         do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed full spreadsheet.', [
             'total_rows' => count($all_data),
             'pipeline_id' => $pipeline_id
         ]);
 
-        return ['processed_items' => [$fetch_data]];
+        return [
+            'processed_items' => [$fetch_data],
+            'engine_parameters' => $engine_parameters
+        ];
     }
 
     /**
@@ -281,7 +288,6 @@ class GoogleSheetsFetch {
             $metadata = [
                 'source_type' => 'googlesheets_fetch',
                 'processing_mode' => 'by_row',
-                'source_url' => "https://docs.google.com/spreadsheets/d/{$spreadsheet_id}/edit",
                 'spreadsheet_id' => $spreadsheet_id,
                 'worksheet_name' => $worksheet_name,
                 'row_number' => $i + 1,
@@ -297,12 +303,21 @@ class GoogleSheetsFetch {
                 'metadata' => $metadata
             ];
             
+            // Generate explicit engine parameters for publish/update handlers (no URLs for spreadsheet data)
+            $engine_parameters = apply_filters('dm_engine_parameters', [
+                'source_url' => '', // No meaningful source URL for spreadsheet data
+                'image_url' => '',   // No images in spreadsheet context
+            ], [$fetch_data], $handler_config, 'fetch', $flow_step_id);
+
             do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed row.', [
                 'row_number' => $i + 1,
                 'pipeline_id' => $pipeline_id
             ]);
 
-            return ['processed_items' => [$fetch_data]];
+            return [
+                'processed_items' => [$fetch_data],
+                'engine_parameters' => $engine_parameters
+            ];
         }
 
         // No unprocessed rows found
@@ -358,7 +373,6 @@ class GoogleSheetsFetch {
             $metadata = [
                 'source_type' => 'googlesheets_fetch',
                 'processing_mode' => 'by_column',
-                'source_url' => "https://docs.google.com/spreadsheets/d/{$spreadsheet_id}/edit",
                 'spreadsheet_id' => $spreadsheet_id,
                 'worksheet_name' => $worksheet_name,
                 'column_letter' => $column_letter,
@@ -374,14 +388,35 @@ class GoogleSheetsFetch {
                 ],
                 'metadata' => $metadata
             ];
-            
+
+            // Store URLs in engine_data for centralized parameter injection (no URLs for spreadsheet data)
+            if ($job_id) {
+                $engine_data = [
+                    'source_url' => '', // No meaningful source URL for spreadsheet data
+                    'image_url' => ''   // No images in spreadsheet context
+                ];
+
+                // Store engine_data via database service
+                $all_databases = apply_filters('dm_db', []);
+                $db_jobs = $all_databases['jobs'] ?? null;
+                if ($db_jobs) {
+                    $db_jobs->store_engine_data($job_id, $engine_data);
+                    do_action('dm_log', 'debug', 'Google Sheets: Stored empty URLs in engine_data', [
+                        'job_id' => $job_id,
+                        'column_header' => $column_header
+                    ]);
+                }
+            }
+
             do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed column.', [
                 'column_letter' => $column_letter,
                 'column_header' => $column_header,
                 'pipeline_id' => $pipeline_id
             ]);
 
-            return ['processed_items' => [$fetch_data]];
+            return [
+                'processed_items' => [$fetch_data]
+            ];
         }
 
         // No unprocessed columns found

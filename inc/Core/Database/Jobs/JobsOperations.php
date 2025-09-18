@@ -233,4 +233,74 @@ class JobsOperations {
         
         return $result;
     }
+
+    /**
+     * Store engine data as JSON in engine_data column.
+     * WordPress automatically handles array to JSON conversion.
+     */
+    public function store_engine_data(int $job_id, array $data): bool {
+        if ($job_id <= 0) {
+            do_action('dm_log', 'error', 'Invalid job ID for engine_data storage', ['job_id' => $job_id]);
+            return false;
+        }
+
+        // WordPress will automatically JSON encode the array
+        $result = $this->wpdb->update(
+            $this->table_name,
+            ['engine_data' => $data],
+            ['job_id' => $job_id],
+            ['%s'],
+            ['%d']
+        );
+
+        if (false === $result) {
+            do_action('dm_log', 'error', 'Failed to store engine_data', [
+                'job_id' => $job_id,
+                'db_error' => $this->wpdb->last_error
+            ]);
+            return false;
+        }
+
+        // Clear job cache after updating engine_data
+        $cache_key = Cache::JOB_CACHE_KEY . $job_id;
+        delete_transient($cache_key);
+
+        do_action('dm_log', 'debug', 'Stored engine_data successfully', [
+            'job_id' => $job_id,
+            'data_keys' => array_keys($data)
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Retrieve engine data from engine_data column.
+     * WordPress automatically handles JSON to array conversion.
+     */
+    public function retrieve_engine_data(int $job_id): array {
+        if ($job_id <= 0) {
+            return [];
+        }
+
+        $result = $this->wpdb->get_var(
+            $this->wpdb->prepare(
+                "SELECT engine_data FROM {$this->table_name} WHERE job_id = %d",
+                $job_id
+            )
+        );
+
+        if (null === $result) {
+            return [];
+        }
+
+        // WordPress automatically decodes JSON to array
+        $engine_data = maybe_unserialize($result);
+
+        // Ensure we return an array
+        if (!is_array($engine_data)) {
+            return [];
+        }
+
+        return $engine_data;
+    }
 }

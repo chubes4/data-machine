@@ -67,13 +67,9 @@ class Cache {
             return;
         }
 
-        do_action('dm_log', 'debug', 'Starting cache clear for pipeline', ['pipeline_id' => $pipeline_id]);
-
         $this->clear_pipeline_cache($pipeline_id);
         $this->clear_flow_cache($pipeline_id);
         $this->clear_job_cache();
-
-        do_action('dm_log', 'debug', 'Cache clear completed for pipeline', ['pipeline_id' => $pipeline_id]);
     }
 
     /**
@@ -84,8 +80,6 @@ class Cache {
             do_action('dm_log', 'warning', 'Flow cache clear requested with empty flow ID');
             return;
         }
-
-        do_action('dm_log', 'debug', 'Starting flow cache clear', ['flow_id' => $flow_id]);
 
         $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
@@ -101,11 +95,6 @@ class Cache {
                 delete_transient(self::PIPELINE_FLOWS_CACHE_KEY . $pipeline_id);
                 delete_transient(self::MAX_DISPLAY_ORDER_CACHE_KEY . $pipeline_id);
             }
-
-            do_action('dm_log', 'debug', 'Flow cache clear completed', [
-                'flow_id' => $flow_id,
-                'pipeline_id' => $pipeline_id
-            ]);
         } else {
             do_action('dm_log', 'warning', 'Could not clear flow cache - flows database not available', [
                 'flow_id' => $flow_id
@@ -117,30 +106,20 @@ class Cache {
      * Clear job-related caches system-wide.
      */
     public function handle_clear_jobs_cache() {
-        do_action('dm_log', 'debug', 'Starting jobs cache clear');
-
         $this->clear_job_cache();
-
-        do_action('dm_log', 'debug', 'Jobs cache clear completed');
     }
 
     /**
      * Clear lightweight pipelines list cache for UI dropdowns.
      */
     public function handle_clear_pipelines_list_cache() {
-        do_action('dm_log', 'debug', 'Starting pipelines list cache clear');
-
         delete_transient(self::PIPELINES_LIST_CACHE_KEY);
-
-        do_action('dm_log', 'debug', 'Pipelines list cache clear completed');
     }
 
     /**
      * Clear all Data Machine caches including object cache.
      */
     public function handle_clear_all_cache() {
-        do_action('dm_log', 'debug', 'Starting complete cache clear');
-
         $cache_patterns = [
             self::PIPELINE_PATTERN,
             self::FLOW_PATTERN,
@@ -161,10 +140,7 @@ class Cache {
 
         if (function_exists('wp_cache_flush')) {
             wp_cache_flush();
-            do_action('dm_log', 'debug', 'Object cache flushed');
         }
-
-        do_action('dm_log', 'debug', 'Complete cache clear finished');
     }
 
     /**
@@ -176,13 +152,6 @@ class Cache {
             return false;
         }
 
-        do_action('dm_log', 'debug', 'Setting cache', [
-            'cache_key' => $key,
-            'timeout' => $timeout,
-            'group' => $group,
-            'data_type' => gettype($data),
-            'data_size' => is_array($data) ? count($data) : (is_string($data) ? strlen($data) : 'unknown')
-        ]);
 
         $result = set_transient($key, $data, $timeout);
 
@@ -208,10 +177,6 @@ class Cache {
             delete_transient($key);
         }
 
-        do_action('dm_log', 'debug', 'Cache cleared for pipeline', [
-            'pipeline_id' => $pipeline_id,
-            'cache_keys_cleared' => count($cache_keys)
-        ]);
     }
 
     /**

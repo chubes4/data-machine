@@ -3,7 +3,7 @@
  * WordPress Media fetch handler.
  *
  * Handles WordPress media library content using WP_Query for attachment post type.
- * Specialized for media files with proper URL extraction and metadata handling.
+ * Specialized for media files with clean content generation and URL separation via engine parameters.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers\WordPressMedia
@@ -24,13 +24,13 @@ class WordPressMedia {
     }
 
     /**
-     * Fetches and prepares WordPress media data from local installation into a standardized format.
+     * Fetch WordPress Media content with explicit data/parameter separation.
+     * Returns clean content for AI consumption and separate engine parameters for handlers.
      *
-     * @param int $pipeline_id The pipeline ID for this execution context.
-     * @param array  $handler_config Decoded handler configuration for the specific pipeline run.
-     * @param string|null $job_id The job ID for processed items tracking.
-     * @return array Array with 'processed_items' key containing eligible items.
-     * @throws Exception If fetch data is invalid or cannot be retrieved.
+     * @param int $pipeline_id Pipeline ID for logging context.
+     * @param array $handler_config Handler configuration including media settings and flow_step_id.
+     * @param string|null $job_id Job ID for deduplication tracking.
+     * @return array Array with 'processed_items' (clean data) and 'engine_parameters' (source_url, image_url).
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
@@ -147,11 +147,32 @@ class WordPressMedia {
                 do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_media', $post_id, $job_id);
             }
 
-            return [$this->create_media_data_packet($post, $include_parent_content)];
+            // Store URLs in engine_data for centralized parameter injection
+            if ($job_id) {
+                $media_url = wp_get_attachment_url($post_id);
+                $engine_data = [
+                    'source_url' => $media_url ?: '',
+                    'image_url' => $media_url ?: ''
+                ];
+
+                // Store engine_data via database service
+                $all_databases = apply_filters('dm_db', []);
+                $db_jobs = $all_databases['jobs'] ?? null;
+                if ($db_jobs) {
+                    $db_jobs->store_engine_data($job_id, $engine_data);
+                    do_action('dm_log', 'debug', 'WordPress Media: Stored URLs in engine_data', [
+                        'job_id' => $job_id,
+                        'media_url' => $engine_data['source_url'],
+                        'post_id' => $post_id
+                    ]);
+                }
+            }
+
+            return ['processed_items' => [$this->create_media_data_packet($post, $include_parent_content)]];
         }
 
         // No eligible items found
-        return [];
+        return ['processed_items' => []];
     }
 
     /**
@@ -217,8 +238,6 @@ class WordPressMedia {
             $content_parts[] = "Description: {$description}";
         }
         
-        $content_parts[] = "File URL: {$media_url}";
-        
         if ($file_size > 0) {
             $file_size_formatted = size_format($file_size);
             $content_parts[] = "File Size: {$file_size_formatted}";
@@ -226,35 +245,33 @@ class WordPressMedia {
         
         $content_string = implode("\n", $content_parts) . $parent_content;
 
-        // Create standardized packet
+        // Create standardized packet with file data at root level for AI processing
         $input_data = [
+            'file_path' => $file_path,
+            'file_name' => basename($file_path),
+            'mime_type' => $file_type,
+            'file_size' => $file_size,
             'data' => [
-                'content_string' => $content_string,
-                'file_info' => null
+                'content_string' => $content_string
             ],
             'metadata' => [
                 'source_type' => 'wordpress_media',
                 'item_identifier_to_log' => $post_id,
                 'original_id' => $post_id,
-                'source_url' => get_permalink($parent_post),
+                'parent_post_id' => $post->post_parent,
                 'original_title' => $title,
-                'image_url' => $media_url && filter_var($media_url, FILTER_VALIDATE_URL) ? $media_url : wp_get_attachment_url($post_id), // URL for publish handlers
-                'file_path' => $file_path,        // Local path for AI processing
-                'mime_type' => $file_type,        // Required by AI Step
                 'original_date_gmt' => $post->post_date_gmt,
-                'file_type' => $file_type,        // Keep for compatibility
+                'mime_type' => $file_type,
                 'file_size' => $file_size
             ]
         ];
-        
+
         // Debug logging for data flow tracking with parent content details
         do_action('dm_log', 'debug', 'WordPress Media: Data packet created (attached media only)', [
             'post_id' => $post_id,
             'media_url' => $media_url,
             'parent_post_id' => $parent_post->ID, // Now guaranteed to exist due to query filter
             'parent_post_title' => $parent_post->post_title,
-            'source_url' => $input_data['metadata']['source_url'],
-            'image_url' => $input_data['metadata']['image_url'],
             'file_path' => $file_path,
             'file_exists' => $file_path ? file_exists($file_path) : false,
             'attached_media_confirmed' => true,
@@ -263,7 +280,7 @@ class WordPressMedia {
             'parent_content_length' => $parent_content_included ? strlen($parent_content) : 0,
             'total_content_length' => strlen($content_string)
         ]);
-        
+
         return $input_data;
     }
 

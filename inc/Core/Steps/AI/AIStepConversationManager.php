@@ -14,6 +14,12 @@ class AIStepConversationManager {
 
     /**
      * Generate tool execution success message with filtering support.
+     * Provides specialized success messages for different tools via dm_tool_success_message filter.
+     *
+     * @param string $tool_name Tool identifier
+     * @param array $tool_result Tool execution result
+     * @param array $tool_parameters Tool parameters used
+     * @return string Formatted success or failure message
      */
     public static function generateSuccessMessage(string $tool_name, array $tool_result, array $tool_parameters): string {
         $success = $tool_result['success'] ?? false;
@@ -31,6 +37,11 @@ class AIStepConversationManager {
 
     /**
      * Update data packet messages within conversation history.
+     * Synchronizes data packet content in existing conversation messages.
+     *
+     * @param array $conversation_messages Conversation message array
+     * @param array $data Updated data packet array
+     * @return array Updated conversation messages with synchronized data packets
      */
     public static function updateDataPacketMessages(array $conversation_messages, array $data): array {
         if (empty($conversation_messages) || empty($data)) {

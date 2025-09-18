@@ -56,14 +56,12 @@ class Delete {
             return;
         }
         
-        // Validate delete type
         $valid_delete_types = ['pipeline', 'flow', 'step', 'processed_items', 'jobs'];
         if (!in_array($delete_type, $valid_delete_types)) {
             wp_send_json_error(['message' => __('Invalid deletion type.', 'data-machine')]);
             return;
         }
         
-        // Validate target ID based on type
         if (in_array($delete_type, ['pipeline', 'flow']) && (!is_numeric($target_id) || (int)$target_id <= 0)) {
             wp_send_json_error(['message' => __('Valid target ID is required.', 'data-machine')]);
             return;
@@ -79,7 +77,6 @@ class Delete {
         $db_flows = $all_databases['flows'] ?? null;
         $db_jobs = $all_databases['jobs'] ?? null;
         
-        // Check required services based on delete type
         if (in_array($delete_type, ['pipeline', 'flow', 'step']) && (!$db_pipelines || !$db_flows)) {
             wp_send_json_error(['message' => __('Database services unavailable.', 'data-machine')]);
             return;
@@ -90,7 +87,6 @@ class Delete {
             return;
         }
         
-        // Route to specific deletion handler
         switch ($delete_type) {
             case 'pipeline':
                 $this->handle_pipeline_deletion($target_id, $db_pipelines, $db_flows);
@@ -132,7 +128,6 @@ class Delete {
      * @since 1.0.0
      */
     private function handle_pipeline_deletion($pipeline_id, $db_pipelines, $db_flows) {
-        // Get pipeline data for response before deletion
         $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
         if (!$pipeline) {
             wp_send_json_error(['message' => __('Pipeline not found.', 'data-machine')]);
@@ -152,14 +147,12 @@ class Delete {
             }
         }
 
-        // Finally delete the pipeline itself
         $success = $db_pipelines->delete_pipeline($pipeline_id);
         if (!$success) {
             wp_send_json_error(['message' => __('Failed to delete pipeline.', 'data-machine')]);
             return;
         }
 
-        // Trigger action for comprehensive cache invalidation
         do_action('dm_pipeline_deleted', $pipeline_id, $flow_count);
 
         // Clear pipelines list cache (pipeline deletion affects dropdown lists)
@@ -189,7 +182,6 @@ class Delete {
      * @since 1.0.0
      */
     private function handle_flow_deletion($flow_id, $db_flows) {
-        // Get flow data for response before deletion
         $flow = $db_flows->get_flow($flow_id);
         if (!$flow) {
             wp_send_json_error(['message' => __('Flow not found.', 'data-machine')]);
@@ -206,10 +198,8 @@ class Delete {
         }
 
 
-        // Trigger action for cache invalidation listeners
         do_action('dm_flow_deleted', $pipeline_id, $flow_id);
 
-        // Clear pipeline cache before response (flow deletion affects pipeline)
         do_action('dm_clear_pipeline_cache', $pipeline_id);
 
         wp_send_json_success([

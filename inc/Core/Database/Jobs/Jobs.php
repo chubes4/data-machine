@@ -67,6 +67,14 @@ class Jobs {
         return $this->operations->delete_jobs($criteria);
     }
 
+    public function store_engine_data(int $job_id, array $data): bool {
+        return $this->operations->store_engine_data($job_id, $data);
+    }
+
+    public function retrieve_engine_data(int $job_id): array {
+        return $this->operations->retrieve_engine_data($job_id);
+    }
+
 
 
 
@@ -85,6 +93,7 @@ class Jobs {
             pipeline_id bigint(20) unsigned NOT NULL,
             flow_id bigint(20) unsigned NOT NULL,
             status varchar(20) NOT NULL,
+            engine_data longtext NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             completed_at datetime NULL DEFAULT NULL,
             PRIMARY KEY  (job_id),
@@ -94,6 +103,16 @@ class Jobs {
         ) $charset_collate;";
 
         dbDelta( $sql );
+
+        // Migration: Add engine_data column if table exists but column doesn't
+        $existing_columns = $wpdb->get_col("DESCRIBE {$table_name}");
+        if (!in_array('engine_data', $existing_columns)) {
+            $wpdb->query("ALTER TABLE {$table_name} ADD COLUMN engine_data longtext NULL");
+            do_action('dm_log', 'debug', 'Added engine_data column to existing jobs table', [
+                'table_name' => $table_name,
+                'action' => 'migrate_engine_data_column'
+            ]);
+        }
 
         do_action('dm_log', 'debug', 'Created jobs database table with pipeline+flow architecture', [
             'table_name' => $table_name,

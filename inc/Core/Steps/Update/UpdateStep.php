@@ -67,11 +67,6 @@ class UpdateStep {
                 return $data;
             }
 
-            do_action('dm_log', 'debug', 'Update Step: Starting update processing', [
-                'flow_step_id' => $flow_step_id,
-                'handler_slug' => $handler_slug,
-                'data_entries' => count($data)
-            ]);
 
             // Check if AI already executed the tool for this handler
             $tool_result_entry = $this->find_tool_result_for_handler($data, $handler_slug);

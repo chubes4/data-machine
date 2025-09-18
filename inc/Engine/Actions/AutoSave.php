@@ -1,6 +1,10 @@
 <?php
 /**
- * Centralized auto-save operations for pipelines and flows.
+ * Complete pipeline persistence system with comprehensive auto-save operations.
+ *
+ * Handles all pipeline-related data in a single action including pipeline data,
+ * flow configurations, scheduling, execution_order synchronization, and cache invalidation.
+ * Provides atomic operations ensuring data consistency across all components.
  *
  * @package DataMachine\Engine\Actions
  */
@@ -15,7 +19,7 @@ if (!defined('WPINC')) {
 class AutoSave
 {
     /**
-     * Register auto-save action hooks.
+     * Register auto-save action hooks for centralized pipeline persistence.
      */
     public static function register() {
         $instance = new self();
@@ -25,14 +29,19 @@ class AutoSave
     }
 
     /**
-     * Handle complete pipeline auto-save operations.
-     * Saves pipeline data, flows, configurations, scheduling, and synchronizes execution order.
+     * Handle complete pipeline auto-save operations with comprehensive data persistence.
+     *
+     * Operations performed:
+     * 1. Pipeline data and configuration persistence
+     * 2. All flows for the pipeline with configurations
+     * 3. Flow scheduling configurations
+     * 4. execution_order synchronization from pipeline steps to flow steps
+     * 5. Cache invalidation for data consistency
      *
      * @param int $pipeline_id Pipeline ID to auto-save
-     * @return bool Success status
+     * @return bool Success status - true if all operations complete successfully
      */
     public function handle_pipeline_auto_save($pipeline_id) {
-        // Get database services
         $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         $db_flows = $all_databases['flows'] ?? null;
@@ -77,7 +86,6 @@ class AutoSave
             $flow_id = $flow['flow_id'];
             $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
 
-            // Synchronize execution_order from pipeline to flow steps
             foreach ($flow_config as $flow_step_id => $flow_step) {
                 $pipeline_step_id = $flow_step['pipeline_step_id'] ?? null;
                 if ($pipeline_step_id && isset($pipeline_config[$pipeline_step_id])) {
@@ -103,7 +111,6 @@ class AutoSave
             'flow_steps_saved' => $flow_steps_saved
         ]);
 
-        // Clear pipeline cache after successful save
         do_action('dm_clear_pipeline_cache', $pipeline_id);
 
         return true;

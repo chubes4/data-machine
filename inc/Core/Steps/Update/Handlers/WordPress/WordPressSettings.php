@@ -60,7 +60,6 @@ class WordPressSettings {
     private static function get_taxonomy_fields(): array {
         $taxonomy_fields = [];
         
-        // Get all public taxonomies
         $taxonomies = get_taxonomies(['public' => true], 'objects');
         
         foreach ($taxonomies as $taxonomy) {
@@ -78,7 +77,6 @@ class WordPressSettings {
                 'ai_decides' => __('AI Decides', 'data-machine')
             ];
             
-            // Get terms for this taxonomy
             $terms = get_terms(['taxonomy' => $taxonomy_slug, 'hide_empty' => false]);
             if (!is_wp_error($terms) && !empty($terms)) {
                 foreach ($terms as $term) {
@@ -147,7 +145,6 @@ class WordPressSettings {
     private static function sanitize_taxonomy_selections(array $raw_settings): array {
         $sanitized = [];
         
-        // Get all public taxonomies to validate against
         $taxonomies = get_taxonomies(['public' => true], 'objects');
         
         foreach ($taxonomies as $taxonomy) {
@@ -188,7 +185,6 @@ class WordPressSettings {
     private static function get_taxonomy_defaults(): array {
         $defaults = [];
         
-        // Get all public taxonomies
         $taxonomies = get_taxonomies(['public' => true], 'objects');
         
         foreach ($taxonomies as $taxonomy) {

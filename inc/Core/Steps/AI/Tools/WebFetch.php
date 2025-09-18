@@ -45,10 +45,6 @@ class WebFetch {
             ];
         }
 
-        do_action('dm_log', 'debug', 'Web Fetch: Starting content retrieval', [
-            'url' => $url,
-            'url_host' => wp_parse_url($url, PHP_URL_HOST)
-        ]);
 
         $response = wp_remote_get($url, [
             'timeout' => 30,

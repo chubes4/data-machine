@@ -1,6 +1,11 @@
 <?php
 /**
- * Google Custom Search API tool for web search and fact-checking
+ * Google Custom Search API tool for web search and fact-checking.
+ *
+ * Provides real-time web search capabilities for AI agents with configurable
+ * result limits, site restrictions, and comprehensive error handling.
+ *
+ * @package DataMachine\Core\Steps\AI\Tools
  */
 
 namespace DataMachine\Core\Steps\AI\Tools;
@@ -29,6 +34,11 @@ class GoogleSearch {
 
     /**
      * Execute Google search with site restrictions and result limiting.
+     * Requires API key and Custom Search Engine ID configuration.
+     *
+     * @param array $parameters Flat parameter structure containing 'query'
+     * @param array $tool_def Tool definition (unused for general tools)
+     * @return array Search results with success status and data array
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         

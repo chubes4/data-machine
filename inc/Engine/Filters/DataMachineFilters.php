@@ -260,25 +260,6 @@ function dm_register_utility_filters() {
             'uuid' => $parts[1]
         ];
     }, 10, 2);
-    /**
-     * Flat parameter system using single filter architecture
-     * 
-     * Simple flat parameter array for all step execution.
-     * All parameters flow through this single filter for consistency and simplicity.
-     * 
-     * Base parameters:
-     * - job_id: Current job identifier
-     * - flow_step_id: Current step identifier  
-     * - flow_step_config: Step configuration
-     * - data: Data packet array
-     * - Additional parameters: Added by filters as needed (source_url, image_url, content, etc.)
-     */
-    add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
-        // Simple flat structure - no arbitrary nesting
-        // Fetch steps and other filters can add parameters directly to flat array
-        return $parameters;
-    }, 10, 5);
-    
     
     add_action('ai_api_error', function($error_data) {
         do_action('dm_log', 'error', $error_data['message'], $error_data);

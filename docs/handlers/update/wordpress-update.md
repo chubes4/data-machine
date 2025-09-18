@@ -13,7 +13,7 @@ Updates existing WordPress posts and pages in the local installation using nativ
 ## Required Parameters
 
 **Tool Call Parameters**:
-- `source_url`: WordPress post/page URL (required for post identification)
+- `source_url`: WordPress post/page URL (required for post identification, provided by engine parameters from fetch handlers)
 
 **Optional Update Parameters**:
 - `title`: New post title (updates `post_title`)

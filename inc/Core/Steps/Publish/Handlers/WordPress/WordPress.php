@@ -1,6 +1,10 @@
 <?php
 /**
- * WordPress publish handler with modular component system.
+ * WordPress publish handler with modular component architecture.
+ *
+ * Integrates FeaturedImageHandler, TaxonomyHandler, and SourceUrlHandler for
+ * specialized post creation processing. Implements configuration hierarchy
+ * where system defaults override handler settings.
  *
  * @package DataMachine\Core\Steps\Publish\Handlers\WordPress
  */
@@ -28,7 +32,12 @@ class WordPress {
     }
 
     /**
-     * Handle AI tool call for WordPress post creation.
+     * Handle AI tool call for WordPress post creation using modular components.
+     * Processes featured images, taxonomies, and source URLs through specialized handlers.
+     *
+     * @param array $parameters Flat parameter structure from AIStepToolParameters
+     * @param array $tool_def Tool definition containing handler_config
+     * @return array Result with success status, post ID, and URL
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         

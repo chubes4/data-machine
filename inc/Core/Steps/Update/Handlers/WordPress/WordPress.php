@@ -1,9 +1,15 @@
 <?php
 /**
- * WordPress Update handler.
+ * WordPress Update handler with engine parameter dependency.
  *
- * Updates existing WordPress posts/pages via source_url parameter. Handles title, content,
- * and taxonomy modifications using wp_update_post. Requires source_url from fetch metadata.
+ * Updates existing WordPress posts/pages via source_url parameter provided through
+ * explicit engine parameter generation by fetch handlers. Handles title, content,
+ * and taxonomy modifications using wp_update_post().
+ *
+ * Engine Parameter Requirements:
+ * - source_url: WordPress post/page URL for post ID extraction (REQUIRED)
+ * - Provided by fetch handlers via dm_engine_parameters filter
+ * - Used with url_to_postid() for target post identification
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Update\Handlers\WordPress
@@ -24,10 +30,11 @@ class WordPress {
 
     /**
      * Handle AI tool call for WordPress content updating.
+     * Requires source_url parameter from engine for post identification.
      *
-     * @param array $parameters Structured parameters from AI tool call.
-     * @param array $tool_def Tool definition including handler configuration.
-     * @return array Tool execution result.
+     * @param array $parameters Structured parameters from AI tool call with engine-provided source_url
+     * @param array $tool_def Tool definition including handler configuration
+     * @return array Tool execution result with success status and post details
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         do_action('dm_log', 'debug', 'WordPress Update Tool: Handling tool call', [
@@ -37,7 +44,21 @@ class WordPress {
             'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
         ]);
 
-        // Extract post ID from WordPress URL
+        // Validate source_url parameter (required from engine parameters)
+        if (empty($parameters['source_url'])) {
+            $error_msg = "source_url parameter is required for WordPress Update handler";
+            do_action('dm_log', 'error', $error_msg, [
+                'available_parameters' => array_keys($parameters)
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $error_msg,
+                'tool_name' => 'wordpress_update'
+            ];
+        }
+
+        // Extract post ID from WordPress URL provided by fetch handler
         $post_id = url_to_postid($parameters['source_url']);
         if (!$post_id) {
             $error_msg = "Could not extract valid WordPress post ID from URL: {$parameters['source_url']}";
@@ -45,7 +66,7 @@ class WordPress {
                 'source_url' => $parameters['source_url'],
                 'extracted_post_id' => $post_id
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $error_msg,
@@ -53,7 +74,6 @@ class WordPress {
             ];
         }
         
-        // Validate that the post exists
         $existing_post = get_post($post_id);
         if (!$existing_post) {
             $error_msg = "WordPress post with ID {$post_id} does not exist";
@@ -68,7 +88,6 @@ class WordPress {
             ];
         }
 
-        // Get handler configuration from tool definition
         $handler_config = $tool_def['handler_config'] ?? [];
         
         do_action('dm_log', 'debug', 'WordPress Update Tool: Using handler configuration', [
@@ -195,7 +214,6 @@ class WordPress {
     private function process_taxonomies_from_settings(int $post_id, array $parameters, array $handler_config): array {
         $taxonomy_results = [];
         
-        // Get all public taxonomies to process
         $taxonomies = get_taxonomies(['public' => true], 'objects');
         
         foreach ($taxonomies as $taxonomy) {
@@ -296,7 +314,6 @@ class WordPress {
             $term_name = sanitize_text_field($term_name);
             if (empty($term_name)) continue;
             
-            // Get or create term
             $term = get_term_by('name', $term_name, $taxonomy_name);
             if (!$term) {
                 $term_result = wp_insert_term($term_name, $taxonomy_name);

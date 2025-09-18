@@ -1,7 +1,12 @@
 <?php
 /**
- * Centralized source URL processing for WordPress publish operations.
- * Handles configuration-based source URL inclusion and Gutenberg block generation.
+ * Modular source URL processing for WordPress publish operations.
+ *
+ * Features:
+ * - Configuration hierarchy validation (system defaults override handler settings)
+ * - URL validation and sanitization using esc_url()
+ * - Gutenberg block generation (separator + paragraph with source link)
+ * - Clean source attribution without content pollution
  *
  * @package DataMachine
  * @subpackage Core\Steps\Publish\Handlers\WordPress
@@ -16,12 +21,12 @@ if (!defined('ABSPATH')) {
 class SourceUrlHandler {
 
     /**
-     * Process source URL and append to content if enabled.
+     * Process source URL and append to content if enabled via configuration hierarchy.
      *
      * @param string $content Current post content
      * @param array $parameters Tool parameters including source_url
      * @param array $handler_config Handler configuration
-     * @return string Content with source URL appended if applicable
+     * @return string Content with Gutenberg source blocks appended if applicable
      */
     public function processSourceUrl(string $content, array $parameters, array $handler_config): string {
         if (!$this->isSourceInclusionEnabled($handler_config)) {
@@ -39,6 +44,7 @@ class SourceUrlHandler {
 
     /**
      * Check if source URL inclusion is enabled based on configuration hierarchy.
+     * System defaults always override handler config when set.
      *
      * @param array $handler_config Handler configuration
      * @return bool True if source inclusion is enabled
@@ -72,6 +78,7 @@ class SourceUrlHandler {
 
     /**
      * Generate Gutenberg blocks for source attribution.
+     * Creates separator block + paragraph block with sanitized source link.
      *
      * @param string $source_url Validated source URL
      * @return string Complete Gutenberg block structure
@@ -84,7 +91,7 @@ class SourceUrlHandler {
     }
 
     /**
-     * Create separator Gutenberg block.
+     * Create separator Gutenberg block with alpha channel opacity.
      *
      * @return string Separator block markup
      */
@@ -93,10 +100,10 @@ class SourceUrlHandler {
     }
 
     /**
-     * Create paragraph Gutenberg block with source link.
+     * Create paragraph Gutenberg block with sanitized source link.
      *
      * @param string $source_url Source URL to include
-     * @return string Paragraph block markup with source link
+     * @return string Paragraph block markup with esc_url() sanitized link
      */
     private function createSourceParagraphBlock(string $source_url): string {
         $sanitized_url = $this->sanitizeSourceUrl($source_url);
@@ -104,7 +111,7 @@ class SourceUrlHandler {
     }
 
     /**
-     * Sanitize source URL for safe output.
+     * Sanitize source URL using esc_url() for safe output.
      *
      * @param string $source_url Raw source URL
      * @return string Sanitized and escaped URL

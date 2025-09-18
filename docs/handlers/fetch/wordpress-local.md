@@ -51,7 +51,11 @@ Retrieves WordPress post and page content from the local installation using WP_Q
 
 ## Data Output
 
-### DataPacket Structure
+### Explicit Data Separation Architecture
+
+The WordPress Local handler generates clean data packets for AI processing and explicit engine parameters for publish/update handlers.
+
+### Clean Data Packet (AI-Visible)
 
 ```php
 [
@@ -63,21 +67,42 @@ Retrieves WordPress post and page content from the local installation using WP_Q
         'source_type' => 'wordpress_local',
         'item_identifier_to_log' => 123, // Post ID
         'original_id' => 123,
-        'source_url' => 'https://site.com/post-slug/',
         'original_title' => 'Post Title',
-        'image_source_url' => 'https://site.com/image.jpg', // Featured image if available
         'original_date_gmt' => '2023-01-01 12:00:00'
+        // URLs removed from AI-visible metadata
     ]
 ]
 ```
 
+### Engine Parameters (Handler-Visible)
+
+```php
+$engine_parameters = [
+    'source_url' => 'https://site.com/post-slug/',     // For Update handlers
+    'image_url' => 'https://site.com/image.jpg'        // For media handling
+];
+```
+
+### Return Structure
+
+```php
+return [
+    'processed_items' => [$clean_data_packet],
+    'engine_parameters' => $engine_parameters
+];
+```
+
 ### Metadata Fields
 
-**source_type**: Always `wordpress_local`
-**source_url**: Full permalink to the post
-**image_source_url**: Featured image URL (null if none)
-**original_title**: Post title as stored in database
-**original_date_gmt**: Post publication date in GMT
+**Clean Data Packet**:
+- `source_type`: Always `wordpress_local`
+- `original_title`: Post title as stored in database
+- `original_date_gmt`: Post publication date in GMT
+- URLs excluded to prevent AI content pollution
+
+**Engine Parameters**:
+- `source_url`: Full permalink for Update handlers
+- `image_url`: Featured image URL for media handling (null if none)
 
 ## Processing Behavior
 
@@ -120,7 +145,8 @@ $handler_config = [
     ]
 ];
 
-$items = $wordpress_handler->get_fetch_data($pipeline_id, $handler_config, $job_id);
+$result = $wordpress_handler->get_fetch_data($pipeline_id, $handler_config, $job_id);
+// Returns: ['processed_items' => [...], 'engine_parameters' => [...]]
 ```
 
 ### Specific Post Targeting

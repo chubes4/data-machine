@@ -22,21 +22,30 @@ Data Machine uses a Pipeline+Flow architecture where:
 
 ### Data Flow
 
-**DataPacket Structure**: Each step receives and returns a **DataPacket** array with chronological ordering (newest packets at index 0). Fetch handlers now provide clean content without URL pollution:
+**Explicit Data Separation Architecture**: Fetch handlers generate clean data packets for AI processing while providing engine parameters separately for publish/update handlers:
 
 ```php
+// Clean data packet (AI-visible)
 [
-    'type' => 'fetch|ai|update|publish',
-    'handler' => 'twitter|rss|wordpress|etc',
-    'content' => ['title' => $title, 'body' => $content], // Clean content without URL injection
+    'data' => [
+        'content_string' => $content,  // Clean content without URLs
+        'file_info' => $file_info      // File metadata when applicable
+    ],
     'metadata' => [
         'source_type' => $type,
-        'source_url' => $url, // URLs maintained in metadata only
-        'image_source_url' => $image_url,
-        'original_title' => $title
-    ],
-    'timestamp' => time()
+        'item_identifier_to_log' => $id,
+        'original_id' => $id,
+        'original_title' => $title,
+        'original_date_gmt' => $date
+        // URLs removed from AI-visible metadata
+    ]
 ]
+
+// Engine parameters (handler-visible, separate structure)
+$engine_parameters = [
+    'source_url' => $source_url,    // For Update handlers
+    'image_url' => $image_url,      // For media handling
+];
 ```
 
 **DataPacketStructureDirective**: AI agents receive automatic explanation of the JSON structure including:

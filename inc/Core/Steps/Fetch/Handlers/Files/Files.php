@@ -81,13 +81,48 @@ class Files {
             'original_date_gmt' => $next_file['uploaded_at'] ?? gmdate('Y-m-d H:i:s')
         ];
 
+        // Generate public URL for image files (for WordPress featured images, etc.)
+        $file_url = '';
+        if (strpos($mime_type, 'image/') === 0) {
+            // For image files, provide public URL for publish handlers
+            $repositories = apply_filters('dm_files_repository', []);
+            $file_repository = $repositories['files'] ?? null;
+            if ($file_repository && $flow_step_id) {
+                $file_url = trailingslashit($file_repository->get_repository_url($flow_step_id)) . $next_file['original_name'];
+            }
+        }
+
+        // Store URLs in engine_data for centralized parameter injection
+        if ($job_id) {
+            $engine_data = [
+                'source_url' => '', // No source URL for local files
+                'image_url' => $file_url // Public URL for images, empty for non-images
+            ];
+
+            // Store engine_data via database service
+            $all_databases = apply_filters('dm_db', []);
+            $db_jobs = $all_databases['jobs'] ?? null;
+            if ($db_jobs) {
+                $db_jobs->store_engine_data($job_id, $engine_data);
+                do_action('dm_log', 'debug', 'Files: Stored URLs in engine_data', [
+                    'job_id' => $job_id,
+                    'has_image_url' => !empty($engine_data['image_url']),
+                    'file_name' => $next_file['original_name']
+                ]);
+            }
+        }
+
         do_action('dm_log', 'debug', 'Files Input: Found unprocessed file for processing.', [
             'pipeline_id' => $pipeline_id,
             'flow_step_id' => $flow_step_id,
-            'file_path' => $file_identifier
+            'file_path' => $file_identifier,
+            'is_image' => !empty($file_url),
+            'public_url' => $file_url
         ]);
 
-        return ['processed_items' => [$item_data]];
+        return [
+            'processed_items' => [$item_data]
+        ];
 	}
 
     /**

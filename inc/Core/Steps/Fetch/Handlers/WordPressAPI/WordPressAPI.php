@@ -22,16 +22,13 @@ class WordPressAPI {
     }
 
     /**
-     * Fetch content from WordPress REST API endpoints
+     * Fetch WordPress API content with explicit data/parameter separation.
+     * Returns clean content for AI consumption and separate engine parameters for handlers.
      *
-     * Retrieves posts/pages from remote WordPress sites via REST API with automatic
-     * deduplication tracking. Provides structured data access and source_url metadata
-     * required for Update handlers.
-     *
-     * @param int $pipeline_id Pipeline execution identifier for item tracking
-     * @param array $handler_config Handler configuration with wordpress_api settings and flow_step_id
-     * @param string|null $job_id Job identifier for deduplication tracking (optional)
-     * @return array Array with 'processed_items' key containing formatted post data
+     * @param int $pipeline_id Pipeline ID for logging context.
+     * @param array $handler_config Handler configuration including site_url, post_type, flow_step_id.
+     * @param string|null $job_id Job ID for deduplication tracking.
+     * @return array Array with 'processed_items' (clean data) and 'engine_parameters' (source_url, image_url).
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
@@ -200,21 +197,42 @@ class WordPressAPI {
                     'source_type' => 'wordpress_api',
                     'item_identifier_to_log' => $unique_id,
                     'original_id' => $post_id,
-                    'source_url' => $source_link,
                     'original_title' => $title,
-                    'image_url' => $image_url,
                     'original_date_gmt' => $post_date,
-                    'site_url' => $site_url,
                     'excerpt' => wp_strip_all_tags($excerpt)
                 ]
             ];
-            
-            // Return first eligible item immediately
-            return [$input_data];
+
+            // Store URLs in engine_data for centralized parameter injection
+            if ($job_id) {
+                $engine_data = [
+                    'source_url' => $source_link,
+                    'image_url' => $image_url ?: '',
+                    'site_url' => $site_url
+                ];
+
+                // Store engine_data via database service
+                $all_databases = apply_filters('dm_db', []);
+                $db_jobs = $all_databases['jobs'] ?? null;
+                if ($db_jobs) {
+                    $db_jobs->store_engine_data($job_id, $engine_data);
+                    do_action('dm_log', 'debug', 'WordPress API: Stored URLs in engine_data', [
+                        'job_id' => $job_id,
+                        'source_url' => $engine_data['source_url'],
+                        'has_image_url' => !empty($engine_data['image_url']),
+                        'site_url' => $engine_data['site_url']
+                    ]);
+                }
+            }
+
+            // Return clean data packet (no URLs in metadata for AI)
+            return [
+                'processed_items' => [$input_data]
+            ];
         }
 
         // No eligible items found
-        return [];
+        return ['processed_items' => []];
     }
 
     /**

@@ -1,6 +1,10 @@
 <?php
 /**
- * Centralized featured image processing for WordPress publish operations.
+ * Modular featured image processing for WordPress publish operations.
+ *
+ * Implements configuration hierarchy where system defaults override handler config,
+ * WordPress media library integration with comprehensive error handling,
+ * and automatic temporary file cleanup.
  *
  * @package DataMachine
  * @subpackage Core\Steps\Publish\Handlers\WordPress
@@ -15,12 +19,12 @@ if (!defined('ABSPATH')) {
 class FeaturedImageHandler {
 
     /**
-     * Process featured image for WordPress post.
+     * Process featured image for WordPress post with configuration hierarchy validation.
      *
      * @param int $post_id WordPress post ID
      * @param array $parameters Tool parameters including image_url
      * @param array $handler_config Handler configuration
-     * @return array|null Processing result or null if skipped
+     * @return array|null Processing result with attachment details or null if skipped/disabled
      */
     public function processImage(int $post_id, array $parameters, array $handler_config): ?array {
         if (!$this->isImageHandlingEnabled($handler_config)) {
@@ -37,6 +41,7 @@ class FeaturedImageHandler {
 
     /**
      * Check if image handling is enabled based on configuration hierarchy.
+     * System defaults always override handler config when set.
      *
      * @param array $handler_config Handler configuration
      * @return bool True if image handling is enabled
@@ -65,11 +70,12 @@ class FeaturedImageHandler {
     }
 
     /**
-     * Download image and create WordPress attachment.
+     * Download image and create WordPress attachment using media_handle_sideload().
+     * Includes comprehensive error handling and automatic temporary file cleanup.
      *
      * @param int $post_id WordPress post ID
      * @param string $image_url Image URL to download
-     * @return array Processing result with success status and details
+     * @return array Processing result with success status, attachment_id, and attachment_url
      */
     private function downloadAndAttach(int $post_id, string $image_url): array {
         require_once(ABSPATH . 'wp-admin/includes/media.php');
@@ -137,7 +143,7 @@ class FeaturedImageHandler {
     }
 
     /**
-     * Clean up temporary files.
+     * Clean up temporary files using wp_delete_file().
      *
      * @param string $temp_file Path to temporary file
      * @return void
@@ -149,7 +155,7 @@ class FeaturedImageHandler {
     }
 
     /**
-     * Log image operation with consistent formatting.
+     * Log image operation using centralized dm_log action.
      *
      * @param string $level Log level (debug, info, warning, error)
      * @param string $message Log message

@@ -1,7 +1,12 @@
 <?php
 /**
- * Centralized taxonomy processing for WordPress publish operations.
- * Handles configuration-based taxonomy selection, dynamic term creation, and AI parameter extraction.
+ * Modular taxonomy processing for WordPress publish operations.
+ *
+ * Features:
+ * - Configuration-based taxonomy selection (skip, AI-decided, pre-selected)
+ * - Dynamic term creation using wp_insert_term() for non-existing terms
+ * - AI parameter extraction with standard naming conventions
+ * - Public taxonomy discovery excluding system taxonomies
  *
  * @package DataMachine
  * @subpackage Core\Steps\Publish\Handlers\WordPress
@@ -17,6 +22,7 @@ class TaxonomyHandler {
 
     /**
      * Process taxonomies for WordPress post based on configuration.
+     * Supports three selection modes per taxonomy: skip, ai_decides, or numeric term ID.
      *
      * @param int $post_id WordPress post ID
      * @param array $parameters Tool parameters including AI-decided taxonomy values
@@ -62,6 +68,7 @@ class TaxonomyHandler {
 
     /**
      * Get all public taxonomies excluding system taxonomies.
+     * Excludes: post_format, nav_menu, link_category
      *
      * @return array WordPress taxonomy objects
      */
@@ -128,7 +135,8 @@ class TaxonomyHandler {
     }
 
     /**
-     * Get parameter name for taxonomy.
+     * Get parameter name for taxonomy using standard naming conventions.
+     * Maps category->category, post_tag->tags, others->taxonomy_name
      *
      * @param string $taxonomy_name WordPress taxonomy name
      * @return string Corresponding parameter name for AI tools
@@ -175,7 +183,8 @@ class TaxonomyHandler {
     }
 
     /**
-     * Assign taxonomy terms with dynamic term creation.
+     * Assign taxonomy terms with dynamic term creation using wp_insert_term().
+     * Creates non-existing terms automatically before assignment.
      *
      * @param int $post_id WordPress post ID
      * @param string $taxonomy_name Taxonomy name
@@ -305,7 +314,7 @@ class TaxonomyHandler {
     }
 
     /**
-     * Log taxonomy operation with consistent formatting.
+     * Log taxonomy operation using centralized dm_log action.
      *
      * @param string $level Log level (debug, info, warning, error)
      * @param string $message Log message

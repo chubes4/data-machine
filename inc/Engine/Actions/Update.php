@@ -103,7 +103,6 @@ class Update {
             return false;
         }
         
-        // Intelligent method selection
         $success = false;
         $method_used = '';
         
@@ -195,7 +194,6 @@ class Update {
         }
         $flow_id = $parts['flow_id'];
         
-        // Get database service using filter-based discovery
         $all_databases = apply_filters('dm_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {

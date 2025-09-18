@@ -206,7 +206,7 @@ Most handlers return exactly one item per execution:
 
 Fetch handlers provide essential metadata that AI steps use for content processing and tool execution:
 
-**Source URL for Updates**: WordPress Local, WordPress API, and WordPress Media handlers provide `source_url` metadata enabling Update steps to modify existing content.
+**Source URL for Updates**: WordPress Local, WordPress API, and WordPress Media handlers provide `source_url` via engine parameters enabling Update steps to modify existing content.
 
 **Content Structure**: All handlers structure content in consistent format that AI steps process through the modular AI directive system.
 
@@ -217,12 +217,12 @@ Fetch handlers provide essential metadata that AI steps use for content processi
 Fetch handlers seamlessly integrate with the tool-first AI architecture:
 
 ```php
-// Fetch provides source_url in metadata
-$data_packet['metadata']['source_url'] = 'https://site.com/post/123';
+// Fetch provides source_url via engine parameters (separate from AI data)
+$engine_parameters['source_url'] = 'https://site.com/post/123';
 
-// AI step processes content with available tools
-// Update tools automatically receive source_url via AIStepToolParameters
-// Publishing tools receive content via AIStepToolParameters  
+// AI step processes clean content without URL pollution
+// Update tools automatically receive source_url via AIStepToolParameters from engine parameters
+// Publishing tools receive clean content via AIStepToolParameters  
 ```
 
 ## Integration Examples
@@ -231,11 +231,12 @@ $data_packet['metadata']['source_url'] = 'https://site.com/post/123';
 
 ```php
 $wordpress_handler = new WordPress();
-$items = $wordpress_handler->get_fetch_data(
+$result = $wordpress_handler->get_fetch_data(
     $pipeline_id,
     ['wordpress_posts' => ['post_type' => 'post']],
     $job_id
 );
+// Returns: ['processed_items' => [...], 'engine_parameters' => [...]]
 ```
 
 ### With Deduplication

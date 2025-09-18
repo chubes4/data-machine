@@ -151,17 +151,7 @@ wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, proc
 
 **Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 
-**Dual-Layer Persistence Model**:
-- **Pipeline Level**: System prompts stored per `pipeline_step_id` - serve as reusable templates
-- **Flow Level**: User messages stored per `flow_step_id` - enable instance-specific customization  
-- **Inheritance**: Flow steps inherit pipeline system prompts, add flow-specific user messages
-
-```php
-$result = apply_filters('ai_request', [
-    'messages' => [['role' => 'user', 'content' => $prompt]],
-    'model' => 'gpt-5-mini'
-], 'openai');
-```
+**Dual-Layer Persistence**: Pipeline-level system prompts (templates) + flow-level user messages (instances)
 
 ### AI Request Priority System
 
@@ -184,17 +174,7 @@ add_filter('ai_request', [DataPacketStructureDirective::class, 'inject'], 40, 5)
 add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
 ```
 
-**AI Step Directive Content**:
-- Context-aware role clarification (detects next-step handlers for targeted guidance)
-- Available tools enumeration with descriptions  
-- Task completion strategy and workflow context
-
-**Site Context Integration**:
-- WordPress site metadata (name, URL, language)
-- Post types with counts and capabilities
-- Taxonomies with term counts and associations
-- User statistics and theme information
-- Cached with automatic invalidation on content changes
+**Site Context Integration**: WordPress metadata, post types, taxonomies, cached with auto-invalidation
 
 **AI Conversation State Management**:
 - **AIStepConversationManager**: Centralized conversation state management and message formatting with turn-based tracking
@@ -221,17 +201,7 @@ AIStepConversationManager::logConversationAction($action, $context);
 - **State Preservation**: Complete conversation history maintained across tool executions with context awareness
 - **Message Types**: System directives → User data → AI responses → Tool calls → Tool results in chronological order
 
-**Tool Result Message Examples**:
-- **Google Search**: "SEARCH COMPLETE: Found {count} results for \"{query}\".\nSearch Results:" or "SEARCH COMPLETE: No results found for \"{query}\". Search task finished."
-- **WordPress Publish**: "SUCCESS: WordPress post published successfully. Title: '{title}' is now live at {url} (ID: {id}). Your content has been published as requested."
-- **Default**: "SUCCESS: {Tool Name} completed successfully. The requested operation has been finished as requested." (filtered via `dm_tool_success_message`)
-
-**AI Step Execution Model**:
-- AI steps can run standalone using flow-level user messages when no fetch step precedes
-- System prompts (pipeline-level) provide consistent behavior templates
-- User messages (flow-level) enable different prompts per flow instance
-- Multi-turn conversation support with context preservation across tool executions
-- Conversation state management through AIStepConversationManager for clear AI communication
+**AI Step Execution**: Standalone execution with flow-level user messages, multi-turn conversation support via AIStepConversationManager
 
 ### Tool Management
 
@@ -275,47 +245,7 @@ add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = 
 }, 10, 3);
 ```
 
-**General Tools**:
-```php
-add_filter('ai_tools', function($tools) {
-    $tools['google_search'] = [
-        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\GoogleSearch',
-        'method' => 'handle_tool_call',
-        'description' => 'Search Google for current information and context',
-        'requires_config' => true,
-        'parameters' => ['query' => ['type' => 'string', 'required' => true]]
-        // No 'handler' property = universal tool
-    ];
-
-    $tools['local_search'] = [
-        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\LocalSearch',
-        'method' => 'handle_tool_call',
-        'description' => 'Search WordPress site for existing content',
-        'requires_config' => false,
-        'parameters' => ['query' => ['type' => 'string', 'required' => true]]
-        // No 'handler' property = universal tool
-    ];
-
-    $tools['web_fetch'] = [
-        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\WebFetch',
-        'method' => 'handle_tool_call',
-        'description' => 'Retrieve and process web page content (50K character limit)',
-        'requires_config' => false,
-        'parameters' => ['url' => ['type' => 'string', 'required' => true]]
-        // No 'handler' property = universal tool
-    ];
-
-    $tools['wordpress_post_reader'] = [
-        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\WordPressPostReader',
-        'method' => 'handle_tool_call',
-        'description' => 'Read full WordPress post content by URL for detailed analysis',
-        'requires_config' => false,
-        'parameters' => ['source_url' => ['type' => 'string', 'required' => true]]
-        // No 'handler' property = universal tool
-    ];
-    return $tools;
-});
-```
+**General Tools**: Google Search, Local Search, WebFetch, WordPress Post Reader (no 'handler' property = universal)
 
 ### Tool Implementation
 
@@ -339,57 +269,10 @@ class Twitter {
 }
 ```
 
-### Tool Parameter Architecture
-
-**AIStepToolParameters Class**: Centralized flat parameter building for AI tool execution with unified structure compatible with all handler tool call methods.
-
-```php
-// Standard AI tool parameter building - creates flat parameter structure  
-$parameters = AIStepToolParameters::buildParameters(
-    $ai_tool_parameters,     // Parameters from AI tool call
-    $unified_parameters,     // Unified parameter structure from engine
-    $tool_definition         // Tool definition from ai_tools filter
-);
-
-// Handler tools with engine parameters merged - for Update handlers requiring source_url
-$parameters = AIStepToolParameters::buildForHandlerTool(
-    $ai_tool_parameters,     // AI tool call parameters
-    $data,                   // Data packet array for content extraction
-    $tool_definition,        // Tool specification
-    $engine_parameters,      // Additional parameters from engine context (source_url, etc.)
-    $handler_config         // Handler-specific settings
-);
-```
-
-**Parameter Building Process**:
-- Starts with engine parameters as base flat structure (job_id, flow_step_id, data, flow_step_config)
-- Extracts content/title from data packets based on tool parameter specifications
-- Adds tool metadata (tool_definition, tool_name, handler_config) directly to flat structure
-- Merges AI-provided parameters directly - overwrites any conflicting keys
-- For handler tools: merges engine parameters (like source_url) for Update handlers
-
-**Flat Parameter Benefits**:
-- **Unified Interface**: Single flat array structure for all tool execution methods
-- **Simple Extraction**: No complex nested structures - all data at root level
-- **Extensible**: New metadata automatically available as additional parameters
-- **Compatible**: Works with existing handler tool call method signatures
-
-
 ### Tool Configuration
 
-**Configuration Management**:
-```php
-$configured = apply_filters('dm_tool_configured', false, 'google_search');
-$config = apply_filters('dm_get_tool_config', [], 'google_search');
-do_action('dm_save_tool_config', 'google_search', $config_data);
-```
-
-**Modal HTML Generation**:
-```php
-// Automatic tool selection rendering in pipeline modals
-$data = AIStepTools->get_tools_data($pipeline_step_id);
-// Includes configuration warnings and per-step enablement checkboxes
-```
+**AIStepToolParameters**: Flat parameter building with unified structure
+**Configuration**: `dm_tool_configured`, `dm_get_tool_config`, `dm_save_tool_config` filters
 
 
 ## Handler Matrix
@@ -425,21 +308,42 @@ $data = AIStepTools->get_tools_data($pipeline_step_id);
 | WebFetch | None | Web page content retrieval, 50K character limit, HTML processing |
 | WordPress Post Reader | None | Single WordPress post content retrieval by URL, full post analysis |
 
-## DataPacket Structure
+## DataPacket Structure & Explicit Data Separation
+
+**Explicit Data Separation Architecture**: Fetch handlers now generate clean data packets for AI processing while providing engine parameters separately for publish/update handlers.
 
 ```php
-// Standard format for all step types
+// Clean data packet format (AI-visible)
 [
-    'type' => 'fetch|ai|update|publish',
-    'handler' => 'rss|twitter|etc', // Optional for AI
-    'content' => ['title' => $title, 'body' => $content], // Clean content without URL injection
-    'metadata' => ['source_type' => $type, 'pipeline_id' => $id, 'source_url' => $url /*...*/],
-    'timestamp' => time()
+    'data' => [
+        'content_string' => $content,  // Clean content without URLs
+        'file_info' => $file_info      // File metadata when applicable
+    ],
+    'metadata' => [
+        'source_type' => $type,
+        'item_identifier_to_log' => $id,
+        'original_id' => $id,
+        'original_title' => $title,
+        'original_date_gmt' => $date
+        // No URLs in metadata - kept separate
+    ]
 ]
+
+// Explicit engine parameters (handler-visible)
+$engine_parameters = apply_filters('dm_engine_parameters', [
+    'source_url' => $source_url,    // For Update handlers
+    'image_url' => $image_url,      // For media handling
+], [$data], $handler_config, 'fetch', $flow_step_id);
+
+// Return structure from fetch handlers
+return [
+    'processed_items' => [$clean_data],
+    'engine_parameters' => $engine_parameters
+];
 ```
 
 **Processing**: Each step adds entry to array front → accumulates complete workflow history
-**Clean Content**: Fetch handlers (RSS, Reddit) provide clean content without URL pollution; source URLs maintained in metadata only
+**Clean Separation**: URLs and metadata removed from AI-visible data packets; engine parameters provide structured access for handlers
 
 ## WordPress Publish Handler Architecture
 
@@ -458,12 +362,7 @@ if (isset($wp_settings['default_enable_images'])) {
 return (bool) ($handler_config['enable_images'] ?? true);  // Fallback to handler config
 ```
 
-**Features**:
-- Configuration hierarchy validation (system defaults override handler settings)
-- Image URL validation and sanitization
-- WordPress media library integration with `media_handle_sideload()`
-- Featured image assignment with comprehensive error handling
-- Temporary file cleanup and logging
+**Features**: Configuration hierarchy, image validation, media library integration, featured image assignment
 
 ### TaxonomyHandler
 ```php
@@ -477,12 +376,7 @@ $results = $taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_
 // 3. numeric ID - Pre-selected term assignment
 ```
 
-**Features**:
-- Configuration-based taxonomy selection (skip, AI-decided, pre-selected)
-- Dynamic term creation with `wp_insert_term()` for non-existing terms
-- AI parameter extraction with standard naming (`category`, `tags`, custom taxonomy names)
-- WordPress taxonomy operations with comprehensive validation
-- Public taxonomy discovery excluding system taxonomies (`post_format`, `nav_menu`, `link_category`)
+**Features**: Configuration-based selection (skip, AI-decided, pre-selected), dynamic term creation, AI parameter extraction
 
 ### SourceUrlHandler
 ```php
@@ -497,12 +391,7 @@ if (isset($wp_settings['default_include_source'])) {
 return (bool) ($handler_config['include_source'] ?? false);  // Handler fallback
 ```
 
-**Features**:
-- Configuration hierarchy validation for source inclusion
-- URL validation and sanitization with `esc_url()`
-- Gutenberg block generation (separator + paragraph with source link)
-- Content appending with proper formatting
-- Clean source attribution without content pollution
+**Features**: Configuration hierarchy, URL validation, Gutenberg block generation, clean source attribution
 
 ### Handler Integration
 ```php
@@ -546,13 +435,7 @@ do_action('dm_auto_save', $pipeline_id);
 // 5. Cache invalidation after successful save
 ```
 
-**AutoSave Features**:
-- **Complete Data Persistence**: Saves pipeline data, all flows, flow configurations, scheduling, and handler settings
-- **execution_order Synchronization**: Updates flow step execution_order to match pipeline step order
-- **Cache Invalidation**: Clears pipeline cache after successful auto-save for data consistency
-- **Database Service Discovery**: Uses filter-based database service access
-- **Comprehensive Logging**: Debug logs for all auto-save operations with context data
-- **Error Handling**: Validates database services and pipeline existence before processing
+**AutoSave Features**: Complete data persistence, execution_order synchronization, cache invalidation, comprehensive logging
 
 ## Step Configuration Persistence
 
@@ -612,12 +495,7 @@ if ($handler_settings && method_exists($handler_settings, 'get_fields')) {
 }
 ```
 
-**Template Features**:
-- **Dynamic Field Rendering**: Uses Settings classes to generate appropriate fields for any handler type
-- **Authentication Integration**: Automatic auth system detection and management button display
-- **Global Settings Notification**: Shows active WordPress global settings with direct settings link
-- **Context-Aware Configuration**: Supports flow-level and pipeline-level configuration inheritance
-- **Validation Integration**: Real-time configuration validation and status indicators
+**Template Features**: Dynamic field rendering, auth integration, global settings notification, validation integration
 
 ## Settings
 
@@ -653,37 +531,8 @@ $core_parameters = [
 ];
 ```
 
-### 2. Flat Parameter Structure  
-All parameters flow through the single `dm_engine_parameters` filter as a simple flat array:
-```php
-// Flat parameter structure built by engine
-$parameters = apply_filters('dm_engine_parameters', [
-    'job_id' => $job_id,
-    'flow_step_id' => $flow_step_id,
-    'flow_step_config' => $flow_step_config,
-    'data' => $data
-    // Additional parameters added by filters as needed
-], $data, $flow_step_config, $step_type, $flow_step_id);
-```
-
-### Step Implementation Pattern
-```php
-class MyStep {
-    public function execute(array $parameters): array {
-        // Extract from flat parameter structure
-        $job_id = $parameters['job_id'];
-        $flow_step_id = $parameters['flow_step_id'];
-        $data = $parameters['data'] ?? [];
-        $flow_step_config = $parameters['flow_step_config'] ?? [];
-        
-        // Extract what this step needs
-        $source_url = $parameters['source_url'] ?? null;
-        // ... use parameters as needed
-        
-        return $data;
-    }
-}
-```
+### 2. Explicit Engine Parameter Generation
+Fetch handlers generate `source_url`, `image_url` via `dm_engine_parameters` filter
 
 
 
@@ -712,11 +561,40 @@ class MyStep {
     }
 }
 
-// Fetch Handler
+// Fetch Handler with Explicit Parameter Generation
 class MyFetchHandler {
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
-        do_action('dm_mark_item_processed', $flow_step_id, 'my_handler', $item_id, $job_id);
-        return ['processed_items' => $items];
+        // Extract flow_step_id from handler config
+        $flow_step_id = $handler_config['flow_step_id'] ?? null;
+
+        // Mark as processed for deduplication
+        if ($flow_step_id) {
+            do_action('dm_mark_item_processed', $flow_step_id, 'my_handler', $item_id, $job_id);
+        }
+
+        // Create clean data packet (no URLs)
+        $clean_data = [
+            'data' => [
+                'content_string' => $content_string,
+                'file_info' => null
+            ],
+            'metadata' => [
+                'source_type' => 'my_handler',
+                'item_identifier_to_log' => $item_id,
+                'original_id' => $item_id
+            ]
+        ];
+
+        // Generate explicit engine parameters for publish/update handlers
+        $engine_parameters = apply_filters('dm_engine_parameters', [
+            'source_url' => $source_url,
+            'image_url' => $image_url,
+        ], [$clean_data], $handler_config, 'fetch', $flow_step_id);
+
+        return [
+            'processed_items' => [$clean_data],
+            'engine_parameters' => $engine_parameters
+        ];
     }
 }
 
@@ -766,16 +644,7 @@ do_action('dm_log', 'debug', 'AIStepTools: Generated HTML attributes', [
 ```
 
 **Log Levels**: `debug`, `info`, `warning`, `error`
-**Context Data**: Structured arrays with relevant debugging information
-**Timestamps**: Automatic microtime tracking in critical operations
-
-**Key Logging Points**:
-- AI request processing and directive injection
-- Tool selection and configuration validation
-- Pipeline step execution and data flow
-- OAuth authentication and configuration
-- Item processing and deduplication
-- Site context generation and caching
+**Key Points**: AI processing, tool validation, pipeline execution, OAuth, item processing
 
 ## Usage Examples
 
@@ -805,7 +674,19 @@ apply_filters('dm_create_step', null, ['step_type' => 'ai', 'pipeline_id' => $pi
 apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' => $pipeline_id]);
 ```
 
-> **Critical**: Update steps require `source_url` from fetch metadata to identify target content. WordPress Local/API fetch handlers provide this automatically. AI agents discover handler tools for immediate next step only.
+> **Critical**: Update steps require `source_url` from engine parameters to identify target content. All fetch handlers now provide this via explicit engine parameter generation. AI agents discover handler tools for immediate next step only.
+
+## Handler-Specific Engine Parameters
+
+**Explicit Parameter Generation**: Each fetch handler generates specific engine parameters for downstream handlers:
+
+- **Reddit**: `source_url` (Reddit post URL), `image_url` (stored image URL)
+- **WordPress Local**: `source_url` (permalink), `image_url` (featured image URL)
+- **WordPress API**: `source_url` (post link), `image_url` (featured image URL)
+- **WordPress Media**: `source_url` (media URL), `image_url` (media URL)
+- **RSS**: `source_url` (item link), `image_url` (enclosure URL)
+- **Google Sheets**: `source_url` (empty), `image_url` (empty)
+- **Files**: `image_url` (public URL for images only)
 
 ## Cache System
 
@@ -823,19 +704,9 @@ do_action('dm_clear_all_cache'); // Complete cache reset
 do_action('dm_cache_set', $key, $data, $timeout, $group);
 ```
 
-**Cache Architecture**:
-- **Pipeline Cache**: Configuration, flows aggregation, step definitions
-- **Flow Cache**: Configuration, scheduling data, display order
-- **Job Cache**: Status tracking, recent jobs, flow-specific job lists
-- **Pattern-Based Clearing**: Supports wildcard patterns (dm_pipeline_*, dm_flow_*, dm_job_*)
-- **Logging Integration**: All cache operations logged via dm_log action
-- **WordPress Transients**: Uses native WordPress transient system for storage
+**Cache Architecture**: Pipeline/Flow/Job caches with pattern-based clearing, WordPress transients
 
-**Key Features**:
-- Eliminates scattered cache clearing throughout codebase
-- Centralized cache key constants for consistency
-- Granular cache invalidation for performance
-- Comprehensive logging for debugging cache operations
+**Key Features**: Centralized cache key constants, granular invalidation, comprehensive logging
 
 ## Development
 
@@ -845,7 +716,7 @@ composer install && composer test
 ```
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths
-**Filter Registration**: 40+ `*Filters.php` files auto-loaded via composer.json
+**Filter Registration**: 40+ `*Filters.php` files auto-loaded via composer.json - handle registration, settings, and auth providers only (parameter injection removed)
 **Key Classes**: Directive classes, `AIStepToolParameters`, `AIStepConversationManager`
 **AI HTTP Client**: `chubes4/ai-http-client` Composer dependency provides unified HTTP interface
 
@@ -876,69 +747,7 @@ add_filter('dm_admin_pages', [$this, 'register_pages']);    // Admin interfaces
 add_filter('dm_tool_configured', [$this, 'check_config']);  // Configuration validation
 ```
 
-**Enhanced Extension Pattern**:
-```php
-<?php
-/**
- * Plugin Name: My Data Machine Extension
- * Requires Plugins: data-machine
- */
-class MyExtension {
-    public function __construct() {
-        add_action('plugins_loaded', [$this, 'init']);
-    }
-    
-    public function init() {
-        add_filter('dm_handlers', [$this, 'register_handlers']);
-        add_filter('ai_tools', [$this, 'register_ai_tools']);
-        add_filter('dm_tool_configured', [$this, 'check_tool_configuration'], 10, 2);
-    }
-    
-    public function register_handlers($handlers) {
-        $handlers['my_handler'] = [
-            'type' => 'publish',
-            'class' => 'MyExtension\\MyHandler',
-            'label' => __('My Handler'),
-            'description' => __('Custom publishing handler with advanced features')
-        ];
-        return $handlers;
-    }
-    
-    public function register_ai_tools($tools, $handler_slug = null, $handler_config = []) {
-        // Handler-specific tool
-        if ($handler_slug === 'my_handler') {
-            $tools['my_publish'] = [
-                'class' => 'MyExtension\\MyHandler',
-                'method' => 'handle_tool_call',
-                'handler' => 'my_handler',
-                'description' => 'Publish to my custom platform',
-                'parameters' => ['content' => ['type' => 'string', 'required' => true]],
-                'handler_config' => $handler_config
-            ];
-        }
-        
-        // General tool (available to all AI steps)
-        $tools['my_search'] = [
-            'class' => 'MyExtension\\MySearchTool',
-            'method' => 'handle_tool_call',
-            'description' => 'Search my custom data source',
-            'requires_config' => true,
-            'parameters' => ['query' => ['type' => 'string', 'required' => true]]
-        ];
-        
-        return $tools;
-    }
-    
-    public function check_tool_configuration($is_configured, $tool_id) {
-        if ($tool_id === 'my_search') {
-            $config = apply_filters('dm_get_tool_config', [], $tool_id);
-            return !empty($config['api_key']);
-        }
-        return $is_configured;
-    }
-}
-new MyExtension();
-```
+**Extension Pattern**: WordPress plugin with `dm_handlers`, `ai_tools`, `dm_tool_configured` filters
 
 **Required Interfaces**:
 - **Fetch**: `get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array`
@@ -946,15 +755,7 @@ new MyExtension();
 - **Update**: `handle_tool_call(array $parameters, array $tool_def = []): array` (requires `source_url` from metadata)
 - **Steps**: `execute(array $parameters): array`
 
-**Error Handling**:
-```php
-try {
-    return $this->process_data($data, $job_id);
-} catch (Exception $e) {
-    do_action('dm_log', 'error', $e->getMessage(), ['flow_step_id' => $flow_step_id]);
-    return $data;
-}
-```
+**Error Handling**: Exception logging via `dm_log` action
 
 ## OAuth Integration
 
@@ -974,15 +775,7 @@ $provider_url = apply_filters('dm_oauth_callback', '', 'twitter');
 $providers = apply_filters('dm_auth_providers', []);
 ```
 
-**Configuration Validation**: Tools requiring configuration are automatically validated before enablement:
-```php
-// Tool configuration check (applied in modal rendering and tool selection)
-$tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
-$requires_config = !empty($tool_config['requires_config']);
-
-// Disabled in UI if configuration needed but not provided
-$disabled = $requires_config && !$tool_configured;
-```
+**Configuration Validation**: Auto-validated via `dm_tool_configured` filter, UI disabled if unconfigured
 
 **URLs**: `/dm-oauth/{provider}/` with `manage_options` security - all OAuth operations require admin capabilities
 **Storage**: `dm_auth_data` option per handler

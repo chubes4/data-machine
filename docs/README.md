@@ -35,6 +35,7 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 - [Google Search](ai-tools/google-search.md) - Web search with Custom Search API
 - [Local Search](ai-tools/local-search.md) - WordPress internal search
 - [WebFetch](ai-tools/web-fetch.md) - Web page content retrieval and processing (50K limit)
+- [WordPress Post Reader](ai-tools/wordpress-post-reader.md) - Single WordPress post content retrieval by URL
 
 ### API Reference
 - [**Core Filters**](api-reference/core-filters.md) - All WordPress filters
@@ -74,7 +75,8 @@ docs/
 │   ├── tools-overview.md                # AI tools system architecture
 │   ├── google-search.md                # Web search tool
 │   ├── local-search.md                 # WordPress internal search
-│   └── web-fetch.md                     # Web content retrieval (50K limit)
+│   ├── web-fetch.md                     # Web content retrieval (50K limit)
+│   └── wordpress-post-reader.md         # Single WordPress post content retrieval
 ├── admin-interface/
 │   ├── pipeline-builder.md             # Visual interface
 │   ├── settings-configuration.md       # Configuration options
@@ -91,7 +93,7 @@ docs/
 **Engine Execution**
 - Three-action cycle (run_flow_now → execute_step → schedule_next_step)
 - Action Scheduler integration
-- Data packet processing with clean content (no URL pollution)
+- Explicit data separation architecture with clean AI data packets and structured engine parameters
 - Job management and status tracking
 - Error handling and failure recovery
 - AutoSave system with complete pipeline persistence, flow synchronization, and cache invalidation
@@ -117,8 +119,8 @@ docs/
 - Files - Local and remote file processing
 
 **External Sources**
-- RSS - Feed parsing with deduplication and clean content processing
-- Reddit - OAuth2 subreddit fetching with clean content processing
+- RSS - Feed parsing with deduplication and explicit engine parameter generation
+- Reddit - OAuth2 subreddit fetching with explicit engine parameter generation
 - Google Sheets - OAuth2 spreadsheet data extraction
 - WordPress API - External WordPress sites via REST API
 
@@ -137,7 +139,7 @@ docs/
 ### ✅ Update Handlers (1 handler)
 
 **Content Modification**
-- WordPress Update - Modify existing posts/pages using source_url
+- WordPress Update - Modify existing posts/pages using source_url from engine parameters
 
 ### ✅ AI Tools (4 general + handler tools)
 

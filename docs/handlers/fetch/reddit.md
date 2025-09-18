@@ -1,6 +1,6 @@
 # Reddit Subreddit Fetch Handler
 
-Fetches posts from Reddit subreddits using OAuth2 authentication with automatic token refresh, content filtering, comment integration, and clean content processing without URL pollution.
+Fetches posts from Reddit subreddits using OAuth2 authentication with automatic token refresh, content filtering, comment integration, and explicit data separation architecture.
 
 ## Authentication
 
@@ -16,7 +16,7 @@ Fetches posts from Reddit subreddits using OAuth2 authentication with automatic 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `subreddit` | string | Yes | Subreddit name (alphanumeric and underscores only) |
-| `sort_by` | string | No | Post sorting: `hot`, `new`, `top`, `rising` (default: `hot`) |
+| `sort_by` | string | No | Post sorting: `hot`, `new`, `top`, `rising`, `controversial` (default: `hot`) |
 | `timeframe_limit` | string | No | Filter by age: `all_time`, `24_hours`, `72_hours`, `7_days`, `30_days` |
 | `min_upvotes` | integer | No | Minimum upvote threshold (default: 0) |
 | `min_comment_count` | integer | No | Minimum comment count threshold (default: 0) |
@@ -57,6 +57,12 @@ $handler_config = [
 
 **Deduplication**: Uses Reddit post ID for tracking previously processed items.
 
+## Recent Improvements
+
+**Controversial Post Support**: Added `controversial` as a supported sort option for enhanced content discovery.
+
+**Enhanced Timeframe Handling**: When 72-hour timeframe is selected, the handler automatically fetches 7-day content to ensure sufficient post availability while maintaining the 72-hour filter for content processing.
+
 ## Content Format
 
 **Post Content**:
@@ -67,8 +73,6 @@ Title: {post_title}
 
 Content:
 {post_selftext_or_body}
-
-Source URL: {external_url_if_not_self_post}
 
 Top Comments:
 - {author}: {comment_body}
@@ -87,33 +91,46 @@ Top Comments:
 
 ## Output Structure
 
-**DataPacket Content**:
+### Explicit Data Separation Architecture
+
+The Reddit handler generates clean data packets for AI processing and explicit engine parameters for publish/update handlers.
+
+### Clean Data Packet (AI-Visible)
 ```php
 [
     'data' => [
-        'content_string' => '...',     // Formatted post + comments
+        'content_string' => '...',     // Formatted post + comments (no URLs)
         'file_info' => [               // If image detected
-            'url' => 'image_url',
+            'url' => 'stored_image_url',   // Repository URL, not Reddit URL
             'type' => 'mime_type',
             'mime_type' => 'mime_type'
         ]
     ],
     'metadata' => [
         'source_type' => 'reddit',
+        'item_identifier_to_log' => 'reddit_post_id',
         'original_id' => 'reddit_post_id',
-        'source_url' => 'reddit_permalink',
         'original_title' => 'post_title',
-        'original_date_gmt' => 'iso_timestamp',
-        'subreddit' => 'subreddit_name',
-        'upvotes' => 'score',
-        'comment_count' => 'num_comments',
-        'author' => 'username',
-        'is_self_post' => true/false,
-        'external_url' => 'link_if_not_self',
-        'image_source_url' => 'image_url_if_detected',
-        'raw_reddit_data' => {...}     // Complete Reddit API response
+        'original_date_gmt' => 'iso_timestamp'
+        // URLs removed from AI-visible metadata
     ]
 ]
+```
+
+### Engine Parameters (Handler-Visible)
+```php
+$engine_parameters = [
+    'source_url' => 'https://reddit.com/r/subreddit/comments/postid/',  // For Update handlers
+    'image_url' => 'https://stored-image-url.com/image.jpg'              // For media handling
+];
+```
+
+### Return Structure
+```php
+return [
+    'processed_items' => [$clean_data_packet],
+    'engine_parameters' => $engine_parameters
+];
 ```
 
 ## Error Handling
