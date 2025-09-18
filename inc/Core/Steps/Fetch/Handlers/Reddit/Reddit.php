@@ -80,13 +80,14 @@ class Reddit {
 
 
 	/**
-	 * Fetch Reddit content with explicit data/parameter separation.
-	 * Returns clean content for AI consumption and separate engine parameters for handlers.
+	 * Fetch Reddit content with clean data for AI processing.
+	 * Returns processed items while storing engine data (source_url, image_url) in database.
 	 *
 	 * @param int $pipeline_id Pipeline ID for logging context.
 	 * @param array $handler_config Handler configuration including subreddit, filters, flow_step_id.
 	 * @param string|null $job_id Job ID for deduplication tracking.
-	 * @return array Array with 'processed_items' (clean data) and 'engine_parameters' (source_url, image_url).
+	 * @return array Array with 'processed_items' containing clean data for AI processing.
+	 *               Engine parameters (source_url, image_url) are stored in database via store_engine_data().
 	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 

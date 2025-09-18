@@ -93,7 +93,7 @@ docs/
 **Engine Execution**
 - Three-action cycle (run_flow_now → execute_step → schedule_next_step)
 - Action Scheduler integration
-- Explicit data separation architecture with clean AI data packets and structured engine parameters
+- Database storage + filter injection architecture with clean AI data packets and structured engine parameters
 - Job management and status tracking
 - Error handling and failure recovery
 - AutoSave system with complete pipeline persistence, flow synchronization, and cache invalidation
@@ -119,8 +119,8 @@ docs/
 - Files - Local and remote file processing
 
 **External Sources**
-- RSS - Feed parsing with deduplication and explicit engine parameter generation
-- Reddit - OAuth2 subreddit fetching with explicit engine parameter generation
+- RSS - Feed parsing with deduplication and database storage of engine parameters
+- Reddit - OAuth2 subreddit fetching with database storage of engine parameters
 - Google Sheets - OAuth2 spreadsheet data extraction
 - WordPress API - External WordPress sites via REST API
 

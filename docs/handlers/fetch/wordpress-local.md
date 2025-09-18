@@ -51,9 +51,9 @@ Retrieves WordPress post and page content from the local installation using WP_Q
 
 ## Data Output
 
-### Explicit Data Separation Architecture
+### Database Storage + Filter Injection Architecture
 
-The WordPress Local handler generates clean data packets for AI processing and explicit engine parameters for publish/update handlers.
+The WordPress Local handler generates clean data packets for AI processing while storing engine parameters in database for later injection by Engine.php.
 
 ### Clean Data Packet (AI-Visible)
 
@@ -74,21 +74,23 @@ The WordPress Local handler generates clean data packets for AI processing and e
 ]
 ```
 
-### Engine Parameters (Handler-Visible)
+### Engine Parameters Storage
 
 ```php
-$engine_parameters = [
+// Stored in database via JobsOperations::store_engine_data()
+$engine_data = [
     'source_url' => 'https://site.com/post-slug/',     // For Update handlers
     'image_url' => 'https://site.com/image.jpg'        // For media handling
 ];
+$db_jobs->store_engine_data($job_id, $engine_data);
 ```
 
 ### Return Structure
 
 ```php
 return [
-    'processed_items' => [$clean_data_packet],
-    'engine_parameters' => $engine_parameters
+    'processed_items' => [$clean_data_packet]
+    // Engine parameters stored separately in database
 ];
 ```
 

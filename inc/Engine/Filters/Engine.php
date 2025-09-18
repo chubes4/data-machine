@@ -31,13 +31,13 @@ function dm_register_engine_filters() {
     /**
      * Centralized Engine Data Parameter Injection
      *
-     * Single filter-based parameter injection system that reads engine_data from database
-     * and injects URLs and engine-specific parameters for discovery pattern.
+     * Database retrieval and parameter injection system that reads engine_data from database
+     * and injects URLs and engine-specific parameters via dm_engine_parameters filter.
      *
      * DATA PACKET = AI (clean metadata, no URLs)
      * ENGINE_DATA = ENGINE (source_url, image_url for handlers)
      *
-     * Discovery Pattern: Inject URLs from engine_data, steps use what they need.
+     * Retrieves stored engine_data from database and injects via dm_engine_parameters filter.
      * Runs at priority 5 to execute before existing handler filters.
      */
     add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {

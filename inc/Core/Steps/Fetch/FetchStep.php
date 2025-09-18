@@ -22,8 +22,6 @@ class FetchStep {
         $data = $parameters['data'] ?? [];
         $flow_step_config = $parameters['flow_step_config'] ?? [];
         try {
- 
-            
             if (empty($flow_step_config)) {
                 do_action('dm_log', 'error', 'Fetch Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);
                 return [];

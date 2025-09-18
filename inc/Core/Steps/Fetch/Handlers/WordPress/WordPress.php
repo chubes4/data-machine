@@ -26,13 +26,14 @@ class WordPress {
 
 
     /**
-     * Fetch WordPress content with explicit data/parameter separation.
-     * Returns clean content for AI consumption and separate engine parameters for handlers.
+     * Fetch WordPress content with clean data for AI processing.
+     * Returns processed items while storing engine data (source_url, image_url) in database.
      *
      * @param int $pipeline_id Pipeline ID for logging context.
      * @param array $handler_config Handler configuration including flow_step_id and WordPress settings.
      * @param string|null $job_id Job ID for deduplication tracking.
-     * @return array Array with 'processed_items' (clean data) and 'engine_parameters' (URLs/metadata).
+     * @return array Array with 'processed_items' containing clean data for AI processing.
+     *               Engine parameters (source_url, image_url) are stored in database via store_engine_data().
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
@@ -67,7 +68,7 @@ class WordPress {
 
     /**
      * Fetch WordPress content using convergence pattern for both URL-specific and query-based access.
-     * Implements explicit data/parameter separation architecture.
+     * Processes WordPress content with clean data for AI consumption.
      *
      * @param int $pipeline_id Pipeline ID for logging context.
      * @param array $config WordPress-specific configuration (post_type, status, timeframe, etc.).
@@ -75,7 +76,7 @@ class WordPress {
      * @param string|null $flow_step_id Flow step ID for deduplication tracking.
      * @param string|null $job_id Job ID for processed items tracking.
      * @param array $handler_config Complete handler configuration for engine parameter generation.
-     * @return array Array with 'processed_items' and 'engine_parameters' separation.
+     * @return array Array with 'processed_items' containing clean data for AI processing.
      */
     private function fetch_local_data(int $pipeline_id, array $config, int $user_id, ?string $flow_step_id = null, ?string $job_id = null, array $handler_config = []): array {
         $source_url = sanitize_url($config['source_url'] ?? '');
@@ -188,13 +189,14 @@ class WordPress {
     /**
      * Convergence method for single post processing with explicit parameter generation.
      * Eliminates code duplication between URL-specific and query-based fetching paths.
-     * Generates clean content for AI and separate engine parameters for publish/update handlers.
+     * Generates clean content for AI while storing engine data in database.
      *
      * @param int $post_id WordPress post ID to process.
      * @param string|null $flow_step_id Flow step ID for deduplication tracking.
      * @param string|null $job_id Job ID for processed items tracking.
      * @param array $handler_config Handler configuration for engine parameter generation.
-     * @return array Explicit separation: processed_items (clean) + engine_parameters (source_url, image_url).
+     * @return array Array with 'processed_items' containing clean data for AI processing.
+     *               Engine parameters (source_url, image_url) are stored in database via store_engine_data().
      */
     private function process_single_post(int $post_id, ?string $flow_step_id, ?string $job_id, array $handler_config): array {
         // Get the post

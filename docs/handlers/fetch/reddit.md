@@ -1,6 +1,6 @@
 # Reddit Subreddit Fetch Handler
 
-Fetches posts from Reddit subreddits using OAuth2 authentication with automatic token refresh, content filtering, comment integration, and explicit data separation architecture.
+Fetches posts from Reddit subreddits using OAuth2 authentication with automatic token refresh, content filtering, comment integration, and database storage + filter injection architecture.
 
 ## Authentication
 
@@ -91,9 +91,9 @@ Top Comments:
 
 ## Output Structure
 
-### Explicit Data Separation Architecture
+### Database Storage + Filter Injection Architecture
 
-The Reddit handler generates clean data packets for AI processing and explicit engine parameters for publish/update handlers.
+The Reddit handler generates clean data packets for AI processing while storing engine parameters in database for later injection by Engine.php.
 
 ### Clean Data Packet (AI-Visible)
 ```php

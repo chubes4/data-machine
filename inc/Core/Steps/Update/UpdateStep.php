@@ -67,7 +67,6 @@ class UpdateStep {
                 return $data;
             }
 
-
             // Check if AI already executed the tool for this handler
             $tool_result_entry = $this->find_tool_result_for_handler($data, $handler_slug);
             if ($tool_result_entry) {

@@ -518,7 +518,7 @@ apply_filters('dm_apply_global_defaults', $current_settings, $handler_slug, $ste
 
 ## Parameter Systems
 
-**Simplified Two-Parameter Architecture**:
+**Hybrid Database + Filter Injection Architecture**:
 
 ### 1. Core Parameters (Always Static)
 Core parameters are always the same and passed to ALL steps:
@@ -531,8 +531,8 @@ $core_parameters = [
 ];
 ```
 
-### 2. Explicit Engine Parameter Generation
-Fetch handlers generate `source_url`, `image_url` via `dm_engine_parameters` filter
+### 2. Engine Parameter Database Storage + Filter Injection
+Fetch handlers store `source_url`, `image_url` in database; Engine.php retrieves and injects via `dm_engine_parameters` filter
 
 
 
@@ -561,7 +561,7 @@ class MyStep {
     }
 }
 
-// Fetch Handler with Explicit Parameter Generation
+// Fetch Handler with Database Storage
 class MyFetchHandler {
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         // Extract flow_step_id from handler config
@@ -585,16 +585,19 @@ class MyFetchHandler {
             ]
         ];
 
-        // Generate explicit engine parameters for publish/update handlers
-        $engine_parameters = apply_filters('dm_engine_parameters', [
-            'source_url' => $source_url,
-            'image_url' => $image_url,
-        ], [$clean_data], $handler_config, 'fetch', $flow_step_id);
+        // Store engine parameters in database for later injection by Engine.php
+        if ($job_id) {
+            $all_databases = apply_filters('dm_db', []);
+            $db_jobs = $all_databases['jobs'] ?? null;
+            if ($db_jobs) {
+                $db_jobs->store_engine_data($job_id, [
+                    'source_url' => $source_url,
+                    'image_url' => $image_url,
+                ]);
+            }
+        }
 
-        return [
-            'processed_items' => [$clean_data],
-            'engine_parameters' => $engine_parameters
-        ];
+        return ['processed_items' => [$clean_data]];
     }
 }
 
@@ -602,7 +605,7 @@ class MyFetchHandler {
 class MyPublishHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         $handler_config = $tool_def['handler_config'] ?? [];
-        // For Update handlers: $parameters['source_url'] required from engine
+        // For Update handlers: $parameters['source_url'] required from database storage + Engine.php injection
         return ['success' => true, 'data' => ['id' => $id, 'url' => $url]];
     }
 }
@@ -674,11 +677,11 @@ apply_filters('dm_create_step', null, ['step_type' => 'ai', 'pipeline_id' => $pi
 apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' => $pipeline_id]);
 ```
 
-> **Critical**: Update steps require `source_url` from engine parameters to identify target content. All fetch handlers now provide this via explicit engine parameter generation. AI agents discover handler tools for immediate next step only.
+> **Critical**: Update steps require `source_url` from engine parameters to identify target content. All fetch handlers store this data in database via store_engine_data() for later retrieval and injection by Engine.php. AI agents discover handler tools for immediate next step only.
 
 ## Handler-Specific Engine Parameters
 
-**Explicit Parameter Generation**: Each fetch handler generates specific engine parameters for downstream handlers:
+**Database Storage + Filter Injection**: Each fetch handler stores specific engine parameters in database for downstream handlers:
 
 - **Reddit**: `source_url` (Reddit post URL), `image_url` (stored image URL)
 - **WordPress Local**: `source_url` (permalink), `image_url` (featured image URL)

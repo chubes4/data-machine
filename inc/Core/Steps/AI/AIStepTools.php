@@ -245,8 +245,7 @@ class AIStepTools {
                 $unified_parameters, 
                 $tool_def
             );
-            
-            
+
             $class_name = $tool_def['class'];
             if (!class_exists($class_name)) {
                 return [
