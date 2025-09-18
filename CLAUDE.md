@@ -162,22 +162,20 @@ wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, proc
 
 ### AI Request Priority System
 
-**6-Tier AI Directive Priority System**: AI requests receive multiple system messages via auto-registering directive classes:
+**5-Tier AI Directive Priority System**: AI requests receive multiple system messages via auto-registering directive classes:
 
-1. **Priority 5 - Plugin Core Directive** (`PluginCoreDirective`): Foundational AI agent identity and core behavioral principles
-2. **Priority 10 - Global System Prompt** (`GlobalSystemPromptDirective`): User-configured foundational AI behavior
-3. **Priority 20 - Pipeline System Prompt** (`PipelineSystemPromptDirective`): Pipeline instructions and workflow visualization
-4. **Priority 30 - Tool Definitions** (`ToolDefinitionsDirective`): Dynamic tool prompts and workflow context
-5. **Priority 40 - Data Packet Structure** (`DataPacketStructureDirective`): JSON structure explanation for AI agents
-6. **Priority 50 - WordPress Site Context** (`SiteContextDirective`): WordPress environment info (toggleable)
+1. **Priority 10 - Plugin Core Directive** (`PluginCoreDirective`): Foundational AI agent identity and core behavioral principles
+2. **Priority 20 - Global System Prompt** (`GlobalSystemPromptDirective`): User-configured foundational AI behavior
+3. **Priority 30 - Pipeline System Prompt** (`PipelineSystemPromptDirective`): Pipeline instructions and workflow visualization
+4. **Priority 40 - Tool Definitions** (`ToolDefinitionsDirective`): Dynamic tool prompts and workflow context
+5. **Priority 50 - WordPress Site Context** (`SiteContextDirective`): WordPress environment info (toggleable)
 
 ```php
 // Auto-registering directive classes with standardized priority spacing
-add_filter('ai_request', [PluginCoreDirective::class, 'inject'], 5, 5);
-add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 10, 5);
-add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 20, 5);
-add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 30, 5);
-add_filter('ai_request', [DataPacketStructureDirective::class, 'inject'], 40, 5);
+add_filter('ai_request', [PluginCoreDirective::class, 'inject'], 10, 5);
+add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 20, 5);
+add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 30, 5);
+add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 40, 5);
 add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
 ```
 

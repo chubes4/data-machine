@@ -1,18 +1,17 @@
 <?php
 /**
- * Pipeline System Prompt Directive - Priority 20
+ * Pipeline System Prompt Directive - Priority 30
  *
  * Injects user-configured task instructions specific to the current pipeline
- * as the third directive in the 6-tier AI directive system. Contains clean
+ * as the third directive in the 5-tier AI directive system. Contains clean
  * user instructions that define what the AI should accomplish for this workflow.
  *
- * Priority Order in 6-Tier System:
- * 1. Priority 5 - Plugin Core Directive
- * 2. Priority 10 - Global System Prompt
- * 3. Priority 20 - Pipeline System Prompt (THIS CLASS)
- * 4. Priority 30 - Tool Definitions and Workflow Context
- * 5. Priority 40 - Data Packet Structure
- * 6. Priority 50 - WordPress Site Context
+ * Priority Order in 5-Tier System:
+ * 1. Priority 10 - Plugin Core Directive
+ * 2. Priority 20 - Global System Prompt
+ * 3. Priority 30 - Pipeline System Prompt (THIS CLASS)
+ * 4. Priority 40 - Tool Definitions and Workflow Context
+ * 5. Priority 50 - WordPress Site Context
  */
 
 namespace DataMachine\Core\Steps\AI\Directives;
@@ -83,5 +82,5 @@ class PipelineSystemPromptDirective {
     }
 }
 
-// Self-register (Priority 20 = third in 6-tier directive system)
-add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 20, 5);
+// Self-register (Priority 30 = third in 5-tier directive system)
+add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 30, 5);

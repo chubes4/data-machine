@@ -1,18 +1,17 @@
 <?php
 /**
- * Tool Definitions Directive - Priority 30
+ * Tool Definitions Directive - Priority 40
  *
  * Injects available tools list, workflow context, and task completion guidance
- * as the fourth directive in the 6-tier AI directive system. Provides complete
+ * as the fourth directive in the 5-tier AI directive system. Provides complete
  * pipeline workflow context and tool orchestration instructions.
  *
- * Priority Order in 6-Tier System:
- * 1. Priority 5 - Plugin Core Directive
- * 2. Priority 10 - Global System Prompt
- * 3. Priority 20 - Pipeline System Prompt
- * 4. Priority 30 - Tool Definitions and Workflow Context (THIS CLASS)
- * 5. Priority 40 - Data Packet Structure
- * 6. Priority 50 - WordPress Site Context
+ * Priority Order in 5-Tier System:
+ * 1. Priority 10 - Plugin Core Directive
+ * 2. Priority 20 - Global System Prompt
+ * 3. Priority 30 - Pipeline System Prompt
+ * 4. Priority 40 - Tool Definitions and Workflow Context (THIS CLASS)
+ * 5. Priority 50 - WordPress Site Context
  */
 
 namespace DataMachine\Core\Steps\AI\Directives;
@@ -412,5 +411,5 @@ class ToolDefinitionsDirective {
     }
 }
 
-// Self-register (Priority 30 = fourth in 6-tier directive system)
-add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 30, 5);
+// Self-register (Priority 40 = fourth in 5-tier directive system)
+add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 40, 5);

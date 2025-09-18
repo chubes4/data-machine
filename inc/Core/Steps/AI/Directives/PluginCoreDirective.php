@@ -1,18 +1,17 @@
 <?php
 /**
- * Plugin Core Directive - Priority 5 (Highest Priority)
+ * Plugin Core Directive - Priority 10 (Highest Priority)
  *
  * Establishes foundational AI agent identity and core behavioral principles
- * as the first directive in the 6-tier AI directive system. Defines the
+ * as the first directive in the 5-tier AI directive system. Defines the
  * fundamental role and operational framework before any user configuration.
  *
- * Priority Order in 6-Tier System:
- * 1. Priority 5 - Plugin Core Directive (THIS CLASS)
- * 2. Priority 10 - Global System Prompt
- * 3. Priority 20 - Pipeline System Prompt
- * 4. Priority 30 - Tool Definitions and Workflow Context
- * 5. Priority 40 - Data Packet Structure
- * 6. Priority 50 - WordPress Site Context
+ * Priority Order in 5-Tier System:
+ * 1. Priority 10 - Plugin Core Directive (THIS CLASS)
+ * 2. Priority 20 - Global System Prompt
+ * 3. Priority 30 - Pipeline System Prompt
+ * 4. Priority 40 - Tool Definitions and Workflow Context
+ * 5. Priority 50 - WordPress Site Context
  */
 
 namespace DataMachine\Core\Steps\AI\Directives;
@@ -80,5 +79,5 @@ class PluginCoreDirective {
     }
 }
 
-// Self-register (Priority 5 = highest priority in 6-tier directive system)
-add_filter('ai_request', [PluginCoreDirective::class, 'inject'], 5, 5);
+// Self-register (Priority 10 = highest priority in 5-tier directive system)
+add_filter('ai_request', [PluginCoreDirective::class, 'inject'], 10, 5);
