@@ -65,7 +65,12 @@ Row: {row_number}
 
 ## Output Structure
 
-**DataPacket Content**:
+### Database Storage + Filter Injection Architecture
+
+The Google Sheets fetch handler generates clean data packets for AI processing while storing empty engine parameters in database (spreadsheet data has no URLs).
+
+### Clean Data Packet (AI-Visible)
+
 ```php
 [
     'data' => [
@@ -75,7 +80,6 @@ Row: {row_number}
     'metadata' => [
         'source_type' => 'googlesheets_fetch',
         'original_id' => 'unique_row_identifier',
-        'source_url' => 'https://docs.google.com/spreadsheets/d/{id}/edit',
         'spreadsheet_id' => 'spreadsheet_id',
         'worksheet_name' => 'worksheet_name',
         'row_number' => 'row_index',
@@ -84,8 +88,29 @@ Row: {row_number}
         },
         'headers' => ['col1', 'col2'], // Column headers if present
         'original_date_gmt' => 'current_timestamp'
+        // URLs removed from AI-visible metadata
     ]
 ]
+```
+
+### Engine Parameters Storage
+
+```php
+// Stored in database via JobsOperations::store_engine_data()
+$engine_data = [
+    'source_url' => '',    // Empty for spreadsheet data
+    'image_url' => ''      // Empty for spreadsheet data
+];
+$db_jobs->store_engine_data($job_id, $engine_data);
+```
+
+### Return Structure
+
+```php
+return [
+    'processed_items' => [$clean_data_packet]
+    // Engine parameters stored separately in database
+];
 ```
 
 ## Cell Range Validation

@@ -1,6 +1,6 @@
 <?php
 /**
- * WordPress local search tool for AI context gathering
+ * WordPress Local Search AI Tool - Site content discovery for AI agents
  */
 
 namespace DataMachine\Core\Steps\AI\Tools;
@@ -18,7 +18,7 @@ class LocalSearch {
     }
 
     /**
-     * Register configuration filters for self-registration
+     * Register tool via filters for self-discovery.
      */
     private function register_configuration() {
         add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
@@ -26,7 +26,7 @@ class LocalSearch {
     }
 
     /**
-     * Execute local WordPress search.
+     * Execute WordPress search with structured results.
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         
@@ -145,14 +145,14 @@ class LocalSearch {
     }
 
     /**
-     * Check if Local Search tool is available.
+     * Check tool availability (always true).
      */
     public static function is_configured(): bool {
         return true;
     }
 
     /**
-     * Filter handler for dm_tool_configured
+     * Handle dm_tool_configured filter.
      */
     public function check_configuration($configured, $tool_id) {
         if ($tool_id !== 'local_search') {
@@ -163,7 +163,7 @@ class LocalSearch {
     }
     
     /**
-     * Get available post types for search.
+     * Get searchable post types.
      */
     public static function get_searchable_post_types(): array {
         $post_types = get_post_types([
@@ -175,7 +175,7 @@ class LocalSearch {
     }
     
     /**
-     * Format success message for local search results.
+     * Format tool success message.
      */
     public function format_success_message($message, $tool_name, $tool_result, $tool_parameters) {
         if ($tool_name !== 'local_search') {

@@ -39,6 +39,8 @@ class PublishStep {
         $flow_step_config = $parameters['flow_step_config'] ?? [];
         
         try {
+            do_action('dm_log', 'debug', 'Publish Step: Starting data publishing', ['flow_step_id' => $flow_step_id]);
+
             // Use step configuration directly - no job config introspection needed
             if (empty($flow_step_config)) {
                 do_action('dm_log', 'error', 'Publish Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);

@@ -50,6 +50,7 @@ class Cache {
         $instance = new self();
 
         add_action('dm_clear_flow_cache', [$instance, 'handle_clear_flow_cache'], 10, 1);
+        add_action('dm_clear_flow_step_cache', [$instance, 'clear_flow_step_cache'], 10, 1);
         add_action('dm_clear_pipeline_cache', [$instance, 'handle_clear_pipeline_cache'], 10, 1);
         add_action('dm_clear_pipelines_list_cache', [$instance, 'handle_clear_pipelines_list_cache'], 10, 0);
         add_action('dm_clear_jobs_cache', [$instance, 'handle_clear_jobs_cache'], 10, 0);
@@ -85,12 +86,21 @@ class Cache {
         $db_flows = $all_databases['flows'] ?? null;
 
         if ($db_flows) {
+            // Get flow data FIRST before clearing any caches to avoid recursion
             $flow = $db_flows->get_flow($flow_id);
             $pipeline_id = $flow['pipeline_id'] ?? null;
+            $flow_config = $flow['flow_config'] ?? [];
 
+            // Clear main flow caches
             delete_transient(self::FLOW_CONFIG_CACHE_KEY . $flow_id);
             delete_transient(self::FLOW_SCHEDULING_CACHE_KEY . $flow_id);
 
+            // Clear flow step caches for all steps in this flow using pre-retrieved data
+            foreach ($flow_config as $flow_step_id => $step_config) {
+                $this->clear_flow_step_cache($flow_step_id);
+            }
+
+            // Clear pipeline-related caches if we have a pipeline_id
             if ($pipeline_id) {
                 delete_transient(self::PIPELINE_FLOWS_CACHE_KEY . $pipeline_id);
                 delete_transient(self::MAX_DISPLAY_ORDER_CACHE_KEY . $pipeline_id);

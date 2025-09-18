@@ -1,13 +1,8 @@
 <?php
 /**
- * Twitter Publishing Handler - OAuth 1.0a integration with media upload support.
+ * Twitter Publishing Handler - OAuth 1.0a with AI tool_call interface
  *
- * Features:
- * - 280-character limit with smart truncation
- * - Media upload (images via v1.1 API)
- * - URL handling (append/reply modes)
- * - Chunked upload for large images
- * - X API v2 for tweet posting
+ * Features: 280-character limit, media upload, URL handling, X API v2 posting
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
@@ -31,7 +26,7 @@ class Twitter {
     }
 
     /**
-     * Handle AI tool call for Twitter publishing.
+     * Handle AI tool call for Twitter publishing with media support.
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
 
@@ -395,7 +390,6 @@ class Twitter {
      * Chunked upload for large files (INIT→APPEND→FINALIZE)
      */
     private function upload_image_chunked($connection, string $temp_image_path, string $mime_type): ?string {
-
         try {
             $file_size = filesize($temp_image_path);
             
@@ -484,9 +478,6 @@ class Twitter {
                 $offset += $chunk_size;
                 $segment_index++;
             }
-            do_action('dm_log', 'debug', 'Twitter: All chunks uploaded successfully.', [
-                'total_segments' => $segment_index
-            ]);
 
             do_action('dm_log', 'debug', 'Twitter: Chunked upload FINALIZE phase.', [
                 'media_id' => $media_id
@@ -521,9 +512,6 @@ class Twitter {
                 }
             }
 
-            do_action('dm_log', 'debug', 'Twitter: Chunked upload completed successfully.', [
-                'media_id' => $finalize_response->media_id_string
-            ]);
 
             return $finalize_response->media_id_string;
 

@@ -1,17 +1,13 @@
 <?php
 /**
- * Google Sheets Fetch Handler
+ * Google Sheets Fetch Handler - OAuth2-authenticated spreadsheet data retrieval
  *
- * Reads data from Google Sheets for the Data Machine pipeline.
- * This handler is responsible for fetching data from Google spreadsheets,
- * parsing the data, and converting it into standardized DataPackets for processing.
+ * Retrieves clean structured data from Google Sheets without URL pollution.
+ * Engine parameters stored in database for later injection by Engine.php.
  *
- * Reuses the existing Google Sheets OAuth infrastructure from the publish handler
- * to provide seamless bi-directional Google Sheets integration.
- *
- * @package    Data_Machine
+ * @package DataMachine
  * @subpackage Core\Steps\Fetch\Handlers\GoogleSheets
- * @since      NEXT_VERSION
+ * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
@@ -23,25 +19,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class GoogleSheetsFetch {
 
-    /**
-     * Parameter-less constructor for pure filter-based architecture.
-     */
     public function __construct() {
-        // No parameters needed - all services accessed via filters
+        // Filter-based service discovery only
     }
 
 
     /**
-     * Fetches and prepares fetch data packets from a Google Sheets spreadsheet.
+     * Fetch Google Sheets data with clean content for AI processing.
+     * Returns structured data while storing empty engine parameters in database.
      *
-     * @param int $pipeline_id The pipeline ID for this execution context.
-     * @param array  $handler_config Decoded handler configuration specific to this handler.
-     * @param string|null $job_id The job ID for processed items tracking.
-     * @return array Array containing 'processed_items' key with standardized data packets for sheet rows.
-     * @throws Exception If data cannot be retrieved or is invalid.
+     * @param int $pipeline_id Pipeline ID for logging context
+     * @param array $handler_config Handler configuration with flow_step_id and sheet settings
+     * @param string|null $job_id Job ID for deduplication tracking
+     * @return array Array with 'processed_items' containing clean structured data.
+     *               Empty engine parameters stored in database (no URLs for spreadsheet data).
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
-
         if (empty($pipeline_id)) {
             do_action('dm_log', 'error', 'Google Sheets Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
@@ -168,7 +161,7 @@ class GoogleSheetsFetch {
     }
 
     /**
-     * Process entire spreadsheet at once
+     * Process entire spreadsheet as single data packet.
      */
     private function process_full_spreadsheet($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id) {
         $sheet_identifier = $spreadsheet_id . '_' . $worksheet_name . '_full';
@@ -228,25 +221,28 @@ class GoogleSheetsFetch {
             'metadata' => $metadata
         ];
 
-        // Generate explicit engine parameters for publish/update handlers (no URLs for spreadsheet data)
-        $engine_parameters = apply_filters('dm_engine_parameters', [
-            'source_url' => '', // No meaningful source URL for spreadsheet data
-            'image_url' => '',   // No images in spreadsheet context
-        ], [$fetch_data], $handler_config, 'fetch', $flow_step_id);
+        // Store empty engine parameters for downstream handlers
+        if ($job_id) {
+            $all_databases = apply_filters('dm_db', []);
+            $db_jobs = $all_databases['jobs'] ?? null;
+            if ($db_jobs) {
+                $db_jobs->store_engine_data($job_id, [
+                    'source_url' => '',
+                    'image_url' => ''
+                ]);
+            }
+        }
 
         do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed full spreadsheet.', [
             'total_rows' => count($all_data),
             'pipeline_id' => $pipeline_id
         ]);
 
-        return [
-            'processed_items' => [$fetch_data],
-            'engine_parameters' => $engine_parameters
-        ];
+        return ['processed_items' => [$fetch_data]];
     }
 
     /**
-     * Process one row at a time
+     * Process spreadsheet rows individually with deduplication.
      */
     private function process_by_row($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id) {
         // Find next unprocessed row
@@ -303,21 +299,24 @@ class GoogleSheetsFetch {
                 'metadata' => $metadata
             ];
             
-            // Generate explicit engine parameters for publish/update handlers (no URLs for spreadsheet data)
-            $engine_parameters = apply_filters('dm_engine_parameters', [
-                'source_url' => '', // No meaningful source URL for spreadsheet data
-                'image_url' => '',   // No images in spreadsheet context
-            ], [$fetch_data], $handler_config, 'fetch', $flow_step_id);
+            // Store empty engine parameters for downstream handlers
+            if ($job_id) {
+                $all_databases = apply_filters('dm_db', []);
+                $db_jobs = $all_databases['jobs'] ?? null;
+                if ($db_jobs) {
+                    $db_jobs->store_engine_data($job_id, [
+                        'source_url' => '',
+                        'image_url' => ''
+                    ]);
+                }
+            }
 
             do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed row.', [
                 'row_number' => $i + 1,
                 'pipeline_id' => $pipeline_id
             ]);
 
-            return [
-                'processed_items' => [$fetch_data],
-                'engine_parameters' => $engine_parameters
-            ];
+            return ['processed_items' => [$fetch_data]];
         }
 
         // No unprocessed rows found
@@ -326,7 +325,7 @@ class GoogleSheetsFetch {
     }
 
     /**
-     * Process one column at a time
+     * Process spreadsheet columns individually with deduplication.
      */
     private function process_by_column($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id) {
         if (empty($rows)) {
@@ -389,21 +388,14 @@ class GoogleSheetsFetch {
                 'metadata' => $metadata
             ];
 
-            // Store URLs in engine_data for centralized parameter injection (no URLs for spreadsheet data)
+            // Store empty engine parameters for downstream handlers
             if ($job_id) {
-                $engine_data = [
-                    'source_url' => '', // No meaningful source URL for spreadsheet data
-                    'image_url' => ''   // No images in spreadsheet context
-                ];
-
-                // Store engine_data via database service
                 $all_databases = apply_filters('dm_db', []);
                 $db_jobs = $all_databases['jobs'] ?? null;
                 if ($db_jobs) {
-                    $db_jobs->store_engine_data($job_id, $engine_data);
-                    do_action('dm_log', 'debug', 'Google Sheets: Stored empty URLs in engine_data', [
-                        'job_id' => $job_id,
-                        'column_header' => $column_header
+                    $db_jobs->store_engine_data($job_id, [
+                        'source_url' => '',
+                        'image_url' => ''
                     ]);
                 }
             }
@@ -425,10 +417,10 @@ class GoogleSheetsFetch {
     }
 
     /**
-     * Sanitize settings for the Google Sheets fetch handler.
+     * Sanitize Google Sheets fetch configuration.
      *
-     * @param array $raw_settings Raw settings array.
-     * @return array Sanitized settings.
+     * @param array $raw_settings Raw configuration array
+     * @return array Sanitized configuration
      */
     public function sanitize_settings(array $raw_settings): array {
         $sanitized = [];
@@ -455,9 +447,9 @@ class GoogleSheetsFetch {
     }
 
     /**
-     * Get the user-friendly label for this handler.
+     * Get handler display label.
      *
-     * @return string Handler label.
+     * @return string Handler label
      */
     public static function get_label(): string {
         return __('Google Sheets Fetch', 'data-machine');

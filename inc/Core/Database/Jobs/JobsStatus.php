@@ -63,6 +63,12 @@ class JobsStatus {
             ['%s'], // Format for data
             ['%d']  // Format for WHERE
         );
+
+        // Clear job-related caches after starting job
+        if ($updated !== false) {
+            do_action('dm_clear_jobs_cache');
+        }
+
         return $updated !== false;
     }
 
@@ -124,6 +130,9 @@ class JobsStatus {
             }
         }
 
+        // Clear job-related caches after completing job
+        do_action('dm_clear_jobs_cache');
+
         return true;
     }
 
@@ -151,7 +160,12 @@ class JobsStatus {
             $format,
             ['%d']
         );
-        
+
+        // Clear job-related caches after status update
+        if ($updated !== false) {
+            do_action('dm_clear_jobs_cache');
+        }
+
         return $updated !== false;
     }
 

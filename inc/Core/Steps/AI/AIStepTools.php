@@ -33,13 +33,13 @@ class AIStepTools {
     public function get_global_enabled_tools(): array {
         $all_tools = apply_filters('ai_tools', []);
         $general_tools = [];
-        
+
         foreach ($all_tools as $tool_name => $tool_config) {
             if (!isset($tool_config['handler'])) {
                 $general_tools[$tool_name] = $tool_config;
             }
         }
-        
+
         return $general_tools;
     }
     

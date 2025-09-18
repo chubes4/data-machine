@@ -350,20 +350,46 @@ class WordPress {
     }
 
     /**
-     * Sanitize block content using WordPress native functions.
+     * Sanitize block content using WordPress native functions with block-aware processing.
+     * Processes individual blocks to prevent corruption of malformed AI-generated block structures.
      *
      * @param string $content Raw content from AI
      * @return string Clean, validated block content
      */
     private function sanitize_block_content(string $content): string {
-        // First pass: standard WordPress sanitization
-        $content = wp_kses_post($content);
-
-        // Second pass: WordPress native block validation and cleanup
+        // Parse blocks first to maintain structure integrity
         $blocks = parse_blocks($content);
-        $content = serialize_blocks($blocks);
 
-        return $content;
+        // Process each block while preserving block structure
+        $filtered_blocks = array_map(function($block) {
+            // Only sanitize the innerHTML content, not the block structure
+            if (isset($block['innerHTML']) && !empty($block['innerHTML'])) {
+                $block['innerHTML'] = wp_kses($block['innerHTML'], dm_allowed_html());
+            }
+            // Recursively process inner blocks if they exist
+            if (isset($block['innerBlocks']) && is_array($block['innerBlocks'])) {
+                $block['innerBlocks'] = array_map([$this, 'sanitizeBlock'], $block['innerBlocks']);
+            }
+            return $block;
+        }, $blocks);
+
+        return serialize_blocks($filtered_blocks);
+    }
+
+    /**
+     * Helper method for recursive block sanitization.
+     *
+     * @param array $block Block data to sanitize
+     * @return array Sanitized block data
+     */
+    private function sanitizeBlock($block) {
+        if (isset($block['innerHTML']) && !empty($block['innerHTML'])) {
+            $block['innerHTML'] = wp_kses($block['innerHTML'], dm_allowed_html());
+        }
+        if (isset($block['innerBlocks']) && is_array($block['innerBlocks'])) {
+            $block['innerBlocks'] = array_map([$this, 'sanitizeBlock'], $block['innerBlocks']);
+        }
+        return $block;
     }
 }
 

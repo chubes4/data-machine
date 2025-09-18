@@ -176,14 +176,28 @@ class WordPress {
     }
 
     /**
-     * Sanitize and validate Gutenberg block content.
+     * Sanitize and validate Gutenberg block content using WordPress core block filtering.
+     * Processes individual blocks to prevent corruption of block delimiters.
      */
     private function sanitize_block_content(string $content): string {
-        $content = wp_kses_post($content);
+        // Parse blocks first to maintain structure integrity
         $blocks = parse_blocks($content);
-        $content = serialize_blocks($blocks);
 
-        return $content;
+        // Apply WordPress core block filtering to each block individually
+        $filtered_blocks = array_map(function($block) {
+            if (function_exists('filter_block_kses')) {
+                // Use WordPress core block filtering function when available
+                return filter_block_kses($block, wp_kses_allowed_html('post'), ['http', 'https']);
+            }
+            // Fallback: apply wp_kses_post only to inner content, preserving block structure
+            if (isset($block['innerHTML']) && !empty($block['innerHTML'])) {
+                $block['innerHTML'] = wp_kses_post($block['innerHTML']);
+            }
+            return $block;
+        }, $blocks);
+
+        // Serialize filtered blocks back to content
+        return serialize_blocks($filtered_blocks);
     }
 }
 

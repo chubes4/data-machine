@@ -72,6 +72,9 @@ class Pipelines {
 			'pipeline_name' => $pipeline_name
 		] );
 
+		// Clear pipelines list cache since a new pipeline was created
+		do_action('dm_clear_pipelines_list_cache');
+
 		return $pipeline_id;
 	}
 
@@ -222,6 +225,9 @@ class Pipelines {
 			'updated_fields' => array_keys( $update_data )
 		] );
 
+		// Clear pipeline cache after successful update to prevent stale data
+		do_action('dm_clear_pipeline_cache', $pipeline_id);
+
 		return true;
 	}
 
@@ -266,6 +272,9 @@ class Pipelines {
 			'pipeline_id' => $pipeline_id,
 			'pipeline_name' => $pipeline_name
 		] );
+
+		// Clear pipeline cache after successful deletion
+		do_action('dm_clear_pipeline_cache', $pipeline_id);
 
 		return true;
 	}

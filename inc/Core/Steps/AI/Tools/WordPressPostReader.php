@@ -17,7 +17,7 @@ class WordPressPostReader {
     }
 
     /**
-     * Register configuration filters for self-registration
+     * Register tool via filters for self-discovery.
      */
     private function register_configuration() {
         add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
@@ -25,7 +25,7 @@ class WordPressPostReader {
     }
 
     /**
-     * Handle AI tool call to read WordPress post content.
+     * Read WordPress post content from URL.
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
 

@@ -117,7 +117,10 @@ class Flows {
             'pipeline_id' => $flow_data['pipeline_id'],
             'flow_name' => $flow_data['flow_name']
         ]);
-        
+
+        // Clear pipeline flows cache since a new flow was created
+        do_action('dm_clear_pipeline_cache', $flow_data['pipeline_id']);
+
         return $flow_id;
     }
 
@@ -226,8 +229,10 @@ class Flows {
             ]);
             return false;
         }
-        
-        
+
+        // Clear flow cache after successful update to prevent stale data
+        do_action('dm_clear_flow_cache', $flow_id);
+
         return true;
     }
 
@@ -260,7 +265,10 @@ class Flows {
         do_action('dm_log', 'debug', 'Flow deleted successfully', [
             'flow_id' => $flow_id
         ]);
-        
+
+        // Clear flow cache after successful deletion
+        do_action('dm_clear_flow_cache', $flow_id);
+
         return true;
     }
 
@@ -285,8 +293,10 @@ class Flows {
             ]);
             return false;
         }
-        
-        
+
+        // Clear flow cache after successful scheduling update
+        do_action('dm_clear_flow_cache', $flow_id);
+
         return true;
     }
 
@@ -443,7 +453,10 @@ class Flows {
             'pipeline_id' => $pipeline_id,
             'affected_rows' => $this->wpdb->rows_affected
         ]);
-        
+
+        // Clear pipeline cache since flow orders were modified
+        do_action('dm_clear_pipeline_cache', $pipeline_id);
+
         return true;
     }
 
@@ -485,8 +498,11 @@ class Flows {
                 'pipeline_id' => $pipeline_id,
                 'updated_flows' => count($flow_orders)
             ]);
+
+            // Clear pipeline flows cache since display order affects flow ordering
+            do_action('dm_clear_pipeline_cache', $pipeline_id);
         }
-        
+
         return $success;
     }
 
@@ -579,7 +595,12 @@ class Flows {
                 'flow2_id' => $flow2['flow_id'],
                 'flow2_new_order' => $flow1['display_order']
             ]);
-            
+
+            // Clear pipeline cache since flow positions affect ordering
+            if (!empty($flow1['pipeline_id'])) {
+                do_action('dm_clear_pipeline_cache', $flow1['pipeline_id']);
+            }
+
             return true;
             
         } catch (Exception $e) {

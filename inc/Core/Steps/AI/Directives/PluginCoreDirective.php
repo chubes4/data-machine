@@ -68,16 +68,13 @@ class PluginCoreDirective {
         $directive .= "OPERATIONAL PRINCIPLES:\n";
         $directive .= "- Execute tasks systematically and thoughtfully\n";
         $directive .= "- Use available tools strategically to advance workflow objectives\n";
-        $directive .= "- Iterate and improve content quality through multiple tool interactions when beneficial\n";
         $directive .= "- Maintain consistency with pipeline objectives while adapting to content requirements\n";
-        $directive .= "- Focus on quality and thoroughness over speed\n\n";
 
         $directive .= "WORKFLOW APPROACH:\n";
         $directive .= "- Analyze available data and context before taking action\n";
-        $directive .= "- Use research tools when additional context would improve output quality\n";
-        $directive .= "- Iterate through multiple research tool calls when it serves the workflow objectives\n";
         $directive .= "- Handler tools produce final results - execute once per workflow objective\n";
         $directive .= "- Execute handler tools only when ready to produce final pipeline outputs\n";
+        $directive .= "- STOP EXECUTION after successful handler tool completion - workflow objective achieved\n";
 
         return trim($directive);
     }

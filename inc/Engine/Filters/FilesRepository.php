@@ -89,7 +89,6 @@ add_action('init', function() {
             'data-machine-files'
         );
 
-        do_action('dm_log', 'debug', 'FilesRepository: Weekly cleanup scheduled.');
     }
 });
 
@@ -622,12 +621,6 @@ class FilesRepository {
             $file_size = filesize($destination_path);
             $file_url = trailingslashit($this->get_repository_url($flow_step_id)) . $safe_filename;
 
-            do_action('dm_log', 'debug', 'FilesRepository: Successfully stored remote file', [
-                'url' => $url,
-                'filename' => $safe_filename,
-                'size' => $file_size,
-                'flow_step_id' => $flow_step_id
-            ]);
 
             return [
                 'path' => $destination_path,

@@ -1,7 +1,8 @@
 <?php
 /**
- * Multi-turn conversation state management for AI workflows.
- * Handles turn-based tracking, message formatting, and duplicate prevention.
+ * AI Conversation Manager - Turn-based conversation state management
+ *
+ * Handles chronological message ordering, turn tracking, and tool result formatting.
  *
  * @package DataMachine
  */
@@ -13,13 +14,12 @@ defined('ABSPATH') || exit;
 class AIStepConversationManager {
 
     /**
-     * Generate tool execution success message with filtering support.
-     * Provides specialized success messages for different tools via dm_tool_success_message filter.
+     * Generate tool execution success message with filter support.
      *
      * @param string $tool_name Tool identifier
      * @param array $tool_result Tool execution result
-     * @param array $tool_parameters Tool parameters used
-     * @return string Formatted success or failure message
+     * @param array $tool_parameters Tool parameters
+     * @return string Formatted success/failure message
      */
     public static function generateSuccessMessage(string $tool_name, array $tool_result, array $tool_parameters): string {
         $success = $tool_result['success'] ?? false;
@@ -126,7 +126,7 @@ class AIStepConversationManager {
      * Log conversation actions for debugging.
      */
     public static function logConversationAction(string $action, array $context = []): void {
-        do_action('dm_log', 'debug', "ConversationManager: {$action}", $context);
+        // Reserved for critical debugging only
     }
 
     /**
@@ -159,12 +159,6 @@ class AIStepConversationManager {
                        ($previous_tool_call['parameters'] === $tool_parameters);
 
         if ($is_duplicate) {
-            do_action('dm_log', 'debug', 'ConversationManager: Duplicate tool call detected', [
-                'tool_name' => $tool_name,
-                'current_parameters' => $tool_parameters,
-                'previous_parameters' => $previous_tool_call['parameters'],
-                'duplicate_prevention' => 'soft_rejection'
-            ]);
 
             $correction_message = "You just called the {$tool_name} tool with the exact same parameters as your previous action. Please try a different approach or use different parameters instead.";
             return ['is_duplicate' => true, 'message' => $correction_message];

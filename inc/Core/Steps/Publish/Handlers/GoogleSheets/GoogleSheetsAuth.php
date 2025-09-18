@@ -322,7 +322,6 @@ class GoogleSheetsAuth {
 
         apply_filters('dm_store_oauth_account', $account_data, 'googlesheets');
 
-        do_action('dm_log', 'debug', 'Successfully completed Google Sheets OAuth flow.');
 
         // 5. Redirect on success
         wp_redirect(add_query_arg('auth_success', 'googlesheets', admin_url('admin.php?page=dm-pipelines')));

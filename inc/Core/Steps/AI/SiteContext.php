@@ -32,10 +32,6 @@ class SiteContext {
         // Cache the result
         set_transient(self::CACHE_KEY, $context, self::CACHE_DURATION);
 
-        do_action('dm_log', 'debug', 'Site Context: Generated fresh context data', [
-            'post_types_count' => count($context['post_types']),
-            'taxonomies_count' => count($context['taxonomies'])
-        ]);
 
         return $context;
     }
@@ -137,7 +133,6 @@ class SiteContext {
     public static function clear_cache(): void {
         delete_transient(self::CACHE_KEY);
         
-        do_action('dm_log', 'debug', 'Site Context: Cache cleared');
     }
 
     /**

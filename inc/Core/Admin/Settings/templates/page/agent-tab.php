@@ -56,7 +56,7 @@ foreach ($all_tools as $tool_name => $tool_config) {
             <?php endif; ?>
         </td>
     </tr>
-    
+
     <tr>
         <th scope="row"><?php esc_html_e('Global System Prompt', 'data-machine'); ?></th>
         <td>

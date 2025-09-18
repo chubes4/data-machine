@@ -1,9 +1,8 @@
 <?php
 /**
- * Jobs database CRUD operations component.
+ * Jobs Database CRUD Operations
  *
- * Handles basic database operations for jobs: create, read, update, delete.
- * Pipeline → Flow architecture implementation.
+ * Core database operations with engine_data storage for parameter injection.
  */
 
 namespace DataMachine\Core\Database\Jobs;
@@ -27,7 +26,7 @@ class JobsOperations {
     }
 
     /**
-     * Create a new pipeline+flow-based job record.
+     * Create job record with pipeline+flow association.
      */
     public function create_job(array $job_data): int|false {
         
@@ -63,7 +62,10 @@ class JobsOperations {
         }
         
         $job_id = $this->wpdb->insert_id;
-        
+
+        // Clear job-related caches after successful creation
+        do_action('dm_clear_jobs_cache');
+
         return $job_id;
     }
 
@@ -230,13 +232,17 @@ class JobsOperations {
             'jobs_deleted' => $result !== false ? $result : 0,
             'success' => $result !== false
         ]);
-        
+
+        // Clear job-related caches after deletion
+        if ($result !== false && $result > 0) {
+            do_action('dm_clear_jobs_cache');
+        }
+
         return $result;
     }
 
     /**
-     * Store engine data as JSON in engine_data column.
-     * WordPress automatically handles array to JSON conversion.
+     * Store engine parameters for fetch handler data separation.
      */
     public function store_engine_data(int $job_id, array $data): bool {
         if ($job_id <= 0) {
@@ -274,8 +280,7 @@ class JobsOperations {
     }
 
     /**
-     * Retrieve engine data from engine_data column.
-     * WordPress automatically handles JSON to array conversion.
+     * Retrieve stored engine parameters for Engine.php injection.
      */
     public function retrieve_engine_data(int $job_id): array {
         if ($job_id <= 0) {

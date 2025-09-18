@@ -17,6 +17,9 @@ $flow_id = apply_filters('dm_create_flow', null, $data);
 apply_filters('dm_get_pipelines', [], $pipeline_id);
 apply_filters('dm_get_flow_config', [], $flow_id);
 
+// Engine Parameters (NEW - Centralized Parameter Injection)
+$enhanced_params = apply_filters('dm_engine_parameters', $parameters, $data, $flow_step_config, $step_type, $flow_step_id);
+
 // AI & Tools
 $result = apply_filters('ai_request', $request, 'anthropic');
 $tools = apply_filters('ai_tools', []);
@@ -67,6 +70,10 @@ do_action('dm_clear_flow_cache', $flow_id); // Clear specific flow cache
 do_action('dm_clear_jobs_cache'); // Clear all job caches
 do_action('dm_clear_all_cache'); // Clear all Data Machine caches
 do_action('dm_cache_set', $key, $data, $timeout, $group); // Standardized cache storage
+
+// Engine Data Storage & Retrieval (NEW)
+$db_jobs->store_engine_data($job_id, $engine_data); // Store source_url, image_url
+$engine_data = $db_jobs->retrieve_engine_data($job_id); // Retrieve for handlers
 ```
 
 ## Architecture
@@ -129,7 +136,7 @@ wp_dm_pipelines: pipeline_id, pipeline_name, pipeline_config, created_at, update
 wp_dm_flows: flow_id, pipeline_id, flow_name, flow_config, scheduling_config, display_order
 
 -- Job executions
-wp_dm_jobs: job_id, flow_id, pipeline_id, status, job_data_json, started_at, completed_at, error_message
+wp_dm_jobs: job_id, flow_id, pipeline_id, status, job_data_json, engine_data, started_at, completed_at, error_message
 
 -- Deduplication tracking
 wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, processed_at

@@ -45,7 +45,6 @@ class WebFetch {
             ];
         }
 
-
         $response = wp_remote_get($url, [
             'timeout' => 30,
             'headers' => [
@@ -98,12 +97,6 @@ class WebFetch {
             $content_truncated = true;
         }
 
-        do_action('dm_log', 'debug', 'Web Fetch: Content retrieved successfully', [
-            'url' => $url,
-            'title_length' => strlen($extracted_content['title']),
-            'content_length' => strlen($extracted_content['content']),
-            'content_truncated' => $content_truncated
-        ]);
 
         return [
             'success' => true,

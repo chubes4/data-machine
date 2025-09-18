@@ -257,10 +257,6 @@ class Update {
             return false;
         }
 
-        // Clear flow cache after successful handler update
-        do_action('dm_clear_flow_cache', $flow_id);
-
-
         return true;
     }
 
@@ -344,9 +340,6 @@ class Update {
             ]);
             return false;
         }
-
-        // Clear flow cache after successful flow configuration update
-        do_action('dm_clear_flow_cache', $flow_id);
 
         do_action('dm_log', 'debug', 'Flow steps sync completed successfully', [
             'flow_id' => $flow_id,
@@ -438,9 +431,6 @@ class Update {
             return false;
         }
 
-        // Clear flow cache after successful user message update
-        do_action('dm_clear_flow_cache', $flow_id);
-
         return true;
     }
 
@@ -520,9 +510,6 @@ class Update {
             ]);
             return false;
         }
-
-        // Clear pipeline cache after successful system prompt update
-        do_action('dm_clear_pipeline_cache', $target_pipeline['pipeline_id']);
 
         return true;
     }

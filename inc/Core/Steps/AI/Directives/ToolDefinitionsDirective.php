@@ -155,9 +155,7 @@ class ToolDefinitionsDirective {
         }
         
         $directive .= "TOOL USAGE STRATEGY:\n";
-        $directive .= "- Use research tools to gather additional context when beneficial\n";
         $directive .= "- Use handler tools to produce pipeline outputs and advance workflow\n";
-        $directive .= "- Balance thoroughness with efficiency based on content requirements\n";
 
         
         if (!empty($tools)) {
@@ -191,7 +189,6 @@ class ToolDefinitionsDirective {
                     $description = $tool_config['description'] ?? 'No description available';
                     $directive .= "- {$tool_name}: {$description}\n";
                 }
-                $directive .= "→ Use these to gather additional context when it would improve your output quality.\n\n";
             }
             
             // Real workflow context (must succeed now)
@@ -314,7 +311,7 @@ class ToolDefinitionsDirective {
             if (!empty($handler_tools)) {
                 $directive .= "Workflow objective achieved when handler tools complete successfully. Stop after successful handler tool execution.";
             } else {
-                $directive .= "Content processed and enhanced for optimal next step performance";
+                $directive .= "Content processed for next step";
             }
             $directive .= "\n";
             

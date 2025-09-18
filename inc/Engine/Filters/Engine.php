@@ -1,9 +1,9 @@
 <?php
 /**
- * Engine Filter Registration
+ * Engine Parameter Injection System
  *
- * Core engine processing filters for parameter injection and execution flow.
- * Centralizes engine-specific filter registrations following established patterns.
+ * Centralized database retrieval and parameter injection for engine_data.
+ * Implements explicit data separation between AI data packets and engine parameters.
  *
  * @package DataMachine
  * @subpackage Engine\Filters
@@ -17,28 +17,27 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Register engine processing filters.
+ * Register engine parameter injection filter.
  *
- * Core engine filters for parameter injection and execution flow management.
- *
- * Key Filters:
- * - dm_engine_parameters: Centralized parameter injection system
+ * Implements centralized engine_data retrieval from database storage.
+ * Fetch handlers store source_url/image_url; Engine.php injects via filter.
  *
  * @since 1.0.0
  */
 function dm_register_engine_filters() {
 
     /**
-     * Centralized Engine Data Parameter Injection
+     * Inject engine parameters from database storage.
      *
-     * Database retrieval and parameter injection system that reads engine_data from database
-     * and injects URLs and engine-specific parameters via dm_engine_parameters filter.
+     * Retrieves source_url, image_url stored by fetch handlers via store_engine_data().
+     * Enables explicit data separation: clean AI packets vs engine parameters.
      *
-     * DATA PACKET = AI (clean metadata, no URLs)
-     * ENGINE_DATA = ENGINE (source_url, image_url for handlers)
-     *
-     * Retrieves stored engine_data from database and injects via dm_engine_parameters filter.
-     * Runs at priority 5 to execute before existing handler filters.
+     * @param array $parameters Current parameters
+     * @param array $data Data packet array
+     * @param array $flow_step_config Step configuration
+     * @param string $step_type Step type identifier
+     * @param string $flow_step_id Flow step identifier
+     * @return array Enhanced parameters with engine data
      */
     add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
         $job_id = $parameters['job_id'] ?? null;
@@ -50,37 +49,19 @@ function dm_register_engine_filters() {
         $all_databases = apply_filters('dm_db', []);
         $db_jobs = $all_databases['jobs'] ?? null;
         if (!$db_jobs) {
-            do_action('dm_log', 'debug', 'Engine Parameter Injection: No jobs database service available', [
-                'job_id' => $job_id,
-                'step_type' => $step_type
-            ]);
             return $parameters;
         }
 
         // Retrieve engine_data for this job
         $engine_data = $db_jobs->retrieve_engine_data($job_id);
         if (empty($engine_data)) {
-            do_action('dm_log', 'debug', 'Engine Parameter Injection: No engine_data found for job', [
-                'job_id' => $job_id,
-                'step_type' => $step_type
-            ]);
             return $parameters;
         }
 
-        // Discovery pattern: inject URLs and engine parameters, steps consume what they need
-        $merged_parameters = array_merge($parameters, $engine_data);
+        // Inject engine parameters for handler consumption
+        return array_merge($parameters, $engine_data);
 
-        do_action('dm_log', 'debug', 'Engine Parameter Injection: Injected URLs from engine_data', [
-            'job_id' => $job_id,
-            'step_type' => $step_type,
-            'injected_keys' => array_keys($engine_data),
-            'has_source_url' => !empty($engine_data['source_url']),
-            'has_image_url' => !empty($engine_data['image_url'])
-        ]);
-
-        return $merged_parameters;
-
-    }, 5, 5); // Priority 5: Execute before existing handler filters
+    }, 5, 5);
 
 }
 

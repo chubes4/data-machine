@@ -285,7 +285,7 @@ $providers['provider_slug'] = new AuthProviderClass();
 
 ### `dm_engine_parameters`
 
-**Purpose**: Unified flat parameter passing system for step execution
+**Purpose**: Centralized database retrieval and parameter injection system for engine parameters
 
 **Parameters**:
 - `$parameters` (array) - Base parameters array containing core execution data
@@ -294,7 +294,7 @@ $providers['provider_slug'] = new AuthProviderClass();
 - `$step_type` (string) - Step type identifier
 - `$flow_step_id` (string) - Flow step identifier
 
-**Return**: Flat array of all parameters for step execution
+**Return**: Enhanced parameters array with engine data injected from database storage
 
 **Base Parameters Structure**:
 ```php
@@ -303,25 +303,49 @@ $parameters = [
     'flow_step_id' => $flow_step_id,
     'flow_step_config' => $flow_step_config,
     'data' => $data
-    // Additional parameters added by filters as needed
+    // Engine parameters injected from database storage
 ];
 ```
 
-**Usage Example**:
+**Core Implementation (Engine.php)**:
 ```php
 add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
-    // Extract source_url from latest data packet for Update steps
-    if ($step_type === 'update' && !empty($data[0]['metadata']['source_url'])) {
-        $parameters['source_url'] = $data[0]['metadata']['source_url'];
+    $job_id = $parameters['job_id'] ?? null;
+    if (!$job_id) {
+        return $parameters;
     }
-    
-    // Add file path from Files handler
-    if (!empty($data[0]['metadata']['file_path'])) {
-        $parameters['file_path'] = $data[0]['metadata']['file_path'];
+
+    // Get database service via filter discovery
+    $all_databases = apply_filters('dm_db', []);
+    $db_jobs = $all_databases['jobs'] ?? null;
+    if (!$db_jobs) {
+        return $parameters;
     }
-    
-    return $parameters;
-}, 10, 5);
+
+    // Retrieve engine_data stored by fetch handlers
+    $engine_data = $db_jobs->retrieve_engine_data($job_id);
+    if (empty($engine_data)) {
+        return $parameters;
+    }
+
+    // Inject engine parameters for handler consumption
+    return array_merge($parameters, $engine_data);
+}, 5, 5);
+```
+
+**Engine Data Storage (by Fetch Handlers)**:
+```php
+// Fetch handlers store engine parameters in database
+if ($job_id) {
+    $all_databases = apply_filters('dm_db', []);
+    $db_jobs = $all_databases['jobs'] ?? null;
+    if ($db_jobs) {
+        $db_jobs->store_engine_data($job_id, [
+            'source_url' => $source_url,    // For Update handlers
+            'image_url' => $image_url,      // For media handling
+        ]);
+    }
+}
 ```
 
 **Benefits**:

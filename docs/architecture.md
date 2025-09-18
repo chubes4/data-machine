@@ -18,7 +18,7 @@ Three-action execution cycle:
 ### Database Schema
 - `wp_dm_pipelines` - Pipeline templates (reusable)
 - `wp_dm_flows` - Flow instances (scheduled + configured)
-- `wp_dm_jobs` - Job executions with status tracking
+- `wp_dm_jobs` - Job executions with status tracking and engine_data storage (source_url, image_url)
 - `wp_dm_processed_items` - Deduplication tracking per execution
 
 ### Cache Management System
@@ -149,6 +149,8 @@ Complete extension system for custom handlers and tools:
 - Tool result formatting with success/failure messages
 
 ### Data Processing
+- **Explicit Data Separation Architecture**: Clean data packets for AI processing vs engine parameters for handlers
+- **Database Storage + Filter Injection**: Fetch handlers store engine_data (source_url, image_url) in database; Engine.php retrieves and injects via `dm_engine_parameters` filter
 - DataPacket structure for consistent data flow with chronological ordering
 - DataPacketStructureDirective explains JSON format to AI agents:
   - Root wrapper with data_packets array

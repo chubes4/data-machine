@@ -1,19 +1,17 @@
 <?php
 /**
- * Twitter handler registration via filters.
+ * Twitter Handler Registration
  *
  * @package DataMachine\Core\Steps\Publish\Handlers\Twitter
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
 
-// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
 
 function dm_register_twitter_filters() {
-    
     add_filter('dm_handlers', function($handlers) {
         $handlers['twitter'] = [
             'type' => 'publish',
@@ -23,17 +21,17 @@ function dm_register_twitter_filters() {
         ];
         return $handlers;
     });
-    
+
     add_filter('dm_auth_providers', function($providers) {
         $providers['twitter'] = new TwitterAuth();
         return $providers;
     });
-    
+
     add_filter('dm_handler_settings', function($all_settings) {
         $all_settings['twitter'] = new TwitterSettings();
         return $all_settings;
     });
-    
+
     add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
         if ($handler_slug === 'twitter') {
             $tools['twitter_publish'] = dm_get_twitter_tool($handler_config);
@@ -98,7 +96,7 @@ function dm_get_twitter_tool(array $handler_config = []): array {
 }
 
 /**
- * Register Twitter-specific success message formatter.
+ * Register Twitter success message formatter.
  */
 function dm_register_twitter_success_message() {
     add_filter('dm_tool_success_message', function($default_message, $tool_name, $tool_result, $tool_parameters) {
