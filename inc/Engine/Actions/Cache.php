@@ -71,6 +71,11 @@ class Cache {
         $this->clear_pipeline_cache($pipeline_id);
         $this->clear_flow_cache($pipeline_id);
         $this->clear_job_cache();
+
+        // Clear object cache to ensure fresh data in all contexts (web + cron)
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
+        }
     }
 
     /**
@@ -91,9 +96,22 @@ class Cache {
             $pipeline_id = $flow['pipeline_id'] ?? null;
             $flow_config = $flow['flow_config'] ?? [];
 
-            // Clear main flow caches
-            delete_transient(self::FLOW_CONFIG_CACHE_KEY . $flow_id);
-            delete_transient(self::FLOW_SCHEDULING_CACHE_KEY . $flow_id);
+            // Clear main flow caches (CRITICAL: dm_get_flow_step_config depends on FLOW_CONFIG_CACHE_KEY)
+            $flow_config_key = self::FLOW_CONFIG_CACHE_KEY . $flow_id;
+            $flow_scheduling_key = self::FLOW_SCHEDULING_CACHE_KEY . $flow_id;
+
+            $flow_config_cleared = delete_transient($flow_config_key);
+            $flow_scheduling_cleared = delete_transient($flow_scheduling_key);
+
+            do_action('dm_log', 'debug', 'Flow cache clearing executed', [
+                'flow_id' => $flow_id,
+                'flow_config_cache_key' => $flow_config_key,
+                'flow_config_cleared' => $flow_config_cleared,
+                'flow_scheduling_cache_key' => $flow_scheduling_key,
+                'flow_scheduling_cleared' => $flow_scheduling_cleared,
+                'pipeline_id' => $pipeline_id,
+                'flow_steps_count' => count($flow_config)
+            ]);
 
             // Clear flow step caches for all steps in this flow using pre-retrieved data
             foreach ($flow_config as $flow_step_id => $step_config) {
@@ -105,10 +123,16 @@ class Cache {
                 delete_transient(self::PIPELINE_FLOWS_CACHE_KEY . $pipeline_id);
                 delete_transient(self::MAX_DISPLAY_ORDER_CACHE_KEY . $pipeline_id);
             }
+
         } else {
             do_action('dm_log', 'warning', 'Could not clear flow cache - flows database not available', [
                 'flow_id' => $flow_id
             ]);
+        }
+
+        // Clear object cache to ensure fresh data in all contexts (web + cron)
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
         }
     }
 
@@ -117,6 +141,11 @@ class Cache {
      */
     public function handle_clear_jobs_cache() {
         $this->clear_job_cache();
+
+        // Clear object cache to ensure fresh data in all contexts (web + cron)
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
+        }
     }
 
     /**
@@ -124,6 +153,11 @@ class Cache {
      */
     public function handle_clear_pipelines_list_cache() {
         delete_transient(self::PIPELINES_LIST_CACHE_KEY);
+
+        // Clear object cache to ensure fresh data in all contexts (web + cron)
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
+        }
     }
 
     /**
@@ -213,6 +247,11 @@ class Cache {
 
         foreach ($cache_keys as $key) {
             delete_transient($key);
+        }
+
+        // Clear object cache to ensure fresh data in all contexts (web + cron)
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
         }
     }
 

@@ -264,7 +264,7 @@ class PublishStep {
             // Check for new ai_handler_complete entries (from unified conversation system)
             if ($entry_type === 'ai_handler_complete') {
                 $handler_tool = $entry['metadata']['handler_tool'] ?? '';
-                
+
                 do_action('dm_log', 'debug', 'PublishStep: Found ai_handler_complete entry', [
                     'handler' => $handler,
                     'entry_index' => $index,
@@ -272,12 +272,11 @@ class PublishStep {
                     'matches_handler' => ($handler_tool === $handler),
                     'entry_metadata' => $entry['metadata'] ?? []
                 ]);
-                
-                // Accept any ai_handler_complete entry with valid tool result data
-                if (!empty($entry['metadata']['tool_result'])) {
-                    do_action('dm_log', 'debug', 'PublishStep: Using ai_handler_complete entry with valid tool result', [
+
+                // Accept ai_handler_complete when it matches this handler, even without storing full tool_result
+                if ($handler_tool === $handler) {
+                    do_action('dm_log', 'debug', 'PublishStep: Using ai_handler_complete entry matching handler', [
                         'handler' => $handler,
-                        'handler_tool' => $handler_tool,
                         'entry_type' => 'ai_handler_complete',
                         'conversation_turn_data' => isset($entry['metadata']['conversation_turn']) ? 'present' : 'missing'
                     ]);

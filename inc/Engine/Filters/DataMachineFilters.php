@@ -18,14 +18,10 @@
  * @since 0.1.0
  */
 
-// If this file is called directly, abort.
-if ( ! defined( 'WPINC' ) ) {
-	die;
+if (!defined('WPINC')) {
+    die;
 }
 
-/**
- * Register Import/Export filters
- */
 function dm_register_importexport_filters() {
     
     add_filter('dm_modals', function($modals) {

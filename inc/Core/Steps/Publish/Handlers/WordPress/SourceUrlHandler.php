@@ -58,7 +58,7 @@ class SourceUrlHandler {
             return (bool) $wp_settings['default_include_source'];
         }
 
-        // Fallback to handler config
+        // Fallback to handler config (default to false if not provided)
         return (bool) ($handler_config['include_source'] ?? false);
     }
 

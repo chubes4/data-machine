@@ -55,16 +55,10 @@ class FeaturedImageHandler {
             return (bool) $wp_settings['default_enable_images'];
         }
 
-        // Fallback to handler config
-        return (bool) ($handler_config['enable_images'] ?? true);
+        // Fallback to handler config (default to false if not provided)
+        return (bool) ($handler_config['enable_images'] ?? false);
     }
 
-    /**
-     * Validate image URL format.
-     *
-     * @param string $image_url Image URL to validate
-     * @return bool True if URL is valid
-     */
     private function validateImageUrl(string $image_url): bool {
         return filter_var($image_url, FILTER_VALIDATE_URL) !== false;
     }
@@ -131,37 +125,16 @@ class FeaturedImageHandler {
 
     }
 
-    /**
-     * Set featured image for WordPress post.
-     *
-     * @param int $post_id WordPress post ID
-     * @param int $attachment_id Attachment ID to set as featured image
-     * @return bool True if featured image was set successfully
-     */
     private function setFeaturedImage(int $post_id, int $attachment_id): bool {
         return set_post_thumbnail($post_id, $attachment_id);
     }
 
-    /**
-     * Clean up temporary files using wp_delete_file().
-     *
-     * @param string $temp_file Path to temporary file
-     * @return void
-     */
     private function cleanupTempFiles(string $temp_file): void {
         if (file_exists($temp_file)) {
             wp_delete_file($temp_file);
         }
     }
 
-    /**
-     * Log image operation using centralized dm_log action.
-     *
-     * @param string $level Log level (debug, info, warning, error)
-     * @param string $message Log message
-     * @param array $context Context data for logging
-     * @return void
-     */
     private function logImageOperation(string $level, string $message, array $context): void {
         do_action('dm_log', $level, $message, $context);
     }

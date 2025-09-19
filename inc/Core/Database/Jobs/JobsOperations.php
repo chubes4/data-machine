@@ -250,10 +250,11 @@ class JobsOperations {
             return false;
         }
 
-        // WordPress will automatically JSON encode the array
+        // Serialize array for reliable storage in longtext column
+        $encoded = maybe_serialize($data);
         $result = $this->wpdb->update(
             $this->table_name,
-            ['engine_data' => $data],
+            ['engine_data' => $encoded],
             ['job_id' => $job_id],
             ['%s'],
             ['%d']
@@ -298,7 +299,13 @@ class JobsOperations {
             return [];
         }
 
-        // WordPress automatically decodes JSON to array
+        // Try JSON first for forward compatibility
+        $json = json_decode($result, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($json)) {
+            return $json;
+        }
+
+        // Fallback to WordPress serialization
         $engine_data = maybe_unserialize($result);
 
         // Ensure we return an array

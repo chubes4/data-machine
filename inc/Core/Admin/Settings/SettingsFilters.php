@@ -241,8 +241,16 @@ function dm_sanitize_settings($input) {
             }
         }
 
-        $sanitized['wordpress_settings']['default_include_source'] = !empty($wp_input['default_include_source']);
-        $sanitized['wordpress_settings']['default_enable_images'] = !empty($wp_input['default_enable_images']);
+        // Tri-state override behavior for global toggles:
+        // - Only store the key when the checkbox is checked (true) to indicate an override.
+        // - When unchecked, omit the key entirely so pipeline-level settings remain in control.
+        if (!empty($wp_input['default_include_source'])) {
+            $sanitized['wordpress_settings']['default_include_source'] = true;
+        }
+
+        if (!empty($wp_input['default_enable_images'])) {
+            $sanitized['wordpress_settings']['default_enable_images'] = true;
+        }
     }
     
     return $sanitized;

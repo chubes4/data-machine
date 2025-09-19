@@ -57,13 +57,6 @@ class ToolDefinitionsDirective {
         return $request;
     }
     
-    /**
-     * Ensure pipeline context is available for AI directive injection.
-     *
-     * @param string|null $pipeline_step_id Pipeline step ID
-     * @param string $context Method context for error logging
-     */
-    private static function require_pipeline_context($pipeline_step_id, string $context): void { /* deprecated noop */ }
     
     /**
      * Generate dynamic tool directive based on available tools.
@@ -75,8 +68,7 @@ class ToolDefinitionsDirective {
      * @return string Generated system directive
      */
     public static function generate_dynamic_directive(array $tools, array $request = [], $pipeline_step_id = null, $flow_step_id = null): string {
-        // Pipeline context validation removed as redundant.
-    $directive = '';
+        $directive = '';
 
         // Detect (but do not require) presence of handler tools for context
         $has_handler_tools = false;

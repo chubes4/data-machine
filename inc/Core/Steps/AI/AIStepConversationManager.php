@@ -65,9 +65,6 @@ class AIStepConversationManager {
         return $conversation_messages;
     }
 
-    /**
-     * Build conversation message with role and content.
-     */
     public static function buildConversationMessage(string $role, string $content): array {
         return [
             'role' => $role,
@@ -75,9 +72,6 @@ class AIStepConversationManager {
         ];
     }
 
-    /**
-     * Format AI tool call message with turn tracking.
-     */
     public static function formatToolCallMessage(string $tool_name, array $tool_parameters, int $turn_count): array {
         $tool_display = ucwords(str_replace('_', ' ', $tool_name));
         $message = "AI ACTION (Turn {$turn_count}): Executing {$tool_display}";
@@ -97,9 +91,6 @@ class AIStepConversationManager {
         return self::buildConversationMessage('assistant', $message);
     }
 
-    /**
-     * Format tool result message with turn tracking.
-     */
     public static function formatToolResultMessage(string $tool_name, array $tool_result, array $tool_parameters, bool $is_handler_tool = false, int $turn_count = 0): array {
         $success_message = self::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
         
@@ -107,31 +98,23 @@ class AIStepConversationManager {
             $success_message = "TOOL RESPONSE (Turn {$turn_count}): " . $success_message;
         }
         
-        if (!empty($tool_result['data'])) {
+        // Only expose raw tool result payloads to the model for non-handler tools.
+        if (!$is_handler_tool && !empty($tool_result['data'])) {
             $success_message .= "\n\n" . json_encode($tool_result['data']);
         }
         
         return self::buildConversationMessage('user', $success_message);
     }
 
-    /**
-     * Generate tool execution failure message.
-     */
     public static function generateFailureMessage(string $tool_name, string $error_message): string {
         $tool_display = ucwords(str_replace('_', ' ', $tool_name));
         return "TOOL FAILED: {$tool_display} execution failed - {$error_message}. Please review the error and adjust your approach if needed.";
     }
 
-    /**
-     * Log conversation actions for debugging.
-     */
     public static function logConversationAction(string $action, array $context = []): void {
         // Reserved for critical debugging only
     }
 
-    /**
-     * Validate tool call for duplicate prevention.
-     */
     public static function validateToolCall(string $tool_name, array $tool_parameters, array $conversation_messages): array {
         if (empty($conversation_messages)) {
             return ['is_duplicate' => false, 'message' => ''];
@@ -167,9 +150,6 @@ class AIStepConversationManager {
         return ['is_duplicate' => false, 'message' => ''];
     }
 
-    /**
-     * Extract tool call data from conversation message.
-     */
     public static function extractToolCallFromMessage(array $message): ?array {
         if ($message['role'] !== 'assistant' || !isset($message['content'])) {
             return null;
@@ -215,9 +195,6 @@ class AIStepConversationManager {
         ];
     }
 
-    /**
-     * Generate duplicate tool call correction message.
-     */
     public static function generateDuplicateToolCallMessage(string $tool_name): array {
         $tool_display = ucwords(str_replace('_', ' ', $tool_name));
         $message = "You just called the {$tool_display} tool with the exact same parameters as your previous action. Please try a different approach or use different parameters instead.";

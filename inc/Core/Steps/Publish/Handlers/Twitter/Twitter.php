@@ -11,9 +11,6 @@ defined('ABSPATH') || exit;
 
 class Twitter {
 
-    /**
-     * OAuth 1.0a authentication handler.
-     */
     private $auth;
 
     public function __construct() {
@@ -25,9 +22,6 @@ class Twitter {
         return $this->auth;
     }
 
-    /**
-     * Handle AI tool call for Twitter publishing with media support.
-     */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
 
         $handler_config = $parameters['handler_config'] ?? [];
@@ -173,9 +167,6 @@ class Twitter {
         }
     }
 
-    /**
-     * Post reply tweet with URL.
-     */
     private function post_reply_tweet($connection, string $original_tweet_id, string $source_url, string $screen_name): array {
         do_action('dm_log', 'debug', 'Twitter Tool: Posting URL as reply tweet', [
             'original_tweet_id' => $original_tweet_id,
@@ -241,9 +232,6 @@ class Twitter {
     }
 
 
-    /**
-     * Upload image to Twitter using v1.1 media API.
-     */
     private function upload_image_to_twitter($connection, string $image_url, string $alt_text): ?string {
         do_action('dm_log', 'debug', 'Attempting to upload image to Twitter using v1.1 media API.', ['image_url' => $image_url]);
         
@@ -336,9 +324,6 @@ class Twitter {
         }
     }
 
-    /**
-     * Simple image upload for files < 1MB
-     */
     private function upload_image_simple($connection, string $temp_image_path, string $mime_type): ?string {
         do_action('dm_log', 'debug', 'Twitter: Attempting simple image upload using TwitterOAuth.', [
             'temp_image_path' => $temp_image_path,
@@ -386,9 +371,6 @@ class Twitter {
         }
     }
 
-    /**
-     * Chunked upload for large files (INIT→APPEND→FINALIZE)
-     */
     private function upload_image_chunked($connection, string $temp_image_path, string $mime_type): ?string {
         try {
             $file_size = filesize($temp_image_path);
@@ -525,17 +507,11 @@ class Twitter {
     }
 
 
-    /**
-     * User-friendly label for handler
-     */
     public static function get_label(): string {
         return __('Post to Twitter', 'data-machine');
     }
 
 
-    /**
-     * Check image URL accessibility
-     */
     private function is_image_accessible(string $image_url): bool {
         $problematic_patterns = [
             'preview.redd.it', // Reddit preview URLs often have access restrictions

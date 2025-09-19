@@ -9,69 +9,131 @@ Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and mult
 $handlers = apply_filters('dm_handlers', []);
 $steps = apply_filters('dm_steps', []);
 $databases = apply_filters('dm_db', []);
+$providers = apply_filters('dm_auth_providers', []);
 
-// Pipeline Operations
+// Pipeline & Flow Operations
 $pipeline_id = apply_filters('dm_create_pipeline', null, $data);
+$pipeline_id = apply_filters('dm_create_pipeline_from_template', null, $template_id, $data);
 $step_id = apply_filters('dm_create_step', null, $data);
 $flow_id = apply_filters('dm_create_flow', null, $data);
+$flow_id = apply_filters('dm_duplicate_flow', null, $source_flow_id);
 apply_filters('dm_get_pipelines', [], $pipeline_id);
+apply_filters('dm_get_pipelines_list', []);
 apply_filters('dm_get_flow_config', [], $flow_id);
+apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
+apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
 
-// Engine Parameters (NEW - Centralized Parameter Injection)
+// Step Configuration & Navigation
+$flow_step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+$pipeline_step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
+$next_flow_step_id = apply_filters('dm_get_next_flow_step_id', null, $flow_step_id);
+$prev_flow_step_id = apply_filters('dm_get_previous_flow_step_id', null, $flow_step_id);
+$next_pipeline_step_id = apply_filters('dm_get_next_pipeline_step_id', null, $pipeline_step_id);
+$prev_pipeline_step_id = apply_filters('dm_get_previous_pipeline_step_id', null, $pipeline_step_id);
+
+// Step ID Management
+$flow_step_id = apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
+$parts = apply_filters('dm_split_pipeline_step_id', null, $pipeline_step_id);
+$parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+
+// Engine Parameters (Centralized Parameter Injection)
 $enhanced_params = apply_filters('dm_engine_parameters', $parameters, $data, $flow_step_config, $step_type, $flow_step_id);
 
 // AI & Tools
 $result = apply_filters('ai_request', $request, 'anthropic');
 $tools = apply_filters('ai_tools', []);
+$ai_config = apply_filters('dm_ai_config', [], $pipeline_step_id);
 apply_filters('dm_tool_configured', false, $tool_id);
 apply_filters('dm_get_tool_config', [], $tool_id);
+apply_filters('dm_tool_success_message', $message, $tool_name, $result, $parameters);
+apply_filters('dm_parse_ai_response', []);
 do_action('dm_save_tool_config', $tool_id, $config_data);
+do_action('ai_api_error', $error_data);
 
-// OAuth
+// OAuth & Authentication
 apply_filters('dm_retrieve_oauth_account', [], 'handler');
+apply_filters('dm_store_oauth_account', $data, 'handler');
+apply_filters('dm_clear_oauth_account', false, 'handler');
+apply_filters('dm_retrieve_oauth_keys', [], 'handler');
+apply_filters('dm_store_oauth_keys', $data, 'handler');
 apply_filters('dm_oauth_callback', '', 'provider');
-$providers = apply_filters('dm_auth_providers', []);
+apply_filters('dm_oauth_url', $auth_url, 'provider');
 
 // Execution
 do_action('dm_run_flow_now', $flow_id, $context);
 do_action('dm_execute_step', $job_id, $flow_step_id, $data);
 do_action('dm_schedule_next_step', $job_id, $flow_step_id, $data);
 
-// Processing
+// Job Management
+do_action('dm_update_job_status', $job_id, $status, $context);
+do_action('dm_fail_job', $job_id, $reason, $context_data);
+
+// Processing & Status
 do_action('dm_mark_item_processed', $flow_step_id, $source_type, $item_id, $job_id);
 apply_filters('dm_is_item_processed', false, $flow_step_id, $source_type, $item_id);
 apply_filters('dm_detect_status', 'green', 'context', $data);
+apply_filters('dm_get_handler_customizations', [], $handler_slug);
 
-// Settings (Direct function access for internal system components)
-$settings = dm_get_data_machine_settings();
-$enabled_pages = dm_get_enabled_admin_pages();
-$enabled_tools = dm_get_enabled_general_tools();
+// Data Processing
+apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $step_type);
+apply_filters('dm_request', [], $method, $url, $args, $context);
 
-// AI Step Persistence
-do_action('dm_update_system_prompt', $pipeline_step_id, $system_prompt); // Pipeline-level templates
-do_action('dm_update_flow_user_message', $flow_step_id, $user_message); // Flow-level instances
-$flow_step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
-$pipeline_config = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+// Pipeline & Flow Events
+do_action('dm_pipeline_deleted', $pipeline_id, $flow_count);
+do_action('dm_flow_deleted', $pipeline_id, $flow_id);
 
-// Site Context
-$context = SiteContext::get_context();
-SiteContext::clear_cache();
+// Update Operations
+do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $settings);
+do_action('dm_update_flow_schedule', $flow_id, $interval, $context);
+do_action('dm_update_system_prompt', $pipeline_step_id, $system_prompt);
+do_action('dm_update_flow_user_message', $flow_step_id, $user_message);
+do_action('dm_sync_steps_to_flow', $flow_id, $step_data, $context);
 
-// System
-do_action('dm_log', $level, $message, $context);
-do_action('dm_auto_save', $pipeline_id);
-do_action('dm_fail_job', $job_id, $reason, $context_data); // Explicit job failure with configurable cleanup
-do_action('dm_cleanup_old_files'); // File repository maintenance via Action Scheduler
+// Template & UI System
+apply_filters('dm_render_template', '', $template_name, $data);
+apply_filters('dm_modals', []);
+apply_filters('dm_admin_pages', []);
+apply_filters('dm_admin_assets', [], $page_slug);
+apply_filters('dm_pipeline_templates', []);
+
+// Settings & Configuration
+apply_filters('dm_handler_settings', []);
+apply_filters('dm_step_settings', []);
+apply_filters('dm_scheduler_intervals', []);
+$settings = dm_get_data_machine_settings(); // Direct function access
+$enabled_pages = dm_get_enabled_admin_pages(); // Direct function access
+$enabled_tools = dm_get_enabled_general_tools(); // Direct function access
+
+// Context Management
+apply_filters('dm_current_flow_step_id', null);
+apply_filters('dm_current_job_id', null);
+$context = SiteContext::get_context(); // Direct class access
+SiteContext::clear_cache(); // Direct class access
+
+// Import/Export
+apply_filters('dm_importer', null);
+apply_filters('dm_import_result', []);
+apply_filters('dm_export_result', '');
+
+// Files Repository
 $files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
 
-// Cache Management
-do_action('dm_clear_pipeline_cache', $pipeline_id); // Clear specific pipeline cache
-do_action('dm_clear_flow_cache', $flow_id); // Clear specific flow cache
-do_action('dm_clear_jobs_cache'); // Clear all job caches
-do_action('dm_clear_all_cache'); // Clear all Data Machine caches
-do_action('dm_cache_set', $key, $data, $timeout, $group); // Standardized cache storage
+// System & Logging
+do_action('dm_log', $level, $message, $context);
+apply_filters('dm_log_file', null, $operation, $param);
+do_action('dm_auto_save', $pipeline_id);
+do_action('dm_cleanup_old_files'); // File repository maintenance via Action Scheduler
+do_action('dm_delete', $type, $id, $criteria);
 
-// Engine Data Storage & Retrieval (NEW)
+// Cache Management
+do_action('dm_clear_pipeline_cache', $pipeline_id);
+do_action('dm_clear_flow_cache', $flow_id);
+do_action('dm_clear_jobs_cache');
+do_action('dm_clear_all_cache');
+do_action('dm_clear_pipelines_list_cache');
+do_action('dm_cache_set', $key, $data, $timeout, $group);
+
+// Engine Data Storage & Retrieval
 $db_jobs->store_engine_data($job_id, $engine_data); // Store source_url, image_url
 $engine_data = $db_jobs->retrieve_engine_data($job_id); // Retrieve for handlers
 ```

@@ -275,7 +275,7 @@ class AIStep {
                                 'metadata' => [
                                     'tool_name' => $tool_name,
                                     'handler_tool' => $tool_def['handler'] ?? null,
-                                    'tool_result' => $tool_result['data'] ?? [],
+                                    // Do not store full handler tool result payloads in data packets
                                     'tool_parameters' => $clean_tool_parameters,
                                     'handler_config' => $handler_config,
                                     'source_type' => $data[0]['metadata']['source_type'] ?? 'unknown',

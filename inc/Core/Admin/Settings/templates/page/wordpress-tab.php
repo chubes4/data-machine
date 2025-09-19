@@ -31,6 +31,11 @@ $users = get_users(['capability' => 'publish_posts', 'number' => 100]);
 $post_statuses = get_post_stati(['public' => true, 'private' => true]);
 ?>
 
+<div class="dm-inline-note" style="margin: 8px 0 16px; padding: 8px 10px; border: 1px solid #e2e8f0; background: #f8fafc;">
+    <strong><?php esc_html_e('Note', 'data-machine'); ?>:</strong>
+    <?php esc_html_e('These are global overrides. If set here, they take precedence over pipeline/handler settings; if not set, pipelines remain in control.', 'data-machine'); ?>
+ </div>
+
 <table class="form-table">
     <tr>
         <th scope="row"><?php esc_html_e('Enabled Post Types', 'data-machine'); ?></th>
