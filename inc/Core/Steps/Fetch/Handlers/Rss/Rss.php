@@ -47,12 +47,7 @@ class Rss {
         $feed_url = trim($config['feed_url'] ?? '');
 
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
-        $search_term = trim($config['search'] ?? '');
-        $search_keywords = [];
-        if (!empty($search_term)) {
-            $search_keywords = array_map('trim', explode(',', $search_term));
-            $search_keywords = array_filter($search_keywords);
-        }
+        $search = trim($config['search'] ?? '');
 
         $cutoff_timestamp = null;
         if ($timeframe_limit !== 'all_time') {
@@ -167,18 +162,11 @@ class Rss {
                 }
             }
 
-            // Check search keywords
-            if (!empty($search_keywords)) {
-                $text_to_search = $title . ' ' . $description;
-                $found_keyword = false;
-                foreach ($search_keywords as $keyword) {
-                    if (mb_stripos($text_to_search, $keyword) !== false) {
-                        $found_keyword = true;
-                        break;
-                    }
-                }
-                if (!$found_keyword) {
-                    continue;
+            // Apply search term filtering
+            if (!empty($search)) {
+                $search_text = strtolower($title . ' ' . wp_strip_all_tags($description));
+                if (strpos($search_text, strtolower($search)) === false) {
+                    continue; // Skip items that don't match search term
                 }
             }
 
@@ -193,12 +181,12 @@ class Rss {
             $author = $this->extract_item_author($item);
             $categories = $this->extract_item_categories($item);
             $enclosure_url = $this->extract_item_enclosure($item);
-            
-            // Build content string
-            $content_string = "Source: RSS Feed\n\nTitle: " . $title . "\n\n";
-            if (!empty($description)) {
-                $content_string .= "Content:\n" . $description . "\n";
-            }
+
+            // Create structured content data for AI processing
+            $content_data = [
+                'title' => $title,
+                'content' => $description
+            ];
 
             // Create clean metadata for AI consumption (URLs removed)
             $metadata = [
@@ -221,10 +209,7 @@ class Rss {
             }
 
             $input_data = [
-                'data' => [
-                    'content_string' => $content_string,
-                    'file_info' => $file_info
-                ],
+                'data' => array_merge($content_data, ['file_info' => $file_info]),
                 'metadata' => $metadata
             ];
 

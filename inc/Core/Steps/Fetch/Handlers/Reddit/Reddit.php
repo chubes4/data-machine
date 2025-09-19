@@ -373,14 +373,14 @@ class Reddit {
 				$selftext = $item_data['selftext'] ?? '';
 				$body = $item_data['body'] ?? '';
 
-				$content_string = "Source: Reddit (r/{$subreddit})\n\nTitle: " . trim($title) . "\n\n";
-				if (!empty($selftext)) {
-					$content_string .= "Content:\n" . trim($selftext) . "\n";
-				} elseif (!empty($body)) {
-					$content_string .= "Content:\n" . trim($body) . "\n";
-				}
+				// Create structured content data for AI processing
+				$content_data = [
+					'title' => trim($title),
+					'content' => !empty($selftext) ? trim($selftext) : (!empty($body) ? trim($body) : '')
+				];
 
-
+				// Fetch and structure comments if configured
+				$comments_array = [];
 				if ($comment_count_setting > 0 && !empty($item_data['permalink'])) {
 					$comments_url = 'https://oauth.reddit.com' . $item_data['permalink'] . '.json?limit=' . $comment_count_setting . '&sort=top';
 					$comment_args = [
@@ -391,26 +391,24 @@ class Reddit {
 					];
 					try {
 						$comments_result = apply_filters('dm_request', null, 'GET', $comments_url, $comment_args, 'Reddit API');
-						
+
 						if ($comments_result['success']) {
 							$comments_data = json_decode($comments_result['data'], true);
 							if (json_last_error() === JSON_ERROR_NONE) {
 							if (is_array($comments_data) && isset($comments_data[1]['data']['children'])) {
 								$top_comments = array_slice($comments_data[1]['data']['children'], 0, $comment_count_setting);
-								if (!empty($top_comments)) {
-									$content_string .= "\n\nTop Comments:\n";
-									$comment_num = 1;
-									foreach ($top_comments as $comment_wrapper) {
-										if (isset($comment_wrapper['data']['body']) && !$comment_wrapper['data']['stickied']) {
-											$author = $comment_wrapper['data']['author'] ?? '[deleted]';
-											$body = trim($comment_wrapper['data']['body']);
-											if ($body !== '') {
-												$content_string .= "- {$author}: {$body}\n";
-												$comment_num++;
-											}
+								foreach ($top_comments as $comment_wrapper) {
+									if (isset($comment_wrapper['data']['body']) && !$comment_wrapper['data']['stickied']) {
+										$comment_author = $comment_wrapper['data']['author'] ?? '[deleted]';
+										$comment_body = trim($comment_wrapper['data']['body']);
+										if ($comment_body !== '') {
+											$comments_array[] = [
+												'author' => $comment_author,
+												'body' => $comment_body
+											];
 										}
-										if ($comment_num > $comment_count_setting) break;
 									}
+									if (count($comments_array) >= $comment_count_setting) break;
 								}
 							}
 							} else {
@@ -508,17 +506,20 @@ class Reddit {
 					'is_self_post' => $item_data['is_self'] ?? false,
 				];
 
+				// Add comments to content data if available
+				if (!empty($comments_array)) {
+					$content_data['comments'] = $comments_array;
+				}
+
 				// Create data packet matching FetchStep expectations
 				if ($stored_image) {
-					// Image post - return file data with nested structure
+					// Image post - return file data with structured content
 					$input_data = [
 						'file_path' => $stored_image['path'],
 						'file_name' => $stored_image['filename'],
 						'mime_type' => $image_info['mime_type'],
 						'file_size' => $stored_image['size'],
-						'data' => [
-							'content_string' => $content_string
-						],
+						'data' => $content_data,
 						'metadata' => array_merge($metadata, [
 							'original_title' => $title,
 							'original_id' => $current_item_id,
@@ -527,11 +528,9 @@ class Reddit {
 						])
 					];
 				} else {
-					// Text-only post - return text data with nested structure
+					// Text-only post - return structured content data
 					$input_data = [
-						'data' => [
-							'content_string' => $content_string
-						],
+						'data' => $content_data,
 						'metadata' => array_merge($metadata, [
 							'original_title' => $title,
 							'original_id' => $current_item_id,

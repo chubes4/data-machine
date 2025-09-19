@@ -55,8 +55,24 @@ function dm_register_engine_filters() {
         // Retrieve engine_data for this job
         $engine_data = $db_jobs->retrieve_engine_data($job_id);
         if (empty($engine_data)) {
+            do_action('dm_log', 'debug', 'Engine Parameters: No engine_data found for job', [
+                'job_id' => $job_id,
+                'step_type' => $step_type,
+                'flow_step_id' => $flow_step_id
+            ]);
             return $parameters;
         }
+
+        do_action('dm_log', 'debug', 'Engine Parameters: Retrieved engine_data from database', [
+            'job_id' => $job_id,
+            'step_type' => $step_type,
+            'flow_step_id' => $flow_step_id,
+            'has_source_url' => isset($engine_data['source_url']),
+            'source_url' => $engine_data['source_url'] ?? 'NOT_SET',
+            'has_image_url' => isset($engine_data['image_url']),
+            'image_url' => $engine_data['image_url'] ?? 'NOT_SET',
+            'engine_data_keys' => array_keys($engine_data)
+        ]);
 
         // Inject engine parameters for handler consumption
         return array_merge($parameters, $engine_data);

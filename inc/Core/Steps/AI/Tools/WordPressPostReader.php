@@ -156,8 +156,7 @@ class WordPressPostReader {
             return "READ COMPLETE: WordPress post found at \"{$source_url}\" but has no content.";
         }
 
-        $title_text = !empty($title) ? "\nPost Title: {$title}" : '';
-        return "READ COMPLETE: Retrieved WordPress post from \"{$source_url}\".{$title_text}\nContent Length: {$content_length} characters ({$word_count} words)";
+        return "READ COMPLETE: Retrieved WordPress post from \"{$source_url}\". Content Length: {$content_length} characters ({$word_count} words)";
     }
 }
 

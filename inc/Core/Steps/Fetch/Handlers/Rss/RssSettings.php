@@ -50,7 +50,8 @@ class RssSettings {
             'search' => [
                 'type' => 'text',
                 'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Filter RSS items by keywords (comma-separated). Only items containing at least one keyword in their title or content will be processed.', 'data-machine'),
+                'description' => __('Filter items by searching title and content for this term.', 'data-machine'),
+                'placeholder' => __('Optional search term', 'data-machine'),
             ],
         ];
     }

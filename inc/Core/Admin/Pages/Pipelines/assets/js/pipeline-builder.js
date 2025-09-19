@@ -223,12 +223,17 @@
          * Add new pipeline to dropdown and switch to it (single-pipeline architecture)
          */
         addNewPipelineCardToPage: function(pipelineData) {
+            // Handle both direct data format and nested pipeline_data format
+            const pipelineId = pipelineData.pipeline_id;
+            const pipelineName = pipelineData.pipeline_name ||
+                                (pipelineData.pipeline_data && pipelineData.pipeline_data.pipeline_name);
+
             // Add new pipeline to dropdown
-            const optionHtml = `<option value="${pipelineData.pipeline_id}">${pipelineData.pipeline_data.pipeline_name}</option>`;
+            const optionHtml = `<option value="${pipelineId}">${pipelineName}</option>`;
             $('#dm-pipeline-selector').append(optionHtml).show();
 
             // Use existing switching mechanism (consistent with single-pipeline architecture)
-            PipelinesPage.autoSelectNewPipeline(pipelineData.pipeline_id);
+            PipelinesPage.autoSelectNewPipeline(pipelineId);
         },
 
         /**
@@ -396,7 +401,7 @@
                 success: (response) => {
                     if (response.success) {
                         // Add the new pipeline to dropdown and switch to it
-                        this.addNewPipelineCardToPage(response.data.pipeline);
+                        this.addNewPipelineCardToPage(response.data);
 
                         this.showNotice(response.data.message || 'Pipeline created from template successfully', 'success');
                     } else {

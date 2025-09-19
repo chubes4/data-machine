@@ -221,17 +221,19 @@ class WordPress {
         $source_link = get_permalink($post_id);
         $image_url = $this->extract_image_url($post_id);
 
-        // Extract source name
-        $site_name = get_bloginfo('name');
-        $source_name = $site_name ?: 'Local WordPress';
-        $content_string = "Source: " . $source_name . "\n\nTitle: " . $title . "\n\n" . $content;
+        // Extract site name for metadata only
+        $site_name = get_bloginfo('name') ?: 'Local WordPress';
+
+        // Create structured content data for AI processing
+        $content_data = [
+            'title' => $title,
+            'content' => $content,
+            'excerpt' => $post->post_excerpt ?: ''
+        ];
 
         // Create clean data packet for AI consumption (URLs removed)
         $input_data = [
-            'data' => [
-                'content_string' => $content_string,
-                'file_info' => null
-            ],
+            'data' => array_merge($content_data, ['file_info' => null]),
             'metadata' => [
                 'source_type' => 'wordpress_local',
                 'item_identifier_to_log' => $post_id,
@@ -239,7 +241,8 @@ class WordPress {
                 'original_title' => $title,
                 'original_date_gmt' => $post->post_date_gmt,
                 'post_type' => $post->post_type,
-                'post_status' => $post->post_status
+                'post_status' => $post->post_status,
+                'site_name' => $site_name
             ]
         ];
 

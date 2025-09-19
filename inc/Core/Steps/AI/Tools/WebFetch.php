@@ -180,15 +180,13 @@ class WebFetch {
 
         $data = $tool_result['data'] ?? [];
         $url = $tool_parameters['url'] ?? 'the URL';
-        $title = $data['title'] ?? '';
         $content_length = $data['content_length'] ?? 0;
 
         if ($content_length === 0 || empty($data['content'])) {
             return "FETCH COMPLETE: No readable content found at \"{$url}\".";
         }
 
-        $title_text = !empty($title) ? "\nPage Title: {$title}" : '';
-        return "FETCH COMPLETE: Retrieved content from \"{$url}\".{$title_text}\nContent Length: {$content_length} characters";
+        return "FETCH COMPLETE: Retrieved content from \"{$url}\". Content Length: {$content_length} characters";
     }
 }
 

@@ -29,47 +29,12 @@ class WordPressAPISettings {
      */
     public static function get_fields(array $current_config = []): array {
         $fields = [
-            'site_url' => [
+            'endpoint_url' => [
                 'type' => 'text',
-                'label' => __('WordPress Site URL', 'data-machine'),
-                'description' => __('Enter the base URL of the WordPress site (e.g., https://example.com)', 'data-machine'),
-                'placeholder' => __('https://example.com', 'data-machine'),
+                'label' => __('API Endpoint URL', 'data-machine'),
+                'description' => __('Enter the complete REST API endpoint URL (e.g., https://sxsw.com/wp-json/wp/v2/posts)', 'data-machine'),
+                'placeholder' => __('https://example.com/wp-json/wp/v2/posts', 'data-machine'),
                 'required' => true,
-            ],
-            'post_type' => [
-                'type' => 'select',
-                'label' => __('Post Type', 'data-machine'),
-                'description' => __('Select the post type to fetch from the remote site.', 'data-machine'),
-                'options' => [
-                    'posts' => __('Posts', 'data-machine'),
-                    'pages' => __('Pages', 'data-machine'),
-                ],
-            ],
-            'post_status' => [
-                'type' => 'select',
-                'label' => __('Post Status', 'data-machine'),
-                'description' => __('Select the post status to fetch.', 'data-machine'),
-                'options' => array_merge(get_post_statuses(), ['any' => __('Any', 'data-machine')]),
-            ],
-            'orderby' => [
-                'type' => 'select',
-                'label' => __('Order By', 'data-machine'),
-                'description' => __('How to order the results.', 'data-machine'),
-                'options' => [
-                    'date' => __('Date Published', 'data-machine'),
-                    'modified' => __('Date Modified', 'data-machine'),
-                    'title' => __('Title', 'data-machine'),
-                    'slug' => __('Slug', 'data-machine'),
-                ],
-            ],
-            'order' => [
-                'type' => 'select',
-                'label' => __('Order', 'data-machine'),
-                'description' => __('Sort order for results.', 'data-machine'),
-                'options' => [
-                    'desc' => __('Descending (Newest First)', 'data-machine'),
-                    'asc' => __('Ascending (Oldest First)', 'data-machine'),
-                ],
             ],
             'timeframe_limit' => [
                 'type' => 'select',
@@ -86,7 +51,7 @@ class WordPressAPISettings {
             'search' => [
                 'type' => 'text',
                 'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Filter items using a search term.', 'data-machine'),
+                'description' => __('Filter items by searching title and content for this term.', 'data-machine'),
                 'placeholder' => __('Optional search term', 'data-machine'),
             ],
         ];
@@ -102,42 +67,14 @@ class WordPressAPISettings {
      */
     public static function sanitize(array $raw_settings): array {
         $sanitized = [
-            'site_url' => esc_url_raw(trim($raw_settings['site_url'] ?? '')),
-            'post_type' => sanitize_text_field($raw_settings['post_type'] ?? 'posts'),
-            'post_status' => sanitize_text_field($raw_settings['post_status'] ?? 'publish'),
-            'orderby' => sanitize_text_field($raw_settings['orderby'] ?? 'date'),
-            'order' => sanitize_text_field($raw_settings['order'] ?? 'desc'),
+            'endpoint_url' => esc_url_raw(trim($raw_settings['endpoint_url'] ?? '')),
             'timeframe_limit' => sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time'),
             'search' => sanitize_text_field($raw_settings['search'] ?? ''),
         ];
 
-        // Additional validation for site_url
-        if (!empty($sanitized['site_url']) && !filter_var($sanitized['site_url'], FILTER_VALIDATE_URL)) {
-            $sanitized['site_url'] = '';
-        }
-
-        // Validate post_type
-        $valid_post_types = ['posts', 'pages'];
-        if (!in_array($sanitized['post_type'], $valid_post_types)) {
-            $sanitized['post_type'] = 'posts';
-        }
-
-        // Validate post_status
-        $valid_statuses = ['publish', 'draft', 'pending', 'private', 'any'];
-        if (!in_array($sanitized['post_status'], $valid_statuses)) {
-            $sanitized['post_status'] = 'publish';
-        }
-
-        // Validate orderby
-        $valid_orderby = ['date', 'modified', 'title', 'slug'];
-        if (!in_array($sanitized['orderby'], $valid_orderby)) {
-            $sanitized['orderby'] = 'date';
-        }
-
-        // Validate order
-        $valid_order = ['desc', 'asc'];
-        if (!in_array($sanitized['order'], $valid_order)) {
-            $sanitized['order'] = 'desc';
+        // Validate endpoint URL
+        if (!empty($sanitized['endpoint_url']) && !filter_var($sanitized['endpoint_url'], FILTER_VALIDATE_URL)) {
+            $sanitized['endpoint_url'] = '';
         }
 
         // Validate timeframe_limit

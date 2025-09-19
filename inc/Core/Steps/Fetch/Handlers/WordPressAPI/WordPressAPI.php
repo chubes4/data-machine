@@ -1,9 +1,9 @@
 <?php
 /**
- * WordPress REST API Fetch Handler
+ * REST API Endpoint Fetch Handler
  *
- * Fetches content from public WordPress sites via REST API endpoints.
- * Provides a modern alternative to RSS feeds with structured data access.
+ * Fetches content from any REST API endpoint that returns JSON data.
+ * Provides universal REST API access with flexible field extraction.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers\WordPressAPI
@@ -22,11 +22,11 @@ class WordPressAPI {
     }
 
     /**
-     * Fetch WordPress API content with clean data for AI processing.
+     * Fetch REST API content with clean data for AI processing.
      * Returns processed items while storing engine data (source_url, image_url) in database.
      *
      * @param int $pipeline_id Pipeline ID for logging context.
-     * @param array $handler_config Handler configuration including site_url, post_type, flow_step_id.
+     * @param array $handler_config Handler configuration including endpoint_url, flow_step_id.
      * @param string|null $job_id Job ID for deduplication tracking.
      * @return array Array with 'processed_items' containing clean data for AI processing.
      *               Engine parameters (source_url, image_url) are stored in database via store_engine_data().
@@ -47,160 +47,159 @@ class WordPressAPI {
 
         // Access config from handler config structure
         $config = $handler_config['wordpress_api'] ?? [];
-        
+
         // Configuration validation
-        $site_url = trim($config['site_url'] ?? '');
-        if (empty($site_url)) {
-            do_action('dm_log', 'error', 'WordPress API Input: Site URL is required.', ['pipeline_id' => $pipeline_id]);
-            return ['processed_items' => []];
-        }
-        
-        // Clean up site URL
-        $site_url = untrailingslashit($site_url);
-        if (!filter_var($site_url, FILTER_VALIDATE_URL)) {
-            do_action('dm_log', 'error', 'WordPress API Input: Invalid site URL format.', ['pipeline_id' => $pipeline_id, 'site_url' => $site_url]);
+        $endpoint_url = trim($config['endpoint_url'] ?? '');
+        if (empty($endpoint_url)) {
+            do_action('dm_log', 'error', 'WordPress API Input: Endpoint URL is required.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
 
-        // Fetch from remote WordPress site
-        $items = $this->fetch_remote_data($pipeline_id, $config, $site_url, $flow_step_id, $job_id);
+        if (!filter_var($endpoint_url, FILTER_VALIDATE_URL)) {
+            do_action('dm_log', 'error', 'WordPress API Input: Invalid endpoint URL format.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
+            return ['processed_items' => []];
+        }
+
+        // Get filtering settings
+        $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
+        $search = trim($config['search'] ?? '');
+
+        // Fetch from API endpoint
+        $items = $this->fetch_from_endpoint($pipeline_id, $endpoint_url, $timeframe_limit, $search, $flow_step_id, $job_id);
         
         return ['processed_items' => $items];
     }
 
     /**
-     * Fetch data from remote WordPress site via REST API
+     * Fetch data from API endpoint
      *
-     * Makes HTTP request to WordPress REST API endpoint and processes response.
+     * Makes HTTP request to provided endpoint URL and processes response.
      * Returns first unprocessed item with automatic deduplication tracking.
      *
      * @param int $pipeline_id Pipeline execution identifier
-     * @param array $config Handler configuration with site_url and filtering options
-     * @param string $site_url Base URL of target WordPress site
+     * @param string $endpoint_url Complete API endpoint URL
+     * @param string $timeframe_limit Timeframe filter setting
+     * @param string $search Search term filter
      * @param string|null $flow_step_id Flow step ID for deduplication tracking
      * @param string|null $job_id Job ID for item tracking
-     * @return array Array containing single eligible post data packet or empty array
+     * @return array Array containing single eligible item data packet or empty array
      */
-    private function fetch_remote_data(int $pipeline_id, array $config, string $site_url, ?string $flow_step_id = null, ?string $job_id = null): array {
-        $post_type = sanitize_text_field($config['post_type'] ?? 'posts');
-        $post_status = sanitize_text_field($config['post_status'] ?? 'publish');
-        $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
-        $search = trim($config['search'] ?? '');
-        $orderby = sanitize_text_field($config['orderby'] ?? 'date');
-        $order = sanitize_text_field($config['order'] ?? 'desc');
-
-        // Build REST API URL
-        $api_url = $site_url . '/wp-json/wp/v2/' . $post_type;
-        
-        // Build query parameters
-        $query_params = [
-            'status' => $post_status,
-            'orderby' => $orderby,
-            'order' => $order,
-            'per_page' => 10, // Fixed at 10 items per request
-            '_embed' => 'true' // Include embedded data (featured images, etc.)
-        ];
-
-        // Add search parameter if specified
-        if (!empty($search)) {
-            $query_params['search'] = $search;
+    private function fetch_from_endpoint(int $pipeline_id, string $endpoint_url, string $timeframe_limit, string $search, ?string $flow_step_id = null, ?string $job_id = null): array {
+        // WordPress REST APIs - try server-side search, fallback to client-side
+        if (strpos($endpoint_url, '/wp-json/') !== false && !empty($search)) {
+            $endpoint_url = add_query_arg('search', $search, $endpoint_url);
+            do_action('dm_log', 'debug', 'REST API: Added server-side search parameter to WordPress endpoint', [
+                'search_term' => $search,
+                'modified_url' => $endpoint_url
+            ]);
         }
-
-        // Add date filtering if specified
-        if ($timeframe_limit !== 'all_time') {
-            $cutoff_timestamp = $this->calculate_cutoff_timestamp($timeframe_limit);
-            if ($cutoff_timestamp !== null) {
-                $query_params['after'] = gmdate('c', $cutoff_timestamp);
-            }
-        }
-
-        // Build full URL with query parameters
-        $request_url = add_query_arg($query_params, $api_url);
 
         // Make HTTP request using dm_request filter
         $args = [
             'user-agent' => 'DataMachine WordPress Plugin/' . DATA_MACHINE_VERSION
         ];
 
-        $result = apply_filters('dm_request', null, 'GET', $request_url, $args, 'WordPress REST API');
-        
+        $result = apply_filters('dm_request', null, 'GET', $endpoint_url, $args, 'REST API');
+
         if (!$result['success']) {
-            do_action('dm_log', 'error', 'WordPress API Input: Failed to fetch from REST API.', [
+            do_action('dm_log', 'error', 'REST API Input: Failed to fetch from endpoint.', [
                 'pipeline_id' => $pipeline_id,
                 'error' => $result['error'],
-                'request_url' => $request_url
+                'endpoint_url' => $endpoint_url
             ]);
             return [];
         }
 
         $response_data = $result['data'];
         if (empty($response_data)) {
-            do_action('dm_log', 'error', 'WordPress API Input: Empty response from REST API.', ['pipeline_id' => $pipeline_id, 'request_url' => $request_url]);
+            do_action('dm_log', 'error', 'REST API Input: Empty response from endpoint.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
             return [];
         }
 
         // Parse JSON response
-        $posts = json_decode($response_data, true);
+        $items = json_decode($response_data, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            do_action('dm_log', 'error', 'WordPress API Input: Invalid JSON response.', [
+            do_action('dm_log', 'error', 'REST API Input: Invalid JSON response.', [
                 'pipeline_id' => $pipeline_id,
                 'json_error' => json_last_error_msg(),
-                'request_url' => $request_url
+                'endpoint_url' => $endpoint_url
             ]);
             return [];
         }
 
-        if (!is_array($posts) || empty($posts)) {
+        if (!is_array($items) || empty($items)) {
             return [];
         }
 
-        // Find first unprocessed post
-        foreach ($posts as $post) {
-            $post_id = $post['id'] ?? 0;
-            if (empty($post_id)) {
+        // Find first unprocessed item
+        foreach ($items as $item) {
+            $item_id = $item['id'] ?? 0;
+            if (empty($item_id)) {
                 continue;
             }
 
-            // Create unique identifier combining site URL and post ID
-            $unique_id = md5($site_url . '_' . $post_id);
-            
-            $is_processed = ($flow_step_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_step_id, 'wordpress_api', $unique_id) : false;
+            // Create unique identifier combining endpoint URL and item ID
+            $unique_id = md5($endpoint_url . '_' . $item_id);
+
+            $is_processed = ($flow_step_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_step_id, 'rest_api', $unique_id) : false;
             if ($is_processed) {
                 continue;
             }
-            
+
             // Found first eligible item - mark as processed and return
             if ($flow_step_id) {
-                do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_api', $unique_id, $job_id);
+                do_action('dm_mark_item_processed', $flow_step_id, 'rest_api', $unique_id, $job_id);
             }
 
-            // Extract post data
-            $title = $post['title']['rendered'] ?? 'N/A';
-            $content = $post['content']['rendered'] ?? '';
-            $excerpt = $post['excerpt']['rendered'] ?? '';
-            $source_link = $post['link'] ?? '';
-            $post_date = $post['date_gmt'] ?? null;
+            // Extract item data flexibly
+            $title = $this->extract_title($item);
+            $content = $this->extract_content($item);
+            $excerpt = $this->extract_excerpt($item);
+            $source_link = $this->extract_source_link($item);
+            $item_date = $this->extract_date($item);
 
-            // Extract featured image URL
-            $image_url = $this->extract_featured_image_url($post);
+            // Apply timeframe filtering
+            if ($timeframe_limit !== 'all_time' && $item_date) {
+                $cutoff_timestamp = $this->calculate_cutoff_timestamp($timeframe_limit);
+                if ($cutoff_timestamp !== null) {
+                    $item_timestamp = strtotime($item_date);
+                    if ($item_timestamp && $item_timestamp < $cutoff_timestamp) {
+                        continue; // Skip items outside timeframe
+                    }
+                }
+            }
 
-            // Extract site name from site URL or post data
-            $site_name = $this->extract_site_name($site_url, $post);
-            $content_string = "Source: " . $site_name . "\n\nTitle: " . $title . "\n\n" . wp_strip_all_tags($content);
+            // Apply search term filtering
+            if (!empty($search)) {
+                $search_text = strtolower($title . ' ' . wp_strip_all_tags($content . ' ' . $excerpt));
+                if (strpos($search_text, strtolower($search)) === false) {
+                    continue; // Skip items that don't match search term
+                }
+            }
+
+            // Extract image URL
+            $image_url = $this->extract_image_url($item);
+
+            // Extract site name from endpoint URL for metadata only
+            $site_name = $this->extract_site_name_from_url($endpoint_url);
+
+            // Create structured content data for AI processing
+            $content_data = [
+                'title' => $title,
+                'content' => wp_strip_all_tags($content),
+                'excerpt' => wp_strip_all_tags($excerpt)
+            ];
 
             // Create standardized packet and return immediately
             $input_data = [
-                'data' => [
-                    'content_string' => $content_string,
-                    'file_info' => null
-                ],
+                'data' => array_merge($content_data, ['file_info' => null]),
                 'metadata' => [
-                    'source_type' => 'wordpress_api',
+                    'source_type' => 'rest_api',
                     'item_identifier_to_log' => $unique_id,
-                    'original_id' => $post_id,
+                    'original_id' => $item_id,
                     'original_title' => $title,
-                    'original_date_gmt' => $post_date,
-                    'excerpt' => wp_strip_all_tags($excerpt)
+                    'original_date_gmt' => $item_date,
+                    'site_name' => $site_name
                 ]
             ];
 
@@ -209,7 +208,6 @@ class WordPressAPI {
                 $engine_data = [
                     'source_url' => $source_link,
                     'image_url' => $image_url ?: '',
-                    'site_url' => $site_url
                 ];
 
                 // Store engine_data via database service
@@ -217,62 +215,218 @@ class WordPressAPI {
                 $db_jobs = $all_databases['jobs'] ?? null;
                 if ($db_jobs) {
                     $db_jobs->store_engine_data($job_id, $engine_data);
-                    do_action('dm_log', 'debug', 'WordPress API: Stored URLs in engine_data', [
+                    do_action('dm_log', 'debug', 'REST API: Stored URLs in engine_data', [
                         'job_id' => $job_id,
                         'source_url' => $engine_data['source_url'],
-                        'has_image_url' => !empty($engine_data['image_url']),
-                        'site_url' => $engine_data['site_url']
+                        'has_image_url' => !empty($engine_data['image_url'])
                     ]);
                 }
             }
 
             // Return clean data packet (no URLs in metadata for AI)
-            return [
-                'processed_items' => [$input_data]
-            ];
+            return [$input_data];
         }
 
         // No eligible items found
-        return ['processed_items' => []];
+        return [];
     }
 
     /**
-     * Extract featured image URL from post data.
+     * Extract title from item data with flexible field checking.
      *
-     * @param array $post Post data from REST API.
-     * @return string|null Featured image URL or null if none found.
+     * @param array $item Item data from REST API.
+     * @return string Title or 'N/A' if none found.
      */
-    private function extract_featured_image_url(array $post): ?string {
-        // Try embedded media first
-        if (isset($post['_embedded']['wp:featuredmedia'][0]['source_url'])) {
-            return $post['_embedded']['wp:featuredmedia'][0]['source_url'];
+    private function extract_title(array $item): string {
+        // WordPress format
+        if (isset($item['title']['rendered'])) {
+            return $item['title']['rendered'];
         }
 
-        // Fallback to featured_media ID (would require additional API call)
-        $featured_media_id = $post['featured_media'] ?? 0;
-        if ($featured_media_id > 0) {
-            // For now, return null - we could implement additional API call here if needed
-            return null;
+        // Direct title field
+        if (isset($item['title']) && is_string($item['title'])) {
+            return $item['title'];
+        }
+
+        // Other common fields
+        if (isset($item['name'])) {
+            return $item['name'];
+        }
+
+        if (isset($item['subject'])) {
+            return $item['subject'];
+        }
+
+        return 'N/A';
+    }
+
+    /**
+     * Extract content from item data with flexible field checking.
+     *
+     * @param array $item Item data from REST API.
+     * @return string Content or empty string if none found.
+     */
+    private function extract_content(array $item): string {
+        // WordPress format
+        if (isset($item['content']['rendered'])) {
+            return $item['content']['rendered'];
+        }
+
+        // Direct content field
+        if (isset($item['content']) && is_string($item['content'])) {
+            return $item['content'];
+        }
+
+        // Other common fields
+        if (isset($item['body'])) {
+            return $item['body'];
+        }
+
+        if (isset($item['description'])) {
+            return $item['description'];
+        }
+
+        if (isset($item['text'])) {
+            return $item['text'];
+        }
+
+        return '';
+    }
+
+    /**
+     * Extract excerpt from item data with flexible field checking.
+     *
+     * @param array $item Item data from REST API.
+     * @return string Excerpt or empty string if none found.
+     */
+    private function extract_excerpt(array $item): string {
+        // WordPress format
+        if (isset($item['excerpt']['rendered'])) {
+            return $item['excerpt']['rendered'];
+        }
+
+        // Direct excerpt field
+        if (isset($item['excerpt']) && is_string($item['excerpt'])) {
+            return $item['excerpt'];
+        }
+
+        // Other common fields
+        if (isset($item['summary'])) {
+            return $item['summary'];
+        }
+
+        if (isset($item['description']) && strlen($item['description']) < 300) {
+            return $item['description'];
+        }
+
+        return '';
+    }
+
+    /**
+     * Extract source link from item data with flexible field checking.
+     *
+     * @param array $item Item data from REST API.
+     * @return string Source link or empty string if none found.
+     */
+    private function extract_source_link(array $item): string {
+        // WordPress format
+        if (isset($item['link'])) {
+            return $item['link'];
+        }
+
+        // Other common fields
+        if (isset($item['url'])) {
+            return $item['url'];
+        }
+
+        if (isset($item['permalink'])) {
+            return $item['permalink'];
+        }
+
+        if (isset($item['href'])) {
+            return $item['href'];
+        }
+
+        return '';
+    }
+
+    /**
+     * Extract date from item data with flexible field checking.
+     *
+     * @param array $item Item data from REST API.
+     * @return string|null Date in GMT format or null if none found.
+     */
+    private function extract_date(array $item): ?string {
+        // WordPress format
+        if (isset($item['date_gmt'])) {
+            return $item['date_gmt'];
+        }
+
+        if (isset($item['date'])) {
+            return $item['date'];
+        }
+
+        // Other common fields
+        if (isset($item['created_at'])) {
+            return $item['created_at'];
+        }
+
+        if (isset($item['published_at'])) {
+            return $item['published_at'];
+        }
+
+        if (isset($item['timestamp'])) {
+            return $item['timestamp'];
         }
 
         return null;
     }
 
     /**
-     * Extract site name from URL or post data.
+     * Extract image URL from item data with flexible field checking.
      *
-     * @param string $site_url Site URL.
-     * @param array $post Post data.
-     * @return string Site name.
+     * @param array $item Item data from REST API.
+     * @return string|null Image URL or null if none found.
      */
-    private function extract_site_name(string $site_url, array $post): string {
-        // Try to extract from URL
-        $parsed_url = wp_parse_url($site_url);
+    private function extract_image_url(array $item): ?string {
+        // WordPress embedded media
+        if (isset($item['_embedded']['wp:featuredmedia'][0]['source_url'])) {
+            return $item['_embedded']['wp:featuredmedia'][0]['source_url'];
+        }
+
+        // Direct image fields
+        if (isset($item['featured_image'])) {
+            return $item['featured_image'];
+        }
+
+        if (isset($item['image'])) {
+            return is_string($item['image']) ? $item['image'] : ($item['image']['url'] ?? null);
+        }
+
+        if (isset($item['thumbnail'])) {
+            return is_string($item['thumbnail']) ? $item['thumbnail'] : ($item['thumbnail']['url'] ?? null);
+        }
+
+        if (isset($item['featured_media']) && is_string($item['featured_media'])) {
+            return $item['featured_media'];
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract site name from endpoint URL.
+     *
+     * @param string $endpoint_url Complete endpoint URL.
+     * @return string Site name extracted from URL.
+     */
+    private function extract_site_name_from_url(string $endpoint_url): string {
+        $parsed_url = wp_parse_url($endpoint_url);
         if (isset($parsed_url['host'])) {
             return $parsed_url['host'];
         }
 
-        return $site_url;
+        return $endpoint_url;
     }
 
     /**
@@ -281,22 +435,22 @@ class WordPressAPI {
      * @param string $timeframe_limit Timeframe setting value.
      * @return int|null Cutoff timestamp or null for 'all_time'.
      */
-    private function calculate_cutoff_timestamp($timeframe_limit) {
+    private function calculate_cutoff_timestamp(string $timeframe_limit): ?int {
         if ($timeframe_limit === 'all_time') {
             return null;
         }
-        
+
         $interval_map = [
             '24_hours' => '-24 hours',
             '72_hours' => '-72 hours',
             '7_days'   => '-7 days',
             '30_days'  => '-30 days'
         ];
-        
+
         if (!isset($interval_map[$timeframe_limit])) {
             return null;
         }
-        
+
         return strtotime($interval_map[$timeframe_limit], current_time('timestamp', true));
     }
 
@@ -306,6 +460,6 @@ class WordPressAPI {
      * @return string Handler label.
      */
     public static function get_label(): string {
-        return __('WordPress REST API', 'data-machine');
+        return __('REST API Endpoint', 'data-machine');
     }
 }

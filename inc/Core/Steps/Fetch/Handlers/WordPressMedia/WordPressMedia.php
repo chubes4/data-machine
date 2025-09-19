@@ -209,42 +209,35 @@ class WordPressMedia {
             if ($include_parent_content && $parent_post) {
                 $parent_title = $parent_post->post_title ?: 'Untitled';
                 $parent_body = $parent_post->post_content ?: '';
-                
-                // Enhanced formatting with clear AI instructions
-                $parent_content = "\n\n=== SOURCE POST CONTENT ===\nTitle: {$parent_title}\n\nContent:\n{$parent_body}\n=== END SOURCE POST ===\n\n[AI Instructions: Reference and build upon the source post content above when creating social media content. Use the source content as context and inspiration for your response.]";
+
+                // Store source post data as structured object
+                $source_post_data = [
+                    'title' => $parent_title,
+                    'content' => $parent_body,
+                    'id' => $post->post_parent
+                ];
                 $parent_content_included = true;
             }
         }
         
-        // Extract source name
-        $site_name = get_bloginfo('name');
-        $source_name = $site_name ?: 'Local WordPress';
-        
-        // Build content string with media information
-        $content_parts = [
-            "Source: {$source_name}",
-            "Media Type: {$file_type}",
-            "Title: {$title}"
+        // Extract site name for metadata only
+        $site_name = get_bloginfo('name') ?: 'Local WordPress';
+
+        // Create structured media data for AI processing
+        $media_data = [
+            'title' => $title,
+            'alt_text' => $alt_text,
+            'caption' => $caption,
+            'description' => $description,
+            'file_type' => $file_type,
+            'file_size' => $file_size,
+            'file_size_formatted' => $file_size > 0 ? size_format($file_size) : null
         ];
-        
-        if (!empty($alt_text)) {
-            $content_parts[] = "Alt Text: {$alt_text}";
+
+        // Add source post data if available
+        if ($parent_content_included && isset($source_post_data)) {
+            $media_data['source_post'] = $source_post_data;
         }
-        
-        if (!empty($caption)) {
-            $content_parts[] = "Caption: {$caption}";
-        }
-        
-        if (!empty($description)) {
-            $content_parts[] = "Description: {$description}";
-        }
-        
-        if ($file_size > 0) {
-            $file_size_formatted = size_format($file_size);
-            $content_parts[] = "File Size: {$file_size_formatted}";
-        }
-        
-        $content_string = implode("\n", $content_parts) . $parent_content;
 
         // Create standardized packet with file data at root level for AI processing
         $input_data = [
@@ -252,9 +245,7 @@ class WordPressMedia {
             'file_name' => basename($file_path),
             'mime_type' => $file_type,
             'file_size' => $file_size,
-            'data' => [
-                'content_string' => $content_string
-            ],
+            'data' => $media_data,
             'metadata' => [
                 'source_type' => 'wordpress_media',
                 'item_identifier_to_log' => $post_id,
@@ -263,7 +254,8 @@ class WordPressMedia {
                 'original_title' => $title,
                 'original_date_gmt' => $post->post_date_gmt,
                 'mime_type' => $file_type,
-                'file_size' => $file_size
+                'file_size' => $file_size,
+                'site_name' => $site_name
             ]
         ];
 

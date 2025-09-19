@@ -60,13 +60,25 @@ class WordPress {
         }
 
         $handler_config = $tool_def['handler_config'] ?? [];
-        
-        do_action('dm_log', 'debug', 'WordPress Tool: Using handler configuration', [
+
+        // Extract taxonomy configuration for diagnostics
+        $taxonomies = get_taxonomies(['public' => true], 'names');
+        $taxonomy_settings = [];
+        foreach ($taxonomies as $taxonomy) {
+            if (!in_array($taxonomy, ['post_format', 'nav_menu', 'link_category'])) {
+                $field_key = "taxonomy_{$taxonomy}_selection";
+                $taxonomy_settings[$taxonomy] = $handler_config[$field_key] ?? 'NOT_SET';
+            }
+        }
+
+        do_action('dm_log', 'debug', 'WordPress Tool: Handler configuration accessed', [
             'has_post_author' => isset($handler_config['post_author']),
             'post_author_config' => $handler_config['post_author'] ?? 'NOT_SET',
             'current_user_id' => get_current_user_id(),
             'has_post_status' => isset($handler_config['post_status']),
-            'has_post_type' => isset($handler_config['post_type'])
+            'has_post_type' => isset($handler_config['post_type']),
+            'taxonomy_settings' => $taxonomy_settings,
+            'total_config_keys' => count($handler_config)
         ]);
 
         if (empty($handler_config['post_type'])) {
