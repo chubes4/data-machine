@@ -615,6 +615,10 @@ class Create {
                 ]);
             }
 
+            // Update internal flow_step_id and flow_id to match the new config key
+            $step_config['flow_step_id'] = $new_flow_step_id;
+            $step_config['flow_id'] = $new_flow_id;
+
             $remapped_config[$new_flow_step_id] = $step_config;
         }
 
@@ -622,7 +626,8 @@ class Create {
             'old_flow_id' => $old_flow_id,
             'new_flow_id' => $new_flow_id,
             'original_steps' => count($source_config),
-            'remapped_steps' => count($remapped_config)
+            'remapped_steps' => count($remapped_config),
+            'fixed_internal_ids' => true
         ]);
 
         return $remapped_config;
