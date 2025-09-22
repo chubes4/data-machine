@@ -306,30 +306,12 @@ function dm_handle_green_statuses($default_status, $context, $data) {
 
 // UTILITY FUNCTIONS
 
-function dm_should_show_setting($setting_key, $current_value, $handler_slug) {
-    // Skip empty strings, false values, and meaningless defaults
-    if ($current_value === '' || $current_value === false) {
-        return false;
-    }
-    
-    // Skip empty arrays
-    if (is_array($current_value) && empty($current_value)) {
-        return false;
-    }
-    
-    // Skip common default-like values
-    if (in_array($current_value, ['all_time', 'any', 0, '0'], true)) {
-        return false;
-    }
-    
-    return true;
-}
 
 function dm_get_handler_customizations_data($customizations, $flow_step_id) {
     if (empty($flow_step_id)) {
         return [];
     }
-    
+
     // Get flow step configuration
     $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
     if (empty($step_config) || !isset($step_config['handler'])) {
@@ -411,8 +393,8 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
             }
         }
         
-        // Show settings that have meaningful values (not empty strings, false, or default-like values)
-        if (dm_should_show_setting($setting_key, $current_value, $handler_slug)) {
+        // Show all settings
+        {
             $field_config = $fields[$setting_key] ?? [];
             $label = $field_config['label'] ?? ucfirst(str_replace('_', ' ', $setting_key));
             

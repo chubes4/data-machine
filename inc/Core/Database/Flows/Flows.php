@@ -603,7 +603,7 @@ class Flows {
 
             return true;
             
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->wpdb->query('ROLLBACK'); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
             
             do_action('dm_log', 'error', 'Exception during flow position swap', [

@@ -64,6 +64,8 @@ $handler_config = [
 
 **Parent Content Integration**: When enabled, includes formatted parent post content with AI instruction prompts.
 
+**Engine Data Storage**: URLs are stored in database via `store_engine_data()` for centralized access by handlers through the `dm_engine_data` filter.
+
 ## Content Format
 
 **Basic Media Content**:
@@ -94,7 +96,7 @@ Content:
 
 ## Output Structure
 
-**DataPacket Content**:
+**Clean DataPacket** (AI-visible):
 ```php
 [
     'data' => [
@@ -104,14 +106,20 @@ Content:
     'metadata' => [
         'source_type' => 'wordpress_media',
         'original_id' => 'post_id',
-        'source_url' => 'parent_post_permalink',
         'original_title' => 'media_title',
-        'image_url' => 'media_attachment_url',  // For publish handlers
+        'original_date_gmt' => 'upload_timestamp',
         'file_path' => '/local/file/path',      // For AI processing
         'mime_type' => 'mime/type',             // File type
-        'original_date_gmt' => 'upload_timestamp',
         'file_size' => 'bytes'
     ]
+]
+```
+
+**Engine Data** (stored in database, accessed via `dm_engine_data` filter):
+```php
+[
+    'source_url' => 'parent_post_permalink',    // When include_parent_content enabled
+    'image_url' => 'media_attachment_url'       // For publish handlers
 ]
 ```
 

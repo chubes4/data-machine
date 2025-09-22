@@ -287,22 +287,22 @@ $tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
 - **Handler Tools**: Step-specific (twitter_publish, wordpress_update) - available when next step matches handler type
 - **General Tools**: Universal (Google Search, Local Search, WebFetch, WordPress Post Reader) - available to all AI agents
 
-**Enhanced Tool Discovery**: UpdateStep implements intelligent tool result detection with handler slug matching and partial name matching:
+**Enhanced Tool Discovery**: UpdateStep and PublishStep implement intelligent tool result detection with exact handler matching and partial name matching for flexible tool discovery:
 
 ```php
-// UpdateStep tool result detection with flexible matching
+// UpdateStep/PublishStep tool result detection with flexible matching
 private function find_tool_result_for_handler(array $data, string $handler): ?array {
     foreach ($data as $entry) {
         if (($entry['type'] ?? '') === 'tool_result') {
             $tool_name = $entry['metadata']['tool_name'] ?? '';
             $tool_handler = $entry['metadata']['tool_handler'] ?? '';
 
-            // Exact handler match
+            // Exact handler match (primary method)
             if ($tool_handler === $handler) {
                 return $entry;
             }
 
-            // Partial name matching for tool discovery
+            // Partial name matching for tool discovery (fallback method)
             if (strpos($tool_name, $handler) !== false || strpos($handler, $tool_name) !== false) {
                 return $entry;
             }
@@ -377,7 +377,7 @@ class Twitter {
 | Reddit | OAuth2 | Subreddit posts, comments, API-based fetching |
 | Google Sheets | OAuth2 | Spreadsheet data extraction, cell-level access |
 | WordPress Local | None | Local post/page content retrieval, specific post ID targeting, taxonomy filtering, timeframe filtering |
-| WordPress Media | None | Media library attachments, file URLs, metadata handling, recent uploads filtering |
+| WordPress Media | None | Media library attachments with post content integration, file URLs, metadata handling, parent post content inclusion, clean content generation |
 | WordPress API | None | External WordPress sites via REST API, structured data access, modern RSS alternative |
 
 | **Publish** | **Auth** | **Limit** | **Features** |
@@ -706,7 +706,7 @@ apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' =>
 - **Reddit**: `source_url` (Reddit post URL), `image_url` (stored image URL)
 - **WordPress Local**: `source_url` (permalink), `image_url` (featured image URL)
 - **WordPress API**: `source_url` (post link), `image_url` (featured image URL)
-- **WordPress Media**: `source_url` (media URL), `image_url` (media URL)
+- **WordPress Media**: `source_url` (parent post permalink when include_parent_content enabled), `image_url` (media URL)
 - **RSS**: `source_url` (item link), `image_url` (enclosure URL)
 - **Google Sheets**: `source_url` (empty), `image_url` (empty)
 - **Files**: `image_url` (public URL for images only)

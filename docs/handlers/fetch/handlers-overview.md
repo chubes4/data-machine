@@ -13,10 +13,10 @@ Fetch handlers retrieve content from various sources and convert it into standar
 - **Key Features**: Taxonomy filtering, timeframe limits, specific post targeting
 
 **WordPress Media** (`wordpress_media`)
-- **Purpose**: Fetch media files from local WordPress media library
+- **Purpose**: Fetch media files from local WordPress media library with parent post integration
 - **Authentication**: None (uses WordPress media functions)
-- **Data Source**: Media library attachments
-- **Key Features**: Recent uploads filtering, specific file targeting
+- **Data Source**: Media library attachments with optional parent content
+- **Key Features**: Parent post content inclusion, file type filtering, metadata extraction, clean content generation
 
 **Files** (`files`)
 - **Purpose**: Process local and remote files
@@ -67,7 +67,7 @@ public function get_fetch_data(int $pipeline_id, array $handler_config, ?string 
 
 **Return**: Array with `processed_items` key containing DataPackets
 
-### Standard DataPacket Format
+### Clean DataPacket Format (AI-visible)
 
 ```php
 [
@@ -79,12 +79,32 @@ public function get_fetch_data(int $pipeline_id, array $handler_config, ?string 
         'source_type' => 'handler_name',
         'item_identifier_to_log' => 'unique_id',
         'original_id' => 'source_id',
-        'source_url' => 'https://source.com/item',
         'original_title' => 'Content Title',
-        'image_source_url' => 'https://source.com/image.jpg', // optional
         'original_date_gmt' => '2023-01-01 12:00:00'
+        // URLs stored separately in engine data
     ]
 ]
+```
+
+### Engine Data (Database Storage)
+
+Fetch handlers store engine parameters in database for centralized access via `dm_engine_data` filter:
+
+```php
+// Stored by fetch handlers in database
+$all_databases = apply_filters('dm_db', []);
+$db_jobs = $all_databases['jobs'] ?? null;
+if ($db_jobs) {
+    $db_jobs->store_engine_data($job_id, [
+        'source_url' => 'https://source.com/item',        // For Update handlers
+        'image_url' => 'https://source.com/image.jpg',    // For media handling
+    ]);
+}
+
+// Retrieved by handlers via centralized filter
+$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$source_url = $engine_data['source_url'] ?? null;
+$image_url = $engine_data['image_url'] ?? null;
 ```
 
 ## Deduplication System
@@ -206,23 +226,30 @@ Most handlers return exactly one item per execution:
 
 Fetch handlers provide essential metadata that AI steps use for content processing and tool execution:
 
-**Source URL for Updates**: WordPress Local, WordPress API, and WordPress Media handlers provide `source_url` via engine parameters enabling Update steps to modify existing content.
+**Source URL for Updates**: WordPress Local, WordPress API, and WordPress Media handlers store `source_url` in database via `store_engine_data()` enabling Update steps to access target URLs through the `dm_engine_data` filter.
 
 **Content Structure**: All handlers structure content in consistent format that AI steps process through the modular AI directive system.
 
-**Metadata Preservation**: Handler metadata (original titles, dates, URLs) flows through pipeline to AI tools via AIStepToolParameters.
+**Metadata Preservation**: Handler metadata (original titles, dates) flows through pipeline to AI tools via AIStepToolParameters while URLs are accessed via engine data filter.
 
 ### Tool-First Architecture Support
 
-Fetch handlers seamlessly integrate with the tool-first AI architecture:
+Fetch handlers seamlessly integrate with the tool-first AI architecture using centralized engine data storage:
 
 ```php
-// Fetch provides source_url via engine parameters (separate from AI data)
-$engine_parameters['source_url'] = 'https://site.com/post/123';
+// Fetch stores engine data in database (separate from AI data)
+$all_databases = apply_filters('dm_db', []);
+$db_jobs = $all_databases['jobs'] ?? null;
+if ($db_jobs) {
+    $db_jobs->store_engine_data($job_id, [
+        'source_url' => 'https://site.com/post/123',
+        'image_url' => 'https://site.com/image.jpg'
+    ]);
+}
 
 // AI step processes clean content without URL pollution
-// Update tools automatically receive source_url via AIStepToolParameters from engine parameters
-// Publishing tools receive clean content via AIStepToolParameters  
+// Update tools access source_url via centralized dm_engine_data filter
+// Publishing tools receive clean content via AIStepToolParameters
 ```
 
 ## Integration Examples
@@ -236,7 +263,8 @@ $result = $wordpress_handler->get_fetch_data(
     ['wordpress_posts' => ['post_type' => 'post']],
     $job_id
 );
-// Returns: ['processed_items' => [...], 'engine_parameters' => [...]]
+// Returns: ['processed_items' => [...]]
+// Engine data stored separately in database via store_engine_data()
 ```
 
 ### With Deduplication
@@ -265,25 +293,37 @@ class CustomFetchHandler {
         // Extract configuration
         $config = $handler_config['custom_source'] ?? [];
         $flow_step_id = $handler_config['flow_step_id'] ?? null;
-        
+
         // Fetch data from source
         $items = $this->fetch_from_source($config);
-        
+
         // Process first unprocessed item
         foreach ($items as $item) {
             if ($flow_step_id) {
-                $is_processed = apply_filters('dm_is_item_processed', false, 
+                $is_processed = apply_filters('dm_is_item_processed', false,
                     $flow_step_id, 'custom_source', $item['id']);
-                
+
                 if ($is_processed) continue;
-                
-                do_action('dm_mark_item_processed', $flow_step_id, 
+
+                do_action('dm_mark_item_processed', $flow_step_id,
                     'custom_source', $item['id'], $job_id);
             }
-            
+
+            // Store engine data in database for handlers
+            if ($job_id) {
+                $all_databases = apply_filters('dm_db', []);
+                $db_jobs = $all_databases['jobs'] ?? null;
+                if ($db_jobs) {
+                    $db_jobs->store_engine_data($job_id, [
+                        'source_url' => $item['url'],
+                        'image_url' => $item['image'] ?? ''
+                    ]);
+                }
+            }
+
             return ['processed_items' => [$this->create_data_packet($item)]];
         }
-        
+
         return ['processed_items' => []];
     }
 }

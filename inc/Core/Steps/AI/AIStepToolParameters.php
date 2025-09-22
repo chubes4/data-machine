@@ -24,10 +24,16 @@ class AIStepToolParameters {
     /**
      * Build flat parameter structure for tool execution.
      *
+     * Creates unified parameter structure by merging:
+     * 1. Core parameters (job_id, flow_step_id, data, flow_step_config)
+     * 2. Extracted content/title based on tool parameter requirements
+     * 3. Tool metadata (definition, name, handler_config)
+     * 4. AI-provided parameters (overwrite conflicts)
+     *
      * @param array $ai_tool_parameters Parameters from AI tool call
-     * @param array $unified_parameters Engine parameter structure
-     * @param array $tool_definition Tool definition
-     * @return array Flat parameter structure
+     * @param array $unified_parameters Core parameter structure from step execution
+     * @param array $tool_definition Tool definition with parameter specifications
+     * @return array Flat parameter structure ready for handler tool call methods
      */
     public static function buildParameters(
         array $ai_tool_parameters,
@@ -87,16 +93,22 @@ class AIStepToolParameters {
     }
     
     /**
-     * Build parameters for handler tools with additional engine context.
-     * Enhanced parameter building that merges engine data (like source_url)
-     * for specialized handlers like Update handlers requiring source identification.
+     * Build parameters for handler tools with engine data integration.
+     *
+     * Enhanced parameter building specifically for handler tools requiring engine context.
+     * Merges engine data (source_url, image_url) from centralized dm_engine_data filter
+     * access for specialized handlers like Update handlers requiring source identification.
+     *
+     * Parameter merge order:
+     * 1. Standard buildParameters() output (core + content + tool metadata + AI params)
+     * 2. Engine parameters from fetch handler database storage (source_url, image_url)
      *
      * @param array $ai_tool_parameters AI tool call parameters
      * @param array $data Data packet array for content extraction
-     * @param array $tool_definition Tool specification
-     * @param array $engine_parameters Additional data from engine context (source_url, etc.)
+     * @param array $tool_definition Tool specification with parameter requirements
+     * @param array $engine_parameters Engine data from centralized filter (source_url, image_url, etc.)
      * @param array $handler_config Handler-specific settings
-     * @return array Flat parameter structure with engine data merged
+     * @return array Flat parameter structure with engine data merged for handler execution
      */
     public static function buildForHandlerTool(
         array $ai_tool_parameters,

@@ -69,20 +69,22 @@ class PipelineModalAjax
             wp_send_json_error(['message' => __('Template data parameter is required', 'data-machine')]);
         }
         
-        $template = sanitize_text_field(wp_unslash($_POST['template']));
-        $raw_template_data = sanitize_textarea_field(wp_unslash($_POST['template_data'] ?? ''));
-        
-        // Validate JSON structure before decoding
-        if (!is_string($raw_template_data)) {
-            wp_send_json_error(['message' => __('Template data must be a JSON string', 'data-machine')]);
+    $template = sanitize_text_field(wp_unslash($_POST['template']));
+    $raw_template_data = wp_unslash($_POST['template_data'] ?? '');
+
+        // Accept either JSON string or array; decode safely then sanitize
+        if (is_string($raw_template_data)) {
+            $decoded = json_decode($raw_template_data, true);
+            if (!is_array($decoded)) {
+                wp_send_json_error(['message' => __('Invalid template data format', 'data-machine')]);
+            }
+            $template_data = $decoded;
+        } elseif (is_array($raw_template_data)) {
+            $template_data = $raw_template_data; // already unslashed above
+        } else {
+            wp_send_json_error(['message' => __('Template data must be a JSON string or array', 'data-machine')]);
         }
-        
-        $template_data = json_decode($raw_template_data, true);
-        
-        if (!is_array($template_data)) {
-            wp_send_json_error(['message' => __('Invalid template data format', 'data-machine')]);
-        }
-        
+
         // Recursively sanitize template data array
         $template_data = $this->sanitize_template_data($template_data);
 
@@ -211,11 +213,15 @@ class PipelineModalAjax
         }
 
         $context_raw = $_POST['context'] ?? []; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+        $context_raw = wp_unslash($context_raw);
 
-        // jQuery AJAX properly handles escaping, so don't double-escape with wp_unslash()
-        $context = is_string($context_raw)
-            ? array_map('sanitize_text_field', json_decode($context_raw, true) ?: [])
-            : array_map('sanitize_text_field', wp_unslash($context_raw));
+        // Decode/sanitize after unslashing
+        if (is_string($context_raw)) {
+            $decoded = json_decode($context_raw, true) ?: [];
+            $context = is_array($decoded) ? array_map('sanitize_text_field', $decoded) : [];
+        } else {
+            $context = array_map('sanitize_text_field', (array) $context_raw);
+        }
 
         // Context data should be a native array after sanitization
         if (!is_array($context)) {
@@ -281,10 +287,7 @@ class PipelineModalAjax
             }
             
             // Save AI HTTP Client step-aware configuration using actions
-            try {
-                    
-                    // Get form data using step-aware field names
-                    $form_data = [];
+            // Get form data using step-aware field names
                     
                     // AI HTTP Client now uses standard field names - Data Machine handles step-specific storage
                     $provider_field = 'ai_provider';
@@ -415,7 +418,12 @@ class PipelineModalAjax
                     ]);
                     
                     if (!$success) {
-                        throw new \Exception('Failed to save pipeline step configuration');
+                        do_action('dm_log', 'error', 'Failed to save pipeline step configuration', [
+                            'pipeline_step_id' => $pipeline_step_id,
+                            'pipeline_id' => $pipeline_id
+                        ]);
+                        wp_send_json_error(['message' => __('Error saving AI configuration', 'data-machine')]);
+                        return;
                     }
                     
                     // Trigger auto-save for additional processing
@@ -437,11 +445,6 @@ class PipelineModalAjax
                             'provider' => $provider
                         ]
                     ]);
-                    
-                } catch (Exception $e) {
-                    do_action('dm_log', 'error', 'AI step configuration save error: ' . $e->getMessage());
-                    wp_send_json_error(['message' => __('Error saving AI configuration', 'data-machine')]);
-                }
         } else {
             // Handle other step types in the future
             /* translators: %s: Step type name */
@@ -467,18 +470,21 @@ class PipelineModalAjax
         do_action('dm_log', 'debug', 'Save handler settings request received', [
             'post_keys' => array_keys($_POST),
             'post_data' => array_intersect_key($_POST, array_flip(['handler_slug', 'step_type', 'flow_id', 'pipeline_id', 'action', 'context'])),
-            'has_nonce' => isset($_POST['handler_settings_nonce']),
+            'has_nonce' => isset($_POST['nonce']),
             'user_can_manage' => current_user_can('manage_options')
         ]);
 
         // Handle both context-based (add handler) and direct form data (save settings) scenarios
         $context_raw = $_POST['context'] ?? []; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+        $context_raw = wp_unslash($context_raw);
 
-        // jQuery AJAX properly handles escaping, so don't double-escape with wp_unslash()
-        $context = is_string($context_raw)
-            ? array_map('sanitize_text_field', json_decode($context_raw, true) ?: [])
-            : array_map('sanitize_text_field', wp_unslash($context_raw));
-        
+        if (is_string($context_raw)) {
+            $decoded = json_decode($context_raw, true) ?: [];
+            $context = is_array($decoded) ? array_map('sanitize_text_field', $decoded) : [];
+        } else {
+            $context = array_map('sanitize_text_field', (array) $context_raw);
+        }
+
         // Extract data from context if available (add handler scenario), otherwise from direct form fields
         // Note: $context is already unslashed and sanitized above, so only unslash direct $_POST values
         $handler_slug = isset($context['handler_slug']) ? 
@@ -544,6 +550,11 @@ class PipelineModalAjax
             // Extract flow_id for JavaScript response
             $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
             $flow_id = $parts['flow_id'] ?? null;
+
+            // Ensure any cached flow data is invalidated before fetching
+            if (!empty($flow_id)) {
+                do_action('dm_clear_flow_cache', $flow_id);
+            }
 
             // Get updated flow configuration for immediate UI update
             $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);

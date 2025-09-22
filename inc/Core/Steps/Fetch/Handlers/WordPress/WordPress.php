@@ -306,11 +306,6 @@ class WordPress {
         return strtotime($interval_map[$timeframe_limit], current_time('timestamp', true));
     }
 
-    /**
-     * Get the user-friendly label for this handler.
-     *
-     * @return string Handler label.
-     */
     public static function get_label(): string {
         return __('Local WordPress Posts', 'data-machine');
     }

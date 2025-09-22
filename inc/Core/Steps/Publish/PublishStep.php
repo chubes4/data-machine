@@ -98,11 +98,15 @@ class PublishStep {
     // PublishStep receives cumulative data packet array from engine via $data parameter
 
     /**
-     * Find tool result for handler
-     * 
-     * @param array $data Data packet array
-     * @param string $handler Handler slug
-     * @return array|null Tool result entry or null
+     * Find AI tool execution result for publish handler.
+     *
+     * Searches data packet for tool execution results supporting multiple formats:
+     * - tool_result: Traditional AI tool call results
+     * - ai_handler_complete: Unified conversation system results
+     *
+     * @param array $data Data packet array from AI step execution
+     * @param string $handler Target handler slug for matching
+     * @return array|null Tool result entry or null if no match found
      */
     private function find_tool_result_for_handler(array $data, string $handler): ?array {
         do_action('dm_log', 'debug', 'PublishStep: Searching for tool result or ai_handler_complete entry', [

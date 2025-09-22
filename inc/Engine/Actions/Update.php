@@ -219,7 +219,7 @@ class Update {
         
         // Initialize step configuration if it doesn't exist
         if (!isset($flow_config[$flow_step_id])) {
-            $pipeline_step_id = implode('_', $parts); // Reconstruct pipeline_step_id
+            $pipeline_step_id = $parts['pipeline_step_id'] ?? null; // Use parsed pipeline_step_id
             $flow_config[$flow_step_id] = [
                 'flow_step_id' => $flow_step_id,
                 'pipeline_step_id' => $pipeline_step_id,

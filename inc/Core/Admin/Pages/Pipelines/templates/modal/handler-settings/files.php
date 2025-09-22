@@ -48,42 +48,34 @@ if ($flow_step_id) {
     $repository = $repositories['files'] ?? null;
     
     if ($repository) {
-        try {
-            // Get all files for this flow step
-            $files = $repository->get_all_files($flow_step_id);
-            
-            if (!empty($files)) {
-                // Get processed items service to check processing status
-                $all_databases = apply_filters('dm_db', []);
-                $processed_items_service = $all_databases['processed_items'] ?? null;
-                
-                // Enhance files with processing status
-                foreach ($files as $file) {
-                    $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'files', $file['path']);
-                    
-                    $files_with_status[] = [
-                        'filename' => $file['filename'],
-                        'size' => $file['size'],
-                        'size_formatted' => size_format($file['size']),
-                        'modified' => $file['modified'],
-                        'modified_formatted' => date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $file['modified']),
-                        'is_processed' => $is_processed,
-                        'status' => $is_processed ? __('Processed', 'data-machine') : __('Pending', 'data-machine'),
-                        'path' => $file['path']
-                    ];
-                }
-                
-                if (!empty($files_with_status)) {
-                    $show_empty_state = false;
-                    $show_table = true;
-                }
+        // Get all files for this flow step
+        $files = $repository->get_all_files($flow_step_id);
+
+        if (!empty($files)) {
+            // Get processed items service to check processing status
+            $all_databases = apply_filters('dm_db', []);
+            $processed_items_service = $all_databases['processed_items'] ?? null;
+
+            // Enhance files with processing status
+            foreach ($files as $file) {
+                $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'files', $file['path']);
+
+                $files_with_status[] = [
+                    'filename' => $file['filename'],
+                    'size' => $file['size'],
+                    'size_formatted' => size_format($file['size']),
+                    'modified' => $file['modified'],
+                    'modified_formatted' => date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $file['modified']),
+                    'is_processed' => $is_processed,
+                    'status' => $is_processed ? __('Processed', 'data-machine') : __('Pending', 'data-machine'),
+                    'path' => $file['path']
+                ];
             }
-        } catch (Exception $e) {
-            // Log error but don't break template rendering
-            do_action('dm_log', 'error', 'Template: Failed to load files for display', [
-                'error' => $e->getMessage(),
-                'flow_step_id' => $flow_step_id
-            ]);
+
+            if (!empty($files_with_status)) {
+                $show_empty_state = false;
+                $show_table = true;
+            }
         }
     }
 }

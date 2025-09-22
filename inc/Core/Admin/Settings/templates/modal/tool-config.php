@@ -47,6 +47,7 @@ $tool_config = apply_filters('dm_get_tool_config', [], $tool_id);
                 ?>
                 <div class="dm-tool-config-container">
                     <div class="dm-tool-config-header">
+                        <!-- translators: %s: tool name -->
                         <h3><?php echo esc_html(sprintf(__('Configure %s', 'data-machine'), ucwords(str_replace('_', ' ', $tool_id)))); ?></h3>
                     </div>
 
@@ -92,6 +93,7 @@ $tool_config = apply_filters('dm_get_tool_config', [], $tool_id);
                 ?>
                 <div class="dm-tool-config-container">
                     <div class="dm-tool-config-header">
+                        <!-- translators: %s: tool name -->
                         <h3><?php echo esc_html(sprintf(__('Configure %s', 'data-machine'), ucwords(str_replace('_', ' ', $tool_id)))); ?></h3>
                         <p><?php esc_html_e('This tool does not require any configuration.', 'data-machine'); ?></p>
                     </div>
@@ -103,6 +105,7 @@ $tool_config = apply_filters('dm_get_tool_config', [], $tool_id);
             ?>
             <div class="dm-tool-config-container">
                 <div class="dm-tool-config-header">
+                    <!-- translators: %s: tool name -->
                     <h3><?php echo esc_html(sprintf(__('Configure %s', 'data-machine'), ucwords(str_replace('_', ' ', $tool_id)))); ?></h3>
                     <p><?php esc_html_e('This tool does not require any configuration.', 'data-machine'); ?></p>
                 </div>

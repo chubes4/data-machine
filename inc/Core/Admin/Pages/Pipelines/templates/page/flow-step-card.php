@@ -39,7 +39,7 @@ if (!$is_empty) {
 
 $current_handler = null;
 if (!$is_empty) {
-    $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+    $step_config = $flow_config[$flow_step_id] ?? [];
     if (!empty($step_config['handler'])) {
         $current_handler = $step_config['handler'];
     }
@@ -178,7 +178,7 @@ if (!$is_empty) {
                         <?php endif; ?>
                         
                         <div class="dm-handler-customizations">
-                            <?php 
+                            <?php
                             $customizations = apply_filters('dm_get_handler_customizations', [], $flow_step_id);
                             if (!empty($customizations)): ?>
                                 <?php foreach ($customizations as $customization): ?>
@@ -208,8 +208,8 @@ if (!$is_empty) {
                                 <div class="dm-user-message-display">
                                     <?php
                                     // Get current flow step configuration to check for user message
-                                    $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
-                                    $user_message = $step_config['user_message'] ?? '';
+                                    $ai_step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+                                    $user_message = $ai_step_config['user_message'] ?? '';
                                     
                                     // Calculate dynamic rows based on content length
                                     $estimated_rows = max(4, min(15, ceil(strlen($user_message) / 60) + 1));

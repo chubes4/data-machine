@@ -197,11 +197,6 @@ class WordPress {
         ];
     }
 
-    /**
-     * Get the user-friendly label for this handler.
-     *
-     * @return string Handler label.
-     */
     public static function get_label(): string {
         return __('WordPress Update', 'data-machine');
     }

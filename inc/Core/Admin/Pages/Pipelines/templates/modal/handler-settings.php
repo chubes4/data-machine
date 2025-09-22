@@ -57,15 +57,24 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts'
 ?>
 <div class="dm-handler-settings-container">
     <div class="dm-handler-settings-header">
-        <h3><?php echo esc_html(sprintf(__('Configure %s Handler', 'data-machine'), $handler_label)); ?></h3>
-        <p><?php echo esc_html(sprintf(__('Set up your %s integration settings below.', 'data-machine'), $handler_label)); ?></p>
+    <h3><?php
+    /* translators: %s: Handler label */
+    echo esc_html( sprintf( __( 'Configure %s Handler', 'data-machine' ), $handler_label ) );
+    ?></h3>
+    <p><?php
+    /* translators: %s: Handler label */
+    echo esc_html( sprintf( __( 'Set up your %s integration settings below.', 'data-machine' ), $handler_label ) );
+    ?></p>
     </div>
     
     <?php if ($has_auth_system): ?>
         <div class="dm-auth-link-section">
             <div class="dm-auth-link-info">
                 <span class="dashicons dashicons-admin-network"></span>
-                <span><?php echo esc_html(sprintf(__('%s requires authentication to function properly.', 'data-machine'), $handler_label)); ?></span>
+                <span><?php
+                /* translators: %s: Handler label */
+                echo esc_html( sprintf( __( '%s requires authentication to function properly.', 'data-machine' ), $handler_label ) );
+                ?></span>
             </div>
             <button type="button" class="button button-secondary dm-modal-content" 
                     data-template="modal/handler-auth-form"
@@ -127,7 +136,8 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts'
             if (!empty($wp_settings['default_author_id'])) {
                 $user = get_userdata($wp_settings['default_author_id']);
                 $author_name = $user ? $user->display_name : 'Unknown';
-                $global_settings[] = sprintf(__('Author: %s', 'data-machine'), $author_name);
+                /* translators: %s: Author display name */
+                $global_settings[] = sprintf( __( 'Author: %s', 'data-machine' ), $author_name );
             }
 
             if (!empty($wp_settings['default_post_status'])) {
@@ -137,17 +147,20 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts'
                     'private' => __('Private', 'data-machine')
                 ];
                 $status_label = $status_labels[$wp_settings['default_post_status']] ?? ucfirst($wp_settings['default_post_status']);
-                $global_settings[] = sprintf(__('Post Status: %s', 'data-machine'), $status_label);
+                /* translators: %s: Post status label */
+                $global_settings[] = sprintf( __( 'Post Status: %s', 'data-machine' ), $status_label );
             }
 
             if (isset($wp_settings['default_include_source'])) {
-                $setting_label = $wp_settings['default_include_source'] ? __('Enabled', 'data-machine') : __('Disabled', 'data-machine');
-                $global_settings[] = sprintf(__('Include Source: %s', 'data-machine'), $setting_label);
+                $setting_label = $wp_settings['default_include_source'] ? __( 'Enabled', 'data-machine' ) : __( 'Disabled', 'data-machine' );
+                /* translators: %s: Enabled/Disabled label for including source */
+                $global_settings[] = sprintf( __( 'Include Source: %s', 'data-machine' ), $setting_label );
             }
 
             if (isset($wp_settings['default_enable_images'])) {
-                $setting_label = $wp_settings['default_enable_images'] ? __('Enabled', 'data-machine') : __('Disabled', 'data-machine');
-                $global_settings[] = sprintf(__('Featured Images: %s', 'data-machine'), $setting_label);
+                $setting_label = $wp_settings['default_enable_images'] ? __( 'Enabled', 'data-machine' ) : __( 'Disabled', 'data-machine' );
+                /* translators: %s: Enabled/Disabled label for featured images */
+                $global_settings[] = sprintf( __( 'Featured Images: %s', 'data-machine' ), $setting_label );
             }
 
             if (!empty($global_settings)) {

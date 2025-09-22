@@ -73,11 +73,15 @@ class ModalAjax
             } elseif (isset($modal_data['template'])) {
                 // Dynamic content via dm_render_template (has access to AJAX context)
                 $context_raw = $_POST['context'] ?? []; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+                $context_raw = wp_unslash($context_raw);
 
-                // jQuery AJAX properly handles escaping, so don't double-escape with wp_unslash()
-                $context = is_string($context_raw)
-                    ? array_map('sanitize_text_field', json_decode($context_raw, true) ?: [])
-                    : array_map('sanitize_text_field', wp_unslash($context_raw));
+                // Decode/sanitize based on type after unslashing
+                if (is_string($context_raw)) {
+                    $decoded = json_decode($context_raw, true) ?: [];
+                    $context = is_array($decoded) ? array_map('sanitize_text_field', $decoded) : [];
+                } else {
+                    $context = array_map('sanitize_text_field', (array) $context_raw);
+                }
                 
                 // Special handling for dynamic modals that need processed context
                 $content = $this->render_dynamic_modal_content($modal_data['template'], $context);

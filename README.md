@@ -105,7 +105,7 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 
 ## Available Handlers
 
-**Fetch Sources**: Local/remote files, RSS feeds, Reddit posts, WordPress Local, WordPress Media, WordPress API, Google Sheets  
+**Fetch Sources**: Local/remote files, RSS feeds, Reddit posts, WordPress Local, WordPress Media (with parent post content integration), WordPress API, Google Sheets  
 **Publish Destinations**: Twitter, Bluesky, Threads, Facebook, WordPress, Google Sheets  
 **Update Handlers**: WordPress Update (existing post/page modification via source_url from engine data filter access)  
 **AI Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)  

@@ -431,11 +431,6 @@ class Rss {
         return $mime_map[$extension] ?? 'application/octet-stream';
     }
 
-    /**
-     * Get handler label for UI display.
-     *
-     * @return string Localized handler label
-     */
     public static function get_label(): string {
         return __('RSS/Atom Feed', 'data-machine');
     }

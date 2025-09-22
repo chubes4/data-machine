@@ -168,12 +168,24 @@ class UpdateStep {
             });
             
             $job_id = $parameters['job_id'];
+
+            // Access engine data via centralized filter pattern (source_url, image_url from fetch handlers)
             $engine_data = apply_filters('dm_engine_data', [], $job_id);
 
             $source_url = $engine_data['source_url'] ?? null;
             $image_url = $engine_data['image_url'] ?? null;
-            $file_path = $parameters['file_path'] ?? null;  // From AI step file metadata
-            $mime_type = $parameters['mime_type'] ?? null;   // From AI step file metadata
+
+            // Extract file metadata from data array (same pattern as AIStep)
+            $file_path = null;
+            $mime_type = null;
+            if (!empty($data)) {
+                $first_item = $data[0] ?? [];
+                $metadata = $first_item['metadata'] ?? [];
+                if (isset($metadata['file_path']) && file_exists($metadata['file_path'])) {
+                    $file_path = $metadata['file_path'];
+                    $mime_type = $metadata['mime_type'] ?? '';
+                }
+            }
 
             $engine_parameters = compact('source_url', 'image_url', 'file_path', 'mime_type');
             
@@ -224,20 +236,28 @@ class UpdateStep {
     }
 
     /**
-     * Find AI tool execution result for this handler.
+     * Find AI tool execution result using intelligent handler matching.
      *
-     * @param array $data Data packet array
-     * @param string $handler Handler slug
-     * @return array|null Tool result entry or null
+     * Implements enhanced tool result detection with flexible matching:
+     * 1. Exact handler match via tool_handler metadata
+     * 2. Partial name matching for tool discovery compatibility
+     *
+     * @param array $data Data packet array from AI step execution
+     * @param string $handler Target handler slug for matching
+     * @return array|null Tool result entry or null if no match found
      */
     private function find_tool_result_for_handler(array $data, string $handler): ?array {
         foreach ($data as $entry) {
             if (($entry['type'] ?? '') === 'tool_result') {
                 $tool_name = $entry['metadata']['tool_name'] ?? '';
                 $tool_handler = $entry['metadata']['tool_handler'] ?? '';
+
+                // Exact handler match - primary discovery method
                 if ($tool_handler === $handler) {
                     return $entry;
                 }
+
+                // Partial name matching for tool discovery - secondary method
                 if (strpos($tool_name, $handler) !== false || strpos($handler, $tool_name) !== false) {
                     return $entry;
                 }
