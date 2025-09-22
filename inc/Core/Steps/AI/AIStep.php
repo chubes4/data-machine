@@ -244,9 +244,6 @@ class AIStep {
                             'flow_step_id' => $parameters['flow_step_id']
                         ];
 
-                        if (isset($available_tools[$tool_name]['handler'])) {
-                            $unified_parameters = array_merge($unified_parameters, $parameters);
-                        }
 
                         $tool_result = AIStepTools::executeTool($tool_name, $tool_parameters, $available_tools, $data, $flow_step_id, $unified_parameters);
                         $tool_def = $available_tools[$tool_name] ?? null;

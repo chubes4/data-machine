@@ -75,7 +75,28 @@ function dm_register_engine_filters() {
         ]);
 
         // Inject engine parameters for handler consumption
-        return array_merge($parameters, $engine_data);
+        $parameters = array_merge($parameters, $engine_data);
+
+        // Inject file metadata from data packet for AI multimodal processing
+        if ($step_type === 'ai' && !empty($data)) {
+            $first_item = $data[0] ?? [];
+            $metadata = $first_item['metadata'] ?? [];
+
+            // Check for file metadata from fetch handlers
+            if (isset($metadata['file_path']) && file_exists($metadata['file_path'])) {
+                $parameters['file_path'] = $metadata['file_path'];
+                $parameters['mime_type'] = $metadata['mime_type'] ?? '';
+
+                do_action('dm_log', 'debug', 'Engine Parameters: Injected file metadata for AI step', [
+                    'job_id' => $job_id,
+                    'flow_step_id' => $flow_step_id,
+                    'file_path' => $parameters['file_path'],
+                    'mime_type' => $parameters['mime_type']
+                ]);
+            }
+        }
+
+        return $parameters;
 
     }, 5, 5);
 
