@@ -1,18 +1,6 @@
 <?php
 /**
- * RSS/Atom feed handler with comprehensive filtering and clean content processing.
- *
- * Provides clean content extraction without URL pollution - source URLs maintained
- * in metadata only. Supports RSS 2.0, RSS 1.0, and Atom formats with comprehensive
- * content field extraction and deduplication tracking.
- *
- * Features:
- * - Multi-format feed parsing (RSS 2.0, RSS 1.0, Atom)
- * - Clean content extraction with HTML tag stripping
- * - Comprehensive content field extraction (description, content:encoded, summary)
- * - Timeframe filtering and keyword search
- * - Deduplication tracking using GUID/ID with fallback to link
- * - Enclosure detection for media files
+ * RSS/Atom feed handler with timeframe and keyword filtering.
  *
  * @package DataMachine\Core\Steps\Fetch\Handlers\Rss
  */
@@ -31,14 +19,8 @@ class Rss {
 
 
     /**
-     * Fetch RSS/Atom content with clean data for AI processing.
-     * Returns processed items while storing engine data (source_url, image_url) in database.
-     *
-     * @param int $pipeline_id Pipeline ID for logging context.
-     * @param array $handler_config Handler configuration including feed_url, timeframe, search terms, flow_step_id.
-     * @param string|null $job_id Job ID for deduplication tracking.
-     * @return array Array with 'processed_items' containing clean data for AI processing.
-     *               Engine parameters (source_url, image_url) are stored via centralized dm_engine_data filter.
+     * Fetch RSS/Atom content with timeframe and keyword filtering.
+     * Engine data (source_url, image_url) stored via dm_engine_data filter.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
@@ -151,12 +133,11 @@ class Rss {
                 }
             }
 
-            // Apply search term filtering
-            if (!empty($search)) {
-                $search_text = strtolower($title . ' ' . wp_strip_all_tags($description));
-                if (strpos($search_text, strtolower($search)) === false) {
-                    continue; // Skip items that don't match search term
-                }
+            // Apply keyword search filter
+            $search_text = $title . ' ' . wp_strip_all_tags($description);
+            $matches = apply_filters('dm_keyword_search_match', false, $search_text, $search);
+            if (!$matches) {
+                continue; // Skip items that don't match search keywords
             }
 
             // Found first eligible item - create standardized packet and return

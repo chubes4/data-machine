@@ -1,34 +1,19 @@
 <?php
 /**
- * Update Step - Content Modification
- *
- * Updates existing content using processed data via handler tools.
- * Supports AI-generated updates and direct handler execution.
+ * Update step with AI tool detection and direct handler execution.
  *
  * @package DataMachine\Core\Steps\Update
- * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Update;
 
-// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
-
-/**
- * Update Step - Modifies Existing Content
- *
- * Processes data packets and updates existing content via handler tools.
- * Detects AI tool execution or executes handlers directly.
- */
 class UpdateStep {
 
     /**
-     * Execute update handler with AI tool detection.
-     *
-     * @param array $parameters Standard step parameters (job_id, flow_step_id, data, flow_step_config)
-     * @return array Updated data packet array
+     * Execute update handler with AI tool result detection.
      */
     public function execute(array $parameters): array {
         $job_id = $parameters['job_id'];

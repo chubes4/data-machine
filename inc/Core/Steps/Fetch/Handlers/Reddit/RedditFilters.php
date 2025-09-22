@@ -1,10 +1,9 @@
 <?php
 /**
- * Reddit Fetch Handler Registration
+ * Reddit handler filter registration.
  *
  * @package DataMachine
  * @subpackage Core\Steps\Fetch\Handlers\Reddit
- * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;
@@ -13,9 +12,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Register Reddit fetch handler filters.
- */
 function dm_register_reddit_fetch_filters() {
     add_filter('dm_handlers', function($handlers) {
         $handlers['reddit'] = [

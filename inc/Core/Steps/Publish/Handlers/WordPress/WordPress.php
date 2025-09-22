@@ -1,10 +1,7 @@
 <?php
 /**
- * WordPress publish handler with modular component architecture.
- *
- * Integrates FeaturedImageHandler, TaxonomyHandler, and SourceUrlHandler for
- * specialized post creation processing. Implements configuration hierarchy
- * where system defaults override handler settings.
+ * WordPress publish handler with modular components.
+ * Configuration hierarchy: system defaults override handler settings.
  *
  * @package DataMachine\Core\Steps\Publish\Handlers\WordPress
  */
@@ -32,11 +29,7 @@ class WordPress {
     }
 
     /**
-     * Create WordPress post with modular component processing.
-     *
-     * @param array $parameters Tool parameters (title, content, etc.)
-     * @param array $tool_def Tool definition with handler_config
-     * @return array Creation result with post ID and URL
+     * Create WordPress post with modular processing (image, taxonomies, source URL).
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         

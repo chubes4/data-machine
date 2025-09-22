@@ -7,29 +7,13 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Pure array-based data packet system - no object dependencies
-
 /**
- * Publish Step - Content Distribution
- *
- * Publishes processed content to external platforms via handler tools.
- * Relies on AI agents to execute handler tools during conversation workflow.
+ * Publish step with AI tool result detection and direct handler execution.
  */
 class PublishStep {
 
     /**
-     * Execute publish processing
-     * 
-     * Publishes processed data to external platforms via handler tools.
-     * Expects AI agents to execute handler tools during conversation workflow.
-     * 
-     * @param array $parameters Core parameter structure from step execution:
-     *   - job_id: Job execution identifier
-     *   - flow_step_id: Flow step identifier
-     *   - flow_step_config: Step configuration data
-     *   - data: Data packet array containing processed content
-     *   - Additional parameters: source_url, image_url, file_path, mime_type (as available)
-     * @return array Updated data packet array with publish results
+     * Execute publish handler with AI tool result detection.
      */
     public function execute(array $parameters): array {
         // Extract from flat parameter structure

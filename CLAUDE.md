@@ -80,6 +80,10 @@ apply_filters('dm_get_handler_customizations', [], $handler_slug);
 apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $step_type);
 apply_filters('dm_request', [], $method, $url, $args, $context);
 
+// Centralized Handler Filters
+apply_filters('dm_timeframe_limit', null, $timeframe_limit); // Shared timeframe parsing across fetch handlers
+apply_filters('dm_keyword_search_match', true, $content, $search_term); // Universal keyword matching with OR logic
+
 // Pipeline & Flow Events
 do_action('dm_pipeline_deleted', $pipeline_id, $flow_count);
 do_action('dm_flow_deleted', $pipeline_id, $flow_id);
@@ -373,12 +377,12 @@ class Twitter {
 | **Fetch** | **Auth** | **Features** |
 |-----------|----------|--------------|
 | Files | None | Local/remote file processing, flow-isolated storage |
-| RSS | None | Feed parsing, deduplication tracking |
-| Reddit | OAuth2 | Subreddit posts, comments, API-based fetching |
+| RSS | None | Feed parsing, deduplication tracking, timeframe filtering, keyword search |
+| Reddit | OAuth2 | Subreddit posts, comments, API-based fetching, timeframe filtering, keyword search |
 | Google Sheets | OAuth2 | Spreadsheet data extraction, cell-level access |
-| WordPress Local | None | Local post/page content retrieval, specific post ID targeting, taxonomy filtering, timeframe filtering |
-| WordPress Media | None | Media library attachments with post content integration, file URLs, metadata handling, parent post content inclusion, clean content generation |
-| WordPress API | None | External WordPress sites via REST API, structured data access, modern RSS alternative |
+| WordPress Local | None | Local post/page content retrieval, specific post ID targeting, taxonomy filtering, timeframe filtering, keyword search |
+| WordPress Media | None | Media library attachments with post content integration, file URLs, metadata handling, parent post content inclusion, clean content generation, timeframe filtering, keyword search |
+| WordPress API | None | External WordPress sites via REST API, structured data access, modern RSS alternative, timeframe filtering, keyword search |
 
 | **Publish** | **Auth** | **Limit** | **Features** |
 |-------------|----------|-----------|--------------|
@@ -725,7 +729,7 @@ composer install && composer test
 ```
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths
-**Filter Registration**: 40+ `*Filters.php` files auto-loaded via composer.json - handle registration, settings, and auth providers only (parameter injection removed)
+**Filter Registration**: 40+ `*Filters.php` files auto-loaded via composer.json - handle registration, settings, auth providers, and centralized cross-cutting functionality
 **Key Classes**: Directive classes, `AIStepToolParameters`, `AIStepConversationManager`
 **AI HTTP Client**: `chubes4/ai-http-client` Composer dependency provides unified HTTP interface
 
@@ -735,9 +739,25 @@ composer install && composer test
 - **Create.php**: Centralized creation operations with comprehensive validation and permission checking
 - **StatusDetection.php**: Filter-based status detection system with RED/YELLOW/GREEN priority architecture
 - **EngineData.php**: Centralized engine data access via `dm_engine_data` filter - replaces direct database access patterns
+- **Handlers.php**: Cross-cutting handler filters for shared functionality (timeframe parsing, keyword matching, data packet creation)
+- **DataPacket.php**: Centralized data packet creation with standardized structure and timestamp management
 - **Comment Cleanup**: Engine filters maintain clean, focused documentation without redundant comments
 - **Atomic Operations**: Complete creation workflows with proper cache invalidation and AJAX response handling
 - **Permission Security**: All engine operations require `manage_options` capability with consistent validation
+
+**Centralized Handler System**: The `Handlers.php` filter provides shared functionality across multiple handlers:
+
+```php
+// Timeframe parsing with discovery and conversion modes
+$timeframe_options = apply_filters('dm_timeframe_limit', null, null); // Discovery mode
+$cutoff_timestamp = apply_filters('dm_timeframe_limit', null, '24_hours'); // Conversion mode
+
+// Universal keyword matching with OR logic
+$matches = apply_filters('dm_keyword_search_match', true, $content, 'keyword1,keyword2');
+
+// Standardized data packet creation
+$data = apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $step_type);
+```
 
 **Engine Data Centralization**: The `dm_engine_data` filter provides unified access to source_url, image_url stored by fetch handlers:
 

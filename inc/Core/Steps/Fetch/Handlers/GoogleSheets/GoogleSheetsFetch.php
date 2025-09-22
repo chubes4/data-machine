@@ -1,13 +1,9 @@
 <?php
 /**
- * Google Sheets Fetch Handler - OAuth2-authenticated spreadsheet data retrieval
- *
- * Retrieves clean structured data from Google Sheets without URL pollution.
- * Engine data stored in database for centralized access via dm_engine_data filter.
+ * Google Sheets fetch handler with OAuth2 authentication.
  *
  * @package DataMachine
  * @subpackage Core\Steps\Fetch\Handlers\GoogleSheets
- * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
@@ -20,14 +16,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 class GoogleSheetsFetch {
 
     /**
-     * Fetch Google Sheets data with clean content for AI processing.
-     * Returns structured data while storing empty engine data in database.
-     *
-     * @param int $pipeline_id Pipeline ID for logging context
-     * @param array $handler_config Handler configuration with flow_step_id and sheet settings
-     * @param string|null $job_id Job ID for deduplication tracking
-     * @return array Array with 'processed_items' containing clean structured data.
-     *               Empty engine data stored in database (no URLs for spreadsheet data).
+     * Fetch Google Sheets data as structured rows.
+     * No engine data stored (no URLs for spreadsheet data).
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {

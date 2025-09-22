@@ -278,10 +278,11 @@ class PipelineModalAjax
                 ]);
             }
             
-            // Validate pipeline_step_id format (should be UUID4)
-            if (!wp_is_uuid($pipeline_step_id)) {
+            // Validate pipeline_step_id format (should be {pipeline_id}_{uuid4})
+            $parsed_step_id = apply_filters('dm_split_pipeline_step_id', null, $pipeline_step_id);
+            if ($parsed_step_id === null) {
                 wp_send_json_error([
-                    'message' => __('Pipeline step ID format invalid - expected UUID', 'data-machine'),
+                    'message' => __('Pipeline step ID format invalid - expected {pipeline_id}_{uuid4}', 'data-machine'),
                     'received' => $pipeline_step_id
                 ]);
             }
@@ -323,8 +324,7 @@ class PipelineModalAjax
                             $step_config_data['providers'][$provider]['model'] = $model;
                         }
                     }
-                    // Process enabled tools using centralized tools management
-                    require_once dirname(__DIR__, 3) . '/Steps/AI/AIStepTools.php';
+                    // Save tool selections via centralized manager
                     $tools_manager = new \DataMachine\Core\Steps\AI\AIStepTools();
                     
                     do_action('dm_log', 'debug', 'PipelineModalAjax: Before saving tool selections', [

@@ -93,6 +93,44 @@ All components self-register via WordPress filters:
 - `dm_auth_providers` - Register authentication providers
 - `dm_steps` - Register custom step types
 
+### Centralized Handler Filter System
+
+**Unified Cross-Cutting Functionality**: The engine provides centralized filters for shared functionality across multiple handlers, eliminating code duplication and ensuring consistency.
+
+**Core Centralized Filters**:
+- **`dm_timeframe_limit`**: Shared timeframe parsing with discovery/conversion modes
+  - Discovery mode: Returns available timeframe options for UI dropdowns
+  - Conversion mode: Returns Unix timestamp for specified timeframe
+  - Used by: RSS, Reddit, WordPress Local, WordPress Media, WordPress API
+- **`dm_keyword_search_match`**: Universal keyword matching with OR logic
+  - Case-insensitive Unicode-safe matching
+  - Comma-separated keyword support
+  - Used by: RSS, Reddit, WordPress Local, WordPress Media, WordPress API
+- **`dm_data_packet`**: Standardized data packet creation and structure
+  - Ensures type and timestamp fields are present
+  - Maintains chronological ordering via array_unshift()
+  - Used by: All step types for consistent data flow
+
+**Implementation**:
+```php
+// Timeframe parsing example
+$cutoff_timestamp = apply_filters('dm_timeframe_limit', null, '24_hours');
+$date_query = $cutoff_timestamp ? ['after' => gmdate('Y-m-d H:i:s', $cutoff_timestamp)] : [];
+
+// Keyword matching example
+$matches = apply_filters('dm_keyword_search_match', true, $content, $search_keywords);
+if (!$matches) continue; // Skip non-matching items
+
+// Data packet creation example
+$data = apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $step_type);
+```
+
+**Benefits**:
+- **Code Consistency**: Identical behavior across all handlers using shared filters
+- **Maintainability**: Single implementation location for shared functionality
+- **Extensibility**: New handlers automatically inherit shared capabilities
+- **Performance**: Optimized implementations used across all handlers
+
 ### WordPress Publish Handler Architecture
 **Modular Component System**: The WordPress publish handler is refactored into specialized processing modules for enhanced maintainability and extensibility.
 

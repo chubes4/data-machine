@@ -42,7 +42,7 @@ class WordPressMediaSettings {
             'search' => [
                 'type' => 'text',
                 'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Filter media by title or description.', 'data-machine'),
+                'description' => __('Filter media by keywords (comma-separated). Media containing any keyword in their title or description will be included.', 'data-machine'),
             ],
             'randomize_selection' => [
                 'type' => 'checkbox',

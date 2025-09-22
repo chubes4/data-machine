@@ -1,21 +1,8 @@
 <?php
 /**
- * Reddit Fetch Handler - OAuth2-authenticated subreddit content fetcher.
- *
- * Provides clean content processing without URL pollution - source URLs maintained
- * in metadata only. Features comprehensive filtering, deduplication tracking,
- * and flow-isolated image storage.
- *
- * Features:
- * - OAuth2 authentication with automatic token refresh
- * - Subreddit posts and comments retrieval with filtering
- * - Clean content extraction without URL injection
- * - Flow-isolated image storage in files repository
- * - Comprehensive deduplication tracking per execution
- * - Reddit-specific rate limiting and error handling
+ * Reddit fetch handler with OAuth2 authentication and universal image handling.
  *
  * @package DataMachine
- * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;
@@ -33,24 +20,13 @@ class Reddit {
 		$this->oauth_reddit = $all_auth['reddit'] ?? null;
 	}
 
-	/**
-	 * Get files repository instance for flow-isolated file storage.
-	 *
-	 * @return \DataMachine\Engine\FilesRepository|null Repository instance or null if unavailable
-	 */
 	private function get_repository(): ?\DataMachine\Engine\FilesRepository {
 		$repositories = apply_filters('dm_files_repository', []);
 		return $repositories['files'] ?? null;
 	}
 
 	/**
-	 * Download and store Reddit image in flow-isolated repository.
-	 * Uses Reddit-specific user agent and comprehensive error handling.
-	 *
-	 * @param string $image_url Remote image URL to download
-	 * @param string $flow_step_id Flow step ID for isolation
-	 * @param string $item_id Reddit item ID for filename generation
-	 * @return array|null Image attachment data with path/filename/size or null on failure
+	 * Store Reddit image with proper user agent handling.
 	 */
 	private function store_reddit_image(string $image_url, string $flow_step_id, string $item_id): ?array {
 		$repository = $this->get_repository();
@@ -80,14 +56,8 @@ class Reddit {
 
 
 	/**
-	 * Fetch Reddit content with clean data for AI processing.
-	 * Returns processed items while storing engine data (source_url, image_url) in database.
-	 *
-	 * @param int $pipeline_id Pipeline ID for logging context.
-	 * @param array $handler_config Handler configuration including subreddit, filters, flow_step_id.
-	 * @param string|null $job_id Job ID for deduplication tracking.
-	 * @return array Array with 'processed_items' containing clean data for AI processing.
-	 *               Engine parameters (source_url, image_url) are stored via centralized dm_engine_data filter.
+	 * Fetch Reddit content with timeframe and keyword filtering.
+	 * Engine data (source_url, image_url) stored via dm_engine_data filter.
 	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
@@ -149,11 +119,6 @@ class Reddit {
 		$min_comment_count = isset($config['min_comment_count']) ? absint($config['min_comment_count']) : 0;
 		$comment_count_setting = isset($config['comment_count']) ? absint($config['comment_count']) : 0;
 		$search_term = trim( $config['search'] ?? '' );
-		$search_keywords = [];
-		if (!empty($search_term)) {
-			$search_keywords = array_map('trim', explode(',', $search_term));
-			$search_keywords = array_filter($search_keywords);
-		}
 
 		if ( empty( $subreddit ) ) {
 			do_action('dm_log', 'error', 'Reddit Input: Subreddit name not configured.', ['pipeline_id' => $pipeline_id]);
@@ -335,21 +300,14 @@ class Reddit {
 					}
 				}
 
-				if (!empty($search_keywords)) {
-					$title_to_check = $item_data['title'] ?? '';
-					$selftext_to_check = $item_data['selftext'] ?? '';
-					$text_to_search = $title_to_check . ' ' . $selftext_to_check;
-					$found_keyword = false;
-					foreach ($search_keywords as $keyword) {
-						if (mb_stripos($text_to_search, $keyword) !== false) {
-							$found_keyword = true;
-							break;
-						}
-					}
-					if (!$found_keyword) {
-						do_action('dm_log', 'debug', 'Reddit Input: Skipping item (search filter).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
-						continue;
-					}
+				// Apply keyword search filter
+				$title_to_check = $item_data['title'] ?? '';
+				$selftext_to_check = $item_data['selftext'] ?? '';
+				$text_to_search = $title_to_check . ' ' . $selftext_to_check;
+				$matches = apply_filters('dm_keyword_search_match', false, $text_to_search, $search_term);
+				if (!$matches) {
+					do_action('dm_log', 'debug', 'Reddit Input: Skipping item (search filter).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
+					continue;
 				}
 
 				do_action('dm_log', 'debug', 'Reddit Input: Found eligible item.', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);

@@ -44,7 +44,7 @@ class WordPressAPISettings {
             'search' => [
                 'type' => 'text',
                 'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Filter items by searching title and content for this term.', 'data-machine'),
+                'description' => __('Filter items by keywords (comma-separated). Items containing any keyword in their title or content will be included.', 'data-machine'),
                 'placeholder' => __('Optional search term', 'data-machine'),
             ],
         ];

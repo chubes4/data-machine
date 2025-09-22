@@ -164,7 +164,7 @@ class WordPressSettings {
             'search' => [
                 'type' => 'text',
                 'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Filter items using a search term.', 'data-machine'),
+                'description' => __('Filter items by keywords (comma-separated). Items containing any keyword in their title or content will be included.', 'data-machine'),
             ],
             'randomize_selection' => [
                 'type' => 'checkbox',

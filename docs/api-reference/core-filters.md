@@ -340,6 +340,82 @@ if ($job_id) {
 - ✅ **Clean Separation**: Engine data separate from AI data packets
 - ✅ **Flexible**: Steps access only what they need via filter call
 
+## Centralized Handler Filters
+
+### `dm_timeframe_limit`
+
+**Purpose**: Shared timeframe parsing across fetch handlers with discovery and conversion modes
+
+**Parameters**:
+- `$default` (mixed) - Default value (null or timestamp)
+- `$timeframe_limit` (string|null) - Timeframe specification
+
+**Return**: Array of options (discovery mode) or timestamp (conversion mode) or null
+
+**Discovery Mode** (when `$timeframe_limit` is null):
+```php
+$timeframe_options = apply_filters('dm_timeframe_limit', null, null);
+// Returns:
+[
+    'all_time' => __('All Time', 'data-machine'),
+    '24_hours' => __('Last 24 Hours', 'data-machine'),
+    '72_hours' => __('Last 72 Hours', 'data-machine'),
+    '7_days'   => __('Last 7 Days', 'data-machine'),
+    '30_days'  => __('Last 30 Days', 'data-machine'),
+]
+```
+
+**Conversion Mode** (when `$timeframe_limit` is a string):
+```php
+$cutoff_timestamp = apply_filters('dm_timeframe_limit', null, '24_hours');
+// Returns: Unix timestamp for 24 hours ago or null for 'all_time'
+```
+
+### `dm_keyword_search_match`
+
+**Purpose**: Universal keyword matching with OR logic for all fetch handlers
+
+**Parameters**:
+- `$default` (bool) - Default match result
+- `$content` (string) - Content to search in
+- `$search_term` (string) - Comma-separated keywords
+
+**Return**: Boolean indicating if any keyword matches
+
+**Usage**:
+```php
+$matches = apply_filters('dm_keyword_search_match', true, $content, 'wordpress,ai,automation');
+// Returns true if content contains 'wordpress' OR 'ai' OR 'automation'
+```
+
+**Features**:
+- **OR Logic**: Any keyword match passes the filter
+- **Case Insensitive**: Uses `mb_stripos()` for Unicode-safe matching
+- **Comma Separated**: Supports multiple keywords separated by commas
+- **Empty Filter**: Returns true when no search term provided (match all)
+
+### `dm_data_packet`
+
+**Purpose**: Centralized data packet creation with standardized structure
+
+**Parameters**:
+- `$data` (array) - Current data packet array
+- `$packet_data` (array) - Packet data to add
+- `$flow_step_id` (string) - Flow step identifier
+- `$step_type` (string) - Step type
+
+**Return**: Array with new packet added to front
+
+**Usage**:
+```php
+$data = apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $step_type);
+```
+
+**Features**:
+- **Standardized Structure**: Ensures type and timestamp fields are present
+- **Preserves All Fields**: Merges packet_data while adding missing structure
+- **Front Addition**: Uses `array_unshift()` to add new packets to the beginning
+
 ## Data Processing Filters
 
 ### `dm_is_item_processed`

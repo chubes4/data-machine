@@ -8,13 +8,12 @@ if (!defined('ABSPATH')) {
 
 
 /**
- * Executes fetch handlers to collect data from external sources.
+ * Fetch step with timeframe and keyword filtering capabilities.
  */
 class FetchStep {
 
     /**
-     * @param array $parameters Core parameter structure from step execution
-     * @return array Updated data packet array
+     * Execute fetch handler to collect data from external sources.
      */
     public function execute(array $parameters): array {
         $job_id = $parameters['job_id'];

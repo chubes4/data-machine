@@ -1,12 +1,6 @@
 <?php
 /**
- * Handler-Centric Cross-Cutting Filters
- *
- * Centralizes filter hooks used by multiple handlers to keep per-handler
- * files focused on registration and handler-specific behavior.
- *
- * Examples:
- * - dm_timeframe_limit: Shared timeframe parsing for fetch handlers
+ * Centralized cross-cutting filters for handler capabilities.
  *
  * @package DataMachine\Engine\Filters
  */
@@ -16,12 +10,10 @@ if (!defined('WPINC')) {
 }
 
 function dm_register_handler_filters() {
-    // Base aggregator for handler discovery; handlers append their own entries
     add_filter('dm_handlers', function($handlers) {
         return $handlers;
     }, 5, 1);
 
-    // Base aggregator for handler settings; handlers append their own entries
     add_filter('dm_handler_settings', function($all_settings) {
         return $all_settings;
     }, 5, 1);
@@ -57,6 +49,31 @@ function dm_register_handler_filters() {
 
         return strtotime($interval_map[$timeframe_limit], current_time('timestamp', true));
     }, 10, 2);
+
+    // Keyword search matching for all fetch handlers: parses comma-separated keywords with OR logic
+    add_filter('dm_keyword_search_match', function($default, $content, $search_term) {
+        if (empty($search_term)) {
+            return true; // No filter = match all
+        }
+
+        // Parse comma-separated keywords (or single term)
+        $keywords = array_map('trim', explode(',', $search_term));
+        $keywords = array_filter($keywords);
+
+        if (empty($keywords)) {
+            return true;
+        }
+
+        // OR logic - any keyword match passes
+        $content_lower = strtolower($content);
+        foreach ($keywords as $keyword) {
+            if (mb_stripos($content_lower, strtolower($keyword)) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }, 10, 3);
 
 }
 

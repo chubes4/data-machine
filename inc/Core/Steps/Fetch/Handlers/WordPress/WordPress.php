@@ -1,13 +1,9 @@
 <?php
 /**
- * WordPress Local fetch handler.
- *
- * Fetches post/page content from local WordPress installation using WP_Query.
- * Generates clean content for AI and stores source_url via engine data for link attribution and post identification.
+ * WordPress local content fetch handler with timeframe and keyword filtering.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers\WordPress
- * @since      1.0.0
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPress;
@@ -24,14 +20,8 @@ class WordPress {
     }
 
     /**
-     * Fetch WordPress content with clean data for AI processing.
-     * Returns processed items while storing engine data (source_url, image_url) in database.
-     *
-     * @param int $pipeline_id Pipeline ID for logging context.
-     * @param array $handler_config Handler configuration including flow_step_id and WordPress settings.
-     * @param string|null $job_id Job ID for deduplication tracking.
-     * @return array Array with 'processed_items' containing clean data for AI processing.
-     *               Engine parameters (source_url, image_url) are stored via centralized dm_engine_data filter.
+     * Fetch local WordPress content with timeframe and keyword filtering.
+     * Engine data (source_url, image_url) stored via dm_engine_data filter.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
@@ -149,9 +139,16 @@ class WordPress {
             $query_args['tax_query'] = $tax_query;
         }
 
-        // Add search term if specified
+        // Add search term if specified - use server-side for single terms, client-side for comma-separated
+        $use_client_side_search = false;
         if (!empty($search)) {
-            $query_args['s'] = $search;
+            if (strpos($search, ',') !== false) {
+                // Comma-separated keywords detected - use client-side filtering
+                $use_client_side_search = true;
+            } else {
+                // Single term - use efficient server-side search
+                $query_args['s'] = $search;
+            }
         }
 
         // Add date query if specified
@@ -173,6 +170,15 @@ class WordPress {
             $is_processed = ($flow_step_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_step_id, 'wordpress_local', $post_id) : false;
             if ($is_processed) {
                 continue;
+            }
+
+            // Apply client-side keyword search filter if needed
+            if ($use_client_side_search && !empty($search)) {
+                $search_text = $post->post_title . ' ' . wp_strip_all_tags($post->post_content . ' ' . $post->post_excerpt);
+                $matches = apply_filters('dm_keyword_search_match', false, $search_text, $search);
+                if (!$matches) {
+                    continue; // Skip posts that don't match search keywords
+                }
             }
 
             // Converge to single processing method - eliminates code duplication

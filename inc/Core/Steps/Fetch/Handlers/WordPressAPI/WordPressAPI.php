@@ -1,13 +1,9 @@
 <?php
 /**
- * REST API Endpoint Fetch Handler
- *
- * Fetches content from any REST API endpoint that returns JSON data.
- * Provides universal REST API access with flexible field extraction.
+ * WordPress REST API fetch handler with timeframe and keyword filtering.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers\WordPressAPI
- * @since      1.0.0
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPressAPI;
@@ -22,14 +18,8 @@ class WordPressAPI {
     }
 
     /**
-     * Fetch REST API content with clean data for AI processing.
-     * Returns processed items while storing engine data (source_url, image_url) in database.
-     *
-     * @param int $pipeline_id Pipeline ID for logging context.
-     * @param array $handler_config Handler configuration including endpoint_url, flow_step_id.
-     * @param string|null $job_id Job ID for deduplication tracking.
-     * @return array Array with 'processed_items' containing clean data for AI processing.
-     *               Engine parameters (source_url, image_url) are stored via centralized dm_engine_data filter.
+     * Fetch WordPress REST API content with timeframe and keyword filtering.
+     * Engine data (source_url, image_url) stored via dm_engine_data filter.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
@@ -169,12 +159,11 @@ class WordPressAPI {
                 }
             }
 
-            // Apply search term filtering
-            if (!empty($search)) {
-                $search_text = strtolower($title . ' ' . wp_strip_all_tags($content . ' ' . $excerpt));
-                if (strpos($search_text, strtolower($search)) === false) {
-                    continue; // Skip items that don't match search term
-                }
+            // Apply keyword search filter
+            $search_text = $title . ' ' . wp_strip_all_tags($content . ' ' . $excerpt);
+            $matches = apply_filters('dm_keyword_search_match', false, $search_text, $search);
+            if (!$matches) {
+                continue; // Skip items that don't match search keywords
             }
 
             // Extract image URL

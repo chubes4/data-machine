@@ -1,13 +1,9 @@
 <?php
 /**
- * WordPress Media fetch handler.
- *
- * Handles WordPress media library content using WP_Query for attachment post type.
- * Specialized for media files with clean content generation and URL storage via engine data.
+ * WordPress media library fetch handler with parent content integration.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers\WordPressMedia
- * @since      1.0.0
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPressMedia;
@@ -24,14 +20,8 @@ class WordPressMedia {
     }
 
     /**
-     * Fetch WordPress Media content with clean data for AI processing.
-     * Returns processed items while storing engine data (source_url, image_url) in database.
-     *
-     * @param int $pipeline_id Pipeline ID for logging context.
-     * @param array $handler_config Handler configuration including media settings and flow_step_id.
-     * @param string|null $job_id Job ID for deduplication tracking.
-     * @return array Array with 'processed_items' containing clean data for AI processing.
-     *               Engine parameters (source_url, image_url) are stored via centralized dm_engine_data filter.
+     * Fetch WordPress media with optional parent content inclusion.
+     * Engine data (source_url, image_url) stored via dm_engine_data filter.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
@@ -124,9 +114,16 @@ class WordPressMedia {
             $query_args['post_mime_type'] = $mime_types;
         }
 
-        // Add search term if specified
+        // Add search term if specified - use server-side for single terms, client-side for comma-separated
+        $use_client_side_search = false;
         if (!empty($search)) {
-            $query_args['s'] = $search;
+            if (strpos($search, ',') !== false) {
+                // Comma-separated keywords detected - use client-side filtering
+                $use_client_side_search = true;
+            } else {
+                // Single term - use efficient server-side search
+                $query_args['s'] = $search;
+            }
         }
 
         // Add date query if specified
@@ -149,8 +146,16 @@ class WordPressMedia {
             if ($is_processed) {
                 continue;
             }
-            
-            
+
+            // Apply client-side keyword search filter if needed
+            if ($use_client_side_search && !empty($search)) {
+                $search_text = $post->post_title . ' ' . wp_strip_all_tags($post->post_content . ' ' . $post->post_excerpt);
+                $matches = apply_filters('dm_keyword_search_match', false, $search_text, $search);
+                if (!$matches) {
+                    continue; // Skip media that don't match search keywords
+                }
+            }
+
             // Found first eligible item - mark as processed and return
             if ($flow_step_id) {
                 do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_media', $post_id, $job_id);

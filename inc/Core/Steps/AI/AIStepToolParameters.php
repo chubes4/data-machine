@@ -1,16 +1,7 @@
 <?php
 /**
  * Centralized flat parameter building for AI tool execution.
- *
- * Creates unified flat parameter structures compatible with all handler tool call methods.
- * Provides two build methods: standard parameter building and enhanced building for handler tools
- * with additional engine context (like source_url for link attribution and post identification).
- *
- * Parameter Building Process:
- * 1. Starts with unified parameters from step execution context
- * 2. Extracts content/title from data packets based on tool specifications
- * 3. Adds tool metadata directly to flat structure
- * 4. Merges AI-provided parameters (overwrites conflicting keys)
+ * Creates unified parameter structures for handler tool calls.
  *
  * @package DataMachine\Core\Steps\AI
  */
@@ -22,18 +13,8 @@ defined('ABSPATH') || exit;
 class AIStepToolParameters {
     
     /**
-     * Build flat parameter structure for tool execution.
-     *
-     * Creates unified parameter structure by merging:
-     * 1. Core parameters (job_id, flow_step_id, data, flow_step_config)
-     * 2. Extracted content/title based on tool parameter requirements
-     * 3. Tool metadata (definition, name, handler_config)
-     * 4. AI-provided parameters (overwrite conflicts)
-     *
-     * @param array $ai_tool_parameters Parameters from AI tool call
-     * @param array $unified_parameters Core parameter structure from step execution
-     * @param array $tool_definition Tool definition with parameter specifications
-     * @return array Flat parameter structure ready for handler tool call methods
+     * Build unified flat parameter structure for tool execution.
+     * Merges core parameters, extracted content, tool metadata, and AI parameters.
      */
     public static function buildParameters(
         array $ai_tool_parameters,
@@ -93,22 +74,8 @@ class AIStepToolParameters {
     }
     
     /**
-     * Build parameters for handler tools with engine data integration.
-     *
-     * Enhanced parameter building specifically for handler tools requiring engine context.
-     * Merges engine data (source_url, image_url) from centralized dm_engine_data filter
-     * for both publish handlers (link attribution) and update handlers (post identification).
-     *
-     * Parameter merge order:
-     * 1. Standard buildParameters() output (core + content + tool metadata + AI params)
-     * 2. Engine parameters from fetch handler database storage (source_url, image_url)
-     *
-     * @param array $ai_tool_parameters AI tool call parameters
-     * @param array $data Data packet array for content extraction
-     * @param array $tool_definition Tool specification with parameter requirements
-     * @param array $engine_parameters Engine data from centralized filter (source_url, image_url, etc.)
-     * @param array $handler_config Handler-specific settings
-     * @return array Flat parameter structure with engine data merged for publish/update handler execution
+     * Build parameters for handler tools with engine data (source_url, image_url).
+     * Used by publish handlers for link attribution and update handlers for post identification.
      */
     public static function buildForHandlerTool(
         array $ai_tool_parameters,

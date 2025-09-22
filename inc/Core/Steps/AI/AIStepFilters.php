@@ -1,12 +1,8 @@
 <?php
 /**
- * AI Step Registration
- *
- * Auto-registers AI step type, configuration UI, and tool integration via filter system.
- * Supports multi-provider AI integration with dynamic tool discovery.
+ * AI step filter registration with tool integration.
  *
  * @package DataMachine\Core\Steps\AI
- * @since 1.0.0
  */
 
 namespace DataMachine\Core\Steps\AI;
