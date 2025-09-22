@@ -24,21 +24,37 @@ Posts content to Twitter with media support, authentication via OAuth 1.0a, and 
 
 ### Content Settings
 
-**Include Source**
-- Default: `true`
-- Purpose: Append source URL to tweets
-- Behavior: URL appended to content or posted as reply
+**Link Handling** (`link_handling` setting)
+- **`'append'`** (default): Appends source_url to tweet content within 280 character limit
+- **`'reply'`**: Posts source_url as separate reply tweet after main tweet
+- **`'none'`**: No source_url appending (ignores source_url from engine data)
 
-**Enable Images**
-- Default: `true`  
+**Include Images**
+- Default: `true`
 - Purpose: Upload and attach images from data packets
 - Formats: JPEG, PNG, GIF, WebP
 - Size Limit: Handled automatically (chunked upload for large files)
 
-**URL as Reply**
-- Default: `false`
-- Purpose: Post source URL as reply tweet instead of appending
-- Behavior: Creates separate reply tweet with URL
+### Source URL Attribution
+
+**Engine Data Source**: `source_url` retrieved from fetch handlers via `dm_engine_data` filter
+
+**Append Mode** (`link_handling: 'append'`):
+- Source URL appended to tweet content with space separator
+- URL counts as 24 characters (t.co link length)
+- Content truncated if total exceeds 280 characters
+- Example: `"Great article content https://example.com/article"`
+
+**Reply Mode** (`link_handling: 'reply'`):
+- Main tweet posted without URL
+- Separate reply tweet created containing only source_url
+- Reply uses Twitter API v2 in_reply_to_tweet_id parameter
+- Both tweet IDs returned in response data
+
+**None Mode** (`link_handling: 'none'`):
+- No source_url processing
+- Content posted as-is without URL attribution
+- Useful when URL already embedded in content
 
 ## Tool Interface
 
@@ -46,8 +62,12 @@ Posts content to Twitter with media support, authentication via OAuth 1.0a, and 
 
 **Parameters**:
 - `content` (string, required) - Tweet content to post
-- `source_url` (string, optional) - Source URL from engine data via dm_engine_data filter
-- `image_url` (string, optional) - Image URL from engine data via dm_engine_data filter
+- `job_id` (string) - Job identifier for engine data access
+- `handler_config` (array) - Handler configuration from tool_def
+
+**Engine Data Access** (via `dm_engine_data` filter):
+- `source_url` (string, optional) - Source URL stored by fetch handlers
+- `image_url` (string, optional) - Image URL stored by fetch handlers
 
 **Return Format**:
 ```php
@@ -190,13 +210,17 @@ $result = $twitter_handler->handle_tool_call([
 ### Tweet with Media
 
 ```php
-// Note: image_url and source_url are automatically included from engine data
-// via dm_engine_data filter - fetch handlers store these parameters in database
+// Engine data (source_url, image_url) automatically retrieved from database
+// via dm_engine_data filter - stored by fetch handlers
 $result = $twitter_handler->handle_tool_call([
     'content' => 'Check out this image!',
-    'image_url' => 'https://example.com/image.jpg',    // From engine data
-    'source_url' => 'https://example.com/article'      // From engine data
+    'job_id' => $job_id  // Used to retrieve engine data
 ], $tool_definition);
+
+// Internal engine data access:
+$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$source_url = $engine_data['source_url'] ?? null;   // From fetch handler
+$image_url = $engine_data['image_url'] ?? null;     // From fetch handler
 ```
 
 ### Reply Mode Configuration

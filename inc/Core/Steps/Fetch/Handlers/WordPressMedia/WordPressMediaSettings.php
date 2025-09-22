@@ -24,22 +24,10 @@ class WordPressMediaSettings {
     /**
      * Get settings fields for WordPress media fetch handler.
      *
-     * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.
      */
-    public static function get_fields(array $current_config = []): array {
+    public static function get_fields(): array {
         $fields = [
-            'file_types' => [
-                'type' => 'multiselect',
-                'label' => __('File Types', 'data-machine'),
-                'description' => __('Select which types of media files to fetch.', 'data-machine'),
-                'options' => [
-                    'image' => __('Images', 'data-machine'),
-                    'video' => __('Videos', 'data-machine'),
-                    'audio' => __('Audio', 'data-machine'),
-                    'document' => __('Documents', 'data-machine'),
-                ],
-            ],
             'include_parent_content' => [
                 'type' => 'checkbox',
                 'label' => __('Include parent post content', 'data-machine'),
@@ -49,13 +37,7 @@ class WordPressMediaSettings {
                 'type' => 'select',
                 'label' => __('Process Items Within', 'data-machine'),
                 'description' => __('Only consider items uploaded within this timeframe.', 'data-machine'),
-                'options' => [
-                    'all_time' => __('All Time', 'data-machine'),
-                    '24_hours' => __('Last 24 Hours', 'data-machine'),
-                    '72_hours' => __('Last 72 Hours', 'data-machine'),
-                    '7_days'   => __('Last 7 Days', 'data-machine'),
-                    '30_days'  => __('Last 30 Days', 'data-machine'),
-                ],
+                'options' => apply_filters('dm_timeframe_limit', [], null),
             ],
             'search' => [
                 'type' => 'text',
@@ -80,7 +62,6 @@ class WordPressMediaSettings {
      */
     public static function sanitize(array $raw_settings): array {
         $sanitized = [
-            'file_types' => self::sanitize_file_types($raw_settings['file_types'] ?? []),
             'include_parent_content' => !empty($raw_settings['include_parent_content']),
             'timeframe_limit' => sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time'),
             'search' => sanitize_text_field($raw_settings['search'] ?? ''),
@@ -89,28 +70,6 @@ class WordPressMediaSettings {
 
         return $sanitized;
     }
-
-    /**
-     * Sanitize file types selection.
-     *
-     * @param array $file_types Raw file types array.
-     * @return array Sanitized file types.
-     */
-    private static function sanitize_file_types(array $file_types): array {
-        $valid_types = ['image', 'video', 'audio', 'document'];
-        $sanitized = [];
-        
-        foreach ($file_types as $type) {
-            $clean_type = sanitize_text_field($type);
-            if (in_array($clean_type, $valid_types)) {
-                $sanitized[] = $clean_type;
-            }
-        }
-        
-        // Default to images if no valid types selected
-        return empty($sanitized) ? ['image'] : array_unique($sanitized);
-    }
-
 
     /**
      * Determine if authentication is required based on current configuration.

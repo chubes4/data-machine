@@ -120,16 +120,17 @@ The Reddit handler generates clean data packets for AI processing while storing 
 ### Engine Parameters (Handler-Visible)
 ```php
 $engine_parameters = [
-    'source_url' => 'https://reddit.com/r/subreddit/comments/postid/',  // For Update handlers
+    'source_url' => 'https://reddit.com/r/subreddit/comments/postid/',  // For link attribution and content updates
     'image_url' => 'https://stored-image-url.com/image.jpg'              // For media handling
 ];
 ```
 
 ### Return Structure
 ```php
+// Engine parameters are stored in database via centralized dm_engine_data filter
+// Only clean data returned for AI processing
 return [
-    'processed_items' => [$clean_data_packet],
-    'engine_parameters' => $engine_parameters
+    'processed_items' => [$clean_data_packet]
 ];
 ```
 

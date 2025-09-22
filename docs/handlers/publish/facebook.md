@@ -19,11 +19,29 @@ Posts content to Facebook Pages using OAuth2 authentication with media upload su
 | `include_images` | boolean | No | Enable image upload and embedding (default: false) |
 | `link_handling` | string | No | Link inclusion mode: `append`, `comment` (default: "append") |
 
-## Link Handling Modes
+## Source URL Attribution
 
-**Append Mode** (`append`): Adds source URL directly to post content separated by double newlines.
+**Engine Data Source**: `source_url` retrieved from fetch handlers via `dm_engine_data` filter
 
-**Comment Mode** (`comment`): Posts source URL as a comment on the created post (requires `pages_manage_engagement` permission).
+### Link Handling Modes
+
+**Append Mode** (`link_handling: 'append'`):
+- Source URL appended to post content with double newline separator (`\n\n`)
+- No character limit restrictions (Facebook supports long posts)
+- Example: `"Great article content\n\nhttps://example.com/article"`
+- URL appears in main post content for immediate visibility
+
+**Comment Mode** (`link_handling: 'comment'`):
+- Main post published without source URL
+- Separate comment created containing only source_url
+- Requires `pages_manage_engagement` permission for comment posting
+- Comment posted immediately after main post creation
+- If permission missing, logs error but main post still succeeds
+
+**None Mode** (`link_handling: 'none'`):
+- No source_url processing or appending
+- Content posted as-is without URL attribution
+- Useful when URL already embedded in content or attribution not needed
 
 ## Usage Examples
 

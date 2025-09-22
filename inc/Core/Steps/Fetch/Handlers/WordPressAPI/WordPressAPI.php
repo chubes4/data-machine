@@ -29,7 +29,7 @@ class WordPressAPI {
      * @param array $handler_config Handler configuration including endpoint_url, flow_step_id.
      * @param string|null $job_id Job ID for deduplication tracking.
      * @return array Array with 'processed_items' containing clean data for AI processing.
-     *               Engine parameters (source_url, image_url) are stored in database via store_engine_data().
+     *               Engine parameters (source_url, image_url) are stored via centralized dm_engine_data filter.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
@@ -160,7 +160,7 @@ class WordPressAPI {
 
             // Apply timeframe filtering
             if ($timeframe_limit !== 'all_time' && $item_date) {
-                $cutoff_timestamp = $this->calculate_cutoff_timestamp($timeframe_limit);
+                $cutoff_timestamp = apply_filters('dm_timeframe_limit', null, $timeframe_limit);
                 if ($cutoff_timestamp !== null) {
                     $item_timestamp = strtotime($item_date);
                     if ($item_timestamp && $item_timestamp < $cutoff_timestamp) {
@@ -191,36 +191,24 @@ class WordPressAPI {
             ];
 
             // Create standardized packet and return immediately
-            $input_data = [
-                'data' => array_merge($content_data, ['file_info' => null]),
-                'metadata' => [
-                    'source_type' => 'rest_api',
-                    'item_identifier_to_log' => $unique_id,
-                    'original_id' => $item_id,
-                    'original_title' => $title,
-                    'original_date_gmt' => $item_date,
-                    'site_name' => $site_name
-                ]
+            $metadata = [
+                'source_type' => 'rest_api',
+                'item_identifier_to_log' => $unique_id,
+                'original_id' => $item_id,
+                'original_title' => $title,
+                'original_date_gmt' => $item_date,
+                'site_name' => $site_name
             ];
 
-            // Store URLs in engine_data for centralized access via dm_engine_data filter
-            if ($job_id) {
-                $engine_data = [
-                    'source_url' => $source_link,
-                    'image_url' => $image_url ?: '',
-                ];
+            // Create clean data packet for AI processing
+            $input_data = [
+                'data' => $content_data,
+                'metadata' => $metadata
+            ];
 
-                // Store engine_data via database service
-                $all_databases = apply_filters('dm_db', []);
-                $db_jobs = $all_databases['jobs'] ?? null;
-                if ($db_jobs) {
-                    $db_jobs->store_engine_data($job_id, $engine_data);
-                    do_action('dm_log', 'debug', 'REST API: Stored URLs in engine_data', [
-                        'job_id' => $job_id,
-                        'source_url' => $engine_data['source_url'],
-                        'has_image_url' => !empty($engine_data['image_url'])
-                    ]);
-                }
+            // Store URLs in engine_data via centralized filter
+            if ($job_id) {
+                apply_filters('dm_engine_data', null, $job_id, $source_link, $image_url ?: '');
             }
 
             // Return clean data packet (no URLs in metadata for AI)
@@ -429,30 +417,6 @@ class WordPressAPI {
         return $endpoint_url;
     }
 
-    /**
-     * Calculate cutoff timestamp based on timeframe limit.
-     *
-     * @param string $timeframe_limit Timeframe setting value.
-     * @return int|null Cutoff timestamp or null for 'all_time'.
-     */
-    private function calculate_cutoff_timestamp(string $timeframe_limit): ?int {
-        if ($timeframe_limit === 'all_time') {
-            return null;
-        }
-
-        $interval_map = [
-            '24_hours' => '-24 hours',
-            '72_hours' => '-72 hours',
-            '7_days'   => '-7 days',
-            '30_days'  => '-30 days'
-        ];
-
-        if (!isset($interval_map[$timeframe_limit])) {
-            return null;
-        }
-
-        return strtotime($interval_map[$timeframe_limit], current_time('timestamp', true));
-    }
 
     /**
      * Get the user-friendly label for this handler.

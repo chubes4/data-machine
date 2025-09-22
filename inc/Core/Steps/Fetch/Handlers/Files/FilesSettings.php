@@ -21,10 +21,9 @@ class FilesSettings {
     /**
      * Get settings fields for Files fetch handler.
      *
-     * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.
      */
-    public static function get_fields(array $current_config = []): array {
+    public static function get_fields(): array {
         return [
             'file_upload_section' => [
                 'type' => 'section',

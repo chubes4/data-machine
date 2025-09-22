@@ -38,7 +38,7 @@ class Rss {
      * @param array $handler_config Handler configuration including feed_url, timeframe, search terms, flow_step_id.
      * @param string|null $job_id Job ID for deduplication tracking.
      * @return array Array with 'processed_items' containing clean data for AI processing.
-     *               Engine parameters (source_url, image_url) are stored in database via store_engine_data().
+     *               Engine parameters (source_url, image_url) are stored via centralized dm_engine_data filter.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
@@ -49,18 +49,7 @@ class Rss {
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
         $search = trim($config['search'] ?? '');
 
-        $cutoff_timestamp = null;
-        if ($timeframe_limit !== 'all_time') {
-            $interval_map = [
-                '24_hours' => '-24 hours',
-                '72_hours' => '-72 hours',
-                '7_days'   => '-7 days',
-                '30_days'  => '-30 days'
-            ];
-            if (isset($interval_map[$timeframe_limit])) {
-                $cutoff_timestamp = strtotime($interval_map[$timeframe_limit], current_time('timestamp'));
-            }
-        }
+        $cutoff_timestamp = apply_filters('dm_timeframe_limit', null, $timeframe_limit);
 
         $args = [
             'user-agent' => 'DataMachine WordPress Plugin/' . DATA_MACHINE_VERSION
@@ -208,30 +197,15 @@ class Rss {
                 ];
             }
 
+            // Create clean data packet for AI processing
             $input_data = [
                 'data' => array_merge($content_data, ['file_info' => $file_info]),
                 'metadata' => $metadata
             ];
 
-            // Store URLs in engine_data for centralized access via dm_engine_data filter
+            // Store URLs in engine_data via centralized filter
             if ($job_id) {
-                $engine_data = [
-                    'source_url' => $link ?: '',
-                    'image_url' => $enclosure_url ?: ''
-                ];
-
-                // Store engine_data via database service
-                $all_databases = apply_filters('dm_db', []);
-                $db_jobs = $all_databases['jobs'] ?? null;
-                if ($db_jobs) {
-                    $db_jobs->store_engine_data($job_id, $engine_data);
-                    do_action('dm_log', 'debug', 'RSS: Stored URLs in engine_data', [
-                        'job_id' => $job_id,
-                        'source_url' => $engine_data['source_url'],
-                        'has_image_url' => !empty($engine_data['image_url']),
-                        'guid' => $guid
-                    ]);
-                }
+                apply_filters('dm_engine_data', null, $job_id, $link ?: '', $enclosure_url ?: '');
             }
 
             // Return clean data packet (no URLs in metadata for AI)

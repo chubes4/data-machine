@@ -116,7 +116,7 @@ In addition to the clean data packets above, the RSS handler stores engine param
 **Stored Engine Data**:
 ```php
 [
-    'source_url' => 'item_link',        // For Update handlers
+    'source_url' => 'item_link',        // For link attribution and content updates
     'image_url' => 'enclosure_url'      // For media handling
 ]
 ```

@@ -24,10 +24,9 @@ class RssSettings {
     /**
      * Get settings fields for RSS fetch handler.
      *
-     * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.
      */
-    public static function get_fields(array $current_config = []): array {
+    public static function get_fields(): array {
         return [
             'feed_url' => [
                 'type' => 'url',
@@ -39,13 +38,7 @@ class RssSettings {
                 'type' => 'select',
                 'label' => __('Process Items Within', 'data-machine'),
                 'description' => __('Only consider RSS items published within this timeframe.', 'data-machine'),
-                'options' => [
-                    'all_time' => __('All Time', 'data-machine'),
-                    '24_hours' => __('Last 24 Hours', 'data-machine'),
-                    '72_hours' => __('Last 72 Hours', 'data-machine'),
-                    '7_days'   => __('Last 7 Days', 'data-machine'),
-                    '30_days'  => __('Last 30 Days', 'data-machine'),
-                ],
+                'options' => apply_filters('dm_timeframe_limit', [], null),
             ],
             'search' => [
                 'type' => 'text',
@@ -74,13 +67,7 @@ class RssSettings {
         
         
         // Timeframe limit
-        $valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
-        $timeframe = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
-        if (!in_array($timeframe, $valid_timeframes)) {
-            do_action('dm_log', 'error', 'RSS Settings: Invalid timeframe parameter provided in settings.', ['timeframe' => $timeframe]);
-            return [];
-        }
-        $sanitized['timeframe_limit'] = $timeframe;
+        $sanitized['timeframe_limit'] = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
         
         // Search terms
         $sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? '');

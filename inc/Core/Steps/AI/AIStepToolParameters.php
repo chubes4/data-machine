@@ -4,7 +4,7 @@
  *
  * Creates unified flat parameter structures compatible with all handler tool call methods.
  * Provides two build methods: standard parameter building and enhanced building for handler tools
- * with additional engine context (like source_url for Update handlers).
+ * with additional engine context (like source_url for link attribution and post identification).
  *
  * Parameter Building Process:
  * 1. Starts with unified parameters from step execution context
@@ -97,7 +97,7 @@ class AIStepToolParameters {
      *
      * Enhanced parameter building specifically for handler tools requiring engine context.
      * Merges engine data (source_url, image_url) from centralized dm_engine_data filter
-     * access for specialized handlers like Update handlers requiring source identification.
+     * for both publish handlers (link attribution) and update handlers (post identification).
      *
      * Parameter merge order:
      * 1. Standard buildParameters() output (core + content + tool metadata + AI params)
@@ -108,7 +108,7 @@ class AIStepToolParameters {
      * @param array $tool_definition Tool specification with parameter requirements
      * @param array $engine_parameters Engine data from centralized filter (source_url, image_url, etc.)
      * @param array $handler_config Handler-specific settings
-     * @return array Flat parameter structure with engine data merged for handler execution
+     * @return array Flat parameter structure with engine data merged for publish/update handler execution
      */
     public static function buildForHandlerTool(
         array $ai_tool_parameters,

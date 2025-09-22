@@ -19,11 +19,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class GoogleSheetsFetch {
 
-    public function __construct() {
-        // Filter-based service discovery only
-    }
-
-
     /**
      * Fetch Google Sheets data with clean content for AI processing.
      * Returns structured data while storing empty engine data in database.
@@ -216,21 +211,15 @@ class GoogleSheetsFetch {
             'title' => 'Google Sheets Data: ' . $worksheet_name,
             'content' => json_encode($all_data, JSON_PRETTY_PRINT)
         ];
+        // Create clean data packet for AI processing
         $fetch_data = [
-            'data' => array_merge($content_data, ['file_info' => null]),
+            'data' => $content_data,
             'metadata' => $metadata
         ];
 
         // Store empty engine data for downstream handlers
         if ($job_id) {
-            $all_databases = apply_filters('dm_db', []);
-            $db_jobs = $all_databases['jobs'] ?? null;
-            if ($db_jobs) {
-                $db_jobs->store_engine_data($job_id, [
-                    'source_url' => '',
-                    'image_url' => ''
-                ]);
-            }
+            apply_filters('dm_engine_data', null, $job_id, '', '');
         }
 
         do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed full spreadsheet.', [
@@ -294,21 +283,15 @@ class GoogleSheetsFetch {
                 'title' => 'Row ' . ($i + 1) . ' Data',
                 'content' => json_encode($row_data, JSON_PRETTY_PRINT)
             ];
+            // Create clean data packet for AI processing
             $fetch_data = [
-                'data' => array_merge($content_data, ['file_info' => null]),
+                'data' => $content_data,
                 'metadata' => $metadata
             ];
             
-            // Store empty engine data for downstream handlers
+            // Store empty engine data via centralized filter
             if ($job_id) {
-                $all_databases = apply_filters('dm_db', []);
-                $db_jobs = $all_databases['jobs'] ?? null;
-                if ($db_jobs) {
-                    $db_jobs->store_engine_data($job_id, [
-                        'source_url' => '',
-                        'image_url' => ''
-                    ]);
-                }
+                apply_filters('dm_engine_data', null, $job_id, '', '');
             }
 
             do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed row.', [
@@ -383,21 +366,15 @@ class GoogleSheetsFetch {
                 'title' => 'Column: ' . $column_header,
                 'content' => json_encode([$column_header => $column_data], JSON_PRETTY_PRINT)
             ];
+            // Create clean data packet for AI processing
             $fetch_data = [
-                'data' => array_merge($content_data, ['file_info' => null]),
+                'data' => $content_data,
                 'metadata' => $metadata
             ];
 
-            // Store empty engine data for downstream handlers
+            // Store empty engine data via centralized filter
             if ($job_id) {
-                $all_databases = apply_filters('dm_db', []);
-                $db_jobs = $all_databases['jobs'] ?? null;
-                if ($db_jobs) {
-                    $db_jobs->store_engine_data($job_id, [
-                        'source_url' => '',
-                        'image_url' => ''
-                    ]);
-                }
+                apply_filters('dm_engine_data', null, $job_id, '', '');
             }
 
             do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed column.', [
@@ -406,9 +383,7 @@ class GoogleSheetsFetch {
                 'pipeline_id' => $pipeline_id
             ]);
 
-            return [
-                'processed_items' => [$fetch_data]
-            ];
+            return ['processed_items' => [$fetch_data]];
         }
 
         // No unprocessed columns found

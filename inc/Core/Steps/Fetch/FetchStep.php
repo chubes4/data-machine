@@ -110,19 +110,50 @@ class FetchStep {
                     throw new \InvalidArgumentException('Handler output must be an array');
                 }
                 
-                if (isset($result['processed_items']) && is_array($result['processed_items']) && !empty($result['processed_items'])) {
-                    $item_data = $result['processed_items'][0];
+                $has_data_title_key = null;
+                $has_data_content_key = null;
+                $attachments_count = is_array($result['attachments'] ?? null) ? count($result['attachments']) : 0;
+                $metadata_keys = array_keys($result['metadata'] ?? []);
+
+                // Normalize handler output: accept wrapped or flat item lists
+                $items = [];
+                $has_processed_items_key = isset($result['processed_items']);
+                if ($has_processed_items_key && is_array($result['processed_items'])) {
+                    $items = $result['processed_items'];
+                } elseif (is_array($result) && isset($result[0]) && is_array($result[0]) && (isset($result[0]['data']) || isset($result[0]['metadata']))) {
+                    $items = $result; // flat list form
+                }
+
+                do_action('dm_log', 'debug', 'FetchStep: Handler output shape', [
+                    'flow_step_id' => $flow_step_config['flow_step_id'] ?? null,
+                    'handler' => $handler_name,
+                    'has_processed_items_key' => $has_processed_items_key,
+                    'processed_items_count' => is_array($items) ? count($items) : 0,
+                ]);
+
+                // Handle accidental double-wrapping: [ 'processed_items' => [ [ 'processed_items' => [ ... ] ] ] ]
+                if (!empty($items) && isset($items[0]['processed_items']) && is_array($items[0]['processed_items'])) {
+                    $items = $items[0]['processed_items'];
+                }
+
+                if (!empty($items)) {
+                    $item_data = $items[0];
 
                     // Universal data extraction using standardized structure
                     $title = $item_data['data']['title'] ?? $item_data['metadata']['original_title'] ?? '';
                     $body = $item_data['data']['content'] ?? '';
 
+                    $has_data_title_key = array_key_exists('title', $item_data['data'] ?? []);
+                    $has_data_content_key = array_key_exists('content', $item_data['data'] ?? []);
+
                     // Handle file info if present
                     $file_info = $item_data['data']['file_info'] ?? null;
                     if ($file_info) {
+                        $file_path_meta = $item_data['file_path'] ?? null;
+                        $file_name_meta = $item_data['file_name'] ?? null;
                         $result['metadata'] = array_merge($result['metadata'] ?? [], [
-                            'file_path' => $file_info['file_path'],
-                            'file_name' => $file_info['file_name'] ?? '',
+                            'file_path' => $file_path_meta,
+                            'file_name' => $file_name_meta,
                             'mime_type' => $file_info['mime_type'] ?? '',
                             'file_size' => $file_info['file_size'] ?? 0
                         ], $item_data['metadata'] ?? []);
@@ -132,7 +163,22 @@ class FetchStep {
                 } else {
                     $title = $result['title'] ?? '';
                     $body = $result['body'] ?? '';
+
+                    $has_data_title_key = array_key_exists('title', $result);
+                    $has_data_content_key = array_key_exists('body', $result);
                 }
+
+                // Observability: confirm presence of keys and non-emptiness without logging content
+                do_action('dm_log', 'debug', 'FetchStep: Content presence check', [
+                    'flow_step_id' => $flow_step_config['flow_step_id'] ?? null,
+                    'handler' => $handler_name,
+                    'has_title' => !empty($title),
+                    'has_body' => !empty($body),
+                    'has_data_title_key' => $has_data_title_key,
+                    'has_data_content_key' => $has_data_content_key,
+                    'metadata_keys' => array_keys($result['metadata'] ?? []),
+                    'attachments_count' => is_array($result['attachments'] ?? null) ? count($result['attachments']) : 0
+                ]);
 
                 $fetch_entry = [
                     'type' => 'fetch',

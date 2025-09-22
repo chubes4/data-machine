@@ -64,7 +64,7 @@ $handler_config = [
 
 **Parent Content Integration**: When enabled, includes formatted parent post content with AI instruction prompts.
 
-**Engine Data Storage**: URLs are stored in database via `store_engine_data()` for centralized access by handlers through the `dm_engine_data` filter.
+**Engine Data Storage**: URLs are stored in database via centralized `dm_engine_data` filter for access by handlers.
 
 ## Content Format
 

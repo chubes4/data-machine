@@ -1,6 +1,20 @@
 <?php
 /**
- * Database access filters for centralized data operations
+ * Database Access Filter System
+ *
+ * Centralized filter-based database operations for pipeline configuration,
+ * flow management, and processed item tracking. All database access follows
+ * filter discovery pattern for architectural consistency.
+ *
+ * Core Filters:
+ * - dm_db: Database service discovery and registration
+ * - dm_get_pipeline_steps: Pipeline configuration access
+ * - dm_get_flow_config: Flow configuration access
+ * - dm_get_pipelines: Pipeline data access (single/all)
+ * - dm_is_item_processed: Deduplication tracking
+ * - Navigation filters: get_next/previous_flow_step_id, get_next/previous_pipeline_step_id
+ *
+ * @package DataMachine\Engine\Filters
  */
 
 if ( ! defined( 'WPINC' ) ) {

@@ -24,10 +24,9 @@ class WordPressSettings {
     /**
      * Get settings fields for WordPress fetch handler.
      *
-     * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.
      */
-    public static function get_fields(array $current_config = []): array {
+    public static function get_fields(): array {
         // WordPress fetch settings for local WordPress installation only
         $fields = self::get_local_fields();
 
@@ -160,13 +159,7 @@ class WordPressSettings {
                 'type' => 'select',
                 'label' => __('Process Items Within', 'data-machine'),
                 'description' => __('Only consider items published within this timeframe.', 'data-machine'),
-                'options' => [
-                    'all_time' => __('All Time', 'data-machine'),
-                    '24_hours' => __('Last 24 Hours', 'data-machine'),
-                    '72_hours' => __('Last 72 Hours', 'data-machine'),
-                    '7_days'   => __('Last 7 Days', 'data-machine'),
-                    '30_days'  => __('Last 30 Days', 'data-machine'),
-                ],
+                'options' => apply_filters('dm_timeframe_limit', [], null),
             ],
             'search' => [
                 'type' => 'text',

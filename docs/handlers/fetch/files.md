@@ -53,22 +53,39 @@ $handler_config = [
 
 ## Output Structure
 
-**DataPacket Content**:
+**Clean Data Packet (AI-visible)**:
 ```php
 [
     'processed_items' => [
         [
-            'file_path' => '/path/to/file.ext',
-            'file_name' => 'original_filename.ext',
-            'mime_type' => 'mime/type',
-            'file_size' => 'bytes',
-            'source_type' => 'files',
-            'item_identifier_to_log' => '/path/to/file.ext',
-            'original_id' => '/path/to/file.ext',
-            'original_title' => 'original_filename.ext',
-            'original_date_gmt' => 'upload_timestamp'
+            'data' => [
+                'title' => 'original_filename.ext',
+                'content' => 'File: original_filename.ext\nType: mime/type\nSize: 1024 bytes',
+                'file_info' => [
+                    'file_path' => '/path/to/file.ext',
+                    'file_name' => 'original_filename.ext',
+                    'mime_type' => 'mime/type',
+                    'file_size' => 1024
+                ]
+            ],
+            'metadata' => [
+                'source_type' => 'files',
+                'item_identifier_to_log' => '/path/to/file.ext',
+                'original_id' => '/path/to/file.ext',
+                'original_title' => 'original_filename.ext',
+                'original_date_gmt' => '2024-01-01 12:00:00'
+            ]
         ]
     ]
+]
+```
+
+**Engine Data Storage (Database)**:
+```php
+// Stored in database for downstream handler access via dm_engine_data filter
+[
+    'source_url' => '',           // Empty for local files
+    'image_url' => $public_url    // Public URL for image files only, empty for non-images
 ]
 ```
 
@@ -106,6 +123,20 @@ $handler_config = [
 
 **Flow Isolation**: Maintains strict flow-level file separation to prevent data leakage between different pipeline instances.
 
-**Engine Compatibility**: Passes file metadata to engine for downstream step processing, letting specialized steps handle file content extraction.
+**Clean Data Separation**: Returns clean data packets to AI agents without URLs, while storing engine parameters (image_url for images) in database for downstream handler access via `dm_engine_data` filter.
+
+**Engine Data Architecture**: Uses centralized filter pattern for engine data access:
+```php
+// Storage by Files handler via centralized filter
+if ($job_id) {
+    apply_filters('dm_engine_data', null, $job_id, '', $file_url);
+}
+
+// Retrieval by downstream handlers (via filter)
+$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$image_url = $engine_data['image_url'] ?? null;
+```
+
+**Image URL Generation**: For image files, generates public URLs for use by publish handlers (WordPress featured images, social media uploads, etc.).
 
 **Logging**: Uses `dm_log` action with debug/error levels for file discovery, processing status, and error conditions.

@@ -24,10 +24,9 @@ class GoogleSheetsFetchSettings {
     /**
      * Get settings fields for Google Sheets fetch handler.
      *
-     * @param array $current_config Current configuration values for this handler.
-     * @return array Associative array defining the settings fields.
-     */
-    public static function get_fields(array $current_config = []): array {
+    * @return array Associative array defining the settings fields.
+    */
+    public static function get_fields(): array {
         return [
             'googlesheets_fetch_spreadsheet_id' => [
                 'type' => 'text',

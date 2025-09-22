@@ -426,6 +426,9 @@
     margin: 2px 0;
     border-radius: 3px;
     font-size: 11px;
+    word-break: break-all;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .dm-handler-customizations div {

@@ -136,7 +136,7 @@ do_action('dm_clear_pipelines_list_cache');
 do_action('dm_cache_set', $key, $data, $timeout, $group);
 
 // Engine Data Storage & Retrieval
-$db_jobs->store_engine_data($job_id, $engine_data); // Store source_url, image_url
+apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url); // Store source_url, image_url
 $engine_data = apply_filters('dm_engine_data', [], $job_id); // Retrieve for handlers
 ```
 
@@ -364,7 +364,7 @@ class Twitter {
 
 ### Tool Configuration
 
-**AIStepToolParameters**: Flat parameter building with unified structure
+**AIStepToolParameters**: Centralized flat parameter building with `buildParameters()` and `buildForHandlerTool()` methods for unified tool execution
 **Configuration**: `dm_tool_configured`, `dm_get_tool_config`, `dm_save_tool_config` filters
 
 
@@ -422,16 +422,9 @@ class Twitter {
     ]
 ]
 
-// Engine parameters stored in database by fetch handlers
+// Engine parameters stored in database by fetch handlers via centralized filter
 if ($job_id) {
-    $all_databases = apply_filters('dm_db', []);
-    $db_jobs = $all_databases['jobs'] ?? null;
-    if ($db_jobs) {
-        $db_jobs->store_engine_data($job_id, [
-            'source_url' => $source_url,    // For Update handlers
-            'image_url' => $image_url,      // For media handling
-        ]);
-    }
+    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
 }
 
 // Return structure from fetch handlers (engine parameters stored separately in database)
@@ -598,16 +591,9 @@ class MyFetchHandler {
             ]
         ];
 
-        // Store engine parameters in database for later retrieval via dm_engine_data filter
+        // Store engine parameters in database via centralized dm_engine_data filter
         if ($job_id) {
-            $all_databases = apply_filters('dm_db', []);
-            $db_jobs = $all_databases['jobs'] ?? null;
-            if ($db_jobs) {
-                $db_jobs->store_engine_data($job_id, [
-                    'source_url' => $source_url,
-                    'image_url' => $image_url,
-                ]);
-            }
+            apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
         }
 
         return ['processed_items' => [$clean_data]];
@@ -625,7 +611,7 @@ class MyPublishHandler {
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;
 
-        // For Update handlers: source_url required from engine data to identify target content
+        // Access source_url from engine data for link attribution (publish handlers) or post identification (update handlers)
         return ['success' => true, 'data' => ['id' => $id, 'url' => $url]];
     }
 }
@@ -697,7 +683,7 @@ apply_filters('dm_create_step', null, ['step_type' => 'ai', 'pipeline_id' => $pi
 apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' => $pipeline_id]);
 ```
 
-> **Critical**: Update steps require `source_url` from engine data to identify target content. All fetch handlers store this data in database via store_engine_data() for later retrieval via `dm_engine_data` filter. AI agents discover handler tools for immediate next step only.
+> **Critical**: Update steps require `source_url` from engine data to identify target content. All fetch handlers store this data in database via centralized `dm_engine_data` filter for later retrieval. AI agents discover handler tools for immediate next step only.
 
 ## Handler-Specific Engine Parameters
 

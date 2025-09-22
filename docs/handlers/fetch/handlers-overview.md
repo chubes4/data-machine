@@ -91,14 +91,9 @@ public function get_fetch_data(int $pipeline_id, array $handler_config, ?string 
 Fetch handlers store engine parameters in database for centralized access via `dm_engine_data` filter:
 
 ```php
-// Stored by fetch handlers in database
-$all_databases = apply_filters('dm_db', []);
-$db_jobs = $all_databases['jobs'] ?? null;
-if ($db_jobs) {
-    $db_jobs->store_engine_data($job_id, [
-        'source_url' => 'https://source.com/item',        // For Update handlers
-        'image_url' => 'https://source.com/image.jpg',    // For media handling
-    ]);
+// Stored by fetch handlers via centralized filter
+if ($job_id) {
+    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
 }
 
 // Retrieved by handlers via centralized filter
@@ -226,7 +221,7 @@ Most handlers return exactly one item per execution:
 
 Fetch handlers provide essential metadata that AI steps use for content processing and tool execution:
 
-**Source URL for Updates**: WordPress Local, WordPress API, and WordPress Media handlers store `source_url` in database via `store_engine_data()` enabling Update steps to access target URLs through the `dm_engine_data` filter.
+**Source URL Storage**: WordPress Local, WordPress API, and WordPress Media handlers store `source_url` in database via centralized `dm_engine_data` filter enabling both publish handlers (link attribution) and update handlers (post identification) to access URLs.
 
 **Content Structure**: All handlers structure content in consistent format that AI steps process through the modular AI directive system.
 
@@ -237,14 +232,9 @@ Fetch handlers provide essential metadata that AI steps use for content processi
 Fetch handlers seamlessly integrate with the tool-first AI architecture using centralized engine data storage:
 
 ```php
-// Fetch stores engine data in database (separate from AI data)
-$all_databases = apply_filters('dm_db', []);
-$db_jobs = $all_databases['jobs'] ?? null;
-if ($db_jobs) {
-    $db_jobs->store_engine_data($job_id, [
-        'source_url' => 'https://site.com/post/123',
-        'image_url' => 'https://site.com/image.jpg'
-    ]);
+// Fetch stores engine data via centralized filter (separate from AI data)
+if ($job_id) {
+    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
 }
 
 // AI step processes clean content without URL pollution
@@ -264,7 +254,7 @@ $result = $wordpress_handler->get_fetch_data(
     $job_id
 );
 // Returns: ['processed_items' => [...]]
-// Engine data stored separately in database via store_engine_data()
+// Engine data stored separately in database via centralized dm_engine_data filter
 ```
 
 ### With Deduplication
@@ -309,16 +299,9 @@ class CustomFetchHandler {
                     'custom_source', $item['id'], $job_id);
             }
 
-            // Store engine data in database for handlers
+            // Store engine data via centralized filter
             if ($job_id) {
-                $all_databases = apply_filters('dm_db', []);
-                $db_jobs = $all_databases['jobs'] ?? null;
-                if ($db_jobs) {
-                    $db_jobs->store_engine_data($job_id, [
-                        'source_url' => $item['url'],
-                        'image_url' => $item['image'] ?? ''
-                    ]);
-                }
+                apply_filters('dm_engine_data', null, $job_id, $item['url'], $item['image'] ?? '');
             }
 
             return ['processed_items' => [$this->create_data_packet($item)]];

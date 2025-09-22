@@ -3,7 +3,7 @@
  * WordPress Local fetch handler.
  *
  * Fetches post/page content from local WordPress installation using WP_Query.
- * Generates clean content for AI and stores source_url via engine data for Update step compatibility.
+ * Generates clean content for AI and stores source_url via engine data for link attribution and post identification.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers\WordPress
@@ -31,7 +31,7 @@ class WordPress {
      * @param array $handler_config Handler configuration including flow_step_id and WordPress settings.
      * @param string|null $job_id Job ID for deduplication tracking.
      * @return array Array with 'processed_items' containing clean data for AI processing.
-     *               Engine parameters (source_url, image_url) are stored in database via store_engine_data().
+     *               Engine parameters (source_url, image_url) are stored via centralized dm_engine_data filter.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
@@ -106,7 +106,7 @@ class WordPress {
         $search = trim($config['search'] ?? '');
 
         // Calculate date query parameters
-        $cutoff_timestamp = $this->calculate_cutoff_timestamp($timeframe_limit);
+        $cutoff_timestamp = apply_filters('dm_timeframe_limit', null, $timeframe_limit);
         $date_query = [];
         if ($cutoff_timestamp !== null) {
             $date_query = [
@@ -194,7 +194,7 @@ class WordPress {
      * @param string|null $job_id Job ID for processed items tracking.
      * @param array $handler_config Handler configuration for engine parameter generation.
      * @return array Array with 'processed_items' containing clean data for AI processing.
-     *               Engine parameters (source_url, image_url) are stored in database via store_engine_data().
+     *               Engine parameters (source_url, image_url) are stored via centralized dm_engine_data filter.
      */
     private function process_single_post(int $post_id, ?string $flow_step_id, ?string $job_id, array $handler_config): array {
         // Get the post
@@ -230,39 +230,26 @@ class WordPress {
         ];
 
         // Create clean data packet for AI consumption (URLs removed)
-        $input_data = [
-            'data' => array_merge($content_data, ['file_info' => null]),
-            'metadata' => [
-                'source_type' => 'wordpress_local',
-                'item_identifier_to_log' => $post_id,
-                'original_id' => $post_id,
-                'original_title' => $title,
-                'original_date_gmt' => $post->post_date_gmt,
-                'post_type' => $post->post_type,
-                'post_status' => $post->post_status,
-                'site_name' => $site_name
-            ]
+        $metadata = [
+            'source_type' => 'wordpress_local',
+            'item_identifier_to_log' => $post_id,
+            'original_id' => $post_id,
+            'original_title' => $title,
+            'original_date_gmt' => $post->post_date_gmt,
+            'post_type' => $post->post_type,
+            'post_status' => $post->post_status,
+            'site_name' => $site_name
         ];
 
-        // Store URLs in engine_data for centralized access via dm_engine_data filter
-        if ($job_id) {
-            $engine_data = [
-                'source_url' => get_permalink($post_id) ?: '',
-                'image_url' => $image_url ?: ''
-            ];
+        // Create clean data packet for AI processing
+        $input_data = [
+            'data' => $content_data,
+            'metadata' => $metadata
+        ];
 
-            // Store engine_data via database service
-            $all_databases = apply_filters('dm_db', []);
-            $db_jobs = $all_databases['jobs'] ?? null;
-            if ($db_jobs) {
-                $db_jobs->store_engine_data($job_id, $engine_data);
-                do_action('dm_log', 'debug', 'WordPress Local: Stored URLs in engine_data', [
-                    'job_id' => $job_id,
-                    'source_url' => $engine_data['source_url'],
-                    'has_image_url' => !empty($engine_data['image_url']),
-                    'post_id' => $post_id
-                ]);
-            }
+        // Store URLs in engine_data via centralized filter
+        if ($job_id) {
+            apply_filters('dm_engine_data', null, $job_id, get_permalink($post_id) ?: '', $image_url ?: '');
         }
 
         return [
@@ -281,30 +268,6 @@ class WordPress {
         return $featured_image_id ? wp_get_attachment_image_url($featured_image_id, 'full') : null;
     }
 
-    /**
-     * Calculate cutoff timestamp based on timeframe limit.
-     *
-     * @param string $timeframe_limit Timeframe setting value.
-     * @return int|null Cutoff timestamp or null for 'all_time'.
-     */
-    private function calculate_cutoff_timestamp($timeframe_limit) {
-        if ($timeframe_limit === 'all_time') {
-            return null;
-        }
-        
-        $interval_map = [
-            '24_hours' => '-24 hours',
-            '72_hours' => '-72 hours',
-            '7_days'   => '-7 days',
-            '30_days'  => '-30 days'
-        ];
-        
-        if (!isset($interval_map[$timeframe_limit])) {
-            return null;
-        }
-        
-        return strtotime($interval_map[$timeframe_limit], current_time('timestamp', true));
-    }
 
     public static function get_label(): string {
         return __('Local WordPress Posts', 'data-machine');

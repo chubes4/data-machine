@@ -453,6 +453,39 @@
         },
 
         /**
+         * Refresh footer for a specific flow with updated next run time
+         */
+        refreshFlowFooter: function(flowId) {
+            var self = this;
+
+            if (!flowId) {
+                console.error('Flow ID is required for footer refresh');
+                return;
+            }
+
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'dm_refresh_flow_footer',
+                    flow_id: flowId,
+                    nonce: window.dmAjaxNonce || ''
+                },
+                success: function(response) {
+                    if (response.success && response.data.footer_html) {
+                        // Replace the footer content for the specific flow
+                        $('[data-flow-id="' + flowId + '"] .dm-flow-meta').replaceWith(response.data.footer_html);
+                    } else {
+                        console.error('Footer refresh failed:', response.data?.message || 'Unknown error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Footer refresh AJAX error:', error);
+                }
+            });
+        },
+
+        /**
          * Cleanup method for destroying the UI system
          */
         destroy: function() {
@@ -471,6 +504,9 @@
             });
         }
     };
+
+    // Create alias for backward compatibility
+    window.dmPipelineCards = PipelineCardsUI;
 
     // Initialize when document is ready
     $(document).ready(function() {

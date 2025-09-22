@@ -87,7 +87,7 @@ class Reddit {
 	 * @param array $handler_config Handler configuration including subreddit, filters, flow_step_id.
 	 * @param string|null $job_id Job ID for deduplication tracking.
 	 * @return array Array with 'processed_items' containing clean data for AI processing.
-	 *               Engine parameters (source_url, image_url) are stored in database via store_engine_data().
+	 *               Engine parameters (source_url, image_url) are stored via centralized dm_engine_data filter.
 	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
@@ -169,18 +169,7 @@ class Reddit {
 			return ['processed_items' => []];
 		}
 
-		$cutoff_timestamp = null;
-		if ($timeframe_limit !== 'all_time') {
-			$interval_map = [
-				'24_hours' => '-24 hours',
-				'72_hours' => '-72 hours',
-				'7_days'   => '-7 days',
-				'30_days'  => '-30 days'
-			];
-			if (isset($interval_map[$timeframe_limit])) {
-				$cutoff_timestamp = strtotime($interval_map[$timeframe_limit], current_time('timestamp'));
-			}
-		}
+		$cutoff_timestamp = apply_filters('dm_timeframe_limit', null, $timeframe_limit);
 
 		$after_param = null;
 		$total_checked = 0;
@@ -511,54 +500,49 @@ class Reddit {
 						'mime_type' => $image_info['mime_type'],
 						'file_size' => $stored_image['size']
 					];
+					$metadata = array_merge($metadata, [
+						'original_title' => $title,
+						'original_id' => $current_item_id,
+						'original_date_gmt' => gmdate('Y-m-d H:i:s', (int)($item_data['created_utc'] ?? time())),
+						'item_identifier_to_log' => $current_item_id
+					]);
+
+					// Create clean data packet for AI processing
 					$input_data = [
 						'data' => array_merge($content_data, ['file_info' => $file_info]),
-						'metadata' => array_merge($metadata, [
-							'original_title' => $title,
-							'original_id' => $current_item_id,
-							'original_date_gmt' => gmdate('Y-m-d H:i:s', (int)($item_data['created_utc'] ?? time())),
-							'item_identifier_to_log' => $current_item_id
-						])
+						'metadata' => $metadata
 					];
 				} else {
 					// Text-only post - use universal pattern with null file_info
+					$metadata = array_merge($metadata, [
+						'original_title' => $title,
+						'original_id' => $current_item_id,
+						'original_date_gmt' => gmdate('Y-m-d H:i:s', (int)($item_data['created_utc'] ?? time())),
+						'item_identifier_to_log' => $current_item_id
+					]);
+
+					// Create clean data packet for AI processing
 					$input_data = [
-						'data' => array_merge($content_data, ['file_info' => null]),
-						'metadata' => array_merge($metadata, [
-							'original_title' => $title,
-							'original_id' => $current_item_id,
-							'original_date_gmt' => gmdate('Y-m-d H:i:s', (int)($item_data['created_utc'] ?? time())),
-							'item_identifier_to_log' => $current_item_id
-						])
+						'data' => $content_data,
+						'metadata' => $metadata
 					];
 				}
 
-				// Store URLs in engine_data for centralized access via dm_engine_data filter
+				// Store URLs in engine_data via centralized filter
 				if ($job_id) {
-					$engine_data = [
-						'source_url' => $item_data['permalink'] ? 'https://www.reddit.com' . $item_data['permalink'] : ''
-					];
+					$source_url = $item_data['permalink'] ? 'https://www.reddit.com' . $item_data['permalink'] : '';
 
-					// Add image URL if file was stored
+					// Generate image URL if file was stored
+					$image_url = '';
 					if ($stored_image && $flow_step_id) {
 						$repositories = apply_filters('dm_files_repository', []);
 						$file_repository = $repositories['files'] ?? null;
 						if ($file_repository && !empty($stored_image['filename'])) {
-							$engine_data['image_url'] = trailingslashit($file_repository->get_repository_url($flow_step_id)) . $stored_image['filename'];
+							$image_url = trailingslashit($file_repository->get_repository_url($flow_step_id)) . $stored_image['filename'];
 						}
 					}
 
-					// Store engine_data via database service
-					$all_databases = apply_filters('dm_db', []);
-					$db_jobs = $all_databases['jobs'] ?? null;
-					if ($db_jobs) {
-						$db_jobs->store_engine_data($job_id, $engine_data);
-						do_action('dm_log', 'debug', 'Reddit: Stored URLs in engine_data', [
-							'job_id' => $job_id,
-							'source_url' => $engine_data['source_url'],
-							'has_image_url' => !empty($engine_data['image_url'])
-						]);
-					}
+					apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
 				}
 
 				// Return clean data packet (no URLs in metadata for AI)
@@ -608,13 +592,7 @@ class Reddit {
 			return [];
 		}
 		$sanitized['sort_by'] = $sort_by;
-		$valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
-		$timeframe = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
-		if (!in_array($timeframe, $valid_timeframes)) {
-			do_action('dm_log', 'error', 'Reddit Settings: Invalid timeframe parameter provided in settings.', ['timeframe' => $timeframe]);
-			return [];
-		}
-		$sanitized['timeframe_limit'] = $timeframe;
+		$sanitized['timeframe_limit'] = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
 		$min_upvotes = isset($raw_settings['min_upvotes']) ? absint($raw_settings['min_upvotes']) : 0;
 		$sanitized['min_upvotes'] = max(0, $min_upvotes);
 		$min_comment_count = isset($raw_settings['min_comment_count']) ? absint($raw_settings['min_comment_count']) : 0;

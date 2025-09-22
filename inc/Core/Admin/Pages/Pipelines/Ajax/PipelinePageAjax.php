@@ -34,6 +34,7 @@ class PipelinePageAjax
         add_action('wp_ajax_dm_run_flow_now', [$instance, 'handle_run_flow_now']);
         add_action('wp_ajax_dm_save_flow_schedule', [$instance, 'handle_save_flow_schedule']);
         add_action('wp_ajax_dm_refresh_pipeline_status', [$instance, 'handle_refresh_pipeline_status']);
+        add_action('wp_ajax_dm_refresh_flow_footer', [$instance, 'handle_refresh_flow_footer']);
     }
 
     /**
@@ -197,6 +198,52 @@ class PipelinePageAjax
         wp_send_json_success([
             'step_statuses' => $step_statuses,
             'pipeline_id' => $pipeline_id
+        ]);
+    }
+
+    /**
+     * Refresh flow footer with updated next run time
+     */
+    public function handle_refresh_flow_footer()
+    {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+
+        $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
+
+        if (empty($flow_id)) {
+            wp_send_json_error(['message' => __('Flow ID is required', 'data-machine')]);
+        }
+
+        // Get flow data using filter-based discovery
+        $all_databases = apply_filters('dm_db', []);
+        $db_flows = $all_databases['flows'] ?? null;
+        if (!$db_flows) {
+            wp_send_json_error(['message' => __('Database service unavailable', 'data-machine')]);
+        }
+
+        // Get flow data
+        $flow = $db_flows->get_flow($flow_id);
+        if (!$flow) {
+            wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);
+        }
+
+        // Parse scheduling config for footer template
+        $scheduling_config = is_array($flow['scheduling_config']) ?
+            $flow['scheduling_config'] :
+            json_decode($flow['scheduling_config'] ?? '{}', true);
+
+        // Render footer template
+        ob_start();
+        include __DIR__ . '/../templates/page/flow-instance-footer.php';
+        $footer_html = ob_get_clean();
+
+        wp_send_json_success([
+            'footer_html' => $footer_html,
+            'flow_id' => $flow_id
         ]);
     }
 

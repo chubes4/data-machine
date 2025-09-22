@@ -101,34 +101,34 @@ function dm_register_core_actions() {
                 case 'clear_all':
                     $result = dm_clear_log_files();
                     return $result;
-                    
+
                 case 'cleanup':
                     $max_size_mb = $param2 ?? 10;
                     $max_age_days = $param3 ?? 30;
                     $result = dm_cleanup_log_files($max_size_mb, $max_age_days);
                     return $result;
-                    
+
                 case 'set_level':
                     return dm_set_log_level($param2);
             }
         }
-        
+
         $context = $param3 ?? [];
-        
+
         $valid_levels = ['debug', 'error', 'warning', 'info', 'critical'];
         if (!in_array($operation, $valid_levels)) {
             return false;
         }
-        
+
         $function_name = 'dm_log_' . $operation;
         if (function_exists($function_name)) {
             $function_name($param2, $context);
             return true;
         }
-        
+
         return false;
     }, 10, 4);
-    
+
     dm_register_execution_engine();
     
     \DataMachine\Engine\Actions\Delete::register();

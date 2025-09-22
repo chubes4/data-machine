@@ -67,9 +67,6 @@ function dm_register_utility_filters() {
         return $providers;
     }, 5, 1);
     
-    add_filter('dm_handler_settings', function($all_settings) {
-        return $all_settings;
-    }, 10, 1);
     
     add_filter('dm_request', function($default, $method, $url, $args, $context) {
         $valid_methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
@@ -263,8 +260,7 @@ function dm_register_utility_filters() {
     add_filter('dm_current_job_id', function($default) {
         return $default;
     }, 5, 1);
-    
-    require_once __DIR__ . '/DataPacket.php';
+
     
     
 }

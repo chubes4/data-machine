@@ -114,11 +114,10 @@ class MyStep {
         $data = $parameters['data'] ?? [];
         $flow_step_config = $parameters['flow_step_config'] ?? [];
         
-        // Extract parameters as needed
-        $source_url = $parameters['source_url'] ?? null;
-        $image_url = $parameters['image_url'] ?? null;
-        $file_path = $parameters['file_path'] ?? null;
-        $mime_type = $parameters['mime_type'] ?? null;
+        // Access engine data via centralized dm_engine_data filter
+        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $source_url = $engine_data['source_url'] ?? null;
+        $image_url = $engine_data['image_url'] ?? null;
         
         // Process data packet
         array_unshift($data, [
@@ -167,14 +166,20 @@ class MyStep {
         $flow_step_id = $parameters['flow_step_id'];
         $data = $parameters['data'] ?? [];
         $flow_step_config = $parameters['flow_step_config'] ?? [];
-        
+
         // Access engine data via centralized dm_engine_data filter
         $engine_data = apply_filters('dm_engine_data', [], $job_id);
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;
-        $file_path = $parameters['file_path'] ?? null;
-        $mime_type = $parameters['mime_type'] ?? null;
-        
+
+        // Process data packet
+        array_unshift($data, [
+            'type' => 'my_step',
+            'content' => ['title' => $title, 'body' => $content],
+            'metadata' => ['source_type' => 'my_source'],
+            'timestamp' => time()
+        ]);
+
         return $data;
     }
 }

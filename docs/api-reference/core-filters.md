@@ -292,7 +292,7 @@ $providers['provider_slug'] = new AuthProviderClass();
 **Engine Data Structure**:
 ```php
 $engine_data = [
-    'source_url' => $source_url,    // For Update handlers
+    'source_url' => $source_url,    // For link attribution and content updates
     'image_url' => $image_url,      // For media handling
     // Additional engine parameters as needed
 ];
@@ -328,16 +328,9 @@ $image_url = $engine_data['image_url'] ?? null;
 
 **Engine Data Storage (by Fetch Handlers)**:
 ```php
-// Fetch handlers store engine parameters in database
+// Fetch handlers store engine parameters in database via centralized filter
 if ($job_id) {
-    $all_databases = apply_filters('dm_db', []);
-    $db_jobs = $all_databases['jobs'] ?? null;
-    if ($db_jobs) {
-        $db_jobs->store_engine_data($job_id, [
-            'source_url' => $source_url,    // For Update handlers
-            'image_url' => $image_url,      // For media handling
-        ]);
-    }
+    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
 }
 ```
 
@@ -439,7 +432,7 @@ Builds flat parameter structure for standard AI tool execution with content extr
 ```php
 AIStepToolParameters::buildForHandlerTool(array $ai_tool_parameters, array $data, array $tool_definition, array $engine_parameters, array $handler_config): array
 ```
-Builds parameters for handler-specific tools with engine parameters merged (like source_url for Update handlers).
+Builds parameters for handler-specific tools with engine parameters merged (like source_url for link attribution).
 
 **Key Features**:
 - **Content Extraction**: Automatically extracts content and title from data packets based on tool specifications

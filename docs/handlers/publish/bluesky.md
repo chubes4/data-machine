@@ -17,6 +17,22 @@ Posts content to Bluesky using app passwords and AT Protocol integration with me
 | `bluesky_include_source` | boolean | No | Include source URL in posts (default: true) |
 | `bluesky_enable_images` | boolean | No | Enable image upload and embedding (default: true) |
 
+## Source URL Attribution
+
+**Engine Data Source**: `source_url` retrieved from fetch handlers via `dm_engine_data` filter
+
+**Link Handling** (`link_handling: 'append'`):
+- Source URL appended to post content with double newline separator (`\n\n`)
+- URL automatically detected and formatted by Bluesky
+- URLs count as 22 characters toward 300 character limit
+- Content truncated with ellipsis (…) if total exceeds limit
+- Example: `"Great article content\n\nhttps://example.com/article"`
+
+**No Link Mode** (`link_handling: 'none'` or `bluesky_include_source: false`):
+- No source_url processing or appending
+- Content posted as-is without URL attribution
+- Useful when URL already embedded in content
+
 ## Character Limits
 
 **Post Limit**: 300 characters maximum per Bluesky post.

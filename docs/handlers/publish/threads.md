@@ -15,6 +15,22 @@ Posts content to Meta's Threads platform using OAuth2 authentication with two-st
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `include_images` | boolean | No | Enable image upload and embedding (default: true) |
+| `link_handling` | string | No | Link inclusion mode: `append`, `none` (default: "append") |
+
+## Source URL Attribution
+
+**Engine Data Source**: `source_url` retrieved from fetch handlers via `dm_engine_data` filter
+
+**Link Handling** (`link_handling: 'append'`):
+- Source URL appended to post content with double newline separator (`\n\n`)
+- URL counts toward 500 character limit (no shortening)
+- Content truncated with "..." if total exceeds limit
+- Example: `"Great article content\n\nhttps://example.com/article"`
+
+**No Link Mode** (`link_handling: 'none'`):
+- No source_url processing or appending
+- Content posted as-is without URL attribution
+- Useful when URL already embedded in content
 
 ## Character Limits
 

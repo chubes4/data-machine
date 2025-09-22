@@ -24,10 +24,9 @@ class GoogleSheetsSettings {
     /**
      * Get settings fields for Google Sheets publish handler.
      *
-     * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.
      */
-    public static function get_fields(array $current_config = []): array {
+    public static function get_fields(): array {
         return [
             'googlesheets_spreadsheet_id' => [
                 'type' => 'text',

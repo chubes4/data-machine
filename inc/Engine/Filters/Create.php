@@ -473,6 +473,7 @@ class Create {
 
         if (wp_doing_ajax()) {
             $flow_data = $db_flows->get_flow($flow_id);
+            $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
             do_action('dm_clear_pipeline_cache', $pipeline_id);
 
             wp_send_json_success([
@@ -482,6 +483,11 @@ class Create {
                 'flow_name' => $flow_name,
                 'pipeline_id' => $pipeline_id,
                 'flow_data' => $flow_data,
+                'pipeline_steps' => $pipeline_steps,
+                'template_data' => [
+                    'flow' => $flow_data,
+                    'pipeline_steps' => $pipeline_steps
+                ],
                 'created_type' => 'flow'
             ]);
         }

@@ -31,7 +31,7 @@ class WordPressMedia {
      * @param array $handler_config Handler configuration including media settings and flow_step_id.
      * @param string|null $job_id Job ID for deduplication tracking.
      * @return array Array with 'processed_items' containing clean data for AI processing.
-     *               Engine parameters (source_url, image_url) are stored in database via store_engine_data().
+     *               Engine parameters (source_url, image_url) are stored via centralized dm_engine_data filter.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
@@ -52,9 +52,17 @@ class WordPressMedia {
         // Access config from handler config structure
         $config = $handler_config['wordpress_media'] ?? [];
         
-        // Fetch from local WordPress media library
-        $items = $this->fetch_media_data($pipeline_id, $config, $user_id, $flow_step_id, $job_id);
-        
+        // Fetch from local WordPress media library and normalize to flat list
+        $items_result = $this->fetch_media_data($pipeline_id, $config, $user_id, $flow_step_id, $job_id);
+
+        if (isset($items_result['processed_items'])) {
+            $items = $items_result['processed_items'];
+        } elseif (is_array($items_result)) {
+            $items = $items_result; // already a flat list or empty
+        } else {
+            $items = [];
+        }
+
         return ['processed_items' => $items];
     }
 
@@ -84,7 +92,7 @@ class WordPressMedia {
         $search = trim($config['search'] ?? '');
 
         // Calculate date query parameters
-        $cutoff_timestamp = $this->calculate_cutoff_timestamp($timeframe_limit);
+        $cutoff_timestamp = apply_filters('dm_timeframe_limit', null, $timeframe_limit);
         $date_query = [];
         if ($cutoff_timestamp !== null) {
             $date_query = [
@@ -148,116 +156,46 @@ class WordPressMedia {
                 do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_media', $post_id, $job_id);
             }
 
-            // Store URLs in engine_data for centralized access via dm_engine_data filter
-            if ($job_id) {
-                $image_url = wp_get_attachment_url($post_id);
+            // Extract media data using universal pattern (identical to all other handlers)
+            $post_id = $post->ID;
+            $title = $post->post_title ?: 'N/A';
+            $caption = $post->post_excerpt ?: '';
+            $description = $post->post_content ?: '';
+            $alt_text = get_post_meta($post_id, '_wp_attachment_image_alt', true) ?: '';
+            $file_type = get_post_mime_type($post_id) ?: 'unknown';
+            $file_path = get_attached_file($post_id);
+            $file_size = $file_path && file_exists($file_path) ? filesize($file_path) : 0;
+            $site_name = get_bloginfo('name') ?: 'Local WordPress';
 
-                // Get parent post permalink for source_url when include_parent_content is enabled
-                $source_url = '';
-                if ($include_parent_content && $post->post_parent > 0) {
-                    $source_url = get_permalink($post->post_parent) ?: '';
-                }
-
-                $engine_data = [
-                    'source_url' => $source_url,
-                    'image_url' => $image_url ?: ''
-                ];
-
-                // Store engine_data via database service
-                $all_databases = apply_filters('dm_db', []);
-                $db_jobs = $all_databases['jobs'] ?? null;
-                if ($db_jobs) {
-                    $db_jobs->store_engine_data($job_id, $engine_data);
-                    do_action('dm_log', 'debug', 'WordPress Media: Stored URLs in engine_data', [
-                        'job_id' => $job_id,
-                        'image_url' => $image_url,
-                        'post_id' => $post_id
-                    ]);
+            // Handle parent post content if enabled
+            $content_data = [];
+            $parent_post = null;
+            if ($include_parent_content && $post->post_parent > 0) {
+                $parent_post = get_post($post->post_parent);
+                if ($parent_post) {
+                    $content_data = [
+                        'title' => $parent_post->post_title ?: 'Untitled',
+                        'content' => $parent_post->post_content ?: ''
+                    ];
                 }
             }
 
-            return ['processed_items' => [$this->create_media_data_packet($post, $include_parent_content)]];
-        }
-
-        // No eligible items found
-        return ['processed_items' => []];
-    }
-
-    /**
-     * Create data packet for media item.
-     *
-     * @param \WP_Post $post Media post object.
-     * @param bool $include_parent_content Whether to include parent post content.
-     * @return array Formatted data packet.
-     */
-    private function create_media_data_packet(\WP_Post $post, bool $include_parent_content = false): array {
-        $post_id = $post->ID;
-        
-        // Get media-specific data
-        $title = $post->post_title ?: 'N/A';
-        $caption = $post->post_excerpt ?: ''; // WordPress stores captions in post_excerpt
-        $description = $post->post_content ?: '';
-        $alt_text = get_post_meta($post_id, '_wp_attachment_image_alt', true) ?: '';
-        
-        // Get media URL and file info
-        $media_url = wp_get_attachment_url($post_id);
-        $file_type = get_post_mime_type($post_id) ?: 'unknown';
-        $file_path = get_attached_file($post_id);
-        $file_size = $file_path && file_exists($file_path) ? filesize($file_path) : 0;
-        
-        // Get parent post for URL and optional content
-        $parent_post = null;
-        $parent_content = '';
-        $parent_content_included = false;
-        if ($post->post_parent > 0) {
-            $parent_post = get_post($post->post_parent);
-            
-            // Add parent content if requested - enhanced formatting for better AI comprehension
-            if ($include_parent_content && $parent_post) {
-                $parent_title = $parent_post->post_title ?: 'Untitled';
-                $parent_body = $parent_post->post_content ?: '';
-
-                // Store source post data as structured object
-                $source_post_data = [
-                    'title' => $parent_title,
-                    'content' => $parent_body,
-                    'id' => $post->post_parent
-                ];
-                $parent_content_included = true;
-            }
-        }
-        
-        // Extract site name for metadata only
-        $site_name = get_bloginfo('name') ?: 'Local WordPress';
-
-        // Build content data with parent post content when enabled (raw structured data)
-        $content_data = [];
-        if ($parent_content_included && isset($source_post_data)) {
-            $content_data = [
-                'title' => $source_post_data['title'],
-                'content' => $source_post_data['content']  // Raw content, no string processing
+            // Create file info for AI processing (contains actual media data)
+            $file_info = [
+                'file_path' => $file_path,
+                'file_name' => basename($file_path),
+                'title' => $title,
+                'alt_text' => $alt_text,
+                'caption' => $caption,
+                'description' => $description,
+                'file_type' => $file_type,
+                'mime_type' => $file_type,
+                'file_size' => $file_size,
+                'file_size_formatted' => $file_size > 0 ? size_format($file_size) : null
             ];
-        }
 
-        // Create structured media data for AI processing
-        $media_data = [
-            'title' => $title,
-            'alt_text' => $alt_text,
-            'caption' => $caption,
-            'description' => $description,
-            'file_type' => $file_type,
-            'file_size' => $file_size,
-            'file_size_formatted' => $file_size > 0 ? size_format($file_size) : null
-        ];
-
-        // Create standardized packet with file data at root level for AI processing
-        $input_data = [
-            'file_path' => $file_path,
-            'file_name' => basename($file_path),
-            'mime_type' => $file_type,
-            'file_size' => $file_size,
-            'data' => array_merge($content_data, ['file_info' => $media_data]),
-            'metadata' => [
+            // Create metadata (no URLs, clean for AI)
+            $metadata = [
                 'source_type' => 'wordpress_media',
                 'item_identifier_to_log' => $post_id,
                 'original_id' => $post_id,
@@ -267,24 +205,31 @@ class WordPressMedia {
                 'mime_type' => $file_type,
                 'file_size' => $file_size,
                 'site_name' => $site_name
-            ]
-        ];
+            ];
 
-        // Debug logging for data flow tracking with parent content details
-        do_action('dm_log', 'debug', 'WordPress Media: Data packet created (attached media only)', [
-            'post_id' => $post_id,
-            'image_url' => wp_get_attachment_url($post_id),
-            'parent_post_id' => $parent_post ? $parent_post->ID : null,
-            'parent_post_title' => $parent_post ? $parent_post->post_title : null,
-            'file_path' => $file_path,
-            'file_exists' => $file_path ? file_exists($file_path) : false,
-            'attached_media_confirmed' => true,
-            'include_parent_content_setting' => $include_parent_content,
-            'parent_content_included' => $parent_content_included
-        ]);
+            // Create clean data packet for AI processing (matches dm_create_data_packet action output)
+            $input_data = [
+                'data' => array_merge($content_data, ['file_info' => $file_info]),
+                'metadata' => $metadata
+            ];
 
-        return $input_data;
+            // Store URLs in engine_data via centralized filter
+            if ($job_id) {
+                $image_url = wp_get_attachment_url($post_id);
+                $source_url = '';
+                if ($include_parent_content && $post->post_parent > 0) {
+                    $source_url = get_permalink($post->post_parent) ?: '';
+                }
+                apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url ?: '');
+            }
+
+            return ['processed_items' => [$input_data]];
+        }
+
+        // No eligible items found
+        return ['processed_items' => []];
     }
+
 
     /**
      * Build mime type query array from file type selections.
@@ -320,30 +265,6 @@ class WordPressMedia {
         return $mime_patterns;
     }
 
-    /**
-     * Calculate cutoff timestamp based on timeframe limit.
-     *
-     * @param string $timeframe_limit Timeframe setting value.
-     * @return int|null Cutoff timestamp or null for 'all_time'.
-     */
-    private function calculate_cutoff_timestamp($timeframe_limit) {
-        if ($timeframe_limit === 'all_time') {
-            return null;
-        }
-        
-        $interval_map = [
-            '24_hours' => '-24 hours',
-            '72_hours' => '-72 hours',
-            '7_days'   => '-7 days',
-            '30_days'  => '-30 days'
-        ];
-        
-        if (!isset($interval_map[$timeframe_limit])) {
-            return null;
-        }
-        
-        return strtotime($interval_map[$timeframe_limit], current_time('timestamp', true));
-    }
 
     /**
      * Get the user-friendly label for this handler.

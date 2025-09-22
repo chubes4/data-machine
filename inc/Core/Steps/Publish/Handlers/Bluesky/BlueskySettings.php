@@ -24,10 +24,9 @@ class BlueskySettings {
     /**
      * Get settings fields for Bluesky publish handler.
      *
-     * @param array $current_config Current configuration values for this handler.
-     * @return array Associative array defining the settings fields.
-     */
-    public static function get_fields(array $current_config = []): array {
+    * @return array Associative array defining the settings fields.
+    */
+    public static function get_fields(): array {
         return [
             'link_handling' => [
                 'type' => 'select',

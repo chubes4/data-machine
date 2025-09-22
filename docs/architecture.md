@@ -21,6 +21,31 @@ Three-action execution cycle:
 - `wp_dm_jobs` - Job executions with status tracking and engine_data storage (source_url, image_url)
 - `wp_dm_processed_items` - Deduplication tracking per execution
 
+### Engine Data Architecture
+
+**Clean Data Separation**: AI agents receive clean data packets without URLs while handlers access engine parameters via centralized filter pattern.
+
+**Database Storage + Filter Access**: Fetch handlers store engine parameters (source_url, image_url) in database; steps retrieve via centralized `dm_engine_data` filter for unified access.
+
+**Core Pattern**:
+```php
+// Fetch handlers store via centralized filter
+if ($job_id) {
+    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
+}
+
+// Steps retrieve via centralized filter (EngineData.php)
+$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$source_url = $engine_data['source_url'] ?? null;
+$image_url = $engine_data['image_url'] ?? null;
+```
+
+**Benefits**:
+- **Clean AI Data**: AI processes content without URLs for better model performance
+- **Centralized Access**: Single filter interface for all engine data retrieval
+- **Filter Consistency**: Maintains architectural pattern of filter-based service discovery
+- **Flexible Storage**: Steps access only what they need via filter call
+
 ### Cache Management System
 **Centralized Architecture**: Actions/Cache.php provides WordPress action-based cache clearing system for comprehensive cache management.
 
@@ -57,7 +82,7 @@ AI agents use tools to interact with handlers:
 - AIStepToolParameters class provides unified flat parameter building:
   - Content/title extraction from data packets
   - Tool metadata integration (tool_definition, tool_name, handler_config)
-  - Engine parameter merging for Update handlers (source_url)
+  - Engine parameter merging for handlers (source_url for link attribution and post identification)
 - Three-layer tool enablement: Global settings → Modal selection → Runtime validation
 - AIStepConversationManager for conversation state and tool result formatting with turn tracking
 

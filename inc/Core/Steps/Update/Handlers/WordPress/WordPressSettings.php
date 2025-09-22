@@ -19,10 +19,9 @@ class WordPressSettings {
     /**
      * Get settings fields for WordPress update handler.
      *
-     * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.
      */
-    public static function get_fields(array $current_config = []): array {
+    public static function get_fields(): array {
         // WordPress update settings for local WordPress installation only
         $fields = self::get_local_fields();
 

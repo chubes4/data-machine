@@ -96,12 +96,10 @@ The Google Sheets fetch handler generates clean data packets for AI processing w
 ### Engine Parameters Storage
 
 ```php
-// Stored in database via JobsOperations::store_engine_data()
-$engine_data = [
-    'source_url' => '',    // Empty for spreadsheet data
-    'image_url' => ''      // Empty for spreadsheet data
-];
-$db_jobs->store_engine_data($job_id, $engine_data);
+// Stored in database via centralized dm_engine_data filter
+if ($job_id) {
+    apply_filters('dm_engine_data', null, $job_id, '', '');  // Empty URLs for spreadsheet data
+}
 ```
 
 ### Return Structure

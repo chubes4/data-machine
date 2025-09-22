@@ -20,23 +20,7 @@ $pipeline_id = $flow['pipeline_id'];
 $scheduling_config = $flow['scheduling_config'];
 $schedule_interval = $scheduling_config['interval'] ?? 'manual';
 
-$last_run = $scheduling_config['last_run_at'] ?? null;
-if (!$last_run) {
-    $all_databases = apply_filters('dm_db', []);
-    $jobs_db = $all_databases['jobs'] ?? null;
-    if ($jobs_db) {
-        $jobs = $jobs_db->get_jobs_for_flow($flow_id);
-        $last_run = !empty($jobs) ? ($jobs[0]['completed_at'] ?? $jobs[0]['created_at']) : null;
-    }
-}
-
-$next_run = null;
-if (function_exists('as_next_scheduled_action')) {
-    $next_action = as_next_scheduled_action('dm_run_flow_now', [absint($flow_id)], 'data-machine');
-    if ($next_action) {
-        $next_run = wp_date('Y-m-d H:i:s', $next_action);
-    }
-}
+// Footer calculations moved to footer template
 
 $pipeline_steps = $pipeline_steps ?? [];
 
@@ -122,14 +106,8 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
         </div>
     </div>
     
-    <div class="dm-flow-meta">
-        <small>
-            <?php
-            /* translators: %1$s: Last run date/time or 'Never', %2$s: Next run date/time or 'Manual' */
-            echo esc_html(sprintf(__('Last: %1$s | Next: %2$s', 'data-machine'),
-                $last_run ? wp_date('M j, Y g:i a', strtotime($last_run)) : __('Never', 'data-machine'),
-                $next_run ? wp_date('M j, Y g:i a', strtotime($next_run)) : __('Manual', 'data-machine')
-            )); ?>
-        </small>
-    </div>
+    <?php
+    // Include footer template with flow data
+    include __DIR__ . '/flow-instance-footer.php';
+    ?>
 </div>

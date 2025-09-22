@@ -36,7 +36,7 @@ if ($handler_slug) {
                 $current_settings_for_fields = $step_config['handler']['settings'][$handler_slug] ?? [];
             }
         }
-        $all_fields = $handler_settings::get_fields($current_settings_for_fields);
+    $all_fields = $handler_settings::get_fields();
         $settings_fields = apply_filters('dm_enabled_settings', $all_fields, $handler_slug, $step_type, [
             'flow_step_id' => $flow_step_id,
             'pipeline_id' => $pipeline_id,

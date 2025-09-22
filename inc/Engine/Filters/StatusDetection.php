@@ -337,7 +337,7 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
     // Get field definitions for labels
     $fields = [];
     if (method_exists($handler_settings, 'get_fields')) {
-        $fields = $handler_settings::get_fields($current_settings);
+        $fields = $handler_settings::get_fields();
     }
     
     // Compare current settings with defaults

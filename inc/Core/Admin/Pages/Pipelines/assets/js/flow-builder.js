@@ -239,36 +239,18 @@
                 $noFlows.remove();
             }
 
-            // Get pipeline steps using filters instead of DOM parsing
-            $.ajax({
-                url: dmPipelineBuilder.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_get_pipeline_data',
-                    pipeline_id: pipelineId,
-                    nonce: dmPipelineBuilder.dm_ajax_nonce
-                },
-                success: (response) => {
-                    if (response.success) {
-                        const pipelineSteps = response.data.pipeline_steps || [];
-                        
-                        // Request flow instance card template with filter-based pipeline steps
-                        PipelinesPage.requestTemplate('page/flow-instance-card', {
-                            flow: flowData.flow_data,
-                            pipeline_steps: pipelineSteps
-                        }).then((flowCardHtml) => {
-                            $flowsList.prepend(flowCardHtml);
-                            
-                        }).catch((error) => {
-                            // Failed to render flow card template
-                        });
-                    } else {
-                        // Failed to get pipeline steps for flow card
-                    }
-                },
-                error: (xhr, status, error) => {
-                    // Failed to get pipeline data for flow card
-                }
+            // Use template data directly from flow creation response
+            const templateData = flowData.template_data || {
+                flow: flowData.flow_data,
+                pipeline_steps: flowData.pipeline_steps || []
+            };
+
+            // Request flow instance card template with complete data from response
+            PipelinesPage.requestTemplate('page/flow-instance-card', templateData).then((flowCardHtml) => {
+                $flowsList.prepend(flowCardHtml);
+
+            }).catch((error) => {
+                console.error('Failed to render flow card template:', error);
             });
         },
 
@@ -542,9 +524,9 @@
                         // Close modal and refresh UI components
                         dmCoreModal.close();
                         
-                        // Refresh flow card UI interactions to show updated schedule
-                        if (typeof window.dmPipelineCards !== 'undefined' && window.dmPipelineCards.refreshAll) {
-                            window.dmPipelineCards.refreshAll();
+                        // Refresh flow footer to show updated next run time
+                        if (typeof window.dmPipelineCards !== 'undefined' && window.dmPipelineCards.refreshFlowFooter) {
+                            window.dmPipelineCards.refreshFlowFooter(flow_id);
                         }
                         
                         // Refresh pipeline status to show updated schedule info

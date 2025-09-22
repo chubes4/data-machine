@@ -35,7 +35,7 @@ class Files {
 	 * @param array $handler_config Handler configuration including flow_step_id and file settings.
 	 * @param string|null $job_id Job ID for deduplication tracking.
 	 * @return array Array with 'processed_items' containing clean data for AI processing.
-	 *               Engine parameters (image_url for images) are stored in database via store_engine_data().
+	 *               Engine parameters (image_url for images) are stored via centralized dm_engine_data filter.
 	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         $repository = $this->get_repository();
@@ -91,15 +91,18 @@ class Files {
             'file_size' => $next_file['size'] ?? 0
         ];
 
+        $metadata = [
+            'source_type' => 'files',
+            'item_identifier_to_log' => $file_identifier,
+            'original_id' => $file_identifier,
+            'original_title' => $next_file['original_name'],
+            'original_date_gmt' => $next_file['uploaded_at'] ?? gmdate('Y-m-d H:i:s')
+        ];
+
+        // Create clean data packet for AI processing
         $item_data = [
             'data' => array_merge($content_data, ['file_info' => $file_info]),
-            'metadata' => [
-                'source_type' => 'files',
-                'item_identifier_to_log' => $file_identifier,
-                'original_id' => $file_identifier,
-                'original_title' => $next_file['original_name'],
-                'original_date_gmt' => $next_file['uploaded_at'] ?? gmdate('Y-m-d H:i:s')
-            ]
+            'metadata' => $metadata
         ];
 
         // Generate public URL for image files (for WordPress featured images, etc.)
@@ -113,24 +116,9 @@ class Files {
             }
         }
 
-        // Store URLs in engine_data for centralized access via dm_engine_data filter
+        // Store URLs in engine_data via centralized filter
         if ($job_id) {
-            $engine_data = [
-                'source_url' => '', // No source URL for local files
-                'image_url' => $file_url // Public URL for images, empty for non-images
-            ];
-
-            // Store engine_data via database service
-            $all_databases = apply_filters('dm_db', []);
-            $db_jobs = $all_databases['jobs'] ?? null;
-            if ($db_jobs) {
-                $db_jobs->store_engine_data($job_id, $engine_data);
-                do_action('dm_log', 'debug', 'Files: Stored URLs in engine_data', [
-                    'job_id' => $job_id,
-                    'has_image_url' => !empty($engine_data['image_url']),
-                    'file_name' => $next_file['original_name']
-                ]);
-            }
+            apply_filters('dm_engine_data', null, $job_id, '', $file_url); // No source URL for local files, image URL for images
         }
 
         do_action('dm_log', 'debug', 'Files Input: Found unprocessed file for processing.', [

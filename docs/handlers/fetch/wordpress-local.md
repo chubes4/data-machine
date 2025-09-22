@@ -77,12 +77,10 @@ The WordPress Local handler generates clean data packets for AI processing while
 ### Engine Parameters Storage
 
 ```php
-// Stored in database via JobsOperations::store_engine_data()
-$engine_data = [
-    'source_url' => 'https://site.com/post-slug/',     // For Update handlers
-    'image_url' => 'https://site.com/image.jpg'        // For media handling
-];
-$db_jobs->store_engine_data($job_id, $engine_data);
+// Stored in database via centralized dm_engine_data filter
+if ($job_id) {
+    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
+}
 ```
 
 ### Return Structure
@@ -103,7 +101,7 @@ return [
 - URLs excluded to prevent AI content pollution
 
 **Engine Parameters**:
-- `source_url`: Full permalink for Update handlers
+- `source_url`: Full permalink for link attribution and post identification
 - `image_url`: Featured image URL for media handling (null if none)
 
 ## Processing Behavior
@@ -148,7 +146,8 @@ $handler_config = [
 ];
 
 $result = $wordpress_handler->get_fetch_data($pipeline_id, $handler_config, $job_id);
-// Returns: ['processed_items' => [...], 'engine_parameters' => [...]]
+// Returns: ['processed_items' => [...]]
+// Engine parameters (source_url, image_url) stored in database via centralized dm_engine_data filter
 ```
 
 ### Specific Post Targeting

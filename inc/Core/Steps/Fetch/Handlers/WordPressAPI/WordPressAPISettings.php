@@ -24,10 +24,9 @@ class WordPressAPISettings {
     /**
      * Get settings fields for WordPress REST API fetch handler.
      *
-     * @param array $current_config Current configuration values for this handler.
      * @return array Associative array defining the settings fields.
      */
-    public static function get_fields(array $current_config = []): array {
+    public static function get_fields(): array {
         $fields = [
             'endpoint_url' => [
                 'type' => 'text',
@@ -40,13 +39,7 @@ class WordPressAPISettings {
                 'type' => 'select',
                 'label' => __('Process Items Within', 'data-machine'),
                 'description' => __('Only consider items published within this timeframe.', 'data-machine'),
-                'options' => [
-                    'all_time' => __('All Time', 'data-machine'),
-                    '24_hours' => __('Last 24 Hours', 'data-machine'),
-                    '72_hours' => __('Last 72 Hours', 'data-machine'),
-                    '7_days'   => __('Last 7 Days', 'data-machine'),
-                    '30_days'  => __('Last 30 Days', 'data-machine'),
-                ],
+                'options' => apply_filters('dm_timeframe_limit', [], null),
             ],
             'search' => [
                 'type' => 'text',
@@ -77,11 +70,6 @@ class WordPressAPISettings {
             $sanitized['endpoint_url'] = '';
         }
 
-        // Validate timeframe_limit
-        $valid_timeframes = ['all_time', '24_hours', '72_hours', '7_days', '30_days'];
-        if (!in_array($sanitized['timeframe_limit'], $valid_timeframes)) {
-            $sanitized['timeframe_limit'] = 'all_time';
-        }
 
         return $sanitized;
     }

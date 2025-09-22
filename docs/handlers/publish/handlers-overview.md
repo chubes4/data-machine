@@ -44,6 +44,53 @@ Publish handlers distribute processed content to external platforms using AI too
 - **Features**: Row insertion, cell targeting, spreadsheet creation
 - **API**: Google Sheets API
 
+## Source URL Attribution
+
+**Purpose**: All publish handlers support automatic source URL attribution for link attribution and content sourcing.
+
+**Engine Data Source**: `source_url` retrieved from fetch handlers via `dm_engine_data` filter
+
+### Link Handling Modes
+
+**Append Mode** (`link_handling: 'append'`):
+- Default behavior for most handlers
+- Source URL appended to content with platform-specific formatting
+- Character limits considered (Twitter: 24 chars, Bluesky: 22 chars)
+
+**Reply/Comment Mode**:
+- **Twitter** (`link_handling: 'reply'`): Separate reply tweet with source URL
+- **Facebook** (`link_handling: 'comment'`): Separate comment with source URL
+
+**None Mode** (`link_handling: 'none'`):
+- No source URL processing
+- Content posted without attribution
+- Available on all handlers
+
+### Platform-Specific Implementation
+
+| Platform | Separator | Character Count | Special Features |
+|----------|-----------|-----------------|------------------|
+| Twitter | ` ` (space) | 24 chars (t.co) | Reply mode available |
+| Bluesky | `\n\n` | 22 chars | Auto-detected by platform |
+| Threads | `\n\n` | Full URL length | Simple truncation |
+| Facebook | `\n\n` | Full URL length | Comment mode available |
+| WordPress | Gutenberg blocks | No limit | Source attribution blocks |
+
+### Engine Data Access Pattern
+
+```php
+// Standard pattern across all handlers
+$job_id = $parameters['job_id'] ?? null;
+$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$source_url = $engine_data['source_url'] ?? null;
+$image_url = $engine_data['image_url'] ?? null;
+
+// Conditional URL appending based on link_handling setting
+if ($link_handling === 'append' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
+    $content .= $platform_separator . $source_url;
+}
+```
+
 ## Tool-First Architecture
 
 ### `handle_tool_call()` Interface

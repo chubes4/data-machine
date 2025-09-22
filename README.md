@@ -16,7 +16,7 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-**Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), 5-Tier AI Directive Priority System, AIStepConversationManager with Turn Tracking, AIStepToolParameters, Clean Content Processing, Centralized Cache Management, Modular WordPress Publish Handler, Universal Handler Settings Template, AutoSave System, Three-Layer Tool Management
+**Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), Centralized Engine Data Architecture, AIStepConversationManager with Turn Tracking, AIStepToolParameters with buildForHandlerTool(), Clean Content Processing, Modular WordPress Publish Handler, Universal Handler Settings Template, AutoSave System
 
 **Requirements**: WordPress 6.2+, PHP 8.0+, Composer
 

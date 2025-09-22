@@ -31,14 +31,9 @@ $core_parameters = [
 Engine data is stored in database by fetch handlers and retrieved via centralized dm_engine_data filter:
 
 ```php
-// 1. Fetch handlers store in database
-$all_databases = apply_filters('dm_db', []);
-$db_jobs = $all_databases['jobs'] ?? null;
-if ($db_jobs) {
-    $db_jobs->store_engine_data($job_id, [
-        'source_url' => $source_url,      // For Update handlers
-        'image_url' => $image_url,        // For media handling
-    ]);
+// 1. Fetch handlers store in database via centralized filter
+if ($job_id) {
+    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
 }
 
 // 2. Steps retrieve engine data via centralized filter
@@ -92,16 +87,9 @@ class MyFetchHandler {
             'metadata' => ['source_type' => 'my_handler', 'original_id' => $item_id]
         ];
 
-        // Store engine parameters in database for later retrieval via dm_engine_data filter
+        // Store engine parameters in database via centralized dm_engine_data filter
         if ($job_id) {
-            $all_databases = apply_filters('dm_db', []);
-            $db_jobs = $all_databases['jobs'] ?? null;
-            if ($db_jobs) {
-                $db_jobs->store_engine_data($job_id, [
-                    'source_url' => $source_url,
-                    'image_url' => $image_url,
-                ]);
-            }
+            apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
         }
 
         return ['processed_items' => [$clean_data]];
@@ -110,16 +98,22 @@ class MyFetchHandler {
 ```
 
 ### Publish Handlers (Tool-Based)
-Use `AIStepToolParameters` for standardized parameter building:
+Use `AIStepToolParameters::buildForHandlerTool()` for parameter building with engine data access:
 
 ```php
 class MyPublishHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        // Parameters built by AIStepToolParameters::buildParameters()
-        // Contains: content, title, tool_name, handler_config, etc.
+        // Parameters built by AIStepToolParameters::buildForHandlerTool()
+        // Contains: content, title, tool_name, handler_config, engine data (source_url, image_url)
 
         $content = $parameters['content'] ?? '';
         $handler_config = $tool_def['handler_config'] ?? [];
+
+        // Access engine data via centralized filter pattern
+        $job_id = $parameters['job_id'] ?? null;
+        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $source_url = $engine_data['source_url'] ?? null;
+        $image_url = $engine_data['image_url'] ?? null;
 
         return ['success' => true, 'data' => ['id' => $id]];
     }
@@ -132,14 +126,15 @@ Require `source_url` from engine data stored by fetch handlers and retrieved via
 ```php
 class MyUpdateHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        // Parameters built by AIStepToolParameters::buildForHandlerTool()
-        // Includes engine data retrieved from database via dm_engine_data filter
+        // Access engine data via centralized filter pattern
+        $job_id = $parameters['job_id'] ?? null;
+        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $source_url = $engine_data['source_url'] ?? null;
 
-        if (empty($parameters['source_url'])) {
-            return ['success' => false, 'error' => 'Missing required source_url parameter'];
+        if (empty($source_url)) {
+            return ['success' => false, 'error' => 'Missing required source_url from engine data'];
         }
 
-        $source_url = $parameters['source_url'];  // From database storage via dm_engine_data filter
         $content = $parameters['content'] ?? '';
 
         // Update existing content at source_url
@@ -177,7 +172,7 @@ $parameters = AIStepToolParameters::buildForHandlerTool(
 2. **Extract Content** - Pull content/title from data packets based on tool specs
 3. **Add Tool Metadata** - Include tool_definition, tool_name, handler_config
 4. **Merge AI Parameters** - Add AI-provided parameters (overwrites conflicts)
-5. **Include Engine Data** - For Update handlers, merge source_url and context
+5. **Include Engine Data** - For handler tools, merge source_url and context from engine data
 
 ### Example Built Parameters
 
@@ -213,27 +208,26 @@ $parameters = AIStepToolParameters::buildForHandlerTool(
 Each fetch handler stores specific engine parameters in the database:
 
 ```php
-// Reddit Handler - stores in database
-$all_databases = apply_filters('dm_db', []);
-$db_jobs = $all_databases['jobs'] ?? null;
-if ($db_jobs) {
-    $db_jobs->store_engine_data($job_id, [
-        'source_url' => 'https://reddit.com' . $item_data['permalink'],
-        'image_url' => $stored_image['url'] ?? '',
-    ]);
+// Reddit Handler - stores via centralized filter
+if ($job_id) {
+    apply_filters('dm_engine_data', null, $job_id,
+        'https://reddit.com' . $item_data['permalink'],
+        $stored_image['url'] ?? ''
+    );
 }
 
-// WordPress Local Handler - stores in database
-$db_jobs->store_engine_data($job_id, [
-    'source_url' => get_permalink($post_id),
-    'image_url' => $this->extract_image_url($post_id),
-]);
+// WordPress Local Handler - stores via centralized filter
+if ($job_id) {
+    apply_filters('dm_engine_data', null, $job_id,
+        get_permalink($post_id),
+        $this->extract_image_url($post_id)
+    );
+}
 
-// RSS Handler - stores in database
-$db_jobs->store_engine_data($job_id, [
-    'source_url' => $item_link,
-    'image_url' => $enclosure_url,
-]);
+// RSS Handler - stores via centralized filter
+if ($job_id) {
+    apply_filters('dm_engine_data', null, $job_id, $item_link, $enclosure_url);
+}
 ```
 
 ### Parameter Validation
