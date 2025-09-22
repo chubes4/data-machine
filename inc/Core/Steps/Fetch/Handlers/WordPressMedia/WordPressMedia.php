@@ -151,8 +151,15 @@ class WordPressMedia {
             // Store URLs in engine_data for centralized access via dm_engine_data filter
             if ($job_id) {
                 $media_url = wp_get_attachment_url($post_id);
+
+                // Get parent post permalink for source_url when include_parent_content is enabled
+                $source_url = '';
+                if ($include_parent_content && $post->post_parent > 0) {
+                    $source_url = get_permalink($post->post_parent) ?: '';
+                }
+
                 $engine_data = [
-                    'source_url' => $media_url ?: '',
+                    'source_url' => $source_url,
                     'image_url' => $media_url ?: ''
                 ];
 
@@ -223,6 +230,15 @@ class WordPressMedia {
         // Extract site name for metadata only
         $site_name = get_bloginfo('name') ?: 'Local WordPress';
 
+        // Build content data with parent post content when enabled
+        $content_data = [];
+        if ($parent_content_included && isset($source_post_data)) {
+            $content_data = [
+                'title' => $source_post_data['title'],
+                'content' => $source_post_data['content']  // Raw content, no processing
+            ];
+        }
+
         // Create structured media data for AI processing
         $media_data = [
             'title' => $title,
@@ -234,18 +250,13 @@ class WordPressMedia {
             'file_size_formatted' => $file_size > 0 ? size_format($file_size) : null
         ];
 
-        // Add source post data if available
-        if ($parent_content_included && isset($source_post_data)) {
-            $media_data['source_post'] = $source_post_data;
-        }
-
         // Create standardized packet with file data at root level for AI processing
         $input_data = [
             'file_path' => $file_path,
             'file_name' => basename($file_path),
             'mime_type' => $file_type,
             'file_size' => $file_size,
-            'data' => $media_data,
+            'data' => array_merge($content_data, ['file_info' => $media_data]),
             'metadata' => [
                 'source_type' => 'wordpress_media',
                 'item_identifier_to_log' => $post_id,
@@ -262,16 +273,16 @@ class WordPressMedia {
         // Debug logging for data flow tracking with parent content details
         do_action('dm_log', 'debug', 'WordPress Media: Data packet created (attached media only)', [
             'post_id' => $post_id,
-            'media_url' => $media_url,
-            'parent_post_id' => $parent_post->ID, // Now guaranteed to exist due to query filter
-            'parent_post_title' => $parent_post->post_title,
+            'media_url' => wp_get_attachment_url($post_id),
+            'parent_post_id' => $parent_post ? $parent_post->ID : null,
+            'parent_post_title' => $parent_post ? $parent_post->post_title : null,
             'file_path' => $file_path,
             'file_exists' => $file_path ? file_exists($file_path) : false,
             'attached_media_confirmed' => true,
             'include_parent_content_setting' => $include_parent_content,
             'parent_content_included' => $parent_content_included,
-            'parent_content_length' => $parent_content_included ? strlen($parent_content) : 0,
-            'total_content_length' => strlen($content_string)
+            'parent_content_length' => $parent_content_included && isset($source_post_data) ? strlen($source_post_data['content']) : 0,
+            'total_content_length' => $parent_content_included && isset($source_post_data) ? strlen($source_post_data['content']) : 0
         ]);
 
         return $input_data;
