@@ -102,7 +102,7 @@ class Files {
             }
         }
 
-        // Store URLs in engine_data for centralized parameter injection
+        // Store URLs in engine_data for centralized access via dm_engine_data filter
         if ($job_id) {
             $engine_data = [
                 'source_url' => '', // No source URL for local files

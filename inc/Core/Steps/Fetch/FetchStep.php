@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
 class FetchStep {
 
     /**
-     * @param array $parameters Flat parameter structure from dm_engine_parameters filter
+     * @param array $parameters Core parameter structure from step execution
      * @return array Updated data packet array
      */
     public function execute(array $parameters): array {

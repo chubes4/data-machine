@@ -3,7 +3,7 @@
  * WordPress Local fetch handler.
  *
  * Fetches post/page content from local WordPress installation using WP_Query.
- * Generates clean content for AI and source_url via engine parameters for Update step compatibility.
+ * Generates clean content for AI and stores source_url via engine data for Update step compatibility.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers\WordPress
@@ -246,7 +246,7 @@ class WordPress {
             ]
         ];
 
-        // Store URLs in engine_data for centralized parameter injection
+        // Store URLs in engine_data for centralized access via dm_engine_data filter
         if ($job_id) {
             $engine_data = [
                 'source_url' => get_permalink($post_id) ?: '',

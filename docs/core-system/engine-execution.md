@@ -40,12 +40,13 @@ do_action('dm_run_flow_now', $flow_id, 'manual');
 
 **Step Execution Pattern**:
 ```php
-$parameters = apply_filters('dm_engine_parameters', [
+$parameters = [
     'job_id' => $job_id,
     'flow_step_id' => $flow_step_id,
     'flow_step_config' => $flow_step_config,
     'data' => $data
-], $data, $flow_step_config, $step_type, $flow_step_id);
+];
+// Engine data added by steps as needed via dm_engine_data filter
 $data = $flow_step->execute($parameters);
 ```
 
@@ -136,22 +137,24 @@ class MyStep {
 
 ### Flat Parameter Architecture
 
-Engine uses unified flat parameter passing through single filter system:
+Engine uses unified flat parameter passing with engine data filter access:
 
-**Unified Parameters** (single flat array):
+**Core Parameters** (always provided):
 ```php
-$parameters = apply_filters('dm_engine_parameters', [
+$parameters = [
     'job_id' => $job_id,
     'flow_step_id' => $flow_step_id,
     'flow_step_config' => $flow_step_config,
     'data' => $data
-    // Additional parameters added by filters as needed
-], $data, $flow_step_config, $step_type, $flow_step_id);
+];
+
+// Engine data retrieved by steps as needed
+$engine_data = apply_filters('dm_engine_data', [], $job_id);
 ```
 
 **Benefits**:
-- ✅ **Simple Interface**: Single flat array for all parameters
-- ✅ **Extensible**: Filters can add any metadata as parameters
+- ✅ **Simple Interface**: Core parameters always provided, engine data accessed via filter
+- ✅ **Extensible**: Engine data filter allows centralized metadata access
 - ✅ **Consistent**: Same pattern across all step types
 
 **Step Implementation Pattern**:
@@ -164,9 +167,10 @@ class MyStep {
         $data = $parameters['data'] ?? [];
         $flow_step_config = $parameters['flow_step_config'] ?? [];
         
-        // Extract what this step needs
-        $source_url = $parameters['source_url'] ?? null;
-        $image_url = $parameters['image_url'] ?? null;
+        // Access engine data as needed
+        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $source_url = $engine_data['source_url'] ?? null;
+        $image_url = $engine_data['image_url'] ?? null;
         $file_path = $parameters['file_path'] ?? null;
         $mime_type = $parameters['mime_type'] ?? null;
         

@@ -149,7 +149,7 @@ Complete extension system for custom handlers and tools:
 
 ### Data Processing
 - **Explicit Data Separation Architecture**: Clean data packets for AI processing vs engine parameters for handlers
-- **Database Storage + Filter Injection**: Fetch handlers store engine_data (source_url, image_url) in database; Engine.php retrieves and injects via `dm_engine_parameters` filter
+- **Engine Data Filter Architecture**: Fetch handlers store engine_data (source_url, image_url) in database; steps retrieve via centralized `dm_engine_data` filter
 - DataPacket structure for consistent data flow with chronological ordering
 - Clear data packet structure for AI agents with chronological ordering:
   - Root wrapper with data_packets array

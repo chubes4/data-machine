@@ -3,7 +3,7 @@
  * WordPress Media fetch handler.
  *
  * Handles WordPress media library content using WP_Query for attachment post type.
- * Specialized for media files with clean content generation and URL separation via engine parameters.
+ * Specialized for media files with clean content generation and URL storage via engine data.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers\WordPressMedia
@@ -148,7 +148,7 @@ class WordPressMedia {
                 do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_media', $post_id, $job_id);
             }
 
-            // Store URLs in engine_data for centralized parameter injection
+            // Store URLs in engine_data for centralized access via dm_engine_data filter
             if ($job_id) {
                 $media_url = wp_get_attachment_url($post_id);
                 $engine_data = [

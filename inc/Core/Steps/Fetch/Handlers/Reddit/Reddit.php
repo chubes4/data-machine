@@ -492,7 +492,7 @@ class Reddit {
 					$stored_image = $this->store_reddit_image($image_info['url'], $flow_step_id, $current_item_id);
 				}
 
-				// Create clean metadata for AI consumption (URLs removed - available via engine parameters)
+				// Create clean metadata for AI consumption (URLs stored separately via engine data)
 				$metadata = [
 					'source_type' => 'reddit',
 					'item_identifier_to_log' => (string) $current_item_id,
@@ -540,7 +540,7 @@ class Reddit {
 					];
 				}
 
-				// Store URLs in engine_data for centralized parameter injection
+				// Store URLs in engine_data for centralized access via dm_engine_data filter
 				if ($job_id) {
 					$engine_data = [
 						'source_url' => $item_data['permalink'] ? 'https://www.reddit.com' . $item_data['permalink'] : ''

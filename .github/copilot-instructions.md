@@ -7,8 +7,8 @@ Focused, codebase-specific rules for fast, correct edits. Full context: `README.
 - Discovery is filter-driven; never new-up or hard-wire classes. Registration lives in composer `autoload.files` entries under `inc/**/ *Filters.php`.
 
 ## Conventions
-- Parameters: Flat only. `execute()`/`handle_tool_call()` receive one array from `dm_engine_parameters` with `job_id`, `flow_step_id`, `flow_step_config`, `data`.
-- Enrichment: Add engine/step data via `dm_engine_parameters` filter only (no globals/singletons).
+- Parameters: Core parameters (`job_id`, `flow_step_id`, `flow_step_config`, `data`) always provided. Engine data accessed via `dm_engine_data` filter as needed.
+- Engine Data: Access via `dm_engine_data` filter for centralized retrieval (no globals/singletons).
 - Logging: `do_action('dm_log', level, message, context)`. Summarize bodies with `content_length`; avoid dumping raw content.
 - Caching: Use actions (`dm_clear_pipeline_cache`, `dm_clear_flow_cache`, `dm_clear_jobs_cache`, `dm_clear_all_cache`, `dm_cache_set`). Do not touch transients/options directly.
 - History: Never mutate older DataPackets; safe metadata append is allowed.
@@ -33,7 +33,7 @@ Focused, codebase-specific rules for fast, correct edits. Full context: `README.
 ## WordPress Publish/Update
 - Canonical handler: `inc/Core/Steps/Publish/Handlers/WordPress/WordPress.php` (uses `FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`).
 - Flow: validate → merge system defaults overriding handler config → sanitize (`wp_kses_post`, block parse/serialize) → taxonomy resolution (skip|fixed IDs|AI-decides with `wp_insert_term`) → log → return `[ 'success'=>bool, 'data'=>..., 'tool_name'=>'wordpress_publish' ]`.
-- Update tools require `source_url`; fetch handlers persist `source_url`/`image_url` in DB; the engine injects them via `dm_engine_parameters`.
+- Update tools require `source_url`; fetch handlers persist `source_url`/`image_url` in DB; steps retrieve via `dm_engine_data` filter.
 
 ## IDs, DB, and Autosave
 - `pipeline_step_id` + `flow_id` → `flow_step_id` (`{pipeline_step_id}_{flow_id}`).
@@ -51,7 +51,7 @@ Focused, codebase-specific rules for fast, correct edits. Full context: `README.
 - Admin UI: `inc/Core/Admin/**` (pages, settings, modals) with filter registration.
 
 ## Quick Hooks Reference
-Filters: `dm_steps`, `dm_handlers`, `ai_tools`, `ai_request`, `dm_engine_parameters`, `dm_db`, `dm_tool_configured`, `dm_get_tool_config`.
+Filters: `dm_steps`, `dm_handlers`, `ai_tools`, `ai_request`, `dm_engine_data`, `dm_db`, `dm_tool_configured`, `dm_get_tool_config`.
 Actions: `dm_auto_save`, `dm_clear_*`, `dm_mark_item_processed`, `dm_log`.
 
 Feedback welcome: If any pattern here is unclear or missing, point me at the file/feature and I’ll tighten this guide.

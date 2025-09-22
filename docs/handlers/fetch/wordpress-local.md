@@ -51,9 +51,9 @@ Retrieves WordPress post and page content from the local installation using WP_Q
 
 ## Data Output
 
-### Database Storage + Filter Injection Architecture
+### Engine Data Filter Architecture
 
-The WordPress Local handler generates clean data packets for AI processing while storing engine parameters in database for later injection by Engine.php.
+The WordPress Local handler generates clean data packets for AI processing while storing engine parameters in database for later retrieval via dm_engine_data filter.
 
 ### Clean Data Packet (AI-Visible)
 

@@ -75,7 +75,7 @@ Auth via `/dm-oauth/{provider}/` popup flow.
 **Content Updates**: WordPress Local → AI → WordPress Update
 **Document Analysis**: Files → AI → WordPress
 
-> **Note**: Multi-platform uses AI→Publish→AI→Publish pattern. Update steps require source_url from engine parameters (stored in database by fetch handlers, injected by Engine.php).
+> **Note**: Multi-platform uses AI→Publish→AI→Publish pattern. Update steps require source_url from engine data (stored in database by fetch handlers, retrieved via dm_engine_data filter).
 
 *For detailed examples and technical specifications, see `CLAUDE.md`*
 
@@ -107,7 +107,7 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 
 **Fetch Sources**: Local/remote files, RSS feeds, Reddit posts, WordPress Local, WordPress Media, WordPress API, Google Sheets  
 **Publish Destinations**: Twitter, Bluesky, Threads, Facebook, WordPress, Google Sheets  
-**Update Handlers**: WordPress Update (existing post/page modification via source_url from database storage + Engine.php injection)  
+**Update Handlers**: WordPress Update (existing post/page modification via source_url from engine data filter access)  
 **AI Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)  
 **General Tools**: Google Search, Local Search, WebFetch (50K character limit), WordPress Post Reader
 
@@ -116,7 +116,7 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 - **Modular WordPress Publish Handler**: Refactored into specialized components - `FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler` with configuration hierarchy (system defaults override handler config)
 - **AutoSave System**: Complete pipeline auto-save with flow synchronization, execution_order updates, and cache invalidation via single `dm_auto_save` action
 - **Enhanced Cache System**: WordPress action-based cache clearing with granular invalidation and pattern support via Actions/Cache.php
-- **Database Storage + Filter Injection Architecture**: Fetch handlers store engine parameters in database via store_engine_data(); Engine.php retrieves and injects via dm_engine_parameters filter - eliminates URL pollution in AI content while maintaining structured access for handlers
+- **Engine Data Filter Architecture**: Fetch handlers store engine parameters in database via store_engine_data(); steps retrieve via centralized dm_engine_data filter - eliminates URL pollution in AI content while maintaining structured access for handlers
 - **Universal Handler Settings**: Template system eliminating modal code duplication across handler types with dynamic field rendering
 
 *All handlers are fully functional with OAuth authentication where required and comprehensive error handling*
@@ -159,7 +159,7 @@ composer install    # Development setup
 ./build.sh         # Production build
 ```
 
-**Architecture**: PSR-4 autoloading, filter-based service discovery, hybrid database storage + filter injection architecture with clean AI data packets and structured engine parameters, centralized cache system via Actions/Cache.php with WordPress action-based clearing, 5-tier AI directive system with auto-registration (PluginCoreDirective, GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, SiteContextDirective), AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution, AutoSave system with complete pipeline persistence and flow synchronization, database storage by fetch handlers + Engine.php filter injection system, modular WordPress publish handler (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`) with configuration hierarchy, universal handler settings template system eliminating modal code duplication, Composer-managed ai-http-client dependency. See `CLAUDE.md` for complete technical specifications.
+**Architecture**: PSR-4 autoloading, filter-based service discovery, engine data filter architecture with clean AI data packets and structured engine parameters, centralized cache system via Actions/Cache.php with WordPress action-based clearing, 5-tier AI directive system with auto-registration (PluginCoreDirective, GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, SiteContextDirective), AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution, AutoSave system with complete pipeline persistence and flow synchronization, database storage by fetch handlers + dm_engine_data filter access system, modular WordPress publish handler (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`) with configuration hierarchy, universal handler settings template system eliminating modal code duplication, Composer-managed ai-http-client dependency. See `CLAUDE.md` for complete technical specifications.
 
 ## License
 

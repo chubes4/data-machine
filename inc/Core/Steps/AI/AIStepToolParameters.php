@@ -7,7 +7,7 @@
  * with additional engine context (like source_url for Update handlers).
  *
  * Parameter Building Process:
- * 1. Starts with engine parameters as base flat structure
+ * 1. Starts with unified parameters from step execution context
  * 2. Extracts content/title from data packets based on tool specifications
  * 3. Adds tool metadata directly to flat structure
  * 4. Merges AI-provided parameters (overwrites conflicting keys)
@@ -89,15 +89,15 @@ class AIStepToolParameters {
     
     /**
      * Build parameters for handler tools with additional engine context.
-     * Enhanced parameter building that merges engine parameters (like source_url)
+     * Enhanced parameter building that merges engine data (like source_url)
      * for specialized handlers like Update handlers requiring source identification.
      *
      * @param array $ai_tool_parameters AI tool call parameters
      * @param array $data Data packet array for content extraction
      * @param array $tool_definition Tool specification
-     * @param array $engine_parameters Additional parameters from engine context (source_url, etc.)
+     * @param array $engine_parameters Additional data from engine context (source_url, etc.)
      * @param array $handler_config Handler-specific settings
-     * @return array Flat parameter structure with engine parameters merged
+     * @return array Flat parameter structure with engine data merged
      */
     public static function buildForHandlerTool(
         array $ai_tool_parameters,
@@ -113,6 +113,7 @@ class AIStepToolParameters {
         
         $parameters = self::buildParameters($ai_tool_parameters, $unified_parameters, $tool_definition);
         
+        // Merge engine data (source_url, image_url) from centralized access
         foreach ($engine_parameters as $key => $value) {
             $parameters[$key] = $value;
         }

@@ -279,54 +279,51 @@ $providers['provider_slug'] = new AuthProviderClass();
 
 ## Parameter Processing Filters
 
-### `dm_engine_parameters`
+### `dm_engine_data`
 
-**Purpose**: Centralized database retrieval and parameter injection system for engine parameters
+**Purpose**: Centralized engine data access filter for retrieving stored engine parameters
 
 **Parameters**:
-- `$parameters` (array) - Base parameters array containing core execution data
-- `$data` (array) - Data packet array from previous steps
-- `$flow_step_config` (array) - Flow step configuration
-- `$step_type` (string) - Step type identifier
-- `$flow_step_id` (string) - Flow step identifier
+- `$engine_data` (array) - Default empty array for return data
+- `$job_id` (int) - Job ID to retrieve engine data for
 
-**Return**: Enhanced parameters array with engine data injected from database storage
+**Return**: Array containing engine data (source_url, image_url, etc.)
 
-**Base Parameters Structure**:
+**Engine Data Structure**:
 ```php
-$parameters = [
-    'job_id' => $job_id,
-    'flow_step_id' => $flow_step_id,
-    'flow_step_config' => $flow_step_config,
-    'data' => $data
-    // Engine parameters injected from database storage
+$engine_data = [
+    'source_url' => $source_url,    // For Update handlers
+    'image_url' => $image_url,      // For media handling
+    // Additional engine parameters as needed
 ];
 ```
 
-**Core Implementation (Engine.php)**:
+**Core Implementation (EngineData.php)**:
 ```php
-add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
-    $job_id = $parameters['job_id'] ?? null;
-    if (!$job_id) {
-        return $parameters;
+add_filter('dm_engine_data', function($engine_data, $job_id) {
+    if (empty($job_id)) {
+        return [];
     }
 
-    // Get database service via filter discovery
+    // Use established filter pattern for database service discovery
     $all_databases = apply_filters('dm_db', []);
     $db_jobs = $all_databases['jobs'] ?? null;
+
     if (!$db_jobs) {
-        return $parameters;
+        return [];
     }
 
-    // Retrieve engine_data stored by fetch handlers
-    $engine_data = $db_jobs->retrieve_engine_data($job_id);
-    if (empty($engine_data)) {
-        return $parameters;
-    }
+    $retrieved_data = $db_jobs->retrieve_engine_data($job_id);
+    return $retrieved_data ?: [];
+}, 10, 2);
+```
 
-    // Inject engine parameters for handler consumption
-    return array_merge($parameters, $engine_data);
-}, 5, 5);
+**Usage by Steps**:
+```php
+// Steps access engine data as needed
+$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$source_url = $engine_data['source_url'] ?? null;
+$image_url = $engine_data['image_url'] ?? null;
 ```
 
 **Engine Data Storage (by Fetch Handlers)**:
@@ -345,10 +342,10 @@ if ($job_id) {
 ```
 
 **Benefits**:
-- ✅ **Flat Structure**: Single array containing all parameters
-- ✅ **Extensible**: Any component can add parameters via filters
-- ✅ **Consistent**: Same pattern across all step types
-- ✅ **Flexible**: Steps extract only what they need
+- ✅ **Centralized Access**: Single filter for all engine data retrieval
+- ✅ **Filter-Based Discovery**: Uses established database service discovery pattern
+- ✅ **Clean Separation**: Engine data separate from AI data packets
+- ✅ **Flexible**: Steps access only what they need via filter call
 
 ## Data Processing Filters
 

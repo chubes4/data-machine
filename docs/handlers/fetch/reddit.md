@@ -91,9 +91,9 @@ Top Comments:
 
 ## Output Structure
 
-### Database Storage + Filter Injection Architecture
+### Engine Data Filter Architecture
 
-The Reddit handler generates clean data packets for AI processing while storing engine parameters in database for later injection by Engine.php.
+The Reddit handler generates clean data packets for AI processing while storing engine parameters in database for later retrieval via dm_engine_data filter.
 
 ### Clean Data Packet (AI-Visible)
 ```php

@@ -4,12 +4,12 @@ Unified flat parameter architecture for all Data Machine components, providing c
 
 ## Architecture Overview
 
-Data Machine uses a hybrid database storage + filter injection system that provides clean data separation and consistent parameter access across all components.
+Data Machine uses an engine data filter architecture that provides clean data separation and consistent parameter access across all components.
 
 ### Core Design Principles
 
-1. **Database Storage + Filter Injection** - Fetch handlers store engine data in database; Engine.php retrieves and injects via filters
-2. **Clean Data Separation** - AI receives clean data packets without URLs; handlers receive engine parameters via filter injection
+1. **Engine Data Filter Access** - Fetch handlers store engine data in database; steps retrieve via centralized dm_engine_data filter
+2. **Clean Data Separation** - AI receives clean data packets without URLs; handlers receive engine parameters via filter access
 3. **Unified Interface** - All steps, handlers, and tools use consistent parameter formats
 4. **Tool-Based Parameter Building** - AIStepToolParameters class provides standardized parameter construction
 
@@ -27,8 +27,8 @@ $core_parameters = [
 ];
 ```
 
-### Engine Parameters
-Engine parameters are stored in database by fetch handlers and injected by Engine.php via filters:
+### Engine Data
+Engine data is stored in database by fetch handlers and retrieved via centralized dm_engine_data filter:
 
 ```php
 // 1. Fetch handlers store in database
@@ -41,12 +41,10 @@ if ($db_jobs) {
     ]);
 }
 
-// 2. Engine.php retrieves and injects parameters
-add_filter('dm_engine_parameters', function($parameters, $data, $flow_step_config, $step_type, $flow_step_id) {
-    $job_id = $parameters['job_id'] ?? null;
-    $engine_data = $db_jobs->retrieve_engine_data($job_id);
-    return array_merge($parameters, $engine_data);
-}, 5, 5);
+// 2. Steps retrieve engine data via centralized filter
+$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$source_url = $engine_data['source_url'] ?? null;
+$image_url = $engine_data['image_url'] ?? null;
 ```
 
 ## Step Implementation Pattern
@@ -94,7 +92,7 @@ class MyFetchHandler {
             'metadata' => ['source_type' => 'my_handler', 'original_id' => $item_id]
         ];
 
-        // Store engine parameters in database for later injection
+        // Store engine parameters in database for later retrieval via dm_engine_data filter
         if ($job_id) {
             $all_databases = apply_filters('dm_db', []);
             $db_jobs = $all_databases['jobs'] ?? null;
@@ -128,20 +126,20 @@ class MyPublishHandler {
 }
 ```
 
-### Update Handlers (Engine Parameters)
-Require `source_url` from engine parameters stored by fetch handlers and injected by Engine.php:
+### Update Handlers (Engine Data)
+Require `source_url` from engine data stored by fetch handlers and retrieved via dm_engine_data filter:
 
 ```php
 class MyUpdateHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         // Parameters built by AIStepToolParameters::buildForHandlerTool()
-        // Includes engine parameters retrieved from database and injected via Engine.php
+        // Includes engine data retrieved from database via dm_engine_data filter
 
         if (empty($parameters['source_url'])) {
             return ['success' => false, 'error' => 'Missing required source_url parameter'];
         }
 
-        $source_url = $parameters['source_url'];  // From database storage via Engine.php injection
+        $source_url = $parameters['source_url'];  // From database storage via dm_engine_data filter
         $content = $parameters['content'] ?? '';
 
         // Update existing content at source_url
@@ -163,12 +161,12 @@ $parameters = AIStepToolParameters::buildParameters(
     $tool_definition         // Tool definition array
 );
 
-// Handler tool parameter building (includes engine parameters)
+// Handler tool parameter building (includes engine data)
 $parameters = AIStepToolParameters::buildForHandlerTool(
     $ai_tool_parameters,     // AI tool call parameters
     $data,                   // Data packet array
     $tool_definition,        // Tool specification
-    $engine_parameters,      // Engine parameters (source_url, etc.)
+    $engine_parameters,      // Engine data (source_url, etc.)
     $handler_config         // Handler configuration
 );
 ```
@@ -179,7 +177,7 @@ $parameters = AIStepToolParameters::buildForHandlerTool(
 2. **Extract Content** - Pull content/title from data packets based on tool specs
 3. **Add Tool Metadata** - Include tool_definition, tool_name, handler_config
 4. **Merge AI Parameters** - Add AI-provided parameters (overwrites conflicts)
-5. **Include Engine Context** - For Update handlers, merge source_url and context
+5. **Include Engine Data** - For Update handlers, merge source_url and context
 
 ### Example Built Parameters
 
@@ -204,7 +202,7 @@ $parameters = AIStepToolParameters::buildForHandlerTool(
     'content' => 'AI-modified tweet content', // Overwrites extracted content
     'hashtags' => '#ai #automation',
 
-    // Engine parameters (Update handlers only)
+    // Engine data (Update handlers only)
     'source_url' => 'https://example.com/post/123'
 ]
 ```

@@ -2,7 +2,7 @@
 /**
  * Jobs Database CRUD Operations
  *
- * Core database operations with engine_data storage for parameter injection.
+ * Core database operations with engine_data storage for centralized access.
  */
 
 namespace DataMachine\Core\Database\Jobs;
@@ -242,7 +242,7 @@ class JobsOperations {
     }
 
     /**
-     * Store engine parameters for fetch handler data separation.
+     * Store engine data for centralized access via dm_engine_data filter.
      */
     public function store_engine_data(int $job_id, array $data): bool {
         if ($job_id <= 0) {
@@ -281,7 +281,7 @@ class JobsOperations {
     }
 
     /**
-     * Retrieve stored engine parameters for Engine.php injection.
+     * Retrieve stored engine data for dm_engine_data filter access.
      */
     public function retrieve_engine_data(int $job_id): array {
         if ($job_id <= 0) {

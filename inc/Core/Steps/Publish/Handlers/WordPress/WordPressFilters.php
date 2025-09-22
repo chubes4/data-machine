@@ -106,6 +106,8 @@ RULES (keep it simple and exact):
 2) Use only core blocks needed here: heading, paragraph, list, separator, image, quote.
 3) No Markdown, no raw HTML outside blocks. Wrap ALL URLs in <a href="URL">Text</a>.
 4) Heading levels: default H2, or set {"level":3} for H3, {"level":4} for H4.
+5) Do not include the image or source url in the post content, these are handled by the system automatically
+6) Do not repeat the post title header in the post content, it is visible via the title field
 
 EXAMPLES:
 - H2: <!-- wp:heading --><h2 class="wp-block-heading">Section Title</h2><!-- /wp:heading -->

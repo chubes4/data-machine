@@ -59,7 +59,7 @@ dm_register_importexport_filters();
  * - dm_scheduler_intervals: Scheduler interval definitions
  * - dm_step_settings: Step configuration discovery
  * - dm_files_repository: Files repository discovery
- * - dm_engine_parameters: Unified parameter passing system
+ * - dm_engine_data: Centralized engine data access system
  * 
  * @since 0.1.0
  */

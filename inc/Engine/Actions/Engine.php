@@ -129,12 +129,13 @@ function dm_register_execution_engine() {
             $step_class = $step_definition['class'] ?? '';
             $flow_step = new $step_class();
             
-            $parameters = apply_filters('dm_engine_parameters', [
+            // Build core parameters for step execution (engine data accessed separately via dm_engine_data filter)
+            $parameters = [
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id,
                 'flow_step_config' => $flow_step_config,
                 'data' => $data ?: []
-            ], $data ?: [], $flow_step_config, $step_type, $flow_step_id);
+            ];
             
             // Set global execution context
             add_filter('dm_current_flow_step_id', function() use ($flow_step_id) { return $flow_step_id; }, 100);

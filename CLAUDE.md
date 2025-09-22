@@ -2,6 +2,8 @@
 
 Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and multi-provider AI integration.
 
+*For user documentation, see `docs/README.md` | For GitHub overview, see `README.md`*
+
 ## Core Filters & Actions
 
 ```php
@@ -36,8 +38,8 @@ $flow_step_id = apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id,
 $parts = apply_filters('dm_split_pipeline_step_id', null, $pipeline_step_id);
 $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
 
-// Engine Parameters (Centralized Parameter Injection)
-$enhanced_params = apply_filters('dm_engine_parameters', $parameters, $data, $flow_step_config, $step_type, $flow_step_id);
+// Engine Data Access
+$engine_data = apply_filters('dm_engine_data', [], $job_id);
 
 // AI & Tools
 $result = apply_filters('ai_request', $request, 'anthropic');
@@ -135,7 +137,7 @@ do_action('dm_cache_set', $key, $data, $timeout, $group);
 
 // Engine Data Storage & Retrieval
 $db_jobs->store_engine_data($job_id, $engine_data); // Store source_url, image_url
-$engine_data = $db_jobs->retrieve_engine_data($job_id); // Retrieve for handlers
+$engine_data = apply_filters('dm_engine_data', [], $job_id); // Retrieve for handlers
 ```
 
 ## Architecture
@@ -177,14 +179,12 @@ function dm_register_twitter_filters() {
 dm_register_twitter_filters(); // Auto-execute at file load
 ```
 
-**Components**:
-- **Pipeline+Flow**: Reusable templates + configured instances
-- **Database**: `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`
-- **Files Repository**: Flow-isolated UUID storage with cleanup
-- **Handlers**: Fetch (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API) | Publish (Twitter, Bluesky, Threads, Facebook, Google Sheets, WordPress) | Update (WordPress content updates) | AI (OpenAI, Anthropic, Google, Grok, OpenRouter)
-- **WordPress Publish Components**: Modular handler architecture with `FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler` for specialized processing
-- **AutoSave System**: Complete pipeline auto-save with flow synchronization and cache invalidation
-- **Admin**: `manage_options` only, zero user dependencies
+**Core Components**:
+- **Pipeline+Flow**: Templates → instances pattern
+- **Database**: 4 core tables (see Database Schema)
+- **Handlers**: See Handler Matrix section
+- **AutoSave**: Complete pipeline persistence
+- **Admin**: `manage_options` security model
 
 ## Database Schema
 
@@ -244,12 +244,10 @@ add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
 **Site Context Integration**: WordPress metadata, post types, taxonomies, cached with auto-invalidation
 
 **AI Conversation State Management**:
-- **AIStepConversationManager**: Centralized conversation state management and message formatting with turn-based tracking
-- **Turn-Based Conversations**: Multi-turn conversation loops with chronological message ordering using `array_push()` for temporal sequence preservation
-- **AI Action Records**: AI tool calls are recorded in conversation history before execution with turn number tracking
-- **Tool Result Messaging**: Enhanced tool result messages with temporal context (`Turn X`) and specialized formatting for different tool types
-- **Data Packet Synchronization**: Dynamic data packet updates in conversation messages via `updateDataPacketMessages()`
-- **Conversation Completion**: Natural AI agent termination with clear success/failure messaging and handler tool execution tracking
+- **AIStepConversationManager**: Turn-based conversation loops with chronological ordering
+- **State Preservation**: Complete conversation history with turn tracking
+- **Tool Integration**: Tool calls recorded before execution with result messaging
+- **Data Synchronization**: Dynamic data packet updates via `updateDataPacketMessages()`
 
 ```php
 // Conversation Management Methods with Turn Tracking
@@ -262,13 +260,9 @@ AIStepConversationManager::generateFailureMessage($tool_name, $error_message);
 AIStepConversationManager::logConversationAction($action, $context);
 ```
 
-**Conversation Flow Architecture**:
-- **Chronological Ordering**: `array_push()` maintains temporal sequence in conversation messages (newest at end)
-- **Turn Counter**: Each conversation iteration increments turn counter for tracking multi-turn executions
-- **State Preservation**: Complete conversation history maintained across tool executions with context awareness
-- **Message Types**: System directives → User data → AI responses → Tool calls → Tool results in chronological order
+**Flow Architecture**: System directives → User data → AI responses → Tool calls → Tool results (chronological)
 
-**AI Step Execution**: Standalone execution with flow-level user messages, multi-turn conversation support via AIStepConversationManager
+**AI Step Execution**: Standalone execution with flow-level user messages and multi-turn support
 
 ### Tool Management
 
@@ -375,9 +369,9 @@ class Twitter {
 | WebFetch | None | Web page content retrieval, 50K character limit, HTML processing |
 | WordPress Post Reader | None | Single WordPress post content retrieval by URL, full post analysis |
 
-## DataPacket Structure & Explicit Data Separation
+## DataPacket Structure & Engine Data
 
-**Explicit Data Separation Architecture**: Fetch handlers now generate clean data packets for AI processing while providing engine parameters separately for publish/update handlers.
+**Clean Data Separation**: AI agents receive clean data packets while handlers access engine parameters via database storage:
 
 ```php
 // Clean data packet format (AI-visible)
@@ -414,78 +408,24 @@ return [
 ];
 ```
 
-**Processing**: Each step adds entry to array front → accumulates complete workflow history
-**Clean Separation**: URLs and metadata removed from AI-visible data packets; engine parameters provide structured access for handlers
+**Processing**: Each step adds entry to array front → accumulates workflow history
+**Access Pattern**: Clean data for AI, structured engine parameters for handlers
 
 ## WordPress Publish Handler Architecture
 
-**Modular Components**: The WordPress publish handler is refactored into specialized processing modules for maintainability and extensibility.
+**Modular Components**: Specialized processing modules with configuration hierarchy (system defaults override handler config):
 
-### FeaturedImageHandler
+### Core Components
+- **FeaturedImageHandler**: Image processing, validation, media library integration
+- **TaxonomyHandler**: Three selection modes (skip, AI-decided, pre-selected), dynamic term creation
+- **SourceUrlHandler**: URL attribution with Gutenberg block generation
+
+**Integration Pattern**:
 ```php
-// Configuration hierarchy - system defaults override handler config
-$image_handler = new FeaturedImageHandler();
-$result = $image_handler->processImage($post_id, $parameters, $handler_config);
-
-// Configuration hierarchy
-if (isset($wp_settings['default_enable_images'])) {
-    return (bool) $wp_settings['default_enable_images'];  // System default ALWAYS overrides
-}
-return (bool) ($handler_config['enable_images'] ?? true);  // Fallback to handler config
-```
-
-**Features**: Configuration hierarchy, image validation, media library integration, featured image assignment
-
-### TaxonomyHandler
-```php
-// Configuration-based taxonomy processing
-$taxonomy_handler = new TaxonomyHandler();
-$results = $taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config);
-
-// Three selection modes per taxonomy:
-// 1. 'skip' - No processing
-// 2. 'ai_decides' - Use AI-provided parameters
-// 3. numeric ID - Pre-selected term assignment
-```
-
-**Features**: Configuration-based selection (skip, AI-decided, pre-selected), dynamic term creation, AI parameter extraction
-
-### SourceUrlHandler
-```php
-// Source URL processing with Gutenberg block generation
-$source_handler = new SourceUrlHandler();
-$content = $source_handler->processSourceUrl($content, $parameters, $handler_config);
-
-// Configuration hierarchy - same pattern as image handler
-if (isset($wp_settings['default_include_source'])) {
-    return (bool) $wp_settings['default_include_source'];  // System override
-}
-return (bool) ($handler_config['include_source'] ?? false);  // Handler fallback
-```
-
-**Features**: Configuration hierarchy, URL validation, Gutenberg block generation, clean source attribution
-
-### Handler Integration
-```php
-// Main WordPress handler uses modular components
 class WordPress {
-    private $featured_image_handler;
-    private $taxonomy_handler;
-    private $source_url_handler;
-
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        // Create post first, then process components
         $post_id = $this->create_wordpress_post($content, $handler_config);
-
-        // Process featured image
-        $image_result = $this->featured_image_handler->processImage($post_id, $parameters, $handler_config);
-
-        // Process taxonomies
-        $taxonomy_results = $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config);
-
-        // Process source URL in content
-        $final_content = $this->source_url_handler->processSourceUrl($content, $parameters, $handler_config);
-
+        // Process: image → taxonomies → source URL
         return ['success' => true, 'data' => ['id' => $post_id, 'url' => $url]];
     }
 }
@@ -493,55 +433,24 @@ class WordPress {
 
 ## AutoSave System
 
-**Complete Pipeline Persistence**: Centralized auto-save operations handle all pipeline-related data in a single action.
+**Complete Pipeline Persistence**: Single action handles all pipeline data, flows, configurations, and cache invalidation:
 
 ```php
-// Single action saves everything
 do_action('dm_auto_save', $pipeline_id);
-
-// AutoSave system handles:
-// 1. Pipeline data and configuration
-// 2. All flows for the pipeline
-// 3. Flow configurations and scheduling
-// 4. execution_order synchronization from pipeline steps to flow steps
-// 5. Cache invalidation after successful save
 ```
-
-**AutoSave Features**: Complete data persistence, execution_order synchronization, cache invalidation, comprehensive logging
 
 ## Step Configuration Persistence
 
 **Dual-Layer Architecture**:
+- **Pipeline Level**: System prompts (templates) shared across flow instances
+- **Flow Level**: User messages (instance-specific) per flow
 
-**Pipeline Level (Templates)**:
-- System prompts stored in `pipeline_config` per `pipeline_step_id`
-- Shared across all flow instances using this pipeline
-- Updated via `dm_update_system_prompt` action
-
-**Flow Level (Instances)**:
-- User messages stored in `flow_config` per `flow_step_id`
-- Instance-specific customization per flow
-- Updated via `dm_update_flow_user_message` action
-
-**Configuration Access**:
+**Access Pattern**:
 ```php
-// Flow step configuration (inherits from pipeline + flow-specific data)
 $flow_step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
-// Contains: user_message (flow-level), system_prompt (inherited from pipeline), handler config
-
-// Pipeline configuration (templates)
 $pipeline_config = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
-// Contains: system_prompt, step configuration templates
-
-// Flow configuration (instance data)  
 $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
-// Contains: flow_step configurations, user_message overrides
 ```
-
-**AI Step Execution**:
-- Reads `user_message` from flow step config (flow-specific)
-- Inherits system prompt template from pipeline step
-- Can run standalone when flow has user_message but no preceding fetch step
 
 ## Admin Interface
 
@@ -603,8 +512,8 @@ $core_parameters = [
 ];
 ```
 
-### 2. Engine Parameter Database Storage + Filter Injection
-Fetch handlers store `source_url`, `image_url` in database; Engine.php retrieves and injects via `dm_engine_parameters` filter
+### 2. Engine Data Filter-Based Access
+Fetch handlers store `source_url`, `image_url` in database; steps retrieve engine data via centralized `dm_engine_data` filter for unified access
 
 
 
@@ -657,7 +566,7 @@ class MyFetchHandler {
             ]
         ];
 
-        // Store engine parameters in database for later injection by Engine.php
+        // Store engine parameters in database for later retrieval via dm_engine_data filter
         if ($job_id) {
             $all_databases = apply_filters('dm_db', []);
             $db_jobs = $all_databases['jobs'] ?? null;
@@ -677,7 +586,7 @@ class MyFetchHandler {
 class MyPublishHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         $handler_config = $tool_def['handler_config'] ?? [];
-        // For Update handlers: $parameters['source_url'] required from database storage + Engine.php injection
+        // For Update handlers: $parameters['source_url'] required from engine data via dm_engine_data filter
         return ['success' => true, 'data' => ['id' => $id, 'url' => $url]];
     }
 }
@@ -749,11 +658,11 @@ apply_filters('dm_create_step', null, ['step_type' => 'ai', 'pipeline_id' => $pi
 apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' => $pipeline_id]);
 ```
 
-> **Critical**: Update steps require `source_url` from engine parameters to identify target content. All fetch handlers store this data in database via store_engine_data() for later retrieval and injection by Engine.php. AI agents discover handler tools for immediate next step only.
+> **Critical**: Update steps require `source_url` from engine data to identify target content. All fetch handlers store this data in database via store_engine_data() for later retrieval via `dm_engine_data` filter. AI agents discover handler tools for immediate next step only.
 
 ## Handler-Specific Engine Parameters
 
-**Database Storage + Filter Injection**: Each fetch handler stores specific engine parameters in database for downstream handlers:
+**Database Storage + Filter Access**: Each fetch handler stores specific engine parameters in database for downstream handlers accessed via `dm_engine_data` filter:
 
 - **Reddit**: `source_url` (Reddit post URL), `image_url` (stored image URL)
 - **WordPress Local**: `source_url` (permalink), `image_url` (featured image URL)

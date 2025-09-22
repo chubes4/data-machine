@@ -23,7 +23,7 @@ class PublishStep {
      * Publishes processed data to external platforms via handler tools.
      * Expects AI agents to execute handler tools during conversation workflow.
      * 
-     * @param array $parameters Flat parameter structure from dm_engine_parameters filter:
+     * @param array $parameters Core parameter structure from step execution:
      *   - job_id: Job execution identifier
      *   - flow_step_id: Flow step identifier
      *   - flow_step_config: Step configuration data

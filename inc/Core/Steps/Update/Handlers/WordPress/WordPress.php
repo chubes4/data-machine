@@ -1,14 +1,14 @@
 <?php
 /**
- * WordPress Update handler with engine parameter dependency.
+ * WordPress Update handler with engine data dependency.
  *
- * Updates existing WordPress posts/pages via source_url parameter provided through
- * database storage by fetch handlers and injection by Engine.php. Handles title, content,
+ * Updates existing WordPress posts/pages via source_url retrieved from database
+ * storage by fetch handlers through dm_engine_data filter. Handles title, content,
  * and taxonomy modifications using wp_update_post().
  *
- * Engine Parameter Requirements:
+ * Engine Data Requirements:
  * - source_url: WordPress post/page URL for post ID extraction (REQUIRED)
- * - Provided by fetch handlers via dm_engine_parameters filter
+ * - Stored by fetch handlers in database, accessed via dm_engine_data filter
  * - Used with url_to_postid() for target post identification
  *
  * @package    Data_Machine
@@ -30,9 +30,9 @@ class WordPress {
 
     /**
      * Handle AI tool call for WordPress content updating.
-     * Requires source_url parameter from engine for post identification.
+     * Requires source_url from engine data for post identification.
      *
-     * @param array $parameters Structured parameters from AI tool call with engine-provided source_url
+     * @param array $parameters Structured parameters from AI tool call
      * @param array $tool_def Tool definition including handler configuration
      * @return array Tool execution result with success status and post details
      */
@@ -50,7 +50,7 @@ class WordPress {
             'source_url_from_engine' => $source_url
         ]);
 
-        // Validate source_url parameter (required from engine parameters)
+        // Validate source_url from engine data (required for post identification)
         if (empty($source_url)) {
             $error_msg = "source_url parameter is required for WordPress Update handler";
             do_action('dm_log', 'error', $error_msg, [

@@ -36,7 +36,7 @@ class UpdateStep {
      *   - flow_step_config: Step configuration data
      *   - data: Data packet array for processing
      *   - file_path, mime_type: File metadata from AI step (when applicable)
-     *   Note: source_url and image_url retrieved from database via dm_engine_data filter
+     *   Note: source_url and image_url accessed via dm_engine_data filter from database
      * @return array Updated data packet array with update results
      */
     public function execute(array $parameters): array {
