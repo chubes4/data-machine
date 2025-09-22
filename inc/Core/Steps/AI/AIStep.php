@@ -39,8 +39,18 @@ class AIStep {
         $flow_step_config = $parameters['flow_step_config'] ?? [];
         try {
             $user_message = trim($flow_step_config['user_message'] ?? '');
-            $file_path = $parameters['file_path'] ?? null;
-            $mime_type = $parameters['mime_type'] ?? null;
+
+            // Read file metadata directly from data packets (clean separation)
+            $file_path = null;
+            $mime_type = null;
+            if (!empty($data)) {
+                $first_item = $data[0] ?? [];
+                $metadata = $first_item['metadata'] ?? [];
+                if (isset($metadata['file_path']) && file_exists($metadata['file_path'])) {
+                    $file_path = $metadata['file_path'];
+                    $mime_type = $metadata['mime_type'] ?? '';
+                }
+            }
             
             $messages = [];
             

@@ -82,11 +82,15 @@ class Facebook {
         $facebook_config = $handler_config['facebook'] ?? $handler_config;
         
 
+        // Access engine_data via centralized filter pattern
+        $job_id = $parameters['job_id'] ?? null;
+        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+
         // Extract parameters from flat structure
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
-        $source_url = $parameters['source_url'] ?? null;
-        $image_url = $parameters['image_url'] ?? null;
+        $source_url = $engine_data['source_url'] ?? null;
+        $image_url = $engine_data['image_url'] ?? null;
         
         // Get config from Facebook-specific settings
         $include_images = $facebook_config['include_images'] ?? false;

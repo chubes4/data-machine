@@ -28,12 +28,12 @@ class SourceUrlHandler {
      * @param array $handler_config Handler configuration
      * @return string Content with Gutenberg source blocks appended if applicable
      */
-    public function processSourceUrl(string $content, array $parameters, array $handler_config): string {
+    public function processSourceUrl(string $content, array $engine_data, array $handler_config): string {
         if (!$this->isSourceInclusionEnabled($handler_config)) {
             return $content;
         }
 
-        $source_url = $parameters['source_url'] ?? null;
+        $source_url = $engine_data['source_url'] ?? null;
         if (!$this->validateSourceUrl($source_url)) {
             return $content;
         }

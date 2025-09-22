@@ -21,7 +21,6 @@
         },
         "files": [
             "inc/Engine/Filters/DataMachineFilters.php",
-            "inc/Engine/Filters/Engine.php",
             "inc/Engine/Filters/Database.php",
             "inc/Engine/Filters/Admin.php",
             "inc/Engine/Filters/Logger.php",
@@ -29,6 +28,7 @@
             "inc/Engine/Filters/OAuth.php",
             "inc/Engine/Actions/DataMachineActions.php",
             "inc/Engine/Filters/StatusDetection.php",
+            "inc/Engine/Filters/EngineData.php",
             "inc/Core/Database/ProcessedItems/ProcessedItemsFilters.php",
             "inc/Core/Database/Pipelines/PipelinesFilters.php",
             "inc/Core/Database/Jobs/JobsFilters.php",

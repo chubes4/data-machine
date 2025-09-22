@@ -80,12 +80,15 @@ class GoogleSheets {
             'worksheet_name' => $handler_config['googlesheets_worksheet_name'] ?? 'Sheet1'
         ]);
 
+        // Access engine_data via centralized filter pattern
+        $job_id = $parameters['job_id'] ?? null;
+        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+
         // Extract parameters
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
-        $source_url = $parameters['source_url'] ?? null;
+        $source_url = $engine_data['source_url'] ?? null;
         $source_type = $parameters['source_type'] ?? 'ai_tool';
-        $job_id = $parameters['job_id'] ?? null;
         
         // Get config from handler settings
         $spreadsheet_id = $handler_config['googlesheets_spreadsheet_id'] ?? '';

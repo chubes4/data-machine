@@ -30,13 +30,13 @@ class UpdateStep {
      * Updates existing content using processed data via handler tools.
      * Detects if AI has already executed the tool or executes handler directly.
      * 
-     * @param array $parameters Flat parameter structure from dm_engine_parameters filter:
+     * @param array $parameters Core parameter structure:
      *   - job_id: Job execution identifier
-     *   - flow_step_id: Flow step identifier  
+     *   - flow_step_id: Flow step identifier
      *   - flow_step_config: Step configuration data
      *   - data: Data packet array for processing
-     *   - source_url: Required for content identification (from metadata)
-     *   - Additional parameters: image_url, file_path, mime_type (as available)
+     *   - file_path, mime_type: File metadata from AI step (when applicable)
+     *   Note: source_url and image_url retrieved from database via dm_engine_data filter
      * @return array Updated data packet array with update results
      */
     public function execute(array $parameters): array {
@@ -188,12 +188,16 @@ class UpdateStep {
                 return isset($tool['handler']) && $tool['handler'] === $handler_slug;
             });
             
-            // Extract variables from flat parameter structure for engine context
-            $source_url = $parameters['source_url'] ?? null;
-            $image_url = $parameters['image_url'] ?? null;
-            $file_path = $parameters['file_path'] ?? null;
-            $mime_type = $parameters['mime_type'] ?? null;
-            
+            // Access engine_data via centralized filter pattern
+            $job_id = $parameters['job_id'];
+            $engine_data = apply_filters('dm_engine_data', [], $job_id);
+
+            // Extract variables from engine data and parameters
+            $source_url = $engine_data['source_url'] ?? null;
+            $image_url = $engine_data['image_url'] ?? null;
+            $file_path = $parameters['file_path'] ?? null;  // From AI step file metadata
+            $mime_type = $parameters['mime_type'] ?? null;   // From AI step file metadata
+
             // Build parameters using AIStepToolParameters with engine context
             $engine_parameters = compact('source_url', 'image_url', 'file_path', 'mime_type');
             

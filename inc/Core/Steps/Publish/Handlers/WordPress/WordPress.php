@@ -61,6 +61,10 @@ class WordPress {
 
         $handler_config = $tool_def['handler_config'] ?? [];
 
+        // Access engine_data via centralized filter pattern
+        $job_id = $parameters['job_id'] ?? null;
+        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+
         // Extract taxonomy configuration for diagnostics
         $taxonomies = get_taxonomies(['public' => true], 'names');
         $taxonomy_settings = [];
@@ -97,7 +101,7 @@ class WordPress {
         
         $content = $this->sanitize_block_content(wp_unslash($parameters['content']));
 
-        $content = $this->source_url_handler->processSourceUrl($content, $parameters, $handler_config);
+        $content = $this->source_url_handler->processSourceUrl($content, $engine_data, $handler_config);
         
         $post_data = [
             'post_title' => sanitize_text_field(wp_unslash($parameters['title'])),
@@ -132,7 +136,7 @@ class WordPress {
         }
 
         $taxonomy_results = $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config);
-        $featured_image_result = $this->featured_image_handler->processImage($post_id, $parameters, $handler_config);
+        $featured_image_result = $this->featured_image_handler->processImage($post_id, $engine_data, $handler_config);
 
         do_action('dm_log', 'debug', 'WordPress Tool: Post created successfully', [
             'post_id' => $post_id,

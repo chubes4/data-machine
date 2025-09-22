@@ -26,12 +26,12 @@ class FeaturedImageHandler {
      * @param array $handler_config Handler configuration
      * @return array|null Processing result with attachment details or null if skipped/disabled
      */
-    public function processImage(int $post_id, array $parameters, array $handler_config): ?array {
+    public function processImage(int $post_id, array $engine_data, array $handler_config): ?array {
         if (!$this->isImageHandlingEnabled($handler_config)) {
             return null;
         }
 
-        $image_url = $parameters['image_url'] ?? null;
+        $image_url = $engine_data['image_url'] ?? null;
         if (empty($image_url) || !$this->validateImageUrl($image_url)) {
             return null;
         }

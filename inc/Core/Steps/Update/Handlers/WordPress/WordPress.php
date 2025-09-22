@@ -37,15 +37,21 @@ class WordPress {
      * @return array Tool execution result with success status and post details
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
+        // Access engine_data via centralized filter pattern
+        $job_id = $parameters['job_id'] ?? null;
+        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $source_url = $engine_data['source_url'] ?? null;
+
         do_action('dm_log', 'debug', 'WordPress Update Tool: Handling tool call', [
             'parameters' => $parameters,
             'parameter_keys' => array_keys($parameters),
             'has_handler_config' => !empty($tool_def['handler_config']),
-            'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
+            'handler_config_keys' => array_keys($tool_def['handler_config'] ?? []),
+            'source_url_from_engine' => $source_url
         ]);
 
         // Validate source_url parameter (required from engine parameters)
-        if (empty($parameters['source_url'])) {
+        if (empty($source_url)) {
             $error_msg = "source_url parameter is required for WordPress Update handler";
             do_action('dm_log', 'error', $error_msg, [
                 'available_parameters' => array_keys($parameters)
@@ -59,11 +65,11 @@ class WordPress {
         }
 
         // Extract post ID from WordPress URL provided by fetch handler
-        $post_id = url_to_postid($parameters['source_url']);
+        $post_id = url_to_postid($source_url);
         if (!$post_id) {
-            $error_msg = "Could not extract valid WordPress post ID from URL: {$parameters['source_url']}";
+            $error_msg = "Could not extract valid WordPress post ID from URL: {$source_url}";
             do_action('dm_log', 'error', $error_msg, [
-                'source_url' => $parameters['source_url'],
+                'source_url' => $source_url,
                 'extracted_post_id' => $post_id
             ]);
 

@@ -27,7 +27,13 @@ class Twitter {
         $handler_config = $parameters['handler_config'] ?? [];
         $twitter_config = $handler_config['twitter'] ?? $handler_config;
         $content = $parameters['content'] ?? '';
-        $source_url = $parameters['source_url'] ?? null;
+
+        // Access engine_data via centralized filter pattern
+        $job_id = $parameters['job_id'] ?? null;
+        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+
+        $source_url = $engine_data['source_url'] ?? null;
+        $image_url = $engine_data['image_url'] ?? null;
         
         $include_images = $twitter_config['include_images'] ?? true;
         $link_handling = $twitter_config['link_handling'] ?? 'append'; // 'none', 'append', or 'reply'
@@ -79,15 +85,14 @@ class Twitter {
             
             do_action('dm_log', 'debug', 'Twitter Handler: Image upload processing', [
                 'include_images' => $include_images,
-                'image_url_provided' => isset($parameters['image_url']),
-                'image_url' => $parameters['image_url'] ?? 'not_provided',
-                'image_url_empty' => empty($parameters['image_url']),
-                'image_url_is_string' => is_string($parameters['image_url'] ?? null),
-                'image_url_length' => isset($parameters['image_url']) ? strlen($parameters['image_url']) : 0
+                'image_url_provided' => !empty($image_url),
+                'image_url' => $image_url ?? 'not_provided',
+                'image_url_empty' => empty($image_url),
+                'image_url_is_string' => is_string($image_url),
+                'image_url_length' => $image_url ? strlen($image_url) : 0
             ]);
-            
-            if ($include_images && !empty($parameters['image_url'])) {
-                $image_url = $parameters['image_url'];
+
+            if ($include_images && !empty($image_url)) {
                 if (filter_var($image_url, FILTER_VALIDATE_URL) && $this->is_image_accessible($image_url)) {
                     $media_id = $this->upload_image_to_twitter($connection, $image_url, substr($content, 0, 50));
                 }
