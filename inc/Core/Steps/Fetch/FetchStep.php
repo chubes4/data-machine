@@ -49,7 +49,7 @@ class FetchStep {
 
             $fetch_entry = $this->execute_handler($handler, $flow_step_config, $handler_settings, $job_id);
 
-            if (!$fetch_entry || empty($fetch_entry['content']['title']) && empty($fetch_entry['content']['body'])) {
+            if (!$fetch_entry) {
                 do_action('dm_log', 'error', 'Fetch handler returned no content', ['flow_step_id' => $flow_step_id]);
                 return $data; // Return unchanged array
             }
@@ -178,6 +178,16 @@ class FetchStep {
                     'metadata_keys' => array_keys($result['metadata'] ?? []),
                     'attachments_count' => is_array($result['attachments'] ?? null) ? count($result['attachments']) : 0
                 ]);
+
+                // Validate that we have meaningful content after extraction
+                if (empty($title) && empty($body)) {
+                    do_action('dm_log', 'error', 'Fetch handler returned no content after extraction', [
+                        'handler' => $handler_name,
+                        'pipeline_id' => $context['pipeline_id'],
+                        'flow_id' => $context['flow_id']
+                    ]);
+                    return null;
+                }
 
                 $fetch_entry = [
                     'type' => 'fetch',

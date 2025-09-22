@@ -111,15 +111,13 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 **AI Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 **General Tools**: Google Search, Local Search, WebFetch (50K character limit), WordPress Post Reader
 
-**Recent Improvements**:
-- **Unified Handler Filter System**: New centralized filters (`dm_timeframe_limit`, `dm_keyword_search_match`, `dm_data_packet`) provide shared functionality across multiple handlers - timeframe parsing with discovery/conversion modes, universal keyword matching with OR logic, and standardized data packet creation
-- **Centralized Engine Data Architecture**: New `EngineData.php` filter provides unified access to source_url, image_url via `dm_engine_data` filter - replaces direct database access patterns while maintaining filter-based architectural consistency
-- **Enhanced Tool Discovery**: UpdateStep implements intelligent tool result detection with handler slug matching and partial name matching for improved AI workflow integration
-- **AIStepConversationManager**: Multi-turn conversation state management with chronological message ordering, turn tracking, and duplicate prevention for enhanced AI agent workflows
-- **Modular WordPress Publish Handler**: Refactored into specialized components - `FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler` with configuration hierarchy (system defaults override handler config)
-- **AutoSave System**: Complete pipeline auto-save with flow synchronization, execution_order updates, and cache invalidation via single `dm_auto_save` action
-- **Enhanced Cache System**: WordPress action-based cache clearing with granular invalidation and pattern support via Actions/Cache.php
-- **Universal Handler Settings**: Template system eliminating modal code duplication across handler types with dynamic field rendering
+**Architecture Highlights**:
+- **Centralized Engine Data**: `dm_engine_data` filter provides unified access to source_url, image_url - clean separation between AI data packets and handler engine parameters
+- **Universal Handler Filters**: Shared functionality (`dm_timeframe_limit`, `dm_keyword_search_match`, `dm_data_packet`) across multiple handlers eliminates code duplication
+- **Tool-First AI Integration**: Multi-turn conversation management with `AIStepConversationManager` and unified parameter building via `AIStepToolParameters`
+- **Modular WordPress Publisher**: Specialized components (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`) with configuration hierarchy
+- **Complete AutoSave System**: Single `dm_auto_save` action handles pipeline persistence, flow synchronization, and cache invalidation
+- **Filter-Based Discovery**: All components self-register via WordPress filters maintaining consistent architectural patterns
 
 *All handlers are fully functional with OAuth authentication where required and comprehensive error handling*
 

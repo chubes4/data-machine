@@ -36,8 +36,8 @@
             errorDetails = errorParts.slice(1).join('_');
         }
         
-        // Send result to parent window if it exists
-        if (window.opener && !window.opener.closed) {
+        // Send result to parent window - universal communication
+        if (window.opener) {
             try {
                 // Send postMessage for backward compatibility
                 window.opener.postMessage({

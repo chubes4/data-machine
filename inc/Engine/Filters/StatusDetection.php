@@ -431,6 +431,9 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
                         $display_value = __('Any', 'data-machine');
                     } elseif ($setting_key === 'post_type' && $current_value === 'any') {
                         $display_value = __('Any', 'data-machine');
+                    } elseif (in_array($setting_key, ['source_url', 'search']) && empty($current_value)) {
+                        // Show N/A for empty text fields
+                        $display_value = __('N/A', 'data-machine');
                     }
                 }
             }

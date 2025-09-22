@@ -57,6 +57,10 @@ class Cache {
         add_action('dm_clear_all_cache', [$instance, 'handle_clear_all_cache'], 10, 0);
 
         add_action('dm_cache_set', [$instance, 'handle_cache_set'], 10, 4);
+
+        // Listen for AI HTTP Client cache events for logging (optional integration)
+        add_action('ai_model_cache_cleared', [$instance, 'handle_ai_cache_cleared'], 10, 1);
+        add_action('ai_all_model_cache_cleared', [$instance, 'handle_ai_all_cache_cleared'], 10, 0);
     }
 
     /**
@@ -182,6 +186,9 @@ class Cache {
         delete_transient(self::PIPELINE_EXPORT_CACHE_KEY);
         delete_transient(self::TOTAL_JOBS_COUNT_CACHE_KEY);
 
+        // Signal AI HTTP Client library to clear model caches (if present)
+        do_action('ai_clear_all_cache');
+
         if (function_exists('wp_cache_flush')) {
             wp_cache_flush();
         }
@@ -292,5 +299,24 @@ class Cache {
         foreach ($timeout_keys as $timeout_key) {
             delete_option($timeout_key);
         }
+    }
+
+    /**
+     * Handle AI model cache cleared event for logging.
+     */
+    public function handle_ai_cache_cleared($provider) {
+        do_action('dm_log', 'debug', 'AI model cache cleared via action hook', [
+            'provider' => $provider,
+            'integration' => 'ai-http-client'
+        ]);
+    }
+
+    /**
+     * Handle AI all model cache cleared event for logging.
+     */
+    public function handle_ai_all_cache_cleared() {
+        do_action('dm_log', 'debug', 'All AI model caches cleared via action hook', [
+            'integration' => 'ai-http-client'
+        ]);
     }
 }

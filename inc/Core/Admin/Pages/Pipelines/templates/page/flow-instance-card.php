@@ -26,7 +26,7 @@ $pipeline_steps = $pipeline_steps ?? [];
 
 $flow = $flow ?? [];
 
-$flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+$flow_config = $flow['flow_config'] ?? [];
 
 ?>
 <div class="dm-flow-instance-card" data-flow-id="<?php echo esc_attr($flow_id); ?>">

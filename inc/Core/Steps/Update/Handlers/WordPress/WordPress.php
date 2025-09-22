@@ -1,19 +1,8 @@
 <?php
 /**
- * WordPress Update handler with engine data dependency.
+ * WordPress Update handler using source_url from engine data for post identification.
  *
- * Updates existing WordPress posts/pages via source_url retrieved from database
- * storage by fetch handlers through dm_engine_data filter. Handles title, content,
- * and taxonomy modifications using wp_update_post().
- *
- * Engine Data Requirements:
- * - source_url: WordPress post/page URL for post ID extraction (REQUIRED)
- * - Stored by fetch handlers in database, accessed via dm_engine_data filter
- * - Used with url_to_postid() for target post identification
- *
- * @package    Data_Machine
- * @subpackage Core\Steps\Update\Handlers\WordPress
- * @since      1.0.0
+ * @package DataMachine\Core\Steps\Update\Handlers\WordPress
  */
 
 namespace DataMachine\Core\Steps\Update\Handlers\WordPress;
@@ -29,12 +18,7 @@ class WordPress {
     }
 
     /**
-     * Handle AI tool call for WordPress content updating.
-     * Requires source_url from engine data for post identification.
-     *
-     * @param array $parameters Structured parameters from AI tool call
-     * @param array $tool_def Tool definition including handler configuration
-     * @return array Tool execution result with success status and post details
+     * Handle AI tool call for WordPress content updating via source_url.
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         $job_id = $parameters['job_id'] ?? null;

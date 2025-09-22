@@ -84,7 +84,7 @@ class AutoSave
 
         foreach ($flows as $flow) {
             $flow_id = $flow['flow_id'];
-            $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+            $flow_config = $flow['flow_config'] ?? [];
 
             foreach ($flow_config as $flow_step_id => $flow_step) {
                 $pipeline_step_id = $flow_step['pipeline_step_id'] ?? null;

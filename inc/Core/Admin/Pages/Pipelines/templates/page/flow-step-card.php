@@ -61,9 +61,10 @@ $has_handlers = !$is_empty && !empty($available_handlers);
 $step_uses_handlers = !$is_empty && ($step_type !== 'ai');
 
 $status_class = '';
+$customizations = []; // Cache handler customizations to avoid duplicate queries
 if (!$is_empty) {
     $status = 'green';
-    
+
     if ($step_type === 'ai' && $pipeline_step_id) {
         $status = apply_filters('dm_detect_status', 'green', 'ai_step', [
             'pipeline_step_id' => $pipeline_step_id
@@ -76,7 +77,7 @@ if (!$is_empty) {
             $handler_slug = $current_handler['handler_slug'] ?? '';
             $all_auth = apply_filters('dm_auth_providers', []);
             $requires_auth = isset($all_auth[$handler_slug]);
-            
+
             if ($requires_auth) {
                 $auth_status = apply_filters('dm_detect_status', 'green', 'handler_auth', [
                     'handler_slug' => $handler_slug
@@ -85,7 +86,7 @@ if (!$is_empty) {
                     $status = 'red';
                 }
             }
-            
+
             if ($status === 'green' && $flow_step_id) {
                 $customizations = apply_filters('dm_get_handler_customizations', [], $flow_step_id);
                 if (empty($customizations)) {
@@ -179,7 +180,7 @@ if (!$is_empty) {
                         
                         <div class="dm-handler-customizations">
                             <?php
-                            $customizations = apply_filters('dm_get_handler_customizations', [], $flow_step_id);
+                            // Use cached customizations from status detection above
                             if (!empty($customizations)): ?>
                                 <?php foreach ($customizations as $customization): ?>
                                     <div>

@@ -276,7 +276,7 @@ class Delete {
         // Sync step deletion to all flows
         foreach ($affected_flows as $flow) {
             $flow_id = $flow['flow_id'];
-            $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+            $flow_config = $flow['flow_config'] ?? [];
             
             // Remove matching flow steps
             foreach ($flow_config as $flow_step_id => $step_data) {

@@ -16,6 +16,17 @@ if (!defined('WPINC')) {
 
 // Get pipelines for export table
 $all_pipelines = apply_filters('dm_get_pipelines', []);
+
+// Pre-load all pipeline steps and flows to avoid N+1 queries
+$pipeline_steps_counts = [];
+$pipeline_flows_counts = [];
+foreach ($all_pipelines as $pipeline) {
+    $pipeline_id = $pipeline['pipeline_id'];
+    $steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+    $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
+    $pipeline_steps_counts[$pipeline_id] = count($steps);
+    $pipeline_flows_counts[$pipeline_id] = count($flows);
+}
 ?>
 <div class="dm-modal-tabs">
     <button class="dm-modal-tab active" data-tab="export"><?php esc_html_e('Export', 'data-machine'); ?></button>
@@ -34,15 +45,16 @@ $all_pipelines = apply_filters('dm_get_pipelines', []);
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($all_pipelines as $pipeline): 
-                $steps = apply_filters('dm_get_pipeline_steps', [], $pipeline['pipeline_id']);
-                $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline['pipeline_id']);
+            <?php foreach ($all_pipelines as $pipeline):
+                $pipeline_id = $pipeline['pipeline_id'];
+                $steps_count = $pipeline_steps_counts[$pipeline_id] ?? 0;
+                $flows_count = $pipeline_flows_counts[$pipeline_id] ?? 0;
             ?>
             <tr>
-                <td><input type="checkbox" class="dm-pipeline-checkbox" value="<?php echo esc_attr($pipeline['pipeline_id']); ?>"></td>
+                <td><input type="checkbox" class="dm-pipeline-checkbox" value="<?php echo esc_attr($pipeline_id); ?>"></td>
                 <td><?php echo esc_html($pipeline['pipeline_name']); ?></td>
-                <td><?php echo count($steps); ?></td>
-                <td><?php echo count($flows); ?></td>
+                <td><?php echo esc_html($steps_count); ?></td>
+                <td><?php echo esc_html($flows_count); ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>

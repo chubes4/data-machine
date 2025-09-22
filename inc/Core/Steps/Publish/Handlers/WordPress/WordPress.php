@@ -66,13 +66,8 @@ class WordPress {
         }
 
         do_action('dm_log', 'debug', 'WordPress Tool: Handler configuration accessed', [
-            'has_post_author' => isset($handler_config['post_author']),
-            'post_author_config' => $handler_config['post_author'] ?? 'NOT_SET',
-            'current_user_id' => get_current_user_id(),
-            'has_post_status' => isset($handler_config['post_status']),
-            'has_post_type' => isset($handler_config['post_type']),
             'taxonomy_settings' => $taxonomy_settings,
-            'total_config_keys' => count($handler_config)
+            'config_keys_count' => count($handler_config)
         ]);
 
         if (empty($handler_config['post_type'])) {

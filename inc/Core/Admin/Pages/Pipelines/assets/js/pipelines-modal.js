@@ -122,9 +122,9 @@
                     
                     // Restore button state
                     $button.text(originalText).prop('disabled', false);
-                    
-                    // Refresh modal content to show updated auth status
-                    this.refreshAuthModal();
+
+                    // Note: Modal refresh handled by dm-auth-success event from popup window
+                    // No immediate refresh needed here to avoid race conditions
                 }
             }, 1000);
         },
@@ -280,7 +280,10 @@
                                 $(this).remove();
                             });
                         }, 3000);
-                        
+
+                        // Refresh modal to show updated connection state
+                        this.refreshAuthModal();
+
                     } else {
                         const message = response.data?.message || 'Failed to save configuration';
                         const $error = $('<div class="notice notice-error is-dismissible"><p>' + message + '</p></div>');

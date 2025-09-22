@@ -186,7 +186,6 @@ class Update {
      * @since 1.0.0
      */
     public function handle_flow_handler_update($flow_step_id, $handler_slug, $handler_settings = []) {
-        // Extract flow_id from flow_step_id using universal filter
         $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
         if (!$parts) {
             do_action('dm_log', 'error', 'Invalid flow_step_id format for handler update', ['flow_step_id' => $flow_step_id]);
@@ -233,7 +232,6 @@ class Update {
                          ($flow_config[$flow_step_id]['handler']['handler_slug'] ?? '') === $handler_slug;
         
         // UPDATE existing handler settings OR ADD new handler (single handler per step)
-        // Store settings nested under handler key for proper structure expected by handlers
         $nested_settings = [
             $handler_slug => $handler_settings
         ];
@@ -373,7 +371,6 @@ class Update {
             $user_message = $flow_step_id;
             $flow_step_id = $result;
         }
-        // Extract flow_id from flow_step_id using universal filter
         $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
         if (!$parts) {
             do_action('dm_log', 'error', 'Invalid flow_step_id format for user message update', ['flow_step_id' => $flow_step_id]);

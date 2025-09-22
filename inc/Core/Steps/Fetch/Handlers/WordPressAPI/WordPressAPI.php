@@ -27,15 +27,12 @@ class WordPressAPI {
             return ['processed_items' => []];
         }
         
-        // Extract flow_step_id from handler config for processed items tracking
         $flow_step_id = $handler_config['flow_step_id'] ?? null;
-        
-        // Handle null flow_step_id gracefully - skip processed items tracking when flow context missing
+
         if ($flow_step_id === null) {
             do_action('dm_log', 'debug', 'WordPress API fetch called without flow_step_id - processed items tracking disabled');
         }
 
-        // Access config from handler config structure
         $config = $handler_config['wordpress_api'] ?? [];
 
         // Configuration validation
@@ -128,7 +125,6 @@ class WordPressAPI {
                 continue;
             }
 
-            // Create unique identifier combining endpoint URL and item ID
             $unique_id = md5($endpoint_url . '_' . $item_id);
 
             $is_processed = ($flow_step_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_step_id, 'rest_api', $unique_id) : false;
@@ -169,7 +165,6 @@ class WordPressAPI {
             // Extract image URL
             $image_url = $this->extract_image_url($item);
 
-            // Extract site name from endpoint URL for metadata only
             $site_name = $this->extract_site_name_from_url($endpoint_url);
 
             // Create structured content data for AI processing
