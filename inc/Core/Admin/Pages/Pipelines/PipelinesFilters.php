@@ -240,7 +240,14 @@ function dm_register_pipelines_admin_page_filters() {
             'dynamic_template' => true, // Flag for dynamic template resolution
             'title' => __('Handler Settings', 'data-machine')
         ];
-                return $modals;
+
+        // Handler authentication modal
+        $modals['modal/handler-auth-form'] = [
+            'template' => 'modal/handler-auth-form',
+            'title' => __('Handler Authentication', 'data-machine')
+        ];
+
+        return $modals;
     });
 }
 
