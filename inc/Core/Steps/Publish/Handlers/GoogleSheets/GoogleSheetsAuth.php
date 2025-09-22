@@ -29,8 +29,6 @@ class GoogleSheetsAuth {
         // No parameters needed - all services accessed via filters
     }
 
-
-
     /**
      * Checks if admin has valid Google Sheets authentication
      *

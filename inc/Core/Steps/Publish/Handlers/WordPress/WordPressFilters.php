@@ -58,7 +58,7 @@ function dm_register_wordpress_publish_filters() {
     }, 10, 3);
 
     // WordPress-specific success message formatting
-    add_filter('dm_tool_success_message', function($default_message, $tool_name, $tool_result, $tool_parameters) {
+    add_filter('dm_tool_success_message', function($default_message, $tool_name, $tool_result) {
         if ($tool_name === 'wordpress_publish' && !empty($tool_result['data']['post_title'])) {
             $title = $tool_result['data']['post_title'];
             $url = $tool_result['data']['post_url'] ?? '';

@@ -18,19 +18,10 @@ require_once __DIR__ . '/AIStepTools.php';
 class AIStep {
 
     /**
-     * Execute AI step with multi-turn conversation processing.
+     * Execute multi-turn AI conversation with tool calling support.
      *
-     * Processes user messages and data packets through AI agents with tool execution,
-     * maintaining conversation state across multiple turns until completion or max turns reached.
-     *
-     * @param array $parameters Flat parameter structure containing:
-     *                         - job_id: Current job identifier
-     *                         - flow_step_id: Flow step identifier
-     *                         - data: Data packet array for processing
-     *                         - flow_step_config: Step configuration including user_message and pipeline_step_id
-     *                         - file_path: Optional file for multimodal input
-     *                         - mime_type: File MIME type when file_path provided
-     * @return array Updated data packet array with AI processing results
+     * @param array $parameters Standard step parameters (job_id, flow_step_id, data, flow_step_config)
+     * @return array Updated data packet array
      */
     public function execute(array $parameters): array {
         $job_id = $parameters['job_id'];
@@ -40,7 +31,6 @@ class AIStep {
         try {
             $user_message = trim($flow_step_config['user_message'] ?? '');
 
-            // Read file metadata directly from data packets (clean separation)
             $file_path = null;
             $mime_type = null;
             if (!empty($data)) {
@@ -116,7 +106,6 @@ class AIStep {
                 throw new \Exception($error_message);
             }
 
-            // Preserve associative keys and handler metadata for directive + provider
             $ai_provider_tools = [];
             foreach ($available_tools as $tool_name => $tool_config) {
                 $ai_provider_tools[$tool_name] = [
@@ -210,8 +199,6 @@ class AIStep {
                 }
                 
                 if (!empty($tool_calls)) {
-                    $handler_tool_executed = false;
-                    
                     foreach ($tool_calls as $tool_call) {
                         $tool_name = $tool_call['name'] ?? '';
                         $tool_parameters = $tool_call['parameters'] ?? [];
@@ -265,7 +252,6 @@ class AIStep {
                         array_push($conversation_messages, $tool_result_message);
                         
                         if ($is_handler_tool && $tool_result['success']) {
-                            $handler_tool_executed = true;
                             $clean_tool_parameters = $tool_parameters;
                             $handler_config = $tool_def['handler_config'] ?? [];
                             

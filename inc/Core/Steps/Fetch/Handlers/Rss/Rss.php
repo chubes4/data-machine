@@ -431,8 +431,6 @@ class Rss {
         return $mime_map[$extension] ?? 'application/octet-stream';
     }
 
-
-
     /**
      * Get handler label for UI display.
      *
@@ -442,4 +440,3 @@ class Rss {
         return __('RSS/Atom Feed', 'data-machine');
     }
 }
-

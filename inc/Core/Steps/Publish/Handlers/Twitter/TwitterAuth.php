@@ -31,8 +31,6 @@ class TwitterAuth {
         // No parameters needed - all services accessed via filters
     }
 
-
-
     /**
      * Checks if admin has valid Twitter authentication
      *
@@ -306,4 +304,3 @@ class TwitterAuth {
     }
 
 }
-

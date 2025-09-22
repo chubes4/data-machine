@@ -389,49 +389,40 @@ class Reddit {
 							'Authorization' => 'Bearer ' . $access_token
 						]
 					];
-					try {
-						$comments_result = apply_filters('dm_request', null, 'GET', $comments_url, $comment_args, 'Reddit API');
+					$comments_result = apply_filters('dm_request', null, 'GET', $comments_url, $comment_args, 'Reddit API');
 
-						if ($comments_result['success']) {
-							$comments_data = json_decode($comments_result['data'], true);
-							if (json_last_error() === JSON_ERROR_NONE) {
-							if (is_array($comments_data) && isset($comments_data[1]['data']['children'])) {
-								$top_comments = array_slice($comments_data[1]['data']['children'], 0, $comment_count_setting);
-								foreach ($top_comments as $comment_wrapper) {
-									if (isset($comment_wrapper['data']['body']) && !$comment_wrapper['data']['stickied']) {
-										$comment_author = $comment_wrapper['data']['author'] ?? '[deleted]';
-										$comment_body = trim($comment_wrapper['data']['body']);
-										if ($comment_body !== '') {
-											$comments_array[] = [
-												'author' => $comment_author,
-												'body' => $comment_body
-											];
-										}
+					if ($comments_result['success']) {
+						$comments_data = json_decode($comments_result['data'], true);
+						if (json_last_error() === JSON_ERROR_NONE) {
+						if (is_array($comments_data) && isset($comments_data[1]['data']['children'])) {
+							$top_comments = array_slice($comments_data[1]['data']['children'], 0, $comment_count_setting);
+							foreach ($top_comments as $comment_wrapper) {
+								if (isset($comment_wrapper['data']['body']) && !$comment_wrapper['data']['stickied']) {
+									$comment_author = $comment_wrapper['data']['author'] ?? '[deleted]';
+									$comment_body = trim($comment_wrapper['data']['body']);
+									if ($comment_body !== '') {
+										$comments_array[] = [
+											'author' => $comment_author,
+											'body' => $comment_body
+										];
 									}
-									if (count($comments_array) >= $comment_count_setting) break;
 								}
+								if (count($comments_array) >= $comment_count_setting) break;
 							}
-							} else {
-								do_action('dm_log', 'warning', 'Reddit Input: Failed to parse comments JSON.', [
-									'item_id' => $current_item_id,
-									'comments_url' => $comments_url,
-									'error' => json_last_error_msg(),
-									'pipeline_id' => $pipeline_id
-								]);
-							}
+						}
 						} else {
-							do_action('dm_log', 'warning', 'Reddit Input: Failed to fetch comments for post.', [
+							do_action('dm_log', 'warning', 'Reddit Input: Failed to parse comments JSON.', [
 								'item_id' => $current_item_id,
 								'comments_url' => $comments_url,
-								'error' => $comments_result['error'],
+								'error' => json_last_error_msg(),
 								'pipeline_id' => $pipeline_id
 							]);
 						}
-					} catch (Exception $e) {
-						do_action('dm_log', 'error', 'Reddit Input: Exception while fetching comments.', [
+					} else {
+						do_action('dm_log', 'warning', 'Reddit Input: Failed to fetch comments for post.', [
 							'item_id' => $current_item_id,
 							'comments_url' => $comments_url,
-							'exception' => $e->getMessage(),
+							'error' => $comments_result['error'],
 							'pipeline_id' => $pipeline_id
 						]);
 					}
@@ -511,15 +502,17 @@ class Reddit {
 					$content_data['comments'] = $comments_array;
 				}
 
-				// Create data packet matching FetchStep expectations
+				// Create data packet using universal pattern
 				if ($stored_image) {
-					// Image post - return file data with structured content
-					$input_data = [
+					// Image post - use universal pattern with file_info
+					$file_info = [
 						'file_path' => $stored_image['path'],
 						'file_name' => $stored_image['filename'],
 						'mime_type' => $image_info['mime_type'],
-						'file_size' => $stored_image['size'],
-						'data' => $content_data,
+						'file_size' => $stored_image['size']
+					];
+					$input_data = [
+						'data' => array_merge($content_data, ['file_info' => $file_info]),
 						'metadata' => array_merge($metadata, [
 							'original_title' => $title,
 							'original_id' => $current_item_id,
@@ -528,9 +521,9 @@ class Reddit {
 						])
 					];
 				} else {
-					// Text-only post - return structured content data
+					// Text-only post - use universal pattern with null file_info
 					$input_data = [
-						'data' => $content_data,
+						'data' => array_merge($content_data, ['file_info' => null]),
 						'metadata' => array_merge($metadata, [
 							'original_title' => $title,
 							'original_id' => $current_item_id,
@@ -637,4 +630,3 @@ class Reddit {
 	}
 
 }
-

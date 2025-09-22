@@ -47,8 +47,6 @@ class PipelineModalAjax
      * and handler settings management within the pipeline editor interface.
      */
 
-
-
     /**
      * Render template with provided data via AJAX.
      *
@@ -212,10 +210,12 @@ class PipelineModalAjax
             wp_send_json_error(['message' => __('Context data is required', 'data-machine')]);
         }
 
-        $context_raw = wp_unslash($_POST['context'] ?? []); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+        $context_raw = $_POST['context'] ?? []; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+        // jQuery AJAX properly handles escaping, so don't double-escape with wp_unslash()
         $context = is_string($context_raw)
             ? array_map('sanitize_text_field', json_decode($context_raw, true) ?: [])
-            : array_map('sanitize_text_field', $context_raw);
+            : array_map('sanitize_text_field', wp_unslash($context_raw));
 
         // Context data should be a native array after sanitization
         if (!is_array($context)) {
@@ -449,10 +449,6 @@ class PipelineModalAjax
         }
     }
 
-
-
-
-
     /**
      * Save handler-specific settings to flow step configuration.
      *
@@ -476,10 +472,12 @@ class PipelineModalAjax
         ]);
 
         // Handle both context-based (add handler) and direct form data (save settings) scenarios
-        $context_raw = wp_unslash($_POST['context'] ?? []); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+        $context_raw = $_POST['context'] ?? []; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+
+        // jQuery AJAX properly handles escaping, so don't double-escape with wp_unslash()
         $context = is_string($context_raw)
             ? array_map('sanitize_text_field', json_decode($context_raw, true) ?: [])
-            : array_map('sanitize_text_field', $context_raw);
+            : array_map('sanitize_text_field', wp_unslash($context_raw));
         
         // Extract data from context if available (add handler scenario), otherwise from direct form fields
         // Note: $context is already unslashed and sanitized above, so only unslash direct $_POST values

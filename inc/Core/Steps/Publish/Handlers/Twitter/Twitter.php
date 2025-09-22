@@ -28,7 +28,6 @@ class Twitter {
         $twitter_config = $handler_config['twitter'] ?? $handler_config;
         $content = $parameters['content'] ?? '';
 
-        // Access engine_data via centralized filter pattern
         $job_id = $parameters['job_id'] ?? null;
         $engine_data = apply_filters('dm_engine_data', [], $job_id);
 
@@ -406,12 +405,10 @@ class Twitter {
                 'media_id' => $media_id
             ]);
 
-            // Initialize WP_Filesystem - required for WordPress compliance
             if (!function_exists('WP_Filesystem')) {
                 require_once(ABSPATH . 'wp-admin/includes/file.php');
             }
 
-            // Initialize filesystem with direct method for temporary files
             $filesystem_init = WP_Filesystem();
             if (!$filesystem_init) {
                 do_action('dm_log', 'error', 'Twitter: WP_Filesystem initialization failed', [
@@ -422,7 +419,6 @@ class Twitter {
 
             global $wp_filesystem;
 
-            // Read entire file using WordPress native method (binary-safe)
             $file_contents = $wp_filesystem->get_contents($temp_image_path);
             if (false === $file_contents) {
                 do_action('dm_log', 'error', 'Twitter: Cannot read image file for chunked upload.', [
@@ -436,7 +432,6 @@ class Twitter {
             $file_length = strlen($file_contents);
             $offset = 0;
 
-            // Process file contents in chunks (WordPress compliant approach)
             while ($offset < $file_length) {
                 $chunk = substr($file_contents, $offset, $chunk_size);
 

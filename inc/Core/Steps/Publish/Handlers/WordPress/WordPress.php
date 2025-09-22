@@ -32,12 +32,11 @@ class WordPress {
     }
 
     /**
-     * Handle AI tool call for WordPress post creation using modular components.
-     * Processes featured images, taxonomies, and source URLs through specialized handlers.
+     * Create WordPress post with modular component processing.
      *
-     * @param array $parameters Flat parameter structure from AIStepToolParameters
-     * @param array $tool_def Tool definition containing handler_config
-     * @return array Result with success status, post ID, and URL
+     * @param array $parameters Tool parameters (title, content, etc.)
+     * @param array $tool_def Tool definition with handler_config
+     * @return array Creation result with post ID and URL
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         
@@ -61,11 +60,9 @@ class WordPress {
 
         $handler_config = $tool_def['handler_config'] ?? [];
 
-        // Access engine_data via centralized filter pattern
         $job_id = $parameters['job_id'] ?? null;
         $engine_data = apply_filters('dm_engine_data', [], $job_id);
 
-        // Extract taxonomy configuration for diagnostics
         $taxonomies = get_taxonomies(['public' => true], 'names');
         $taxonomy_settings = [];
         foreach ($taxonomies as $taxonomy) {
@@ -163,9 +160,6 @@ class WordPress {
         return __('WordPress', 'data-machine');
     }
 
-    /**
-     * Get effective post status with system defaults priority.
-     */
     private function get_effective_post_status(array $handler_config): string {
         $all_settings = get_option('data_machine_settings', []);
         $wp_settings = $all_settings['wordpress_settings'] ?? [];
@@ -177,9 +171,6 @@ class WordPress {
         return $handler_config['post_status'] ?? 'draft';
     }
 
-    /**
-     * Get effective post author with system defaults priority.
-     */
     private function get_effective_post_author(array $handler_config): int {
         $all_settings = get_option('data_machine_settings', []);
         $wp_settings = $all_settings['wordpress_settings'] ?? [];
@@ -191,12 +182,7 @@ class WordPress {
         return $handler_config['post_author'] ?? get_current_user_id();
     }
 
-    /**
-     * Sanitize and validate Gutenberg block content using WordPress core block filtering.
-     * Processes individual blocks to prevent corruption of block delimiters.
-     */
     private function sanitize_block_content(string $content): string {
-        // Detect obvious malformed Gutenberg block starts (unterminated JSON) for logging (future enhancement)
         if (preg_match('/<!--\s*wp:[^\n\r{}]+\{[^}]*$/', $content)) {
             do_action('dm_log', 'debug', 'WordPress Publish: Detected potentially unterminated block JSON', [
                 'content_preview' => substr($content, 0, 200)
@@ -221,5 +207,3 @@ class WordPress {
         return serialize_blocks($sanitized);
     }
 }
-
-

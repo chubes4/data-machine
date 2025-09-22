@@ -66,8 +66,6 @@ class FacebookAuth {
     }
 
 
-
-
     /**
      * Checks if admin has valid Facebook authentication
      *
@@ -690,4 +688,3 @@ class FacebookAuth {
         exit;
     }
 }
-

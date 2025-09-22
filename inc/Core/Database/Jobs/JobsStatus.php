@@ -169,8 +169,6 @@ class JobsStatus {
         return $updated !== false;
     }
 
-
-
     private function get_job( int $job_id ): ?object {
         if ( empty( $job_id ) ) {
             return null;

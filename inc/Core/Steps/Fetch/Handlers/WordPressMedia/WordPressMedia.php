@@ -150,7 +150,7 @@ class WordPressMedia {
 
             // Store URLs in engine_data for centralized access via dm_engine_data filter
             if ($job_id) {
-                $media_url = wp_get_attachment_url($post_id);
+                $image_url = wp_get_attachment_url($post_id);
 
                 // Get parent post permalink for source_url when include_parent_content is enabled
                 $source_url = '';
@@ -160,7 +160,7 @@ class WordPressMedia {
 
                 $engine_data = [
                     'source_url' => $source_url,
-                    'image_url' => $media_url ?: ''
+                    'image_url' => $image_url ?: ''
                 ];
 
                 // Store engine_data via database service
@@ -170,7 +170,7 @@ class WordPressMedia {
                     $db_jobs->store_engine_data($job_id, $engine_data);
                     do_action('dm_log', 'debug', 'WordPress Media: Stored URLs in engine_data', [
                         'job_id' => $job_id,
-                        'media_url' => $engine_data['source_url'],
+                        'image_url' => $image_url,
                         'post_id' => $post_id
                     ]);
                 }
@@ -230,12 +230,12 @@ class WordPressMedia {
         // Extract site name for metadata only
         $site_name = get_bloginfo('name') ?: 'Local WordPress';
 
-        // Build content data with parent post content when enabled
+        // Build content data with parent post content when enabled (raw structured data)
         $content_data = [];
         if ($parent_content_included && isset($source_post_data)) {
             $content_data = [
                 'title' => $source_post_data['title'],
-                'content' => $source_post_data['content']  // Raw content, no processing
+                'content' => $source_post_data['content']  // Raw content, no string processing
             ];
         }
 
@@ -273,16 +273,14 @@ class WordPressMedia {
         // Debug logging for data flow tracking with parent content details
         do_action('dm_log', 'debug', 'WordPress Media: Data packet created (attached media only)', [
             'post_id' => $post_id,
-            'media_url' => wp_get_attachment_url($post_id),
+            'image_url' => wp_get_attachment_url($post_id),
             'parent_post_id' => $parent_post ? $parent_post->ID : null,
             'parent_post_title' => $parent_post ? $parent_post->post_title : null,
             'file_path' => $file_path,
             'file_exists' => $file_path ? file_exists($file_path) : false,
             'attached_media_confirmed' => true,
             'include_parent_content_setting' => $include_parent_content,
-            'parent_content_included' => $parent_content_included,
-            'parent_content_length' => $parent_content_included && isset($source_post_data) ? strlen($source_post_data['content']) : 0,
-            'total_content_length' => $parent_content_included && isset($source_post_data) ? strlen($source_post_data['content']) : 0
+            'parent_content_included' => $parent_content_included
         ]);
 
         return $input_data;

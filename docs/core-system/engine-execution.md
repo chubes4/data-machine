@@ -46,7 +46,7 @@ $parameters = [
     'flow_step_config' => $flow_step_config,
     'data' => $data
 ];
-// Engine data added by steps as needed via dm_engine_data filter
+// Engine data accessed by steps via centralized dm_engine_data filter
 $data = $flow_step->execute($parameters);
 ```
 
@@ -137,7 +137,7 @@ class MyStep {
 
 ### Flat Parameter Architecture
 
-Engine uses unified flat parameter passing with engine data filter access:
+Engine uses unified flat parameter passing with centralized engine data access via `EngineData.php` filter:
 
 **Core Parameters** (always provided):
 ```php
@@ -148,13 +148,14 @@ $parameters = [
     'data' => $data
 ];
 
-// Engine data retrieved by steps as needed
+// Centralized engine data access via dm_engine_data filter
 $engine_data = apply_filters('dm_engine_data', [], $job_id);
 ```
 
 **Benefits**:
-- ✅ **Simple Interface**: Core parameters always provided, engine data accessed via filter
-- ✅ **Extensible**: Engine data filter allows centralized metadata access
+- ✅ **Simple Interface**: Core parameters always provided, engine data accessed via centralized filter
+- ✅ **Architectural Consistency**: EngineData.php filter maintains filter-based service discovery pattern
+- ✅ **Unified Access**: Single filter replaces direct database access patterns
 - ✅ **Consistent**: Same pattern across all step types
 
 **Step Implementation Pattern**:
@@ -167,7 +168,7 @@ class MyStep {
         $data = $parameters['data'] ?? [];
         $flow_step_config = $parameters['flow_step_config'] ?? [];
         
-        // Access engine data as needed
+        // Access engine data via centralized dm_engine_data filter
         $engine_data = apply_filters('dm_engine_data', [], $job_id);
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;

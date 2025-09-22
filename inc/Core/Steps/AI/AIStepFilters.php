@@ -28,8 +28,6 @@ function dm_register_ai_step_filters() {
         return $steps;
     });
     
-    
-    
     add_filter('dm_step_settings', function($configs) {
         $configs['ai'] = [
             'config_type' => 'ai_configuration',

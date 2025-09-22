@@ -93,7 +93,7 @@ docs/
 **Engine Execution**
 - Three-action cycle (run_flow_now → execute_step → schedule_next_step)
 - Action Scheduler integration
-- Database storage + filter injection architecture with clean AI data packets and structured engine parameters
+- Centralized engine data architecture with `EngineData.php` filter providing unified `dm_engine_data` access - clean AI data packets with structured engine parameters via database storage and filter retrieval
 - Job management and status tracking
 - Error handling and failure recovery
 - AutoSave system with complete pipeline persistence, flow synchronization, and cache invalidation
@@ -119,10 +119,10 @@ docs/
 - Files - Local and remote file processing
 
 **External Sources**
-- RSS - Feed parsing with deduplication and database storage of engine parameters
-- Reddit - OAuth2 subreddit fetching with database storage of engine parameters
+- RSS - Feed parsing with deduplication and centralized engine data storage (source_url, image_url via dm_engine_data filter)
+- Reddit - OAuth2 subreddit fetching with centralized engine data storage (source_url, image_url via dm_engine_data filter)
 - Google Sheets - OAuth2 spreadsheet data extraction
-- WordPress API - External WordPress sites via REST API
+- WordPress API - External WordPress sites via REST API with centralized engine data storage
 
 ### ✅ Publish Handlers (6 handlers)
 
@@ -139,7 +139,7 @@ docs/
 ### ✅ Update Handlers (1 handler)
 
 **Content Modification**
-- WordPress Update - Modify existing posts/pages using source_url from engine parameters
+- WordPress Update - Modify existing posts/pages using source_url from centralized engine data via dm_engine_data filter with enhanced tool discovery (handler slug matching and partial name matching)
 
 ### ✅ AI Tools (4 general + handler tools)
 

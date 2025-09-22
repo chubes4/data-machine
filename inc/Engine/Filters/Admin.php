@@ -29,8 +29,6 @@ function dm_register_admin_filters() {
         return $templates;
     }, 5, 1);
     
-    
-    
     // Template rendering with dynamic discovery
     add_filter('dm_render_template', function($content, $template_name, $data = []) {
         // Template discovery and rendering
@@ -71,8 +69,6 @@ function dm_register_admin_filters() {
     add_action('admin_menu', 'dm_register_admin_menu');
     add_action('admin_enqueue_scripts', 'dm_enqueue_admin_assets');
 }
-
-
 
 // Split composite flow_step_id: {pipeline_step_id}_{flow_id}
 add_filter('dm_split_flow_step_id', function($null, $flow_step_id) {
@@ -449,10 +445,6 @@ function dm_enqueue_page_assets($assets, $page_slug) {
 
 
 // Settings page rendering and callbacks moved to /inc/Core/Admin/Settings/SettingsFilters.php
-
-
-
-
 
 
 // Settings page styles moved to /inc/Core/Admin/Settings/assets/css/settings-page.css

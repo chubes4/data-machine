@@ -108,3 +108,22 @@ Source URL: {item_link}
 **Enclosure Detection**: Automatically detects media attachments from RSS enclosures with MIME type detection based on file extension.
 
 **Supported Types**: Images (JPEG, PNG, GIF, WebP), Audio (MP3), Video (MP4), Documents (PDF, ZIP).
+
+## Engine Data Storage
+
+In addition to the clean data packets above, the RSS handler stores engine parameters in the database for access by downstream handlers via the centralized `dm_engine_data` filter:
+
+**Stored Engine Data**:
+```php
+[
+    'source_url' => 'item_link',        // For Update handlers
+    'image_url' => 'enclosure_url'      // For media handling
+]
+```
+
+**Access by Steps**:
+```php
+$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$source_url = $engine_data['source_url'] ?? null;
+$image_url = $engine_data['image_url'] ?? null;
+```

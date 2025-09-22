@@ -22,13 +22,12 @@ defined('ABSPATH') || exit;
 class AIStepToolParameters {
     
     /**
-     * Build flat parameter structure merging AI parameters with engine context.
-     * Creates unified flat array compatible with all handler tool call methods.
+     * Build flat parameter structure for tool execution.
      *
      * @param array $ai_tool_parameters Parameters from AI tool call
-     * @param array $unified_parameters Unified parameter structure from engine
-     * @param array $tool_definition Tool definition from ai_tools filter
-     * @return array Flat parameter structure with all data at root level
+     * @param array $unified_parameters Engine parameter structure
+     * @param array $tool_definition Tool definition
+     * @return array Flat parameter structure
      */
     public static function buildParameters(
         array $ai_tool_parameters,
@@ -52,11 +51,11 @@ class AIStepToolParameters {
     }
     
     /**
-     * Extract content from latest data packet entry if tool requires content parameter.
+     * Extract content from data packet if tool requires content parameter.
      *
-     * @param array $data_packet Data packet array with chronological entries
-     * @param array $tool_definition Tool definition containing parameter specifications
-     * @return string|null Content body from latest entry or null if not required
+     * @param array $data_packet Data packet array
+     * @param array $tool_definition Tool definition
+     * @return string|null Content body or null
      */
     private static function extractContent(array $data_packet, array $tool_definition): ?string {
         $tool_params = $tool_definition['parameters'] ?? [];
@@ -70,11 +69,11 @@ class AIStepToolParameters {
     }
     
     /**
-     * Extract title from latest data packet entry if tool requires title parameter.
+     * Extract title from data packet if tool requires title parameter.
      *
-     * @param array $data_packet Data packet array with chronological entries
-     * @param array $tool_definition Tool definition containing parameter specifications
-     * @return string|null Content title from latest entry or null if not required
+     * @param array $data_packet Data packet array
+     * @param array $tool_definition Tool definition
+     * @return string|null Content title or null
      */
     private static function extractTitle(array $data_packet, array $tool_definition): ?string {
         $tool_params = $tool_definition['parameters'] ?? [];

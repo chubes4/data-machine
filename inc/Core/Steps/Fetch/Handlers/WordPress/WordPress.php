@@ -23,8 +23,6 @@ class WordPress {
     public function __construct() {
     }
 
-
-
     /**
      * Fetch WordPress content with clean data for AI processing.
      * Returns processed items while storing engine data (source_url, image_url) in database.
@@ -283,11 +281,6 @@ class WordPress {
         return $featured_image_id ? wp_get_attachment_image_url($featured_image_id, 'full') : null;
     }
 
-
-
-
-
-
     /**
      * Calculate cutoff timestamp based on timeframe limit.
      *
@@ -322,4 +315,3 @@ class WordPress {
         return __('Local WordPress Posts', 'data-machine');
     }
 }
-

@@ -26,11 +26,7 @@ class Facebook {
      */
     private $auth;
 
-    /**
-     * Constructor - filter-based auth access following pure discovery architectural standards
-     */
     public function __construct() {
-        // Use filter-based auth access following pure discovery architectural standards
         $all_auth = apply_filters('dm_auth_providers', []);
         $this->auth = $all_auth['facebook'] ?? null;
         
@@ -39,25 +35,19 @@ class Facebook {
                 'missing_service' => 'facebook',
                 'available_providers' => array_keys($all_auth)
             ]);
-            // Handler will return error in handle_tool_call() when auth is null
         }
     }
 
-    /**
-     * Get Facebook auth handler - internal implementation.
-     * 
-     * @return FacebookAuth
-     */
     private function get_auth() {
         return $this->auth;
     }
 
     /**
-     * Handle AI tool call for Facebook publishing.
+     * Publish content to Facebook page.
      *
-     * @param array $parameters Structured parameters from AI tool call.
-     * @param array $tool_def Tool definition including handler configuration.
-     * @return array Tool execution result.
+     * @param array $parameters Tool parameters including content
+     * @param array $tool_def Tool definition with handler_config
+     * @return array Publication result
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
 
@@ -75,14 +65,12 @@ class Facebook {
             ];
         }
 
-        // Get handler configuration from flat parameter structure
         $handler_config = $parameters['handler_config'] ?? [];
         
         // Extract Facebook-specific configuration (it's nested under 'facebook' key)
         $facebook_config = $handler_config['facebook'] ?? $handler_config;
         
 
-        // Access engine_data via centralized filter pattern
         $job_id = $parameters['job_id'] ?? null;
         $engine_data = apply_filters('dm_engine_data', [], $job_id);
 
@@ -431,8 +419,6 @@ class Facebook {
         }
     }
 
-
-
     /**
      * Returns the user-friendly label for this publish handler.
      *
@@ -508,5 +494,3 @@ class Facebook {
         return false;
     }
 }
-
-

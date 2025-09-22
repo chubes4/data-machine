@@ -66,8 +66,6 @@ class ThreadsAuth {
     }
 
 
-
-
     /**
      * Checks if admin has valid Threads authentication
      *
@@ -494,4 +492,3 @@ class ThreadsAuth {
         exit;
     }
 }
-

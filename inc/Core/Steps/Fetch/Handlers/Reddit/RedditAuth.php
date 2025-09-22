@@ -400,4 +400,3 @@ class RedditAuth {
     }
 
 } // End class
-

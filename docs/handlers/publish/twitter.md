@@ -46,8 +46,8 @@ Posts content to Twitter with media support, authentication via OAuth 1.0a, and 
 
 **Parameters**:
 - `content` (string, required) - Tweet content to post
-- `source_url` (string, optional) - Source URL from metadata
-- `image_url` (string, optional) - Image URL from metadata
+- `source_url` (string, optional) - Source URL from engine data via dm_engine_data filter
+- `image_url` (string, optional) - Image URL from engine data via dm_engine_data filter
 
 **Return Format**:
 ```php
@@ -190,10 +190,12 @@ $result = $twitter_handler->handle_tool_call([
 ### Tweet with Media
 
 ```php
+// Note: image_url and source_url are automatically included from engine data
+// via dm_engine_data filter - fetch handlers store these parameters in database
 $result = $twitter_handler->handle_tool_call([
     'content' => 'Check out this image!',
-    'image_url' => 'https://example.com/image.jpg',
-    'source_url' => 'https://example.com/article'
+    'image_url' => 'https://example.com/image.jpg',    // From engine data
+    'source_url' => 'https://example.com/article'      // From engine data
 ], $tool_definition);
 ```
 

@@ -287,6 +287,31 @@ $tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
 - **Handler Tools**: Step-specific (twitter_publish, wordpress_update) - available when next step matches handler type
 - **General Tools**: Universal (Google Search, Local Search, WebFetch, WordPress Post Reader) - available to all AI agents
 
+**Enhanced Tool Discovery**: UpdateStep implements intelligent tool result detection with handler slug matching and partial name matching:
+
+```php
+// UpdateStep tool result detection with flexible matching
+private function find_tool_result_for_handler(array $data, string $handler): ?array {
+    foreach ($data as $entry) {
+        if (($entry['type'] ?? '') === 'tool_result') {
+            $tool_name = $entry['metadata']['tool_name'] ?? '';
+            $tool_handler = $entry['metadata']['tool_handler'] ?? '';
+
+            // Exact handler match
+            if ($tool_handler === $handler) {
+                return $entry;
+            }
+
+            // Partial name matching for tool discovery
+            if (strpos($tool_name, $handler) !== false || strpos($handler, $tool_name) !== false) {
+                return $entry;
+            }
+        }
+    }
+    return null;
+}
+```
+
 ### Tool Registration
 
 **Handler-Specific Tools**:
@@ -317,14 +342,21 @@ class Twitter {
         if (empty($parameters['content'])) {
             return ['success' => false, 'error' => 'Missing content', 'tool_name' => 'twitter_publish'];
         }
-        
+
         $handler_config = $tool_def['handler_config'] ?? [];
+
+        // Access engine data via centralized filter pattern
+        $job_id = $parameters['job_id'] ?? null;
+        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $source_url = $engine_data['source_url'] ?? null;
+        $image_url = $engine_data['image_url'] ?? null;
+
         $connection = $this->auth->get_connection();
         if (is_wp_error($connection)) {
             return ['success' => false, 'error' => $connection->get_error_message()];
         }
-        
-        // Format and publish logic
+
+        // Format and publish logic using engine data
         return ['success' => true, 'data' => ['tweet_id' => $id, 'url' => $url]];
     }
 }
@@ -582,11 +614,18 @@ class MyFetchHandler {
     }
 }
 
-// Publish/Update Handler
+// Publish/Update Handler with Engine Data Access
 class MyPublishHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         $handler_config = $tool_def['handler_config'] ?? [];
-        // For Update handlers: $parameters['source_url'] required from engine data via dm_engine_data filter
+
+        // Access engine data via centralized filter pattern
+        $job_id = $parameters['job_id'] ?? null;
+        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $source_url = $engine_data['source_url'] ?? null;
+        $image_url = $engine_data['image_url'] ?? null;
+
+        // For Update handlers: source_url required from engine data to identify target content
         return ['success' => true, 'data' => ['id' => $id, 'url' => $url]];
     }
 }
@@ -709,9 +748,26 @@ composer install && composer test
 **Streamlined Engine Filters** (`inc/Engine/Filters/`):
 - **Create.php**: Centralized creation operations with comprehensive validation and permission checking
 - **StatusDetection.php**: Filter-based status detection system with RED/YELLOW/GREEN priority architecture
+- **EngineData.php**: Centralized engine data access via `dm_engine_data` filter - replaces direct database access patterns
 - **Comment Cleanup**: Engine filters maintain clean, focused documentation without redundant comments
 - **Atomic Operations**: Complete creation workflows with proper cache invalidation and AJAX response handling
 - **Permission Security**: All engine operations require `manage_options` capability with consistent validation
+
+**Engine Data Centralization**: The `dm_engine_data` filter provides unified access to source_url, image_url stored by fetch handlers:
+
+```php
+// Centralized engine data access (replaces direct database calls)
+$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$source_url = $engine_data['source_url'] ?? null;
+$image_url = $engine_data['image_url'] ?? null;
+
+// Filter registration pattern maintains architectural consistency
+add_filter('dm_engine_data', function($engine_data, $job_id) {
+    $all_databases = apply_filters('dm_db', []);
+    $db_jobs = $all_databases['jobs'] ?? null;
+    return $db_jobs ? $db_jobs->retrieve_engine_data($job_id) : [];
+}, 10, 2);
+```
 
 ## Extensions
 

@@ -12,30 +12,20 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Register engine data filter.
- *
- * Centralizes engine_data access through filter pattern instead of direct database access.
- * Maintains consistency with established architectural pattern of filter-based service discovery.
- */
 function dm_register_engine_data_filter() {
 
     /**
-     * Retrieve engine data for a job.
-     *
-     * Provides centralized access to source_url, image_url stored by fetch handlers.
-     * Uses existing filter-based database service discovery pattern.
+     * Retrieve engine data for job via centralized filter.
      *
      * @param array $engine_data Default empty array
-     * @param int $job_id Job ID to retrieve engine data for
-     * @return array Engine data containing source_url, image_url, etc.
+     * @param int $job_id Job ID
+     * @return array Engine data (source_url, image_url, etc.)
      */
     add_filter('dm_engine_data', function($engine_data, $job_id) {
         if (empty($job_id)) {
             return [];
         }
 
-        // Use established filter pattern for database service discovery
         $all_databases = apply_filters('dm_db', []);
         $db_jobs = $all_databases['jobs'] ?? null;
 
@@ -70,5 +60,4 @@ function dm_register_engine_data_filter() {
 
 }
 
-// Auto-register when file loads - following established pattern
 dm_register_engine_data_filter();

@@ -76,8 +76,6 @@ class Jobs {
     }
 
 
-
-
     public static function create_table() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'dm_jobs';

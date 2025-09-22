@@ -29,9 +29,6 @@ class Bluesky {
         return $this->auth;
     }
 
-    /**
-     * Publish content to Bluesky with AT Protocol integration
-     */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         do_action('dm_log', 'debug', 'Bluesky Tool: Handling tool call', [
             'parameters' => $parameters,
@@ -54,7 +51,6 @@ class Bluesky {
             ];
         }
 
-        // Get handler configuration from flat parameter structure
         $handler_config = $parameters['handler_config'] ?? [];
         $bluesky_config = $handler_config['bluesky'] ?? $handler_config;
         
@@ -63,21 +59,17 @@ class Bluesky {
             'link_handling' => $bluesky_config['link_handling'] ?? 'append'
         ]);
 
-        // Access engine_data via centralized filter pattern
         $job_id = $parameters['job_id'] ?? null;
         $engine_data = apply_filters('dm_engine_data', [], $job_id);
 
-        // Extract parameters from flat structure
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;
         
-        // Get config from handler settings (300 character limit is hardcoded)
         $include_images = $bluesky_config['include_images'] ?? true;
         $link_handling = $bluesky_config['link_handling'] ?? 'append';
 
-        // Get authenticated session
         $session = $this->auth->get_session();
         if (is_wp_error($session)) {
             $error_msg = 'Bluesky authentication failed: ' . $session->get_error_message();
@@ -104,7 +96,6 @@ class Bluesky {
             ];
         }
 
-        // Format post content (Bluesky's character limit is 300)
         $post_text = $title ? $title . ": " . $content : $content;
         $ellipsis = '…';
         $ellipsis_len = mb_strlen($ellipsis, 'UTF-8');
@@ -131,10 +122,8 @@ class Bluesky {
         }
 
         try {
-            // Detect link facets
             $facets = $this->detect_link_facets($post_text);
 
-            // Create post record
             $current_time = gmdate("Y-m-d\TH:i:s.v\Z");
             $record = [
                 '$type' => 'app.bsky.feed.post',
@@ -143,12 +132,10 @@ class Bluesky {
                 'langs' => ['en'],
             ];
 
-            // Add facets if detected
             if (!empty($facets)) {
                 $record['facets'] = $facets;
             }
 
-            // Handle image upload if provided and enabled
             if ($include_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
                 $image_alt_text = $title ?: substr($content, 0, 50);
                 $uploaded_image_blob = $this->upload_bluesky_image($pds_url, $access_token, $did, $image_url, $image_alt_text);
@@ -166,7 +153,6 @@ class Bluesky {
                 }
             }
 
-            // Create post
             $post_result = $this->create_bluesky_post($pds_url, $access_token, $did, $record);
 
             if (is_wp_error($post_result)) {
@@ -287,7 +273,6 @@ class Bluesky {
      */
     private function upload_bluesky_image(string $pds_url, string $access_token, string $did, string $image_url, string $alt_text) {
         
-        // Download image temporarily
         if (!function_exists('download_url')) {
             require_once ABSPATH . 'wp-admin/includes/file.php';
         }
@@ -298,14 +283,12 @@ class Bluesky {
             return $temp_file_path;
         }
 
-        // Check file size (1MB limit)
         $file_size = @filesize($temp_file_path);
         if ($file_size === false || $file_size > 1000000) {
             wp_delete_file($temp_file_path);
             return new \WP_Error('bluesky_image_too_large', __('Image exceeds Bluesky size limit.', 'data-machine'));
         }
 
-        // Get mime type and content
         $mime_type = mime_content_type($temp_file_path);
         if (!$mime_type || strpos($mime_type, 'image/') !== 0) {
             wp_delete_file($temp_file_path);
@@ -318,7 +301,6 @@ class Bluesky {
             return new \WP_Error('bluesky_image_read_failed', __('Could not read image file.', 'data-machine'));
         }
 
-        // Upload to Bluesky
         $upload_url = rtrim($pds_url, '/') . '/xrpc/com.atproto.repo.uploadBlob';
         $result = apply_filters('dm_request', null, 'POST', $upload_url, [
             'headers' => [

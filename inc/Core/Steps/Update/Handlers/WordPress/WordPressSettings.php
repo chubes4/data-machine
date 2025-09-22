@@ -175,8 +175,6 @@ class WordPressSettings {
         return $sanitized;
     }
 
-
-
     /**
      * Get default values for all available taxonomies.
      *

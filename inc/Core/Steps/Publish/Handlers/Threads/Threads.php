@@ -69,7 +69,6 @@ class Threads {
             ];
         }
 
-        // Get handler configuration from flat parameter structure
         $handler_config = $parameters['handler_config'] ?? [];
         $threads_config = $handler_config['threads'] ?? $handler_config;
         
@@ -78,21 +77,17 @@ class Threads {
             'link_handling' => $threads_config['link_handling'] ?? 'append'
         ]);
 
-        // Access engine_data via centralized filter pattern
         $job_id = $parameters['job_id'] ?? null;
         $engine_data = apply_filters('dm_engine_data', [], $job_id);
 
-        // Extract parameters from flat structure
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;
         
-        // Get config from handler settings (500 character limit is hardcoded)
         $include_images = $threads_config['include_images'] ?? true;
         $link_handling = $threads_config['link_handling'] ?? 'append';
 
-        // Get authenticated access token
         $access_token = $this->auth->get_access_token();
         if (empty($access_token)) {
             return [
@@ -204,8 +199,6 @@ class Threads {
             ];
         }
     }
-
-
 
     /**
      * Create a media container for Threads.
@@ -324,4 +317,3 @@ class Threads {
         return __('Threads', 'data-machine');
     }
 }
-

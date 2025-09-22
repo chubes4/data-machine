@@ -72,7 +72,6 @@ class GoogleSheets {
             ];
         }
 
-        // Get handler configuration from tool definition
         $handler_config = $tool_def['handler_config'] ?? [];
         
         do_action('dm_log', 'debug', 'Google Sheets Tool: Using handler configuration', [
@@ -80,11 +79,9 @@ class GoogleSheets {
             'worksheet_name' => $handler_config['googlesheets_worksheet_name'] ?? 'Sheet1'
         ]);
 
-        // Access engine_data via centralized filter pattern
         $job_id = $parameters['job_id'] ?? null;
         $engine_data = apply_filters('dm_engine_data', [], $job_id);
 
-        // Extract parameters
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
         $source_url = $engine_data['source_url'] ?? null;

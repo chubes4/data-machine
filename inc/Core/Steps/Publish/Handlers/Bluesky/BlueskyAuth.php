@@ -26,8 +26,6 @@ class BlueskyAuth {
         // No parameters needed - all services accessed via filters
     }
 
-
-
     /**
      * Checks if admin has valid Bluesky authentication
      *

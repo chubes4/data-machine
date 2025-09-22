@@ -112,11 +112,12 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 **General Tools**: Google Search, Local Search, WebFetch (50K character limit), WordPress Post Reader
 
 **Recent Improvements**:
+- **Centralized Engine Data Architecture**: New `EngineData.php` filter provides unified access to source_url, image_url via `dm_engine_data` filter - replaces direct database access patterns while maintaining filter-based architectural consistency
+- **Enhanced Tool Discovery**: UpdateStep implements intelligent tool result detection with handler slug matching and partial name matching for improved AI workflow integration
 - **AIStepConversationManager**: Multi-turn conversation state management with chronological message ordering, turn tracking, and duplicate prevention for enhanced AI agent workflows
 - **Modular WordPress Publish Handler**: Refactored into specialized components - `FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler` with configuration hierarchy (system defaults override handler config)
 - **AutoSave System**: Complete pipeline auto-save with flow synchronization, execution_order updates, and cache invalidation via single `dm_auto_save` action
 - **Enhanced Cache System**: WordPress action-based cache clearing with granular invalidation and pattern support via Actions/Cache.php
-- **Engine Data Filter Architecture**: Fetch handlers store engine parameters in database via store_engine_data(); steps retrieve via centralized dm_engine_data filter - eliminates URL pollution in AI content while maintaining structured access for handlers
 - **Universal Handler Settings**: Template system eliminating modal code duplication across handler types with dynamic field rendering
 
 *All handlers are fully functional with OAuth authentication where required and comprehensive error handling*
@@ -159,7 +160,7 @@ composer install    # Development setup
 ./build.sh         # Production build
 ```
 
-**Architecture**: PSR-4 autoloading, filter-based service discovery, engine data filter architecture with clean AI data packets and structured engine parameters, centralized cache system via Actions/Cache.php with WordPress action-based clearing, 5-tier AI directive system with auto-registration (PluginCoreDirective, GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, SiteContextDirective), AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution, AutoSave system with complete pipeline persistence and flow synchronization, database storage by fetch handlers + dm_engine_data filter access system, modular WordPress publish handler (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`) with configuration hierarchy, universal handler settings template system eliminating modal code duplication, Composer-managed ai-http-client dependency. See `CLAUDE.md` for complete technical specifications.
+**Architecture**: PSR-4 autoloading, filter-based service discovery, centralized engine data architecture with `EngineData.php` filter providing unified `dm_engine_data` access (replaces direct database patterns), clean AI data packets with structured engine parameters, centralized cache system via Actions/Cache.php with WordPress action-based clearing, 5-tier AI directive system with auto-registration (PluginCoreDirective, GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, SiteContextDirective), enhanced tool discovery in UpdateStep with handler slug matching and partial name matching, AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution, AutoSave system with complete pipeline persistence and flow synchronization, modular WordPress publish handler (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`) with configuration hierarchy, universal handler settings template system eliminating modal code duplication, Composer-managed ai-http-client dependency. See `CLAUDE.md` for complete technical specifications.
 
 ## License
 

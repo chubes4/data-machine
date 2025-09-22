@@ -193,8 +193,6 @@ function dm_register_pipelines_admin_page_filters() {
     // Register authentication AJAX handlers
     \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineAuthAjax::register();
     
-    
-    
     // Pipeline auto-save hook moved to DataMachineActions.php for architectural consistency
     
     // Universal modal AJAX integration - no component-specific handlers needed

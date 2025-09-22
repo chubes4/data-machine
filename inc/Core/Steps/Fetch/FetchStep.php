@@ -113,29 +113,20 @@ class FetchStep {
                 if (isset($result['processed_items']) && is_array($result['processed_items']) && !empty($result['processed_items'])) {
                     $item_data = $result['processed_items'][0];
 
-                    // Universal file parameter extraction for all handlers
-                    if (isset($item_data['file_path'])) {
-                        // File-based data (Files handler, Reddit images, etc.)
-                        $title = $item_data['metadata']['original_title'] ?? $item_data['file_name'] ?? 'File';
-                        $body = $item_data['data']['content_string'] ?? '';
+                    // Universal data extraction using standardized structure
+                    $title = $item_data['data']['title'] ?? $item_data['metadata']['original_title'] ?? '';
+                    $body = $item_data['data']['content'] ?? '';
 
-                        // If no content string, create basic file info
-                        if (empty($body)) {
-                            $body = "File: " . ($item_data['file_name'] ?? '') . "\nType: " . ($item_data['mime_type'] ?? '') . "\nSize: " . ($item_data['file_size'] ?? 0) . " bytes";
-                        }
-
+                    // Handle file info if present
+                    $file_info = $item_data['data']['file_info'] ?? null;
+                    if ($file_info) {
                         $result['metadata'] = array_merge($result['metadata'] ?? [], [
-                            'file_path' => $item_data['file_path'],
-                            'file_name' => $item_data['file_name'] ?? '',
-                            'mime_type' => $item_data['mime_type'] ?? '',
-                            'file_size' => $item_data['file_size'] ?? 0
+                            'file_path' => $file_info['file_path'],
+                            'file_name' => $file_info['file_name'] ?? '',
+                            'mime_type' => $file_info['mime_type'] ?? '',
+                            'file_size' => $file_info['file_size'] ?? 0
                         ], $item_data['metadata'] ?? []);
                     } else {
-                        // Text-only data (RSS, WordPress, etc.)
-                        $content_string = $item_data['data']['content_string'] ?? '';
-                        $title = $item_data['metadata']['original_title'] ?? '';
-                        $body = $content_string;
-
                         $result['metadata'] = array_merge($result['metadata'] ?? [], $item_data['metadata'] ?? []);
                     }
                 } else {
@@ -200,5 +191,3 @@ class FetchStep {
         return class_exists($class_name) ? new $class_name() : null;
     }
 }
-
-

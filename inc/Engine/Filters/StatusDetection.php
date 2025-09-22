@@ -464,5 +464,3 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
     
     return $customizations;
 }
-
-

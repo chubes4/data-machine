@@ -44,8 +44,6 @@ function dm_register_importexport_filters() {
 
 dm_register_importexport_filters();
 
-
-
 /**
  * Register core backend processing filters.
  * 
@@ -270,5 +268,3 @@ function dm_register_utility_filters() {
     
     
 }
-
-

@@ -41,8 +41,6 @@ class PipelinePageAjax
      */
 
 
-
-
     /**
      * Save flow schedule configuration
      */
@@ -154,8 +152,6 @@ class PipelinePageAjax
     }
 
 
-
-
     /**
      * Refresh pipeline status for real-time updates - individual step statuses
      */
@@ -203,7 +199,5 @@ class PipelinePageAjax
             'pipeline_id' => $pipeline_id
         ]);
     }
-
-
 
 }

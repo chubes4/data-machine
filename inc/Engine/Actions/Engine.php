@@ -9,10 +9,6 @@
 defined('ABSPATH') || exit;
 
 
-/**
- * Register Data Machine execution engine actions.
- * Registers three core actions for the pipeline execution cycle.
- */
 function dm_register_execution_engine() {
 
     add_action('dm_run_flow_now', function($flow_id) {
@@ -129,7 +125,6 @@ function dm_register_execution_engine() {
             $step_class = $step_definition['class'] ?? '';
             $flow_step = new $step_class();
             
-            // Build core parameters for step execution (engine data accessed separately via dm_engine_data filter)
             $parameters = [
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id,
@@ -137,7 +132,6 @@ function dm_register_execution_engine() {
                 'data' => $data ?: []
             ];
             
-            // Set global execution context
             add_filter('dm_current_flow_step_id', function() use ($flow_step_id) { return $flow_step_id; }, 100);
             add_filter('dm_current_job_id', function() use ($job_id) { return $job_id; }, 100);
 

@@ -79,16 +79,27 @@ class Files {
         $file_identifier = $next_file['persistent_path'];
         $mime_type = $next_file['mime_type'] ?? 'application/octet-stream';
 
-        $item_data = [
+        $content_data = [
+            'title' => $next_file['original_name'],
+            'content' => 'File: ' . $next_file['original_name'] . "\nType: " . $mime_type . "\nSize: " . ($next_file['size'] ?? 0) . ' bytes'
+        ];
+
+        $file_info = [
             'file_path' => $next_file['persistent_path'],
-            'file_name' => $next_file['original_name'], 
+            'file_name' => $next_file['original_name'],
             'mime_type' => $mime_type,
-            'file_size' => $next_file['size'] ?? 0,
-            'source_type' => 'files',
-            'item_identifier_to_log' => $file_identifier,
-            'original_id' => $file_identifier,
-            'original_title' => $next_file['original_name'],
-            'original_date_gmt' => $next_file['uploaded_at'] ?? gmdate('Y-m-d H:i:s')
+            'file_size' => $next_file['size'] ?? 0
+        ];
+
+        $item_data = [
+            'data' => array_merge($content_data, ['file_info' => $file_info]),
+            'metadata' => [
+                'source_type' => 'files',
+                'item_identifier_to_log' => $file_identifier,
+                'original_id' => $file_identifier,
+                'original_title' => $next_file['original_name'],
+                'original_date_gmt' => $next_file['uploaded_at'] ?? gmdate('Y-m-d H:i:s')
+            ]
         ];
 
         // Generate public URL for image files (for WordPress featured images, etc.)
@@ -229,4 +240,3 @@ class Files {
         return true;
     }
 }
-

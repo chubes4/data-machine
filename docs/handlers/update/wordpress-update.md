@@ -13,7 +13,7 @@ Updates existing WordPress posts and pages in the local installation using nativ
 ## Required Parameters
 
 **Tool Call Parameters**:
-- `source_url`: WordPress post/page URL (required for post identification, provided by engine data from fetch handlers)
+- `source_url`: WordPress post/page URL (required for post identification, provided by centralized engine data via dm_engine_data filter)
 
 **Optional Update Parameters**:
 - `title`: New post title (updates `post_title`)
@@ -26,8 +26,10 @@ Updates existing WordPress posts and pages in the local installation using nativ
 
 **Basic Content Update**:
 ```php
+// Note: source_url is automatically provided via centralized dm_engine_data filter
+// from the fetch handler that originally retrieved the content
 $parameters = [
-    'source_url' => 'https://site.com/existing-post/',
+    'source_url' => 'https://site.com/existing-post/',  // From engine data
     'content' => 'Updated post content with <strong>HTML formatting</strong>.'
 ];
 
@@ -164,7 +166,9 @@ $parameters = [
 
 ## Workflow Integration
 
-**Source URL Requirement**: Requires source URL from metadata for post identification, making it suitable for content update workflows.
+**Source URL Requirement**: Requires source URL from centralized engine data via dm_engine_data filter for post identification, making it suitable for content update workflows.
+
+**Enhanced Tool Discovery**: UpdateStep implements intelligent tool result detection with handler slug matching and partial name matching for improved AI workflow integration.
 
 **Metadata Preservation**: Maintains existing post metadata, publication dates, and author information.
 

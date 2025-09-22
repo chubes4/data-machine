@@ -212,12 +212,12 @@ class GoogleSheetsFetch {
             'total_rows' => count($all_data)
         ];
 
+        $content_data = [
+            'title' => 'Google Sheets Data: ' . $worksheet_name,
+            'content' => json_encode($all_data, JSON_PRETTY_PRINT)
+        ];
         $fetch_data = [
-            'data' => [
-                'content_string' => json_encode($all_data, JSON_PRETTY_PRINT),
-                'structured_data' => $all_data,
-                'file_info' => null
-            ],
+            'data' => array_merge($content_data, ['file_info' => null]),
             'metadata' => $metadata
         ];
 
@@ -290,12 +290,12 @@ class GoogleSheetsFetch {
                 'headers' => $headers
             ];
 
+            $content_data = [
+                'title' => 'Row ' . ($i + 1) . ' Data',
+                'content' => json_encode($row_data, JSON_PRETTY_PRINT)
+            ];
             $fetch_data = [
-                'data' => [
-                    'content_string' => json_encode($row_data, JSON_PRETTY_PRINT),
-                    'structured_data' => $row_data,
-                    'file_info' => null
-                ],
+                'data' => array_merge($content_data, ['file_info' => null]),
                 'metadata' => $metadata
             ];
             
@@ -379,12 +379,12 @@ class GoogleSheetsFetch {
                 'headers' => $headers
             ];
 
+            $content_data = [
+                'title' => 'Column: ' . $column_header,
+                'content' => json_encode([$column_header => $column_data], JSON_PRETTY_PRINT)
+            ];
             $fetch_data = [
-                'data' => [
-                    'content_string' => json_encode([$column_header => $column_data], JSON_PRETTY_PRINT),
-                    'structured_data' => [$column_header => $column_data],
-                    'file_info' => null
-                ],
+                'data' => array_merge($content_data, ['file_info' => null]),
                 'metadata' => $metadata
             ];
 
