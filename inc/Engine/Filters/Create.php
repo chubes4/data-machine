@@ -202,7 +202,7 @@ class Create {
             ];
         }
 
-        $update_success = $db_flows->update_flow($flow_id, [
+        $update_success = apply_filters('dm_update_flow', false, $flow_id, [
             'flow_config' => json_encode($flow_config)
         ]);
 
@@ -472,7 +472,7 @@ class Create {
         ]);
 
         if (wp_doing_ajax()) {
-            $flow_data = $db_flows->get_flow($flow_id);
+            $flow_data = apply_filters('dm_get_flow', null, $flow_id);
             $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
             do_action('dm_clear_pipeline_cache', $pipeline_id);
 
@@ -519,7 +519,7 @@ class Create {
         }
 
         // Get source flow data
-        $source_flow = $db_flows->get_flow($source_flow_id);
+        $source_flow = apply_filters('dm_get_flow', null, $source_flow_id);
         if (!$source_flow) {
             do_action('dm_log', 'error', 'Source flow not found for duplication', ['source_flow_id' => $source_flow_id]);
             return false;
@@ -558,7 +558,7 @@ class Create {
 
         $remapped_config = $this->remap_flow_step_ids($source_flow['flow_config'], $source_flow_id, $new_flow_id);
 
-        $update_success = $db_flows->update_flow($new_flow_id, [
+        $update_success = apply_filters('dm_update_flow', false, $new_flow_id, [
             'flow_config' => json_encode($remapped_config)
         ]);
 
@@ -580,7 +580,7 @@ class Create {
         do_action('dm_flow_duplicated', $source_flow['pipeline_id']);
 
         if (wp_doing_ajax()) {
-            $duplicated_flow_data = $db_flows->get_flow($new_flow_id);
+            $duplicated_flow_data = apply_filters('dm_get_flow', null, $new_flow_id);
             $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $source_flow['pipeline_id']);
             do_action('dm_clear_pipeline_cache', $source_flow['pipeline_id']);
 

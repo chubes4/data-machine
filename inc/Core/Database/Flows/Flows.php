@@ -461,158 +461,195 @@ class Flows {
     }
 
     /**
-     * Update display orders for multiple flows in a pipeline
+     * Update display orders for multiple flows in a pipeline using bulk operation
      */
     public function update_flow_display_orders(int $pipeline_id, array $flow_orders): bool {
         if (empty($flow_orders)) {
             return true;
         }
 
-        $success = true;
-        
+        // Update each flow using WordPress native update() method
+        $success_count = 0;
+
         foreach ($flow_orders as $flow_id => $display_order) {
             $result = $this->wpdb->update(
                 $this->table_name,
                 ['display_order' => (int)$display_order],
-                [
-                    'flow_id' => (int)$flow_id,
-                    'pipeline_id' => $pipeline_id
-                ],
+                ['flow_id' => (int)$flow_id, 'pipeline_id' => $pipeline_id],
                 ['%d'],
                 ['%d', '%d']
             );
-            
-            if ($result === false) {
-                do_action('dm_log', 'error', 'Failed to update flow display order', [
-                    'flow_id' => $flow_id,
-                    'display_order' => $display_order,
-                    'pipeline_id' => $pipeline_id,
-                    'wpdb_error' => $this->wpdb->last_error
-                ]);
-                $success = false;
+
+            if ($result !== false) {
+                $success_count++;
             }
         }
-        
-        if ($success) {
-            do_action('dm_log', 'debug', 'Flow display orders updated successfully', [
-                'pipeline_id' => $pipeline_id,
-                'updated_flows' => count($flow_orders)
-            ]);
 
-            // Clear pipeline flows cache since display order affects flow ordering
-            do_action('dm_clear_pipeline_cache', $pipeline_id);
+        $result = ($success_count === count($flow_orders)) ? $success_count : false;
+
+        if ($result === false) {
+            do_action('dm_log', 'error', 'Failed to bulk update flow display orders', [
+                'pipeline_id' => $pipeline_id,
+                'flow_count' => count($flow_orders),
+                'wpdb_error' => $this->wpdb->last_error
+            ]);
+            return false;
+        }
+
+        do_action('dm_log', 'debug', 'Flow display orders updated successfully', [
+            'pipeline_id' => $pipeline_id,
+            'updated_flows' => count($flow_orders),
+            'successful_updates' => $result
+        ]);
+
+        // Clear pipeline flows cache since display order affects flow ordering
+        do_action('dm_clear_pipeline_cache', $pipeline_id);
+
+        return true;
+    }
+
+    /**
+     * Move a flow up in the display order using fresh data and bulk update
+     */
+    public function move_flow_up(int $flow_id): bool {
+        // Get flow to determine pipeline_id
+        $flow = $this->get_flow($flow_id);
+        if (!$flow) {
+            return false;
+        }
+
+        $pipeline_id = (int)$flow['pipeline_id'];
+
+        // Clear cache FIRST to ensure we get fresh data for position calculations
+        do_action('dm_clear_pipeline_cache', $pipeline_id);
+
+        // Get fresh flows data after cache clear
+        $flows = $this->get_flows_for_pipeline($pipeline_id);
+
+        if (empty($flows)) {
+            return false;
+        }
+
+        // Find current flow and previous flow by display_order using fresh data
+        $current_flow = null;
+        $prev_flow = null;
+
+        // First pass: find the current flow in fresh data
+        foreach ($flows as $pipeline_flow) {
+            if ((int)$pipeline_flow['flow_id'] === $flow_id) {
+                $current_flow = $pipeline_flow;
+                break;
+            }
+        }
+
+        if (!$current_flow) {
+            return false; // Flow not found in fresh data
+        }
+
+        $current_display_order = (int)$current_flow['display_order'];
+
+        // Second pass: find previous flow
+        foreach ($flows as $pipeline_flow) {
+            if ((int)$pipeline_flow['display_order'] < $current_display_order) {
+                if (!$prev_flow || (int)$pipeline_flow['display_order'] > (int)$prev_flow['display_order']) {
+                    $prev_flow = $pipeline_flow;
+                }
+            }
+        }
+
+        if (!$current_flow || !$prev_flow) {
+            return false; // Already at the top or flow not found
+        }
+
+        // Swap positions using bulk update
+        $flow_orders = [
+            (int)$current_flow['flow_id'] => (int)$prev_flow['display_order'],
+            (int)$prev_flow['flow_id'] => (int)$current_flow['display_order']
+        ];
+
+        $success = apply_filters('dm_update_flow_display_orders', false, $pipeline_id, $flow_orders);
+
+        if ($success) {
+            do_action('dm_log', 'debug', 'Successfully moved flow up', [
+                'flow_id' => $flow_id,
+                'old_position' => $current_display_order,
+                'new_position' => (int)$prev_flow['display_order']
+            ]);
         }
 
         return $success;
     }
 
     /**
-     * Move a flow up in the display order (swap with previous flow)
-     */
-    public function move_flow_up(int $flow_id): bool {
-
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-        $current_flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT flow_id, pipeline_id, display_order FROM %i WHERE flow_id = %d", $this->table_name, $flow_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-        
-        if (!$current_flow) {
-            return false;
-        }
-        
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-        $prev_flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT flow_id, display_order FROM %i WHERE pipeline_id = %d AND display_order < %d ORDER BY display_order DESC LIMIT 1", $this->table_name, $current_flow['pipeline_id'], $current_flow['display_order'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-
-        if (!$prev_flow) {
-            return false; // Already at the top
-        }
-        
-        return $this->swap_flow_positions($current_flow, $prev_flow);
-    }
-
-    /**
-     * Move a flow down in the display order (swap with next flow)
+     * Move a flow down in the display order using fresh data and bulk update
      */
     public function move_flow_down(int $flow_id): bool {
+        // Get flow to determine pipeline_id
+        $flow = $this->get_flow($flow_id);
+        if (!$flow) {
+            return false;
+        }
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-        $current_flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT flow_id, pipeline_id, display_order FROM %i WHERE flow_id = %d", $this->table_name, $flow_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-        
+        $pipeline_id = (int)$flow['pipeline_id'];
+
+        // Clear cache FIRST to ensure we get fresh data for position calculations
+        do_action('dm_clear_pipeline_cache', $pipeline_id);
+
+        // Get fresh flows data after cache clear
+        $flows = $this->get_flows_for_pipeline($pipeline_id);
+
+        if (empty($flows)) {
+            return false;
+        }
+
+        // Find current flow and next flow by display_order using fresh data
+        $current_flow = null;
+        $next_flow = null;
+
+        // First pass: find the current flow in fresh data
+        foreach ($flows as $pipeline_flow) {
+            if ((int)$pipeline_flow['flow_id'] === $flow_id) {
+                $current_flow = $pipeline_flow;
+                break;
+            }
+        }
+
         if (!$current_flow) {
-            return false;
+            return false; // Flow not found in fresh data
         }
-        
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-        $next_flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT flow_id, display_order FROM %i WHERE pipeline_id = %d AND display_order > %d ORDER BY display_order ASC LIMIT 1", $this->table_name, $current_flow['pipeline_id'], $current_flow['display_order'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-        
-        if (!$next_flow) {
-            return false; // Already at the bottom
+
+        $current_display_order = (int)$current_flow['display_order'];
+
+        // Second pass: find next flow
+        foreach ($flows as $pipeline_flow) {
+            if ((int)$pipeline_flow['display_order'] > $current_display_order) {
+                if (!$next_flow || (int)$pipeline_flow['display_order'] < (int)$next_flow['display_order']) {
+                    $next_flow = $pipeline_flow;
+                }
+            }
         }
-        
-        return $this->swap_flow_positions($current_flow, $next_flow);
+
+        if (!$current_flow || !$next_flow) {
+            return false; // Already at the bottom or flow not found
+        }
+
+        // Swap positions using bulk update
+        $flow_orders = [
+            (int)$current_flow['flow_id'] => (int)$next_flow['display_order'],
+            (int)$next_flow['flow_id'] => (int)$current_flow['display_order']
+        ];
+
+        $success = apply_filters('dm_update_flow_display_orders', false, $pipeline_id, $flow_orders);
+
+        if ($success) {
+            do_action('dm_log', 'debug', 'Successfully moved flow down', [
+                'flow_id' => $flow_id,
+                'old_position' => $current_display_order,
+                'new_position' => (int)$next_flow['display_order']
+            ]);
+        }
+
+        return $success;
     }
 
-    /**
-     * Swap the display_order values of two flows
-     */
-    private function swap_flow_positions(array $flow1, array $flow2): bool {
-        
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-        $this->wpdb->query('START TRANSACTION');
-        
-        try {
-            $result1 = $this->wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-                $this->table_name,
-                ['display_order' => $flow2['display_order']],
-                ['flow_id' => $flow1['flow_id']],
-                ['%d'],
-                ['%d']
-            );
-            
-            $result2 = $this->wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-                $this->table_name,
-                ['display_order' => $flow1['display_order']],
-                ['flow_id' => $flow2['flow_id']],
-                ['%d'],
-                ['%d']
-            );
-            
-            if ($result1 === false || $result2 === false) {
-                $this->wpdb->query('ROLLBACK'); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-                
-                do_action('dm_log', 'error', 'Failed to swap flow positions', [
-                    'flow1_id' => $flow1['flow_id'],
-                    'flow2_id' => $flow2['flow_id'],
-                    'wpdb_error' => $this->wpdb->last_error
-                ]);
-                
-                return false;
-            }
-            
-            $this->wpdb->query('COMMIT'); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-            
-            do_action('dm_log', 'debug', 'Successfully swapped flow positions', [
-                'flow1_id' => $flow1['flow_id'],
-                'flow1_new_order' => $flow2['display_order'],
-                'flow2_id' => $flow2['flow_id'],
-                'flow2_new_order' => $flow1['display_order']
-            ]);
-
-            // Clear pipeline cache since flow positions affect ordering
-            if (!empty($flow1['pipeline_id'])) {
-                do_action('dm_clear_pipeline_cache', $flow1['pipeline_id']);
-            }
-
-            return true;
-            
-        } catch (\Exception $e) {
-            $this->wpdb->query('ROLLBACK'); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-            
-            do_action('dm_log', 'error', 'Exception during flow position swap', [
-                'flow1_id' => $flow1['flow_id'],
-                'flow2_id' => $flow2['flow_id'],
-                'error' => $e->getMessage()
-            ]);
-            
-            return false;
-        }
-    }
 }

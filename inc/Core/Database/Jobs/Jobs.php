@@ -31,9 +31,6 @@ class Jobs {
         return $this->operations->create_job($job_data);
     }
 
-    public function get_job(int $job_id): ?object {
-        return $this->operations->get_job($job_id);
-    }
 
     public function get_jobs_count(): int {
         return $this->operations->get_jobs_count();
@@ -98,16 +95,6 @@ class Jobs {
         ) $charset_collate;";
 
         dbDelta( $sql );
-
-        // Migration: Add engine_data column if table exists but column doesn't
-        $existing_columns = $wpdb->get_col("DESCRIBE {$table_name}");
-        if (!in_array('engine_data', $existing_columns)) {
-            $wpdb->query("ALTER TABLE {$table_name} ADD COLUMN engine_data longtext NULL");
-            do_action('dm_log', 'debug', 'Added engine_data column to existing jobs table', [
-                'table_name' => $table_name,
-                'action' => 'migrate_engine_data_column'
-            ]);
-        }
 
         do_action('dm_log', 'debug', 'Created jobs database table with pipeline+flow architecture', [
             'table_name' => $table_name,

@@ -114,13 +114,13 @@ class PipelineAutoSaveAjax
         }
 
         // Get existing flow to extract pipeline_id for auto-save
-        $flow = $db_flows->get_flow($flow_id);
+        $flow = apply_filters('dm_get_flow', null, $flow_id);
         if (!$flow) {
             wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);
         }
 
         // Update flow title
-        $success = $db_flows->update_flow($flow_id, [
+        $success = apply_filters('dm_update_flow', false, $flow_id, [
             'flow_name' => $flow_title
         ]);
 
@@ -128,9 +128,7 @@ class PipelineAutoSaveAjax
             wp_send_json_error(['message' => __('Failed to save flow title', 'data-machine')]);
         }
 
-        // Clear flow cache after successful title save
         $pipeline_id = (int) $flow['pipeline_id'];
-        do_action('dm_clear_flow_cache', $flow_id);
 
         wp_send_json_success([
             'message' => __('Flow title saved successfully', 'data-machine'),
@@ -172,12 +170,10 @@ class PipelineAutoSaveAjax
                 $db_flows = $all_databases['flows'] ?? null;
 
                 if ($db_flows) {
-                    $flow = $db_flows->get_flow($flow_id);
+                    $flow = apply_filters('dm_get_flow', null, $flow_id);
                     if ($flow && !empty($flow['pipeline_id'])) {
                         $pipeline_id = (int) $flow['pipeline_id'];
 
-                        // Clear flow cache before response (user message affects flow configuration)
-                        do_action('dm_clear_flow_cache', $flow_id);
 
                         // Clear pipeline cache for broader invalidation
                         do_action('dm_clear_pipeline_cache', $pipeline_id);

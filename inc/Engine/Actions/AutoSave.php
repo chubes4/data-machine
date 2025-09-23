@@ -93,7 +93,7 @@ class AutoSave
                 }
             }
 
-            $flow_success = $db_flows->update_flow($flow_id, [
+            $flow_success = apply_filters('dm_update_flow', false, $flow_id, [
                 'flow_name' => $flow['flow_name'],
                 'flow_config' => wp_json_encode($flow_config),
                 'scheduling_config' => wp_json_encode($flow['scheduling_config'])

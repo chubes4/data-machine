@@ -148,7 +148,8 @@ function dm_register_database_filters() {
         }
         $flow_id = $parts['flow_id'];
         
-        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        $flow = apply_filters('dm_get_flow', null, $flow_id);
+        $flow_config = $flow['flow_config'] ?? [];
         return $flow_config[$flow_step_id] ?? [];
     }, 10, 2);
     
@@ -162,7 +163,8 @@ function dm_register_database_filters() {
         $current_execution_order = $current_config['execution_order'];
         $next_execution_order = $current_execution_order + 1;
 
-        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        $flow = apply_filters('dm_get_flow', null, $flow_id);
+        $flow_config = $flow['flow_config'] ?? [];
         if (empty($flow_config)) {
             return null;
         }
@@ -186,7 +188,8 @@ function dm_register_database_filters() {
         $current_execution_order = $current_config['execution_order'];
         $previous_execution_order = $current_execution_order - 1;
 
-        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        $flow = apply_filters('dm_get_flow', null, $flow_id);
+        $flow_config = $flow['flow_config'] ?? [];
         if (empty($flow_config)) {
             return null;
         }
@@ -284,4 +287,78 @@ function dm_register_database_filters() {
         
         return $is_processed;
     }, 10, 4);
+
+    add_filter('dm_get_job', function($default, $job_id) {
+        $all_databases = apply_filters('dm_db', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
+
+        if (!$db_jobs) {
+            do_action('dm_log', 'error', 'Job access failed - database service unavailable', ['job_id' => $job_id]);
+            return null;
+        }
+
+        return $db_jobs->get_job($job_id);
+    }, 10, 2);
+
+    add_filter('dm_get_flow', function($default, $flow_id) {
+        $all_databases = apply_filters('dm_db', []);
+        $db_flows = $all_databases['flows'] ?? null;
+
+        if (!$db_flows) {
+            do_action('dm_log', 'error', 'Flow access failed - database service unavailable', ['flow_id' => $flow_id]);
+            return null;
+        }
+
+        return $db_flows->get_flow($flow_id);
+    }, 10, 2);
+
+    add_filter('dm_update_flow', function($default, $flow_id, $update_data) {
+        $all_databases = apply_filters('dm_db', []);
+        $db_flows = $all_databases['flows'] ?? null;
+
+        if (!$db_flows) {
+            do_action('dm_log', 'error', 'Flow update failed - database service unavailable', [
+                'flow_id' => $flow_id,
+                'update_fields' => array_keys($update_data)
+            ]);
+            return false;
+        }
+
+        $success = $db_flows->update_flow($flow_id, $update_data);
+
+        if ($success) {
+            do_action('dm_clear_flow_cache', $flow_id);
+            do_action('dm_log', 'debug', 'Flow updated via centralized filter', [
+                'flow_id' => $flow_id,
+                'updated_fields' => array_keys($update_data)
+            ]);
+        }
+
+        return $success;
+    }, 10, 3);
+
+    add_filter('dm_update_flow_display_orders', function($default, $pipeline_id, $flow_orders) {
+        $all_databases = apply_filters('dm_db', []);
+        $db_flows = $all_databases['flows'] ?? null;
+
+        if (!$db_flows) {
+            do_action('dm_log', 'error', 'Flow display orders update failed - database service unavailable', [
+                'pipeline_id' => $pipeline_id,
+                'flow_count' => count($flow_orders)
+            ]);
+            return false;
+        }
+
+        $success = $db_flows->update_flow_display_orders($pipeline_id, $flow_orders);
+
+        if ($success) {
+            do_action('dm_clear_pipeline_cache', $pipeline_id);
+            do_action('dm_log', 'debug', 'Flow display orders updated via centralized filter', [
+                'pipeline_id' => $pipeline_id,
+                'updated_flows' => count($flow_orders)
+            ]);
+        }
+
+        return $success;
+    }, 10, 3);
 }

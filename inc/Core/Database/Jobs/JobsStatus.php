@@ -89,7 +89,7 @@ class JobsStatus {
         }
 
         // Get job details once for both operations
-        $job = $this->get_job($job_id);
+        $job = apply_filters('dm_get_job', null, $job_id);
         if (!$job) {
             return false;
         }
@@ -167,23 +167,5 @@ class JobsStatus {
         }
 
         return $updated !== false;
-    }
-
-    private function get_job( int $job_id ): ?object {
-        if ( empty( $job_id ) ) {
-            return null;
-        }
-        $cache_key = Cache::JOB_STATUS_CACHE_KEY . $job_id;
-        $cached_result = get_transient( $cache_key );
-
-        if ( false === $cached_result ) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $job = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE job_id = %d", $this->table_name, $job_id ), OBJECT );
-            do_action('dm_cache_set', $cache_key, $job, 30, 'jobs'); // Very short 30s cache for job status
-            $cached_result = $job;
-        } else {
-            $job = $cached_result;
-        }
-        return $job;
     }
 }

@@ -72,8 +72,11 @@ class ModalAjax
                 $content = $modal_data['content'];
             } elseif (isset($modal_data['template'])) {
                 // Dynamic content via dm_render_template (has access to AJAX context)
-                $context_raw = $_POST['context'] ?? []; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-                $context_raw = wp_unslash($context_raw);
+                if (isset($_POST['context']) && is_array($_POST['context'])) {
+                    $context_raw = array_map('sanitize_text_field', wp_unslash($_POST['context']));
+                } else {
+                    $context_raw = sanitize_text_field(wp_unslash($_POST['context'] ?? ''));
+                }
 
                 // Decode/sanitize based on type after unslashing
                 if (is_string($context_raw)) {
@@ -136,7 +139,7 @@ class ModalAjax
                 $db_flows = $all_databases['flows'] ?? null;
                 
                 if ($db_flows) {
-                    $flow = $db_flows->get_flow($context['flow_id']);
+                    $flow = apply_filters('dm_get_flow', null, $context['flow_id']);
                     if ($flow) {
                         // Database method already decodes JSON - just handle missing data
                         $scheduling_config = $flow['scheduling_config'] ?? [];

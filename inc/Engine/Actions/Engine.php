@@ -25,7 +25,7 @@ function dm_register_execution_engine() {
             return false;
         }
         
-        $flow = $db_flows->get_flow($flow_id);
+        $flow = apply_filters('dm_get_flow', null, $flow_id);
         if (!$flow) {
             do_action('dm_log', 'error', 'Flow execution failed - flow not found', ['flow_id' => $flow_id]);
             return false;
@@ -43,7 +43,8 @@ function dm_register_execution_engine() {
             ]);
             return false;
         }
-        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        $flow = apply_filters('dm_get_flow', null, $flow_id);
+        $flow_config = $flow['flow_config'] ?? [];
 
         $first_flow_step_id = null;
         foreach ($flow_config as $flow_step_id => $config) {

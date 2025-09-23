@@ -187,19 +187,15 @@ $uses_oauth = method_exists($auth_instance, 'get_authorization_url') || method_e
                         <?php
                         // Get direct provider authorization URL - bare metal connection
                         $oauth_url = apply_filters('dm_oauth_url', '', $handler_slug);
-                        
+
                         // Handle errors from authorization URL generation
                         if (is_wp_error($oauth_url)) {
                             $oauth_url = '#';
-                            $has_config = false; // Disable button if URL generation failed
-                        } else {
-                            $has_config = !empty($current_config);
                         }
                         ?>
-                        <button type="button" class="button button-primary dm-connect-oauth" 
+                        <button type="button" class="button button-primary dm-connect-oauth"
                                 data-handler="<?php echo esc_attr($handler_slug); ?>"
-                                data-oauth-url="<?php echo esc_attr($oauth_url); ?>"
-                                <?php if (!$has_config): ?>disabled title="<?php esc_attr_e('Save configuration first', 'data-machine'); ?>"<?php endif; ?>>
+                                data-oauth-url="<?php echo esc_attr($oauth_url); ?>">
                             <?php /* translators: %s: Handler name/label */ ?>
                             <?php echo esc_html(sprintf(__('Connect %s', 'data-machine'), $handler_label)); ?>
                         </button>

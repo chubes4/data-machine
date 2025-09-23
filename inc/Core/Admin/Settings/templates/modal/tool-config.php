@@ -47,8 +47,10 @@ $tool_config = apply_filters('dm_get_tool_config', [], $tool_id);
                 ?>
                 <div class="dm-tool-config-container">
                     <div class="dm-tool-config-header">
-                        <!-- translators: %s: tool name -->
-                        <h3><?php echo esc_html(sprintf(__('Configure %s', 'data-machine'), ucwords(str_replace('_', ' ', $tool_id)))); ?></h3>
+                        <?php
+                        /* translators: %s: tool name */
+                        echo '<h3>' . esc_html(sprintf(__('Configure %s', 'data-machine'), ucwords(str_replace('_', ' ', $tool_id)))) . '</h3>';
+                        ?>
                     </div>
 
                     <form id="dm-<?php echo esc_attr($tool_id); ?>-config-form" data-tool-id="<?php echo esc_attr($tool_id); ?>">
@@ -93,8 +95,10 @@ $tool_config = apply_filters('dm_get_tool_config', [], $tool_id);
                 ?>
                 <div class="dm-tool-config-container">
                     <div class="dm-tool-config-header">
-                        <!-- translators: %s: tool name -->
-                        <h3><?php echo esc_html(sprintf(__('Configure %s', 'data-machine'), ucwords(str_replace('_', ' ', $tool_id)))); ?></h3>
+                        <?php
+                        /* translators: %s: tool name */
+                        echo '<h3>' . esc_html(sprintf(__('Configure %s', 'data-machine'), ucwords(str_replace('_', ' ', $tool_id)))) . '</h3>';
+                        ?>
                         <p><?php esc_html_e('This tool does not require any configuration.', 'data-machine'); ?></p>
                     </div>
                 </div>
@@ -105,8 +109,10 @@ $tool_config = apply_filters('dm_get_tool_config', [], $tool_id);
             ?>
             <div class="dm-tool-config-container">
                 <div class="dm-tool-config-header">
-                    <!-- translators: %s: tool name -->
-                    <h3><?php echo esc_html(sprintf(__('Configure %s', 'data-machine'), ucwords(str_replace('_', ' ', $tool_id)))); ?></h3>
+                    <?php
+                    /* translators: %s: tool name */
+                    echo '<h3>' . esc_html(sprintf(__('Configure %s', 'data-machine'), ucwords(str_replace('_', ' ', $tool_id)))) . '</h3>';
+                    ?>
                     <p><?php esc_html_e('This tool does not require any configuration.', 'data-machine'); ?></p>
                 </div>
             </div>

@@ -35,10 +35,11 @@ class AIStep {
             $mime_type = null;
             if (!empty($data)) {
                 $first_item = $data[0] ?? [];
-                $metadata = $first_item['metadata'] ?? [];
-                if (isset($metadata['file_path']) && file_exists($metadata['file_path'])) {
-                    $file_path = $metadata['file_path'];
-                    $mime_type = $metadata['mime_type'] ?? '';
+                $file_info = $first_item['data']['file_info'] ?? null;
+
+                if ($file_info && isset($file_info['file_path']) && file_exists($file_info['file_path'])) {
+                    $file_path = $file_info['file_path'];
+                    $mime_type = $file_info['mime_type'] ?? '';
                 }
             }
             

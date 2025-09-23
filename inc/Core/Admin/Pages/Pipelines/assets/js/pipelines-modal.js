@@ -89,37 +89,70 @@
 
         /**
          * Handle direct OAuth connect button click
-         * Opens OAuth window immediately without intermediate loading modal
+         * Validates configuration before opening OAuth window
          */
         handleOAuthConnect: function(e) {
             e.preventDefault();
-            
+
             const $button = $(e.currentTarget);
             const handlerSlug = $button.data('handler');
             const oauthUrl = $button.data('oauth-url');
-            
+
             if (!handlerSlug || !oauthUrl) {
                 return;
             }
-            
+
+            // Check if configuration exists by looking for filled form fields
+            const $configForm = $('.dm-auth-config-form[data-handler="' + handlerSlug + '"]');
+            let hasConfig = false;
+
+            if ($configForm.length) {
+                // Check if any required fields have values
+                $configForm.find('input[required]').each(function() {
+                    if ($(this).val().trim() !== '') {
+                        hasConfig = true;
+                        return false; // break out of each loop
+                    }
+                });
+            }
+
+            // If no configuration, show error notice and don't open OAuth window
+            if (!hasConfig) {
+                // Remove any existing error notices first
+                $('.dm-auth-config-section .notice').remove();
+
+                // Create error notice using same pattern as handleAuthConfigSave
+                const $error = $('<div class="notice notice-error is-dismissible"><p>Please save your API configuration first before connecting your account.</p></div>');
+                $('.dm-auth-config-section').before($error);
+
+                // Auto-remove error after 5 seconds
+                setTimeout(() => {
+                    $error.fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                }, 5000);
+
+                return; // Don't proceed with OAuth
+            }
+
             // Show loading state on button
             const originalText = $button.text();
             $button.text(dmPipelineModal.strings?.connecting || 'Connecting...').prop('disabled', true);
-            
-            // Open OAuth window immediately
+
+            // Open OAuth window
             const oauthWindow = window.open(oauthUrl, 'oauth_window', 'width=600,height=700,scrollbars=yes,resizable=yes');
-            
+
             if (!oauthWindow) {
                 // Popup blocked - restore button state and exit silently
                 $button.text(originalText).prop('disabled', false);
                 return;
             }
-            
+
             // Monitor OAuth window for completion
             const checkInterval = setInterval(() => {
                 if (oauthWindow.closed) {
                     clearInterval(checkInterval);
-                    
+
                     // Restore button state
                     $button.text(originalText).prop('disabled', false);
 
@@ -133,11 +166,45 @@
          * Refresh auth modal content to show updated authentication status
          */
         refreshAuthModal: function() {
-            // Get current modal context and refresh the content
-            const $modalContent = $('.dm-modal-content').first();
-            if ($modalContent.length && $modalContent.data('template') === 'modal/handler-auth-form') {
-                const context = $modalContent.data('context') || {};
-                dmCoreModal.open('modal/handler-auth-form', context);
+            // Check if modal is actually open
+            const $modal = $('#dm-modal');
+            if (!$modal.hasClass('dm-modal-active')) {
+                return; // No modal open, nothing to refresh
+            }
+
+            // Get handler context from existing form
+            const $authForm = $('.dm-auth-config-form');
+            if ($authForm.length) {
+                const handlerSlug = $authForm.data('handler');
+
+                if (!handlerSlug) {
+                    return; // No handler context available
+                }
+
+                // Make direct AJAX call to refresh modal content with fresh authentication state
+                $.ajax({
+                    url: dmCoreModal.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'dm_get_modal_content',
+                        template: 'handler-auth-form',
+                        context: JSON.stringify({
+                            handler_slug: handlerSlug
+                        }),
+                        nonce: dmCoreModal.dm_ajax_nonce
+                    },
+                    success: (response) => {
+                        if (response.success) {
+                            // Replace modal content directly with fresh PHP-rendered content
+                            $modal.find('.dm-modal-title').text(response.data.template);
+                            $modal.find('.dm-modal-body').html(response.data.content);
+                        }
+                    },
+                    error: (xhr, status, error) => {
+                        // Silent fail - don't break the authentication flow
+                        console.log('Modal refresh failed:', error);
+                    }
+                });
             }
         },
 

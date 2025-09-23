@@ -154,14 +154,9 @@ class TwitterAuth {
             // 6. Store Request Token Secret temporarily
             set_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $request_token['oauth_token'], $request_token['oauth_token_secret'], 15 * MINUTE_IN_SECONDS);
 
-            // 6b. Generate and store state nonce for verification
-            $state = wp_create_nonce('dm_twitter_oauth_state');
-            set_transient('dm_twitter_oauth_state', $state, 15 * MINUTE_IN_SECONDS);
-
-            // 7. Return Authorization URL with state parameter
+            // 7. Return Authorization URL (OAuth 1.0a standard)
             return $connection->url('oauth/authenticate', [
-                'oauth_token' => $request_token['oauth_token'],
-                'state' => $state
+                'oauth_token' => $request_token['oauth_token']
             ]);
 
         } catch (\Exception $e) {
@@ -179,10 +174,12 @@ class TwitterAuth {
      */
     public function handle_oauth_callback() {
         // --- 1. Extract parameters using null coalescing to avoid nonce warnings ---
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth callback cannot use nonces
         $denied = sanitize_text_field(wp_unslash($_GET['denied'] ?? ''));
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth callback cannot use nonces
         $oauth_token = sanitize_text_field(wp_unslash($_GET['oauth_token'] ?? ''));
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth callback cannot use nonces
         $oauth_verifier = sanitize_text_field(wp_unslash($_GET['oauth_verifier'] ?? ''));
-        $state = sanitize_text_field(wp_unslash($_GET['state'] ?? ''));
 
         // --- 2. Initial Checks ---
         if (!current_user_can('manage_options')) {
@@ -200,19 +197,9 @@ class TwitterAuth {
         }
 
         // Check for required parameters
-        if (empty($oauth_token) || empty($oauth_verifier) || empty($state)) {
-            do_action('dm_log', 'error', 'Twitter OAuth Error: Missing oauth_token, oauth_verifier, or state in callback.');
+        if (empty($oauth_token) || empty($oauth_verifier)) {
+            do_action('dm_log', 'error', 'Twitter OAuth Error: Missing oauth_token or oauth_verifier in callback.');
             wp_redirect(add_query_arg('auth_error', 'twitter_missing_callback_params', admin_url('admin.php?page=dm-pipelines')));
-            exit;
-        }
-
-        // Verify state nonce
-        $stored_state = get_transient('dm_twitter_oauth_state');
-        delete_transient('dm_twitter_oauth_state');
-
-        if (empty($stored_state) || false === wp_verify_nonce($state, 'dm_twitter_oauth_state')) {
-            do_action('dm_log', 'error', 'Twitter OAuth Error: State mismatch or expired.');
-            wp_redirect(add_query_arg('auth_error', 'twitter_state_mismatch', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 

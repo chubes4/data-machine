@@ -67,7 +67,7 @@ class PipelinePageAjax
         }
 
         // Get existing flow
-        $flow = $db_flows->get_flow($flow_id);
+        $flow = apply_filters('dm_get_flow', null, $flow_id);
         if (!$flow) {
             wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);
         }
@@ -82,7 +82,7 @@ class PipelinePageAjax
         $scheduling_config['interval'] = $schedule_interval;
 
         // Update database
-        $result = $db_flows->update_flow($flow_id, [
+        $result = apply_filters('dm_update_flow', false, $flow_id, [
             'scheduling_config' => wp_json_encode($scheduling_config)
         ]);
 
@@ -226,7 +226,7 @@ class PipelinePageAjax
         }
 
         // Get flow data
-        $flow = $db_flows->get_flow($flow_id);
+        $flow = apply_filters('dm_get_flow', null, $flow_id);
         if (!$flow) {
             wp_send_json_error(['message' => __('Flow not found', 'data-machine')]);
         }

@@ -174,7 +174,7 @@ class ProcessedItems {
         if (!empty($criteria['flow_id']) && empty($criteria['flow_step_id'])) {
             $pattern = '%_' . $criteria['flow_id'];
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $result = $this->wpdb->query( $this->wpdb->prepare( "DELETE FROM %i WHERE flow_step_id LIKE %s", $this->table_name, $pattern ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+            $result = $this->wpdb->query( $this->wpdb->prepare( "DELETE FROM %i WHERE flow_step_id LIKE %s", $this->table_name, $pattern ) );
 
             // Clear processed items cache after deletion
             if ( $result !== false ) {
@@ -203,7 +203,7 @@ class ProcessedItems {
             $total_deleted = 0;
             foreach ($flow_patterns as $pattern) {
                 // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-                $deleted = $this->wpdb->query( $this->wpdb->prepare( "DELETE FROM %i WHERE flow_step_id LIKE %s", $this->table_name, $pattern ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+                $deleted = $this->wpdb->query( $this->wpdb->prepare( "DELETE FROM %i WHERE flow_step_id LIKE %s", $this->table_name, $pattern ) );
                 if ($deleted !== false) {
                     $total_deleted += $deleted;
                 }

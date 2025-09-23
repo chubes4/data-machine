@@ -113,13 +113,7 @@ class Pipelines {
 
 		if ( false === $cached_result ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$results = $this->wpdb->get_results(
-				$this->wpdb->prepare(
-					"SELECT * FROM %i ORDER BY pipeline_name ASC",
-					$this->table_name
-				),
-				ARRAY_A
-			);
+			$results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i ORDER BY pipeline_name ASC", $this->table_name ), ARRAY_A );
 
 			// Decode JSON fields immediately after database retrieval
 			foreach ($results as &$pipeline) {
@@ -145,13 +139,7 @@ class Pipelines {
 
 		if ( false === $cached_result ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$results = $this->wpdb->get_results(
-				$this->wpdb->prepare(
-					"SELECT pipeline_id, pipeline_name FROM %i ORDER BY pipeline_name ASC",
-					$this->table_name
-				),
-				ARRAY_A
-			);
+			$results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT pipeline_id, pipeline_name FROM %i ORDER BY pipeline_name ASC", $this->table_name ), ARRAY_A );
 			do_action('dm_cache_set', $cache_key, $results, 0, 'pipelines');
 			$cached_result = $results;
 		} else {
@@ -358,8 +346,7 @@ class Pipelines {
 		if ( false === $cached_result ) {
 			$query = sprintf( "SELECT * FROM %%i ORDER BY %s %s LIMIT %%d OFFSET %%d", $orderby, $order );
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$sql = $this->wpdb->prepare( $query, $this->table_name, $per_page, $offset );
-			$results = $this->wpdb->get_results( $sql, ARRAY_A );
+			$results = $this->wpdb->get_results( $this->wpdb->prepare( $query, $this->table_name, $per_page, $offset ), ARRAY_A );
 
 			// Decode JSON fields immediately after database retrieval
 			foreach ($results as &$pipeline) {

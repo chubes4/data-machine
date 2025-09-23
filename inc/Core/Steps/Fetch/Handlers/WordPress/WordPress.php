@@ -106,6 +106,7 @@ class WordPress {
             }
         }
         if (!empty($tax_query)) {
+            // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
             $query_args['tax_query'] = $tax_query;
         }
 

@@ -96,9 +96,8 @@ class JobsOperations {
         $cached_result = get_transient( $cache_key );
 
         if ( false === $cached_result ) {
-            $count = $this->wpdb->get_var(
-                "SELECT COUNT(job_id) FROM %i", $this->table_name
-            );
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(job_id) FROM %i", $this->table_name ) );
             do_action('dm_cache_set', $cache_key, $count, 300, 'jobs'); // 5 min cache for counts
             $cached_result = $count;
         } else {
@@ -222,9 +221,8 @@ class JobsOperations {
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             $result = $this->wpdb->query( $this->wpdb->prepare( "DELETE FROM %i WHERE status = %s", $this->table_name, 'failed' ) );
         } else {
-            $result = $this->wpdb->query(
-                "DELETE FROM %i", $this->table_name
-            );
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            $result = $this->wpdb->query( $this->wpdb->prepare( "DELETE FROM %i", $this->table_name ) );
         }
         
         do_action('dm_log', 'debug', 'Deleted jobs', [
@@ -288,12 +286,8 @@ class JobsOperations {
             return [];
         }
 
-        $result = $this->wpdb->get_var(
-            $this->wpdb->prepare(
-                "SELECT engine_data FROM {$this->table_name} WHERE job_id = %d",
-                $job_id
-            )
-        );
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $result = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT engine_data FROM %i WHERE job_id = %d", $this->table_name, $job_id ) );
 
         if (null === $result) {
             return [];

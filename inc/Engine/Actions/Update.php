@@ -204,7 +204,7 @@ class Update {
         }
         
         // Get current flow
-        $flow = $db_flows->get_flow($flow_id);
+        $flow = apply_filters('dm_get_flow', null, $flow_id);
         if (!$flow) {
             do_action('dm_log', 'error', 'Flow handler update failed - flow not found', [
                 'flow_id' => $flow_id,
@@ -212,9 +212,7 @@ class Update {
             ]);
             return false;
         }
-        
-        // Get current flow configuration using centralized filter
-        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        $flow_config = $flow['flow_config'] ?? [];
         
         // Initialize step configuration if it doesn't exist
         if (!isset($flow_config[$flow_step_id])) {
@@ -240,9 +238,9 @@ class Update {
             'settings' => $nested_settings,
             'enabled' => true
         ];
-        
+
         // Update flow with new configuration
-        $success = $db_flows->update_flow($flow_id, [
+        $success = apply_filters('dm_update_flow', false, $flow_id, [
             'flow_config' => wp_json_encode($flow_config)
         ]);
         
@@ -284,7 +282,7 @@ class Update {
         }
         
         // Validate flow exists
-        $flow = $db_flows->get_flow($flow_id);
+        $flow = apply_filters('dm_get_flow', null, $flow_id);
         if (!$flow) {
             do_action('dm_log', 'error', 'Flow steps sync failed - flow not found', [
                 'flow_id' => $flow_id,
@@ -293,9 +291,7 @@ class Update {
             ]);
             return false;
         }
-        
-        // Get current flow configuration
-        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        $flow_config = $flow['flow_config'] ?? [];
         
         // Process each step
         foreach ($steps as $step) {
@@ -324,9 +320,9 @@ class Update {
                 'handler' => null
             ];
         }
-        
+
         // Update flow configuration
-        $success = $db_flows->update_flow($flow_id, [
+        $success = apply_filters('dm_update_flow', false, $flow_id, [
             'flow_config' => wp_json_encode($flow_config)
         ]);
         
@@ -390,7 +386,7 @@ class Update {
         }
 
         // Get current flow
-        $flow = $db_flows->get_flow($flow_id);
+        $flow = apply_filters('dm_get_flow', null, $flow_id);
         if (!$flow) {
             do_action('dm_log', 'error', 'Flow user message update failed - flow not found', [
                 'flow_id' => $flow_id,
@@ -416,7 +412,7 @@ class Update {
         $flow_config[$flow_step_id]['user_message'] = wp_unslash(sanitize_textarea_field($user_message));
 
         // Update flow with new configuration
-        $success = $db_flows->update_flow($flow_id, [
+        $success = apply_filters('dm_update_flow', false, $flow_id, [
             'flow_config' => wp_json_encode($flow_config)
         ]);
 

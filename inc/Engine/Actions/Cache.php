@@ -96,7 +96,7 @@ class Cache {
 
         if ($db_flows) {
             // Get flow data FIRST before clearing any caches to avoid recursion
-            $flow = $db_flows->get_flow($flow_id);
+            $flow = apply_filters('dm_get_flow', null, $flow_id);
             $pipeline_id = $flow['pipeline_id'] ?? null;
             $flow_config = $flow['flow_config'] ?? [];
 
@@ -281,6 +281,7 @@ class Cache {
 
         $sql_pattern = str_replace('*', '%', $pattern);
 
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
         $transient_keys = $wpdb->get_col($wpdb->prepare(
             "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
             '_transient_' . $sql_pattern
@@ -291,6 +292,7 @@ class Cache {
             delete_transient($transient_name);
         }
 
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
         $timeout_keys = $wpdb->get_col($wpdb->prepare(
             "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
             '_transient_timeout_' . $sql_pattern

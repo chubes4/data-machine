@@ -70,7 +70,7 @@ class PipelineModalAjax
         }
         
     $template = sanitize_text_field(wp_unslash($_POST['template']));
-    $raw_template_data = wp_unslash($_POST['template_data'] ?? '');
+    $raw_template_data = sanitize_text_field(wp_unslash($_POST['template_data'] ?? ''));
 
         // Accept either JSON string or array; decode safely then sanitize
         if (is_string($raw_template_data)) {
@@ -182,7 +182,8 @@ class PipelineModalAjax
         }
 
         // Get flow configuration using centralized filter
-        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        $flow = apply_filters('dm_get_flow', null, $flow_id);
+        $flow_config = $flow['flow_config'] ?? [];
         
         // Return success even with empty config (normal for new flows)
         wp_send_json_success([
@@ -212,8 +213,11 @@ class PipelineModalAjax
             wp_send_json_error(['message' => __('Context data is required', 'data-machine')]);
         }
 
-        $context_raw = $_POST['context'] ?? []; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-        $context_raw = wp_unslash($context_raw);
+        if (isset($_POST['context']) && is_array($_POST['context'])) {
+            $context_raw = array_map('sanitize_text_field', wp_unslash($_POST['context']));
+        } else {
+            $context_raw = sanitize_text_field(wp_unslash($_POST['context'] ?? ''));
+        }
 
         // Decode/sanitize after unslashing
         if (is_string($context_raw)) {
@@ -251,7 +255,7 @@ class PipelineModalAjax
                 'context_values' => $context,
                 'debug_info' => [
                     'post_keys' => array_keys($_POST),
-                    'context_source' => is_string($_POST['context'] ?? null) ? 'json_string' : 'array'
+                    'context_source' => isset($_POST['context']) && is_string($_POST['context']) ? 'json_string' : 'array'
                 ]
             ]);
         }
@@ -327,9 +331,15 @@ class PipelineModalAjax
                     // Save tool selections via centralized manager
                     $tools_manager = new \DataMachine\Core\Steps\AI\AIStepTools();
                     
+                    if (isset($_POST['enabled_tools']) && is_array($_POST['enabled_tools'])) {
+                        $post_enabled_tools_for_log = array_map('sanitize_text_field', wp_unslash($_POST['enabled_tools']));
+                    } else {
+                        $post_enabled_tools_for_log = sanitize_text_field(wp_unslash($_POST['enabled_tools'] ?? ''));
+                    }
+
                     do_action('dm_log', 'debug', 'PipelineModalAjax: Before saving tool selections', [
                         'pipeline_step_id' => $pipeline_step_id,
-                        'post_enabled_tools' => array_map('sanitize_text_field', wp_unslash($_POST['enabled_tools'] ?? [])),
+                        'post_enabled_tools' => $post_enabled_tools_for_log,
                         'post_keys' => array_keys($_POST)
                     ]);
                     
@@ -372,7 +382,7 @@ class PipelineModalAjax
                     
                     $pipeline = $db_pipelines->get_pipeline($pipeline_id);
                     if (!$pipeline) {
-                        throw new \Exception('Pipeline not found: ' . $pipeline_id);
+                        throw new \Exception('Pipeline not found: ' . esc_html($pipeline_id));
                     }
                     
                     // Get current step configuration
@@ -475,8 +485,11 @@ class PipelineModalAjax
         ]);
 
         // Handle both context-based (add handler) and direct form data (save settings) scenarios
-        $context_raw = $_POST['context'] ?? []; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-        $context_raw = wp_unslash($context_raw);
+        if (isset($_POST['context']) && is_array($_POST['context'])) {
+            $context_raw = array_map('sanitize_text_field', wp_unslash($_POST['context']));
+        } else {
+            $context_raw = sanitize_text_field(wp_unslash($_POST['context'] ?? ''));
+        }
 
         if (is_string($context_raw)) {
             $decoded = json_decode($context_raw, true) ?: [];
@@ -551,13 +564,10 @@ class PipelineModalAjax
             $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
             $flow_id = $parts['flow_id'] ?? null;
 
-            // Ensure any cached flow data is invalidated before fetching
-            if (!empty($flow_id)) {
-                do_action('dm_clear_flow_cache', $flow_id);
-            }
 
             // Get updated flow configuration for immediate UI update
-            $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+            $flow = apply_filters('dm_get_flow', null, $flow_id);
+            $flow_config = $flow['flow_config'] ?? [];
             
             // Prepare success message based on action type
             $message = ($action_type === 'added')

@@ -182,7 +182,7 @@ class Delete {
      * @since 1.0.0
      */
     private function handle_flow_deletion($flow_id, $db_flows) {
-        $flow = $db_flows->get_flow($flow_id);
+        $flow = apply_filters('dm_get_flow', null, $flow_id);
         if (!$flow) {
             wp_send_json_error(['message' => __('Flow not found.', 'data-machine')]);
             return;
@@ -286,7 +286,7 @@ class Delete {
             }
             
             // Update flow with cleaned configuration
-            $db_flows->update_flow($flow_id, [
+            apply_filters('dm_update_flow', false, $flow_id, [
                 'flow_config' => json_encode($flow_config)
             ]);
         }
