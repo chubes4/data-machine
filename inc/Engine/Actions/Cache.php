@@ -51,6 +51,9 @@ class Cache {
 
         add_action('dm_clear_flow_cache', [$instance, 'handle_clear_flow_cache'], 10, 1);
         add_action('dm_clear_flow_step_cache', [$instance, 'clear_flow_step_cache'], 10, 1);
+        add_action('dm_clear_flow_config_cache', [$instance, 'handle_clear_flow_config_cache'], 10, 1);
+        add_action('dm_clear_flow_scheduling_cache', [$instance, 'handle_clear_flow_scheduling_cache'], 10, 1);
+        add_action('dm_clear_flow_steps_cache', [$instance, 'handle_clear_flow_steps_cache'], 10, 1);
         add_action('dm_clear_pipeline_cache', [$instance, 'handle_clear_pipeline_cache'], 10, 1);
         add_action('dm_clear_pipelines_list_cache', [$instance, 'handle_clear_pipelines_list_cache'], 10, 0);
         add_action('dm_clear_jobs_cache', [$instance, 'handle_clear_jobs_cache'], 10, 0);
@@ -133,10 +136,76 @@ class Cache {
                 'flow_id' => $flow_id
             ]);
         }
+    }
 
-        // Ensure fresh data across web and cron contexts
-        if (function_exists('wp_cache_flush')) {
-            wp_cache_flush();
+    /**
+     * Clear only the flow config cache for targeted updates.
+     */
+    public function handle_clear_flow_config_cache($flow_id) {
+        if (empty($flow_id)) {
+            do_action('dm_log', 'warning', 'Flow config cache clear requested with empty flow ID');
+            return;
+        }
+
+        $flow_config_key = self::FLOW_CONFIG_CACHE_KEY . $flow_id;
+        $cleared = delete_transient($flow_config_key);
+
+        do_action('dm_log', 'debug', 'Flow config cache cleared', [
+            'flow_id' => $flow_id,
+            'cache_key' => $flow_config_key,
+            'cleared' => $cleared
+        ]);
+    }
+
+    /**
+     * Clear only the flow scheduling cache for targeted updates.
+     */
+    public function handle_clear_flow_scheduling_cache($flow_id) {
+        if (empty($flow_id)) {
+            do_action('dm_log', 'warning', 'Flow scheduling cache clear requested with empty flow ID');
+            return;
+        }
+
+        $flow_scheduling_key = self::FLOW_SCHEDULING_CACHE_KEY . $flow_id;
+        $cleared = delete_transient($flow_scheduling_key);
+
+        do_action('dm_log', 'debug', 'Flow scheduling cache cleared', [
+            'flow_id' => $flow_id,
+            'cache_key' => $flow_scheduling_key,
+            'cleared' => $cleared
+        ]);
+    }
+
+    /**
+     * Clear only the flow step caches for targeted updates.
+     */
+    public function handle_clear_flow_steps_cache($flow_id) {
+        if (empty($flow_id)) {
+            do_action('dm_log', 'warning', 'Flow steps cache clear requested with empty flow ID');
+            return;
+        }
+
+        $all_databases = apply_filters('dm_db', []);
+        $db_flows = $all_databases['flows'] ?? null;
+
+        if ($db_flows) {
+            // Retrieve flow data to get step IDs
+            $flow = apply_filters('dm_get_flow', null, $flow_id);
+            $flow_config = $flow['flow_config'] ?? [];
+
+            // Clear individual flow step caches
+            foreach ($flow_config as $flow_step_id => $step_config) {
+                $this->clear_flow_step_cache($flow_step_id);
+            }
+
+            do_action('dm_log', 'debug', 'Flow steps caches cleared', [
+                'flow_id' => $flow_id,
+                'steps_count' => count($flow_config)
+            ]);
+        } else {
+            do_action('dm_log', 'warning', 'Could not clear flow steps cache - flows database not available', [
+                'flow_id' => $flow_id
+            ]);
         }
     }
 

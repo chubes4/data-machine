@@ -212,23 +212,24 @@ class Update {
             'handler_slug' => $handler_slug,
             'settings' => $nested_settings,
             'enabled' => true
-        ];
+         ];
 
-        // Update flow with new configuration
-        $success = apply_filters('dm_update_flow', false, $flow_id, [
-            'flow_config' => wp_json_encode($flow_config)
-        ]);
-        
-        if (!$success) {
-            do_action('dm_log', 'error', 'Flow handler update failed - database update failed', [
-                'flow_id' => $flow_id,
-                'flow_step_id' => $flow_step_id,
-                'handler_slug' => $handler_slug
-            ]);
-            return false;
-        }
+         // Update flow with new configuration
+         $success = apply_filters('dm_update_flow', false, $flow_id, [
+             'flow_config' => wp_json_encode($flow_config),
+             'context' => 'handler_update'
+         ]);
+         
+         if (!$success) {
+             do_action('dm_log', 'error', 'Flow handler update failed - database update failed', [
+                 'flow_id' => $flow_id,
+                 'flow_step_id' => $flow_step_id,
+                 'handler_slug' => $handler_slug
+             ]);
+             return false;
+         }
 
-        return true;
+         return true;
     }
 
     /**

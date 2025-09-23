@@ -560,31 +560,25 @@ class PipelineModalAjax
         try {
             do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $handler_settings);
 
-            // Extract flow_id for JavaScript response
-            $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
-            $flow_id = $parts['flow_id'] ?? null;
-
-
-            // Get updated flow configuration for immediate UI update
-            $flow = apply_filters('dm_get_flow', null, $flow_id);
-            $flow_config = $flow['flow_config'] ?? [];
-            
-            // Prepare success message based on action type
-            $message = ($action_type === 'added')
-                /* translators: %s: Handler name or label */
-                ? sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug)
-                /* translators: %s: Handler name or label */
-                : sprintf(__('Handler "%s" settings saved successfully.', 'data-machine'), $handler_slug);
-            
-            wp_send_json_success([
-                'message' => $message,
-                'handler_slug' => $handler_slug,
-                'step_type' => $step_type,  // Include step_type for UI updates
-                'flow_step_id' => $flow_step_id,
-                'flow_id' => $flow_id,
-                'flow_config' => $flow_config,
-                'action_type' => $action_type
-            ]);
+             // Extract flow_id for JavaScript response
+             $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+             $flow_id = $parts['flow_id'] ?? null;
+             
+             // Prepare success message based on action type
+             $message = ($action_type === 'added')
+                 /* translators: %s: Handler name or label */
+                 ? sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug)
+                 /* translators: %s: Handler name or label */
+                 : sprintf(__('Handler "%s" settings saved successfully.', 'data-machine'), $handler_slug);
+             
+             wp_send_json_success([
+                 'message' => $message,
+                 'handler_slug' => $handler_slug,
+                 'step_type' => $step_type,  // Include step_type for UI updates
+                 'flow_step_id' => $flow_step_id,
+                 'flow_id' => $flow_id,
+                 'action_type' => $action_type
+             ]);
             
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'Handler settings save failed: ' . $e->getMessage(), [

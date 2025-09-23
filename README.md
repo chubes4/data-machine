@@ -36,10 +36,10 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 **Pipeline+Flow**: Pipelines are reusable templates, Flows are configured instances
 
 **Example**: WordPress Content Enhancement System
-- **Pipeline Template**: WordPress Local → AI → WordPress Update with system prompt "You are a content optimizer. Analyze existing WordPress content and enhance it with better SEO, readability, and comprehensive information using research tools."
-- **Flow A**: Scan old blog posts → AI + Google Search tool → Update with current data and improved SEO (weekly)
-- **Flow B**: Process draft pages → AI + Local Search tool → Enhance with internal links and related content (daily)
-- **Flow C**: Review product pages → AI + WebFetch tool → Update with latest specs and competitive analysis (bi-weekly)
+- **Pipeline Template**: Fetch → AI → Update (defines workflow structure with system prompt "You are a content optimizer. Analyze existing WordPress content and enhance it with better SEO, readability, and comprehensive information using research tools.")
+- **Flow A**: WordPress Local (old blog posts) → AI + Google Search tool → WordPress Update (weekly)
+- **Flow B**: WordPress Local (draft pages) → AI + Local Search tool → WordPress Update (daily)
+- **Flow C**: WordPress Local (product pages) → AI + WebFetch tool → WordPress Update (bi-weekly)
 
 ## Quick Start
 
@@ -73,31 +73,44 @@ Auth via `/dm-oauth/{provider}/` popup flow.
 
 ### Quick Example: Document Processing System
 
-1. Create Pipeline: "PDF to WordPress"
-2. Add Steps: Files → AI → WordPress
-3. Configure: File upload + system prompt "Extract key insights and create structured WordPress posts with proper headings, summaries, and tags"
-4. Upload: Research PDFs, documentation, reports
-5. Result: Automatic WordPress posts with clean formatting and taxonomy
+1. **Create Pipeline Template**: "Document Processing" (Fetch → AI → Publish)
+2. **Add System Prompt**: "Extract key insights and create structured WordPress posts with proper headings, summaries, and tags"
+3. **Create Flow Instance**: Files handler → AI → WordPress handler
+4. **Configure Flow**: Upload PDFs, set scheduling, configure WordPress settings
+5. **Result**: Automatic WordPress posts with clean formatting and taxonomy
 
 ## Examples
 
 ### Workflow Patterns
 
-**Content Enhancement**: WordPress Local → AI (+ Google Search tool) → WordPress Update
-- Enhances existing posts with current data, better SEO, internal links
+**Content Enhancement**: Pipeline (Fetch → AI → Update) + Flow (WordPress Local → AI + tools → WordPress Update)
+- Template defines step structure, flow selects specific handlers and tools
 - Uses `source_url` from engine data to target specific content
 
-**Document Processing**: Files → AI (+ WordPress Post Reader tool) → WordPress
-- PDFs, docs, media → structured WordPress content with taxonomy
+**Document Processing**: Pipeline (Fetch → AI → Publish) + Flow (Files → AI + tools → WordPress)
+- Template provides workflow, flow configures file handling and publishing destination
 - Flow-isolated file storage with automatic cleanup
 
-**Research Workflows**: Google Sheets → AI (+ WebFetch tool) → WordPress
-- Data analysis → comprehensive posts with external research
+**Research Workflows**: Pipeline (Fetch → AI → Publish) + Flow (Google Sheets → AI + WebFetch → WordPress)
+- Template structures workflow, flow defines data source and research tools
 - Multi-turn AI conversations for complex content creation
 
-**Cross-Site Content**: WordPress API → AI → Multiple Publishers
-- Pull from external WordPress sites → transform → distribute
-- Maintains source attribution via engine data system
+**Multi-Platform Publishing**: Pipeline (Fetch → AI → Publish → AI → Publish) + Flow Configuration
+- Template structures sequential publishing workflow
+- Flow configures RSS/Reddit → AI → Twitter → AI → Facebook publishing chain
+- Engine data maintains source attribution throughout workflow
+
+**WordPress Content Enhancement**: Pipeline (Fetch → AI → Update) + Multiple Enhancement Flows
+- Pipeline: "Content Optimizer" (Fetch → AI → Update)
+- Flow A: WordPress Local (old posts) → AI + Google Search tool → WordPress Update (weekly SEO refresh)
+- Flow B: WordPress Local (draft content) → AI + WebFetch tool → WordPress Update (research enhancement)
+- Flow C: WordPress Local (product pages) → AI + Local Search + WordPress Post Reader → WordPress Update (internal linking)
+
+**Automated News Publishing**: Pipeline (Fetch → AI → Publish) + Multiple Source Flows
+- Pipeline: "News Feed" (Fetch → AI → Publish)
+- Flow A: TechCrunch RSS → AI → WordPress (hourly tech news)
+- Flow B: Reddit r/webdev → AI → WordPress (daily development updates)
+- Flow C: Industry Google Sheets → AI → WordPress (weekly reports)
 
 > **Note**: Update workflows require `source_url` from fetch handlers. AI tools enable multi-turn conversations for complex research and analysis tasks.
 
