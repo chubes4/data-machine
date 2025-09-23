@@ -16,17 +16,30 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
-**Features**: Tool-First AI, Visual Pipeline Builder, Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter), Centralized Engine Data Architecture, Unified Handler Filter System, AIStepConversationManager with Turn Tracking, AIStepToolParameters with buildForHandlerTool(), Clean Content Processing, Modular WordPress Publish Handler, Universal Handler Settings Template, AutoSave System
+**Features**:
+- Tool-First AI with multi-turn conversation management
+- Visual Pipeline Builder with drag & drop interface
+- Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter)
+- Centralized Engine Data Architecture
+- Unified Handler Filter System
+- AIStepConversationManager with Turn Tracking
+- AIStepToolParameters with buildForHandlerTool()
+- Clean Content Processing
+- Modular WordPress Publish Handler
+- Universal Handler Settings Template
+- AutoSave System
+- Database Query Optimization
+- Centralized Cache Management
 
 **Requirements**: WordPress 6.2+, PHP 8.0+, Composer
 
 **Pipeline+Flow**: Pipelines are reusable templates, Flows are configured instances
 
-**Example**: Automated Tech News Twitter Feed
-- **Pipeline Template**: Fetch → AI → Twitter with system prompt "You are a tech news curator. Extract key insights and create engaging tweets that highlight innovation and industry impact. Maintain a professional but accessible tone."
-- **Flow A**: TechCrunch RSS → AI agent → user message "Focus on AI/ML breakthroughs and venture funding" → Twitter (every 2 hours)
-- **Flow B**: Reddit r/technology → AI agent → user message "Focus on open-source projects and developer tools" → Twitter (every 4 hours)  
-- **Flow C**: VentureBeat RSS → AI agent → user message "Focus on startup launches and product innovations" → Twitter (every 6 hours)
+**Example**: WordPress Content Enhancement System
+- **Pipeline Template**: WordPress Local → AI → WordPress Update with system prompt "You are a content optimizer. Analyze existing WordPress content and enhance it with better SEO, readability, and comprehensive information using research tools."
+- **Flow A**: Scan old blog posts → AI + Google Search tool → Update with current data and improved SEO (weekly)
+- **Flow B**: Process draft pages → AI + Local Search tool → Enhance with internal links and related content (daily)
+- **Flow C**: Review product pages → AI + WebFetch tool → Update with latest specs and competitive analysis (bi-weekly)
 
 ## Quick Start
 
@@ -58,24 +71,35 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 
 Auth via `/dm-oauth/{provider}/` popup flow.
 
-### Quick Example: RSS to Twitter Bot
+### Quick Example: Document Processing System
 
-1. Create Pipeline: "Tech News Bot"
-2. Add Steps: RSS → AI → Twitter
-3. Configure: TechCrunch feed + Claude 3.5 Sonnet + Twitter auth
-4. Schedule: Every 2 hours
-5. Monitor: Data Machine → Logs
+1. Create Pipeline: "PDF to WordPress"
+2. Add Steps: Files → AI → WordPress
+3. Configure: File upload + system prompt "Extract key insights and create structured WordPress posts with proper headings, summaries, and tags"
+4. Upload: Research PDFs, documentation, reports
+5. Result: Automatic WordPress posts with clean formatting and taxonomy
 
 ## Examples
 
 ### Workflow Patterns
 
-**Single Platform**: RSS → AI → Twitter (recommended)
-**Multi-Platform**: RSS → AI → Twitter → AI → Facebook  
-**Content Updates**: WordPress Local → AI → WordPress Update
-**Document Analysis**: Files → AI → WordPress
+**Content Enhancement**: WordPress Local → AI (+ Google Search tool) → WordPress Update
+- Enhances existing posts with current data, better SEO, internal links
+- Uses `source_url` from engine data to target specific content
 
-> **Note**: Multi-platform uses AI→Publish→AI→Publish pattern. Update steps require source_url from engine data (stored in database by fetch handlers, retrieved via dm_engine_data filter).
+**Document Processing**: Files → AI (+ WordPress Post Reader tool) → WordPress
+- PDFs, docs, media → structured WordPress content with taxonomy
+- Flow-isolated file storage with automatic cleanup
+
+**Research Workflows**: Google Sheets → AI (+ WebFetch tool) → WordPress
+- Data analysis → comprehensive posts with external research
+- Multi-turn AI conversations for complex content creation
+
+**Cross-Site Content**: WordPress API → AI → Multiple Publishers
+- Pull from external WordPress sites → transform → distribute
+- Maintains source attribution via engine data system
+
+> **Note**: Update workflows require `source_url` from fetch handlers. AI tools enable multi-turn conversations for complex research and analysis tasks.
 
 *For detailed examples and technical specifications, see `CLAUDE.md`*
 
@@ -105,19 +129,48 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 
 ## Available Handlers
 
-**Fetch Sources**: Local/remote files, RSS feeds (timeframe/keyword filtering), Reddit posts (timeframe/keyword filtering), WordPress Local (timeframe/keyword filtering), WordPress Media (with parent post content integration, timeframe/keyword filtering), WordPress API (timeframe/keyword filtering), Google Sheets
-**Publish Destinations**: Twitter, Bluesky, Threads, Facebook, WordPress, Google Sheets
-**Update Handlers**: WordPress Update (existing post/page modification via source_url from engine data filter access)
-**AI Providers**: OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
-**General Tools**: Google Search, Local Search, WebFetch (50K character limit), WordPress Post Reader
+**Fetch Sources**:
+- Local/remote files
+- RSS feeds (timeframe/keyword filtering)
+- Reddit posts (timeframe/keyword filtering)
+- WordPress Local (timeframe/keyword filtering)
+- WordPress Media (with parent post content integration, timeframe/keyword filtering)
+- WordPress API (timeframe/keyword filtering)
+- Google Sheets
+
+**Publish Destinations**:
+- Twitter, Bluesky, Threads, Facebook
+- WordPress
+- Google Sheets
+
+**Update Handlers**:
+- WordPress Update (existing post/page modification via source_url from engine data filter access)
+
+**AI Providers**:
+- OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
+
+**General Tools**:
+- Google Search, Local Search
+- WebFetch (50K character limit)
+- WordPress Post Reader
 
 **Architecture Highlights**:
-- **Centralized Engine Data**: `dm_engine_data` filter provides unified access to source_url, image_url - clean separation between AI data packets and handler engine parameters
-- **Universal Handler Filters**: Shared functionality (`dm_timeframe_limit`, `dm_keyword_search_match`, `dm_data_packet`) across multiple handlers eliminates code duplication
-- **Tool-First AI Integration**: Multi-turn conversation management with `AIStepConversationManager` and unified parameter building via `AIStepToolParameters`
-- **Modular WordPress Publisher**: Specialized components (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`) with configuration hierarchy
-- **Complete AutoSave System**: Single `dm_auto_save` action handles pipeline persistence, flow synchronization, and cache invalidation
-- **Filter-Based Discovery**: All components self-register via WordPress filters maintaining consistent architectural patterns
+- **Centralized Engine Data**:
+  - `dm_engine_data` filter provides unified access to source_url, image_url
+  - Clean separation between AI data packets and handler engine parameters
+- **Universal Handler Filters**:
+  - Shared functionality (`dm_timeframe_limit`, `dm_keyword_search_match`, `dm_data_packet`)
+  - Eliminates code duplication across multiple handlers
+- **Tool-First AI Integration**:
+  - Multi-turn conversation management with `AIStepConversationManager`
+  - Unified parameter building via `AIStepToolParameters`
+- **Modular WordPress Publisher**:
+  - Specialized components (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`)
+  - Configuration hierarchy system
+- **Complete AutoSave System**:
+  - Single `dm_auto_save` action handles pipeline persistence, flow synchronization, and cache invalidation
+- **Filter-Based Discovery**:
+  - All components self-register via WordPress filters maintaining consistent architectural patterns
 
 *All handlers are fully functional with OAuth authentication where required and comprehensive error handling*
 
@@ -143,9 +196,12 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 - Site Context toggle (WordPress info injection)
 - Job data cleanup on failure toggle (debugging)
 - File retention settings (1-90 days)
-- 5-Tier AI Directive Priority System: Plugin Core Directive → Global system prompt → Pipeline prompts → Tool definitions → Site context
-- AIStepConversationManager for multi-turn conversation state management with turn tracking and chronological message ordering
-- AIStepToolParameters flat parameter architecture with content extraction
+- **5-Tier AI Directive Priority System**:
+  - Plugin Core Directive → Global system prompt → Pipeline prompts → Tool definitions → Site context
+- **AIStepConversationManager**:
+  - Multi-turn conversation state management with turn tracking and chronological message ordering
+- **AIStepToolParameters**:
+  - Flat parameter architecture with content extraction
 - Tool configuration (API keys, OAuth)
 - WordPress defaults (post types, taxonomies, author, status)
 - Three-layer tool management (global → modal → validation)
@@ -159,7 +215,34 @@ composer install    # Development setup
 ./build.sh         # Production build
 ```
 
-**Architecture**: PSR-4 autoloading, filter-based service discovery, unified handler filter system with centralized cross-cutting filters (`dm_timeframe_limit`, `dm_keyword_search_match`, `dm_data_packet`), centralized engine data architecture with `EngineData.php` filter providing unified `dm_engine_data` access (replaces direct database patterns), clean AI data packets with structured engine parameters, centralized cache system via Actions/Cache.php with WordPress action-based clearing, 5-tier AI directive system with auto-registration (PluginCoreDirective, GlobalSystemPromptDirective, PipelineSystemPromptDirective, ToolDefinitionsDirective, SiteContextDirective), enhanced tool discovery in UpdateStep with handler slug matching and partial name matching, AIStepConversationManager for conversation state management with turn tracking, AIStepToolParameters class for unified tool execution, AutoSave system with complete pipeline persistence and flow synchronization, modular WordPress publish handler (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`) with configuration hierarchy, universal handler settings template system eliminating modal code duplication, Composer-managed ai-http-client dependency. See `CLAUDE.md` for complete technical specifications.
+**Architecture**:
+- **PSR-4 Autoloading**: Composer-managed dependency structure
+- **Filter-Based Service Discovery**: WordPress hooks for component registration
+- **Unified Handler Filter System**:
+  - Centralized cross-cutting filters (`dm_timeframe_limit`, `dm_keyword_search_match`, `dm_data_packet`)
+- **Centralized Engine Data**:
+  - `EngineData.php` filter providing unified `dm_engine_data` access (replaces direct database patterns)
+  - Clean AI data packets with structured engine parameters
+- **Centralized Cache System**:
+  - Actions/Cache.php with WordPress action-based clearing
+- **5-Tier AI Directive System**:
+  - Auto-registration: PluginCoreDirective → GlobalSystemPromptDirective → PipelineSystemPromptDirective → ToolDefinitionsDirective → SiteContextDirective
+- **Enhanced Tool Discovery**:
+  - UpdateStep with handler slug matching and partial name matching
+- **Conversation Management**:
+  - AIStepConversationManager for conversation state management with turn tracking
+  - AIStepToolParameters class for unified tool execution
+- **AutoSave System**:
+  - Complete pipeline persistence and flow synchronization
+- **Modular WordPress Publisher**:
+  - (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`) with configuration hierarchy
+- **Universal Handler Settings**:
+  - Template system eliminating modal code duplication
+- **Performance Optimizations**:
+  - Database query optimization for improved performance
+  - Composer-managed ai-http-client dependency
+
+See `CLAUDE.md` for complete technical specifications.
 
 ## License
 

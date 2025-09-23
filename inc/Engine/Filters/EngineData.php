@@ -2,8 +2,8 @@
 /**
  * Centralized Engine Data Access Filter
  *
- * Provides unified access to engine_data (source_url, image_url) stored by fetch handlers.
- * Maintains architectural consistency with filter-based service discovery pattern.
+ * Provides unified storage and retrieval of engine_data (source_url, image_url)
+ * via dm_engine_data filter. Maintains filter-based service discovery consistency.
  *
  * @package DataMachine\Engine\Filters
  */
@@ -15,20 +15,20 @@ if (!defined('ABSPATH')) {
 function dm_register_engine_data_filter() {
 
     /**
-     * Engine data storage and retrieval via centralized filter.
+     * Engine data storage and retrieval filter.
      *
-     * @param array $default Default value (empty array for retrieval, null for storage)
+     * @param array $default Default value for retrieval
      * @param int $job_id Job ID
-     * @param string $source_url Source URL (for storage only)
-     * @param string $image_url Image URL (for storage only)
-     * @return array Engine data (retrieval only) or null (storage)
+     * @param string $source_url Source URL (storage mode)
+     * @param string $image_url Image URL (storage mode)
+     * @return array|null Engine data array or null for storage
      */
     add_filter('dm_engine_data', function($default, $job_id, $source_url = null, $image_url = null) {
         if (empty($job_id)) {
             return [];
         }
 
-        // Storage mode: 4+ parameters provided (robust parameter count detection)
+        // Storage mode: 4+ parameters indicates storage operation
         if (func_num_args() >= 4) {
             $all_databases = apply_filters('dm_db', []);
             $db_jobs = $all_databases['jobs'] ?? null;

@@ -6,6 +6,10 @@
 - **AI Conversation Management**: ✅ Complete - Multi-turn state management with chronological ordering
 - **Cache System**: ✅ Complete - WordPress action-based cache clearing with granular invalidation
 - **Engine Filters**: ✅ Complete - Streamlined engine operations with centralized validation
+- **Database Query Optimization**: ✅ Complete - Reduced unnecessary queries for improved pipeline page performance
+- **Handler Authentication Modals**: ✅ Complete - Fixed registration of handler authentication modals
+- **Universal Handler Filters**: ✅ Complete - Centralized timeframe limit and keyword search filters
+- **Legacy Logic Cleanup**: ✅ Complete - Streamlined system with removal of legacy patterns
 
 **CURRENT KNOWN ISSUES**
 - Status detection for Update step types needs comprehensive testing

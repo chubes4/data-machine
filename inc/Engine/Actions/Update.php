@@ -3,26 +3,12 @@ namespace DataMachine\Engine\Actions;
 
 
 /**
- * Data Machine Update Actions
- *
  * Centralized update operations for jobs, flows, and pipelines.
+ *
  * Provides intelligent method selection, service discovery, and consistent
- * error handling for all update operations.
+ * error handling via action hooks.
  *
- * SUPPORTED UPDATE TYPES:
- * - job_status: Intelligent job status updates with automatic method selection
- * - flow_schedule: Flow scheduling operations with Action Scheduler integration
- * - pipeline_auto_save: Central pipeline auto-save operations
- * - flow_handler: Central flow handler management eliminating 50+ line update patterns
- *
- * ARCHITECTURAL BENEFITS:
- * - Intelligent method routing for job status updates
- * - Direct Action Scheduler integration for flow scheduling
- * - Filter-based service discovery for database operations
- * - Centralized logging and error handling
- *
- * @package DataMachine
- * @since 1.0.0
+ * @package DataMachine\Engine\Actions
  */
 
 // If this file is called directly, abort.
@@ -31,23 +17,12 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * Data Machine Update Actions Class
- *
- * Handles centralized update operations through multiple action hooks.
- * Provides consistent validation, service discovery, and error handling
- * patterns for all update types.
- *
- * @since 1.0.0
+ * Centralized update operations via action hooks.
  */
 class Update {
 
     /**
-     * Register update action hooks using static method.
-     *
-     * Registers update action hooks that provide intelligent method selection
-     * and consistent service discovery patterns.
-     *
-     * @since 1.0.0
+     * Register update action hooks with intelligent method selection.
      */
     public static function register() {
         $instance = new self();

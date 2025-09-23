@@ -1,10 +1,11 @@
 <?php
 /**
- * AI Conversation Manager - Turn-based conversation state management
+ * AI Conversation Manager for turn-based conversation state management.
  *
- * Handles chronological message ordering, turn tracking, and tool result formatting.
+ * Handles chronological message ordering, turn tracking, and tool result formatting
+ * for multi-turn AI conversations with tool execution support.
  *
- * @package DataMachine
+ * @package DataMachine\Core\Steps\AI
  */
 
 namespace DataMachine\Core\Steps\AI;
@@ -14,12 +15,12 @@ defined('ABSPATH') || exit;
 class AIStepConversationManager {
 
     /**
-     * Generate tool execution success message with filter support.
+     * Generate tool execution result message with filter support.
      *
      * @param string $tool_name Tool identifier
      * @param array $tool_result Tool execution result
      * @param array $tool_parameters Tool parameters
-     * @return string Formatted success/failure message
+     * @return string Formatted result message
      */
     public static function generateSuccessMessage(string $tool_name, array $tool_result, array $tool_parameters): string {
         $success = $tool_result['success'] ?? false;
@@ -36,12 +37,11 @@ class AIStepConversationManager {
     }
 
     /**
-     * Update data packet messages within conversation history.
-     * Synchronizes data packet content in existing conversation messages.
+     * Synchronize data packet content in conversation messages.
      *
      * @param array $conversation_messages Conversation message array
      * @param array $data Updated data packet array
-     * @return array Updated conversation messages with synchronized data packets
+     * @return array Updated conversation messages
      */
     public static function updateDataPacketMessages(array $conversation_messages, array $data): array {
         if (empty($conversation_messages) || empty($data)) {

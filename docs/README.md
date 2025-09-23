@@ -105,24 +105,25 @@ docs/
 - Processed Items (deduplication tracking)
 
 **Cache Management**
-- Centralized cache system via Actions/Cache.php
+- Centralized cache system via Actions/Cache.php with consistent WordPress action-based clearing
 - WordPress action-based cache clearing (dm_clear_pipeline_cache, dm_clear_flow_cache, dm_clear_jobs_cache, dm_clear_all_cache)
 - Pattern-based cache invalidation with wildcard support (dm_pipeline_*, dm_flow_*, dm_job_*)
-- Standardized cache storage via dm_cache_set action
-- Comprehensive logging for cache operations
+- Standardized cache storage via dm_cache_set action with validation and logging
+- Comprehensive logging for cache operations and AI HTTP Client integration
+- Database query optimization for improved pipeline page performance
 
 ### ✅ Fetch Handlers (7 handlers)
 
 **Local Sources**
-- WordPress - Posts/pages from local installation
-- WordPress Media - Media library attachments  
-- Files - Local and remote file processing
+- WordPress Local - Posts/pages from local installation with timeframe filtering and keyword search
+- WordPress Media - Media library attachments with parent post content integration, timeframe filtering, and keyword search
+- Files - Local and remote file processing with flow-isolated storage
 
 **External Sources**
-- RSS - Feed parsing with deduplication and centralized engine data storage (source_url, image_url via dm_engine_data filter)
-- Reddit - OAuth2 subreddit fetching with centralized engine data storage (source_url, image_url via dm_engine_data filter)
+- RSS - Feed parsing with deduplication, timeframe filtering, keyword search, and centralized engine data storage (source_url, image_url via dm_engine_data filter)
+- Reddit - OAuth2 subreddit fetching with timeframe filtering, keyword search, and centralized engine data storage (source_url, image_url via dm_engine_data filter)
 - Google Sheets - OAuth2 spreadsheet data extraction
-- WordPress API - External WordPress sites via REST API with centralized engine data storage
+- WordPress API - External WordPress sites via REST API with timeframe filtering, keyword search, and centralized engine data storage
 
 ### ✅ Publish Handlers (6 handlers)
 
@@ -219,6 +220,8 @@ docs/
 - Files repository for large data handling
 - Single-item processing strategy
 - Memory optimization and cleanup
+- Database query optimization for improved pipeline page performance
+- Centralized cache management with pattern-based invalidation
 
 ## Usage Patterns
 

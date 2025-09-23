@@ -1,15 +1,11 @@
 <?php
 /**
- * Handles Twitter OAuth 1.0a authentication for the Twitter publish handler.
+ * Twitter OAuth 1.0a authentication handler.
  *
- * Self-contained authentication system that provides all OAuth functionality
- * needed by the Twitter publish handler including credential management,
- * OAuth flow handling, and authenticated connection creation.
- * Uses the unified OAuth rewrite system and filter-based architecture.
+ * Provides complete OAuth functionality for Twitter publish handler including
+ * credential management, OAuth flow, and connection creation via filter-based architecture.
  *
- * @package    Data_Machine
- * @subpackage Core\Steps\Publish\Handlers\Twitter
- * @since      NEXT_VERSION
+ * @package DataMachine\Core\Steps\Publish\Handlers\Twitter
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
@@ -25,16 +21,16 @@ class TwitterAuth {
     const TEMP_TOKEN_SECRET_TRANSIENT_PREFIX = 'dm_twitter_req_secret_'; // Prefix + request_token
 
     /**
-     * Constructor - parameter-less for pure filter-based architecture
+     * Constructor for filter-based architecture.
      */
     public function __construct() {
-        // No parameters needed - all services accessed via filters
+        // Services accessed via filters
     }
 
     /**
-     * Checks if admin has valid Twitter authentication
+     * Check if Twitter authentication is valid.
      *
-     * @return bool True if authenticated, false otherwise
+     * @return bool True if authenticated
      */
     public function is_authenticated(): bool {
         $account = apply_filters('dm_retrieve_oauth_account', [], 'twitter');
@@ -45,9 +41,9 @@ class TwitterAuth {
     }
 
     /**
-     * Get configuration fields required for Twitter authentication
+     * Get Twitter configuration field definitions.
      *
-     * @return array Configuration field definitions
+     * @return array Configuration fields
      */
     public function get_config_fields(): array {
         return [
@@ -67,9 +63,9 @@ class TwitterAuth {
     }
 
     /**
-     * Check if Twitter authentication is properly configured
+     * Check if Twitter API credentials are configured.
      *
-     * @return bool True if API credentials are configured, false otherwise
+     * @return bool True if configured
      */
     public function is_configured(): bool {
         $config = apply_filters('dm_retrieve_oauth_keys', [], 'twitter');
@@ -77,9 +73,9 @@ class TwitterAuth {
     }
 
     /**
-     * Gets an authenticated TwitterOAuth connection object.
+     * Get authenticated TwitterOAuth connection.
      *
-     * @return TwitterOAuth|\WP_Error Authenticated connection object or WP_Error on failure.
+     * @return TwitterOAuth|\WP_Error Connection or error
      */
     public function get_connection() {
 
@@ -89,7 +85,7 @@ class TwitterAuth {
             return new \WP_Error('twitter_missing_credentials', __('Twitter credentials not found. Please authenticate.', 'data-machine'));
         }
 
-        // Get the stored tokens directly
+        // Get stored access tokens
         $access_token = $credentials['access_token'];
         $access_token_secret = $credentials['access_token_secret'];
 
@@ -112,12 +108,12 @@ class TwitterAuth {
 
 
     /**
-     * Get the authorization URL for direct connection to Twitter OAuth
+     * Get Twitter OAuth authorization URL.
      *
      * @return string Authorization URL
      */
     public function get_authorization_url(): string {
-        // 1. Get API Key/Secret from configuration
+        // Get API credentials
         $config = apply_filters('dm_retrieve_oauth_keys', [], 'twitter');
         $api_key = $config['api_key'] ?? '';
         $api_secret = $config['api_secret'] ?? '';
@@ -129,17 +125,17 @@ class TwitterAuth {
             return '';
         }
 
-        // 2. Define Callback URL  
+        // Define callback URL
         $callback_url = apply_filters('dm_oauth_callback', '', 'twitter');
 
         try {
-            // 3. Instantiate TwitterOAuth
+            // Initialize TwitterOAuth
             $connection = new TwitterOAuth($api_key, $api_secret);
 
-            // 4. Get Request Token from Twitter API
+            // Get request token
             $request_token = $connection->oauth('oauth/request_token', ['oauth_callback' => $callback_url]);
 
-            // 5. Check for errors from Twitter
+            // Check for API errors
             if ($connection->getLastHttpCode() != 200 || !isset($request_token['oauth_token']) || !isset($request_token['oauth_token_secret'])) {
                 $error_message = 'Failed to get request token from Twitter.';
                 do_action('dm_log', 'error', 'Twitter OAuth Error: ' . $error_message, [
@@ -151,10 +147,10 @@ class TwitterAuth {
                 return '';
             }
 
-            // 6. Store Request Token Secret temporarily
+            // Store temporary token secret
             set_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $request_token['oauth_token'], $request_token['oauth_token_secret'], 15 * MINUTE_IN_SECONDS);
 
-            // 7. Return Authorization URL (OAuth 1.0a standard)
+            // Return authorization URL
             return $connection->url('oauth/authenticate', [
                 'oauth_token' => $request_token['oauth_token']
             ]);
@@ -169,11 +165,10 @@ class TwitterAuth {
     }
 
     /**
-     * Handles the callback from Twitter after user authorization.
-     * Called via the unified OAuth rewrite system at /dm-oauth/twitter/.
+     * Handle Twitter OAuth callback after user authorization.
      */
     public function handle_oauth_callback() {
-        // --- 1. Extract parameters using null coalescing to avoid nonce warnings ---
+        // Extract OAuth callback parameters
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth callback cannot use nonces
         $denied = sanitize_text_field(wp_unslash($_GET['denied'] ?? ''));
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth callback cannot use nonces
@@ -181,31 +176,31 @@ class TwitterAuth {
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth callback cannot use nonces
         $oauth_verifier = sanitize_text_field(wp_unslash($_GET['oauth_verifier'] ?? ''));
 
-        // --- 2. Initial Checks ---
+        // Perform initial validation
         if (!current_user_can('manage_options')) {
              wp_redirect(add_query_arg('auth_error', 'twitter_permission_denied', admin_url('admin.php?page=dm-pipelines')));
              exit;
         }
 
-        // Check if user denied access
+        // Handle user denial
         if (!empty($denied)) {
-            // Clean up transient if we can identify it (optional)
+            // Clean up temporary token
             delete_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $denied);
             do_action('dm_log', 'warning', 'Twitter OAuth Warning: User denied access.', ['denied_token' => $denied]);
             wp_redirect(add_query_arg('auth_error', 'twitter_access_denied', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
-        // Check for required parameters
+        // Validate required parameters
         if (empty($oauth_token) || empty($oauth_verifier)) {
             do_action('dm_log', 'error', 'Twitter OAuth Error: Missing oauth_token or oauth_verifier in callback.');
             wp_redirect(add_query_arg('auth_error', 'twitter_missing_callback_params', admin_url('admin.php?page=dm-pipelines')));
             exit;
         }
 
-        // --- 2. Retrieve Temp Secret & Credentials --- 
+        // Retrieve temporary secret and credentials
         $oauth_token_secret = get_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $oauth_token);
-        // Delete transient immediately after retrieving it
+        // Clean up temporary token immediately
         delete_transient(self::TEMP_TOKEN_SECRET_TRANSIENT_PREFIX . $oauth_token);
 
         if (empty($oauth_token_secret)) {
@@ -223,15 +218,15 @@ class TwitterAuth {
             exit;
         }
 
-        // --- 3. Exchange for Access Token --- 
+        // Exchange for access token
         try {
-            // Instantiate with App Key/Secret and *Request* Token/Secret
+            // Initialize with request token
             $connection = new TwitterOAuth($api_key, $api_secret, $oauth_token, $oauth_token_secret);
 
-            // Exchange Request Token for Access Token
+            // Exchange tokens
             $access_token_data = $connection->oauth("oauth/access_token", ["oauth_verifier" => $oauth_verifier]);
 
-            // Check for errors during token exchange
+            // Validate token exchange
             if ($connection->getLastHttpCode() != 200 || !isset($access_token_data['oauth_token']) || !isset($access_token_data['oauth_token_secret'])) {
                 do_action('dm_log', 'error', 'Twitter OAuth Error: Failed to get access token.', [
                     'http_code' => $connection->getLastHttpCode(),
@@ -241,8 +236,8 @@ class TwitterAuth {
                 exit;
             }
 
-            // --- 4. Store Permanent Credentials --- 
-            // Store the access tokens directly
+            // Store permanent credentials
+            // Store access tokens
             $account_data = [
                 'access_token'        => $access_token_data['oauth_token'],
                 'access_token_secret' => $access_token_data['oauth_token_secret'],
@@ -251,10 +246,10 @@ class TwitterAuth {
                 'last_verified_at'    => time() // Timestamp of this successful auth
             ];
 
-            // Store in site options for admin-only authentication
+            // Store in site options
             apply_filters('dm_store_oauth_account', $account_data, 'twitter');
 
-            // --- 5. Redirect on Success --- 
+            // Redirect on success
             wp_redirect(add_query_arg('auth_success', 'twitter', admin_url('admin.php?page=dm-pipelines')));
             exit;
 
@@ -267,10 +262,9 @@ class TwitterAuth {
 
 
     /**
-     * Retrieves the stored Twitter account details.
-     * Uses global site options for admin-global authentication.
+     * Get stored Twitter account details.
      *
-     * @return array|null Account details array or null if not found/invalid.
+     * @return array|null Account details or null
      */
     public function get_account_details(): ?array {
         $account = apply_filters('dm_retrieve_oauth_account', [], 'twitter');
@@ -281,10 +275,9 @@ class TwitterAuth {
     }
 
     /**
-     * Removes the stored Twitter account details.
-     * Uses global site options for admin-global authentication.
+     * Remove stored Twitter account details.
      *
-     * @return bool True on success, false on failure.
+     * @return bool Success status
      */
     public function remove_account(): bool {
         return apply_filters('dm_clear_oauth_account', false, 'twitter');

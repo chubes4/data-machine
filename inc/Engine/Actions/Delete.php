@@ -3,7 +3,9 @@ namespace DataMachine\Engine\Actions;
 
 
 /**
- * Deletion system for pipelines, flows, steps with cascade support via dm_delete action
+ * Centralized deletion operations with cascade support via dm_delete action.
+ *
+ * @package DataMachine\Engine\Actions
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -11,43 +13,27 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * Data Machine Delete Actions Class
- *
- * Handles centralized deletion operations through the dm_delete action hook.
- * Provides consistent validation, permission checking, and service discovery
- * patterns for all deletion types.
- *
- * @since 1.0.0
+ * Centralized deletion operations via dm_delete action hook.
  */
 class Delete {
 
     /**
-     * Register delete action hooks using static method.
-     *
-     * Registers the central dm_delete action hook that routes to specific
-     * deletion handlers based on entity type.
-     *
-     * @since 1.0.0
+     * Register deletion action hooks.
      */
     public static function register() {
         $instance = new self();
-        // Central deletion action hook - eliminates code duplication across deletion types
+        // Central deletion routing
         add_action('dm_delete', [$instance, 'handle_delete'], 10, 3);
         
     }
     
 
     /**
-     * Handle universal delete operations for all entity types.
+     * Handle deletion operations with routing by entity type.
      *
-     * Central deletion handler that routes requests to specific deletion
-     * handlers based on entity type. Provides consistent validation and
-     * permission checking across all deletion operations.
-     *
-     * @param string $delete_type Type of entity to delete (pipeline|flow|step)
-     * @param mixed $target_id Target entity ID or identifier
-     * @param array $context Additional context information
-     * @since 1.0.0
+     * @param string $delete_type Entity type (pipeline|flow|step)
+     * @param mixed $target_id Entity ID or identifier
+     * @param array $context Additional context
      */
     public function handle_delete($delete_type, $target_id, $context = []) {
         // Verify user capabilities - universal requirement for all deletions

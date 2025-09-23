@@ -26,7 +26,7 @@ class JobsOperations {
     }
 
     /**
-     * Create job record with pipeline+flow association.
+     * Create job record with pipeline and flow association.
      */
     public function create_job(array $job_data): int|false {
         
@@ -63,7 +63,7 @@ class JobsOperations {
         
         $job_id = $this->wpdb->insert_id;
 
-        // Clear job-related caches after successful creation
+        // Invalidate job caches
         do_action('dm_clear_jobs_cache');
 
         return $job_id;
@@ -88,7 +88,7 @@ class JobsOperations {
     }
 
     /**
-     * Get jobs count for list table pagination.
+     * Get total jobs count for pagination.
      */
     public function get_jobs_count(): int {
         
@@ -107,7 +107,7 @@ class JobsOperations {
     }
 
     /**
-     * Get jobs for list table display.
+     * Get paginated jobs with pipeline and flow names.
      */
     public function get_jobs_for_list_table(array $args): array {
         
@@ -145,7 +145,7 @@ class JobsOperations {
     }
 
     /**
-     * Get all jobs for a specific pipeline (for deletion impact analysis).
+     * Get all jobs for pipeline deletion impact analysis.
      */
     public function get_jobs_for_pipeline( int $pipeline_id ): array {
         if ( $pipeline_id <= 0 ) {
@@ -182,7 +182,7 @@ class JobsOperations {
     }
 
     /**
-     * Get all jobs for a specific flow.
+     * Get all jobs for a flow.
      */
     public function get_jobs_for_flow(int $flow_id): array {
         
@@ -206,9 +206,7 @@ class JobsOperations {
     }
     
     /**
-     * Delete jobs based on criteria.
-     *
-     * Provides flexible deletion of jobs by status or all jobs.
+     * Delete jobs by status criteria or all jobs.
      */
     public function delete_jobs(array $criteria = []): int|false {
         
@@ -231,7 +229,7 @@ class JobsOperations {
             'success' => $result !== false
         ]);
 
-        // Clear job-related caches after deletion
+        // Invalidate job caches
         if ($result !== false && $result > 0) {
             do_action('dm_clear_jobs_cache');
         }
@@ -248,7 +246,7 @@ class JobsOperations {
             return false;
         }
 
-        // Serialize array for reliable storage in longtext column
+        // Serialize data for database storage
         $encoded = maybe_serialize($data);
         $result = $this->wpdb->update(
             $this->table_name,
@@ -266,7 +264,7 @@ class JobsOperations {
             return false;
         }
 
-        // Clear job cache after updating engine_data
+        // Invalidate job cache after engine_data update
         $cache_key = Cache::JOB_CACHE_KEY . $job_id;
         delete_transient($cache_key);
 
@@ -293,16 +291,16 @@ class JobsOperations {
             return [];
         }
 
-        // Try JSON first for forward compatibility
+        // Try JSON decode first
         $json = json_decode($result, true);
         if (json_last_error() === JSON_ERROR_NONE && is_array($json)) {
             return $json;
         }
 
-        // Fallback to WordPress serialization
+        // Fallback to WordPress unserialize
         $engine_data = maybe_unserialize($result);
 
-        // Ensure we return an array
+        // Ensure array return type
         if (!is_array($engine_data)) {
             return [];
         }
