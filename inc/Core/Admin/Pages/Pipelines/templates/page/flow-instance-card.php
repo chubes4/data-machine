@@ -31,22 +31,6 @@ $flow_config = $flow['flow_config'] ?? [];
 ?>
 <div class="dm-flow-instance-card" data-flow-id="<?php echo esc_attr($flow_id); ?>">
     <div class="dm-flow-header">
-        <div class="dm-flow-reorder-controls">
-            <span class="dm-reorder-arrow-up" 
-                  data-flow-id="<?php echo esc_attr($flow_id); ?>"
-                  data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>"
-                  title="<?php esc_attr_e('Move up', 'data-machine'); ?>"
-                  aria-label="<?php echo esc_attr(sprintf('Move %s up', $flow_name)); ?>">
-                <span class="dashicons dashicons-arrow-up-alt2"></span>
-            </span>
-            <span class="dm-reorder-arrow-down"
-                  data-flow-id="<?php echo esc_attr($flow_id); ?>"  
-                  data-pipeline-id="<?php echo esc_attr($pipeline_id); ?>"
-                  title="<?php esc_attr_e('Move down', 'data-machine'); ?>"
-                  aria-label="<?php echo esc_attr(sprintf('Move %s down', $flow_name)); ?>">
-                <span class="dashicons dashicons-arrow-down-alt2"></span>
-            </span>
-        </div>
         <div class="dm-flow-title-section">
             <input type="text" class="dm-flow-title-input" 
                    value="<?php echo esc_attr($flow_name); ?>" 

@@ -24,7 +24,6 @@ class Cache {
     const FLOW_CONFIG_CACHE_KEY = 'dm_flow_config_';
     const PIPELINE_FLOWS_CACHE_KEY = 'dm_pipeline_flows_';
     const FLOW_SCHEDULING_CACHE_KEY = 'dm_flow_scheduling_';
-    const MAX_DISPLAY_ORDER_CACHE_KEY = 'dm_max_display_order_';
 
     const JOB_CACHE_KEY = 'dm_job_';
     const JOB_STATUS_CACHE_KEY = 'dm_job_status_';
@@ -117,7 +116,6 @@ class Cache {
             // Clear associated pipeline caches
             if ($pipeline_id) {
                 delete_transient(self::PIPELINE_FLOWS_CACHE_KEY . $pipeline_id);
-                delete_transient(self::MAX_DISPLAY_ORDER_CACHE_KEY . $pipeline_id);
             }
 
         } else {
@@ -294,8 +292,7 @@ class Cache {
         $cache_keys = [
             self::PIPELINE_CACHE_KEY . $pipeline_id,
             self::PIPELINE_CONFIG_CACHE_KEY . $pipeline_id,
-            self::PIPELINE_FLOWS_CACHE_KEY . $pipeline_id,
-            self::MAX_DISPLAY_ORDER_CACHE_KEY . $pipeline_id
+            self::PIPELINE_FLOWS_CACHE_KEY . $pipeline_id
         ];
 
         foreach ($cache_keys as $key) {

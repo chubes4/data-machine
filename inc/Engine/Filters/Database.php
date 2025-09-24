@@ -336,28 +336,4 @@ function dm_register_database_filters() {
         return $success;
     }, 10, 3);
 
-    add_filter('dm_update_flow_display_orders', function($default, $pipeline_id, $flow_orders) {
-        $all_databases = apply_filters('dm_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-
-        if (!$db_flows) {
-            do_action('dm_log', 'error', 'Flow display orders update failed - database service unavailable', [
-                'pipeline_id' => $pipeline_id,
-                'flow_count' => count($flow_orders)
-            ]);
-            return false;
-        }
-
-        $success = $db_flows->update_flow_display_orders($pipeline_id, $flow_orders);
-
-        if ($success) {
-            do_action('dm_clear_pipeline_cache', $pipeline_id);
-            do_action('dm_log', 'debug', 'Flow display orders updated via centralized filter', [
-                'pipeline_id' => $pipeline_id,
-                'updated_flows' => count($flow_orders)
-            ]);
-        }
-
-        return $success;
-    }, 10, 3);
 }

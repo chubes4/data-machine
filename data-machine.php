@@ -3,7 +3,7 @@
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/data-machine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:         0.1.0
+ * Version:         0.1.1
  * Author:          Chris Huber
  * Author URI:      https://chubes.net
  * Text Domain:     data-machine
@@ -19,7 +19,7 @@ if ( ! dm_check_requirements() ) {
 	return;
 }
 
-define( 'DATA_MACHINE_VERSION', '0.1.0' );
+define( 'DATA_MACHINE_VERSION', '0.1.1' );
 
 define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATA_MACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -50,7 +50,6 @@ function run_data_machine() {
     \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineDeleteAjax::register();
     \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineImportExportAjax::register();
     \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineAutoSaveAjax::register();
-    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineReorderAjax::register();
     \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineFlowCreateAjax::register();
     \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineFileUploadAjax::register();
 }
@@ -138,5 +137,110 @@ function dm_check_requirements() {
 	}
 	
 	return true;
+}
+
+function dm_check_database_cleanup() {
+	// Only check on admin pages
+	if (!is_admin()) {
+		return;
+	}
+
+	global $wpdb;
+	$flows_table = $wpdb->prefix . 'dm_flows';
+
+	// Check if table exists and has display_order column
+	$table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $flows_table));
+	if (!$table_exists) {
+		return;
+	}
+
+	$column_exists = $wpdb->get_results($wpdb->prepare(
+		"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+		 WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'display_order'",
+		DB_NAME,
+		$flows_table
+	));
+
+	if (!empty($column_exists)) {
+		add_action('admin_notices', function() {
+			echo '<div class="notice notice-info is-dismissible">';
+			echo '<p>';
+			esc_html_e('Data Machine: Database cleanup available. Click to remove unused display order column.', 'data-machine');
+			echo ' <button type="button" class="button button-secondary" id="dm-cleanup-database">';
+			esc_html_e('Clean Database', 'data-machine');
+			echo '</button>';
+			echo '</p>';
+			echo '</div>';
+
+			// Add inline JavaScript following existing patterns
+			echo '<script>
+			jQuery(document).ready(function($) {
+				$("#dm-cleanup-database").on("click", function() {
+					var button = $(this);
+					button.prop("disabled", true).text("' . esc_js(__('Cleaning...', 'data-machine')) . '");
+
+					$.post(ajaxurl, {
+						action: "dm_cleanup_database",
+						nonce: "' . wp_create_nonce('dm_ajax_actions') . '"
+					}, function(response) {
+						if (response.success) {
+							button.closest(".notice").html("<p>' . esc_js(__('Database cleanup completed successfully!', 'data-machine')) . '</p>");
+							setTimeout(function() {
+								button.closest(".notice").fadeOut();
+							}, 3000);
+						} else {
+							button.prop("disabled", false).text("' . esc_js(__('Clean Database', 'data-machine')) . '");
+							alert("Error: " + response.data.message);
+						}
+					});
+				});
+			});
+			</script>';
+		});
+	}
+}
+
+// Add AJAX handler for database cleanup
+add_action('wp_ajax_dm_cleanup_database', 'dm_handle_cleanup_database');
+
+// Add admin_init hook to check for database cleanup
+add_action('admin_init', 'dm_check_database_cleanup');
+
+function dm_handle_cleanup_database() {
+	// Security check - exact same pattern as existing AJAX handlers
+	check_ajax_referer('dm_ajax_actions', 'nonce');
+
+	if (!current_user_can('manage_options')) {
+		wp_send_json_error(['message' => __('You do not have sufficient permissions to access this page.', 'data-machine')]);
+	}
+
+	global $wpdb;
+	$flows_table = $wpdb->prefix . 'dm_flows';
+
+	// Check if index exists before dropping (MySQL compatible)
+	$index_exists = $wpdb->get_var($wpdb->prepare(
+		"SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+		 WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND INDEX_NAME = 'display_order'",
+		DB_NAME,
+		$flows_table
+	));
+
+	if ($index_exists) {
+		$wpdb->query("ALTER TABLE {$flows_table} DROP INDEX display_order");
+	}
+
+	// Drop the column (we already verified it exists in dm_check_database_cleanup)
+	$wpdb->query("ALTER TABLE {$flows_table} DROP COLUMN display_order");
+
+	do_action('dm_log', 'info', 'Database cleanup: Removed display_order column via admin notice', [
+		'table' => $flows_table,
+		'trigger' => 'admin_notice',
+		'index_existed' => (bool)$index_exists
+	]);
+
+	// Send success response - exact same pattern as existing handlers
+	wp_send_json_success([
+		'message' => __('Database cleanup completed successfully.', 'data-machine')
+	]);
 }
 

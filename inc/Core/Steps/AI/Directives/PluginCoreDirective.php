@@ -60,7 +60,7 @@ class PluginCoreDirective {
         $directive .= "- Analyze available data and context before taking action\n";
         $directive .= "- Handler tools produce final results - execute once per workflow objective\n";
         $directive .= "- Execute handler tools only when ready to produce final pipeline outputs\n";
-        $directive .= "- STOP EXECUTION after successful handler tool completion - workflow objective achieved\n";
+        $directive .= "- STOP EXECUTION after successful handler tool completion\n";
 
         return trim($directive);
     }

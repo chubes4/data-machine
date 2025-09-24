@@ -415,21 +415,11 @@ class Create {
         
         $flow_name = isset($data['flow_name']) ? sanitize_text_field(wp_unslash($data['flow_name'])) : 'Flow';
 
-        $increment_success = $db_flows->increment_existing_flow_orders($pipeline_id);
-        if (!$increment_success) {
-            do_action('dm_log', 'error', 'Failed to increment existing flow orders for new flow creation', [
-                'pipeline_id' => $pipeline_id,
-                'flow_name' => $flow_name
-            ]);
-            return false;
-        }
-
         $flow_data = [
             'pipeline_id' => $pipeline_id,
             'flow_name' => $flow_name,
             'flow_config' => json_encode([]),
-            'scheduling_config' => json_encode(['interval' => 'manual']),
-            'display_order' => 0
+            'scheduling_config' => json_encode(['interval' => 'manual'])
         ];
         
         $flow_id = $db_flows->create_flow($flow_data);
@@ -509,21 +499,11 @@ class Create {
         /* translators: %s: Original flow name */
         $duplicate_flow_name = sprintf(__('Copy of %s', 'data-machine'), $source_flow['flow_name']);
 
-        $increment_success = $db_flows->increment_existing_flow_orders($source_flow['pipeline_id']);
-        if (!$increment_success) {
-            do_action('dm_log', 'error', 'Failed to increment existing flow orders for flow duplication', [
-                'source_flow_id' => $source_flow_id,
-                'pipeline_id' => $source_flow['pipeline_id']
-            ]);
-            return false;
-        }
-
         $flow_data = [
             'pipeline_id' => $source_flow['pipeline_id'],
             'flow_name' => $duplicate_flow_name,
             'flow_config' => json_encode($source_flow['flow_config']),
-            'scheduling_config' => json_encode(['interval' => 'manual']),
-            'display_order' => 0
+            'scheduling_config' => json_encode(['interval' => 'manual'])
         ];
 
         $new_flow_id = $db_flows->create_flow($flow_data);

@@ -39,10 +39,8 @@ class Flows {
             flow_name varchar(255) NOT NULL,
             flow_config longtext NOT NULL,
             scheduling_config longtext NOT NULL,
-            display_order int(11) NOT NULL DEFAULT 0,
             PRIMARY KEY (flow_id),
-            KEY pipeline_id (pipeline_id),
-            KEY display_order (display_order)
+            KEY pipeline_id (pipeline_id)
         ) $charset_collate;";
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
@@ -91,10 +89,6 @@ class Flows {
             '%s'  // scheduling_config
         ];
         
-        if (isset($flow_data['display_order'])) {
-            $insert_data['display_order'] = intval($flow_data['display_order']);
-            $insert_format[] = '%d';
-        }
         
         $result = $this->wpdb->insert(
             $this->table_name,
@@ -157,7 +151,7 @@ class Flows {
 
         if ( false === $cached_result ) {
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE pipeline_id = %d ORDER BY display_order ASC, flow_id ASC", $this->table_name, $pipeline_id ), ARRAY_A );
+            $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE pipeline_id = %d ORDER BY flow_id DESC", $this->table_name, $pipeline_id ), ARRAY_A );
 
             if ($flows === null) {
                 do_action('dm_log', 'warning', 'No flows found for pipeline', [
@@ -441,224 +435,7 @@ class Flows {
     }
 
 
-    /**
-     * Increment display_order for all existing flows in a pipeline by 1
-     * Used when inserting a new flow at the top (display_order = 0)
-     */
-    public function increment_existing_flow_orders(int $pipeline_id): bool {
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-        $result = $this->wpdb->query( $this->wpdb->prepare( "UPDATE %i SET display_order = display_order + 1 WHERE pipeline_id = %d", $this->table_name, $pipeline_id ) );
-        
-        if ($result === false) {
-            do_action('dm_log', 'error', 'Failed to increment existing flow orders', [
-                'pipeline_id' => $pipeline_id,
-                'wpdb_error' => $this->wpdb->last_error
-            ]);
-            return false;
-        }
-        
-        do_action('dm_log', 'debug', 'Successfully incremented existing flow orders', [
-            'pipeline_id' => $pipeline_id,
-            'affected_rows' => $this->wpdb->rows_affected
-        ]);
 
-        // Clear pipeline cache since flow orders were modified
-        do_action('dm_clear_pipeline_cache', $pipeline_id);
-
-        return true;
-    }
-
-    /**
-     * Update display orders for multiple flows in a pipeline using bulk operation
-     */
-    public function update_flow_display_orders(int $pipeline_id, array $flow_orders): bool {
-        if (empty($flow_orders)) {
-            return true;
-        }
-
-        // Update each flow using WordPress native update() method
-        $success_count = 0;
-
-        foreach ($flow_orders as $flow_id => $display_order) {
-            $result = $this->wpdb->update(
-                $this->table_name,
-                ['display_order' => (int)$display_order],
-                ['flow_id' => (int)$flow_id, 'pipeline_id' => $pipeline_id],
-                ['%d'],
-                ['%d', '%d']
-            );
-
-            if ($result !== false) {
-                $success_count++;
-            }
-        }
-
-        $result = ($success_count === count($flow_orders)) ? $success_count : false;
-
-        if ($result === false) {
-            do_action('dm_log', 'error', 'Failed to bulk update flow display orders', [
-                'pipeline_id' => $pipeline_id,
-                'flow_count' => count($flow_orders),
-                'wpdb_error' => $this->wpdb->last_error
-            ]);
-            return false;
-        }
-
-        do_action('dm_log', 'debug', 'Flow display orders updated successfully', [
-            'pipeline_id' => $pipeline_id,
-            'updated_flows' => count($flow_orders),
-            'successful_updates' => $result
-        ]);
-
-        // Clear pipeline flows cache since display order affects flow ordering
-        do_action('dm_clear_pipeline_cache', $pipeline_id);
-
-        return true;
-    }
-
-    /**
-     * Move a flow up in the display order using fresh data and bulk update
-     */
-    public function move_flow_up(int $flow_id): bool {
-        // Get flow to determine pipeline_id
-        $flow = $this->get_flow($flow_id);
-        if (!$flow) {
-            return false;
-        }
-
-        $pipeline_id = (int)$flow['pipeline_id'];
-
-        // Clear cache FIRST to ensure we get fresh data for position calculations
-        do_action('dm_clear_pipeline_cache', $pipeline_id);
-
-        // Get fresh flows data after cache clear
-        $flows = $this->get_flows_for_pipeline($pipeline_id);
-
-        if (empty($flows)) {
-            return false;
-        }
-
-        // Find current flow and previous flow by display_order using fresh data
-        $current_flow = null;
-        $prev_flow = null;
-
-        // First pass: find the current flow in fresh data
-        foreach ($flows as $pipeline_flow) {
-            if ((int)$pipeline_flow['flow_id'] === $flow_id) {
-                $current_flow = $pipeline_flow;
-                break;
-            }
-        }
-
-        if (!$current_flow) {
-            return false; // Flow not found in fresh data
-        }
-
-        $current_display_order = (int)$current_flow['display_order'];
-
-        // Second pass: find previous flow
-        foreach ($flows as $pipeline_flow) {
-            if ((int)$pipeline_flow['display_order'] < $current_display_order) {
-                if (!$prev_flow || (int)$pipeline_flow['display_order'] > (int)$prev_flow['display_order']) {
-                    $prev_flow = $pipeline_flow;
-                }
-            }
-        }
-
-        if (!$current_flow || !$prev_flow) {
-            return false; // Already at the top or flow not found
-        }
-
-        // Swap positions using bulk update
-        $flow_orders = [
-            (int)$current_flow['flow_id'] => (int)$prev_flow['display_order'],
-            (int)$prev_flow['flow_id'] => (int)$current_flow['display_order']
-        ];
-
-        $success = apply_filters('dm_update_flow_display_orders', false, $pipeline_id, $flow_orders);
-
-        if ($success) {
-            do_action('dm_log', 'debug', 'Successfully moved flow up', [
-                'flow_id' => $flow_id,
-                'old_position' => $current_display_order,
-                'new_position' => (int)$prev_flow['display_order']
-            ]);
-        }
-
-        return $success;
-    }
-
-    /**
-     * Move a flow down in the display order using fresh data and bulk update
-     */
-    public function move_flow_down(int $flow_id): bool {
-        // Get flow to determine pipeline_id
-        $flow = $this->get_flow($flow_id);
-        if (!$flow) {
-            return false;
-        }
-
-        $pipeline_id = (int)$flow['pipeline_id'];
-
-        // Clear cache FIRST to ensure we get fresh data for position calculations
-        do_action('dm_clear_pipeline_cache', $pipeline_id);
-
-        // Get fresh flows data after cache clear
-        $flows = $this->get_flows_for_pipeline($pipeline_id);
-
-        if (empty($flows)) {
-            return false;
-        }
-
-        // Find current flow and next flow by display_order using fresh data
-        $current_flow = null;
-        $next_flow = null;
-
-        // First pass: find the current flow in fresh data
-        foreach ($flows as $pipeline_flow) {
-            if ((int)$pipeline_flow['flow_id'] === $flow_id) {
-                $current_flow = $pipeline_flow;
-                break;
-            }
-        }
-
-        if (!$current_flow) {
-            return false; // Flow not found in fresh data
-        }
-
-        $current_display_order = (int)$current_flow['display_order'];
-
-        // Second pass: find next flow
-        foreach ($flows as $pipeline_flow) {
-            if ((int)$pipeline_flow['display_order'] > $current_display_order) {
-                if (!$next_flow || (int)$pipeline_flow['display_order'] < (int)$next_flow['display_order']) {
-                    $next_flow = $pipeline_flow;
-                }
-            }
-        }
-
-        if (!$current_flow || !$next_flow) {
-            return false; // Already at the bottom or flow not found
-        }
-
-        // Swap positions using bulk update
-        $flow_orders = [
-            (int)$current_flow['flow_id'] => (int)$next_flow['display_order'],
-            (int)$next_flow['flow_id'] => (int)$current_flow['display_order']
-        ];
-
-        $success = apply_filters('dm_update_flow_display_orders', false, $pipeline_id, $flow_orders);
-
-        if ($success) {
-            do_action('dm_log', 'debug', 'Successfully moved flow down', [
-                'flow_id' => $flow_id,
-                'old_position' => $current_display_order,
-                'new_position' => (int)$next_flow['display_order']
-            ]);
-        }
-
-        return $success;
-    }
 
 
 }

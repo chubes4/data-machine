@@ -33,7 +33,6 @@
             this.bindEvents();
             this.initCardExpansion();
             this.initPipelineSortable();
-            this.initFlowReordering();
             this.initMutationObserver();
         },
 
@@ -45,8 +44,6 @@
             $(document).on('click', '.dm-expand-toggle', this.handleExpandToggle.bind(this));
             
             // Flow reordering arrows
-            $(document).on('click', '.dm-reorder-arrow-up', this.handleMoveFlowUp.bind(this));
-            $(document).on('click', '.dm-reorder-arrow-down', this.handleMoveFlowDown.bind(this));
             
             // Legacy event support for existing code
             $(document).on('dm:cards-updated', this.handleDOMChanges.bind(this));
@@ -194,135 +191,6 @@
             });
         },
 
-        /**
-         * Initialize flow reordering system
-         */
-        initFlowReordering: function() {
-            // Initialize arrow visibility for all pipelines on page load
-            $('.dm-pipeline-card').each(function() {
-                PipelineCardsUI.updateFlowArrowVisibility($(this));
-            });
-        },
-
-        /**
-         * Handle move flow up
-         */
-        handleMoveFlowUp: function(e) {
-            e.preventDefault();
-            
-            const $button = $(e.currentTarget);
-            const flowId = $button.data('flow-id');
-            const pipelineId = $button.data('pipeline-id');
-            
-            if (!flowId || !pipelineId) {
-                return;
-            }
-            
-            this.moveFlow(flowId, pipelineId, 'up', $button);
-        },
-
-        /**
-         * Handle move flow down
-         */
-        handleMoveFlowDown: function(e) {
-            e.preventDefault();
-            
-            const $button = $(e.currentTarget);
-            const flowId = $button.data('flow-id');
-            const pipelineId = $button.data('pipeline-id');
-            
-            if (!flowId || !pipelineId) {
-                return;
-            }
-            
-            this.moveFlow(flowId, pipelineId, 'down', $button);
-        },
-
-        /**
-         * Move flow up or down
-         */
-        moveFlow: function(flowId, pipelineId, direction, $arrow) {
-            // Add loading state by dimming the arrow
-            $arrow.css('opacity', '0.5').css('cursor', 'wait');
-            
-            $.ajax({
-                url: dmPipelineBuilder.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_move_flow',
-                    flow_id: flowId,
-                    pipeline_id: pipelineId,
-                    direction: direction,
-                    nonce: dmPipelineBuilder.dm_ajax_nonce
-                },
-                success: (response) => {
-                    if (response.success) {
-                        // Find the current flow card
-                        const $flowCard = $(`.dm-flow-instance-card[data-flow-id="${flowId}"]`);
-                        const $flowsList = $flowCard.closest('.dm-flows-list');
-                        
-                        if (direction === 'up') {
-                            // Move flow card up
-                            const $prevCard = $flowCard.prev('.dm-flow-instance-card');
-                            if ($prevCard.length) {
-                                $flowCard.insertBefore($prevCard);
-                            }
-                        } else {
-                            // Move flow card down  
-                            const $nextCard = $flowCard.next('.dm-flow-instance-card');
-                            if ($nextCard.length) {
-                                $flowCard.insertAfter($nextCard);
-                            }
-                        }
-                        
-                        // Update arrow visibility after successful move
-                        this.updateFlowArrowVisibility($flowsList.closest('.dm-pipeline-card'));
-                    } else {
-                    }
-                },
-                error: (xhr, status, error) => {
-                },
-                complete: () => {
-                    // Restore arrow appearance
-                    $arrow.css('opacity', '').css('cursor', '');
-                }
-            });
-        },
-
-        /**
-         * Update arrow visibility based on flow position and count
-         */
-        updateFlowArrowVisibility: function($pipelineCard) {
-            const $flows = $pipelineCard.find('.dm-flow-instance-card');
-            const flowCount = $flows.length;
-            
-            if (flowCount <= 1) {
-                // Hide all arrows if only 1 or no flows
-                $pipelineCard.find('.dm-reorder-arrow-up, .dm-reorder-arrow-down').hide();
-                return;
-            }
-            
-            $flows.each(function(index) {
-                const $flow = $(this);
-                const $upArrow = $flow.find('.dm-reorder-arrow-up');
-                const $downArrow = $flow.find('.dm-reorder-arrow-down');
-                
-                // Show/hide based on position
-                if (index === 0) {
-                    // First flow: hide up arrow, show down arrow
-                    $upArrow.hide();
-                    $downArrow.show();
-                } else if (index === flowCount - 1) {
-                    // Last flow: show up arrow, hide down arrow
-                    $upArrow.show();
-                    $downArrow.hide();
-                } else {
-                    // Middle flows: show both arrows
-                    $upArrow.show();
-                    $downArrow.show();
-                }
-            });
-        },
 
         /**
          * Initialize MutationObserver for automatic DOM change detection
@@ -447,9 +315,6 @@
          */
         refreshAll: function() {
             this.initCardExpansion();
-            $('.dm-pipeline-card').each(function() {
-                PipelineCardsUI.updateFlowArrowVisibility($(this));
-            });
         },
 
         /**
