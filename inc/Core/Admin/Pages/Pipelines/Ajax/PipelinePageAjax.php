@@ -93,11 +93,11 @@ class PipelinePageAjax
         // Handle Action Scheduler scheduling via central action hook
         do_action('dm_update_flow_schedule', $flow_id, $schedule_interval, $old_interval);
 
-        // Auto-save pipeline after flow schedule change
+        // Clear the 3 specific caches affected by schedule changes
         $pipeline_id = (int)$flow['pipeline_id'];
-        if ($pipeline_id > 0) {
-            do_action('dm_auto_save', $pipeline_id);
-        }
+        do_action('dm_clear_flow_config_cache', $flow_id);           // Individual flow cache
+        do_action('dm_clear_flow_scheduling_cache', $flow_id);       // Flow scheduling cache
+        delete_transient('dm_pipeline_flows_' . $pipeline_id);      // Pipeline flows list
 
         wp_send_json_success([
             /* translators: %s: Schedule interval (e.g., 'active', 'paused') */

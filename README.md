@@ -112,7 +112,7 @@ Auth via `/dm-oauth/{provider}/` popup flow.
 - Flow B: Reddit r/webdev → AI → WordPress (daily development updates)
 - Flow C: Industry Google Sheets → AI → WordPress (weekly reports)
 
-> **Note**: Update workflows require `source_url` from fetch handlers. AI tools enable multi-turn conversations for complex research and analysis tasks.
+> **Note**: Update workflows require `source_url` (provided by fetch handlers or AI tools like Local Search/WordPress Post Reader). AI tools enable multi-turn conversations for complex research and analysis tasks.
 
 *For detailed examples and technical specifications, see `CLAUDE.md`*
 

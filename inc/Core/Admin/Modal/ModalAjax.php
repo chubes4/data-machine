@@ -150,7 +150,7 @@ class ModalAjax
                         // Query next scheduled run time
                         $next_run_time = null;
                         if (function_exists('as_next_scheduled_action')) {
-                            $next_action = as_next_scheduled_action('dm_run_flow_now', [$context['flow_id']], 'data-machine');
+                            $next_action = as_next_scheduled_action('dm_run_flow_now', [absint($context['flow_id'])], 'data-machine');
                             if ($next_action) {
                                 $next_run_time = wp_date('Y-m-d H:i:s', $next_action);
                             }
