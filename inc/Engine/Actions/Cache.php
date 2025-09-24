@@ -1,6 +1,6 @@
 <?php
 /**
- * Centralized cache management using WordPress transients and action hooks.
+ * Centralized cache management using WordPress transients.
  *
  * @package DataMachine\Engine\Actions
  */
@@ -14,9 +14,6 @@ if (!defined('WPINC')) {
 
 class Cache {
 
-    /**
-     * Cache key constants for consistent transient management.
-     */
     const PIPELINE_CACHE_KEY = 'dm_pipeline_';
     const ALL_PIPELINES_CACHE_KEY = 'dm_all_pipelines';
     const PIPELINES_LIST_CACHE_KEY = 'dm_pipelines_list';
@@ -43,9 +40,6 @@ class Cache {
     const RECENT_JOBS_PATTERN = 'dm_recent_jobs*';
     const FLOW_JOBS_PATTERN = 'dm_flow_jobs*';
 
-    /**
-     * Register centralized cache management actions.
-     */
     public static function register() {
         $instance = new self();
 
@@ -66,9 +60,6 @@ class Cache {
         add_action('ai_all_model_cache_cleared', [$instance, 'handle_ai_all_cache_cleared'], 10, 0);
     }
 
-    /**
-     * Clear pipeline caches with cascading flow and job invalidation.
-     */
     public function handle_clear_pipeline_cache($pipeline_id) {
         if (empty($pipeline_id)) {
             do_action('dm_log', 'warning', 'Cache clear requested with empty pipeline ID');
@@ -79,15 +70,11 @@ class Cache {
         $this->clear_flow_cache($pipeline_id);
         $this->clear_job_cache();
 
-        // Ensure fresh data across web and cron contexts
         if (function_exists('wp_cache_flush')) {
             wp_cache_flush();
         }
     }
 
-    /**
-     * Clear flow caches with pipeline cache coordination.
-     */
     public function handle_clear_flow_cache($flow_id) {
         if (empty($flow_id)) {
             do_action('dm_log', 'warning', 'Flow cache clear requested with empty flow ID');
@@ -98,12 +85,10 @@ class Cache {
         $db_flows = $all_databases['flows'] ?? null;
 
         if ($db_flows) {
-            // Retrieve flow data before cache invalidation to prevent recursion
             $flow = apply_filters('dm_get_flow', null, $flow_id);
             $pipeline_id = $flow['pipeline_id'] ?? null;
             $flow_config = $flow['flow_config'] ?? [];
 
-            // Clear flow caches - flow step configs depend on FLOW_CONFIG_CACHE_KEY
             $flow_config_key = self::FLOW_CONFIG_CACHE_KEY . $flow_id;
             $flow_scheduling_key = self::FLOW_SCHEDULING_CACHE_KEY . $flow_id;
 
@@ -215,7 +200,6 @@ class Cache {
     public function handle_clear_jobs_cache() {
         $this->clear_job_cache();
 
-        // Ensure fresh data across web and cron contexts
         if (function_exists('wp_cache_flush')) {
             wp_cache_flush();
         }
@@ -227,7 +211,6 @@ class Cache {
     public function handle_clear_pipelines_list_cache() {
         delete_transient(self::PIPELINES_LIST_CACHE_KEY);
 
-        // Ensure fresh data across web and cron contexts
         if (function_exists('wp_cache_flush')) {
             wp_cache_flush();
         }
@@ -325,7 +308,6 @@ class Cache {
             delete_transient($key);
         }
 
-        // Ensure fresh data across web and cron contexts
         if (function_exists('wp_cache_flush')) {
             wp_cache_flush();
         }

@@ -39,7 +39,7 @@ Purpose-built instructions for AI agents working in this repo. Read alongside: `
 
 ### Developer Workflows
 - Install deps/tests: `composer install` → `composer test` (unit: `composer test:unit`, coverage: `composer test:coverage`).
-- Build plugin zip: `./build.sh` → outputs to `build/`.
+- Build plugin zip: `./build.sh` → outputs to `/dist/data-machine.zip`.
 - VS Code tasks available: Install Dependencies, Run Tests, Build Data Machine Plugin.
 
 ### Where to Add/Change

@@ -1,9 +1,6 @@
 <?php
 /**
- * AI Conversation Manager for turn-based conversation state management.
- *
- * Handles chronological message ordering, turn tracking, and tool result formatting
- * for multi-turn AI conversations with tool execution support.
+ * AI conversation state management with turn tracking and tool result formatting.
  *
  * @package DataMachine\Core\Steps\AI
  */
@@ -15,12 +12,10 @@ defined('ABSPATH') || exit;
 class AIStepConversationManager {
 
     /**
-     * Generate tool execution result message with filter support.
-     *
      * @param string $tool_name Tool identifier
-     * @param array $tool_result Tool execution result
+     * @param array $tool_result Execution result
      * @param array $tool_parameters Tool parameters
-     * @return string Formatted result message
+     * @return string Result message
      */
     public static function generateSuccessMessage(string $tool_name, array $tool_result, array $tool_parameters): string {
         $success = $tool_result['success'] ?? false;

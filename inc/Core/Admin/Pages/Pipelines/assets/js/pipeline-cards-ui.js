@@ -469,7 +469,7 @@
                 data: {
                     action: 'dm_refresh_flow_footer',
                     flow_id: flowId,
-                    nonce: window.dmAjaxNonce || ''
+                    nonce: dmPipelineBuilder.dm_ajax_nonce
                 },
                 success: function(response) {
                     if (response.success && response.data.footer_html) {

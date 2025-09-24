@@ -52,7 +52,7 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 4. Configure AI provider at Settings → Data Machine
 
 **Production**:
-1. Run `./build.sh` for production zip
+1. Run `./build.sh` to create `/dist/data-machine.zip`
 2. Install via WordPress admin
 3. Configure AI provider and tools
 
@@ -225,7 +225,7 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 
 ```bash
 composer install    # Development setup
-./build.sh         # Production build
+./build.sh         # Production build to /dist/data-machine.zip
 ```
 
 **Architecture**:
@@ -238,6 +238,7 @@ composer install    # Development setup
   - Clean AI data packets with structured engine parameters
 - **Centralized Cache System**:
   - Actions/Cache.php with WordPress action-based clearing
+  - Granular cache methods: `dm_clear_flow_config_cache`, `dm_clear_flow_scheduling_cache`, `dm_clear_flow_steps_cache`
 - **5-Tier AI Directive System**:
   - Auto-registration: PluginCoreDirective → GlobalSystemPromptDirective → PipelineSystemPromptDirective → ToolDefinitionsDirective → SiteContextDirective
 - **Enhanced Tool Discovery**:

@@ -134,6 +134,9 @@ do_action('dm_delete', $type, $id, $criteria);
 // Cache Management
 do_action('dm_clear_pipeline_cache', $pipeline_id);
 do_action('dm_clear_flow_cache', $flow_id);
+do_action('dm_clear_flow_config_cache', $flow_id);
+do_action('dm_clear_flow_scheduling_cache', $flow_id);
+do_action('dm_clear_flow_steps_cache', $flow_id);
 do_action('dm_clear_jobs_cache');
 do_action('dm_clear_all_cache');
 do_action('dm_clear_pipelines_list_cache');
@@ -710,6 +713,9 @@ apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' =>
 // Granular cache clearing
 do_action('dm_clear_pipeline_cache', $pipeline_id); // Pipeline + flows + jobs
 do_action('dm_clear_flow_cache', $flow_id); // Flow-specific caches
+do_action('dm_clear_flow_config_cache', $flow_id); // Flow configuration cache
+do_action('dm_clear_flow_scheduling_cache', $flow_id); // Flow scheduling cache
+do_action('dm_clear_flow_steps_cache', $flow_id); // Flow steps cache
 do_action('dm_clear_jobs_cache'); // All job-related caches
 do_action('dm_clear_all_cache'); // Complete cache reset
 
@@ -725,7 +731,7 @@ do_action('dm_cache_set', $key, $data, $timeout, $group);
 
 ```bash
 composer install && composer test
-./build.sh  # Production build
+./build.sh  # Production build to /dist/data-machine.zip
 ```
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths

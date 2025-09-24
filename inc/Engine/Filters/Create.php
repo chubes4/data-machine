@@ -1,6 +1,6 @@
 <?php
 /**
- * Centralized creation operations with atomic workflows and permission validation.
+ * Centralized creation operations for pipelines, flows, and steps.
  *
  * @package DataMachine\Engine\Filters
  */
@@ -11,9 +11,6 @@ defined('WPINC') || exit;
 
 class Create {
 
-    /**
-     * Register creation filters for pipeline, flow, step, and template operations.
-     */
     public static function register() {
         $instance = new self();
         add_filter('dm_create_pipeline', [$instance, 'handle_create_pipeline'], 10, 2);
@@ -25,11 +22,9 @@ class Create {
 
 
     /**
-     * Create pipeline with automatic mode detection (simple vs complete).
-     *
-     * @param mixed $default Unused filter default
+     * @param mixed $default Unused
      * @param array $data Pipeline creation data
-     * @return int|false Pipeline ID on success, false on failure
+     * @return int|false Pipeline ID or false
      */
     public function handle_create_pipeline($default, $data = []) {
         if (!current_user_can('manage_options')) {
@@ -65,9 +60,6 @@ class Create {
         }
     }
 
-    /**
-     * Create basic pipeline with default flow.
-     */
     private function create_simple_pipeline($data, $db_pipelines, $db_flows) {
         $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : 'Pipeline';
 
@@ -101,9 +93,6 @@ class Create {
         return $this->finalize_pipeline_creation($pipeline_id, $pipeline_name, $flow_id, $db_pipelines, $db_flows);
     }
 
-    /**
-     * Create pipeline with predefined steps and configuration.
-     */
     private function create_complete_pipeline($data, $db_pipelines, $db_flows) {
         $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : 'Pipeline';
         $steps = $data['steps'];
@@ -243,9 +232,6 @@ class Create {
         return $this->finalize_pipeline_creation($pipeline_id, $pipeline_name, $flow_id, $db_pipelines, $db_flows, 'complete');
     }
 
-    /**
-     * Complete pipeline creation with cache clearing and AJAX response.
-     */
     private function finalize_pipeline_creation($pipeline_id, $pipeline_name, $flow_id, $db_pipelines, $db_flows, $creation_type = 'simple') {
         do_action('dm_log', 'info', 'Pipeline created successfully', [
             'pipeline_id' => $pipeline_id,
@@ -283,11 +269,9 @@ class Create {
     }
 
     /**
-     * Add new step to pipeline with automatic flow synchronization.
-     *
-     * @param mixed $default Unused filter default
+     * @param mixed $default Unused
      * @param array $data Step creation data
-     * @return string|false Pipeline step ID on success, false on failure
+     * @return string|false Pipeline step ID or false
      */
     public function handle_create_step($default, $data = []) {
         if (!current_user_can('manage_options')) {
@@ -393,11 +377,9 @@ class Create {
     }
 
     /**
-     * Create new flow instance for existing pipeline.
-     *
-     * @param mixed $default Unused filter default
+     * @param mixed $default Unused
      * @param array $data Flow creation data
-     * @return int|false Flow ID on success, false on failure
+     * @return int|false Flow ID or false
      */
     public function handle_create_flow($default, $data = []) {
         if (!current_user_can('manage_options')) {
@@ -496,11 +478,9 @@ class Create {
     }
 
     /**
-     * Duplicate existing flow with remapped step IDs.
-     *
-     * @param mixed $default Unused filter default
+     * @param mixed $default Unused
      * @param int $source_flow_id Flow to duplicate
-     * @return int|false New flow ID on success, false on failure
+     * @return int|false New flow ID or false
      */
     public function handle_duplicate_flow($default, int $source_flow_id) {
         if (!current_user_can('manage_options')) {
@@ -600,9 +580,6 @@ class Create {
         return $new_flow_id;
     }
 
-    /**
-     * Remap flow step IDs from old flow to new flow for duplication.
-     */
     private function remap_flow_step_ids(array $source_config, int $old_flow_id, int $new_flow_id): array {
         $remapped_config = [];
 
@@ -640,12 +617,10 @@ class Create {
     }
 
     /**
-     * Create pipeline from predefined template configuration.
-     *
-     * @param mixed $default Unused filter default
+     * @param mixed $default Unused
      * @param string $template_id Template identifier
-     * @param array $options Template customization options
-     * @return int|false Pipeline ID on success, false on failure
+     * @param array $options Template options
+     * @return int|false Pipeline ID or false
      */
     public function handle_create_pipeline_from_template($default, $template_id, $options = []) {
         if (!current_user_can('manage_options')) {

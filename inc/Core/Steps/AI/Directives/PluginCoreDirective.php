@@ -1,17 +1,6 @@
 <?php
 /**
- * Plugin Core Directive - Priority 10 (Highest Priority)
- *
- * Establishes foundational AI agent identity and core behavioral principles
- * as the first directive in the 5-tier AI directive system. Defines the
- * fundamental role and operational framework before any user configuration.
- *
- * Priority Order in 5-Tier System:
- * 1. Priority 10 - Plugin Core Directive (THIS CLASS)
- * 2. Priority 20 - Global System Prompt
- * 3. Priority 30 - Pipeline System Prompt
- * 4. Priority 40 - Tool Definitions and Workflow Context
- * 5. Priority 50 - WordPress Site Context
+ * Priority 10 AI directive establishing foundational agent identity.
  */
 
 namespace DataMachine\Core\Steps\AI\Directives;
@@ -21,14 +10,12 @@ defined('ABSPATH') || exit;
 class PluginCoreDirective {
 
     /**
-     * Inject plugin core identity directive into AI request.
-     *
-     * @param array $request AI request array with messages
-     * @param string $provider_name AI provider name
-     * @param callable $streaming_callback Streaming callback (unused)
-     * @param array $tools Available tools (unused)
-     * @param string|null $pipeline_step_id Pipeline step ID (unused)
-     * @return array Modified request with core directive added
+     * @param array $request AI request
+     * @param string $provider_name Provider name
+     * @param callable $streaming_callback Unused
+     * @param array $tools Unused
+     * @param string|null $pipeline_step_id Unused
+     * @return array Modified request
      */
     public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null): array {
         if (!isset($request['messages']) || !is_array($request['messages'])) {

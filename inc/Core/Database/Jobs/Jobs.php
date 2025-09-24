@@ -72,6 +72,10 @@ class Jobs {
         return $this->operations->retrieve_engine_data($job_id);
     }
 
+    public function get_job(int $job_id): ?object {
+        return $this->operations->get_job($job_id);
+    }
+
 
     public static function create_table() {
         global $wpdb;

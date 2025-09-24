@@ -513,8 +513,6 @@ class PipelineModalAjax
             sanitize_text_field($context['pipeline_id']) : 
             sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
         
-        // Determine if this is an "add" or "update" operation
-        $action_type = !empty($context) ? 'added' : 'updated';
         
         if (empty($handler_slug) || empty($flow_step_id)) {
             wp_send_json_error([
@@ -552,7 +550,6 @@ class PipelineModalAjax
         do_action('dm_log', 'debug', 'Handler settings processed', [
             'handler_slug' => $handler_slug,
             'flow_step_id' => $flow_step_id,
-            'action_type' => $action_type,
             'settings_count' => count($handler_settings)
         ]);
         
@@ -563,21 +560,21 @@ class PipelineModalAjax
              // Extract flow_id for JavaScript response
              $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
              $flow_id = $parts['flow_id'] ?? null;
-             
-             // Prepare success message based on action type
-             $message = ($action_type === 'added')
-                 /* translators: %s: Handler name or label */
-                 ? sprintf(__('Handler "%s" added to flow successfully', 'data-machine'), $handler_info['label'] ?? $handler_slug)
-                 /* translators: %s: Handler name or label */
-                 : sprintf(__('Handler "%s" settings saved successfully.', 'data-machine'), $handler_slug);
-             
+
+             // Get the updated flow step configuration we just saved
+             $updated_flow_step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+
+             // Prepare success message
+             /* translators: %s: Handler name or label */
+             $message = sprintf(__('Handler "%s" settings saved successfully.', 'data-machine'), $handler_info['label'] ?? $handler_slug);
+
              wp_send_json_success([
                  'message' => $message,
                  'handler_slug' => $handler_slug,
                  'step_type' => $step_type,  // Include step_type for UI updates
                  'flow_step_id' => $flow_step_id,
                  'flow_id' => $flow_id,
-                 'action_type' => $action_type
+                 'step_config' => $updated_flow_step_config  // Add the actual step config we just saved
              ]);
             
         } catch (\Exception $e) {

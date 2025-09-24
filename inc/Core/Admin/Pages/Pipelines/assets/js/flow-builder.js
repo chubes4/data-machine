@@ -320,17 +320,21 @@
          * Update specific flow step card after handler configuration using fresh data
          */
         updateFlowStepCard: function(handlerData) {
-            const { flow_step_id, step_type, handler_slug, flow_id, flow_config } = handlerData;
-            
+            const { flow_step_id, step_type, handler_slug, flow_id, step_config } = handlerData;
+
             // Find the specific flow step card to update
             const $flowStepContainer = $(`.dm-step-container[data-flow-step-id="${flow_step_id}"]`);
-            
+
             if (!$flowStepContainer.length) {
                 // Flow step container not found
                 return;
             }
 
-            // Use flow config directly from save response - no AJAX call needed
+            // Build flow_config structure directly from response data - no database lookup needed
+            const flow_config = {};
+            flow_config[flow_step_id] = step_config;
+
+            // Use step config directly from save response - no additional AJAX call needed
             PipelinesPage.requestTemplate('page/flow-step-card', {
                 step: {
                     step_type: step_type,
@@ -344,12 +348,12 @@
             }).then((updatedStepHtml) => {
                 // Replace the existing step container with updated version
                 $flowStepContainer.replaceWith(updatedStepHtml);
-                
+
                 // Trigger card UI updates for updated content
                 if (typeof PipelineCardsUI !== 'undefined') {
                     PipelineCardsUI.handleDOMChanges();
                 }
-                
+
                 // Refresh pipeline status after template update
                 const pipelineId = $flowStepContainer.closest('.dm-pipeline-card').data('pipeline-id');
                 if (pipelineId) {

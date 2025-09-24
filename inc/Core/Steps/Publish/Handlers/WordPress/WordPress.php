@@ -1,7 +1,6 @@
 <?php
 /**
- * WordPress publish handler with modular components.
- * Configuration hierarchy: system defaults override handler settings.
+ * WordPress publish handler with modular post creation components.
  *
  * @package DataMachine\Core\Steps\Publish\Handlers\WordPress
  */

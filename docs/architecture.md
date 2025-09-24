@@ -52,6 +52,9 @@ $image_url = $engine_data['image_url'] ?? null;
 **Cache Operations**:
 - `dm_clear_pipeline_cache($pipeline_id)` - Clear pipeline + flows + jobs
 - `dm_clear_flow_cache($flow_id)` - Clear flow-specific caches
+- `dm_clear_flow_config_cache($flow_id)` - Clear flow configuration cache
+- `dm_clear_flow_scheduling_cache($flow_id)` - Clear flow scheduling cache
+- `dm_clear_flow_steps_cache($flow_id)` - Clear flow steps cache
 - `dm_clear_jobs_cache()` - Clear all job-related caches
 - `dm_clear_all_cache()` - Complete cache reset
 - `dm_cache_set($key, $data, $timeout, $group)` - Standardized cache storage

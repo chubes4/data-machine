@@ -1,8 +1,6 @@
 <?php
 /**
- * Twitter Publishing Handler - OAuth 1.0a with AI tool_call interface
- *
- * Features: 280-character limit, media upload, URL handling, X API v2 posting
+ * Twitter publishing handler with OAuth 1.0a and AI tool integration.
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;

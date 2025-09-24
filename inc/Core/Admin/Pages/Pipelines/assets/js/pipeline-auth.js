@@ -144,4 +144,219 @@
     } else {
         handleOAuthCompletion();
     }
+
+    /**
+     * Auth UI Controller (main admin page)
+     * Owns auth-related handlers in the modal to avoid duplication
+     */
+    window.dmAuthUI = window.dmAuthUI || (function($) {
+        const api = {
+            init() {
+                this.bindEvents();
+            },
+
+            bindEvents() {
+                // OAuth connection
+                $(document).on('click', '.dm-connect-oauth', this.handleOAuthConnect.bind(this));
+                // Disconnect
+                $(document).on('click', '.dm-disconnect-account', this.handleDisconnect.bind(this));
+                // Save config
+                $(document).on('submit', '.dm-auth-config-form', this.handleAuthConfigSave.bind(this));
+
+                // OAuth completion events from popup
+                window.addEventListener('dm-auth-success', this.handleAuthSuccess.bind(this));
+                window.addEventListener('dm-auth-error', this.handleAuthError.bind(this));
+            },
+
+            handleOAuthConnect(e) {
+                e.preventDefault();
+
+                const $button = $(e.currentTarget);
+                const handlerSlug = $button.data('handler');
+                const oauthUrl = $button.data('oauth-url');
+                if (!handlerSlug || !oauthUrl) return;
+
+                // Ensure config present
+                const $configForm = $('.dm-auth-config-form[data-handler="' + handlerSlug + '"]');
+                let hasConfig = false;
+                if ($configForm.length) {
+                    $configForm.find('input[required]').each(function() {
+                        if ($(this).val().trim() !== '') {
+                            hasConfig = true;
+                            return false;
+                        }
+                    });
+                }
+                if (!hasConfig) {
+                    $('.dm-auth-config-section .notice').remove();
+                    const $error = $('<div class="notice notice-error is-dismissible"><p>Please save your API configuration first before connecting your account.</p></div>');
+                    $('.dm-auth-config-section').before($error);
+                    setTimeout(() => $error.fadeOut(300, function() { $(this).remove(); }), 5000);
+                    return;
+                }
+
+                const strings = (window.dmPipelineModal && dmPipelineModal.strings) || { connecting: 'Connecting...' };
+                const originalText = $button.text();
+                $button.text(strings.connecting).prop('disabled', true);
+
+                const oauthWindow = window.open(oauthUrl, 'oauth_window', 'width=600,height=700,scrollbars=yes,resizable=yes');
+                if (!oauthWindow) {
+                    $button.text(originalText).prop('disabled', false);
+                    return;
+                }
+                const checkInterval = setInterval(() => {
+                    if (oauthWindow.closed) {
+                        clearInterval(checkInterval);
+                        $button.text(originalText).prop('disabled', false);
+                        // Refresh handled by dm-auth-success event
+                    }
+                }, 1000);
+            },
+
+            refreshAuthModal() {
+                const $modal = $('#dm-modal');
+                if (!$modal.hasClass('dm-modal-active')) return;
+
+                const $authForm = $('.dm-auth-config-form');
+                if (!$authForm.length) return;
+                const handlerSlug = $authForm.data('handler');
+                if (!handlerSlug) return;
+
+                // Preserve full context from Back to Settings button
+                let context = { handler_slug: handlerSlug };
+                const $backBtn = $('.dm-modal-navigation .dm-modal-content[data-template^="handler-settings/"]');
+                if ($backBtn.length) {
+                    let btnCtx = $backBtn.data('context');
+                    if (btnCtx) {
+                        try {
+                            if (typeof btnCtx === 'string') btnCtx = JSON.parse(btnCtx);
+                            context = Object.assign({}, btnCtx, { handler_slug: handlerSlug });
+                        } catch (e) {
+                            context = { handler_slug: handlerSlug };
+                        }
+                    }
+                }
+
+                $.ajax({
+                    url: (window.dmCoreModal && dmCoreModal.ajax_url) || ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'dm_get_modal_content',
+                        template: 'modal/handler-auth-form',
+                        context: JSON.stringify(context),
+                        nonce: (window.dmCoreModal && dmCoreModal.dm_ajax_nonce) || ''
+                    },
+                    success: (response) => {
+                        if (response && response.success) {
+                            $modal.find('.dm-modal-title').text(response.data.template);
+                            $modal.find('.dm-modal-body').html(response.data.content);
+                        }
+                    },
+                    error: (xhr, status, error) => {
+                        // Silent fail
+                        console.log('Modal refresh failed:', error);
+                    }
+                });
+            },
+
+            handleAuthSuccess(event) {
+                const provider = event.detail.provider;
+                this.refreshAuthModal();
+                if (window.dmPipelineCards && typeof window.dmPipelineCards.refreshAll === 'function') {
+                    window.dmPipelineCards.refreshAll();
+                }
+            },
+
+            handleAuthError(event) {
+                // Optional: show notice via dmCoreModal.showNotice if desired
+            },
+
+            handleDisconnect(e) {
+                e.preventDefault();
+                const $button = $(e.currentTarget);
+                const handlerSlug = $button.data('handler');
+                if (!handlerSlug) return;
+
+                const strings = (window.dmPipelineModal && dmPipelineModal.strings) || {
+                    disconnecting: 'Disconnecting...',
+                    confirmDisconnect: 'Are you sure you want to disconnect this account? You will need to reconnect to use this handler.'
+                };
+                if (!confirm(strings.confirmDisconnect)) return;
+
+                const originalText = $button.text();
+                $button.text(strings.disconnecting).prop('disabled', true);
+
+                $.ajax({
+                    url: (window.dmCoreModal && dmCoreModal.ajax_url) || ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'dm_disconnect_account',
+                        handler_slug: handlerSlug,
+                        nonce: (window.dmCoreModal && dmCoreModal.dm_ajax_nonce) || ''
+                    },
+                    success: (response) => {
+                        if (response && response.success) {
+                            this.refreshAuthModal();
+                        } else {
+                            $button.text(originalText).prop('disabled', false);
+                        }
+                    },
+                    error: () => {
+                        $button.text(originalText).prop('disabled', false);
+                    }
+                });
+            },
+
+            handleAuthConfigSave(e) {
+                e.preventDefault();
+                const $form = $(e.currentTarget);
+                const $submitButton = $form.find('button[type="submit"]');
+                const handlerSlug = $form.data('handler');
+                if (!handlerSlug) return;
+
+                const strings = (window.dmPipelineModal && dmPipelineModal.strings) || { saving: 'Saving...' };
+                const originalText = $submitButton.text();
+                $submitButton.text(strings.saving).prop('disabled', true);
+
+                const formData = $form.serialize();
+                $.ajax({
+                    url: (window.dmCoreModal && dmCoreModal.ajax_url) || ajaxurl,
+                    type: 'POST',
+                    data: formData + '&action=dm_save_auth_config',
+                    success: (response) => {
+                        if (response && response.success) {
+                            const message = (response.data && response.data.message) || 'Configuration saved successfully';
+                            const $success = $('<div class="notice notice-success is-dismissible"><p>' + message + '</p></div>');
+                            $form.before($success);
+                            setTimeout(() => {
+                                $success.fadeOut(300, function() { $(this).remove(); });
+                            }, 3000);
+                            this.refreshAuthModal();
+                        } else {
+                            const message = (response && response.data && response.data.message) || 'Failed to save configuration';
+                            const $error = $('<div class="notice notice-error is-dismissible"><p>' + message + '</p></div>');
+                            $form.before($error);
+                        }
+                    },
+                    error: () => {
+                        const $error = $('<div class="notice notice-error is-dismissible"><p>Error saving configuration</p></div>');
+                        $form.before($error);
+                    },
+                    complete: () => {
+                        $submitButton.text(originalText).prop('disabled', false);
+                    }
+                });
+            }
+        };
+        return api;
+    })(jQuery);
+
+    // Initialize auth UI on document ready
+    if (typeof jQuery !== 'undefined') {
+        jQuery(function() {
+            if (window.dmAuthUI && typeof window.dmAuthUI.init === 'function') {
+                window.dmAuthUI.init();
+            }
+        });
+    }
 })();

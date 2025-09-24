@@ -244,6 +244,42 @@ do_action('dm_clear_flow_cache', $flow_id);
 3. Clears pipeline flow aggregation cache
 4. Clears global flow caches
 
+### `dm_clear_flow_config_cache`
+
+**Purpose**: Clear configuration cache for a specific flow
+
+**Parameters**:
+- `$flow_id` (int) - Flow ID to clear configuration cache for
+
+**Usage**:
+```php
+do_action('dm_clear_flow_config_cache', $flow_id);
+```
+
+### `dm_clear_flow_scheduling_cache`
+
+**Purpose**: Clear scheduling cache for a specific flow
+
+**Parameters**:
+- `$flow_id` (int) - Flow ID to clear scheduling cache for
+
+**Usage**:
+```php
+do_action('dm_clear_flow_scheduling_cache', $flow_id);
+```
+
+### `dm_clear_flow_steps_cache`
+
+**Purpose**: Clear steps cache for a specific flow
+
+**Parameters**:
+- `$flow_id` (int) - Flow ID to clear steps cache for
+
+**Usage**:
+```php
+do_action('dm_clear_flow_steps_cache', $flow_id);
+```
+
 ### `dm_clear_jobs_cache`
 
 **Purpose**: Clear all job-related caches

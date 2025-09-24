@@ -1,7 +1,5 @@
 <?php
 /**
- * Twitter Handler Registration
- *
  * @package DataMachine\Core\Steps\Publish\Handlers\Twitter
  */
 
@@ -44,13 +42,6 @@ function dm_register_twitter_filters() {
 function dm_get_twitter_tool(array $handler_config = []): array {
     $twitter_config = $handler_config['twitter'] ?? $handler_config;
     
-    if (!empty($handler_config)) {
-        do_action('dm_log', 'debug', 'Twitter Tool: Generating with configuration', [
-            'handler_config_keys' => array_keys($handler_config),
-            'twitter_config_keys' => array_keys($twitter_config),
-            'twitter_config_values' => $twitter_config
-        ]);
-    }
     
     $tool = [
         'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
@@ -73,7 +64,7 @@ function dm_get_twitter_tool(array $handler_config = []): array {
     $include_images = $twitter_config['include_images'] ?? true;
     $link_handling = $twitter_config['link_handling'] ?? 'append';
     
-    
+
     $description_parts = ['Post content to Twitter (280 character limit)'];
     if ($link_handling === 'append') {
         $description_parts[] = 'source URLs from data will be appended to tweets';
@@ -85,19 +76,9 @@ function dm_get_twitter_tool(array $handler_config = []): array {
     }
     $tool['description'] = implode(', ', $description_parts);
     
-    do_action('dm_log', 'debug', 'Twitter Tool: Generation complete', [
-        'parameter_count' => count($tool['parameters']),
-        'parameter_names' => array_keys($tool['parameters']),
-        'include_images' => $include_images,
-        'link_handling' => $link_handling
-    ]);
-    
     return $tool;
 }
 
-/**
- * Register Twitter success message formatter.
- */
 function dm_register_twitter_success_message() {
     add_filter('dm_tool_success_message', function($default_message, $tool_name, $tool_result, $tool_parameters) {
         if ($tool_name === 'twitter_publish' && !empty($tool_result['data']['tweet_url'])) {
