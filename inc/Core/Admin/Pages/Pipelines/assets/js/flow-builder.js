@@ -320,7 +320,7 @@
          * Update specific flow step card after handler configuration using fresh data
          */
         updateFlowStepCard: function(handlerData) {
-            const { flow_step_id, step_type, handler_slug, flow_id, step_config } = handlerData;
+            const { flow_step_id, step_type, handler_slug, flow_id, flow_config } = handlerData;
 
             // Find the specific flow step card to update
             const $flowStepContainer = $(`.dm-step-container[data-flow-step-id="${flow_step_id}"]`);
@@ -329,10 +329,6 @@
                 // Flow step container not found
                 return;
             }
-
-            // Build flow_config structure directly from response data - no database lookup needed
-            const flow_config = {};
-            flow_config[flow_step_id] = step_config;
 
             // Use step config directly from save response - no additional AJAX call needed
             PipelinesPage.requestTemplate('page/flow-step-card', {

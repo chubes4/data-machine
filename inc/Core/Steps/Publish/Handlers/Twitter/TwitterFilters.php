@@ -47,7 +47,7 @@ function dm_get_twitter_tool(array $handler_config = []): array {
         'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
         'method' => 'handle_tool_call',
         'handler' => 'twitter',
-        'description' => 'Prepare and publish content to Twitter (280 char limit). This tool completes your pipeline task by publishing the processed content.',
+        'description' => 'Post content to Twitter',
         'parameters' => [
             'content' => [
                 'type' => 'string',
@@ -61,20 +61,9 @@ function dm_get_twitter_tool(array $handler_config = []): array {
         $tool['handler_config'] = $handler_config;
     }
     
-    $include_images = $twitter_config['include_images'] ?? true;
-    $link_handling = $twitter_config['link_handling'] ?? 'append';
     
 
-    $description_parts = ['Post content to Twitter (280 character limit)'];
-    if ($link_handling === 'append') {
-        $description_parts[] = 'source URLs from data will be appended to tweets';
-    } elseif ($link_handling === 'reply') {
-        $description_parts[] = 'source URLs from data will be posted as reply tweets';
-    }
-    if ($include_images) {
-        $description_parts[] = 'images from data will be uploaded automatically';
-    }
-    $tool['description'] = implode(', ', $description_parts);
+    $tool['description'] = 'Post content to Twitter';
     
     return $tool;
 }

@@ -37,6 +37,12 @@ function dm_register_flows_database_filters() {
         }
         return $services;
     });
+
+    // Cache clearing integration - respond to clear all cache action
+    add_action('dm_clear_all_cache', function() {
+        // Clear FLOW_PATTERN cache using new bulk clearing action
+        do_action('dm_clear_all_flows_cache');
+    });
 }
 
 // Auto-register when file loads - achieving complete self-containment

@@ -53,6 +53,10 @@ class Cache {
         add_action('dm_clear_jobs_cache', [$instance, 'handle_clear_jobs_cache'], 10, 0);
         add_action('dm_clear_all_cache', [$instance, 'handle_clear_all_cache'], 10, 0);
 
+        // Bulk clearing actions for action-based architecture
+        add_action('dm_clear_all_flows_cache', [$instance, 'handle_clear_all_flows_cache'], 10, 0);
+        add_action('dm_clear_all_pipelines_cache', [$instance, 'handle_clear_all_pipelines_cache'], 10, 0);
+
         add_action('dm_cache_set', [$instance, 'handle_cache_set'], 10, 4);
 
         // Listen for AI HTTP Client cache events for logging (optional integration)
@@ -218,28 +222,46 @@ class Cache {
 
     /**
      * Complete cache invalidation across all Data Machine components.
+     *
+     * Uses action-based architecture where each database component responds to
+     * dm_clear_all_cache action to clear its own cache patterns. This ensures
+     * extensibility and follows the "plugins within plugins" architecture.
      */
     public function handle_clear_all_cache() {
-        $cache_patterns = [
-            self::PIPELINE_PATTERN,
-            self::FLOW_PATTERN,
-            self::JOB_PATTERN,
-            self::RECENT_JOBS_PATTERN,
-            self::FLOW_JOBS_PATTERN
-        ];
-
-        foreach ($cache_patterns as $pattern) {
-            $this->clear_cache_pattern($pattern);
-        }
-
+        // Clear specific core transients managed by the Cache class itself
         delete_transient(self::ALL_PIPELINES_CACHE_KEY);
         delete_transient(self::PIPELINES_LIST_CACHE_KEY);
         delete_transient(self::PIPELINE_COUNT_CACHE_KEY);
         delete_transient(self::PIPELINE_EXPORT_CACHE_KEY);
         delete_transient(self::TOTAL_JOBS_COUNT_CACHE_KEY);
 
+        // CRITICAL: Fire the action so database components can respond with their own cache clearing
+        do_action('dm_clear_all_cache');
+
         // Clear AI HTTP Client caches if available
         do_action('ai_clear_all_cache');
+
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
+        }
+    }
+
+    /**
+     * Clear all flows cache patterns for action-based architecture.
+     */
+    public function handle_clear_all_flows_cache() {
+        $this->clear_cache_pattern(self::FLOW_PATTERN);
+
+        if (function_exists('wp_cache_flush')) {
+            wp_cache_flush();
+        }
+    }
+
+    /**
+     * Clear all pipelines cache patterns for action-based architecture.
+     */
+    public function handle_clear_all_pipelines_cache() {
+        $this->clear_cache_pattern(self::PIPELINE_PATTERN);
 
         if (function_exists('wp_cache_flush')) {
             wp_cache_flush();

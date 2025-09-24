@@ -294,6 +294,18 @@ class ProcessedItems {
     }
 
     /**
+     * Clear all processed items cache entries
+     *
+     * Called by dm_clear_all_cache action to ensure processed items cache
+     * is included in system-wide cache clearing operations.
+     *
+     * @return int Number of cache entries cleared
+     */
+    public function clear_all_processed_cache() {
+        return $this->clear_cache_pattern( 'dm_processed_*' );
+    }
+
+    /**
      * Clear multiple cache entries matching a pattern
      *
      * @param string $pattern Pattern to match (using SQL LIKE syntax with %)

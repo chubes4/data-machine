@@ -561,8 +561,9 @@ class PipelineModalAjax
              $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
              $flow_id = $parts['flow_id'] ?? null;
 
-             // Get the updated flow step configuration we just saved
-             $updated_flow_step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+             // Get the full flow configuration so template can find the step by pipeline_step_id
+             $flow = apply_filters('dm_get_flow', null, $flow_id);
+             $full_flow_config = $flow['flow_config'] ?? [];
 
              // Prepare success message
              /* translators: %s: Handler name or label */
@@ -574,7 +575,7 @@ class PipelineModalAjax
                  'step_type' => $step_type,  // Include step_type for UI updates
                  'flow_step_id' => $flow_step_id,
                  'flow_id' => $flow_id,
-                 'step_config' => $updated_flow_step_config  // Add the actual step config we just saved
+                 'flow_config' => $full_flow_config  // Return full flow config for template
              ]);
             
         } catch (\Exception $e) {

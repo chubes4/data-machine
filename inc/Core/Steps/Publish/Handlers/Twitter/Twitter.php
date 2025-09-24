@@ -41,13 +41,14 @@ class Twitter {
             do_action('dm_log', 'error', $error_msg, [
                 'error_code' => $connection->get_error_code()
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $error_msg,
                 'tool_name' => 'twitter_publish'
             ];
         }
+
 
         $tweet_text = $content;
         $ellipsis = '…';
@@ -144,10 +145,11 @@ class Twitter {
                 if (isset($response->title)) {
                     $error_msg = "Twitter API error: {$response->title}";
                 }
-                
+
                 do_action('dm_log', 'error', $error_msg, [
                     'http_code' => $http_code,
-                    'api_response' => $response
+                    'raw_api_response' => json_encode($response, JSON_PRETTY_PRINT),
+                    'response_headers' => $connection->getLastXHeaders() ?? 'unavailable'
                 ]);
 
                 return [
@@ -540,10 +542,12 @@ class Twitter {
         }
 
         do_action('dm_log', 'warning', 'Twitter: Image URL validation failed', [
-            'url' => $image_url, 
-            'http_code' => $http_code, 
+            'url' => $image_url,
+            'http_code' => $http_code,
             'content_type' => $content_type
         ]);
         return false;
     }
+
+
 }

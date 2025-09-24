@@ -327,17 +327,9 @@ function dm_register_database_filters() {
         $success = $db_flows->update_flow($flow_id, $update_data);
 
         if ($success) {
-            $context = $update_data['context'] ?? null;
-            if ($context === 'handler_update') {
-                do_action('dm_clear_flow_config_cache', $flow_id);
-                do_action('dm_clear_flow_steps_cache', $flow_id);
-            } else {
-                do_action('dm_clear_flow_cache', $flow_id);
-            }
             do_action('dm_log', 'debug', 'Flow updated via centralized filter', [
                 'flow_id' => $flow_id,
-                'updated_fields' => array_keys($update_data),
-                'context' => $context
+                'updated_fields' => array_keys($update_data)
             ]);
         }
 

@@ -230,20 +230,14 @@ class Flows {
             return false;
         }
 
-        // Context-aware cache clearing based on what was updated
-        $context = $flow_data['context'] ?? 'general';
-
-        if ($context === 'handler_update') {
-            // For handler updates, only clear flow config cache (preserve step display caches)
+        // Intelligent cache clearing based on what's actually being updated
+        if (isset($flow_data['scheduling_config'])) {
+            do_action('dm_clear_flow_scheduling_cache', $flow_id);
+        } elseif (isset($flow_data['flow_config'])) {
             do_action('dm_clear_flow_config_cache', $flow_id);
-
-            // Clear pipeline flows cache to update flow list display
-            $flow = $this->get_flow($flow_id); // Get before cache clear
-            if ($flow && !empty($flow['pipeline_id'])) {
-                delete_transient('dm_pipeline_flows_' . $flow['pipeline_id']);
-            }
+            do_action('dm_clear_flow_steps_cache', $flow_id);
         } else {
-            // For other updates, use full cache clearing
+            // Structural flow changes - clear everything
             do_action('dm_clear_flow_cache', $flow_id);
         }
 
@@ -665,5 +659,6 @@ class Flows {
 
         return $success;
     }
+
 
 }

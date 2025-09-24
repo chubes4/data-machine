@@ -36,25 +36,47 @@ class Delete {
      * @param array $context Additional context
      */
     public function handle_delete($delete_type, $target_id, $context = []) {
-        // Verify user capabilities - universal requirement for all deletions
-        if (!current_user_can('manage_options')) {
+        // Context-aware permission check: strict for admin operations, allow system cleanup
+        $admin_delete_types = ['pipeline', 'flow', 'step'];
+        $system_cleanup_types = ['processed_items', 'jobs'];
+
+        if (in_array($delete_type, $admin_delete_types) && !current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('Insufficient permissions for delete operation.', 'data-machine')]);
             return;
+        }
+
+        // Allow system cleanup types (processed_items, jobs) in Action Scheduler background context
+        if (in_array($delete_type, $system_cleanup_types) && !current_user_can('manage_options')) {
+            // Log background cleanup for debugging
+            do_action('dm_log', 'debug', 'Background system cleanup operation', [
+                'delete_type' => $delete_type,
+                'target_id' => $target_id,
+                'context' => 'action_scheduler_background'
+            ]);
         }
         
         $valid_delete_types = ['pipeline', 'flow', 'step', 'processed_items', 'jobs'];
         if (!in_array($delete_type, $valid_delete_types)) {
-            wp_send_json_error(['message' => __('Invalid deletion type.', 'data-machine')]);
+            do_action('dm_log', 'error', 'Invalid deletion type requested', ['delete_type' => $delete_type]);
+            if (wp_doing_ajax()) {
+                wp_send_json_error(['message' => __('Invalid deletion type.', 'data-machine')]);
+            }
             return;
         }
         
         if (in_array($delete_type, ['pipeline', 'flow']) && (!is_numeric($target_id) || (int)$target_id <= 0)) {
-            wp_send_json_error(['message' => __('Valid target ID is required.', 'data-machine')]);
+            do_action('dm_log', 'error', 'Invalid target ID for deletion', ['delete_type' => $delete_type, 'target_id' => $target_id]);
+            if (wp_doing_ajax()) {
+                wp_send_json_error(['message' => __('Valid target ID is required.', 'data-machine')]);
+            }
             return;
         }
         
         if ($delete_type === 'step' && (empty($target_id) || !is_string($target_id))) {
-            wp_send_json_error(['message' => __('Valid pipeline step ID is required.', 'data-machine')]);
+            do_action('dm_log', 'error', 'Invalid pipeline step ID for deletion', ['target_id' => $target_id]);
+            if (wp_doing_ajax()) {
+                wp_send_json_error(['message' => __('Valid pipeline step ID is required.', 'data-machine')]);
+            }
             return;
         }
         
@@ -64,12 +86,18 @@ class Delete {
         $db_jobs = $all_databases['jobs'] ?? null;
         
         if (in_array($delete_type, ['pipeline', 'flow', 'step']) && (!$db_pipelines || !$db_flows)) {
-            wp_send_json_error(['message' => __('Database services unavailable.', 'data-machine')]);
+            do_action('dm_log', 'error', 'Database services unavailable for deletion', ['delete_type' => $delete_type]);
+            if (wp_doing_ajax()) {
+                wp_send_json_error(['message' => __('Database services unavailable.', 'data-machine')]);
+            }
             return;
         }
         
         if ($delete_type === 'jobs' && !$db_jobs) {
-            wp_send_json_error(['message' => __('Jobs database service unavailable.', 'data-machine')]);
+            do_action('dm_log', 'error', 'Jobs database service unavailable for deletion', ['delete_type' => $delete_type]);
+            if (wp_doing_ajax()) {
+                wp_send_json_error(['message' => __('Jobs database service unavailable.', 'data-machine')]);
+            }
             return;
         }
         

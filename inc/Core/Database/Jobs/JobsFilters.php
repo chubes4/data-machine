@@ -37,7 +37,12 @@ function dm_register_jobs_database_filters() {
         }
         return $services;
     });
-    
+
+    // Cache clearing integration - respond to clear all cache action
+    add_action('dm_clear_all_cache', function() {
+        // Clear all job-related cache patterns (JOB_PATTERN, RECENT_JOBS_PATTERN, FLOW_JOBS_PATTERN)
+        do_action('dm_clear_jobs_cache');
+    });
 }
 
 // Auto-register when file loads - achieving complete self-containment

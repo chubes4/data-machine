@@ -216,8 +216,7 @@ class Update {
 
          // Update flow with new configuration
          $success = apply_filters('dm_update_flow', false, $flow_id, [
-             'flow_config' => wp_json_encode($flow_config),
-             'context' => 'handler_update'
+             'flow_config' => wp_json_encode($flow_config)
          ]);
          
          if (!$success) {

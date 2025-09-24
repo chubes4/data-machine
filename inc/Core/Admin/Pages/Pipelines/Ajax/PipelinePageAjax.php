@@ -81,7 +81,7 @@ class PipelinePageAjax
         // Update scheduling config
         $scheduling_config['interval'] = $schedule_interval;
 
-        // Update database
+        // Update flow using existing filter - filter will detect scheduling_config parameter
         $result = apply_filters('dm_update_flow', false, $flow_id, [
             'scheduling_config' => wp_json_encode($scheduling_config)
         ]);
@@ -92,12 +92,6 @@ class PipelinePageAjax
 
         // Handle Action Scheduler scheduling via central action hook
         do_action('dm_update_flow_schedule', $flow_id, $schedule_interval, $old_interval);
-
-        // Clear the 3 specific caches affected by schedule changes
-        $pipeline_id = (int)$flow['pipeline_id'];
-        do_action('dm_clear_flow_config_cache', $flow_id);           // Individual flow cache
-        do_action('dm_clear_flow_scheduling_cache', $flow_id);       // Flow scheduling cache
-        delete_transient('dm_pipeline_flows_' . $pipeline_id);      // Pipeline flows list
 
         wp_send_json_success([
             /* translators: %s: Schedule interval (e.g., 'active', 'paused') */

@@ -37,7 +37,16 @@ function dm_register_processed_items_database_filters() {
         }
         return $services;
     });
-    
+
+    // Cache clearing integration - respond to clear all cache action
+    add_action('dm_clear_all_cache', function() {
+        $all_databases = apply_filters('dm_db', []);
+        $processed_items = $all_databases['processed_items'] ?? null;
+        if ($processed_items) {
+            $processed_items->clear_all_processed_cache();
+        }
+    });
+
 }
 
 // Auto-register when file loads - achieving complete self-containment

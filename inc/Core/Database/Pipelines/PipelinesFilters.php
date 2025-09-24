@@ -37,6 +37,12 @@ function dm_register_pipelines_database_filters() {
         }
         return $services;
     });
+
+    // Cache clearing integration - respond to clear all cache action
+    add_action('dm_clear_all_cache', function() {
+        // Clear PIPELINE_PATTERN cache using new bulk clearing action
+        do_action('dm_clear_all_pipelines_cache');
+    });
 }
 
 // Auto-register when file loads - achieving complete self-containment
