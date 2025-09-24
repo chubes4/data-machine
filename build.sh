@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 PLUGIN_FILE="data-machine.php"
-BUILD_DIR="build"
+BUILD_DIR="dist"
 TEMP_DIR="$BUILD_DIR/temp"
 BUILDIGNORE_FILE=".buildignore"
 
@@ -52,8 +52,8 @@ if ! command -v composer &> /dev/null; then
     exit 1
 fi
 
-# Clean build directory
-echo -e "${YELLOW}🧹 Cleaning build directory...${NC}"
+# Clean dist directory
+echo -e "${YELLOW}🧹 Cleaning dist directory...${NC}"
 rm -rf "$BUILD_DIR"
 mkdir -p "$TEMP_DIR/data-machine"
 
@@ -99,7 +99,7 @@ for file in "${EXCLUDED_FILES[@]}"; do
 done
 
 # Create zip file
-ZIP_NAME="data-machine-v$VERSION.zip"
+ZIP_NAME="data-machine.zip"
 echo -e "${YELLOW}📦 Creating zip file: $ZIP_NAME${NC}"
 
 cd "$TEMP_DIR"
@@ -117,10 +117,12 @@ composer install --no-interaction
 
 # Final output
 BUILD_PATH="$BUILD_DIR/$ZIP_NAME"
+DIRECTORY_PATH="$BUILD_DIR/data-machine"
 FILE_SIZE=$(du -h "$BUILD_PATH" | cut -f1)
 
 echo -e "${GREEN}✅ Build complete!${NC}"
-echo -e "${GREEN}📦 Output: $BUILD_PATH ($FILE_SIZE)${NC}"
+echo -e "${GREEN}📦 ZIP file: $BUILD_PATH ($FILE_SIZE)${NC}"
+echo -e "${GREEN}📁 Clean directory: $DIRECTORY_PATH${NC}"
 echo -e "${GREEN}🚀 Ready for WordPress installation${NC}"
 
 # Optional: Show zip contents

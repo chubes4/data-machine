@@ -17,7 +17,7 @@ desktop.ini
 .roo/
 node_modules/
 vendor/
-build/
+dist/
 
 # Log files only (not logs directories)
 *.log
