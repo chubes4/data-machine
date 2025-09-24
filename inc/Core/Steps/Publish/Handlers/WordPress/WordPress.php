@@ -27,9 +27,6 @@ class WordPress {
         $this->taxonomy_handler = new TaxonomyHandler();
     }
 
-    /**
-     * Create WordPress post with modular processing (image, taxonomies, source URL).
-     */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         
         if (empty($parameters['title']) || empty($parameters['content'])) {

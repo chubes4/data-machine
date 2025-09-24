@@ -40,13 +40,11 @@ CREATE TABLE wp_dm_flows (
     flow_name varchar(255) NOT NULL,
     flow_config longtext NULL,
     scheduling_config longtext NULL,
-    display_order int(11) NOT NULL DEFAULT 0,
     created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (flow_id),
     KEY pipeline_id (pipeline_id),
     KEY flow_name (flow_name),
-    KEY display_order (display_order),
     FOREIGN KEY (pipeline_id) REFERENCES wp_dm_pipelines(pipeline_id) ON DELETE CASCADE
 );
 ```
@@ -57,7 +55,6 @@ CREATE TABLE wp_dm_flows (
 - `flow_name` - Instance-specific name
 - `flow_config` - JSON configuration with flow-specific settings
 - `scheduling_config` - Scheduling rules and automation settings
-- `display_order` - UI display ordering
 
 ### `wp_dm_jobs`
 

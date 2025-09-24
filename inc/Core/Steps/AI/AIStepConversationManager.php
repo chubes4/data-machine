@@ -11,12 +11,6 @@ defined('ABSPATH') || exit;
 
 class AIStepConversationManager {
 
-    /**
-     * @param string $tool_name Tool identifier
-     * @param array $tool_result Execution result
-     * @param array $tool_parameters Tool parameters
-     * @return string Result message
-     */
     public static function generateSuccessMessage(string $tool_name, array $tool_result, array $tool_parameters): string {
         $success = $tool_result['success'] ?? false;
         $data = $tool_result['data'] ?? [];
@@ -32,11 +26,7 @@ class AIStepConversationManager {
     }
 
     /**
-     * Synchronize data packet content in conversation messages.
-     *
-     * @param array $conversation_messages Conversation message array
-     * @param array $data Updated data packet array
-     * @return array Updated conversation messages
+     * Synchronizes data packet content in conversation messages by updating JSON content.
      */
     public static function updateDataPacketMessages(array $conversation_messages, array $data): array {
         if (empty($conversation_messages) || empty($data)) {

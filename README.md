@@ -225,7 +225,8 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 
 ```bash
 composer install    # Development setup
-./build.sh         # Production build to /dist/data-machine.zip
+composer test       # Run tests (PHPUnit configured, test files not yet implemented)
+./build.sh          # Production build to /dist/data-machine.zip
 ```
 
 **Architecture**:

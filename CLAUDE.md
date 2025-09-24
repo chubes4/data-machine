@@ -202,7 +202,7 @@ dm_register_twitter_filters(); // Auto-execute at file load
 wp_dm_pipelines: pipeline_id, pipeline_name, pipeline_config, created_at, updated_at
 
 -- Flow instances (scheduled + configured)
-wp_dm_flows: flow_id, pipeline_id, flow_name, flow_config, scheduling_config, display_order
+wp_dm_flows: flow_id, pipeline_id, flow_name, flow_config, scheduling_config
 
 -- Job executions
 wp_dm_jobs: job_id, flow_id, pipeline_id, status, job_data_json, engine_data, started_at, completed_at, error_message
@@ -730,8 +730,9 @@ do_action('dm_cache_set', $key, $data, $timeout, $group);
 ## Development
 
 ```bash
-composer install && composer test
-./build.sh  # Production build to /dist/data-machine.zip
+composer install    # Install dependencies
+composer test       # Run tests (PHPUnit configured, test files not yet implemented)
+./build.sh          # Production build to /dist/data-machine.zip
 ```
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths

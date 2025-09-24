@@ -16,10 +16,6 @@ class Twitter {
         $this->auth = $all_auth['twitter'] ?? null;
     }
 
-    private function get_auth() {
-        return $this->auth;
-    }
-
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
 
         $handler_config = $parameters['handler_config'] ?? [];
@@ -50,15 +46,16 @@ class Twitter {
         }
 
 
+        // Twitter text processing with t.co URL length calculation (24 chars)
         $tweet_text = $content;
         $ellipsis = '…';
         $ellipsis_len = mb_strlen($ellipsis, 'UTF-8');
-        
+
         $should_append_url = $link_handling === 'append' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL);
         $link = $should_append_url ? ' ' . $source_url : '';
         $link_length = $link ? 24 : 0; // t.co link length
         $available_chars = 280 - $link_length;
-        
+
         if ($available_chars < $ellipsis_len) {
             $tweet_text = mb_substr($link, 0, 280);
         } else {

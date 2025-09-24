@@ -1,13 +1,6 @@
 <?php
 /**
  * Pipeline Modal AJAX Handler
- *
- * Handles modal and template rendering AJAX operations (UI support).
- * Manages modal content generation, template requests, and configuration processing.
- * Handles 7 AJAX actions: templates, configuration, data retrieval, and settings.
- *
- * @package DataMachine\Core\Admin\Pages\Pipelines
- * @since 1.0.0
  */
 
 namespace DataMachine\Core\Admin\Pages\Pipelines\Ajax;
@@ -19,18 +12,9 @@ if (!defined('WPINC')) {
 
 class PipelineModalAjax
 {
-    /**
-     * Register all pipeline modal AJAX handlers.
-     *
-     * Self-contained registration pattern following WordPress-native approach.
-     * Registers all modal-related AJAX actions this class handles.
-     *
-     * @since 1.0.0
-     */
     public static function register() {
         $instance = new self();
         
-        // Modal and template AJAX actions
         add_action('wp_ajax_dm_get_template', [$instance, 'handle_get_template']);
         add_action('wp_ajax_dm_get_flow_step_card', [$instance, 'handle_get_flow_step_card']);
         add_action('wp_ajax_dm_get_flow_config', [$instance, 'handle_get_flow_config']);
@@ -41,18 +25,7 @@ class PipelineModalAjax
     }
 
     /**
-     * Core AJAX handler methods for pipeline modal operations.
-     * 
-     * Provides UI support functionality for modal rendering, step configuration,
-     * and handler settings management within the pipeline editor interface.
-     */
-
-    /**
-     * Render template with provided data via AJAX.
-     *
-     * Universal template rendering endpoint that processes template requests
-     * and injects contextual data for pipeline step cards and modal content.
-     * Includes AJAX-specific defaults for UI rendering consistency.
+     * Universal template rendering endpoint with contextual data injection.
      */
     public function handle_get_template()
     {

@@ -19,21 +19,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class ProcessedItems {
 
-    /**
-     * The name for the processed items table.
-     * @var string
-     */
     private $table_name;
-
-    /**
-     * @var \wpdb WordPress database instance
-     */
     private $wpdb;
 
 
-    /**
-     * Initialize the database service.
-     */
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;

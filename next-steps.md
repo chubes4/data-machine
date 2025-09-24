@@ -10,6 +10,8 @@
 - **Handler Authentication Modals**: ✅ Complete - Fixed registration of handler authentication modals
 - **Universal Handler Filters**: ✅ Complete - Centralized timeframe limit and keyword search filters
 - **Legacy Logic Cleanup**: ✅ Complete - Streamlined system with removal of legacy patterns
+- **Flow Reordering Removal**: ✅ Complete - Removed complex flow reordering system, simplified to newest-first ordering
+- **Documentation Alignment**: ✅ Complete - All .md files aligned with current implementation, removed outdated references
 
 **CURRENT KNOWN ISSUES**
 - Status detection for Update step types needs comprehensive testing

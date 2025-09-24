@@ -5,7 +5,7 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.1] - 2024-09-24
+## [0.1.1] - 2025-09-24
 
 ### Removed
 - Flow reordering system including drag & drop arrows, database display_order column, and complex position management
@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Followed WordPress native patterns for admin notices and AJAX security
 - Implemented KISS principle by eliminating over-engineered cosmetic feature
 
-## [0.1.0] - 2024-09-20
+## [0.1.0] - 2025-09-20
 
 ### Added
 - Initial release of Data Machine

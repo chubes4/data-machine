@@ -40,7 +40,6 @@ Visual drag-and-drop interface for creating and managing Pipeline+Flow configura
 - Custom naming and descriptions
 - Schedule configuration with Action Scheduler integration
 - Handler-specific configuration overrides
-- Display order management
 
 **Schedule Configuration**: Visual scheduling interface supporting:
 - One-time execution

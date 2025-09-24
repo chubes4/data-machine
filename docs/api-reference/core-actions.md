@@ -223,7 +223,6 @@ do_action('dm_clear_pipeline_cache', $pipeline_id);
 - `dm_pipeline_{id}` - Pipeline configuration
 - `dm_pipeline_config_{id}` - Pipeline configuration
 - `dm_pipeline_flows_{id}` - Pipeline flows
-- `dm_max_display_order_{id}` - Display order cache
 - Flow and job related caches
 
 ### `dm_clear_flow_cache`

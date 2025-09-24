@@ -15,9 +15,6 @@ if (!defined('WPINC')) {
 
 class AIStepTools {
     
-    /**
-     * @return array General tools without handler property
-     */
     public function get_global_enabled_tools(): array {
         $all_tools = apply_filters('ai_tools', []);
         $general_tools = [];
@@ -31,10 +28,6 @@ class AIStepTools {
         return $general_tools;
     }
     
-    /**
-     * @param string $pipeline_step_id Pipeline step UUID
-     * @return array Enabled tool IDs from step configuration
-     */
     public function get_step_enabled_tools(string $pipeline_step_id): array {
         if (empty($pipeline_step_id)) {
             return [];
@@ -46,11 +39,6 @@ class AIStepTools {
         return is_array($modal_enabled_tools) ? $modal_enabled_tools : [];
     }
     
-    /**
-     * @param string $pipeline_step_id Pipeline step UUID
-     * @param array $post_data POST data from form submission
-     * @return array Validated enabled tool IDs
-     */
     public function save_tool_selections(string $pipeline_step_id, array $post_data): array {
         if (isset($post_data['enabled_tools']) && is_array($post_data['enabled_tools'])) {
             $raw_enabled_tools = array_map('sanitize_text_field', wp_unslash($post_data['enabled_tools']));
@@ -102,12 +90,6 @@ class AIStepTools {
     }
     
     
-    /**
-     * @param array|null $previous_step_config Previous step configuration
-     * @param array|null $next_step_config Next step configuration
-     * @param string|null $current_pipeline_step_id Pipeline step UUID
-     * @return array Context-aware filtered tools
-     */
     public static function getAvailableTools(?array $previous_step_config = null, ?array $next_step_config = null, ?string $current_pipeline_step_id = null): array {
         $available_tools = [];
         
@@ -140,12 +122,6 @@ class AIStepTools {
         return array_unique($available_tools, SORT_REGULAR);
     }
 
-    /**
-     * @param array $all_tools Available tools
-     * @param string|null $handler_slug Handler context
-     * @param string|null $pipeline_step_id Pipeline step UUID
-     * @return array Filtered enabled tools
-     */
     private static function getAllowedTools(array $all_tools, ?string $handler_slug, ?string $pipeline_step_id = null): array {
         $allowed_tools = [];
         
@@ -176,10 +152,6 @@ class AIStepTools {
         return $allowed_tools;
     }
 
-    /**
-     * @param string $tool_name Tool identifier
-     * @return bool Tool is enabled and configured
-     */
     private static function isGeneralToolEnabled(string $tool_name): bool {
         $tool_configured = apply_filters('dm_tool_configured', false, $tool_name);
         $all_tools = apply_filters('ai_tools', []);
@@ -190,15 +162,8 @@ class AIStepTools {
     }
 
     /**
-     * Execute tool with error handling and parameter building.
-     *
-     * @param string $tool_name Tool identifier
-     * @param array $tool_parameters AI-provided parameters
-     * @param array $available_tools Available tools
-     * @param array $data Data packet
-     * @param string $flow_step_id Flow step ID
-     * @param array $unified_parameters Engine parameters
-     * @return array Tool execution result
+     * Executes tool with parameter merging and comprehensive error handling.
+     * Builds complete parameters by combining AI parameters with unified engine parameters.
      */
     public static function executeTool(string $tool_name, array $tool_parameters, array $available_tools, array $data, string $flow_step_id, array $unified_parameters): array {
         $tool_def = $available_tools[$tool_name] ?? null;

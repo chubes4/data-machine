@@ -21,11 +21,6 @@ class Create {
     }
 
 
-    /**
-     * @param mixed $default Unused
-     * @param array $data Pipeline creation data
-     * @return int|false Pipeline ID or false
-     */
     public function handle_create_pipeline($default, $data = []) {
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for pipeline creation');
@@ -268,11 +263,6 @@ class Create {
         return $pipeline_id;
     }
 
-    /**
-     * @param mixed $default Unused
-     * @param array $data Step creation data
-     * @return string|false Pipeline step ID or false
-     */
     public function handle_create_step($default, $data = []) {
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for step creation');
@@ -376,11 +366,6 @@ class Create {
         return $new_step['pipeline_step_id'];
     }
 
-    /**
-     * @param mixed $default Unused
-     * @param array $data Flow creation data
-     * @return int|false Flow ID or false
-     */
     public function handle_create_flow($default, $data = []) {
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for flow creation');
@@ -467,11 +452,6 @@ class Create {
         return $flow_id;
     }
 
-    /**
-     * @param mixed $default Unused
-     * @param int $source_flow_id Flow to duplicate
-     * @return int|false New flow ID or false
-     */
     public function handle_duplicate_flow($default, int $source_flow_id) {
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for flow duplication');
@@ -596,12 +576,6 @@ class Create {
         return $remapped_config;
     }
 
-    /**
-     * @param mixed $default Unused
-     * @param string $template_id Template identifier
-     * @param array $options Template options
-     * @return int|false Pipeline ID or false
-     */
     public function handle_create_pipeline_from_template($default, $template_id, $options = []) {
         if (!current_user_can('manage_options')) {
             do_action('dm_log', 'error', 'Insufficient permissions for template pipeline creation');

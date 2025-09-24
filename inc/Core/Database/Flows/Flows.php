@@ -23,9 +23,6 @@ class Flows {
         $this->table_name = $this->wpdb->prefix . 'dm_flows';
     }
 
-    /**
-     * Create the flows table
-     */
     public static function create_table(): void {
         global $wpdb;
         
