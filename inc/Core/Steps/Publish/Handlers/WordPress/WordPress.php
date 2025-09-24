@@ -83,9 +83,9 @@ class WordPress {
             ];
         }
         
-        $content = $this->sanitize_block_content(wp_unslash($parameters['content']));
-
-        $content = $this->source_url_handler->processSourceUrl($content, $engine_data, $handler_config);
+    $content = wp_unslash($parameters['content']);
+    $content = $this->source_url_handler->processSourceUrl($content, $engine_data, $handler_config);
+    $content = $this->sanitize_block_content($content);
         
         $post_data = [
             'post_title' => sanitize_text_field(wp_unslash($parameters['title'])),
@@ -170,27 +170,101 @@ class WordPress {
     }
 
     private function sanitize_block_content(string $content): string {
+        $original_length = strlen($content);
+        $has_wp_comments = (bool) preg_match('/<!--\s*wp:/i', $content);
+
+        $unterminated_detected = false;
         if (preg_match('/<!--\s*wp:[^\n\r{}]+\{[^}]*$/', $content)) {
+            $unterminated_detected = true;
             do_action('dm_log', 'debug', 'WordPress Publish: Detected potentially unterminated block JSON', [
                 'content_preview' => substr($content, 0, 200)
             ]);
         }
 
-        $blocks = parse_blocks($content);
-        $sanitized = array_map(function($block) {
+        // First attempt: try parsing as-is to avoid stripping valid attributes when content is fine.
+        $initial_blocks = parse_blocks($content);
+        $initial_serialized = serialize_blocks($initial_blocks);
+        $initial_length = strlen($initial_serialized);
+
+        $needs_repair = $unterminated_detected || ($has_wp_comments && $initial_length < max(64, (int) ($original_length * 0.8)));
+
+        $attributes_stripped = false;
+        $appended_closers = 0;
+
+        if ($needs_repair) {
+            // 1) Normalize/repair block openers by stripping attributes/JSON to avoid parser breaks.
+            $before_strip = $content;
+            $content = preg_replace('/<!--\s*wp:(?!\/)\s*([a-z0-9\-\/_]+)\s+\{[^}]*}\s*-->\s*/i', '<!-- wp:$1 -->', $content);
+            $content = preg_replace('/<!--\s*wp:(?!\/)\s*([a-z0-9\-\/_]+)[^>]*-->\s*/i', '<!-- wp:$1 -->', $content);
+            $attributes_stripped = ($before_strip !== $content);
+
+            // 2) Ensure opener comments terminate
+            if (preg_match('/<!--\s*wp:(?!\/)\s*([a-z0-9\-\/_]+)[^>]*\z/i', $content)) {
+                $content .= ' -->';
+            }
+
+            // 3) Append missing closers
+            $stack = [];
+            if (preg_match_all('/<!--\s*(\/?)(?:wp:)([a-z0-9\-\/_]+)[^>]*-->\s*/i', $content, $m, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+                foreach ($m as $match) {
+                    $is_close = $match[1][0] === '/';
+                    $name = strtolower($match[2][0]);
+                    if ($is_close) {
+                        if (!empty($stack) && end($stack) === $name) {
+                            array_pop($stack);
+                        }
+                    } else {
+                        $stack[] = $name;
+                    }
+                }
+            }
+            if (!empty($stack)) {
+                for ($i = count($stack) - 1; $i >= 0; $i--) {
+                    $content .= sprintf('<!-- /wp:%s -->', $stack[$i]);
+                    $appended_closers++;
+                }
+            }
+
+            // Re-parse after repairs
+            $blocks = parse_blocks($content);
+        } else {
+            $blocks = $initial_blocks;
+        }
+
+        // Sanitize recursively: innerHTML + innerContent + nested innerBlocks.
+        $sanitize_block = null;
+        $sanitize_block = function($block) use (&$sanitize_block) {
             if (isset($block['innerHTML']) && $block['innerHTML'] !== '') {
                 $block['innerHTML'] = wp_kses_post($block['innerHTML']);
             }
-            if (!empty($block['innerBlocks']) && is_array($block['innerBlocks'])) {
-                $block['innerBlocks'] = array_map(function($inner) {
-                    if (isset($inner['innerHTML']) && $inner['innerHTML'] !== '') {
-                        $inner['innerHTML'] = wp_kses_post($inner['innerHTML']);
+            if (isset($block['innerContent']) && is_array($block['innerContent'])) {
+                foreach ($block['innerContent'] as $idx => $piece) {
+                    if (is_string($piece) && $piece !== '') {
+                        $block['innerContent'][$idx] = wp_kses_post($piece);
                     }
-                    return $inner;
-                }, $block['innerBlocks']);
+                }
+            }
+            if (!empty($block['innerBlocks']) && is_array($block['innerBlocks'])) {
+                $block['innerBlocks'] = array_map($sanitize_block, $block['innerBlocks']);
             }
             return $block;
-        }, $blocks);
-        return serialize_blocks($sanitized);
+        };
+
+        $sanitized = array_map($sanitize_block, $blocks);
+        $serialized = serialize_blocks($sanitized);
+
+        // Diagnostics
+        if ($needs_repair) {
+            do_action('dm_log', 'debug', 'WordPress Publish: Block content repaired/sanitized', [
+                'attributes_stripped' => $attributes_stripped,
+                'appended_closers' => $appended_closers,
+                'unterminated_detected' => $unterminated_detected,
+                'original_length' => $original_length,
+                'before_repair_length' => $initial_length,
+                'final_length' => strlen($serialized)
+            ]);
+        }
+
+        return $serialized;
     }
 }
