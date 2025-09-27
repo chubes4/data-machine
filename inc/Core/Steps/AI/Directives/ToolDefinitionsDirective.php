@@ -81,8 +81,8 @@ class ToolDefinitionsDirective {
     if (!$has_handler_tools) {
         $directive .= "(Note: No handler/publish tools available in this turn.)\n";
     }
+    $directive .= "\n";
 
-        
         if (!empty($tools)) {
             $directive .= "TOOLS:\n";
             foreach ($tools as $tool_name => $tool_config) {
@@ -95,5 +95,5 @@ class ToolDefinitionsDirective {
     }
 }
 
-// Self-register (Priority 40 = fourth in 5-tier directive system)
-add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 40, 5);
+// Self-register (Priority 15 = second in 5-tier directive system)
+add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 15, 5);
