@@ -71,12 +71,17 @@ function dm_get_wordpress_update_base_tool(array $handler_config = []): array {
         'class' => 'DataMachine\\Core\\Steps\\Update\\Handlers\\WordPress\\WordPress',
         'method' => 'handle_tool_call',
         'handler' => 'wordpress_update',
-        'description' => 'Update existing WordPress content',
+        'description' => 'Make surgical updates to WordPress posts using find-and-replace operations. Preserves all images, blocks, and formatting.',
         'parameters' => [
-            'source_url' => [
-                'type' => 'string',
-                'required' => true,
-                'description' => 'WordPress post/page URL to update'
+            'updates' => [
+                'type' => 'array',
+                'required' => false,
+                'description' => 'Array of surgical find-and-replace operations: [{"find": "old text", "replace": "new text"}]. Use for precise content changes without affecting rest of post.'
+            ],
+            'block_updates' => [
+                'type' => 'array',
+                'required' => false,
+                'description' => 'Array of block-specific updates: [{"block_index": 0, "find": "old text", "replace": "new text"}]. Target specific Gutenberg blocks by index.'
             ]
         ]
     ];
@@ -90,25 +95,17 @@ function dm_get_wordpress_update_base_tool(array $handler_config = []): array {
         ];
     }
 
-    // Conditionally add content parameter  
+    // Conditionally add legacy content parameter for backward compatibility
     if ($handler_config['allow_content_updates'] ?? true) {
         $tool['parameters']['content'] = [
             'type' => 'string',
             'required' => false,
-            'description' => 'New post content formatted as WordPress Gutenberg blocks (leave empty to keep existing)'
+            'description' => 'LEGACY: Complete replacement content (use "updates" array for surgical changes instead)'
         ];
     }
 
-    // Update description based on allowed operations
-    $allowed_ops = [];
-    if ($handler_config['allow_title_updates'] ?? true) $allowed_ops[] = 'title';
-    if ($handler_config['allow_content_updates'] ?? true) $allowed_ops[] = 'content';
-    
-    if (!empty($allowed_ops)) {
-        $tool['description'] = 'Update existing WordPress ' . implode(' and/or ', $allowed_ops);
-    } else {
-        $tool['description'] = 'WordPress update handler (no modifications allowed)';
-    }
+    // Description remains surgical-focused regardless of legacy settings
+    // The new surgical update capabilities are always available
 
     return $tool;
 }
