@@ -82,5 +82,5 @@ class PipelineSystemPromptDirective {
     }
 }
 
-// Self-register (Priority 45 = fifth in 5-tier directive system)
-add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 45, 5);
+// Self-register (Priority 30 = third in 5-tier directive system)
+add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 30, 5);

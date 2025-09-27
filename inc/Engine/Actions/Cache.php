@@ -1,6 +1,6 @@
 <?php
 /**
- * Centralized cache management using WordPress transients.
+ * Centralized cache management with granular invalidation patterns.
  *
  * @package DataMachine\Engine\Actions
  */
@@ -125,9 +125,6 @@ class Cache {
         }
     }
 
-    /**
-     * Clear only the flow config cache for targeted updates.
-     */
     public function handle_clear_flow_config_cache($flow_id) {
         if (empty($flow_id)) {
             do_action('dm_log', 'warning', 'Flow config cache clear requested with empty flow ID');
@@ -144,9 +141,6 @@ class Cache {
         ]);
     }
 
-    /**
-     * Clear only the flow scheduling cache for targeted updates.
-     */
     public function handle_clear_flow_scheduling_cache($flow_id) {
         if (empty($flow_id)) {
             do_action('dm_log', 'warning', 'Flow scheduling cache clear requested with empty flow ID');
@@ -163,9 +157,6 @@ class Cache {
         ]);
     }
 
-    /**
-     * Clear only the flow step caches for targeted updates.
-     */
     public function handle_clear_flow_steps_cache($flow_id) {
         if (empty($flow_id)) {
             do_action('dm_log', 'warning', 'Flow steps cache clear requested with empty flow ID');
@@ -196,9 +187,6 @@ class Cache {
         }
     }
 
-    /**
-     * Clear all job-related caches.
-     */
     public function handle_clear_jobs_cache() {
         $this->clear_job_cache();
 
@@ -207,9 +195,6 @@ class Cache {
         }
     }
 
-    /**
-     * Clear pipelines list cache for UI components.
-     */
     public function handle_clear_pipelines_list_cache() {
         delete_transient(self::PIPELINES_LIST_CACHE_KEY);
 
@@ -266,9 +251,6 @@ class Cache {
         }
     }
 
-    /**
-     * Store cache data with validation and logging.
-     */
     public function handle_cache_set($key, $data, $timeout = 0, $group = null) {
         if (empty($key)) {
             do_action('dm_log', 'warning', 'Cache set requested with empty key');
@@ -285,9 +267,6 @@ class Cache {
         return $result;
     }
 
-    /**
-     * Clear pipeline-specific transients.
-     */
     private function clear_pipeline_cache($pipeline_id) {
         $cache_keys = [
             self::PIPELINE_CACHE_KEY . $pipeline_id,
@@ -301,18 +280,12 @@ class Cache {
 
     }
 
-    /**
-     * Clear flow caches using pattern matching.
-     */
     private function clear_flow_cache($pipeline_id) {
         delete_transient(self::PIPELINE_FLOWS_CACHE_KEY . $pipeline_id);
 
         $this->clear_cache_pattern(self::FLOW_PATTERN);
     }
 
-    /**
-     * Clear individual flow step caches.
-     */
     public function clear_flow_step_cache($flow_step_id) {
         if (empty($flow_step_id)) {
             return;
@@ -332,9 +305,6 @@ class Cache {
         }
     }
 
-    /**
-     * Clear all job-related transients.
-     */
     private function clear_job_cache() {
         delete_transient(self::TOTAL_JOBS_COUNT_CACHE_KEY);
 
@@ -343,9 +313,6 @@ class Cache {
         $this->clear_cache_pattern(self::FLOW_JOBS_PATTERN);
     }
 
-    /**
-     * Clear transients matching wildcard patterns.
-     */
     private function clear_cache_pattern($pattern) {
         global $wpdb;
 
@@ -373,9 +340,6 @@ class Cache {
         }
     }
 
-    /**
-     * Log AI HTTP Client cache events.
-     */
     public function handle_ai_cache_cleared($provider) {
         do_action('dm_log', 'debug', 'AI model cache cleared via action hook', [
             'provider' => $provider,
@@ -383,9 +347,6 @@ class Cache {
         ]);
     }
 
-    /**
-     * Log AI HTTP Client complete cache clear events.
-     */
     public function handle_ai_all_cache_cleared() {
         do_action('dm_log', 'debug', 'All AI model caches cleared via action hook', [
             'integration' => 'ai-http-client'

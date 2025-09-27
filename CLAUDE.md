@@ -233,7 +233,7 @@ wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, proc
 
 **5-Tier AI Directive Priority System**: AI requests receive multiple system messages via auto-registering directive classes:
 
-1. **Priority 10 - Plugin Core Directive** (`PluginCoreDirective`): Foundational AI agent identity and core behavioral principles
+1. **Priority 10 - Plugin Core Directive** (`PluginCoreDirective`): Foundational AI agent identity establishing role as content processing agent, operational principles for systematic execution, workflow approach with termination logic, and data packet structure guidance
 2. **Priority 20 - Global System Prompt** (`GlobalSystemPromptDirective`): User-configured foundational AI behavior
 3. **Priority 30 - Pipeline System Prompt** (`PipelineSystemPromptDirective`): Pipeline instructions and workflow visualization
 4. **Priority 40 - Tool Definitions** (`ToolDefinitionsDirective`): Dynamic tool prompts and workflow context
@@ -251,10 +251,11 @@ add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
 **Site Context Integration**: WordPress metadata, post types, taxonomies, cached with auto-invalidation
 
 **AI Conversation State Management**:
-- **AIStepConversationManager**: Turn-based conversation loops with chronological ordering
-- **State Preservation**: Complete conversation history with turn tracking
-- **Tool Integration**: Tool calls recorded before execution with result messaging
-- **Data Synchronization**: Dynamic data packet updates via `updateDataPacketMessages()`
+- **AIStepConversationManager**: Turn-based conversation loops with chronological ordering and temporal context
+- **State Preservation**: Complete conversation history with turn tracking and duplicate detection
+- **Tool Integration**: Tool calls recorded before execution with turn-numbered messages and result formatting
+- **Data Synchronization**: Dynamic data packet updates via `updateDataPacketMessages()` with JSON synchronization
+- **Conversation Validation**: Duplicate tool call detection with parameter comparison and corrective messaging
 
 ```php
 // Conversation Management Methods with Turn Tracking
@@ -264,7 +265,9 @@ AIStepConversationManager::generateSuccessMessage($tool_name, $tool_result, $too
 AIStepConversationManager::updateDataPacketMessages($conversation_messages, $data);
 AIStepConversationManager::buildConversationMessage($role, $content);
 AIStepConversationManager::generateFailureMessage($tool_name, $error_message);
-AIStepConversationManager::logConversationAction($action, $context);
+AIStepConversationManager::validateToolCall($tool_name, $tool_parameters, $conversation_messages);
+AIStepConversationManager::extractToolCallFromMessage($message);
+AIStepConversationManager::generateDuplicateToolCallMessage($tool_name);
 ```
 
 **Flow Architecture**: System directives → User data → AI responses → Tool calls → Tool results (chronological)
@@ -723,9 +726,9 @@ do_action('dm_clear_all_cache'); // Complete cache reset
 do_action('dm_cache_set', $key, $data, $timeout, $group);
 ```
 
-**Cache Architecture**: Pipeline/Flow/Job caches with pattern-based clearing, WordPress transients
+**Cache Architecture**: Pipeline/Flow/Job caches with pattern-based clearing, WordPress transients, action-based database component integration
 
-**Key Features**: Centralized cache key constants, granular invalidation, comprehensive logging
+**Key Features**: Centralized cache key constants, granular invalidation with targeted methods (`dm_clear_flow_config_cache`, `dm_clear_flow_scheduling_cache`, `dm_clear_flow_steps_cache`), comprehensive logging, and extensible action-based architecture for database components
 
 ## Development
 

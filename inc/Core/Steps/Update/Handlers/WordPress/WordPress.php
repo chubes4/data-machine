@@ -20,7 +20,7 @@ class WordPress {
     /**
      * Handle AI tool call for WordPress content updating via source_url.
      */
-    public function handle_tool_call(array $parameters, array $tool_def = []): array {
+    public function handle_tool_call(array $parameters, array $tool_def = []): array {"
         $job_id = $parameters['job_id'] ?? null;
         $engine_data = apply_filters('dm_engine_data', [], $job_id);
         $source_url = $engine_data['source_url'] ?? null;

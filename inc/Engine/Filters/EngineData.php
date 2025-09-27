@@ -15,20 +15,20 @@ if (!defined('ABSPATH')) {
 function dm_register_engine_data_filter() {
 
     /**
-     * Engine data storage and retrieval filter.
+     * Engine data storage and retrieval via parameter count detection.
      *
-     * @param array $default Default value for retrieval
+     * @param array $default Default value for retrieval mode
      * @param int $job_id Job ID
-     * @param string $source_url Source URL (storage mode)
-     * @param string $image_url Image URL (storage mode)
-     * @return array|null Engine data array or null for storage
+     * @param string $source_url Source URL (storage mode only)
+     * @param string $image_url Image URL (storage mode only)
+     * @return array|null Engine data array for retrieval, null for storage
      */
     add_filter('dm_engine_data', function($default, $job_id, $source_url = null, $image_url = null) {
         if (empty($job_id)) {
             return [];
         }
 
-        // Storage mode: 4+ parameters indicates storage operation
+        // Storage mode detection: 4+ parameters indicates storage operation
         if (func_num_args() >= 4) {
             $all_databases = apply_filters('dm_db', []);
             $db_jobs = $all_databases['jobs'] ?? null;

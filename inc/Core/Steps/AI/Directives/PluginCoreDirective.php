@@ -10,12 +10,14 @@ defined('ABSPATH') || exit;
 class PluginCoreDirective {
 
     /**
-     * @param array $request AI request
-     * @param string $provider_name Provider name
-     * @param callable $streaming_callback Unused
-     * @param array $tools Unused
-     * @param string|null $pipeline_step_id Unused
-     * @return array Modified request
+     * Inject foundational AI agent identity directive.
+     *
+     * @param array $request AI request array with messages
+     * @param string $provider_name AI provider name
+     * @param callable $streaming_callback Streaming callback (unused)
+     * @param array $tools Available tools (unused)
+     * @param string|null $pipeline_step_id Pipeline step ID (unused)
+     * @return array Modified request with core identity directive added
      */
     public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null): array {
         if (!isset($request['messages']) || !is_array($request['messages'])) {
@@ -39,7 +41,7 @@ class PluginCoreDirective {
     }
 
     /**
-     * Generate core plugin directive establishing AI agent identity.
+     * Generate core directive establishing workflow termination logic and data packet structure.
      *
      * @return string Core directive content
      */

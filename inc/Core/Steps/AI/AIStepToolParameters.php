@@ -1,7 +1,6 @@
 <?php
 /**
- * Centralized flat parameter building for AI tool execution.
- * Creates unified parameter structures for handler tool calls.
+ * Centralized parameter building with engine data integration for AI tool execution.
  *
  * @package DataMachine\Core\Steps\AI
  */

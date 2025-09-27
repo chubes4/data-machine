@@ -25,9 +25,6 @@ class JobsOperations {
         $this->table_name = $wpdb->prefix . 'dm_jobs';
     }
 
-    /**
-     * Create job record with pipeline and flow association.
-     */
     public function create_job(array $job_data): int|false {
         
         $pipeline_id = absint($job_data['pipeline_id'] ?? 0);

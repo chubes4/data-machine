@@ -57,5 +57,5 @@ class GlobalSystemPromptDirective {
     }
 }
 
-// Self-register (Priority 35 = fourth in 5-tier directive system)
-add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 35, 5);
+// Self-register (Priority 20 = second in 5-tier directive system)
+add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 20, 5);

@@ -95,5 +95,5 @@ class ToolDefinitionsDirective {
     }
 }
 
-// Self-register (Priority 15 = second in 5-tier directive system)
-add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 15, 5);
+// Self-register (Priority 40 = fourth in 5-tier directive system)
+add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 40, 5);

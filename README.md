@@ -17,19 +17,19 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
 **Features**:
-- Tool-First AI with multi-turn conversation management
-- Visual Pipeline Builder with drag & drop interface
-- Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter)
-- Centralized Engine Data Architecture
-- Unified Handler Filter System
-- AIStepConversationManager with Turn Tracking
-- AIStepToolParameters with buildForHandlerTool()
-- Clean Content Processing
-- Modular WordPress Publish Handler
-- Universal Handler Settings Template
-- AutoSave System
-- Database Query Optimization
-- Centralized Cache Management
+- Tool-First AI with enhanced multi-turn conversation management and duplicate detection
+- Visual Pipeline Builder with drag & drop interface and status detection
+- Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter) with 5-tier directive system
+- Centralized Engine Data Architecture with unified filter access pattern
+- Enhanced Unified Handler Filter System with shared functionality patterns
+- AIStepConversationManager with Turn Tracking, temporal context, and validation
+- AIStepToolParameters with buildForHandlerTool() and centralized parameter building
+- Clean Content Processing with structured data packet architecture
+- Modular WordPress Publish Handler with specialized processing components
+- Universal Handler Settings Template eliminating code duplication
+- Complete AutoSave System with cache invalidation
+- Database Query Optimization with centralized access patterns
+- Advanced Centralized Cache Management with granular controls and action-based architecture
 
 **Requirements**: WordPress 6.2+, PHP 8.0+, Composer
 
@@ -209,12 +209,12 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 - Site Context toggle (WordPress info injection)
 - Job data cleanup on failure toggle (debugging)
 - File retention settings (1-90 days)
-- **5-Tier AI Directive Priority System**:
-  - Plugin Core Directive → Global system prompt → Pipeline prompts → Tool definitions → Site context
-- **AIStepConversationManager**:
-  - Multi-turn conversation state management with turn tracking and chronological message ordering
-- **AIStepToolParameters**:
-  - Flat parameter architecture with content extraction
+- **Enhanced 5-Tier AI Directive Priority System**:
+  - PluginCoreDirective (foundational identity with workflow termination logic) → GlobalSystemPromptDirective → PipelineSystemPromptDirective → ToolDefinitionsDirective → SiteContextDirective
+- **Advanced AIStepConversationManager**:
+  - Multi-turn conversation state management with turn tracking, chronological message ordering, duplicate detection, and parameter validation
+- **Enhanced AIStepToolParameters**:
+  - Centralized flat parameter architecture with buildForHandlerTool() and unified tool execution patterns
 - Tool configuration (API keys, OAuth)
 - WordPress defaults (post types, taxonomies, author, status)
 - Three-layer tool management (global → modal → validation)
@@ -234,19 +234,20 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
 - **Filter-Based Service Discovery**: WordPress hooks for component registration
 - **Unified Handler Filter System**:
   - Centralized cross-cutting filters (`dm_timeframe_limit`, `dm_keyword_search_match`, `dm_data_packet`)
-- **Centralized Engine Data**:
-  - `EngineData.php` filter providing unified `dm_engine_data` access (replaces direct database patterns)
-  - Clean AI data packets with structured engine parameters
-- **Centralized Cache System**:
-  - Actions/Cache.php with WordPress action-based clearing
+- **Enhanced Centralized Engine Data**:
+  - `EngineData.php` filter providing unified `dm_engine_data` access with storage/retrieval mode detection
+  - Clean AI data packets with structured engine parameters and database separation
+- **Advanced Centralized Cache System**:
+  - Actions/Cache.php with comprehensive WordPress action-based clearing and database component integration
   - Granular cache methods: `dm_clear_flow_config_cache`, `dm_clear_flow_scheduling_cache`, `dm_clear_flow_steps_cache`
-- **5-Tier AI Directive System**:
-  - Auto-registration: PluginCoreDirective → GlobalSystemPromptDirective → PipelineSystemPromptDirective → ToolDefinitionsDirective → SiteContextDirective
-- **Enhanced Tool Discovery**:
-  - UpdateStep with handler slug matching and partial name matching
-- **Conversation Management**:
-  - AIStepConversationManager for conversation state management with turn tracking
-  - AIStepToolParameters class for unified tool execution
+  - Action-based architecture for extensible cache management across components
+- **Enhanced 5-Tier AI Directive System**:
+  - Auto-registration with priority spacing: PluginCoreDirective (foundational identity) → GlobalSystemPromptDirective → PipelineSystemPromptDirective → ToolDefinitionsDirective → SiteContextDirective
+- **Advanced Tool Discovery**:
+  - UpdateStep and PublishStep with intelligent tool result detection, exact handler matching, and partial name matching
+- **Enhanced Conversation Management**:
+  - AIStepConversationManager with turn tracking, temporal context, duplicate detection, and conversation validation
+  - AIStepToolParameters with centralized parameter building and unified tool execution patterns
 - **AutoSave System**:
   - Complete pipeline persistence and flow synchronization
 - **Modular WordPress Publisher**:

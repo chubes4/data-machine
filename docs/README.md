@@ -93,7 +93,7 @@ docs/
 **Engine Execution**
 - Three-action cycle (run_flow_now → execute_step → schedule_next_step)
 - Action Scheduler integration
-- Centralized engine data architecture with `EngineData.php` filter providing unified `dm_engine_data` access - clean AI data packets with structured engine parameters via database storage and filter retrieval
+- Enhanced centralized engine data architecture with `EngineData.php` filter providing unified `dm_engine_data` access with storage/retrieval mode detection - clean AI data packets with structured engine parameters via database storage and filter retrieval
 - Job management and status tracking
 - Error handling and failure recovery
 - AutoSave system with complete pipeline persistence, flow synchronization, and cache invalidation
@@ -104,11 +104,11 @@ docs/
 - Jobs (individual executions)
 - Processed Items (deduplication tracking)
 
-**Cache Management**
-- Centralized cache system via Actions/Cache.php with consistent WordPress action-based clearing
-- WordPress action-based cache clearing (dm_clear_pipeline_cache, dm_clear_flow_cache, dm_clear_jobs_cache, dm_clear_all_cache)
-- Pattern-based cache invalidation with wildcard support (dm_pipeline_*, dm_flow_*, dm_job_*)
-- Standardized cache storage via dm_cache_set action with validation and logging
+**Advanced Cache Management**
+- Enhanced centralized cache system via Actions/Cache.php with comprehensive WordPress action-based clearing and database component integration
+- Granular WordPress action-based cache clearing (dm_clear_pipeline_cache, dm_clear_flow_cache, dm_clear_flow_config_cache, dm_clear_flow_scheduling_cache, dm_clear_flow_steps_cache, dm_clear_jobs_cache, dm_clear_all_cache)
+- Advanced pattern-based cache invalidation with wildcard support and extensible action-based architecture
+- Standardized cache storage via dm_cache_set action with validation, logging, and performance optimization
 - Comprehensive logging for cache operations and AI HTTP Client integration
 - Database query optimization for improved pipeline page performance
 
@@ -140,7 +140,7 @@ docs/
 ### ✅ Update Handlers (1 handler)
 
 **Content Modification**
-- WordPress Update - Modify existing posts/pages using source_url from centralized engine data via dm_engine_data filter with enhanced tool discovery (handler slug matching and partial name matching)
+- WordPress Update - Modify existing posts/pages using source_url from centralized engine data via dm_engine_data filter with advanced tool discovery (exact handler matching and partial name matching for flexible tool result detection)
 
 ### ✅ AI Tools (4 general + handler tools)
 
@@ -190,24 +190,25 @@ docs/
 
 ### AI Integration
 - Multi-provider support (OpenAI, Anthropic, Google, Grok, OpenRouter)
-- 5-tier AI directive system with auto-registration:
-  - PluginCoreDirective (Priority 10 - foundational AI agent identity)
-  - GlobalSystemPromptDirective (Priority 20 - foundational behavior)
-  - PipelineSystemPromptDirective (Priority 30 - workflow visualization)
-  - ToolDefinitionsDirective (Priority 40 - usage instructions)
-  - SiteContextDirective (Priority 50 - WordPress environment)
-- AIStepConversationManager for centralized conversation state management:
-  - Turn-based conversation loops with chronological message ordering
-  - AI tool calls recorded before execution with turn number tracking
-  - Enhanced tool result messaging with temporal context
-  - Data packet synchronization via updateDataPacketMessages()
-- Tool-first architecture for agentic execution
-- AIStepToolParameters for unified flat parameter building:
-  - buildParameters() for standard AI tools
-  - buildForHandlerTool() for handler tools with engine parameters
-  - Content/title extraction from data packets
-- Context-aware processing with WordPress site context
-- Clear tool result messaging enabling natural conversation termination
+- Enhanced 5-tier AI directive system with auto-registration and priority spacing:
+  - PluginCoreDirective (Priority 10 - foundational AI agent identity with workflow termination logic and data packet structure guidance)
+  - GlobalSystemPromptDirective (Priority 20 - user-configured foundational behavior)
+  - PipelineSystemPromptDirective (Priority 30 - pipeline instructions and workflow visualization)
+  - ToolDefinitionsDirective (Priority 40 - dynamic tool prompts and workflow context)
+  - SiteContextDirective (Priority 50 - WordPress environment info, toggleable)
+- Advanced AIStepConversationManager for centralized conversation state management:
+  - Turn-based conversation loops with chronological message ordering and temporal context
+  - AI tool calls recorded before execution with turn number tracking and duplicate detection
+  - Enhanced tool result messaging with temporal context and conversation validation
+  - Data packet synchronization via updateDataPacketMessages() with JSON synchronization
+  - Duplicate tool call detection with parameter comparison and corrective messaging
+- Enhanced tool-first architecture for agentic execution with intelligent tool discovery
+- Advanced AIStepToolParameters for unified flat parameter building:
+  - buildParameters() for standard AI tools with centralized parameter management
+  - buildForHandlerTool() for handler tools with engine parameters and unified execution patterns
+  - Content/title extraction from data packets with structured processing
+- Context-aware processing with WordPress site context and metadata integration
+- Clear tool result messaging enabling natural conversation termination with success/failure tracking
 
 ### Extension System
 - Filter-based service discovery

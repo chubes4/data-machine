@@ -25,7 +25,7 @@ Three-action execution cycle:
 
 **Clean Data Separation**: AI agents receive clean data packets without URLs while handlers access engine parameters via centralized filter pattern.
 
-**Database Storage + Filter Access**: Fetch handlers store engine parameters (source_url, image_url) in database; steps retrieve via centralized `dm_engine_data` filter for unified access.
+**Enhanced Database Storage + Filter Access**: Fetch handlers store engine parameters (source_url, image_url) in database; steps retrieve via centralized `dm_engine_data` filter with storage/retrieval mode detection for unified access.
 
 **Core Pattern**:
 ```php
@@ -46,24 +46,25 @@ $image_url = $engine_data['image_url'] ?? null;
 - **Filter Consistency**: Maintains architectural pattern of filter-based service discovery
 - **Flexible Storage**: Steps access only what they need via filter call
 
-### Cache Management System
-**Centralized Architecture**: Actions/Cache.php provides WordPress action-based cache clearing system for comprehensive cache management.
+### Advanced Cache Management System
+**Enhanced Centralized Architecture**: Actions/Cache.php provides comprehensive WordPress action-based cache clearing system with database component integration and extensible architecture.
 
-**Cache Operations**:
-- `dm_clear_pipeline_cache($pipeline_id)` - Clear pipeline + flows + jobs
-- `dm_clear_flow_cache($flow_id)` - Clear flow-specific caches
-- `dm_clear_flow_config_cache($flow_id)` - Clear flow configuration cache
-- `dm_clear_flow_scheduling_cache($flow_id)` - Clear flow scheduling cache
-- `dm_clear_flow_steps_cache($flow_id)` - Clear flow steps cache
-- `dm_clear_jobs_cache()` - Clear all job-related caches
-- `dm_clear_all_cache()` - Complete cache reset
-- `dm_cache_set($key, $data, $timeout, $group)` - Standardized cache storage
+**Granular Cache Operations**:
+- `dm_clear_pipeline_cache($pipeline_id)` - Clear pipeline + flows + jobs with comprehensive invalidation
+- `dm_clear_flow_cache($flow_id)` - Clear flow-specific caches with step integration
+- `dm_clear_flow_config_cache($flow_id)` - Clear flow configuration cache for targeted updates
+- `dm_clear_flow_scheduling_cache($flow_id)` - Clear flow scheduling cache for targeted updates
+- `dm_clear_flow_steps_cache($flow_id)` - Clear flow steps cache for targeted updates
+- `dm_clear_jobs_cache()` - Clear all job-related caches with pattern matching
+- `dm_clear_all_cache()` - Complete cache reset with database component integration
+- `dm_cache_set($key, $data, $timeout, $group)` - Standardized cache storage with validation
 
-**Key Features**:
-- Pattern-based clearing with wildcard support (dm_pipeline_*, dm_flow_*, dm_job_*)
-- WordPress transient integration for native storage
-- Comprehensive logging for all cache operations
-- Granular cache invalidation for optimal performance
+**Advanced Features**:
+- Enhanced pattern-based clearing with wildcard support and extensible action-based architecture
+- WordPress transient integration with performance optimization
+- Comprehensive logging for all cache operations and AI HTTP Client integration
+- Granular cache invalidation with targeted methods for optimal performance
+- Action-based database component integration for extensible cache management
 
 ### Step Types
 - **Fetch**: Data retrieval with clean content processing (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API)
@@ -87,7 +88,7 @@ AI agents use tools to interact with handlers:
   - Tool metadata integration (tool_definition, tool_name, handler_config)
   - Engine parameter merging for handlers (source_url for link attribution and post identification)
 - Three-layer tool enablement: Global settings → Modal selection → Runtime validation
-- AIStepConversationManager for conversation state and tool result formatting with turn tracking
+- Enhanced AIStepConversationManager for conversation state management with turn tracking, temporal context, duplicate detection, and conversation validation
 
 ### Filter-Based Discovery
 All components self-register via WordPress filters:
@@ -193,23 +194,24 @@ Complete extension system for custom handlers and tools:
 
 ### AI Integration
 - Multiple provider support (200+ models via OpenRouter)
-- 5-tier AI directive priority system with standardized spacing for extensibility:
-  - **Priority 10**: PluginCoreDirective (foundational AI agent identity)
-  - **Priority 20**: GlobalSystemPromptDirective (foundational AI behavior)
-  - **Priority 30**: PipelineSystemPromptDirective (workflow structure visualization)
-  - **Priority 40**: ToolDefinitionsDirective (tool definitions + workflow context)
-  - **Priority 50**: SiteContextDirective (WordPress environment info)
-- AIStepConversationManager for centralized conversation state management:
-  - Turn-based conversation loops with chronological message ordering
-  - AI tool calls recorded before execution with turn number tracking
-  - Enhanced tool result messaging with temporal context ("Turn X")
-  - Conversation completion with natural AI agent termination
-  - Data packet synchronization via `updateDataPacketMessages()`
-- AIStepToolParameters class for unified tool execution:
-  - `buildParameters()` for standard AI tools
-  - `buildForHandlerTool()` for handler tools with engine parameters
-  - Flat parameter structure with content/title extraction
-- Clear tool result messaging enabling natural AI agent conversation termination
+- Enhanced 5-tier AI directive priority system with standardized spacing and auto-registration:
+  - **Priority 10**: PluginCoreDirective (foundational AI agent identity with workflow termination logic and data packet structure guidance)
+  - **Priority 20**: GlobalSystemPromptDirective (user-configured foundational AI behavior)
+  - **Priority 30**: PipelineSystemPromptDirective (pipeline instructions and workflow visualization)
+  - **Priority 40**: ToolDefinitionsDirective (dynamic tool prompts and workflow context)
+  - **Priority 50**: SiteContextDirective (WordPress environment info, toggleable)
+- Advanced AIStepConversationManager for centralized conversation state management:
+  - Turn-based conversation loops with chronological message ordering and temporal context
+  - AI tool calls recorded before execution with turn number tracking and duplicate detection
+  - Enhanced tool result messaging with temporal context and conversation validation
+  - Conversation completion with natural AI agent termination and success/failure tracking
+  - Data packet synchronization via `updateDataPacketMessages()` with JSON synchronization
+  - Duplicate tool call detection with parameter comparison and corrective messaging
+- Enhanced AIStepToolParameters class for unified tool execution:
+  - `buildParameters()` for standard AI tools with centralized parameter management
+  - `buildForHandlerTool()` for handler tools with engine parameters and unified execution patterns
+  - Flat parameter structure with content/title extraction and structured processing
+- Clear tool result messaging enabling natural AI agent conversation termination with enhanced validation
 - Site context injection with automatic cache invalidation
 - Tool result formatting with success/failure messages
 

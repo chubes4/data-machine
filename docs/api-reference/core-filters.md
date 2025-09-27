@@ -115,7 +115,7 @@ $tools['tool_name'] = [
 
 **5-Tier Directive System**: System messages automatically injected via separate directive classes in priority order:
 
-**Priority 10**: Plugin core directive (`PluginCoreDirective`) - foundational AI agent identity
+**Priority 10**: Plugin core directive (`PluginCoreDirective`) - foundational AI agent identity with workflow termination logic and data packet structure guidance
 **Priority 20**: Global system prompt (`GlobalSystemPromptDirective`) - background guidance
 **Priority 30**: Pipeline system prompt (`PipelineSystemPromptDirective`) - user configuration
 **Priority 40**: Tool definitions and directives (`ToolDefinitionsDirective`) - usage instructions
