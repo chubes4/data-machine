@@ -139,7 +139,7 @@ function dm_get_threads_tool(array $handler_config = []): array {
 function dm_register_threads_success_message() {
     add_filter('dm_tool_success_message', function($default_message, $tool_name, $tool_result, $tool_parameters) {
         if ($tool_name === 'threads_publish' && !empty($tool_result['data']['post_url'])) {
-            return "THREADS POST PUBLISHED: Your content is now live on Threads at {$tool_result['data']['post_url']}. Your thread is ready for conversation!";
+            return "Post published successfully to Threads at {$tool_result['data']['post_url']}.";
         }
         return $default_message;
     }, 10, 4);

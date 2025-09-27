@@ -146,7 +146,7 @@ function dm_get_facebook_tool(array $handler_config = []): array {
 function dm_register_facebook_success_message() {
     add_filter('dm_tool_success_message', function($default_message, $tool_name, $tool_result, $tool_parameters) {
         if ($tool_name === 'facebook_publish' && !empty($tool_result['data']['post_url'])) {
-            return "FACEBOOK POST LIVE: Your content is now published on Facebook at {$tool_result['data']['post_url']}. Your post is live and ready for social interaction!";
+            return "Post published successfully to Facebook at {$tool_result['data']['post_url']}.";
         }
         return $default_message;
     }, 10, 4);

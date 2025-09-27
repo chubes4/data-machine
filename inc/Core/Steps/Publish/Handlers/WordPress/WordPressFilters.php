@@ -65,9 +65,9 @@ function dm_register_wordpress_publish_filters() {
             $post_id = $tool_result['data']['post_id'] ?? '';
             
             if (!empty($url)) {
-                return "PUBLISHING COMPLETE: WordPress post published successfully. Title: '{$title}' is now live at {$url} (ID: {$post_id}). Your publishing task is finished and the content is ready for readers!";
+                return "WordPress post published successfully. Title: '{$title}' at {$url} (ID: {$post_id}).";
             } else {
-                return "PUBLISHING COMPLETE: WordPress post created successfully. Title: '{$title}' (ID: {$post_id}). Your publishing task is finished and the content is ready for readers!";
+                return "WordPress post created successfully. Title: '{$title}' (ID: {$post_id}).";
             }
         }
         return $default_message;

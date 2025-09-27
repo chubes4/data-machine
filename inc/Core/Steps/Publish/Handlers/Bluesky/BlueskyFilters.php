@@ -125,7 +125,7 @@ function dm_get_bluesky_tool(array $handler_config = []): array {
 function dm_register_bluesky_success_message() {
     add_filter('dm_tool_success_message', function($default_message, $tool_name, $tool_result, $tool_parameters) {
         if ($tool_name === 'bluesky_publish' && !empty($tool_result['data']['post_url'])) {
-            return "BLUESKY POST COMPLETE: Your content is now live on Bluesky at {$tool_result['data']['post_url']}. Your post is published and ready for the community!";
+            return "Post published successfully to Bluesky at {$tool_result['data']['post_url']}.";
         }
         return $default_message;
     }, 10, 4);

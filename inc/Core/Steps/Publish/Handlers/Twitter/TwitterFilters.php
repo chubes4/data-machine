@@ -71,7 +71,7 @@ function dm_get_twitter_tool(array $handler_config = []): array {
 function dm_register_twitter_success_message() {
     add_filter('dm_tool_success_message', function($default_message, $tool_name, $tool_result, $tool_parameters) {
         if ($tool_name === 'twitter_publish' && !empty($tool_result['data']['tweet_url'])) {
-            return "TWEET POSTED: Your content is now live on Twitter at {$tool_result['data']['tweet_url']}. Your tweet is published and ready for engagement!";
+            return "Tweet published successfully to Twitter at {$tool_result['data']['tweet_url']}.";
         }
         return $default_message;
     }, 10, 4);

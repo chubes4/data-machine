@@ -46,7 +46,7 @@ class PipelineSystemPromptDirective {
 
         array_push($request['messages'], [
             'role' => 'system',
-            'content' => trim($system_prompt)
+            'content' => "PIPELINE GOALS:\n" . trim($system_prompt)
         ]);
 
         do_action('dm_log', 'debug', 'Pipeline System Prompt: Injected user configuration', [

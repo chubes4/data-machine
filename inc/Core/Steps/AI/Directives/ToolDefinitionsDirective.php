@@ -77,7 +77,7 @@ class ToolDefinitionsDirective {
         }
 
     $directive .= "TOOL STRATEGY:\n";
-    $directive .= "Invoke tools only when they add clear value toward the step objective. You may think for multiple turns before using a tool.\n";
+    $directive .= "Follow the user instructions and use these tools to complete the pipeline goals.\n";
     if (!$has_handler_tools) {
         $directive .= "(Note: No handler/publish tools available in this turn.)\n";
     }

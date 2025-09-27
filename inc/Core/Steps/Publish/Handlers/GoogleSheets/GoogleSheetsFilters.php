@@ -151,7 +151,7 @@ function dm_register_googlesheets_success_message() {
     add_filter('dm_tool_success_message', function($default_message, $tool_name, $tool_result, $tool_parameters) {
         if ($tool_name === 'google_sheets_publish' && !empty($tool_result['data']['sheet_url'])) {
             $worksheet = $tool_result['data']['worksheet_name'] ?? 'worksheet';
-            return "SPREADSHEET UPDATED: Your data has been successfully added to {$worksheet} at {$tool_result['data']['sheet_url']}. Your spreadsheet entry is complete and ready for use!";
+            return "Data added successfully to {$worksheet} at {$tool_result['data']['sheet_url']}.";
         }
         return $default_message;
     }, 10, 4);
