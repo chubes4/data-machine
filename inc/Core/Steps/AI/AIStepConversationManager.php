@@ -27,7 +27,7 @@ class AIStepConversationManager {
 
     /**
      * Synchronizes data packet content in conversation messages with real-time updates.
-     */"
+     */
     public static function updateDataPacketMessages(array $conversation_messages, array $data): array {
         if (empty($conversation_messages) || empty($data)) {
             return $conversation_messages;
