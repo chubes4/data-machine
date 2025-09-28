@@ -66,6 +66,12 @@ function dm_register_logs_admin_page_filters() {
         $logs_instance = new Logs();
         $logs_instance->ajax_clear_logs();
     });
+
+    // AJAX handler registration for loading full log content
+    add_action('wp_ajax_dm_load_full_logs', function() {
+        $logs_instance = new Logs();
+        $logs_instance->ajax_load_full_logs();
+    });
 }
 
 // Auto-register when file loads - achieving complete self-containment

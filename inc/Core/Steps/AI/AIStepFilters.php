@@ -78,4 +78,23 @@ add_filter('ai_render_component', function($output, $config) {
 
 dm_register_ai_step_filters();
 
+// Register AI error handlers
+add_action('ai_api_error', function($error_data) {
+    do_action('dm_log', 'error', 'AI API Error: ' . $error_data['provider'] . ' ' . $error_data['endpoint'], [
+        'provider' => $error_data['provider'],
+        'endpoint' => $error_data['endpoint'],
+        'error_response' => $error_data['response'],
+        'timestamp' => $error_data['timestamp']
+    ]);
+});
+
+add_action('ai_library_error', function($error_data) {
+    do_action('dm_log', 'error', 'AI Library Error: ' . $error_data['component'] . ' - ' . $error_data['message'], [
+        'component' => $error_data['component'],
+        'message' => $error_data['message'],
+        'context' => $error_data['context'],
+        'timestamp' => $error_data['timestamp']
+    ]);
+});
+
 require_once __DIR__ . '/Tools/GeneralToolsFilters.php';

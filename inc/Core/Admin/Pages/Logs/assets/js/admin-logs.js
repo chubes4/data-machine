@@ -63,6 +63,12 @@
                 }
             }
         });
+
+        // Handle load full logs button
+        $('.dm-load-full-logs').on('click', function(e) {
+            e.preventDefault();
+            handleFullLogLoad();
+        });
     }
 
     /**
@@ -104,6 +110,102 @@
         setTimeout(function() {
             $button.text(originalText).removeClass('dm-copy-error');
         }, 2000);
+    }
+
+    /**
+     * Handle loading full log content via AJAX
+     */
+    function handleFullLogLoad() {
+        const $button = $('#dm-load-full-logs-btn');
+        const $logViewer = $('.dm-log-viewer');
+        const $sectionTitle = $('.dm-log-section-title');
+        const $statusMessage = $('.dm-log-status-message');
+        const currentMode = $logViewer.data('current-mode');
+
+        // Toggle between full and recent modes
+        if (currentMode === 'full') {
+            // Switch back to recent logs
+            location.reload();
+            return;
+        }
+
+        // Proceed with loading full logs
+        const originalButtonText = $button.text();
+        const nonce = $button.data('nonce');
+
+        if (!nonce) {
+            showStatusMessage('Security error: Missing nonce.', 'error');
+            return;
+        }
+
+        // Set loading state
+        $button.prop('disabled', true).text('Loading...');
+        showStatusMessage('Loading full log file...', 'info');
+
+        // AJAX request to load full logs
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'dm_load_full_logs',
+                dm_logs_nonce: nonce
+            },
+            timeout: 30000, // 30 second timeout for large files
+            success: function(response) {
+                if (response.success) {
+                    // Update log viewer with full content
+                    $logViewer.text(response.data.content).data('current-mode', 'full');
+
+                    // Update section title
+                    $sectionTitle.text('Full Log File (' + response.data.total_lines + ' entries)');
+
+                    // Update button text
+                    $button.text('Show Recent Only');
+
+                    // Show success message
+                    showStatusMessage(response.data.message, 'success');
+                } else {
+                    showStatusMessage('Error: ' + (response.data || 'Unknown error occurred'), 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                let errorMessage = 'Failed to load full logs.';
+                if (status === 'timeout') {
+                    errorMessage = 'Request timed out. Log file may be too large.';
+                } else if (xhr.responseJSON && xhr.responseJSON.data) {
+                    errorMessage = xhr.responseJSON.data;
+                }
+                showStatusMessage(errorMessage, 'error');
+            },
+            complete: function() {
+                // Reset button state
+                $button.prop('disabled', false);
+                if ($logViewer.data('current-mode') !== 'full') {
+                    $button.text(originalButtonText);
+                }
+            }
+        });
+    }
+
+    /**
+     * Show status message to user
+     */
+    function showStatusMessage(message, type) {
+        const $statusMessage = $('.dm-log-status-message');
+        const typeClass = 'dm-status-' + type;
+
+        // Remove any existing type classes
+        $statusMessage.removeClass('dm-status-success dm-status-error dm-status-info');
+
+        // Add new type class and show message
+        $statusMessage.addClass(typeClass).text(message).show();
+
+        // Auto-hide after 5 seconds for success/info messages
+        if (type === 'success' || type === 'info') {
+            setTimeout(function() {
+                $statusMessage.fadeOut();
+            }, 5000);
+        }
     }
 
     // Initialize when DOM is ready

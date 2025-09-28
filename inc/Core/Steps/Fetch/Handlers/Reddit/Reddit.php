@@ -310,7 +310,6 @@ class Reddit {
 					continue;
 				}
 
-				do_action('dm_log', 'debug', 'Reddit Input: Found eligible item.', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
 
 				if ($flow_step_id && $job_id) {
 					do_action('dm_mark_item_processed', $flow_step_id, 'reddit', $current_item_id, $job_id);
@@ -502,6 +501,16 @@ class Reddit {
 
 					apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
 				}
+
+				// Focused success logging
+				do_action('dm_log', 'debug', 'Reddit: Fetched data successfully', [
+					'source_type' => 'reddit',
+					'item_id' => $current_item_id,
+					'has_image' => !empty($image_info),
+					'image_url_domain' => !empty($image_info['url']) ? parse_url($image_info['url'], PHP_URL_HOST) : null,
+					'content_length' => strlen($title . ' ' . $selftext . ' ' . $body),
+					'file_info_status' => $stored_image ? 'downloaded' : 'none'
+				]);
 
 				// Return clean data packet (no URLs in metadata for AI)
 				return ['processed_items' => [$input_data]];

@@ -256,12 +256,20 @@ function dm_store_page_config($page_slug, $page_config) {
  * @param string $page_slug Page slug
  */
 function dm_render_admin_page_content($page_config, $page_slug) {
-    // Direct template rendering using standardized template name pattern
+    // Special handling for logs page to use Logs class render_content method
+    if ($page_slug === 'logs') {
+        // Use Logs class to render content properly
+        $logs_instance = new \DataMachine\Core\Admin\Pages\Logs\Logs();
+        $logs_instance->render_content();
+        return;
+    }
+
+    // Direct template rendering using standardized template name pattern for other pages
     $content = apply_filters('dm_render_template', '', "page/{$page_slug}-page", [
         'page_slug' => $page_slug,
         'page_config' => $page_config
     ]);
-    
+
     if (!empty($content)) {
         echo wp_kses($content, dm_allowed_html());
     } else {

@@ -173,11 +173,40 @@ class WordPress {
         $image_url = $this->extract_image_url($post_id);
         $site_name = get_bloginfo('name') ?: 'Local WordPress';
 
+        // Include featured image file_info if present for AI vision analysis
+        $file_info = null;
+        $featured_image_id = get_post_thumbnail_id($post_id);
+        if ($featured_image_id) {
+            $file_path = get_attached_file($featured_image_id);
+            if ($file_path && file_exists($file_path)) {
+                $file_size = filesize($file_path);
+                $mime_type = get_post_mime_type($featured_image_id) ?: 'image/jpeg';
+
+                $file_info = [
+                    'file_path' => $file_path,
+                    'mime_type' => $mime_type,
+                    'file_size' => $file_size
+                ];
+
+                do_action('dm_log', 'debug', 'WordPress Local: Including featured image file_info for AI processing', [
+                    'post_id' => $post_id,
+                    'featured_image_id' => $featured_image_id,
+                    'file_path' => $file_path,
+                    'file_size' => $file_size
+                ]);
+            }
+        }
+
         $content_data = [
             'title' => $title,
             'content' => $content,
             'excerpt' => $post->post_excerpt ?: ''
         ];
+
+        // Add file_info if featured image is available
+        if ($file_info) {
+            $content_data['file_info'] = $file_info;
+        }
 
         $metadata = [
             'source_type' => 'wordpress_local',

@@ -165,6 +165,55 @@ class WordPressAPI {
             // Extract image URL
             $image_url = $this->extract_image_url($item);
 
+            // Download remote image if present
+            $file_info = null;
+            if (!empty($image_url) && $flow_step_id) {
+                $repositories = apply_filters('dm_files_repository', []);
+                $files_repo = $repositories['files'] ?? null;
+
+                if ($files_repo) {
+                    // Generate filename from URL
+                    $url_path = wp_parse_url($image_url, PHP_URL_PATH);
+                    $extension = $url_path ? pathinfo($url_path, PATHINFO_EXTENSION) : 'jpg';
+                    if (empty($extension)) {
+                        $extension = 'jpg';
+                    }
+                    $filename = 'wp_api_image_' . time() . '_' . sanitize_file_name(basename($url_path ?: 'image')) . '.' . $extension;
+
+                    $download_result = $files_repo->store_remote_file($image_url, $filename, $flow_step_id);
+
+                    if ($download_result) {
+                        // Determine MIME type from extension
+                        $mime_map = [
+                            'jpg' => 'image/jpeg',
+                            'jpeg' => 'image/jpeg',
+                            'png' => 'image/png',
+                            'gif' => 'image/gif',
+                            'webp' => 'image/webp'
+                        ];
+                        $mime_type = $mime_map[strtolower($extension)] ?? 'image/jpeg';
+
+                        $file_info = [
+                            'file_path' => $download_result['path'],
+                            'mime_type' => $mime_type,
+                            'file_size' => $download_result['size']
+                        ];
+
+                        do_action('dm_log', 'debug', 'WordPress API Input: Downloaded remote image for AI processing', [
+                            'item_id' => $unique_id,
+                            'source_url' => $image_url,
+                            'local_path' => $download_result['path'],
+                            'file_size' => $download_result['size']
+                        ]);
+                    } else {
+                        do_action('dm_log', 'warning', 'WordPress API Input: Failed to download remote image', [
+                            'item_id' => $unique_id,
+                            'image_url' => $image_url
+                        ]);
+                    }
+                }
+            }
+
             $site_name = $this->extract_site_name_from_url($endpoint_url);
 
             // Create structured content data for AI processing
@@ -173,6 +222,11 @@ class WordPressAPI {
                 'content' => wp_strip_all_tags($content),
                 'excerpt' => wp_strip_all_tags($excerpt)
             ];
+
+            // Add file_info if image was downloaded
+            if ($file_info) {
+                $content_data['file_info'] = $file_info;
+            }
 
             // Create standardized packet and return immediately
             $metadata = [

@@ -53,8 +53,7 @@ class Logs
         
         // Form handling moved to template - admin_init timing issues
         
-        // AJAX handlers
-        add_action('wp_ajax_dm_clear_logs', [$this, 'ajax_clear_logs']);
+        // AJAX handlers - dm_clear_logs and dm_load_full_logs are registered in LogsFilters.php
         add_action('wp_ajax_dm_update_log_level', [$this, 'ajax_update_log_level']);
     }
 
@@ -261,9 +260,52 @@ class Logs
         /* translators: %s: Log level name (e.g., debug, info, error) */
         wp_send_json_success(sprintf(esc_html__('Log level updated to %s.', 'data-machine'), ucfirst($new_level)));
     }
-    
+
+    /**
+     * AJAX: Load full log file content.
+     */
+    public function ajax_load_full_logs()
+    {
+        $nonce = sanitize_text_field(wp_unslash($_POST['dm_logs_nonce'] ?? ''));
+        if (!wp_verify_nonce($nonce, 'dm_logs_action')) {
+            wp_send_json_error(__('Security check failed.', 'data-machine'));
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(__('Insufficient permissions.', 'data-machine'));
+        }
+
+        if (!file_exists($this->log_file_path)) {
+            wp_send_json_error(__('Log file not found.', 'data-machine'));
+        }
+
+        $file_content = file_get_contents($this->log_file_path);
+        if ($file_content === false) {
+            wp_send_json_error(__('Unable to read log file.', 'data-machine'));
+        }
+
+        // Split into lines and reverse to show newest first
+        $lines = explode("\n", $file_content);
+        $lines = array_filter($lines, function($line) {
+            return trim($line) !== '';
+        });
+        $lines = array_reverse($lines);
+
+        $total_lines = count($lines);
+        $full_content = implode("\n", $lines);
+
+        wp_send_json_success([
+            'content' => $full_content,
+            'total_lines' => $total_lines,
+            'message' => sprintf(
+                /* translators: %d: Total number of log entries loaded */
+                esc_html__('Loaded %d total log entries.', 'data-machine'),
+                $total_lines
+            )
+        ]);
+    }
+
 
 }
 
-// Auto-instantiate for self-registration
-new Logs();
+// Instance creation handled by LogsFilters.php as needed

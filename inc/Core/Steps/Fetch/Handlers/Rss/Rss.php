@@ -169,13 +169,59 @@ class Rss {
                 'categories' => $categories
             ];
 
-            // Detect file info from enclosure (no URLs for AI)
+            // Download remote image from enclosure if present
             $file_info = null;
             if (!empty($enclosure_url)) {
-                $file_info = [
-                    'type' => $this->guess_mime_type_from_url($enclosure_url),
-                    'mime_type' => $this->guess_mime_type_from_url($enclosure_url)
-                ];
+                $mime_type = $this->guess_mime_type_from_url($enclosure_url);
+
+                // Only download if it's an image that AI can process
+                if (strpos($mime_type, 'image/') === 0 && in_array($mime_type, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
+                    $repositories = apply_filters('dm_files_repository', []);
+                    $files_repo = $repositories['files'] ?? null;
+
+                    if ($files_repo && $flow_step_id) {
+                        $filename = 'rss_image_' . time() . '_' . sanitize_file_name(basename(wp_parse_url($enclosure_url, PHP_URL_PATH)));
+                        $download_result = $files_repo->store_remote_file($enclosure_url, $filename, $flow_step_id);
+
+                        if ($download_result) {
+                            $file_info = [
+                                'file_path' => $download_result['path'],
+                                'mime_type' => $mime_type,
+                                'file_size' => $download_result['size']
+                            ];
+
+                            do_action('dm_log', 'debug', 'RSS Input: Downloaded remote image for AI processing', [
+                                'guid' => $guid,
+                                'source_url' => $enclosure_url,
+                                'local_path' => $download_result['path'],
+                                'file_size' => $download_result['size']
+                            ]);
+                        } else {
+                            do_action('dm_log', 'warning', 'RSS Input: Failed to download remote image', [
+                                'guid' => $guid,
+                                'enclosure_url' => $enclosure_url
+                            ]);
+
+                            // Fall back to type info only
+                            $file_info = [
+                                'type' => $mime_type,
+                                'mime_type' => $mime_type
+                            ];
+                        }
+                    } else {
+                        // Fall back to type info only if no repository or flow_step_id
+                        $file_info = [
+                            'type' => $mime_type,
+                            'mime_type' => $mime_type
+                        ];
+                    }
+                } else {
+                    // Non-image or unsupported image format - keep original behavior
+                    $file_info = [
+                        'type' => $mime_type,
+                        'mime_type' => $mime_type
+                    ];
+                }
             }
 
             // Create clean data packet for AI processing

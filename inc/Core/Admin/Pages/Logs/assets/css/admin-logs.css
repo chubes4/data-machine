@@ -104,6 +104,15 @@
     color: white;
 }
 
+.dm-load-full-logs {
+    margin-left: 10px;
+}
+
+.dm-load-full-logs:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
 /* Recent logs section */
 .dm-recent-logs {
     background: #fff;
@@ -130,4 +139,30 @@
     white-space: pre-wrap;
     max-height: 400px;
     overflow-y: auto;
+}
+
+/* Status message styling */
+.dm-log-status-message {
+    padding: 8px 12px;
+    margin: 10px 0;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.dm-log-status-message.dm-status-success {
+    background-color: #d1ecf1;
+    border: 1px solid #bee5eb;
+    color: #0c5460;
+}
+
+.dm-log-status-message.dm-status-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.dm-log-status-message.dm-status-info {
+    background-color: #cce7ff;
+    border: 1px solid #b3d7ff;
+    color: #0c5460;
 }

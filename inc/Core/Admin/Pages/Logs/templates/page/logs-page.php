@@ -3,6 +3,7 @@
  * Logs Admin Page Template
  *
  * Template for the main logs administration page.
+ * Data is provided by Logs::render_content() method.
  *
  * @package DataMachine\Core\Admin\Pages\Logs
  * @since 1.0.0
@@ -19,14 +20,14 @@ if (!empty($_POST) && isset($_POST['dm_logs_action'])) {
     if (!wp_verify_nonce($nonce, 'dm_logs_action')) {
         wp_die(esc_html__('Security check failed.', 'data-machine'));
     }
-    
+
     $action = sanitize_text_field(wp_unslash($_POST['dm_logs_action']));
-    
+
     switch ($action) {
         case 'clear_all':
             do_action('dm_log', 'clear_all');
             break;
-            
+
         case 'update_log_level':
             $new_level = sanitize_text_field(wp_unslash($_POST['log_level'] ?? ''));
             $available_levels = apply_filters('dm_log_file', [], 'get_available_levels');
@@ -37,48 +38,8 @@ if (!empty($_POST) && isset($_POST['dm_logs_action'])) {
     }
 }
 
-$current_log_level = apply_filters('dm_log_file', 'error', 'get_level');
-
-$upload_dir = wp_upload_dir();
-$log_file_path = $upload_dir['basedir'] . '/data-machine-logs/data-machine.log';
-
-$log_file_info = [
-    'exists' => false,
-    'size' => 0,
-    'size_formatted' => '0 bytes'
-];
-
-if (file_exists($log_file_path)) {
-    $log_file_info['exists'] = true;
-    $log_file_info['size'] = filesize($log_file_path);
-    
-    // Format file size
-    $bytes = $log_file_info['size'];
-    if ($bytes == 0) {
-        $log_file_info['size_formatted'] = '0 bytes';
-    } else {
-        $units = ['bytes', 'KB', 'MB', 'GB'];
-        $unit_index = 0;
-        
-        while ($bytes >= 1024 && $unit_index < count($units) - 1) {
-            $bytes /= 1024;
-            $unit_index++;
-        }
-        
-        $log_file_info['size_formatted'] = round($bytes, 2) . ' ' . $units[$unit_index];
-    }
-}
-
-// Get recent log entries
-$recent_logs = [];
-if (file_exists($log_file_path)) {
-    $lines = file($log_file_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    if ($lines) {
-    // Get the last 200 lines and reverse to show newest first
-    $recent_lines = array_slice($lines, -200);
-        $recent_logs = array_reverse($recent_lines);
-    }
-}
+// Use data provided by Logs class render_content method
+// Variables available: $current_log_level, $log_file_info, $recent_logs, $log_file_path
 ?>
 
 <div class="dm-logs-page">
@@ -145,19 +106,25 @@ if (file_exists($log_file_path)) {
             <button type="button" class="button dm-copy-logs" data-copy-target=".dm-log-viewer">
                 <?php esc_html_e('Copy Logs', 'data-machine'); ?>
             </button>
+
+            <button type="button" class="button dm-load-full-logs" id="dm-load-full-logs-btn" data-nonce="<?php echo esc_attr(wp_create_nonce('dm_logs_action')); ?>">
+                <?php esc_html_e('Load Full Log', 'data-machine'); ?>
+            </button>
         </div>
     </div>
 
-    <!-- Recent Log Entries Section -->
+    <!-- Log Entries Section -->
     <div class="dm-recent-logs">
-    <h2><?php esc_html_e('Recent Log Entries (Last 200)', 'data-machine'); ?></h2>
-        
+        <h2 class="dm-log-section-title"><?php esc_html_e('Recent Log Entries (Last 200)', 'data-machine'); ?></h2>
+
+        <div class="dm-log-status-message" style="display: none;"></div>
+
         <?php if (empty($recent_logs)): ?>
             <p class="dm-no-logs-message">
                 <?php esc_html_e('No log entries found.', 'data-machine'); ?>
             </p>
         <?php else: ?>
-            <div class="dm-log-viewer">
+            <div class="dm-log-viewer" data-current-mode="recent">
 <?php echo esc_html(implode("\n", $recent_logs)); ?>
             </div>
         <?php endif; ?>
