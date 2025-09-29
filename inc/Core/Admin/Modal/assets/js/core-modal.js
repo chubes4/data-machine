@@ -1,33 +1,20 @@
 /**
  * Universal Modal JavaScript
- * 
- * Handles ONLY modal lifecycle management: open/close, loading states, AJAX content loading.
- * Responds to .dm-modal-open buttons with data-template and data-context attributes.
- * Content interactions handled by page-specific modal scripts (e.g., pipeline-modal.js).
- * 
+ *
+ * Handles modal lifecycle management: open/close, loading states, AJAX content loading.
+ *
  * @package DataMachine\Core\Admin\Modal
- * @since 1.0.0
  */
 
 (function($) {
     'use strict';
 
-    /**
-     * Universal Modal System
-     * 
-     * Provides the same API as dmPipelineModal for seamless migration
-     * while enabling universal modal functionality across all admin pages.
-     */
     
-    // Preserve WordPress-localized data and extend with methods
     window.dmCoreModal = window.dmCoreModal || {};
     Object.assign(window.dmCoreModal, {
 
         /**
-         * Open modal with universal content loading
-         * 
-         * @param {string} template - Modal template identifier
-         * @param {object} context - Context data for modal content
+         * Open modal with universal content loading.
          */
         open: function(template, context = {}) {
             if (!template) {
@@ -39,8 +26,7 @@
                 return;
             }
             
-            
-            // Show loading state
+
             this.showLoading();
             
             const ajaxData = {
@@ -50,15 +36,12 @@
                 nonce: dmCoreModal.dm_ajax_nonce
             };
             
-            
-            // Make AJAX call to universal modal content handler
-            
+
             $.ajax({
                 url: dmCoreModal.ajax_url,
                 type: 'POST',
                 data: ajaxData,
                 success: (response) => {
-                    // Check if response is HTML (server error) instead of JSON
                     if (typeof response === 'string' && response.includes('<!DOCTYPE html>')) {
                         this.showError('Server error - check console for details');
                         return;

@@ -70,10 +70,7 @@ class PipelineAutoSaveAjax
             wp_send_json_error(['message' => __('Failed to save pipeline title', 'data-machine')]);
         }
 
-    // Clear pipeline caches after successful title save
     do_action('dm_clear_pipeline_cache', $pipeline_id);
-
-    // Clear pipelines list cache since title change affects dropdown lists
     do_action('dm_clear_pipelines_list_cache');
 
         wp_send_json_success([
@@ -175,7 +172,6 @@ class PipelineAutoSaveAjax
                         $pipeline_id = (int) $flow['pipeline_id'];
 
 
-                        // Clear pipeline cache for broader invalidation
                         do_action('dm_clear_pipeline_cache', $pipeline_id);
                     }
                 }
@@ -218,7 +214,6 @@ class PipelineAutoSaveAjax
             if (!empty($pipeline_step_config['pipeline_id'])) {
                 $pipeline_id = (int) $pipeline_step_config['pipeline_id'];
 
-                // Clear pipeline cache before response (system prompt affects pipeline configuration)
                 do_action('dm_clear_pipeline_cache', $pipeline_id);
             }
 

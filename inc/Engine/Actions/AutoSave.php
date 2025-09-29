@@ -24,7 +24,6 @@ class AutoSave
     public static function register() {
         $instance = new self();
 
-        // Central pipeline auto-save hook
         add_action('dm_auto_save', [$instance, 'handle_pipeline_auto_save'], 10, 1);
     }
 

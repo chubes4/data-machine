@@ -25,9 +25,6 @@ class AIStepConversationManager {
         return apply_filters('dm_tool_success_message', $default_message, $tool_name, $tool_result, $tool_parameters);
     }
 
-    /**
-     * Synchronizes data packet content in conversation messages with real-time updates.
-     */
     public static function updateDataPacketMessages(array $conversation_messages, array $data): array {
         if (empty($conversation_messages) || empty($data)) {
             return $conversation_messages;
@@ -83,7 +80,6 @@ class AIStepConversationManager {
             $success_message = "TOOL RESPONSE (Turn {$turn_count}): " . $success_message;
         }
         
-        // Only expose raw tool result payloads to the model for non-handler tools.
         if (!$is_handler_tool && !empty($tool_result['data'])) {
             $success_message .= "\n\n" . json_encode($tool_result['data']);
         }
@@ -97,7 +93,6 @@ class AIStepConversationManager {
     }
 
     public static function logConversationAction(string $action, array $context = []): void {
-        // Reserved for critical debugging only
     }
 
     public static function validateToolCall(string $tool_name, array $tool_parameters, array $conversation_messages): array {

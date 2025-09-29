@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Publish step with AI tool result detection and direct handler execution.
+ * Publish step with AI tool result detection.
  */
 class PublishStep {
 
@@ -16,7 +16,6 @@ class PublishStep {
      * Execute publish handler with AI tool result detection.
      */
     public function execute(array $parameters): array {
-        // Extract from flat parameter structure
         $flow_step_id = $parameters['flow_step_id'];
         $data = $parameters['data'] ?? [];
         $flow_step_config = $parameters['flow_step_config'] ?? [];
@@ -24,7 +23,6 @@ class PublishStep {
         try {
             do_action('dm_log', 'debug', 'Publish Step: Starting data publishing', ['flow_step_id' => $flow_step_id]);
 
-            // Use step configuration directly - no job config introspection needed
             if (empty($flow_step_config)) {
                 do_action('dm_log', 'error', 'Publish Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);
                 return [];
@@ -43,7 +41,6 @@ class PublishStep {
             
             $handler = $handler_data['handler_slug'];
 
-            // PublishStep trusts AI workflow completely - AI must call handler tool during conversation
             $tool_result_entry = $this->find_tool_result_for_handler($data, $handler);
             if ($tool_result_entry) {
                 do_action('dm_log', 'info', 'PublishStep: AI successfully used handler tool', [
@@ -51,11 +48,9 @@ class PublishStep {
                     'tool_result' => $tool_result_entry['metadata']['tool_name'] ?? 'unknown'
                 ]);
                 
-                // Create success entry from AI tool result and return
                 return $this->create_publish_entry_from_tool_result($tool_result_entry, $data, $handler, $flow_step_id);
             }
 
-            // AI did not execute handler tool - this indicates a workflow problem
             do_action('dm_log', 'error', 'PublishStep: AI did not execute handler tool - step failed', [
                 'flow_step_id' => $flow_step_id,
                 'expected_handler' => $handler,
@@ -63,7 +58,7 @@ class PublishStep {
                 'available_entry_types' => array_unique(array_column($data, 'type'))
             ]);
             
-            return []; // Return empty array to signal step failure
+            return [];
 
         } catch (\Exception $e) {
             do_action('dm_log', 'error', 'Publish Step: Exception during publishing', [
@@ -71,7 +66,6 @@ class PublishStep {
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            // Return empty array on failure (engine interprets as step failure)
             return $data;
         }
     }

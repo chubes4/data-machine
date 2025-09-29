@@ -190,25 +190,11 @@ docs/
 
 ### AI Integration
 - Multi-provider support (OpenAI, Anthropic, Google, Grok, OpenRouter)
-- Enhanced 5-tier AI directive system with auto-registration and priority spacing:
-  - PluginCoreDirective (Priority 10 - foundational AI agent identity with workflow termination logic and data packet structure guidance)
-  - GlobalSystemPromptDirective (Priority 20 - user-configured foundational behavior)
-  - PipelineSystemPromptDirective (Priority 30 - pipeline instructions and workflow visualization)
-  - ToolDefinitionsDirective (Priority 40 - dynamic tool prompts and workflow context)
-  - SiteContextDirective (Priority 50 - WordPress environment info, toggleable)
-- Advanced AIStepConversationManager for centralized conversation state management:
-  - Turn-based conversation loops with chronological message ordering and temporal context
-  - AI tool calls recorded before execution with turn number tracking and duplicate detection
-  - Enhanced tool result messaging with temporal context and conversation validation
-  - Data packet synchronization via updateDataPacketMessages() with JSON synchronization
-  - Duplicate tool call detection with parameter comparison and corrective messaging
-- Enhanced tool-first architecture for agentic execution with intelligent tool discovery
-- Advanced AIStepToolParameters for unified flat parameter building:
-  - buildParameters() for standard AI tools with centralized parameter management
-  - buildForHandlerTool() for handler tools with engine parameters and unified execution patterns
-  - Content/title extraction from data packets with structured processing
-- Context-aware processing with WordPress site context and metadata integration
-- Clear tool result messaging enabling natural conversation termination with success/failure tracking
+- **5-Tier AI Directive System**: Auto-registering directive classes with priority spacing (PluginCoreDirective → GlobalSystemPromptDirective → PipelineSystemPromptDirective → ToolDefinitionsDirective → SiteContextDirective)
+- **AIStepConversationManager**: Centralized conversation state management with turn-based loops, chronological ordering, duplicate detection, and data packet synchronization
+- **Tool-First Architecture**: Agentic execution with intelligent tool discovery and enhanced tool result detection
+- **AIStepToolParameters**: Unified parameter building with buildParameters() for standard tools and buildForHandlerTool() for handler tools with engine parameters
+- **Context-Aware Processing**: WordPress site context integration with metadata and clear tool result messaging
 
 ### Extension System
 - Filter-based service discovery

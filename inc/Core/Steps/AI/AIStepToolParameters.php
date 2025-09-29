@@ -13,7 +13,6 @@ class AIStepToolParameters {
     
     /**
      * Build unified flat parameter structure for tool execution.
-     * Merges core parameters, extracted content, tool metadata, and AI parameters.
      */
     public static function buildParameters(
         array $ai_tool_parameters,
@@ -38,10 +37,6 @@ class AIStepToolParameters {
     
     /**
      * Extract content from data packet if tool requires content parameter.
-     *
-     * @param array $data_packet Data packet array
-     * @param array $tool_definition Tool definition
-     * @return string|null Content body or null
      */
     private static function extractContent(array $data_packet, array $tool_definition): ?string {
         $tool_params = $tool_definition['parameters'] ?? [];
@@ -56,10 +51,6 @@ class AIStepToolParameters {
     
     /**
      * Extract title from data packet if tool requires title parameter.
-     *
-     * @param array $data_packet Data packet array
-     * @param array $tool_definition Tool definition
-     * @return string|null Content title or null
      */
     private static function extractTitle(array $data_packet, array $tool_definition): ?string {
         $tool_params = $tool_definition['parameters'] ?? [];
@@ -73,8 +64,7 @@ class AIStepToolParameters {
     }
     
     /**
-     * Build parameters for handler tools with engine data (source_url, image_url).
-     * Used by publish handlers for link attribution and update handlers for post identification.
+     * Build parameters for handler tools with engine data.
      */
     public static function buildForHandlerTool(
         array $ai_tool_parameters,

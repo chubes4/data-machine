@@ -1,6 +1,6 @@
 <?php
 /**
- * WordPress Update handler using source_url from engine data for post identification.
+ * WordPress Update handler for post modification.
  *
  * @package DataMachine\Core\Steps\Update\Handlers\WordPress
  */
@@ -18,7 +18,7 @@ class WordPress {
     }
 
     /**
-     * Handle AI tool call for WordPress content updating via source_url.
+     * Handle AI tool call for WordPress content updating.
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         $job_id = $parameters['job_id'] ?? null;
@@ -87,21 +87,18 @@ class WordPress {
             'has_block_updates' => !empty($parameters['block_updates'])
         ]);
         
-        // Prepare post data for update - only include fields that should be updated
         $post_data = [
             'ID' => $post_id
         ];
         $all_changes = [];
         $original_content = $existing_post->post_content;
 
-        // Handle surgical content updates
         if (!empty($parameters['updates'])) {
             $result = $this->apply_surgical_updates($original_content, $parameters['updates']);
             $post_data['post_content'] = $this->sanitize_block_content($result['content']);
             $all_changes['content_updates'] = $result['changes'];
         }
 
-        // Handle block-level updates
         if (!empty($parameters['block_updates'])) {
             $working_content = $post_data['post_content'] ?? $original_content;
             $result = $this->apply_block_updates($working_content, $parameters['block_updates']);
@@ -310,7 +307,6 @@ class WordPress {
 
         $term_ids = [];
         
-        // Handle array of terms or single term
         $terms = is_array($taxonomy_value) ? $taxonomy_value : [$taxonomy_value];
         
         foreach ($terms as $term_name) {

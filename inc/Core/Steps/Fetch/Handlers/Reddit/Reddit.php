@@ -1,6 +1,6 @@
 <?php
 /**
- * Reddit fetch handler with OAuth2 authentication and universal image handling.
+ * Reddit fetch handler with OAuth2 authentication and image handling.
  *
  * @package DataMachine
  */
@@ -26,7 +26,7 @@ class Reddit {
 	}
 
 	/**
-	 * Store Reddit image with proper user agent handling.
+	 * Store Reddit image with proper user agent.
 	 */
 	private function store_reddit_image(string $image_url, string $flow_step_id, string $item_id): ?array {
 		$repository = $this->get_repository();
@@ -45,7 +45,6 @@ class Reddit {
 		}
 		$filename = "reddit_image_{$item_id}.{$extension}";
 
-		// Store image with Reddit-specific user agent
 		$options = [
 			'timeout' => 30,
 			'user_agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/sailnlax04)'
@@ -57,7 +56,6 @@ class Reddit {
 
 	/**
 	 * Fetch Reddit content with timeframe and keyword filtering.
-	 * Engine data (source_url, image_url) stored via dm_engine_data filter.
 	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
@@ -226,7 +224,6 @@ class Reddit {
 				$item_data = $post_wrapper['data'];
 				$current_item_id = $item_data['id'];
 
-				// Skip pinned/stickied posts (old but shown at top)
 				$is_stickied = $item_data['stickied'] ?? false;
 				$is_pinned = $item_data['pinned'] ?? false;
 				if ($is_stickied || $is_pinned) {
@@ -239,7 +236,6 @@ class Reddit {
 					continue;
 				}
 
-				// Timeframe filtering with consecutive post logic
 				if ($cutoff_timestamp !== null) {
 					if (empty($item_data['created_utc'])) {
 						do_action('dm_log', 'debug', 'Reddit Input: Skipping item (missing creation date for timeframe check).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
@@ -300,7 +296,6 @@ class Reddit {
 					}
 				}
 
-				// Apply keyword search filter
 				$title_to_check = $item_data['title'] ?? '';
 				$selftext_to_check = $item_data['selftext'] ?? '';
 				$text_to_search = $title_to_check . ' ' . $selftext_to_check;
@@ -319,13 +314,11 @@ class Reddit {
 				$selftext = $item_data['selftext'] ?? '';
 				$body = $item_data['body'] ?? '';
 
-				// Create structured content data for AI processing
 				$content_data = [
 					'title' => trim($title),
 					'content' => !empty($selftext) ? trim($selftext) : (!empty($body) ? trim($body) : '')
 				];
 
-				// Fetch and structure comments if configured
 				$comments_array = [];
 				if ($comment_count_setting > 0 && !empty($item_data['permalink'])) {
 					$comments_url = 'https://oauth.reddit.com' . $item_data['permalink'] . '.json?limit=' . $comment_count_setting . '&sort=top';
@@ -373,17 +366,13 @@ class Reddit {
 						]);
 					}
 				}
-				// --- End fetch/append comments ---
 
-				// --- Detect image post and download to repository if found ---
 				$stored_image = null;
 				$image_info = null;
 				$url = $item_data['url'] ?? '';
 				$is_imgur = preg_match('#^https?://(www\.)?imgur\.com/([^./]+)$#i', $url, $imgur_matches);
 
-				// 1. Gallery support (Reddit API: is_gallery + media_metadata)
 				if (!empty($item_data['is_gallery']) && !empty($item_data['media_metadata']) && is_array($item_data['media_metadata'])) {
-					// Get the first image in the gallery
 					$first_media = reset($item_data['media_metadata']);
 					if (!empty($first_media['s']['u'])) {
 						$direct_url = html_entity_decode($first_media['s']['u']);
@@ -394,7 +383,6 @@ class Reddit {
 						];
 					}
 				}
-				// 2. Imgur or direct image
 				elseif (
 					!empty($url) &&
 					(
@@ -424,12 +412,10 @@ class Reddit {
 					];
 				}
 
-				// Download and store image in repository if detected
 				if ($image_info) {
 					$stored_image = $this->store_reddit_image($image_info['url'], $flow_step_id, $current_item_id);
 				}
 
-				// Create clean metadata for AI consumption (URLs stored separately via engine data)
 				$metadata = [
 					'source_type' => 'reddit',
 					'item_identifier_to_log' => (string) $current_item_id,
@@ -443,14 +429,11 @@ class Reddit {
 					'is_self_post' => $item_data['is_self'] ?? false,
 				];
 
-				// Add comments to content data if available
 				if (!empty($comments_array)) {
 					$content_data['comments'] = $comments_array;
 				}
 
-				// Create data packet using universal pattern
 				if ($stored_image) {
-					// Image post - use universal pattern with file_info
 					$file_info = [
 						'file_path' => $stored_image['path'],
 						'file_name' => $stored_image['filename'],
@@ -464,13 +447,11 @@ class Reddit {
 						'item_identifier_to_log' => $current_item_id
 					]);
 
-					// Create clean data packet for AI processing
 					$input_data = [
 						'data' => array_merge($content_data, ['file_info' => $file_info]),
 						'metadata' => $metadata
 					];
 				} else {
-					// Text-only post - use universal pattern with null file_info
 					$metadata = array_merge($metadata, [
 						'original_title' => $title,
 						'original_id' => $current_item_id,
@@ -478,18 +459,15 @@ class Reddit {
 						'item_identifier_to_log' => $current_item_id
 					]);
 
-					// Create clean data packet for AI processing
 					$input_data = [
 						'data' => $content_data,
 						'metadata' => $metadata
 					];
 				}
 
-				// Store URLs in engine_data via centralized filter
 				if ($job_id) {
 					$source_url = $item_data['permalink'] ? 'https://www.reddit.com' . $item_data['permalink'] : '';
 
-					// Generate image URL if file was stored
 					$image_url = '';
 					if ($stored_image && $flow_step_id) {
 						$repositories = apply_filters('dm_files_repository', []);
@@ -502,7 +480,6 @@ class Reddit {
 					apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
 				}
 
-				// Focused success logging
 				do_action('dm_log', 'debug', 'Reddit: Fetched data successfully', [
 					'source_type' => 'reddit',
 					'item_id' => $current_item_id,
@@ -512,7 +489,6 @@ class Reddit {
 					'file_info_status' => $stored_image ? 'downloaded' : 'none'
 				]);
 
-				// Return clean data packet (no URLs in metadata for AI)
 				return ['processed_items' => [$input_data]];
 			} // End foreach ($response_data...)
 
@@ -542,11 +518,7 @@ class Reddit {
 
 
 	/**
-	 * Sanitize Reddit handler settings with comprehensive validation.
-	 * Validates subreddit names, sort parameters, timeframes, and numeric filters.
-	 *
-	 * @param array $raw_settings Raw handler settings from user input
-	 * @return array Sanitized settings or empty array on validation failure
+	 * Sanitize Reddit handler settings.
 	 */
 	public function sanitize_settings(array $raw_settings): array {
 		$sanitized = [];

@@ -44,7 +44,14 @@ class AIStep {
             }
             
             $messages = [];
-            
+
+            if (!empty($data)) {
+                $messages[] = [
+                    'role' => 'user',
+                    'content' => json_encode(['data_packets' => $data], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+                ];
+            }
+
             if ($file_path && file_exists($file_path)) {
                 $messages[] = [
                     'role' => 'user',
@@ -57,18 +64,11 @@ class AIStep {
                     ]
                 ];
             }
-            
+
             if (!empty($user_message)) {
                 $messages[] = [
                     'role' => 'user',
                     'content' => $user_message
-                ];
-            }
-            
-            if (!empty($data)) {
-                $messages[] = [
-                    'role' => 'user',
-                    'content' => json_encode(['data_packets' => $data], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
                 ];
             }
 
@@ -269,7 +269,6 @@ class AIStep {
                                 'metadata' => [
                                     'tool_name' => $tool_name,
                                     'handler_tool' => $tool_def['handler'] ?? null,
-                                    // Clean parameters for data packet storage
                                     'tool_parameters' => $clean_tool_parameters,
                                     'handler_config' => $handler_config,
                                     'source_type' => $data[0]['metadata']['source_type'] ?? 'unknown',

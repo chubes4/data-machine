@@ -209,12 +209,9 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 - Site Context toggle (WordPress info injection)
 - Job data cleanup on failure toggle (debugging)
 - File retention settings (1-90 days)
-- **Enhanced 5-Tier AI Directive Priority System**:
-  - PluginCoreDirective (foundational identity with workflow termination logic) → GlobalSystemPromptDirective → PipelineSystemPromptDirective → ToolDefinitionsDirective → SiteContextDirective
-- **Advanced AIStepConversationManager**:
-  - Multi-turn conversation state management with turn tracking, chronological message ordering, duplicate detection, and parameter validation
-- **Enhanced AIStepToolParameters**:
-  - Centralized flat parameter architecture with buildForHandlerTool() and unified tool execution patterns
+- **5-Tier AI Directive System**: Auto-registering directive classes with priority spacing for comprehensive AI context
+- **AIStepConversationManager**: Multi-turn conversation state with turn tracking, chronological ordering, and duplicate detection
+- **AIStepToolParameters**: Centralized parameter building with buildForHandlerTool() for unified tool execution
 - Tool configuration (API keys, OAuth)
 - WordPress defaults (post types, taxonomies, author, status)
 - Three-layer tool management (global → modal → validation)
@@ -234,20 +231,11 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
 - **Filter-Based Service Discovery**: WordPress hooks for component registration
 - **Unified Handler Filter System**:
   - Centralized cross-cutting filters (`dm_timeframe_limit`, `dm_keyword_search_match`, `dm_data_packet`)
-- **Enhanced Centralized Engine Data**:
-  - `EngineData.php` filter providing unified `dm_engine_data` access with storage/retrieval mode detection
-  - Clean AI data packets with structured engine parameters and database separation
-- **Advanced Centralized Cache System**:
-  - Actions/Cache.php with comprehensive WordPress action-based clearing and database component integration
-  - Granular cache methods: `dm_clear_flow_config_cache`, `dm_clear_flow_scheduling_cache`, `dm_clear_flow_steps_cache`
-  - Action-based architecture for extensible cache management across components
-- **Enhanced 5-Tier AI Directive System**:
-  - Auto-registration with priority spacing: PluginCoreDirective (foundational identity) → GlobalSystemPromptDirective → PipelineSystemPromptDirective → ToolDefinitionsDirective → SiteContextDirective
-- **Advanced Tool Discovery**:
-  - UpdateStep and PublishStep with intelligent tool result detection, exact handler matching, and partial name matching
-- **Enhanced Conversation Management**:
-  - AIStepConversationManager with turn tracking, temporal context, duplicate detection, and conversation validation
-  - AIStepToolParameters with centralized parameter building and unified tool execution patterns
+- **Centralized Engine Data**: `EngineData.php` filter providing unified `dm_engine_data` access with clean AI data packets
+- **Centralized Cache System**: Actions/Cache.php with comprehensive WordPress action-based clearing and granular methods
+- **5-Tier AI Directive System**: Auto-registering directive classes with priority spacing from PluginCoreDirective to SiteContextDirective
+- **Intelligent Tool Discovery**: UpdateStep and PublishStep with exact handler matching and partial name matching
+- **Advanced Conversation Management**: AIStepConversationManager with turn tracking and AIStepToolParameters for unified execution
 - **AutoSave System**:
   - Complete pipeline persistence and flow synchronization
 - **Modular WordPress Publisher**:

@@ -11,13 +11,6 @@ class PluginCoreDirective {
 
     /**
      * Inject foundational AI agent identity directive.
-     *
-     * @param array $request AI request array with messages
-     * @param string $provider_name AI provider name
-     * @param callable $streaming_callback Streaming callback (unused)
-     * @param array $tools Available tools (unused)
-     * @param string|null $pipeline_step_id Pipeline step ID (unused)
-     * @return array Modified request with core identity directive added
      */
     public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null): array {
         if (!isset($request['messages']) || !is_array($request['messages'])) {
@@ -41,9 +34,7 @@ class PluginCoreDirective {
     }
 
     /**
-     * Generate core directive establishing workflow termination logic and data packet structure.
-     *
-     * @return string Core directive content
+     * Generate core directive establishing workflow termination logic.
      */
     private static function generate_core_directive(): string {
         $directive = "You are an AI content processing agent in the Data Machine WordPress plugin pipeline system.\n\n";
@@ -74,5 +65,4 @@ class PluginCoreDirective {
     }
 }
 
-// Self-register (Priority 10 = highest priority in 5-tier directive system)
 add_filter('ai_request', [PluginCoreDirective::class, 'inject'], 10, 5);

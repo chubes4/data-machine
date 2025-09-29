@@ -2,24 +2,14 @@
  * Pipeline Builder JavaScript
  *
  * Handles pipeline structure management and step type operations.
- * Manages pipeline templates, step sequences, and pipeline-level operations.
- *
- * @since 1.0.0
  */
 
 (function($) {
     'use strict';
 
-    /**
-     * Pipeline Builder Controller
-     */
     window.PipelineBuilder = {
         
-        /**
-         * Show WordPress-style admin notice
-         */
         showNotice: function(message, type = 'error') {
-            // Remove any existing notices first
             $('.dm-admin-notice').remove();
             
             const $notice = $(`
@@ -31,21 +21,18 @@
                 </div>
             `);
             
-            // Find the best container to insert the notice
             const $container = $('.dm-admin-wrap').length ? 
                 $('.dm-admin-wrap') : 
                 $('.dm-pipelines-page').length ? $('.dm-pipelines-page') : $('body');
             
             $container.prepend($notice);
             
-            // Auto-dismiss after 5 seconds
             setTimeout(() => {
                 $notice.fadeOut(300, function() {
                     $(this).remove();
                 });
             }, 5000);
             
-            // Manual dismiss handler
             $notice.find('.notice-dismiss').on('click', function() {
                 $notice.fadeOut(300, function() {
                     $(this).remove();
@@ -53,33 +40,23 @@
             });
         },
         
-        /**
-         * Initialize the pipeline builder
-         */
         init: function() {
             this.bindEvents();
         },
 
-        /**
-         * Bind pipeline-specific event handlers
-         */
         bindEvents: function() {
-            // Direct data attribute handler for step selection
             $(document).on('click', '[data-template="add-step-action"]', this.handleAddStepAction.bind(this));
             
             
             
-            // Direct delete action handler for pipeline and step deletion
             $(document).on('click', '[data-template="delete-action"]', this.handleDeleteAction.bind(this));
 
-            // Template selection handlers
             $(document).on('click', '[data-template="select-pipeline-template"]', this.handleTemplateSelection.bind(this));
             $(document).on('click', '[data-template="create-custom-pipeline"]', this.handleCustomPipelineCreation.bind(this));
         },
 
         /**
-         * Handle add step action via data attributes
-         * Triggered when user clicks any element with data-template="add-step-action"
+         * Handle add step action via data attributes.
          */
         handleAddStepAction: function(e) {
             e.preventDefault();
@@ -88,11 +65,9 @@
             const contextData = $card.data('context');
             
             if (!contextData || !contextData.step_type || !contextData.pipeline_id) {
-                // Invalid step data
                 return;
             }
 
-            // Add step to the specific pipeline
             this.addStepToPipeline(contextData.step_type, contextData.pipeline_id);
         },
 

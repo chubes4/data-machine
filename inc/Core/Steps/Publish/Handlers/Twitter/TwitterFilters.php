@@ -40,9 +40,6 @@ function dm_register_twitter_filters() {
 }
 
 function dm_get_twitter_tool(array $handler_config = []): array {
-    $twitter_config = $handler_config['twitter'] ?? $handler_config;
-    
-    
     $tool = [
         'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
         'method' => 'handle_tool_call',
@@ -56,15 +53,11 @@ function dm_get_twitter_tool(array $handler_config = []): array {
             ]
         ]
     ];
-    
+
     if (!empty($handler_config)) {
         $tool['handler_config'] = $handler_config;
     }
-    
-    
 
-    $tool['description'] = 'Post content to Twitter';
-    
     return $tool;
 }
 

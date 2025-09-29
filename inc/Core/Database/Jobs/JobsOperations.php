@@ -1,8 +1,6 @@
 <?php
 /**
  * Jobs Database CRUD Operations
- *
- * Core database operations with engine_data storage for centralized access.
  */
 
 namespace DataMachine\Core\Database\Jobs;
@@ -60,7 +58,6 @@ class JobsOperations {
         
         $job_id = $this->wpdb->insert_id;
 
-        // Invalidate job caches
         do_action('dm_clear_jobs_cache');
 
         return $job_id;
@@ -84,9 +81,6 @@ class JobsOperations {
         return $job;
     }
 
-    /**
-     * Get total jobs count for pagination.
-     */
     public function get_jobs_count(): int {
         
         $cache_key = Cache::TOTAL_JOBS_COUNT_CACHE_KEY;

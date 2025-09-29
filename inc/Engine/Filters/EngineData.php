@@ -2,8 +2,7 @@
 /**
  * Centralized Engine Data Access Filter
  *
- * Provides unified storage and retrieval of engine_data (source_url, image_url)
- * via dm_engine_data filter. Maintains filter-based service discovery consistency.
+ * Unified storage and retrieval of engine_data via dm_engine_data filter.
  *
  * @package DataMachine\Engine\Filters
  */
@@ -28,7 +27,6 @@ function dm_register_engine_data_filter() {
             return [];
         }
 
-        // Storage mode detection: 4+ parameters indicates storage operation
         if (func_num_args() >= 4) {
             $all_databases = apply_filters('dm_db', []);
             $db_jobs = $all_databases['jobs'] ?? null;
