@@ -1,6 +1,11 @@
 <?php
 /**
- * Centralized cross-cutting filters for handler capabilities.
+ * Cross-cutting filters for handler capabilities.
+ *
+ * Provides shared functionality used across multiple handlers:
+ * - Timeframe parsing (discovery and conversion modes)
+ * - Keyword matching with OR logic
+ * - Handler registration discovery
  *
  * @package DataMachine\Engine\Filters
  */
@@ -10,17 +15,26 @@ if (!defined('WPINC')) {
 }
 
 function dm_register_handler_filters() {
-    add_filter('dm_handlers', function($handlers) {
+    add_filter('dm_handlers', function($handlers, $step_type = null) {
         return $handlers;
-    }, 5, 1);
+    }, 5, 2);
 
-    add_filter('dm_handler_settings', function($all_settings) {
+    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
         return $all_settings;
-    }, 5, 1);
+    }, 5, 2);
 
-    // Timeframe parsing for fetch handlers: returns cutoff timestamp, options array, or null
+    add_filter('dm_auth_providers', function($providers, $step_type = null) {
+        return $providers;
+    }, 5, 2);
+
+    /**
+     * Dual-mode timeframe parsing: options discovery or timestamp conversion.
+     *
+     * @param mixed $default Default value
+     * @param string|null $timeframe_limit Timeframe identifier (null for discovery mode)
+     * @return array|int|null Options array, timestamp, or null
+     */
     add_filter('dm_timeframe_limit', function($default, $timeframe_limit) {
-        // Discovery mode: return available timeframe options for dropdowns
         if ($timeframe_limit === null) {
             return [
                 'all_time' => __('All Time', 'data-machine'),
@@ -31,7 +45,6 @@ function dm_register_handler_filters() {
             ];
         }
 
-        // Conversion mode: return timestamp or null
         if ($timeframe_limit === 'all_time') {
             return null;
         }
@@ -50,13 +63,19 @@ function dm_register_handler_filters() {
         return strtotime($interval_map[$timeframe_limit], current_time('timestamp', true));
     }, 10, 2);
 
-    // Keyword search matching for all fetch handlers: parses comma-separated keywords with OR logic
+    /**
+     * Keyword matching with OR logic across comma-separated terms.
+     *
+     * @param bool $default Default match result
+     * @param string $content Content to search
+     * @param string $search_term Comma-separated keywords (empty matches all)
+     * @return bool Match result
+     */
     add_filter('dm_keyword_search_match', function($default, $content, $search_term) {
         if (empty($search_term)) {
-            return true; // No filter = match all
+            return true;
         }
 
-        // Parse comma-separated keywords (or single term)
         $keywords = array_map('trim', explode(',', $search_term));
         $keywords = array_filter($keywords);
 
@@ -64,7 +83,6 @@ function dm_register_handler_filters() {
             return true;
         }
 
-        // OR logic - any keyword match passes
         $content_lower = strtolower($content);
         foreach ($keywords as $keyword) {
             if (mb_stripos($content_lower, strtolower($keyword)) !== false) {

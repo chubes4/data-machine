@@ -1,12 +1,9 @@
 <?php
 /**
- * Modular source URL processing for WordPress publish operations.
+ * Source URL processing with configuration hierarchy and Gutenberg blocks.
  *
- * Features:
- * - Configuration hierarchy validation (system defaults override handler settings)
- * - URL validation and sanitization using esc_url()
- * - Gutenberg block generation (separator + paragraph with source link)
- * - Clean source attribution without content pollution
+ * System defaults override handler settings. Generates separator and paragraph
+ * blocks for clean source attribution.
  *
  * @package DataMachine
  * @subpackage Core\Steps\Publish\Handlers\WordPress
@@ -21,12 +18,12 @@ if (!defined('ABSPATH')) {
 class SourceUrlHandler {
 
     /**
-     * Process source URL and append to content if enabled via configuration hierarchy.
+     * Append source URL to content if enabled.
      *
      * @param string $content Current post content
-     * @param array $parameters Tool parameters including source_url
+     * @param array $engine_data Engine data with source_url
      * @param array $handler_config Handler configuration
-     * @return string Content with Gutenberg source blocks appended if applicable
+     * @return string Content with Gutenberg source blocks if applicable
      */
     public function processSourceUrl(string $content, array $engine_data, array $handler_config): string {
         if (!$this->isSourceInclusionEnabled($handler_config)) {
@@ -43,29 +40,28 @@ class SourceUrlHandler {
     }
 
     /**
-     * Check if source URL inclusion is enabled based on configuration hierarchy.
-     * System defaults always override handler config when set.
+     * Check if source URL inclusion is enabled.
+     *
+     * System defaults override handler config when set.
      *
      * @param array $handler_config Handler configuration
-     * @return bool True if source inclusion is enabled
+     * @return bool True if source inclusion enabled
      */
     public function isSourceInclusionEnabled(array $handler_config): bool {
         $all_settings = get_option('data_machine_settings', []);
         $wp_settings = $all_settings['wordpress_settings'] ?? [];
 
-        // System default overrides handler config when set
         if (isset($wp_settings['default_include_source'])) {
             return (bool) $wp_settings['default_include_source'];
         }
 
-        // Fallback to handler config (default to false if not provided)
         return (bool) ($handler_config['include_source'] ?? false);
     }
 
     /**
      * Validate source URL format.
      *
-     * @param string|null $source_url Source URL to validate
+     * @param string|null $source_url Source URL
      * @return bool True if URL is valid
      */
     private function validateSourceUrl(?string $source_url): bool {

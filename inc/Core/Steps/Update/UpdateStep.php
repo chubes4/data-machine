@@ -123,10 +123,7 @@ class UpdateStep {
      */
     private function execute_handler($handler_slug, $data, $handler_config, $flow_step_config, $parameters) {
         try {
-            $all_handlers = apply_filters('dm_handlers', []);
-            $update_handlers = array_filter($all_handlers, function($handler) {
-                return isset($handler['type']) && $handler['type'] === 'update';
-            });
+            $update_handlers = apply_filters('dm_handlers', [], 'update');
 
             if (!isset($update_handlers[$handler_slug])) {
                 do_action('dm_log', 'error', 'Update Step: Handler not found', [

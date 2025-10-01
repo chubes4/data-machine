@@ -1,9 +1,6 @@
 <?php
 /**
- * Google Custom Search API tool for web search and fact-checking.
- *
- * Provides real-time web search capabilities for AI agents with configurable
- * result limits, site restrictions, and comprehensive error handling.
+ * Google Custom Search API integration with site restrictions and result limits.
  *
  * @package DataMachine\Core\Steps\AI\Tools
  */
@@ -12,9 +9,6 @@ namespace DataMachine\Core\Steps\AI\Tools;
 
 defined('ABSPATH') || exit;
 
-/**
- * Google Custom Search API integration for web search results.
- */
 class GoogleSearch {
 
     public function __construct() {
@@ -31,14 +25,13 @@ class GoogleSearch {
 
     /**
      * Execute Google search with site restrictions and result limiting.
-     * Requires API key and Custom Search Engine ID configuration.
      *
-     * @param array $parameters Flat parameter structure containing 'query'
-     * @param array $tool_def Tool definition (unused for general tools)
-     * @return array Search results with success status and data array
+     * @param array $parameters Contains 'query' and optional 'site_restrict'
+     * @param array $tool_def Tool definition (unused)
+     * @return array Search results with success status
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        
+
         if (empty($parameters['query'])) {
             return [
                 'success' => false,
@@ -47,7 +40,7 @@ class GoogleSearch {
             ];
         }
 
-        $config = get_option('dm_search_config', []);
+        $config = get_site_option('dm_search_config', []);
         $google_config = $config['google_search'] ?? [];
         
         if (empty($google_config['api_key']) || empty($google_config['search_engine_id'])) {
@@ -68,7 +61,7 @@ class GoogleSearch {
             'cx' => $google_config['search_engine_id'],
             'q' => $query,
             'num' => $max_results,
-            'safe' => 'active' // Enable safe search
+            'safe' => 'active'
         ];
         
         if ($site_restrict) {
@@ -166,14 +159,14 @@ class GoogleSearch {
     }
 
     public static function is_configured(): bool {
-        $config = get_option('dm_search_config', []);
+        $config = get_site_option('dm_search_config', []);
         $google_config = $config['google_search'] ?? [];
-        
+
         return !empty($google_config['api_key']) && !empty($google_config['search_engine_id']);
     }
     
     public static function get_config(): array {
-        $config = get_option('dm_search_config', []);
+        $config = get_site_option('dm_search_config', []);
         return $config['google_search'] ?? [];
     }
 
@@ -206,13 +199,13 @@ class GoogleSearch {
             return;
         }
 
-        $stored_config = get_option('dm_search_config', []);
+        $stored_config = get_site_option('dm_search_config', []);
         $stored_config['google_search'] = [
             'api_key' => $api_key,
             'search_engine_id' => $search_engine_id
         ];
 
-        if (update_option('dm_search_config', $stored_config)) {
+        if (update_site_option('dm_search_config', $stored_config)) {
             wp_send_json_success([
                 'message' => __('Google Search configuration saved successfully', 'data-machine'),
                 'configured' => true
@@ -242,8 +235,8 @@ class GoogleSearch {
     }
     
     /**
-     * Format success message for Google search results
-     * 
+     * Format success message for Google search results.
+     *
      * @param string $message Default message
      * @param string $tool_name Tool name
      * @param array $tool_result Tool execution result

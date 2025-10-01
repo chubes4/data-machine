@@ -29,24 +29,28 @@ if (!defined('ABSPATH')) {
  * @since 1.0.0
  */
 function dm_register_wordpress_media_fetch_filters() {
-    
+
     // Handler registration - WordPress Media declares itself as fetch handler (pure discovery mode)
-    add_filter('dm_handlers', function($handlers) {
-        $handlers['wordpress_media'] = [
-            'type' => 'fetch',
-            'class' => WordPressMedia::class,
-            'label' => __('WordPress Media', 'data-machine'),
-            'description' => __('Source attached images and media from WordPress media library', 'data-machine')
-        ];
+    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+        if ($step_type === null || $step_type === 'fetch') {
+            $handlers['wordpress_media'] = [
+                'type' => 'fetch',
+                'class' => WordPressMedia::class,
+                'label' => __('WordPress Media', 'data-machine'),
+                'description' => __('Source attached images and media from WordPress media library', 'data-machine')
+            ];
+        }
         return $handlers;
-    });
-    
-    
+    }, 10, 2);
+
+
     // Settings registration - pure discovery mode
-    add_filter('dm_handler_settings', function($all_settings) {
-        $all_settings['wordpress_media'] = new WordPressMediaSettings();
+    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
+        if ($step_type === null || $step_type === 'fetch') {
+            $all_settings['wordpress_media'] = new WordPressMediaSettings();
+        }
         return $all_settings;
-    });
+    }, 10, 2);
 
     // Modal registrations removed - now handled by generic modal system via pure discovery
     

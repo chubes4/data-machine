@@ -10,25 +10,31 @@ if (!defined('ABSPATH')) {
 }
 
 function dm_register_twitter_filters() {
-    add_filter('dm_handlers', function($handlers) {
-        $handlers['twitter'] = [
-            'type' => 'publish',
-            'class' => Twitter::class,
-            'label' => __('Twitter', 'data-machine'),
-            'description' => __('Post content to Twitter with media support', 'data-machine')
-        ];
+    add_filter('dm_handlers', function($handlers, $step_type = null) {
+        if ($step_type === null || $step_type === 'publish') {
+            $handlers['twitter'] = [
+                'type' => 'publish',
+                'class' => Twitter::class,
+                'label' => __('Twitter', 'data-machine'),
+                'description' => __('Post content to Twitter with media support', 'data-machine')
+            ];
+        }
         return $handlers;
-    });
+    }, 10, 2);
 
-    add_filter('dm_auth_providers', function($providers) {
-        $providers['twitter'] = new TwitterAuth();
+    add_filter('dm_auth_providers', function($providers, $step_type = null) {
+        if ($step_type === null || $step_type === 'publish') {
+            $providers['twitter'] = new TwitterAuth();
+        }
         return $providers;
-    });
+    }, 10, 2);
 
-    add_filter('dm_handler_settings', function($all_settings) {
-        $all_settings['twitter'] = new TwitterSettings();
+    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
+        if ($step_type === null || $step_type === 'publish') {
+            $all_settings['twitter'] = new TwitterSettings();
+        }
         return $all_settings;
-    });
+    }, 10, 2);
 
     add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
         if ($handler_slug === 'twitter') {

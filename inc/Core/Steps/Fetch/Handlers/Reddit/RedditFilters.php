@@ -13,25 +13,31 @@ if (!defined('ABSPATH')) {
 }
 
 function dm_register_reddit_fetch_filters() {
-    add_filter('dm_handlers', function($handlers) {
-        $handlers['reddit'] = [
-            'type' => 'fetch',
-            'class' => Reddit::class,
-            'label' => __('Reddit', 'data-machine'),
-            'description' => __('Fetch posts from subreddits via Reddit API', 'data-machine')
-        ];
+    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+        if ($step_type === null || $step_type === 'fetch') {
+            $handlers['reddit'] = [
+                'type' => 'fetch',
+                'class' => Reddit::class,
+                'label' => __('Reddit', 'data-machine'),
+                'description' => __('Fetch posts from subreddits via Reddit API', 'data-machine')
+            ];
+        }
         return $handlers;
-    });
+    }, 10, 2);
 
-    add_filter('dm_auth_providers', function($providers) {
-        $providers['reddit'] = new RedditAuth();
+    add_filter('dm_auth_providers', function($providers, $step_type = null) {
+        if ($step_type === null || $step_type === 'fetch') {
+            $providers['reddit'] = new RedditAuth();
+        }
         return $providers;
-    });
+    }, 10, 2);
 
-    add_filter('dm_handler_settings', function($all_settings) {
-        $all_settings['reddit'] = new RedditSettings();
+    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
+        if ($step_type === null || $step_type === 'fetch') {
+            $all_settings['reddit'] = new RedditSettings();
+        }
         return $all_settings;
-    });
+    }, 10, 2);
 }
 
 dm_register_reddit_fetch_filters();

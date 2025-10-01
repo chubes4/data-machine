@@ -1,11 +1,11 @@
 <?php
 /**
- * Web Fetch AI Tool - Retrieves and processes web page content with 50K character limit
+ * Web page content retrieval with HTML processing and 50K character limit.
  */
 namespace DataMachine\Core\Steps\AI\Tools;
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly.
+    exit;
 }
 
 class WebFetch {

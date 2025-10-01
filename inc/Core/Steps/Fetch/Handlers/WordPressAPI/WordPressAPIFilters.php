@@ -29,23 +29,27 @@ if (!defined('ABSPATH')) {
  * @since 1.0.0
  */
 function dm_register_wordpress_api_fetch_filters() {
-    
+
     // Handler registration - WordPress REST API declares itself as fetch handler (pure discovery mode)
-    add_filter('dm_handlers', function($handlers) {
-        $handlers['wordpress_api'] = [
-            'type' => 'fetch',
-            'class' => WordPressAPI::class,
-            'label' => __('WordPress REST API', 'data-machine'),
-            'description' => __('Fetch content from public WordPress sites via REST API', 'data-machine')
-        ];
+    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+        if ($step_type === null || $step_type === 'fetch') {
+            $handlers['wordpress_api'] = [
+                'type' => 'fetch',
+                'class' => WordPressAPI::class,
+                'label' => __('WordPress REST API', 'data-machine'),
+                'description' => __('Fetch content from public WordPress sites via REST API', 'data-machine')
+            ];
+        }
         return $handlers;
-    });
-    
+    }, 10, 2);
+
     // Settings registration - pure discovery mode
-    add_filter('dm_handler_settings', function($all_settings) {
-        $all_settings['wordpress_api'] = new WordPressAPISettings();
+    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
+        if ($step_type === null || $step_type === 'fetch') {
+            $all_settings['wordpress_api'] = new WordPressAPISettings();
+        }
         return $all_settings;
-    });
+    }, 10, 2);
 
 }
 

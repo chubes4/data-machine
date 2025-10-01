@@ -18,20 +18,24 @@ if (!defined('ABSPATH')) {
  * Register files fetch handler filters.
  */
 function dm_register_files_fetch_filters() {
-    add_filter('dm_handlers', function($handlers) {
-        $handlers['files'] = [
-            'type' => 'fetch',
-            'class' => Files::class,
-            'label' => __('Files', 'data-machine'),
-            'description' => __('Process local files and uploads', 'data-machine')
-        ];
+    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+        if ($step_type === null || $step_type === 'fetch') {
+            $handlers['files'] = [
+                'type' => 'fetch',
+                'class' => Files::class,
+                'label' => __('Files', 'data-machine'),
+                'description' => __('Process local files and uploads', 'data-machine')
+            ];
+        }
         return $handlers;
-    });
+    }, 10, 2);
 
-    add_filter('dm_handler_settings', function($all_settings) {
-        $all_settings['files'] = new FilesSettings();
+    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
+        if ($step_type === null || $step_type === 'fetch') {
+            $all_settings['files'] = new FilesSettings();
+        }
         return $all_settings;
-    });
+    }, 10, 2);
 
     add_filter('dm_render_template', function($content, $template_name, $data = []) {
         if ($template_name === 'modal/handler-settings/files') {

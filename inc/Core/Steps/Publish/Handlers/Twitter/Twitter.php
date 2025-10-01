@@ -45,8 +45,6 @@ class Twitter {
             ];
         }
 
-
-        // Twitter text processing with t.co URL length calculation (24 chars)
         $tweet_text = $content;
         $ellipsis = '…';
         $ellipsis_len = mb_strlen($ellipsis, 'UTF-8');

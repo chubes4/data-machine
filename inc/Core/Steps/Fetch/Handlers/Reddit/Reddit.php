@@ -47,7 +47,7 @@ class Reddit {
 
 		$options = [
 			'timeout' => 30,
-			'user_agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/sailnlax04)'
+			'user_agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION
 		];
 
 		return $repository->store_remote_file($image_url, $filename, $flow_step_id, $options);
@@ -170,7 +170,7 @@ class Reddit {
 				$time_param
 			);
 			$args = [
-				'user-agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/sailnlax04)', // Use constant
+				'user-agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION,
 				'headers' => [
 					'Authorization' => 'Bearer ' . $access_token
 				]

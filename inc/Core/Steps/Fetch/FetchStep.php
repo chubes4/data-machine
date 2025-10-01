@@ -235,13 +235,13 @@ class FetchStep {
      * @return object|null Instantiated handler object or null if not found
      */
     private function get_handler_object(string $handler_name): ?object {
-        $all_handlers = apply_filters('dm_handlers', []);
+        $all_handlers = apply_filters('dm_handlers', [], 'fetch');
         $handler_info = $all_handlers[$handler_name] ?? null;
-        
+
         if (!$handler_info || !isset($handler_info['class'])) {
             return null;
         }
-        
+
         $class_name = $handler_info['class'];
         return class_exists($class_name) ? new $class_name() : null;
     }

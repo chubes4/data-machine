@@ -106,20 +106,17 @@ class WordPress {
             $all_changes['block_updates'] = $result['changes'];
         }
 
-        // Update title if provided
         if (!empty($parameters['title'])) {
             $post_data['post_title'] = sanitize_text_field(wp_unslash($parameters['title']));
             $all_changes['title_update'] = true;
         }
 
-        // Legacy: Update content if provided (for backward compatibility)
         if (!empty($parameters['content']) && !isset($post_data['post_content'])) {
             $post_data['post_content'] = $this->sanitize_block_content(wp_unslash($parameters['content']));
             $all_changes['legacy_content_update'] = true;
         }
 
-        // Check if any updates are actually being made
-        $has_updates = count($post_data) > 1; // More than just the ID
+        $has_updates = count($post_data) > 1;
         
         if (!$has_updates) {
             do_action('dm_log', 'info', 'WordPress Update Tool: No updates to apply', [

@@ -20,12 +20,12 @@ $handler_settings = null;
 $settings_fields = [];
 
 if ($handler_slug) {
-    $all_handlers = apply_filters('dm_handlers', []);
+    $all_handlers = apply_filters('dm_handlers', [], $step_type);
     $handler_info = $all_handlers[$handler_slug] ?? [];
-    
+
     $settings_key = $handler_slug;
-    
-    $all_settings = apply_filters('dm_handler_settings', []);
+
+    $all_settings = apply_filters('dm_handler_settings', [], $step_type);
     $handler_settings = $all_settings[$settings_key] ?? null;
     
     if ($handler_settings && method_exists($handler_settings, 'get_fields')) {
@@ -47,7 +47,7 @@ if ($handler_slug) {
 
 $handler_label = $handler_info['label'] ?? ucfirst(str_replace('_', ' ', $handler_slug));
 
-$all_auth = apply_filters('dm_auth_providers', []);
+$all_auth = apply_filters('dm_auth_providers', [], $step_type);
 $has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_key]);
 
 if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts') {

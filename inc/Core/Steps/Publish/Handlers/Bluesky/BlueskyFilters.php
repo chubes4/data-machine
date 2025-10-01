@@ -29,29 +29,35 @@ if (!defined('ABSPATH')) {
  * @since 0.1.0
  */
 function dm_register_bluesky_filters() {
-    
+
     // Handler registration - Bluesky declares itself as publish handler (pure discovery mode)
-    add_filter('dm_handlers', function($handlers) {
-        $handlers['bluesky'] = [
-            'type' => 'publish',
-            'class' => Bluesky::class,
-            'label' => __('Bluesky', 'data-machine'),
-            'description' => __('Post content to Bluesky with media support and AT Protocol integration', 'data-machine')
-        ];
+    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+        if ($step_type === null || $step_type === 'publish') {
+            $handlers['bluesky'] = [
+                'type' => 'publish',
+                'class' => Bluesky::class,
+                'label' => __('Bluesky', 'data-machine'),
+                'description' => __('Post content to Bluesky with media support and AT Protocol integration', 'data-machine')
+            ];
+        }
         return $handlers;
-    });
-    
+    }, 10, 2);
+
     // Authentication registration - pure discovery mode
-    add_filter('dm_auth_providers', function($providers) {
-        $providers['bluesky'] = new BlueskyAuth();
+    add_filter('dm_auth_providers', function($providers, $step_type = null) {
+        if ($step_type === null || $step_type === 'publish') {
+            $providers['bluesky'] = new BlueskyAuth();
+        }
         return $providers;
-    });
-    
+    }, 10, 2);
+
     // Settings registration - pure discovery mode
-    add_filter('dm_handler_settings', function($all_settings) {
-        $all_settings['bluesky'] = new BlueskySettings();
+    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
+        if ($step_type === null || $step_type === 'publish') {
+            $all_settings['bluesky'] = new BlueskySettings();
+        }
         return $all_settings;
-    });
+    }, 10, 2);
     
     // Bluesky tool registration with AI HTTP Client library
     add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {

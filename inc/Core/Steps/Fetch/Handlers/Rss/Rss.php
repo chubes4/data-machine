@@ -248,12 +248,6 @@ class Rss {
         return ['processed_items' => []];
     }
 
-    /**
-     * Extract title from RSS/Atom item with fallback to 'Untitled'.
-     *
-     * @param object $item RSS/Atom item object
-     * @return string Item title
-     */
     private function extract_item_title($item): string {
         if (isset($item->title)) {
             return (string) $item->title;
@@ -261,13 +255,6 @@ class Rss {
         return 'Untitled';
     }
 
-    /**
-     * Extract description/content from RSS/Atom item with HTML tag stripping.
-     * Tries description, summary, content, and content:encoded fields.
-     *
-     * @param object $item RSS/Atom item object
-     * @return string Clean text content without HTML tags
-     */
     private function extract_item_description($item): string {
         // Try various content fields
         if (isset($item->description)) {
@@ -287,12 +274,6 @@ class Rss {
         return '';
     }
 
-    /**
-     * Extract link from RSS/Atom item supporting both RSS and Atom formats.
-     *
-     * @param object $item RSS/Atom item object
-     * @return string Item link URL
-     */
     private function extract_item_link($item): string {
         if (isset($item->link)) {
             $link = $item->link;
@@ -305,13 +286,6 @@ class Rss {
         return '';
     }
 
-    /**
-     * Extract publication date from RSS/Atom item.
-     * Supports pubDate, published, updated, and Dublin Core date fields.
-     *
-     * @param object $item RSS/Atom item object
-     * @return string|null Publication date string or null if not found
-     */
     private function extract_item_date($item): ?string {
         if (isset($item->pubDate)) {
             return (string) $item->pubDate;
@@ -330,13 +304,6 @@ class Rss {
         return null;
     }
 
-    /**
-     * Extract GUID from RSS/Atom item with fallback to link for deduplication.
-     *
-     * @param object $item RSS/Atom item object
-     * @param string $item_link Item link as fallback
-     * @return string Unique identifier for deduplication
-     */
     private function extract_item_guid($item, string $item_link): string {
         if (isset($item->guid)) {
             return (string) $item->guid;
@@ -347,13 +314,6 @@ class Rss {
         return $item_link;
     }
 
-    /**
-     * Extract author from RSS/Atom item supporting multiple formats.
-     * Supports author name, author object, and Dublin Core creator.
-     *
-     * @param object $item RSS/Atom item object
-     * @return string|null Author name or null if not found
-     */
     private function extract_item_author($item): ?string {
         if (isset($item->author)) {
             $author = $item->author;
@@ -371,12 +331,6 @@ class Rss {
         return null;
     }
 
-    /**
-     * Extract categories from RSS/Atom item supporting RSS and Atom formats.
-     *
-     * @param object $item RSS/Atom item object
-     * @return array Array of category names
-     */
     private function extract_item_categories($item): array {
         $categories = [];
         
@@ -395,12 +349,6 @@ class Rss {
         return $categories;
     }
 
-    /**
-     * Extract enclosure URL from RSS item for media file detection.
-     *
-     * @param object $item RSS item object
-     * @return string|null Enclosure URL or null if not found
-     */
     private function extract_item_enclosure($item): ?string {
         if (isset($item->enclosure) && isset($item->enclosure['url'])) {
             return (string) $item->enclosure['url'];
@@ -408,12 +356,6 @@ class Rss {
         return null;
     }
 
-    /**
-     * Guess MIME type from URL extension for media file classification.
-     *
-     * @param string $url File URL
-     * @return string MIME type or 'application/octet-stream' as fallback
-     */
     private function guess_mime_type_from_url(string $url): string {
         $extension = strtolower(pathinfo(wp_parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
         

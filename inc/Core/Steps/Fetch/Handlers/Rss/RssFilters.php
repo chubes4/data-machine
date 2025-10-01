@@ -29,23 +29,27 @@ if (!defined('ABSPATH')) {
  * @since 0.1.0
  */
 function dm_register_rss_fetch_filters() {
-    
+
     // Handler registration - RSS declares itself as fetch handler (pure discovery mode)
-    add_filter('dm_handlers', function($handlers) {
-        $handlers['rss'] = [
-            'type' => 'fetch',
-            'class' => Rss::class,
-            'label' => __('RSS', 'data-machine'),
-            'description' => __('Monitor and process RSS feeds', 'data-machine')
-        ];
+    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+        if ($step_type === null || $step_type === 'fetch') {
+            $handlers['rss'] = [
+                'type' => 'fetch',
+                'class' => Rss::class,
+                'label' => __('RSS', 'data-machine'),
+                'description' => __('Monitor and process RSS feeds', 'data-machine')
+            ];
+        }
         return $handlers;
-    });
-    
+    }, 10, 2);
+
     // Settings registration - parameter-matched to 'rss' handler
-    add_filter('dm_handler_settings', function($all_settings) {
-        $all_settings['rss'] = new RssSettings();
+    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
+        if ($step_type === null || $step_type === 'fetch') {
+            $all_settings['rss'] = new RssSettings();
+        }
         return $all_settings;
-    });
+    }, 10, 2);
     
     // Modal registrations removed - now handled by generic modal system via pure discovery
     

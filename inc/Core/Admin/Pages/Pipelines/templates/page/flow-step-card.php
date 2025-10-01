@@ -45,7 +45,7 @@ if (!$is_empty) {
     }
 }
 
-$all_handlers = apply_filters('dm_handlers', []);
+$all_handlers = apply_filters('dm_handlers', [], $step_type);
 $available_handlers = array_filter($all_handlers, function($handler) use ($step_type) {
     return ($handler['type'] ?? '') === $step_type;
 });

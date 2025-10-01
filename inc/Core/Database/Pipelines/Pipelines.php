@@ -31,7 +31,6 @@ class Pipelines {
 		$pipeline_name = sanitize_text_field( $pipeline_data['pipeline_name'] ?? '' );
 		$pipeline_config = $pipeline_data['pipeline_config'] ?? [];
 
-		// Validate required fields
 		if ( empty( $pipeline_name ) ) {
 			do_action( 'dm_log', 'error', 'Cannot create pipeline - missing pipeline name', [
 				'pipeline_data' => $pipeline_data
@@ -39,7 +38,6 @@ class Pipelines {
 			return false;
 		}
 
-		// Ensure pipeline_config is JSON
 		if ( is_array( $pipeline_config ) ) {
 			$pipeline_config_json = wp_json_encode( $pipeline_config );
 		} else {
@@ -72,7 +70,6 @@ class Pipelines {
 			'pipeline_name' => $pipeline_name
 		] );
 
-		// Clear pipelines list cache since a new pipeline was created
 		do_action('dm_clear_pipelines_list_cache');
 
 		return $pipeline_id;

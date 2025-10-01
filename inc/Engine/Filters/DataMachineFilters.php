@@ -1,17 +1,9 @@
 <?php
 /**
- * Data Machine Engine - Backend Processing Filters
+ * Backend processing filters for Data Machine engine.
  *
- * Pure backend processing filters with clean separation from admin/UI logic.
- * 
- * Core Functions:
- * - dm_register_utility_filters(): Backend processing filters
- * - dm_register_importexport_filters(): Import/export functionality
- * 
- * Filter Categories:
- * - Handler Services: Authentication, settings, directive discovery  
- * - Processing Services: HTTP requests, scheduling
- * - Step Services: Configuration and discovery
+ * Core filter registration for handler services, HTTP requests, scheduling,
+ * and step configuration discovery.
  *
  * @package DataMachine
  * @subpackage Engine\Filters
@@ -45,20 +37,11 @@ function dm_register_importexport_filters() {
 dm_register_importexport_filters();
 
 /**
- * Register core backend processing filters.
- * 
- * Backend filters for discovery infrastructure and processing services.
- * Admin/UI filters are in Admin.php, action hooks in DataMachineActions.php.
- * 
- * Key Filters:
- * - dm_auth_providers: Authentication provider discovery
- * - dm_handler_settings: Handler configuration discovery  
- * - dm_request: WordPress HTTP request wrapper
- * - dm_scheduler_intervals: Scheduler interval definitions
- * - dm_step_settings: Step configuration discovery
- * - dm_files_repository: Files repository discovery
- * - dm_engine_data: Centralized engine data access system
- * 
+ * Register backend processing filters for engine operations.
+ *
+ * Registers filters for service discovery, HTTP requests, scheduling,
+ * and step configuration. Does not handle UI/admin logic.
+ *
  * @since 0.1.0
  */
 function dm_register_utility_filters() {

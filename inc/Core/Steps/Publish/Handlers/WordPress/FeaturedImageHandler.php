@@ -13,9 +13,6 @@ if (!defined('ABSPATH')) {
 
 class FeaturedImageHandler {
 
-    /**
-     * Process featured image for WordPress post.
-     */
     public function processImage(int $post_id, array $engine_data, array $handler_config): ?array {
         if (!$this->isImageHandlingEnabled($handler_config)) {
             return null;
@@ -29,9 +26,6 @@ class FeaturedImageHandler {
         return $this->downloadAndAttach($post_id, $image_url);
     }
 
-    /**
-     * Check if image handling is enabled based on configuration hierarchy.
-     */
     public function isImageHandlingEnabled(array $handler_config): bool {
         $all_settings = get_option('data_machine_settings', []);
         $wp_settings = $all_settings['wordpress_settings'] ?? [];
@@ -47,9 +41,6 @@ class FeaturedImageHandler {
         return filter_var($image_url, FILTER_VALIDATE_URL) !== false;
     }
 
-    /**
-     * Download image and create WordPress attachment.
-     */
     private function downloadAndAttach(int $post_id, string $image_url): array {
         require_once(ABSPATH . 'wp-admin/includes/media.php');
         require_once(ABSPATH . 'wp-admin/includes/file.php');

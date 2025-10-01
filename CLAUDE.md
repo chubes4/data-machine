@@ -635,6 +635,26 @@ do_action('dm_import', 'pipelines', $csv_data);
 do_action('dm_export', 'pipelines', [$pipeline_id]);
 ```
 
+**REST API**:
+```php
+// Trigger flow execution via REST API
+POST /wp-json/dm/v1/trigger
+{
+    "flow_id": 123
+}
+
+// Response
+{
+    "success": true,
+    "flow_id": 123,
+    "flow_name": "My Flow",
+    "message": "Flow triggered successfully."
+}
+
+// Requires manage_options capability
+// Works with any flow (scheduled or manual)
+```
+
 **AJAX**: WordPress hooks with `dm_ajax_actions` nonce + `manage_options`
 **Templates**: Filter-based rendering
 **Jobs**: Clear processed items/jobs via modal

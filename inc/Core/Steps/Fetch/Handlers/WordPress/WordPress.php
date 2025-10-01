@@ -79,16 +79,15 @@ class WordPress {
             ];
         }
 
-        // Build WP_Query arguments
         $query_args = [
             'post_type' => $post_type,
             'post_status' => $post_status,
-            'posts_per_page' => 10, // Simple limit to find first eligible item
+            'posts_per_page' => 10,
             'orderby' => $orderby,
             'order' => $order,
-            'no_found_rows' => true, // Performance optimization
-            'update_post_meta_cache' => false, // Performance optimization
-            'update_post_term_cache' => false, // Performance optimization
+            'no_found_rows' => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
         ];
 
         $tax_query = [];

@@ -2,11 +2,8 @@
 /**
  * Modular taxonomy processing for WordPress publish operations.
  *
- * Features:
- * - Configuration-based taxonomy selection (skip, AI-decided, pre-selected)
- * - Dynamic term creation using wp_insert_term() for non-existing terms
- * - AI parameter extraction with standard naming conventions
- * - Public taxonomy discovery excluding system taxonomies
+ * Supports three selection modes per taxonomy: skip, AI-decided, pre-selected.
+ * Creates non-existing terms dynamically. Excludes system taxonomies.
  *
  * @package DataMachine
  * @subpackage Core\Steps\Publish\Handlers\WordPress
@@ -21,11 +18,10 @@ if (!defined('ABSPATH')) {
 class TaxonomyHandler {
 
     /**
-     * Process taxonomies for WordPress post based on configuration.
-     * Supports three selection modes per taxonomy: skip, ai_decides, or numeric term ID.
+     * Process taxonomies based on configuration.
      *
      * @param int $post_id WordPress post ID
-     * @param array $parameters Tool parameters including AI-decided taxonomy values
+     * @param array $parameters Tool parameters with AI-decided taxonomy values
      * @param array $handler_config Handler configuration with taxonomy selections
      * @return array Processing results for all configured taxonomies
      */
@@ -66,43 +62,19 @@ class TaxonomyHandler {
         return $taxonomy_results;
     }
 
-    /**
-     * Get all public taxonomies excluding system taxonomies.
-     * Excludes: post_format, nav_menu, link_category
-     *
-     * @return array WordPress taxonomy objects
-     */
     private function getPublicTaxonomies(): array {
         return get_taxonomies(['public' => true], 'objects');
     }
 
-    /**
-     * Check if taxonomy should be skipped from processing.
-     *
-     * @param string $taxonomy_name Taxonomy name to check
-     * @return bool True if taxonomy should be skipped
-     */
     private function shouldSkipTaxonomy(string $taxonomy_name): bool {
         $excluded_taxonomies = ['post_format', 'nav_menu', 'link_category'];
         return in_array($taxonomy_name, $excluded_taxonomies);
     }
 
-    /**
-     * Check if selection indicates AI-decided taxonomy.
-     *
-     * @param string $selection Selection value from configuration
-     * @return bool True if AI should decide taxonomy terms
-     */
     private function isAiDecidedTaxonomy(string $selection): bool {
         return $selection === 'ai_decides';
     }
 
-    /**
-     * Check if selection indicates pre-selected taxonomy.
-     *
-     * @param string $selection Selection value from configuration
-     * @return bool True if taxonomy has pre-selected term ID
-     */
     private function isPreSelectedTaxonomy(string $selection): bool {
         return is_numeric($selection);
     }
@@ -209,23 +181,10 @@ class TaxonomyHandler {
         return $this->createSuccessResult($taxonomy_name, $terms, $term_ids);
     }
 
-    /**
-     * Validate that taxonomy exists.
-     *
-     * @param string $taxonomy_name Taxonomy name to validate
-     * @return bool True if taxonomy exists
-     */
     private function validateTaxonomyExists(string $taxonomy_name): bool {
         return taxonomy_exists($taxonomy_name);
     }
 
-    /**
-     * Process array of terms and return term IDs.
-     *
-     * @param array $terms Array of term names
-     * @param string $taxonomy_name Taxonomy name
-     * @return array Array of term IDs
-     */
     private function processTerms(array $terms, string $taxonomy_name): array {
         $term_ids = [];
 
@@ -244,13 +203,6 @@ class TaxonomyHandler {
         return $term_ids;
     }
 
-    /**
-     * Find existing term or create new one.
-     *
-     * @param string $term_name Term name to find or create
-     * @param string $taxonomy_name Taxonomy name
-     * @return int|false Term ID on success, false on failure
-     */
     private function findOrCreateTerm(string $term_name, string $taxonomy_name) {
         $term = get_term_by('name', $term_name, $taxonomy_name);
 
@@ -271,26 +223,10 @@ class TaxonomyHandler {
         return $term_result['term_id'];
     }
 
-    /**
-     * Set taxonomy terms for post.
-     *
-     * @param int $post_id WordPress post ID
-     * @param array $term_ids Array of term IDs
-     * @param string $taxonomy_name Taxonomy name
-     * @return bool|WP_Error True on success, WP_Error on failure
-     */
     private function setPostTerms(int $post_id, array $term_ids, string $taxonomy_name) {
         return wp_set_object_terms($post_id, $term_ids, $taxonomy_name);
     }
 
-    /**
-     * Create success result array.
-     *
-     * @param string $taxonomy_name Taxonomy name
-     * @param array $terms Array of term names
-     * @param array $term_ids Array of term IDs
-     * @return array Success result structure
-     */
     private function createSuccessResult(string $taxonomy_name, array $terms, array $term_ids): array {
         return [
             'success' => true,
@@ -300,12 +236,6 @@ class TaxonomyHandler {
         ];
     }
 
-    /**
-     * Create error result array.
-     *
-     * @param string $error_message Error message
-     * @return array Error result structure
-     */
     private function createErrorResult(string $error_message): array {
         return [
             'success' => false,
@@ -313,14 +243,6 @@ class TaxonomyHandler {
         ];
     }
 
-    /**
-     * Log taxonomy operation using centralized dm_log action.
-     *
-     * @param string $level Log level (debug, info, warning, error)
-     * @param string $message Log message
-     * @param array $context Context data for logging
-     * @return void
-     */
     private function logTaxonomyOperation(string $level, string $message, array $context): void {
         do_action('dm_log', $level, $message, $context);
     }

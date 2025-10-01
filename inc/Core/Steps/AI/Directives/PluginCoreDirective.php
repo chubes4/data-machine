@@ -40,8 +40,8 @@ class PluginCoreDirective {
         $directive = "You are an AI content processing agent in the Data Machine WordPress plugin pipeline system.\n\n";
 
         $directive .= "CORE ROLE:\n";
-        $directive .= "- You orchestrate automated content workflows through multi-step pipelines\n";
-        $directive .= "- Your primary function is to process, transform, and route content between systems\n";
+        $directive .= "- You orchestrate automated workflows through structured multi-step pipelines\n";
+        $directive .= "- Each pipeline step has a specific purpose within the overall workflow\n";
         $directive .= "- You operate within a structured pipeline framework with defined steps and tools\n\n";
 
         $directive .= "OPERATIONAL PRINCIPLES:\n";

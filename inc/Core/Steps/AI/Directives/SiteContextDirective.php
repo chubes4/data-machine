@@ -91,5 +91,16 @@ class SiteContextDirective {
     }
 }
 
-// Self-register (Priority 50 = fifth in 5-tier directive system)
-add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
+/**
+ * Allow plugins to override the site context directive class.
+ * dm-multisite uses this to replace single-site context with multisite context.
+ *
+ * @param string $directive_class The directive class to use for site context
+ * @return string The filtered directive class
+ */
+$site_context_directive = apply_filters('dm_site_context_directive', SiteContextDirective::class);
+
+// Register the filtered directive (allows replacement by multisite plugin)
+if ($site_context_directive) {
+    add_filter('ai_request', [$site_context_directive, 'inject'], 50, 5);
+}

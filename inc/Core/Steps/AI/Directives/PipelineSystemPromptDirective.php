@@ -80,83 +80,85 @@ class PipelineSystemPromptDirective {
     }
 
     /**
-     * Build workflow visualization string from pipeline configuration.
+     * Build workflow visualization string from flow configuration.
+     *
+     * Uses dm_get_flow_steps filter for optimized handler loading.
      *
      * @param string|null $pipeline_step_id Pipeline step ID for context
      * @param string|null $current_pipeline_step_id Currently executing pipeline step ID
-     * @return string Workflow visualization (e.g., "REDDIT FETCH - AI (YOU ARE HERE) - WORDPRESS PUBLISH")
+     * @return string Workflow visualization (e.g., "REDDIT FETCH → AI (YOU ARE HERE) → WORDPRESS PUBLISH")
      */
     private static function buildWorkflowVisualization($pipeline_step_id, $current_pipeline_step_id = null): string {
         if (empty($pipeline_step_id)) {
             return '';
         }
 
-        // Extract pipeline_id using existing filter
-        $parts = apply_filters('dm_split_pipeline_step_id', null, $pipeline_step_id);
-        if (!$parts || empty($parts['pipeline_id'])) {
-            do_action('dm_log', 'debug', 'Workflow visualization: Failed to extract pipeline_id', [
-                'pipeline_step_id' => $pipeline_step_id
+        // Get flow_id from current execution context
+        $current_flow_step_id = apply_filters('dm_current_flow_step_id', null);
+        if (!$current_flow_step_id) {
+            do_action('dm_log', 'debug', 'Workflow visualization: No flow context available');
+            return '';
+        }
+
+        $flow_parts = apply_filters('dm_split_flow_step_id', null, $current_flow_step_id);
+        $flow_id = $flow_parts['flow_id'] ?? null;
+
+        if (!$flow_id) {
+            do_action('dm_log', 'debug', 'Workflow visualization: Could not extract flow_id');
+            return '';
+        }
+
+        // Get enriched flow steps (handlers pre-loaded and optimized)
+        $flow_steps = apply_filters('dm_get_flow_steps', [], $flow_id);
+        if (empty($flow_steps)) {
+            do_action('dm_log', 'debug', 'Workflow visualization: No flow steps found', [
+                'flow_id' => $flow_id
             ]);
             return '';
         }
 
-        $pipeline_id = $parts['pipeline_id'];
-
-        // Get pipeline steps using existing filter
-        $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
-        if (empty($pipeline_steps)) {
-            do_action('dm_log', 'debug', 'Workflow visualization: No pipeline steps found', [
-                'pipeline_id' => $pipeline_id
-            ]);
-            return '';
-        }
-
-        // Get handler registry for display names
-        $handlers = apply_filters('dm_handlers', []);
-
-        // Sort steps by execution_order and build workflow string
-        $workflow_parts = [];
+        // Sort steps by execution_order
         $sorted_steps = [];
-
-        // Extract steps with execution_order
-        foreach ($pipeline_steps as $step_id => $step_config) {
+        foreach ($flow_steps as $flow_step_id => $step_config) {
             $execution_order = $step_config['execution_order'] ?? -1;
             if ($execution_order >= 0) {
+                // Extract pipeline_step_id from flow_step_id for "YOU ARE HERE" matching
+                $step_parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+                $step_pipeline_step_id = $step_parts['pipeline_step_id'] ?? '';
+
                 $sorted_steps[$execution_order] = [
-                    'step_id' => $step_id,
+                    'pipeline_step_id' => $step_pipeline_step_id,
                     'step_type' => $step_config['step_type'] ?? '',
-                    'handler_slug' => $step_config['handler_slug'] ?? ''
+                    'handler_info' => $step_config['handler_info'] ?? null
                 ];
             }
         }
-
-        // Sort by execution order
         ksort($sorted_steps);
 
         // Build workflow visualization
+        $workflow_parts = [];
         foreach ($sorted_steps as $step_data) {
             $step_type = strtoupper($step_data['step_type']);
-            $handler_slug = $step_data['handler_slug'];
-            $step_id = $step_data['step_id'];
+            $step_pipeline_step_id = $step_data['pipeline_step_id'];
 
             if ($step_type === 'AI') {
-                // Only show "YOU ARE HERE" for the currently executing AI step
-                $is_current_step = ($current_pipeline_step_id && $step_id === $current_pipeline_step_id);
+                // Show "YOU ARE HERE" for currently executing AI step
+                $is_current_step = ($current_pipeline_step_id && $step_pipeline_step_id === $current_pipeline_step_id);
                 $workflow_parts[] = $is_current_step ? 'AI (YOU ARE HERE)' : 'AI';
-            } else if (!empty($handler_slug) && isset($handlers[$handler_slug])) {
-                // Get handler display name and combine with step type
-                $handler_label = strtoupper($handlers[$handler_slug]['label'] ?? $handler_slug);
+            } else if ($step_data['handler_info']) {
+                // Get handler display name from pre-loaded handler info
+                $handler_label = strtoupper($step_data['handler_info']['label'] ?? 'UNKNOWN');
                 $workflow_parts[] = $handler_label . ' ' . $step_type;
-            } else if (!empty($step_type)) {
-                // Step type only (unconfigured step)
+            } else {
+                // Fallback if handler info not available
                 $workflow_parts[] = $step_type;
             }
         }
 
-        $workflow_string = implode(' - ', $workflow_parts);
+        $workflow_string = implode(' → ', $workflow_parts);
 
-        do_action('dm_log', 'debug', 'Workflow visualization: Built workflow string', [
-            'pipeline_id' => $pipeline_id,
+        do_action('dm_log', 'debug', 'Workflow visualization: Built from flow config', [
+            'flow_id' => $flow_id,
             'steps_count' => count($sorted_steps),
             'current_pipeline_step_id' => $current_pipeline_step_id,
             'workflow_string' => $workflow_string

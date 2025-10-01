@@ -499,9 +499,9 @@ class PipelineModalAjax
             ]);
             return;
         }
-        
+
         // Validate handler exists
-        $all_handlers = apply_filters('dm_handlers', []);
+        $all_handlers = apply_filters('dm_handlers', [], $step_type);
         $handler_info = null;
         
         foreach ($all_handlers as $slug => $config) {

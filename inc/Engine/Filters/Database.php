@@ -65,7 +65,7 @@ function dm_register_database_filters() {
     add_filter('dm_get_pipeline_steps', function($default, $pipeline_id) {
         $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
-        
+
         if (!$db_pipelines) {
             do_action('dm_log', 'error', 'Pipeline steps access failed - database service unavailable', ['pipeline_id' => $pipeline_id]);
             return [];
@@ -73,6 +73,57 @@ function dm_register_database_filters() {
 
         return $db_pipelines->get_pipeline_config($pipeline_id);
     }, 10, 2);
+
+    add_filter('dm_get_flow_steps', function($default, $flow_id) {
+        // Get flow configuration
+        $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+        if (empty($flow_config)) {
+            do_action('dm_log', 'debug', 'dm_get_flow_steps: No flow config found', ['flow_id' => $flow_id]);
+            return [];
+        }
+
+        // Collect unique step types used in this flow
+        $step_types_in_flow = [];
+        foreach ($flow_config as $step_config) {
+            $step_type = $step_config['step_type'] ?? '';
+            if ($step_type && !in_array($step_type, $step_types_in_flow, true)) {
+                $step_types_in_flow[] = $step_type;
+            }
+        }
+
+        // Load handlers ONLY for step types present in this flow
+        $handlers = [];
+        foreach ($step_types_in_flow as $step_type) {
+            if ($step_type === 'ai') {
+                continue; // AI steps don't have handlers
+            }
+            $type_handlers = apply_filters('dm_handlers', [], $step_type);
+            $handlers = array_merge($handlers, $type_handlers);
+        }
+
+        // Enrich flow steps with handler metadata
+        $enriched_steps = [];
+        foreach ($flow_config as $flow_step_id => $step_config) {
+            $handler_slug = $step_config['handler']['handler_slug'] ?? '';
+
+            $enriched_steps[$flow_step_id] = $step_config;
+
+            // Attach handler info if handler exists
+            if (!empty($handler_slug) && isset($handlers[$handler_slug])) {
+                $enriched_steps[$flow_step_id]['handler_info'] = $handlers[$handler_slug];
+            }
+        }
+
+        do_action('dm_log', 'debug', 'dm_get_flow_steps: Built enriched steps', [
+            'flow_id' => $flow_id,
+            'step_count' => count($enriched_steps),
+            'step_types' => $step_types_in_flow,
+            'handler_count' => count($handlers)
+        ]);
+
+        return $enriched_steps;
+    }, 10, 2);
+
     add_filter('dm_get_pipelines', function($default, $pipeline_id = null) {
         $all_databases = apply_filters('dm_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;

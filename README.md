@@ -119,7 +119,7 @@ Auth via `/dm-oauth/{provider}/` popup flow.
 ## Programmatic Usage
 
 ```php
-// Pipeline creation and execution  
+// Pipeline creation and execution
 $pipeline_id = apply_filters('dm_create_pipeline', null, ['pipeline_name' => 'My Pipeline']);
 $step_id = apply_filters('dm_create_step', null, ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
 $flow_id = apply_filters('dm_create_flow', null, ['pipeline_id' => $pipeline_id]);
@@ -131,6 +131,28 @@ $response = apply_filters('ai_request', [
     'model' => 'gpt-5-mini'
 ], 'openai');
 ```
+
+### REST API
+
+Trigger flow execution via REST API endpoint:
+
+```bash
+# Trigger any flow via REST API
+curl -X POST https://example.com/wp-json/dm/v1/trigger \
+  -H "Content-Type: application/json" \
+  -u username:application_password \
+  -d '{"flow_id": 123}'
+
+# Response
+{
+  "success": true,
+  "flow_id": 123,
+  "flow_name": "My Flow",
+  "message": "Flow triggered successfully."
+}
+```
+
+**Requirements**: WordPress application password or cookie authentication with `manage_options` capability
 
 *For complete API documentation, see `CLAUDE.md`*
 

@@ -23,18 +23,18 @@ $handler_info = [];
 $handler_settings = null;
 
 if ($handler_slug) {
-    $all_handlers = apply_filters('dm_handlers', []);
+    $all_handlers = apply_filters('dm_handlers', [], 'fetch');
     $handler_info = $all_handlers[$handler_slug] ?? [];
-    
+
     // Get handler settings instance via pure discovery
-    $all_settings = apply_filters('dm_handler_settings', []);
+    $all_settings = apply_filters('dm_handler_settings', [], 'fetch');
     $handler_settings = $all_settings[$handler_slug] ?? null;
 }
 
 $handler_label = $handler_info['label'] ?? ucfirst($handler_slug);
 
 // Authentication discovery - Files handler doesn't require authentication
-$all_auth = apply_filters('dm_auth_providers', []);
+$all_auth = apply_filters('dm_auth_providers', [], 'fetch');
 $has_auth_system = isset($all_auth[$handler_slug]);
 
 // Load existing files from repository using template-based approach

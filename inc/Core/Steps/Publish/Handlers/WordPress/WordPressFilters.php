@@ -29,24 +29,28 @@ if (!defined('ABSPATH')) {
  * @since 0.1.0
  */
 function dm_register_wordpress_publish_filters() {
-    
+
     // Handler registration - WordPress declares itself as publish handler (pure discovery mode)
-    add_filter('dm_handlers', function($handlers) {
-        $handlers['wordpress_publish'] = [
-            'type' => 'publish',
-            'class' => WordPress::class,
-            'label' => __('WordPress', 'data-machine'),
-            'description' => __('Create WordPress posts and pages', 'data-machine')
-        ];
+    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+        if ($step_type === null || $step_type === 'publish') {
+            $handlers['wordpress_publish'] = [
+                'type' => 'publish',
+                'class' => WordPress::class,
+                'label' => __('WordPress', 'data-machine'),
+                'description' => __('Create WordPress posts and pages', 'data-machine')
+            ];
+        }
         return $handlers;
-    });
-    
-    
+    }, 10, 2);
+
+
     // Settings registration - pure discovery mode
-    add_filter('dm_handler_settings', function($all_settings) {
-        $all_settings['wordpress_publish'] = new WordPressSettings();
+    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
+        if ($step_type === null || $step_type === 'publish') {
+            $all_settings['wordpress_publish'] = new WordPressSettings();
+        }
         return $all_settings;
-    });
+    }, 10, 2);
     
     // WordPress tool registration with AI HTTP Client library
     add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {

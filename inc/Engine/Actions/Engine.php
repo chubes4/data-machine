@@ -1,7 +1,8 @@
 <?php
 /**
- * Pipeline execution engine implementing three-action execution cycle.
- * Core cycle: dm_run_flow_now → dm_execute_step → dm_schedule_next_step
+ * Three-action execution engine.
+ *
+ * Execution cycle: dm_run_flow_now → dm_execute_step → dm_schedule_next_step
  *
  * @package DataMachine\Engine\Actions
  */
