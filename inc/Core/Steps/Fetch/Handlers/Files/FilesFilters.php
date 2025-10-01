@@ -30,8 +30,8 @@ function dm_register_files_fetch_filters() {
         return $handlers;
     }, 10, 2);
 
-    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
-        if ($step_type === null || $step_type === 'fetch') {
+    add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
+        if ($handler_slug === null || $handler_slug === 'files') {
             $all_settings['files'] = new FilesSettings();
         }
         return $all_settings;

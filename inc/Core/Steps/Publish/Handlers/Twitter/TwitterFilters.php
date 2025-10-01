@@ -29,8 +29,8 @@ function dm_register_twitter_filters() {
         return $providers;
     }, 10, 2);
 
-    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
-        if ($step_type === null || $step_type === 'publish') {
+    add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
+        if ($handler_slug === null || $handler_slug === 'twitter') {
             $all_settings['twitter'] = new TwitterSettings();
         }
         return $all_settings;

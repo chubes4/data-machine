@@ -99,7 +99,7 @@ add_action('init', function() {
  */
 function dm_files_should_schedule_cleanup(): bool {
     // Get settings via filter discovery pattern
-    $all_settings = apply_filters('dm_handler_settings', []);
+    $all_settings = apply_filters('dm_handler_settings', [], 'files');
     $files_settings = $all_settings['files'] ?? null;
 
     // Default to auto cleanup enabled. In the future, this could check actual handler

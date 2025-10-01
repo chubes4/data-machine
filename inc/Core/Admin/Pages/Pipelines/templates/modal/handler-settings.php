@@ -25,7 +25,7 @@ if ($handler_slug) {
 
     $settings_key = $handler_slug;
 
-    $all_settings = apply_filters('dm_handler_settings', [], $step_type);
+    $all_settings = apply_filters('dm_handler_settings', [], $handler_slug);
     $handler_settings = $all_settings[$settings_key] ?? null;
     
     if ($handler_settings && method_exists($handler_settings, 'get_fields')) {

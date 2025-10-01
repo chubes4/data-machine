@@ -27,7 +27,7 @@ if ($handler_slug) {
     $handler_info = $all_handlers[$handler_slug] ?? [];
 
     // Get handler settings instance via pure discovery
-    $all_settings = apply_filters('dm_handler_settings', [], 'fetch');
+    $all_settings = apply_filters('dm_handler_settings', [], 'files');
     $handler_settings = $all_settings[$handler_slug] ?? null;
 }
 

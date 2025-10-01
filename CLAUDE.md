@@ -103,7 +103,7 @@ apply_filters('dm_admin_assets', [], $page_slug);
 apply_filters('dm_pipeline_templates', []);
 
 // Settings & Configuration
-apply_filters('dm_handler_settings', []);
+apply_filters('dm_handler_settings', [], $handler_slug); // Pass handler_slug to load only specific handler's settings
 apply_filters('dm_step_settings', []);
 apply_filters('dm_scheduler_intervals', []);
 $settings = dm_get_data_machine_settings(); // Direct function access
@@ -502,7 +502,7 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
 
 ```php
 // Universal template approach
-$handler_settings = apply_filters('dm_handler_settings', [])[$handler_slug] ?? null;
+$handler_settings = apply_filters('dm_handler_settings', [], $handler_slug)[$handler_slug] ?? null;
 if ($handler_settings && method_exists($handler_settings, 'get_fields')) {
     $settings_fields = apply_filters('dm_enabled_settings',
         $handler_settings::get_fields($current_settings),

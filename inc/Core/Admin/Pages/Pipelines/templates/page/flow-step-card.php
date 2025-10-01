@@ -75,7 +75,7 @@ if (!$is_empty) {
             $status = 'red';
         } else {
             $handler_slug = $current_handler['handler_slug'] ?? '';
-            $all_auth = apply_filters('dm_auth_providers', []);
+            $all_auth = apply_filters('dm_auth_providers', [], $step_type);
             $requires_auth = isset($all_auth[$handler_slug]);
 
             if ($requires_auth) {
@@ -88,7 +88,7 @@ if (!$is_empty) {
             }
 
             if ($status === 'green' && $flow_step_id) {
-                $customizations = apply_filters('dm_get_handler_customizations', [], $flow_step_id);
+                $customizations = apply_filters('dm_get_handler_customizations', [], $flow_step_id, $step_type);
                 if (empty($customizations)) {
                     $status = 'yellow';
                 }

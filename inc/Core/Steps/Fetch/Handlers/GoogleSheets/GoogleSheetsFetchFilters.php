@@ -29,8 +29,8 @@ function dm_register_googlesheets_fetch_filters() {
         return $handlers;
     }, 10, 2);
 
-    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
-        if ($step_type === null || $step_type === 'fetch') {
+    add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
+        if ($handler_slug === null || $handler_slug === 'googlesheets_fetch') {
             $all_settings['googlesheets_fetch'] = new GoogleSheetsFetchSettings();
         }
         return $all_settings;

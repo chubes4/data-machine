@@ -636,7 +636,7 @@ class PipelineModalAjax
      */
     private function process_handler_settings($handler_slug, $post_data)
     {
-        $all_settings = apply_filters('dm_handler_settings', []);
+        $all_settings = apply_filters('dm_handler_settings', [], $handler_slug);
         $handler_settings = $all_settings[$handler_slug] ?? null;
 
         if (!$handler_settings || !method_exists($handler_settings, 'sanitize')) {

@@ -32,8 +32,8 @@ function dm_register_reddit_fetch_filters() {
         return $providers;
     }, 10, 2);
 
-    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
-        if ($step_type === null || $step_type === 'fetch') {
+    add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
+        if ($handler_slug === null || $handler_slug === 'reddit') {
             $all_settings['reddit'] = new RedditSettings();
         }
         return $all_settings;

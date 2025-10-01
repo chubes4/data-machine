@@ -45,8 +45,8 @@ function dm_register_wordpress_update_filters() {
 
 
     // Settings registration - pure discovery mode
-    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
-        if ($step_type === null || $step_type === 'update') {
+    add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
+        if ($handler_slug === null || $handler_slug === 'wordpress_update') {
             $all_settings['wordpress_update'] = new WordPressSettings();
         }
         return $all_settings;

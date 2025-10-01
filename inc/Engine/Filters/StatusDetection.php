@@ -321,13 +321,13 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
     $handler_slug = $step_config['handler']['handler_slug'] ?? '';
     $all_settings = $step_config['handler']['settings'] ?? [];
     $current_settings = $all_settings[$handler_slug] ?? [];
-    
+
     if (empty($handler_slug) || empty($current_settings)) {
         return [];
     }
-    
+
     // Get handler's Settings class
-    $all_settings = apply_filters('dm_handler_settings', []);
+    $all_settings = apply_filters('dm_handler_settings', [], $handler_slug);
     $handler_settings = $all_settings[$handler_slug] ?? null;
     
     if (!$handler_settings) {

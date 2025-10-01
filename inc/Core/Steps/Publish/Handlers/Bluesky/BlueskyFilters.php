@@ -52,8 +52,8 @@ function dm_register_bluesky_filters() {
     }, 10, 2);
 
     // Settings registration - pure discovery mode
-    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
-        if ($step_type === null || $step_type === 'publish') {
+    add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
+        if ($handler_slug === null || $handler_slug === 'bluesky') {
             $all_settings['bluesky'] = new BlueskySettings();
         }
         return $all_settings;

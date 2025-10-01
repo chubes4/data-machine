@@ -44,8 +44,8 @@ function dm_register_rss_fetch_filters() {
     }, 10, 2);
 
     // Settings registration - parameter-matched to 'rss' handler
-    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
-        if ($step_type === null || $step_type === 'fetch') {
+    add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
+        if ($handler_slug === null || $handler_slug === 'rss') {
             $all_settings['rss'] = new RssSettings();
         }
         return $all_settings;

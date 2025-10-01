@@ -19,7 +19,7 @@ function dm_register_handler_filters() {
         return $handlers;
     }, 5, 2);
 
-    add_filter('dm_handler_settings', function($all_settings, $step_type = null) {
+    add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
         return $all_settings;
     }, 5, 2);
 
