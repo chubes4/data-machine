@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_wordpress_api_fetch_filters() {
 
     // Handler registration - WordPress REST API declares itself as fetch handler (pure discovery mode)
-    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+    add_filter('dm_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'fetch') {
             $handlers['wordpress_api'] = [
                 'type' => 'fetch',

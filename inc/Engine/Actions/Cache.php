@@ -7,7 +7,6 @@
 
 namespace DataMachine\Engine\Actions;
 
-// If this file is called directly, abort.
 if (!defined('WPINC')) {
     die;
 }
@@ -58,7 +57,6 @@ class Cache {
 
         add_action('dm_cache_set', [$instance, 'handle_cache_set'], 10, 4);
 
-        // Listen for AI HTTP Client cache events for logging (optional integration)
         add_action('ai_model_cache_cleared', [$instance, 'handle_ai_cache_cleared'], 10, 1);
         add_action('ai_all_model_cache_cleared', [$instance, 'handle_ai_all_cache_cleared'], 10, 0);
     }
@@ -108,12 +106,10 @@ class Cache {
                 'flow_steps_count' => count($flow_config)
             ]);
 
-            // Clear individual flow step caches using pre-retrieved flow data
             foreach ($flow_config as $flow_step_id => $step_config) {
                 $this->clear_flow_step_cache($flow_step_id);
             }
 
-            // Clear associated pipeline caches
             if ($pipeline_id) {
                 delete_transient(self::PIPELINE_FLOWS_CACHE_KEY . $pipeline_id);
             }
@@ -167,11 +163,9 @@ class Cache {
         $db_flows = $all_databases['flows'] ?? null;
 
         if ($db_flows) {
-            // Retrieve flow data to get step IDs
             $flow = apply_filters('dm_get_flow', null, $flow_id);
             $flow_config = $flow['flow_config'] ?? [];
 
-            // Clear individual flow step caches
             foreach ($flow_config as $flow_step_id => $step_config) {
                 $this->clear_flow_step_cache($flow_step_id);
             }
@@ -211,7 +205,6 @@ class Cache {
      * extensibility and follows the "plugins within plugins" architecture.
      */
     public function handle_clear_all_cache() {
-        // Clear specific core transients managed by the Cache class itself
         delete_transient(self::ALL_PIPELINES_CACHE_KEY);
         delete_transient(self::PIPELINES_LIST_CACHE_KEY);
         delete_transient(self::PIPELINE_COUNT_CACHE_KEY);
@@ -221,7 +214,6 @@ class Cache {
         // CRITICAL: Fire the action so database components can respond with their own cache clearing
         do_action('dm_clear_all_cache');
 
-        // Clear AI HTTP Client caches if available
         do_action('ai_clear_all_cache');
 
         if (function_exists('wp_cache_flush')) {

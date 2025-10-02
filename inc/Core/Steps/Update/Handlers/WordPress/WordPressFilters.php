@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_wordpress_update_filters() {
 
     // Handler registration - WordPress declares itself as update handler (pure discovery mode)
-    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+    add_filter('dm_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'update') {
             $handlers['wordpress_update'] = [
                 'type' => 'update',

@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_wordpress_fetch_filters() {
 
     // Handler registration - WordPress Posts declares itself as fetch handler (pure discovery mode)
-    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+    add_filter('dm_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'fetch') {
             $handlers['wordpress_posts'] = [
                 'type' => 'fetch',

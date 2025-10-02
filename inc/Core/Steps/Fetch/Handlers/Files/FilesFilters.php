@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
  * Register files fetch handler filters.
  */
 function dm_register_files_fetch_filters() {
-    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+    add_filter('dm_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'fetch') {
             $handlers['files'] = [
                 'type' => 'fetch',

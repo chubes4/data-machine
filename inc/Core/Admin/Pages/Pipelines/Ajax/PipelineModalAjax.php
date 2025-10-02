@@ -14,10 +14,11 @@ class PipelineModalAjax
 {
     public static function register() {
         $instance = new self();
-        
+
         add_action('wp_ajax_dm_get_template', [$instance, 'handle_get_template']);
         add_action('wp_ajax_dm_get_flow_step_card', [$instance, 'handle_get_flow_step_card']);
         add_action('wp_ajax_dm_get_flow_config', [$instance, 'handle_get_flow_config']);
+        add_action('wp_ajax_dm_get_flow_step_config', [$instance, 'handle_get_flow_step_config']);
         add_action('wp_ajax_dm_configure_step_action', [$instance, 'handle_configure_step_action']);
         add_action('wp_ajax_dm_save_handler_settings', [$instance, 'handle_save_handler_settings']);
         add_action('wp_ajax_dm_get_pipeline_data', [$instance, 'handle_get_pipeline_data']);
@@ -116,10 +117,6 @@ class PipelineModalAjax
             wp_send_json_error(['message' => __('Invalid step type', 'data-machine')]);
         }
 
-        // Check if this is the first flow step by counting existing steps in flows
-        $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
-        $is_first_step = empty($flows) || empty($flows[0]['flow_config'] ?? []);
-
         // Simplified data - let centralized system resolve context requirements
         $template_data = [
             'step' => [
@@ -127,8 +124,7 @@ class PipelineModalAjax
                 'step_config' => []  // Empty config for new steps
             ],
             'flow_id' => $flow_id,
-            'pipeline_id' => $pipeline_id,
-            'is_first_step' => $is_first_step
+            'pipeline_id' => $pipeline_id
         ];
 
         wp_send_json_success([
@@ -157,11 +153,37 @@ class PipelineModalAjax
         // Get flow configuration using centralized filter
         $flow = apply_filters('dm_get_flow', null, $flow_id);
         $flow_config = $flow['flow_config'] ?? [];
-        
+
         // Return success even with empty config (normal for new flows)
         wp_send_json_success([
             'flow_id' => $flow_id,
             'flow_config' => $flow_config ?? []
+        ]);
+    }
+
+    /**
+     * Get specific flow step configuration (targeted payload)
+     */
+    public function handle_get_flow_step_config()
+    {
+        check_ajax_referer('dm_ajax_actions', 'nonce');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
+        }
+
+        $flow_step_id = sanitize_text_field(wp_unslash($_POST['flow_step_id'] ?? ''));
+
+        if (empty($flow_step_id)) {
+            wp_send_json_error(['message' => __('Flow step ID is required', 'data-machine')]);
+            return;
+        }
+
+        // Get single step configuration using centralized filter
+        $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+
+        wp_send_json_success([
+            'flow_step_id' => $flow_step_id,
+            'step_config' => $step_config
         ]);
     }
 
@@ -530,13 +552,13 @@ class PipelineModalAjax
         try {
             do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $handler_settings);
 
-             // Extract flow_id for JavaScript response
+             // Extract flow_id and pipeline_step_id for targeted response
              $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
              $flow_id = $parts['flow_id'] ?? null;
+             $pipeline_step_id = $parts['pipeline_step_id'] ?? null;
 
-             // Get the full flow configuration so template can find the step by pipeline_step_id
-             $flow = apply_filters('dm_get_flow', null, $flow_id);
-             $full_flow_config = $flow['flow_config'] ?? [];
+             // Get only the updated step configuration (reduced payload)
+             $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
 
              // Prepare success message
              /* translators: %s: Handler name or label */
@@ -545,10 +567,11 @@ class PipelineModalAjax
              wp_send_json_success([
                  'message' => $message,
                  'handler_slug' => $handler_slug,
-                 'step_type' => $step_type,  // Include step_type for UI updates
+                 'step_type' => $step_type,
                  'flow_step_id' => $flow_step_id,
                  'flow_id' => $flow_id,
-                 'flow_config' => $full_flow_config  // Return full flow config for template
+                 'pipeline_step_id' => $pipeline_step_id,
+                 'step_config' => $step_config  // Return only updated step (not full flow config)
              ]);
             
         } catch (\Exception $e) {

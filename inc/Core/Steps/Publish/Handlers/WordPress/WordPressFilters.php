@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_wordpress_publish_filters() {
 
     // Handler registration - WordPress declares itself as publish handler (pure discovery mode)
-    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+    add_filter('dm_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'publish') {
             $handlers['wordpress_publish'] = [
                 'type' => 'publish',
@@ -118,7 +118,8 @@ EXAMPLES:
 - H3: <!-- wp:heading {"level":3} --><h3 class="wp-block-heading">Subsection</h3><!-- /wp:heading -->
 - Paragraph: <!-- wp:paragraph --><p>Text with <a href="https://example.com">link</a>.</p><!-- /wp:paragraph -->
 - Unordered list: <!-- wp:list --><ul class="wp-block-list"><li>Item 1</li><li>Item 2</li></ul><!-- /wp:list -->
-- Ordered list: <!-- wp:list {"ordered":true} --><ol class="wp-block-list"><li>Step 1</li><li>Step 2</li></ol><!-- /wp:list -->'
+- Ordered list: <!-- wp:list {"ordered":true} --><ol class="wp-block-list"><li>Step 1</li><li>Step 2</li></ol><!-- /wp:list -->
+- Separator: <!-- wp:separator --><hr class="wp-block-separator has-alpha-channel-opacity"/><!-- /wp:separator -->'
             ]
         ]
     ];

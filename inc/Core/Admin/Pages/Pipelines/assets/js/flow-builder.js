@@ -320,7 +320,7 @@
          * Update specific flow step card after handler configuration using fresh data
          */
         updateFlowStepCard: function(handlerData) {
-            const { flow_step_id, step_type, handler_slug, flow_id, flow_config } = handlerData;
+            const { flow_step_id, step_type, handler_slug, flow_id, step_config } = handlerData;
 
             // Find the specific flow step card to update
             const $flowStepContainer = $(`.dm-step-container[data-flow-step-id="${flow_step_id}"]`);
@@ -330,6 +330,10 @@
                 return;
             }
 
+            // Construct minimal flow_config with single step for template compatibility
+            const minimal_flow_config = {};
+            minimal_flow_config[flow_step_id] = step_config;
+
             // Use step config directly from save response - no additional AJAX call needed
             PipelinesPage.requestTemplate('page/flow-step-card', {
                 step: {
@@ -338,7 +342,7 @@
                     pipeline_step_id: $flowStepContainer.data('pipeline-step-id'),
                     is_empty: false
                 },
-                flow_config: flow_config,
+                flow_config: minimal_flow_config,
                 flow_id: flow_id,
                 pipeline_id: $flowStepContainer.closest('.dm-pipeline-card').data('pipeline-id')
             }).then((updatedStepHtml) => {

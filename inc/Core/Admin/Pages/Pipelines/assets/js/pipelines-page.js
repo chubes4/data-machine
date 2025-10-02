@@ -546,17 +546,24 @@
                             const step_type = contextData.step_type;
                             
                             if (flow_id) {
-                                // Get updated flow configuration to ensure fresh data
+                                // Generate flow_step_id for targeted config fetch
+                                const flow_step_id = pipeline_step_id + '_' + flow_id;
+
+                                // Get targeted step configuration (reduced payload)
                                 $.ajax({
                                     url: dmPipelineBuilder.ajax_url,
                                     type: 'POST',
                                     data: {
-                                        action: 'dm_get_flow_config',
-                                        flow_id: flow_id,
+                                        action: 'dm_get_flow_step_config',
+                                        flow_step_id: flow_step_id,
                                         nonce: dmPipelineBuilder.dm_ajax_nonce
                                     },
                                     success: (flowResponse) => {
-                                        if (flowResponse.success && flowResponse.data.flow_config) {
+                                        if (flowResponse.success && flowResponse.data.step_config) {
+                                            // Construct minimal flow_config with single step for template compatibility
+                                            const minimal_flow_config = {};
+                                            minimal_flow_config[flow_step_id] = flowResponse.data.step_config;
+
                                             // Request updated step card template with fresh configuration
                                             PipelinesPage.requestTemplate('page/flow-step-card', {
                                                 step: {
@@ -565,7 +572,7 @@
                                                     pipeline_step_id: pipeline_step_id,
                                                     is_empty: false
                                                 },
-                                                flow_config: flowResponse.data.flow_config,
+                                                flow_config: minimal_flow_config,
                                                 flow_id: flow_id,
                                                 pipeline_id: pipeline_id
                                             }).then((updatedStepHtml) => {

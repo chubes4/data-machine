@@ -1,9 +1,11 @@
 <?php
 /**
  * WordPress Tab Template
- * 
+ *
  * WordPress-specific settings for post types, taxonomies, and defaults.
  */
+
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 $settings = dm_get_data_machine_settings();
 $wp_settings = $settings['wordpress_settings'] ?? [];

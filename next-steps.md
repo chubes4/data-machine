@@ -1,5 +1,7 @@
 # Future Development Roadmap
 
+**Status**: This document outlines planned features and known issues for future releases.
+
 ## Planned Features
 
 ### Webhook Receiver Step

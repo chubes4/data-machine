@@ -31,7 +31,7 @@ if (!defined('ABSPATH')) {
 function dm_register_googlesheets_filters() {
 
     // Handler registration - Google Sheets declares itself as publish handler (pure discovery mode)
-    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+    add_filter('dm_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'publish') {
             $handlers['googlesheets_output'] = [
                 'type' => 'publish',

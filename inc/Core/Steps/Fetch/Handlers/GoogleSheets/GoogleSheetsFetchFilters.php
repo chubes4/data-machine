@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
  * Register Google Sheets fetch handler filters.
  */
 function dm_register_googlesheets_fetch_filters() {
-    add_filter('dm_handlers_uncached', function($handlers, $step_type = null) {
+    add_filter('dm_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'fetch') {
             $handlers['googlesheets_fetch'] = [
                 'type' => 'fetch',

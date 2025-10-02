@@ -31,7 +31,7 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 - Database Query Optimization with centralized access patterns
 - Advanced Centralized Cache Management with granular controls and action-based architecture
 
-**Requirements**: WordPress 6.2+, PHP 8.0+, Composer
+**Requirements**: WordPress 6.2+, PHP 8.0+, Composer (for development)
 
 **Pipeline+Flow**: Pipelines are reusable templates, Flows are configured instances
 

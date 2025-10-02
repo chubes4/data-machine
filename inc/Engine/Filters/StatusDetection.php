@@ -326,6 +326,10 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
         return [];
     }
 
+    // Apply global defaults to show effective settings on card
+    $step_type = $step_config['step_type'] ?? '';
+    $current_settings = apply_filters('dm_apply_global_defaults', $current_settings, $handler_slug, $step_type);
+
     // Get handler's Settings class
     $all_settings = apply_filters('dm_handler_settings', [], $handler_slug);
     $handler_settings = $all_settings[$handler_slug] ?? null;

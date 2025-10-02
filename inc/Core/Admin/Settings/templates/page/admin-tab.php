@@ -1,9 +1,11 @@
 <?php
 /**
  * Admin Tab Template
- * 
+ *
  * Controls for engine mode, admin pages, and job data cleanup.
  */
+
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 $settings = dm_get_data_machine_settings();
 $engine_mode = $settings['engine_mode'];

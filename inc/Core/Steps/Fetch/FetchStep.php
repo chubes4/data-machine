@@ -176,7 +176,9 @@ class FetchStep {
                     'has_data_title_key' => $has_data_title_key,
                     'has_data_content_key' => $has_data_content_key,
                     'metadata_keys' => array_keys($result['metadata'] ?? []),
-                    'attachments_count' => is_array($result['attachments'] ?? null) ? count($result['attachments']) : 0
+                    'attachments_count' => is_array($result['attachments'] ?? null) ? count($result['attachments']) : 0,
+                    'has_file_info' => !empty($file_info),
+                    'file_info_path' => $file_info['file_path'] ?? null
                 ]);
 
                 // Validate that we have meaningful content after extraction
@@ -189,13 +191,20 @@ class FetchStep {
                     return null;
                 }
 
+                // Build content array with file_info if available
+                $content_array = [
+                    'title' => $title,
+                    'body' => $body
+                ];
+
+                if ($file_info) {
+                    $content_array['file_info'] = $file_info;
+                }
+
                 $fetch_entry = [
                     'type' => 'fetch',
                     'handler' => $handler_name,
-                    'content' => [
-                        'title' => $title,
-                        'body' => $body
-                    ],
+                    'content' => $content_array,
                     'metadata' => array_merge([
                         'source_type' => $handler_name,
                         'pipeline_id' => $context['pipeline_id'],
