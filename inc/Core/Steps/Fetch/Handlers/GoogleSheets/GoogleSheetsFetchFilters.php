@@ -1,10 +1,6 @@
 <?php
 /**
- * Google Sheets Fetch Handler Registration
- *
- * @package DataMachine
- * @subpackage Core\Steps\Fetch\Handlers\GoogleSheets
- * @since 1.0.0
+ * @package DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
@@ -13,9 +9,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Register Google Sheets fetch handler filters.
- */
 function dm_register_googlesheets_fetch_filters() {
     add_filter('dm_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'fetch') {
@@ -23,7 +16,8 @@ function dm_register_googlesheets_fetch_filters() {
                 'type' => 'fetch',
                 'class' => GoogleSheetsFetch::class,
                 'label' => __('Google Sheets', 'data-machine'),
-                'description' => __('Read data from Google Sheets spreadsheets', 'data-machine')
+                'description' => __('Read data from Google Sheets spreadsheets', 'data-machine'),
+                'requires_auth' => true
             ];
         }
         return $handlers;

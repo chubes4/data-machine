@@ -189,8 +189,13 @@ class PipelineAuthAjax
         $config_fields = $auth_instance->get_config_fields();
         $config_data = [];
 
+        // Determine storage location based on auth type
+        $uses_oauth = method_exists($auth_instance, 'get_authorization_url') || method_exists($auth_instance, 'handle_oauth_callback');
+
         // Get existing configuration to handle unchanged saves
-        $existing_config = apply_filters('dm_retrieve_oauth_keys', [], $handler_slug);
+        $existing_config = $uses_oauth
+            ? apply_filters('dm_retrieve_oauth_keys', [], $handler_slug)
+            : apply_filters('dm_retrieve_oauth_account', [], $handler_slug);
 
         // Validate and sanitize each field
         foreach ($config_fields as $field_name => $field_config) {
@@ -228,9 +233,17 @@ class PipelineAuthAjax
             }
         }
 
-        // Save configuration using dm_oauth filter
-        $saved = apply_filters('dm_store_oauth_keys', $config_data, $handler_slug);
-        
+        // Save to appropriate storage location based on auth type
+        // OAuth providers: save to oauth_keys (API configuration)
+        // Simple auth providers: save to oauth_account (final credentials)
+        if ($uses_oauth) {
+            // OAuth providers: save API keys for app configuration
+            $saved = apply_filters('dm_store_oauth_keys', $config_data, $handler_slug);
+        } else {
+            // Simple auth providers: save credentials as account data
+            $saved = apply_filters('dm_store_oauth_account', $config_data, $handler_slug);
+        }
+
         if ($saved) {
             wp_send_json_success(['message' => __('Configuration saved successfully', 'data-machine')]);
         } else {

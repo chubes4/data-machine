@@ -52,6 +52,8 @@ function run_data_machine() {
     \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineAutoSaveAjax::register();
     \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineFlowCreateAjax::register();
     \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineFileUploadAjax::register();
+    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineStatusAjax::register();
+    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\FlowStatusAjax::register();
 
     \DataMachine\Engine\Rest\Trigger::register();
 }

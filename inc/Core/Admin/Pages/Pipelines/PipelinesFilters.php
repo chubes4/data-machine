@@ -93,6 +93,11 @@ function dm_register_pipelines_admin_page_filters() {
                         'deps' => ['jquery'],
                         'in_footer' => true
                     ],
+                    'dm-flow-status' => [
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/flow-status.js',
+                        'deps' => ['jquery', 'dm-pipeline-status'],
+                        'in_footer' => true
+                    ],
                     'dm-pipeline-cards-ui' => [
                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipeline-cards-ui.js',
                         'deps' => ['jquery', 'jquery-ui-sortable'],
@@ -133,7 +138,7 @@ function dm_register_pipelines_admin_page_filters() {
                     ],
                     'dm-flow-builder' => [
                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/flow-builder.js',
-                        'deps' => ['jquery', 'dm-pipelines-page', 'dm-pipeline-status'],
+                        'deps' => ['jquery', 'dm-pipelines-page', 'dm-pipeline-status', 'dm-flow-status'],
                         'in_footer' => true
                     ],
                     'dm-pipelines-modal' => [
@@ -192,7 +197,7 @@ function dm_register_pipelines_admin_page_filters() {
     
     // Register authentication AJAX handlers
     \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineAuthAjax::register();
-    
+
     // Pipeline auto-save hook moved to DataMachineActions.php for architectural consistency
     
     // Universal modal AJAX integration - no component-specific handlers needed

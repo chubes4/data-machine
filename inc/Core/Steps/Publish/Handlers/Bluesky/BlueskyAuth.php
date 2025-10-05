@@ -33,9 +33,31 @@ class BlueskyAuth {
      */
     public function is_authenticated(): bool {
         $auth_data = apply_filters('dm_retrieve_oauth_account', [], 'bluesky');
-        return !empty($auth_data) && 
-               !empty($auth_data['username']) && 
+        return !empty($auth_data) &&
+               !empty($auth_data['username']) &&
                !empty($auth_data['app_password']);
+    }
+
+    /**
+     * Get Bluesky configuration field definitions.
+     *
+     * @return array Configuration fields
+     */
+    public function get_config_fields(): array {
+        return [
+            'username' => [
+                'label' => __('Bluesky Handle', 'data-machine'),
+                'type' => 'text',
+                'required' => true,
+                'description' => __('Your Bluesky handle (e.g., user.bsky.social)', 'data-machine')
+            ],
+            'app_password' => [
+                'label' => __('App Password', 'data-machine'),
+                'type' => 'password',
+                'required' => true,
+                'description' => __('Generate an app password at bsky.app/settings/app-passwords', 'data-machine')
+            ]
+        ];
     }
 
     /**

@@ -40,6 +40,7 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 ### API Reference
 - [**Core Filters**](api-reference/core-filters.md) - All WordPress filters
 - [**Core Actions**](api-reference/core-actions.md) - All WordPress actions
+- [**REST API**](api-reference/rest-api.md) - Flow trigger endpoint with authentication
 
 ### Admin Interface
 - [Pipeline Builder](admin-interface/pipeline-builder.md) - Visual drag-and-drop interface
@@ -83,7 +84,8 @@ docs/
 │   └── jobs-management.md              # Monitoring and logs
 └── api-reference/
     ├── core-filters.md                 # WordPress filters
-    └── core-actions.md                 # WordPress actions
+    ├── core-actions.md                 # WordPress actions
+    └── rest-api.md                     # REST API trigger endpoint
 ```
 
 ## Component Coverage

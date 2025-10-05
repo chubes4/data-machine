@@ -61,7 +61,7 @@ $has_handlers = !$is_empty && !empty($available_handlers);
 $step_uses_handlers = !$is_empty && ($step_type !== 'ai');
 
 $status_class = '';
-$customizations = []; // Cache handler customizations to avoid duplicate queries
+$handler_settings_display = []; // Cache handler settings display to avoid duplicate queries
 if (!$is_empty) {
     $status = 'green';
 
@@ -88,8 +88,8 @@ if (!$is_empty) {
             }
 
             if ($status === 'green' && $flow_step_id) {
-                $customizations = apply_filters('dm_get_handler_customizations', [], $flow_step_id, $step_type);
-                if (empty($customizations)) {
+                $handler_settings_display = apply_filters('dm_get_handler_settings_display', [], $flow_step_id, $step_type);
+                if (empty($handler_settings_display)) {
                     $status = 'yellow';
                 }
             }
@@ -177,14 +177,14 @@ if (!$is_empty) {
                                 <span class="dm-handler-name"><?php echo esc_html($current_handler['handler_slug'] ?? 'Unknown'); ?></span>
                             </div>
                         <?php endif; ?>
-                        
-                        <div class="dm-handler-customizations">
+
+                        <div class="dm-handler-settings-display">
                             <?php
-                            // Use cached customizations from status detection above
-                            if (!empty($customizations)): ?>
-                                <?php foreach ($customizations as $customization): ?>
+                            // Use cached settings display from status detection above
+                            if (!empty($handler_settings_display)): ?>
+                                <?php foreach ($handler_settings_display as $setting): ?>
                                     <div>
-                                        <?php echo esc_html(empty($customization['label']) ? $customization['display_value'] : $customization['label'] . ': ' . $customization['display_value']); ?>
+                                        <?php echo esc_html(empty($setting['label']) ? $setting['display_value'] : $setting['label'] . ': ' . $setting['display_value']); ?>
                                     </div>
                                 <?php endforeach; ?>
                             <?php endif; ?>

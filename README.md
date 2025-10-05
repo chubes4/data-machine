@@ -20,15 +20,16 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 - Tool-First AI with enhanced multi-turn conversation management and duplicate detection
 - Visual Pipeline Builder with drag & drop interface and status detection
 - Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter) with 5-tier directive system
+- REST API Flow Trigger Endpoint with authentication and error handling
 - Centralized Engine Data Architecture with unified filter access pattern
 - Enhanced Unified Handler Filter System with shared functionality patterns
 - AIStepConversationManager with Turn Tracking, temporal context, and validation
 - AIStepToolParameters with buildForHandlerTool() and centralized parameter building
 - Clean Content Processing with structured data packet architecture
 - Modular WordPress Publish Handler with specialized processing components
-- Universal Handler Settings Template eliminating code duplication
+- Universal Handler Settings Template with metadata-based auth detection
 - Complete AutoSave System with cache invalidation
-- Database Query Optimization with centralized access patterns
+- Performance Optimizations: 50% query reduction in handler settings operations
 - Advanced Centralized Cache Management with granular controls and action-based architecture
 
 **Requirements**: WordPress 6.2+, PHP 8.0+, Composer (for development)
@@ -134,7 +135,7 @@ $response = apply_filters('ai_request', [
 
 ### REST API
 
-Trigger flow execution via REST API endpoint:
+Trigger flow execution via REST API endpoint (`POST /wp-json/dm/v1/trigger`):
 
 ```bash
 # Trigger any flow via REST API
@@ -143,16 +144,32 @@ curl -X POST https://example.com/wp-json/dm/v1/trigger \
   -u username:application_password \
   -d '{"flow_id": 123}'
 
-# Response
+# Success Response
 {
   "success": true,
   "flow_id": 123,
   "flow_name": "My Flow",
   "message": "Flow triggered successfully."
 }
+
+# Error Response (403 Forbidden)
+{
+  "code": "rest_forbidden",
+  "message": "You do not have permission to trigger flows.",
+  "data": {"status": 403}
+}
+
+# Error Response (404 Not Found)
+{
+  "code": "invalid_flow",
+  "message": "Flow not found.",
+  "data": {"status": 404}
+}
 ```
 
+**Implementation**: `inc/Engine/Rest/Trigger.php`
 **Requirements**: WordPress application password or cookie authentication with `manage_options` capability
+**Context**: Triggers flows via `dm_run_flow_now` action with `'rest_api_trigger'` context
 
 *For complete API documentation, see `CLAUDE.md`*
 
@@ -263,10 +280,14 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
 - **Modular WordPress Publisher**:
   - (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`) with configuration hierarchy
 - **Universal Handler Settings**:
-  - Template system eliminating modal code duplication
+  - Template system with metadata-based auth detection (`requires_auth` flag)
+  - Eliminates auth provider instantiation overhead
 - **Performance Optimizations**:
-  - Database query optimization for improved performance
+  - Handler settings modal load: 50% query reduction (single flow config query, metadata-based auth check)
+  - Handler settings save: 50% query reduction (memory-based config building)
   - Composer-managed ai-http-client dependency
+- **REST API Integration**:
+  - Flow trigger endpoint with authentication and comprehensive error handling
 
 See `CLAUDE.md` for complete technical specifications.
 

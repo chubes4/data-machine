@@ -1,36 +1,15 @@
 <?php
 /**
- * RSS Fetch Handler Component Filter Registration
- * 
- * "Plugins Within Plugins" Architecture Implementation
- * 
- * This file serves as RSS Fetch Handler's complete interface contract with the engine,
- * demonstrating complete self-containment and zero bootstrap dependencies.
- * Each handler component manages its own filter registration.
- * 
- * @package DataMachine
- * @subpackage Core\Steps\Fetch\Handlers\Rss
- * @since 0.1.0
+ * @package DataMachine\Core\Steps\Fetch\Handlers\Rss
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Rss;
 
-// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Register all RSS Fetch Handler component filters
- * 
- * Complete self-registration pattern following "plugins within plugins" architecture.
- * Engine discovers RSS Fetch Handler capabilities purely through filter-based discovery.
- * 
- * @since 0.1.0
- */
 function dm_register_rss_fetch_filters() {
-
-    // Handler registration - RSS declares itself as fetch handler (pure discovery mode)
     add_filter('dm_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'fetch') {
             $handlers['rss'] = [
@@ -43,17 +22,12 @@ function dm_register_rss_fetch_filters() {
         return $handlers;
     }, 10, 2);
 
-    // Settings registration - parameter-matched to 'rss' handler
     add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
         if ($handler_slug === null || $handler_slug === 'rss') {
             $all_settings['rss'] = new RssSettings();
         }
         return $all_settings;
     }, 10, 2);
-    
-    // Modal registrations removed - now handled by generic modal system via pure discovery
-    
 }
 
-// Auto-register when file loads - achieving complete self-containment
 dm_register_rss_fetch_filters();

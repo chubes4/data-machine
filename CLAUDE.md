@@ -2,6 +2,8 @@
 
 Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and multi-provider AI integration.
 
+**Version**: 0.1.1
+
 *For user documentation, see `docs/README.md` | For GitHub overview, see `README.md`*
 
 ## Core Filters & Actions
@@ -74,7 +76,7 @@ do_action('dm_fail_job', $job_id, $reason, $context_data);
 do_action('dm_mark_item_processed', $flow_step_id, $source_type, $item_id, $job_id);
 apply_filters('dm_is_item_processed', false, $flow_step_id, $source_type, $item_id);
 apply_filters('dm_detect_status', 'green', 'context', $data);
-apply_filters('dm_get_handler_customizations', [], $handler_slug);
+apply_filters('dm_get_handler_settings_display', [], $flow_step_id);
 
 // Data Processing
 apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $step_type);
@@ -513,6 +515,35 @@ if ($handler_settings && method_exists($handler_settings, 'get_fields')) {
 
 **Template Features**: Dynamic field rendering, auth integration, global settings notification, validation integration
 
+### Performance Optimizations
+
+**Handler Settings Modal Load** (50% query reduction):
+- Single `dm_get_flow_step_config` query (eliminated duplicate at line 100)
+- Direct metadata check via `$handler_info['requires_auth']` instead of auth provider instantiation
+- Zero auth object overhead during modal load
+
+**Handler Settings Save** (50% query reduction):
+- Step config built from memory instead of database query
+- Eliminated redundant `dm_get_flow_step_config` call in `PipelineModalAjax::handle_save_handler_settings()`
+- Single targeted flow query for execution_order only
+
+**Handler Metadata Pattern**:
+All auth-enabled handlers include `'requires_auth' => true` flag:
+```php
+add_filter('dm_handlers', function($handlers, $step_type = null) {
+    $handlers['twitter'] = [
+        'type' => 'publish',
+        'class' => Twitter::class,
+        'label' => __('Twitter', 'data-machine'),
+        'description' => __('Post content to Twitter with media support', 'data-machine'),
+        'requires_auth' => true  // Metadata flag eliminates provider instantiation
+    ];
+    return $handlers;
+}, 10, 2);
+```
+
+**Auth-Enabled Handlers**: Twitter, Bluesky, Facebook, Threads, Google Sheets (publish & fetch), Reddit (fetch)
+
 ## Settings
 
 **Controls**: Engine Mode (headless - disables admin pages only), admin page toggles, tool toggles, site context toggle, global system prompt, job data cleanup on failure
@@ -635,15 +666,18 @@ do_action('dm_import', 'pipelines', $csv_data);
 do_action('dm_export', 'pipelines', [$pipeline_id]);
 ```
 
-**REST API**:
+**REST API Trigger Endpoint**:
 ```php
-// Trigger flow execution via REST API
+// Endpoint: POST /wp-json/dm/v1/trigger
+// Implementation: inc/Engine/Rest/Trigger.php
+// Registration: Automatic via rest_api_init action
+
 POST /wp-json/dm/v1/trigger
 {
     "flow_id": 123
 }
 
-// Response
+// Success Response
 {
     "success": true,
     "flow_id": 123,
@@ -651,8 +685,27 @@ POST /wp-json/dm/v1/trigger
     "message": "Flow triggered successfully."
 }
 
-// Requires manage_options capability
-// Works with any flow (scheduled or manual)
+// Error Responses
+// 403 Forbidden - Insufficient permissions
+{
+    "code": "rest_forbidden",
+    "message": "You do not have permission to trigger flows.",
+    "data": {"status": 403}
+}
+
+// 404 Not Found - Invalid flow
+{
+    "code": "invalid_flow",
+    "message": "Flow not found.",
+    "data": {"status": 404}
+}
+
+// Requirements:
+// - manage_options capability (WordPress admin/editor)
+// - WordPress application password or cookie authentication
+// - Works with any flow (scheduled or manual)
+// - Triggers via dm_run_flow_now action with 'rest_api_trigger' context
+// - Logs execution with user info via dm_log action
 ```
 
 **AJAX**: WordPress hooks with `dm_ajax_actions` nonce + `manage_options`
@@ -754,7 +807,7 @@ do_action('dm_cache_set', $key, $data, $timeout, $group);
 
 ```bash
 composer install    # Install dependencies
-composer test       # Run tests (PHPUnit configured, test files not yet implemented)
+composer test       # Run tests (PHPUnit configured, test files pending implementation)
 ./build.sh          # Production build to /dist/data-machine.zip
 ```
 

@@ -25,9 +25,6 @@ class PipelineModalAjax
         add_action('wp_ajax_dm_get_flow_data', [$instance, 'handle_get_flow_data']);
     }
 
-    /**
-     * Universal template rendering endpoint with contextual data injection.
-     */
     public function handle_get_template()
     {
         check_ajax_referer('dm_ajax_actions', 'nonce');
@@ -90,12 +87,6 @@ class PipelineModalAjax
         }
     }
 
-    /**
-     * Generate flow step card template data for AJAX rendering.
-     *
-     * Validates step type against registered steps and constructs template data
-     * for new step cards including flow context and first-step detection logic.
-     */
     public function handle_get_flow_step_card()
     {
         check_ajax_referer('dm_ajax_actions', 'nonce');
@@ -134,9 +125,6 @@ class PipelineModalAjax
         ]);
     }
 
-    /**
-     * Get flow configuration for step card updates
-     */
     public function handle_get_flow_config()
     {
         check_ajax_referer('dm_ajax_actions', 'nonce');
@@ -161,9 +149,6 @@ class PipelineModalAjax
         ]);
     }
 
-    /**
-     * Get specific flow step configuration (targeted payload)
-     */
     public function handle_get_flow_step_config()
     {
         check_ajax_referer('dm_ajax_actions', 'nonce');
@@ -188,13 +173,7 @@ class PipelineModalAjax
     }
 
     /**
-     * Process and save AI step configuration data.
-     *
-     * Handles AI HTTP Client integration by:
-     * - Extracting step-specific configuration from form data
-     * - Saving API keys to unified ai_provider_api_keys storage
-     * - Storing step configuration in pipeline database with provider-specific model persistence
-     * - Validating UUID4 format for pipeline_step_id
+     * Process AI step configuration with provider-specific model persistence.
      */
     public function handle_configure_step_action()
     {
@@ -458,11 +437,7 @@ class PipelineModalAjax
     }
 
     /**
-     * Save handler-specific settings to flow step configuration.
-     *
-     * Unified method that handles both adding new handlers and updating existing handler settings.
-     * Processes form data through handler's sanitize() method and updates flow step configuration 
-     * via dm_update_flow_handler action. Provides immediate flow configuration refresh for UI consistency.
+     * Save handler settings with optimized step config building (no redundant database query).
      */
     public function handle_save_handler_settings()
     {
@@ -557,12 +532,37 @@ class PipelineModalAjax
              $flow_id = $parts['flow_id'] ?? null;
              $pipeline_step_id = $parts['pipeline_step_id'] ?? null;
 
-             // Get only the updated step configuration (reduced payload)
-             $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+             // Build step config from memory (no database query needed)
+             $step_config = [
+                 'step_type' => $step_type,
+                 'handler' => [
+                     'handler_slug' => $handler_slug,
+                     'settings' => [$handler_slug => $handler_settings],
+                     'enabled' => true
+                 ],
+                 'flow_id' => $flow_id,
+                 'pipeline_step_id' => $pipeline_step_id,
+                 'flow_step_id' => $flow_step_id
+             ];
+
+             // Get execution_order from cached flow (single targeted query)
+             $all_databases = apply_filters('dm_db', []);
+             $db_flows = $all_databases['flows'] ?? null;
+             if ($db_flows) {
+                 $flow = $db_flows->get_flow($flow_id);
+                 $flow_config = $flow['flow_config'] ?? [];
+                 $existing_step = $flow_config[$flow_step_id] ?? [];
+                 if (isset($existing_step['execution_order'])) {
+                     $step_config['execution_order'] = $existing_step['execution_order'];
+                 }
+             }
 
              // Prepare success message
              /* translators: %s: Handler name or label */
              $message = sprintf(__('Handler "%s" settings saved successfully.', 'data-machine'), $handler_info['label'] ?? $handler_slug);
+
+             // Get handler settings display for immediate card update
+             $handler_settings_display = apply_filters('dm_get_handler_settings_display', [], $flow_step_id);
 
              wp_send_json_success([
                  'message' => $message,
@@ -571,7 +571,8 @@ class PipelineModalAjax
                  'flow_step_id' => $flow_step_id,
                  'flow_id' => $flow_id,
                  'pipeline_step_id' => $pipeline_step_id,
-                 'step_config' => $step_config  // Return only updated step (not full flow config)
+                 'step_config' => $step_config,
+                 'handler_settings_display' => $handler_settings_display
              ]);
             
         } catch (\Exception $e) {
@@ -584,9 +585,6 @@ class PipelineModalAjax
         }
     }
 
-    /**
-     * Get complete pipeline data using filters
-     */
     public function handle_get_pipeline_data()
     {
         check_ajax_referer('dm_ajax_actions', 'nonce');
@@ -613,9 +611,6 @@ class PipelineModalAjax
         ]);
     }
 
-    /**
-     * Get flow data for validation and operations
-     */
     public function handle_get_flow_data()
     {
         check_ajax_referer('dm_ajax_actions', 'nonce');
@@ -646,17 +641,6 @@ class PipelineModalAjax
     }
 
 
-    /**
-     * Extract and sanitize handler settings from POST data.
-     *
-     * Uses handler's sanitize() method for proper data validation while
-     * filtering out WordPress-specific form fields (nonce, action, etc.).
-     * Returns sanitized settings array ready for storage.
-     *
-     * @param string $handler_slug Handler identifier for settings lookup.
-     * @param array $post_data Sanitized POST data array.
-     * @return array Sanitized handler settings.
-     */
     private function process_handler_settings($handler_slug, $post_data)
     {
         $all_settings = apply_filters('dm_handler_settings', [], $handler_slug);
@@ -683,12 +667,6 @@ class PipelineModalAjax
         return $handler_settings->sanitize($raw_settings);
     }
     
-    /**
-     * Recursively sanitize template data array to prevent XSS
-     * 
-     * @param array $data Array to sanitize
-     * @return array Sanitized array
-     */
     private function sanitize_template_data($data) {
         if (!is_array($data)) {
             return sanitize_text_field($data);

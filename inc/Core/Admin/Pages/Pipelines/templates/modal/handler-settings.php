@@ -27,14 +27,16 @@ if ($handler_slug) {
 
     $all_settings = apply_filters('dm_handler_settings', [], $handler_slug);
     $handler_settings = $all_settings[$settings_key] ?? null;
-    
+
+    $step_config = [];
+    if (!empty($flow_step_id) && !empty($handler_slug)) {
+        $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+    }
+
     if ($handler_settings && method_exists($handler_settings, 'get_fields')) {
         $current_settings_for_fields = [];
-        if (!empty($flow_step_id) && !empty($handler_slug)) {
-            $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
-            if (!empty($step_config)) {
-                $current_settings_for_fields = $step_config['handler']['settings'][$handler_slug] ?? [];
-            }
+        if (!empty($step_config)) {
+            $current_settings_for_fields = $step_config['handler']['settings'][$handler_slug] ?? [];
         }
     $all_fields = $handler_settings::get_fields();
         $settings_fields = apply_filters('dm_enabled_settings', $all_fields, $handler_slug, $step_type, [
@@ -47,12 +49,7 @@ if ($handler_slug) {
 
 $handler_label = $handler_info['label'] ?? ucfirst(str_replace('_', ' ', $handler_slug));
 
-$all_auth = apply_filters('dm_auth_providers', [], $step_type);
-$has_auth_system = isset($all_auth[$handler_slug]) || isset($all_auth[$settings_key]);
-
-if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts') {
-    $has_auth_system = false;
-}
+$has_auth_system = $handler_info['requires_auth'] ?? false;
 
 ?>
 <div class="dm-handler-settings-container">
@@ -95,14 +92,10 @@ if ($settings_key === 'wordpress_publish' || $settings_key === 'wordpress_posts'
         <div class="dm-settings-fields">
             <?php
             $current_settings = [];
-            
-            if (!empty($flow_step_id) && !empty($handler_slug)) {
-                $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
-                if (!empty($step_config)) {
-                    $current_settings = $step_config['handler']['settings'][$handler_slug] ?? [];
-                }
+            if (!empty($step_config)) {
+                $current_settings = $step_config['handler']['settings'][$handler_slug] ?? [];
             }
-            
+
             $current_settings = apply_filters('dm_apply_global_defaults', $current_settings, $handler_slug, $step_type);
             
             

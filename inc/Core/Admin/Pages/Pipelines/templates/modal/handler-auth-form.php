@@ -51,8 +51,13 @@ if (!$has_auth) {
     return;
 }
 
+// Detect if this provider uses OAuth flow vs simple credential storage
+$uses_oauth = method_exists($auth_instance, 'get_authorization_url') || method_exists($auth_instance, 'handle_oauth_callback');
+
 // Get current configuration and authentication status
-$current_config = apply_filters('dm_retrieve_oauth_keys', [], $handler_slug);
+$current_config = $uses_oauth
+    ? apply_filters('dm_retrieve_oauth_keys', [], $handler_slug)
+    : apply_filters('dm_retrieve_oauth_account', [], $handler_slug);
 $is_authenticated = $auth_instance->is_authenticated();
 $config_fields = method_exists($auth_instance, 'get_config_fields') ? $auth_instance->get_config_fields() : [];
 $account_details = null;
@@ -60,9 +65,6 @@ $account_details = null;
 if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
     $account_details = $auth_instance->get_account_details();
 }
-
-// Detect if this provider uses OAuth flow vs simple credential storage
-$uses_oauth = method_exists($auth_instance, 'get_authorization_url') || method_exists($auth_instance, 'handle_oauth_callback');
 
 ?>
 <div class="dm-handler-auth-container">
@@ -132,8 +134,7 @@ $uses_oauth = method_exists($auth_instance, 'get_authorization_url') || method_e
         <?php endif; ?>
     </div>
     <?php endif; ?>
-    
-    <?php if ($uses_oauth): ?>
+
     <!-- Connection Status & Actions -->
     <div class="dm-auth-connection-section">
         <h4><?php esc_html_e('Account Connection', 'data-machine'); ?></h4>
@@ -210,8 +211,7 @@ $uses_oauth = method_exists($auth_instance, 'get_authorization_url') || method_e
             </div>
         </div>
     </div>
-    <?php endif; ?>
-    
+
     <div class="dm-modal-navigation">
         <?php 
         // EXACT COPY FROM EDIT HANDLER BUTTON

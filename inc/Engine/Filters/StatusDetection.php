@@ -7,20 +7,23 @@ if (!defined('ABSPATH')) {
     exit;
 }
 function dm_register_status_detection_filters() {
-    
+
     // RED Status Filters (Critical - Blocks Execution)
     add_filter('dm_detect_status', 'dm_handle_red_pipeline_statuses', 10, 3);
     add_filter('dm_detect_status', 'dm_handle_red_flow_statuses', 10, 3);
-    
+
     // YELLOW Status Filters (Warning - Suboptimal)
     add_filter('dm_detect_status', 'dm_handle_yellow_pipeline_statuses', 10, 3);
     add_filter('dm_detect_status', 'dm_handle_yellow_flow_statuses', 10, 3);
-    
+
+    // Flow-Specific Status Filters (Optimized for flow-scoped operations)
+    add_filter('dm_detect_status', 'dm_handle_flow_step_status', 10, 3);
+
     // GREEN Status Filters (Success)
     add_filter('dm_detect_status', 'dm_handle_green_statuses', 10, 3);
-    
+
     // Utility Filters
-    add_filter('dm_get_handler_customizations', 'dm_get_handler_customizations_data', 10, 2);
+    add_filter('dm_get_handler_settings_display', 'dm_get_handler_settings_display_data', 10, 2);
 }
 
 // RED STATUS HANDLERS - Critical issues that block execution
@@ -296,6 +299,75 @@ function dm_handle_yellow_flow_statuses($default_status, $context, $data) {
     return $default_status;
 }
 
+// FLOW-SPECIFIC STATUS HANDLER - Optimized for flow-scoped operations
+function dm_handle_flow_step_status($default_status, $context, $data) {
+    // Only process flow-specific status context
+    if ($context !== 'flow_step_status') {
+        return $default_status;
+    }
+
+    $flow_step_id = $data['flow_step_id'] ?? null;
+    $step_config = $data['step_config'] ?? [];
+    $step_type = $data['step_type'] ?? '';
+
+    if (!$flow_step_id || !$step_config) {
+        return 'red';
+    }
+
+    // For AI steps, check pipeline-level configuration
+    if ($step_type === 'ai') {
+        $pipeline_step_id = $step_config['pipeline_step_id'] ?? null;
+        if ($pipeline_step_id) {
+            return apply_filters('dm_detect_status', 'green', 'ai_step', [
+                'pipeline_step_id' => $pipeline_step_id
+            ]);
+        }
+        return 'red';
+    }
+
+    // For handler-based steps, check flow-specific settings
+    $handler_slug = $step_config['handler']['handler_slug'] ?? '';
+    if (empty($handler_slug)) {
+        return 'red'; // No handler configured
+    }
+
+    // Check handler authentication
+    $auth_status = apply_filters('dm_detect_status', 'green', 'handler_auth', [
+        'handler_slug' => $handler_slug
+    ]);
+    if ($auth_status === 'red') {
+        return 'red';
+    }
+
+    // Check handler settings
+    $handler_settings_display = apply_filters('dm_get_handler_settings_display', [], $flow_step_id);
+    if (empty($handler_settings_display)) {
+        return 'yellow'; // Handler added but not configured
+    }
+
+    // Check WordPress draft mode
+    if ($handler_slug === 'wordpress_publish') {
+        $draft_status = apply_filters('dm_detect_status', 'green', 'wordpress_draft', [
+            'flow_step_id' => $flow_step_id
+        ]);
+        if ($draft_status === 'yellow') {
+            return 'yellow';
+        }
+    }
+
+    // Check Files handler readiness
+    if ($handler_slug === 'files') {
+        $files_status = apply_filters('dm_detect_status', 'green', 'files_status', [
+            'flow_step_id' => $flow_step_id
+        ]);
+        if ($files_status === 'red') {
+            return 'red';
+        }
+    }
+
+    return 'green';
+}
+
 // GREEN STATUS HANDLERS - Success conditions
 
 function dm_handle_green_statuses($default_status, $context, $data) {
@@ -306,8 +378,7 @@ function dm_handle_green_statuses($default_status, $context, $data) {
 
 // UTILITY FUNCTIONS
 
-
-function dm_get_handler_customizations_data($customizations, $flow_step_id) {
+function dm_get_handler_settings_display_data($default, $flow_step_id) {
     if (empty($flow_step_id)) {
         return [];
     }
@@ -344,10 +415,10 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
         $fields = $handler_settings::get_fields();
     }
     
-    // Compare current settings with defaults
-    $customizations = [];
-    
-    // Special handling for WordPress handlers - always show essential settings
+    // Format all configured settings for display
+    $settings_display = [];
+
+    // WordPress handlers - ensure essential settings appear first
     if ($handler_slug === 'wordpress_publish') {
         $essential_wordpress_settings = ['post_type', 'post_status', 'post_author'];
         foreach ($essential_wordpress_settings as $essential_key) {
@@ -368,7 +439,7 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
                     $display_value = $field_config['options'][$current_value];
                 }
                 
-                $customizations[] = [
+                $settings_display[] = [
                     'key' => $essential_key,
                     'label' => $label,
                     'value' => $current_value,
@@ -442,7 +513,7 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
                 }
             }
             
-            $customizations[] = [
+            $settings_display[] = [
                 'key' => $setting_key,
                 'label' => $label,
                 'value' => $current_value,
@@ -450,6 +521,6 @@ function dm_get_handler_customizations_data($customizations, $flow_step_id) {
             ];
         }
     }
-    
-    return $customizations;
+
+    return $settings_display;
 }

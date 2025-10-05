@@ -1,9 +1,6 @@
 <?php
 /**
- * Reddit handler filter registration.
- *
- * @package DataMachine
- * @subpackage Core\Steps\Fetch\Handlers\Reddit
+ * @package DataMachine\Core\Steps\Fetch\Handlers\Reddit
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;
@@ -19,7 +16,8 @@ function dm_register_reddit_fetch_filters() {
                 'type' => 'fetch',
                 'class' => Reddit::class,
                 'label' => __('Reddit', 'data-machine'),
-                'description' => __('Fetch posts from subreddits via Reddit API', 'data-machine')
+                'description' => __('Fetch posts from subreddits via Reddit API', 'data-machine'),
+                'requires_auth' => true
             ];
         }
         return $handlers;

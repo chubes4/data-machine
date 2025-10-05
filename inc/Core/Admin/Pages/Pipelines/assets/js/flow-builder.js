@@ -131,11 +131,11 @@
                             dmCoreModal.close();
                         }
                         
-                        // Refresh pipeline status after handler addition
-                        const pipelineId = contextData.pipeline_id;
-                        if (pipelineId) {
-                            PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
-                                // Status refresh failed after adding handler
+                        // Refresh flow status after handler addition (flow-scoped)
+                        const flowId = contextData.flow_id;
+                        if (flowId && typeof FlowStatusManager !== 'undefined') {
+                            FlowStatusManager.refreshFlowStatus(flowId).catch((error) => {
+                                // Flow status refresh failed after adding handler
                             });
                         }
                     } else {
@@ -305,19 +305,17 @@
             if (data && data.handler_slug && data.step_type && data.flow_step_id) {
                 this.updateFlowStepCard(data);
                 
-                // Refresh pipeline status after handler configuration save
-                const $stepContainer = $(`.dm-step-container[data-flow-step-id="${data.flow_step_id}"]`);
-                const pipelineId = $stepContainer.closest('.dm-pipeline-card').data('pipeline-id');
-                if (pipelineId) {
-                    PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
-                        // Status refresh failed after handler save
+                // Refresh flow status after handler configuration save (flow-scoped)
+                if (data.flow_id && typeof FlowStatusManager !== 'undefined') {
+                    FlowStatusManager.refreshFlowStatus(data.flow_id).catch((error) => {
+                        // Flow status refresh failed after handler save
                     });
                 }
             }
         },
 
         /**
-         * Update specific flow step card after handler configuration using fresh data
+         * Update specific flow step card after handler configuration using direct DOM updates
          */
         updateFlowStepCard: function(handlerData) {
             const { flow_step_id, step_type, handler_slug, flow_id, step_config } = handlerData;
@@ -330,40 +328,45 @@
                 return;
             }
 
-            // Construct minimal flow_config with single step for template compatibility
-            const minimal_flow_config = {};
-            minimal_flow_config[flow_step_id] = step_config;
+            const $stepCard = $flowStepContainer.find('.dm-step-card');
 
-            // Use step config directly from save response - no additional AJAX call needed
-            PipelinesPage.requestTemplate('page/flow-step-card', {
-                step: {
-                    step_type: step_type,
-                    execution_order: $flowStepContainer.data('step-execution-order') || 0,
-                    pipeline_step_id: $flowStepContainer.data('pipeline-step-id'),
-                    is_empty: false
-                },
-                flow_config: minimal_flow_config,
-                flow_id: flow_id,
-                pipeline_id: $flowStepContainer.closest('.dm-pipeline-card').data('pipeline-id')
-            }).then((updatedStepHtml) => {
-                // Replace the existing step container with updated version
-                $flowStepContainer.replaceWith(updatedStepHtml);
+            // Update handler name in tag
+            const $handlerTag = $stepCard.find('.dm-handler-tag');
+            if ($handlerTag.length) {
+                $handlerTag.attr('data-handler-key', handler_slug);
+                $handlerTag.find('.dm-handler-name').text(handler_slug);
+            }
 
-                // Trigger card UI updates for updated content
-                if (typeof PipelineCardsUI !== 'undefined') {
-                    PipelineCardsUI.handleDOMChanges();
-                }
+            // Update button text from "Add Handler" to "Edit Handler" if needed
+            const $modalButton = $stepCard.find('.dm-modal-open');
+            if ($modalButton.length) {
+                $modalButton.text('Edit Handler');
+                $modalButton.attr('data-template', 'handler-settings/' + handler_slug);
 
-                // Refresh pipeline status after template update
-                const pipelineId = $flowStepContainer.closest('.dm-pipeline-card').data('pipeline-id');
-                if (pipelineId) {
-                    PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
-                        // Status refresh failed after step card update
-                    });
-                }
-            }).catch((error) => {
-                // Failed to render updated step card template
-            });
+                // Update button context data
+                const contextData = JSON.parse($modalButton.attr('data-context') || '{}');
+                contextData.handler_slug = handler_slug;
+                $modalButton.attr('data-context', JSON.stringify(contextData));
+            }
+
+            // Update handler settings display
+            const $settingsDisplay = $stepCard.find('.dm-handler-settings-display');
+            if ($settingsDisplay.length && handlerData.handler_settings_display) {
+                $settingsDisplay.empty();
+                handlerData.handler_settings_display.forEach(setting => {
+                    const text = setting.label
+                        ? `${setting.label}: ${setting.display_value}`
+                        : setting.display_value;
+                    // Escape HTML to prevent XSS
+                    const $div = $('<div>').text(text);
+                    $settingsDisplay.append($div);
+                });
+            }
+
+            // Trigger card UI updates for updated content
+            if (typeof PipelineCardsUI !== 'undefined') {
+                PipelineCardsUI.handleDOMChanges();
+            }
         },
 
         /**
@@ -532,13 +535,11 @@
                         if (typeof window.dmPipelineCards !== 'undefined' && window.dmPipelineCards.refreshFlowFooter) {
                             window.dmPipelineCards.refreshFlowFooter(flow_id);
                         }
-                        
-                        // Refresh pipeline status to show updated schedule info
-                        const $pipelineCard = $('.dm-pipeline-card').first();
-                        const pipelineId = $pipelineCard.data('pipeline-id');
-                        if (pipelineId) {
-                            PipelineStatusManager.refreshStatus(pipelineId).catch((error) => {
-                                // Status refresh failed after schedule save - continue silently
+
+                        // Refresh flow status after schedule save (flow-scoped)
+                        if (flow_id && typeof FlowStatusManager !== 'undefined') {
+                            FlowStatusManager.refreshFlowStatus(flow_id).catch((error) => {
+                                // Flow status refresh failed after schedule save
                             });
                         }
                     } else {

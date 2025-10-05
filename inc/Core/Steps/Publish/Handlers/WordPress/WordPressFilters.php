@@ -1,13 +1,7 @@
 <?php
 /**
- * WordPress Publish Handler Component Filter Registration
- * 
- * "Plugins Within Plugins" Architecture Implementation
- * 
- * This file serves as WordPress Publish Handler's complete interface contract with the engine,
- * demonstrating complete self-containment and zero bootstrap dependencies.
- * Each handler component manages its own filter registration.
- * 
+ * WordPress publish handler filter registration.
+ *
  * @package DataMachine
  * @subpackage Core\Steps\Publish\Handlers\WordPress
  * @since 0.1.0
@@ -15,22 +9,11 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
 
-// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
 
-/**
- * Register all WordPress Publish Handler component filters
- * 
- * Complete self-registration pattern following "plugins within plugins" architecture.
- * Engine discovers WordPress Publish Handler capabilities purely through filter-based discovery.
- * 
- * @since 0.1.0
- */
 function dm_register_wordpress_publish_filters() {
-
-    // Handler registration - WordPress declares itself as publish handler (pure discovery mode)
     add_filter('dm_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'publish') {
             $handlers['wordpress_publish'] = [
@@ -43,31 +26,26 @@ function dm_register_wordpress_publish_filters() {
         return $handlers;
     }, 10, 2);
 
-
-    // Settings registration - pure discovery mode
     add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
         if ($handler_slug === null || $handler_slug === 'wordpress_publish') {
             $all_settings['wordpress_publish'] = new WordPressSettings();
         }
         return $all_settings;
     }, 10, 2);
-    
-    // WordPress tool registration with AI HTTP Client library
+
     add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
-        // Only generate WordPress tool when it's the target handler
         if ($handler_slug === 'wordpress_publish') {
             $tools['wordpress_publish'] = dm_get_dynamic_wordpress_tool($handler_config);
         }
         return $tools;
     }, 10, 3);
 
-    // WordPress-specific success message formatting
     add_filter('dm_tool_success_message', function($default_message, $tool_name, $tool_result) {
         if ($tool_name === 'wordpress_publish' && !empty($tool_result['data']['post_title'])) {
             $title = $tool_result['data']['post_title'];
             $url = $tool_result['data']['post_url'] ?? '';
             $post_id = $tool_result['data']['post_id'] ?? '';
-            
+
             if (!empty($url)) {
                 return "WordPress post published successfully. Title: '{$title}' at {$url} (ID: {$post_id}).";
             } else {
@@ -76,8 +54,6 @@ function dm_register_wordpress_publish_filters() {
         }
         return $default_message;
     }, 10, 4);
-    
-    // WordPress handler does not register any modals - site-local publishing only
 }
 
 /**

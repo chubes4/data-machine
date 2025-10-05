@@ -16,7 +16,8 @@ function dm_register_twitter_filters() {
                 'type' => 'publish',
                 'class' => Twitter::class,
                 'label' => __('Twitter', 'data-machine'),
-                'description' => __('Post content to Twitter with media support', 'data-machine')
+                'description' => __('Post content to Twitter with media support', 'data-machine'),
+                'requires_auth' => true
             ];
         }
         return $handlers;
@@ -55,7 +56,7 @@ function dm_get_twitter_tool(array $handler_config = []): array {
             'content' => [
                 'type' => 'string',
                 'required' => true,
-                'description' => 'Tweet content (will be formatted and truncated if needed)'
+                'description' => 'Tweet content (will be formatted and truncated if needed). Do not include URLs - they are handled automatically.'
             ]
         ]
     ];
