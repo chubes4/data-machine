@@ -1,10 +1,6 @@
 <?php
 /**
- * Pipeline Status AJAX Handler
- *
- * Handles pipeline-level status refresh operations.
- * Provides comprehensive status checks across entire pipeline structure,
- * used for pipeline template modifications (add/delete steps, AI configuration).
+ * Pipeline-wide status refresh (step add/delete, AI config, architectural changes).
  *
  * @package DataMachine\Core\Admin\Pages\Pipelines\Ajax
  * @since NEXT_VERSION
@@ -19,9 +15,6 @@ if (!defined('WPINC')) {
 
 class PipelineStatusAjax
 {
-    /**
-     * Register pipeline status AJAX handlers.
-     */
     public static function register() {
         $instance = new self();
 
@@ -29,11 +22,7 @@ class PipelineStatusAjax
     }
 
     /**
-     * Refresh pipeline status for real-time updates - pipeline-wide scope
-     *
-     * Used for pipeline template modifications: step additions/deletions,
-     * AI configuration changes, architectural updates. Checks all pipeline
-     * steps including viability and cascade effects.
+     * Pipeline-wide status with viability and cascade effect checks.
      */
     public function handle_refresh_pipeline_status()
     {

@@ -299,9 +299,9 @@ function dm_handle_yellow_flow_statuses($default_status, $context, $data) {
     return $default_status;
 }
 
-// FLOW-SPECIFIC STATUS HANDLER - Optimized for flow-scoped operations
+// FLOW-SPECIFIC STATUS HANDLER
 function dm_handle_flow_step_status($default_status, $context, $data) {
-    // Only process flow-specific status context
+    // Only process flow_step_status context
     if ($context !== 'flow_step_status') {
         return $default_status;
     }

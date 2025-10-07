@@ -31,7 +31,7 @@ class PipelineDeleteAjax
     }
 
     /**
-     * Delete pipeline - delegated to central dm_delete action
+     * Delete pipeline - delegated to dm_delete_pipeline action
      */
     public function handle_delete_pipeline()
     {
@@ -42,12 +42,11 @@ class PipelineDeleteAjax
 
         $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
 
-        // Delegate to central deletion system
-        do_action('dm_delete', 'pipeline', $pipeline_id);
+        do_action('dm_delete_pipeline', $pipeline_id);
     }
 
     /**
-     * Delete step from pipeline - delegated to central dm_delete action
+     * Delete step from pipeline - delegated to dm_delete_step action
      */
     public function handle_delete_step()
     {
@@ -59,12 +58,11 @@ class PipelineDeleteAjax
         $pipeline_step_id = sanitize_text_field(wp_unslash($_POST['pipeline_step_id'] ?? ''));
         $pipeline_id = (int)sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? ''));
 
-        // Delegate to central deletion system
-        do_action('dm_delete', 'step', $pipeline_step_id, ['pipeline_id' => $pipeline_id]);
+        do_action('dm_delete_step', $pipeline_step_id, $pipeline_id);
     }
 
     /**
-     * Delete flow - delegated to central dm_delete action
+     * Delete flow - delegated to dm_delete_flow action
      */
     public function handle_delete_flow()
     {
@@ -75,7 +73,6 @@ class PipelineDeleteAjax
 
         $flow_id = (int)sanitize_text_field(wp_unslash($_POST['flow_id'] ?? ''));
 
-        // Delegate to central deletion system
-        do_action('dm_delete', 'flow', $flow_id);
+        do_action('dm_delete_flow', $flow_id);
     }
 }

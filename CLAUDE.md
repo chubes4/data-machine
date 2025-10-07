@@ -16,8 +16,7 @@ $databases = apply_filters('dm_db', []);
 $providers = apply_filters('dm_auth_providers', []);
 
 // Pipeline & Flow Operations
-$pipeline_id = apply_filters('dm_create_pipeline', null, $data);
-$pipeline_id = apply_filters('dm_create_pipeline_from_template', null, $template_id, $data);
+$pipeline_id = apply_filters('dm_create_pipeline', null, $data); // Accepts simple or complete pipeline data with steps array
 $step_id = apply_filters('dm_create_step', null, $data);
 $flow_id = apply_filters('dm_create_flow', null, $data);
 $flow_id = apply_filters('dm_duplicate_flow', null, $source_flow_id);
@@ -86,9 +85,13 @@ apply_filters('dm_request', [], $method, $url, $args, $context);
 apply_filters('dm_timeframe_limit', null, $timeframe_limit); // Shared timeframe parsing across fetch handlers
 apply_filters('dm_keyword_search_match', true, $content, $search_term); // Universal keyword matching with OR logic
 
-// Pipeline & Flow Events
-do_action('dm_pipeline_deleted', $pipeline_id, $flow_count);
-do_action('dm_flow_deleted', $pipeline_id, $flow_id);
+// Delete Operations
+do_action('dm_delete_pipeline', $pipeline_id);
+do_action('dm_delete_flow', $flow_id);
+do_action('dm_delete_step', $pipeline_step_id, $pipeline_id);
+do_action('dm_delete_processed_items', $criteria); // Criteria array: ['job_id' => 123] or ['flow_id' => 456]
+do_action('dm_delete_jobs', $clear_type, $cleanup_processed); // clear_type: 'all' or 'failed'
+do_action('dm_delete_logs'); // Clear log file
 
 // Update Operations
 do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $settings);
@@ -131,7 +134,6 @@ do_action('dm_log', $level, $message, $context);
 apply_filters('dm_log_file', null, $operation, $param);
 do_action('dm_auto_save', $pipeline_id);
 do_action('dm_cleanup_old_files'); // File repository maintenance via Action Scheduler
-do_action('dm_delete', $type, $id, $criteria);
 
 // Cache Management
 do_action('dm_clear_pipeline_cache', $pipeline_id);
@@ -907,7 +909,9 @@ $providers = apply_filters('dm_auth_providers', []);
 **Configuration Validation**: Auto-validated via `dm_tool_configured` filter, UI disabled if unconfigured
 
 **URLs**: `/dm-oauth/{provider}/` with `manage_options` security - all OAuth operations require admin capabilities
-**Storage**: `dm_auth_data` option per handler
+**Storage**: Dual-path authentication storage based on auth type detection
+- **OAuth providers** (Reddit, Twitter, Facebook, Threads, Google Sheets): Save to `oauth_keys` (API configuration)
+- **Simple auth providers** (Bluesky): Save to `oauth_account` (final credentials)
 **Validation**: Real-time configuration checks prevent unconfigured tools from being enabled
 
 **Requirements**:
@@ -923,7 +927,11 @@ $providers = apply_filters('dm_auth_providers', []);
 
 **Status Detection**: `apply_filters('dm_detect_status', 'green', $context, $data)`
 - Values: `red` (error), `yellow` (warning), `green` (ready)
-- Contexts: `ai_step`, `handler_auth`, `wordpress_draft`, `files_status`, `subsequent_publish_step`
+- Contexts: `ai_step`, `handler_auth`, `wordpress_draft`, `files_status`, `subsequent_publish_step`, `pipeline_step_status`, `flow_step_status`
+
+**AJAX Status System**: Two specialized AJAX handlers for optimized status refresh operations
+- **FlowStatusAjax** (`wp_ajax_dm_refresh_flow_status`): Flow-scoped status refresh for single flow operations (handler configuration, scheduling, flow settings) - uses `flow_step_status` context
+- **PipelineStatusAjax** (`wp_ajax_dm_refresh_pipeline_status`): Pipeline-wide status refresh for template modifications (add/delete steps, AI configuration) - uses `pipeline_step_status` context
 
 **Core Rules**:
 - Engine agnostic (no hardcoded step types in `/inc/Engine/`)

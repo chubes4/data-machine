@@ -53,7 +53,7 @@ class PipelineFlowCreateAjax
     }
 
     /**
-     * Create pipeline from template - delegated to central dm_create_pipeline_from_template filter
+     * Create pipeline from template - transforms template data and delegates to dm_create_pipeline filter
      */
     public function handle_create_pipeline_from_template()
     {
@@ -69,22 +69,38 @@ class PipelineFlowCreateAjax
             wp_send_json_error(['message' => __('Template ID is required', 'data-machine')]);
         }
 
-        // Prepare options
-        $options = [];
-        if (!empty($pipeline_name)) {
-            $options['pipeline_name'] = $pipeline_name;
+        // Get available templates
+        $templates = apply_filters('dm_pipeline_templates', []);
+
+        if (!isset($templates[$template_id])) {
+            wp_send_json_error(['message' => __('Template not found', 'data-machine')]);
         }
 
-        // Delegate to dm_create_pipeline_from_template filter
-        $pipeline_id = apply_filters('dm_create_pipeline_from_template', false, $template_id, $options);
+        $template = $templates[$template_id];
+
+        // Transform template structure to pipeline data format
+        $pipeline_data = [
+            'pipeline_name' => !empty($pipeline_name) ? $pipeline_name : $template['name']
+        ];
+
+        if (!empty($template['steps'])) {
+            $pipeline_data['steps'] = [];
+            foreach ($template['steps'] as $index => $step) {
+                $pipeline_data['steps'][] = [
+                    'step_type' => $step['type'],
+                    'execution_order' => $index,
+                    'label' => ucfirst(str_replace('_', ' ', $step['type']))
+                ];
+            }
+        }
+
+        // Delegate to dm_create_pipeline filter in complete mode
+        // Filter handles AJAX response directly via wp_send_json when in AJAX context
+        $pipeline_id = apply_filters('dm_create_pipeline', false, $pipeline_data);
 
         if (!$pipeline_id) {
             wp_send_json_error(['message' => __('Failed to create pipeline from template', 'data-machine')]);
         }
-
-        // Engine handles AJAX response when wp_doing_ajax() is true
-        // This code is only reached for non-AJAX contexts (if any)
-        return;
     }
 
     /**

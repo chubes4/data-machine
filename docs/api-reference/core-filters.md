@@ -19,7 +19,8 @@ $handlers['handler_slug'] = [
     'type' => 'fetch|publish|update',
     'class' => 'HandlerClassName',
     'label' => __('Human Readable Name', 'data-machine'),
-    'description' => __('Handler description', 'data-machine')
+    'description' => __('Handler description', 'data-machine'),
+    'requires_auth' => true  // Optional: Metadata flag for auth detection
 ];
 ```
 
@@ -30,11 +31,17 @@ add_filter('dm_handlers', function($handlers) {
         'type' => 'publish',
         'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
         'label' => __('Twitter', 'data-machine'),
-        'description' => __('Post content to Twitter with media support', 'data-machine')
+        'description' => __('Post content to Twitter with media support', 'data-machine'),
+        'requires_auth' => true  // Eliminates auth provider instantiation overhead
     ];
     return $handlers;
 });
 ```
+
+**Handler Metadata**:
+- `requires_auth` (boolean): Optional metadata flag for performance optimization
+- Eliminates auth provider instantiation during handler settings modal load
+- Auth-enabled handlers: Twitter, Bluesky, Facebook, Threads, Google Sheets (publish & fetch), Reddit (fetch)
 
 ### `dm_steps`
 
@@ -440,6 +447,15 @@ $data = apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $ste
 - `$data` (array) - Additional data for status determination
 
 **Return**: Status string ('red', 'yellow', 'green')
+
+**Status Contexts**:
+- `ai_step` - AI step configuration validation
+- `handler_auth` - Handler authentication status
+- `wordpress_draft` - WordPress draft post status
+- `files_status` - Files repository status
+- `subsequent_publish_step` - Publishing step validation
+- `pipeline_step_status` - Pipeline-wide status refresh (template modifications)
+- `flow_step_status` - Flow-scoped status refresh (handler config, scheduling)
 
 
 ## Files Repository Filters

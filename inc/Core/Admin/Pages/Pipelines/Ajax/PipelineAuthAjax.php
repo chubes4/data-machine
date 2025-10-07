@@ -1,9 +1,6 @@
 <?php
 /**
- * Pipeline Authentication AJAX Handler
- *
- * Centralized authentication and authorization AJAX operations for pipelines.
- * Handles OAuth connections, disconnections, configuration saves, and tool configuration.
+ * Pipeline authentication AJAX (OAuth, disconnections, configuration).
  *
  * @package DataMachine\Core\Admin\Pages\Pipelines
  * @since 1.0.0
@@ -18,9 +15,6 @@ if (!defined('WPINC')) {
 
 class PipelineAuthAjax
 {
-    /**
-     * Register all pipeline authentication AJAX handlers.
-     */
     public static function register() {
         $instance = new self();
         
@@ -31,9 +25,6 @@ class PipelineAuthAjax
         // Note: dm_save_tool_config moved to SettingsPageAjax for better UX
     }
 
-    /**
-     * Handle account disconnection for OAuth handlers
-     */
     public function handle_disconnect_account()
     {
         check_ajax_referer('dm_ajax_actions', 'nonce');
@@ -75,9 +66,6 @@ class PipelineAuthAjax
         }
     }
 
-    /**
-     * Check OAuth authentication status for polling
-     */
     public function handle_check_oauth_status()
     {
         check_ajax_referer('dm_ajax_actions', 'nonce');
@@ -159,9 +147,6 @@ class PipelineAuthAjax
         }
     }
 
-    /**
-     * Handle authentication configuration form submissions
-     */
     public function handle_save_auth_config()
     {
         // Security verification
@@ -189,10 +174,9 @@ class PipelineAuthAjax
         $config_fields = $auth_instance->get_config_fields();
         $config_data = [];
 
-        // Determine storage location based on auth type
+        // OAuth providers: store to oauth_keys; simple auth: store to oauth_account
         $uses_oauth = method_exists($auth_instance, 'get_authorization_url') || method_exists($auth_instance, 'handle_oauth_callback');
 
-        // Get existing configuration to handle unchanged saves
         $existing_config = $uses_oauth
             ? apply_filters('dm_retrieve_oauth_keys', [], $handler_slug)
             : apply_filters('dm_retrieve_oauth_account', [], $handler_slug);
@@ -215,11 +199,10 @@ class PipelineAuthAjax
             $config_data[$field_name] = $value;
         }
 
-        // Check if data has actually changed before attempting to save
+        // Skip save if data unchanged
         if (!empty($existing_config)) {
             $data_changed = false;
             
-            // Compare only the fields that are being submitted in the form
             foreach ($config_data as $field_name => $new_value) {
                 $existing_value = $existing_config[$field_name] ?? '';
                 if ($new_value !== $existing_value) {
@@ -233,14 +216,10 @@ class PipelineAuthAjax
             }
         }
 
-        // Save to appropriate storage location based on auth type
-        // OAuth providers: save to oauth_keys (API configuration)
-        // Simple auth providers: save to oauth_account (final credentials)
+        // OAuth: save API keys; Simple auth: save credentials
         if ($uses_oauth) {
-            // OAuth providers: save API keys for app configuration
             $saved = apply_filters('dm_store_oauth_keys', $config_data, $handler_slug);
         } else {
-            // Simple auth providers: save credentials as account data
             $saved = apply_filters('dm_store_oauth_account', $config_data, $handler_slug);
         }
 

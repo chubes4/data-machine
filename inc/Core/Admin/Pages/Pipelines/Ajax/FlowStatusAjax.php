@@ -1,10 +1,6 @@
 <?php
 /**
- * Flow Status AJAX Handler
- *
- * Handles flow-scoped status refresh operations.
- * Provides targeted status checks for single flow instances without
- * loading entire pipeline data, optimizing common flow-level operations.
+ * Flow-scoped status refresh (single flow config query, no pipeline data).
  *
  * @package DataMachine\Core\Admin\Pages\Pipelines\Ajax
  * @since NEXT_VERSION
@@ -19,9 +15,6 @@ if (!defined('WPINC')) {
 
 class FlowStatusAjax
 {
-    /**
-     * Register flow status AJAX handlers.
-     */
     public static function register() {
         $instance = new self();
 
@@ -29,11 +22,7 @@ class FlowStatusAjax
     }
 
     /**
-     * Refresh flow status for real-time updates - flow-scoped only
-     *
-     * Optimized for common operations: handler configuration, scheduling,
-     * flow-specific settings. Only loads single flow config instead of
-     * entire pipeline data.
+     * Flow-scoped status refresh (handler config, scheduling, flow settings).
      */
     public function handle_refresh_flow_status()
     {

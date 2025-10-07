@@ -98,7 +98,7 @@ class Update {
         
         // Clean up processed items if job failed (allows retry without processed item conflicts)
         if ($new_status === 'failed' && $success) {
-            do_action('dm_delete', 'processed_items', $job_id, ['delete_by' => 'job_id']);
+            do_action('dm_delete_processed_items', ['job_id' => (int)$job_id]);
         }
         
         
@@ -519,7 +519,7 @@ class Update {
         }
         
         // Clean up processed items to allow retry (existing logic from handle_job_status_update)
-        do_action('dm_delete', 'processed_items', $job_id, ['delete_by' => 'job_id']);
+        do_action('dm_delete_processed_items', ['job_id' => (int)$job_id]);
         
         // Conditional file cleanup based on settings
         $settings = dm_get_data_machine_settings();

@@ -1,6 +1,6 @@
 <?php
 /**
- * Pipeline Modal AJAX Handler
+ * Pipeline modal AJAX operations.
  */
 
 namespace DataMachine\Core\Admin\Pages\Pipelines\Ajax;
@@ -63,15 +63,12 @@ class PipelineModalAjax
             wp_send_json_error(['message' => __('Template name is required', 'data-machine')]);
         }
         
-        // For step-card templates in AJAX context, add sensible defaults for UI rendering
         if ($template === 'page/pipeline-step-card' || $template === 'page/flow-step-card') {
             if (!isset($template_data['step']['is_empty'])) {
-                // AJAX-rendered steps are typically populated (not empty)
                 $template_data['step']['is_empty'] = false;
             }
         }
 
-        // Use universal template rendering system
         $content = apply_filters('dm_render_template', '', $template, $template_data);
         
         if ($content) {
@@ -101,18 +98,16 @@ class PipelineModalAjax
             wp_send_json_error(['message' => __('Step type is required', 'data-machine')]);
         }
 
-        // Validate step type exists using pure discovery
         $all_steps = apply_filters('dm_steps', []);
         $step_config = $all_steps[$step_type] ?? null;
         if (!$step_config) {
             wp_send_json_error(['message' => __('Invalid step type', 'data-machine')]);
         }
 
-        // Simplified data - let centralized system resolve context requirements
         $template_data = [
             'step' => [
                 'step_type' => $step_type,
-                'step_config' => []  // Empty config for new steps
+                'step_config' => []
             ],
             'flow_id' => $flow_id,
             'pipeline_id' => $pipeline_id
@@ -138,11 +133,9 @@ class PipelineModalAjax
             return;
         }
 
-        // Get flow configuration using centralized filter
         $flow = apply_filters('dm_get_flow', null, $flow_id);
         $flow_config = $flow['flow_config'] ?? [];
 
-        // Return success even with empty config (normal for new flows)
         wp_send_json_success([
             'flow_id' => $flow_id,
             'flow_config' => $flow_config ?? []
@@ -163,7 +156,6 @@ class PipelineModalAjax
             return;
         }
 
-        // Get single step configuration using centralized filter
         $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
 
         wp_send_json_success([
@@ -172,9 +164,6 @@ class PipelineModalAjax
         ]);
     }
 
-    /**
-     * Process AI step configuration with provider-specific model persistence.
-     */
     public function handle_configure_step_action()
     {
         check_ajax_referer('dm_ajax_actions', 'nonce');
@@ -182,7 +171,6 @@ class PipelineModalAjax
             wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
         }
         
-        // Get context data from AJAX request
         if (!isset($_POST['context'])) {
             wp_send_json_error(['message' => __('Context data is required', 'data-machine')]);
         }
@@ -193,7 +181,6 @@ class PipelineModalAjax
             $context_raw = sanitize_text_field(wp_unslash($_POST['context'] ?? ''));
         }
 
-        // Decode/sanitize after unslashing
         if (is_string($context_raw)) {
             $decoded = json_decode($context_raw, true) ?: [];
             $context = is_array($decoded) ? array_map('sanitize_text_field', $decoded) : [];
@@ -201,7 +188,6 @@ class PipelineModalAjax
             $context = array_map('sanitize_text_field', (array) $context_raw);
         }
 
-        // Context data should be a native array after sanitization
         if (!is_array($context)) {
             wp_send_json_error([
                 'message' => __('Invalid context data format - expected array', 'data-machine'),
@@ -210,7 +196,6 @@ class PipelineModalAjax
             ]);
         }
         
-        // Validate required context fields with enhanced debugging
         $required_fields = ['step_type', 'pipeline_id', 'pipeline_step_id'];
         $missing_fields = [];
         
@@ -242,9 +227,7 @@ class PipelineModalAjax
             wp_send_json_error(['message' => __('Step type is required', 'data-machine')]);
         }
         
-        // Handle AI step configuration
         if ($step_type === 'ai') {
-            // FAIL FAST - require pipeline_step_id for unique configuration
             if (empty($pipeline_step_id)) {
                 wp_send_json_error([
                     'message' => __('Pipeline step ID is required for AI configuration', 'data-machine'),
@@ -256,7 +239,6 @@ class PipelineModalAjax
                 ]);
             }
             
-            // Validate pipeline_step_id format (should be {pipeline_id}_{uuid4})
             $parsed_step_id = apply_filters('dm_split_pipeline_step_id', null, $pipeline_step_id);
             if ($parsed_step_id === null) {
                 wp_send_json_error([
@@ -265,19 +247,13 @@ class PipelineModalAjax
                 ]);
             }
             
-            // Save AI HTTP Client step-aware configuration using actions
-            // Get form data using step-aware field names
-                    
-                    // AI HTTP Client now uses standard field names - Data Machine handles step-specific storage
-                    $provider_field = 'ai_provider';
+            $provider_field = 'ai_provider';
                     $api_key_field = 'ai_api_key';
                     $model_field = 'ai_model';
-                    
-                    
-                    // Extract AI configuration with proper field names
-                    $step_config_data = []; // Step config data (no API key)
-                    $api_key = null; // API key for shared storage
-                    $provider = null; // Provider for API key storage
+
+                    $step_config_data = [];
+                    $api_key = null;
+                    $provider = null;
                     
                     if (isset($_POST[$provider_field])) {
                         $provider = sanitize_text_field(wp_unslash($_POST[$provider_field]));
@@ -285,13 +261,11 @@ class PipelineModalAjax
                     }
                     if (isset($_POST[$api_key_field])) {
                         $api_key = sanitize_text_field(wp_unslash($_POST[$api_key_field]));
-                        // API key goes to shared storage, NOT step config
                     }
                     if (isset($_POST[$model_field])) {
                         $model = sanitize_text_field(wp_unslash($_POST[$model_field]));
                         $step_config_data['model'] = $model;
                         
-                        // Also store model per provider for provider switching
                         if (!empty($provider) && !empty($model)) {
                             if (!isset($step_config_data['providers'])) {
                                 $step_config_data['providers'] = [];
@@ -302,7 +276,6 @@ class PipelineModalAjax
                             $step_config_data['providers'][$provider]['model'] = $model;
                         }
                     }
-                    // Save tool selections via centralized manager
                     $tools_manager = new \DataMachine\Core\Steps\AI\AIStepTools();
                     
                     if (isset($_POST['enabled_tools']) && is_array($_POST['enabled_tools'])) {
@@ -324,7 +297,6 @@ class PipelineModalAjax
                         'saved_enabled_tools' => $step_config_data['enabled_tools']
                     ]);
                     
-                    // Save API key via unified ai_provider_api_keys filter (replace per-provider option storage)
                     if (!empty($api_key) && !empty($provider)) {
                         $all_keys = apply_filters('ai_provider_api_keys', null);
                         if (!is_array($all_keys)) {
@@ -340,13 +312,11 @@ class PipelineModalAjax
                         ]);
                     }
                     
-                    // Save step configuration to pipeline database
                     do_action('dm_log', 'debug', 'Before step config save', [
                         'pipeline_step_id' => $pipeline_step_id,
                         'config_data' => $step_config_data
                     ]);
                     
-                    // Get current pipeline configuration
                     $all_databases = apply_filters('dm_db', []);
                     $db_pipelines = $all_databases['pipelines'] ?? null;
                     
@@ -359,10 +329,9 @@ class PipelineModalAjax
                         throw new \Exception('Pipeline not found: ' . esc_html($pipeline_id));
                     }
                     
-                    // Get current step configuration
                     $pipeline_config = $pipeline['pipeline_config'] ?? [];
                     
-                    // Merge with existing step configuration to preserve provider-specific models
+                    // Preserve provider-specific models
                     if (isset($pipeline_config[$pipeline_step_id])) {
                         $existing_config = $pipeline_config[$pipeline_step_id];
                         
@@ -374,7 +343,6 @@ class PipelineModalAjax
                             'new_config_keys' => array_keys($step_config_data)
                         ]);
                         
-                        // Preserve existing provider models
                         if (isset($existing_config['providers']) && isset($step_config_data['providers'])) {
                             $step_config_data['providers'] = array_merge(
                                 $existing_config['providers'], 
@@ -384,7 +352,6 @@ class PipelineModalAjax
                             $step_config_data['providers'] = $existing_config['providers'];
                         }
                         
-                        // Merge with existing config
                         $pipeline_config[$pipeline_step_id] = array_merge($existing_config, $step_config_data);
                         
                         do_action('dm_log', 'debug', 'PipelineModalAjax: Config merged', [
@@ -396,7 +363,6 @@ class PipelineModalAjax
                         $pipeline_config[$pipeline_step_id] = $step_config_data;
                     }
                     
-                    // Save updated pipeline configuration using dm_auto_save
                     $success = $db_pipelines->update_pipeline($pipeline_id, [
                         'pipeline_config' => json_encode($pipeline_config)
                     ]);
@@ -410,7 +376,6 @@ class PipelineModalAjax
                         return;
                     }
                     
-                    // Trigger auto-save for additional processing
                     do_action('dm_auto_save', $pipeline_id);
 
                     do_action('dm_log', 'debug', 'AI step configuration saved successfully', [
@@ -430,14 +395,13 @@ class PipelineModalAjax
                         ]
                     ]);
         } else {
-            // Handle other step types in the future
             /* translators: %s: Step type name */
             wp_send_json_error(['message' => sprintf(__('Configuration for %s steps is not yet implemented', 'data-machine'), $step_type)]);
         }
     }
 
     /**
-     * Save handler settings with optimized step config building (no redundant database query).
+     * Step config built from memory (no database query).
      */
     public function handle_save_handler_settings()
     {
@@ -446,7 +410,6 @@ class PipelineModalAjax
             wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
         }
         
-        // Enhanced debugging for save handler process
         do_action('dm_log', 'debug', 'Save handler settings request received', [
             'post_keys' => array_keys($_POST),
             'post_data' => array_intersect_key($_POST, array_flip(['handler_slug', 'step_type', 'flow_id', 'pipeline_id', 'action', 'context'])),
@@ -454,7 +417,6 @@ class PipelineModalAjax
             'user_can_manage' => current_user_can('manage_options')
         ]);
 
-        // Handle both context-based (add handler) and direct form data (save settings) scenarios
         if (isset($_POST['context']) && is_array($_POST['context'])) {
             $context_raw = array_map('sanitize_text_field', wp_unslash($_POST['context']));
         } else {
@@ -468,8 +430,6 @@ class PipelineModalAjax
             $context = array_map('sanitize_text_field', (array) $context_raw);
         }
 
-        // Extract data from context if available (add handler scenario), otherwise from direct form fields
-        // Note: $context is already unslashed and sanitized above, so only unslash direct $_POST values
         $handler_slug = isset($context['handler_slug']) ? 
             sanitize_text_field($context['handler_slug']) : 
             sanitize_text_field(wp_unslash($_POST['handler_slug'] ?? ''));
@@ -497,7 +457,6 @@ class PipelineModalAjax
             return;
         }
 
-        // Validate handler exists
         $all_handlers = apply_filters('dm_handlers', [], $step_type);
         $handler_info = null;
         
@@ -513,7 +472,6 @@ class PipelineModalAjax
             return;
         }
         
-        // Process handler settings using existing method
         $sanitized_post = array_map('sanitize_text_field', wp_unslash($_POST));
         $handler_settings = $this->process_handler_settings($handler_slug, $sanitized_post);
         
@@ -523,16 +481,14 @@ class PipelineModalAjax
             'settings_count' => count($handler_settings)
         ]);
         
-        // Save handler settings to flow step
         try {
             do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $handler_settings);
 
-             // Extract flow_id and pipeline_step_id for targeted response
              $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
              $flow_id = $parts['flow_id'] ?? null;
              $pipeline_step_id = $parts['pipeline_step_id'] ?? null;
 
-             // Build step config from memory (no database query needed)
+             // Build config from memory (50% query reduction)
              $step_config = [
                  'step_type' => $step_type,
                  'handler' => [
@@ -545,7 +501,6 @@ class PipelineModalAjax
                  'flow_step_id' => $flow_step_id
              ];
 
-             // Get execution_order from cached flow (single targeted query)
              $all_databases = apply_filters('dm_db', []);
              $db_flows = $all_databases['flows'] ?? null;
              if ($db_flows) {
@@ -557,11 +512,9 @@ class PipelineModalAjax
                  }
              }
 
-             // Prepare success message
              /* translators: %s: Handler name or label */
              $message = sprintf(__('Handler "%s" settings saved successfully.', 'data-machine'), $handler_info['label'] ?? $handler_slug);
 
-             // Get handler settings display for immediate card update
              $handler_settings_display = apply_filters('dm_get_handler_settings_display', [], $flow_step_id);
 
              wp_send_json_success([
@@ -598,7 +551,6 @@ class PipelineModalAjax
             return;
         }
 
-        // Get pipeline data using filters - reliable thanks to dm_auto_save
         $pipeline_data = apply_filters('dm_get_pipelines', [], $pipeline_id);
         $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
         $pipeline_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
@@ -624,7 +576,6 @@ class PipelineModalAjax
             return;
         }
 
-        // Get flow data using filters
         $pipeline_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
         $first_flow_id = null;
         

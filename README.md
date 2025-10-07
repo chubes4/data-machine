@@ -171,7 +171,7 @@ curl -X POST https://example.com/wp-json/dm/v1/trigger \
 **Requirements**: WordPress application password or cookie authentication with `manage_options` capability
 **Context**: Triggers flows via `dm_run_flow_now` action with `'rest_api_trigger'` context
 
-*For complete API documentation, see `CLAUDE.md`*
+*For complete REST API documentation, see `docs/api-reference/rest-api.md` | For technical specifications, see `CLAUDE.md`*
 
 ### Extension Development
 
@@ -285,9 +285,12 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
 - **Performance Optimizations**:
   - Handler settings modal load: 50% query reduction (single flow config query, metadata-based auth check)
   - Handler settings save: 50% query reduction (memory-based config building)
+  - AJAX status system: Flow-scoped (`FlowStatusAjax`) and pipeline-wide (`PipelineStatusAjax`) handlers
+  - Status detection contexts: `pipeline_step_status` and `flow_step_status` for targeted checks
   - Composer-managed ai-http-client dependency
 - **REST API Integration**:
   - Flow trigger endpoint with authentication and comprehensive error handling
+  - Complete REST API documentation with integration examples
 
 See `CLAUDE.md` for complete technical specifications.
 

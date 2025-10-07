@@ -235,8 +235,7 @@ class Logs
             wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
         }
 
-        // Delegate to central deletion system
-        do_action('dm_delete', 'logs', null);
+        do_action('dm_delete_logs');
     }
 
     /**

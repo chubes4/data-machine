@@ -151,15 +151,10 @@ add_action('wp_ajax_dm_clear_processed_items_manual', function() {
         wp_send_json_error(['message' => __('Invalid target ID', 'data-machine')]);
     }
     
-    // Use the existing dm_delete action to clear processed items
-    // This will trigger the handle_processed_items_deletion method in Delete.php
     if ($clear_type === 'pipeline') {
-        // For pipeline: Delete all processed items for flows in this pipeline
-        // We need to implement 'pipeline_id' deletion in Delete.php
-        do_action('dm_delete', 'processed_items', $target_id, ['delete_by' => 'pipeline_id']);
+        do_action('dm_delete_processed_items', ['pipeline_id' => (int)$target_id]);
     } else {
-        // For flow: Use existing flow_id deletion 
-        do_action('dm_delete', 'processed_items', $target_id, ['delete_by' => 'flow_id']);
+        do_action('dm_delete_processed_items', ['flow_id' => (int)$target_id]);
     }
     
     // The dm_delete action handles the response via wp_send_json_success/error
@@ -226,9 +221,7 @@ add_action('wp_ajax_dm_clear_jobs_manual', function() {
         wp_send_json_error(['message' => __('Invalid clear type', 'data-machine')]);
     }
     
-    // Use the existing dm_delete action to clear jobs
-    // This will trigger the handle_jobs_deletion method in Delete.php
-    do_action('dm_delete', 'jobs', $clear_type, ['cleanup_processed' => $cleanup_processed]);
+    do_action('dm_delete_jobs', $clear_type, $cleanup_processed);
     
     // The dm_delete action handles the response via wp_send_json_success/error
     // If we get here without a response sent, send a generic success

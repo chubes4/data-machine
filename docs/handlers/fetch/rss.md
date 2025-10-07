@@ -82,13 +82,13 @@ Source URL: {item_link}
     'metadata' => [
         'source_type' => 'rss',
         'original_id' => 'item_guid',
-        'source_url' => 'item_link',
+        'item_identifier_to_log' => 'item_guid',
         'original_title' => 'item_title',
         'original_date_gmt' => 'iso_date',
         'author' => 'item_author',
         'categories' => ['cat1', 'cat2'],
-        'feed_url' => 'source_feed_url',
-        'enclosure_url' => 'media_url'
+        'feed_url' => 'source_feed_url'
+        // Note: source_url and enclosure_url stored in engine data separately
     ]
 ]
 ```
