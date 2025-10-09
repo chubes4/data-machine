@@ -415,12 +415,12 @@
     padding-top: 8px;
 }
 
-/* Handler customization badges */
-.dm-handler-customizations {
+/* Handler settings display */
+.dm-handler-settings-display {
     margin-top: 8px;
 }
 
-.dm-handler-customizations div {
+.dm-handler-settings-display div {
     display: inline-block;
     padding: 2px 6px;
     margin: 2px 0;
@@ -431,7 +431,7 @@
     box-sizing: border-box;
 }
 
-.dm-handler-customizations div {
+.dm-handler-settings-display div {
     background: #f0f0f0;
 }
 

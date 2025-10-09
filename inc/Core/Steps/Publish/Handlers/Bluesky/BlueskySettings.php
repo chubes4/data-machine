@@ -42,6 +42,7 @@ class BlueskySettings {
                 'type' => 'checkbox',
                 'label' => __('Enable Image Posting', 'data-machine'),
                 'description' => __('Attempt to find and upload an image from the source data (if available). Images must be under 1MB.', 'data-machine'),
+                'default' => false
             ]
         ];
     }

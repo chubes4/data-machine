@@ -393,6 +393,21 @@ function dm_get_handler_settings_display_data($default, $flow_step_id) {
     $all_settings = $step_config['handler']['settings'] ?? [];
     $current_settings = $all_settings[$handler_slug] ?? [];
 
+    // Merge field defaults BEFORE empty check (ensures defaults display)
+    if (!empty($handler_slug)) {
+        $all_handler_settings = apply_filters('dm_handler_settings', [], $handler_slug);
+        $handler_settings_class = $all_handler_settings[$handler_slug] ?? null;
+
+        if ($handler_settings_class && method_exists($handler_settings_class, 'get_fields')) {
+            $fields_for_defaults = $handler_settings_class::get_fields();
+            foreach ($fields_for_defaults as $field_name => $field_config) {
+                if (!isset($current_settings[$field_name]) && isset($field_config['default'])) {
+                    $current_settings[$field_name] = $field_config['default'];
+                }
+            }
+        }
+    }
+
     if (empty($handler_slug) || empty($current_settings)) {
         return [];
     }
@@ -404,11 +419,11 @@ function dm_get_handler_settings_display_data($default, $flow_step_id) {
     // Get handler's Settings class
     $all_settings = apply_filters('dm_handler_settings', [], $handler_slug);
     $handler_settings = $all_settings[$handler_slug] ?? null;
-    
+
     if (!$handler_settings) {
         return [];
     }
-    
+
     // Get field definitions for labels
     $fields = [];
     if (method_exists($handler_settings, 'get_fields')) {
