@@ -39,6 +39,16 @@ class BlueskyAuth {
     }
 
     /**
+     * Check if Bluesky authentication is properly configured.
+     * For simple auth providers, configured = authenticated.
+     *
+     * @return bool True if configured, false otherwise
+     */
+    public function is_configured(): bool {
+        return $this->is_authenticated();
+    }
+
+    /**
      * Get Bluesky configuration field definitions.
      *
      * @return array Configuration fields

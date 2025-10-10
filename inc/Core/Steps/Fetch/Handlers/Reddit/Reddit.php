@@ -484,7 +484,7 @@ class Reddit {
 					'source_type' => 'reddit',
 					'item_id' => $current_item_id,
 					'has_image' => !empty($image_info),
-					'image_url_domain' => !empty($image_info['url']) ? parse_url($image_info['url'], PHP_URL_HOST) : null,
+					'image_url_domain' => !empty($image_info['url']) ? wp_parse_url($image_info['url'], PHP_URL_HOST) : null,
 					'content_length' => strlen($title . ' ' . $selftext . ' ' . $body),
 					'file_info_status' => $stored_image ? 'downloaded' : 'none'
 				]);
