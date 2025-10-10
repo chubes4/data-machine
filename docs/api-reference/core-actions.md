@@ -423,6 +423,76 @@ do_action('dm_log', 'debug', 'AI Step Directive: Injected system directive', [
 - **warning** - Non-critical issues that should be noted
 - **error** - Critical errors that affect functionality
 
+## AJAX Actions
+
+### `wp_ajax_dm_refresh_flow_status`
+
+**Purpose**: Flow-scoped status refresh for single flow operations
+
+**Handler Class**: `FlowStatusAjax`
+
+**Request Parameters**:
+- `flow_id` (int) - Flow ID to refresh status for
+- `nonce` (string) - AJAX nonce for verification
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "step_statuses": {
+      "flow_step_id_1": "green",
+      "flow_step_id_2": "yellow",
+      "flow_step_id_3": "red"
+    },
+    "flow_id": 123
+  }
+}
+```
+
+**Use Cases**:
+- Handler configuration changes
+- Scheduling updates
+- Flow settings modifications
+
+**Status Context**: Uses `flow_step_status` context for optimized flow-scoped validation
+
+### `wp_ajax_dm_refresh_pipeline_status`
+
+**Purpose**: Pipeline-wide status refresh for template modifications
+
+**Handler Class**: `PipelineStatusAjax`
+
+**Request Parameters**:
+- `pipeline_id` (int) - Pipeline ID to refresh status for
+- `nonce` (string) - AJAX nonce for verification
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "step_statuses": {
+      "pipeline_step_id_1": "green",
+      "pipeline_step_id_2": "yellow",
+      "pipeline_step_id_3": "red"
+    },
+    "pipeline_id": 456
+  }
+}
+```
+
+**Use Cases**:
+- Add/delete steps
+- AI configuration changes
+- Pipeline architectural modifications
+
+**Status Context**: Uses `pipeline_step_status` context for pipeline-wide validation with cascade effects
+
+**Security**: Both AJAX actions require:
+- `manage_options` capability
+- Valid `dm_ajax_actions` nonce
+
 ## Action Scheduler Integration
 
 ### Action Types

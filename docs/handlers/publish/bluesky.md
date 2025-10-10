@@ -10,6 +10,26 @@ Posts content to Bluesky using app passwords and AT Protocol integration with me
 
 **Session Management**: Automatic session creation and token management with PDS (Personal Data Server) URL discovery.
 
+**Configuration Fields**: The `BlueskyAuth` class provides `get_config_fields()` method for universal handler settings template integration:
+```php
+[
+    'username' => [
+        'label' => 'Bluesky Handle',
+        'type' => 'text',
+        'required' => true,
+        'description' => 'Your Bluesky handle (e.g., user.bsky.social)'
+    ],
+    'app_password' => [
+        'label' => 'App Password',
+        'type' => 'password',
+        'required' => true,
+        'description' => 'Generate an app password at bsky.app/settings/app-passwords'
+    ]
+]
+```
+
+**Simple Auth Pattern**: Bluesky uses simple authentication (app password) rather than OAuth flow, with credentials stored directly via `dm_store_oauth_account` filter.
+
 ## Configuration Parameters
 
 | Parameter | Type | Required | Description |

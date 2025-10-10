@@ -21,9 +21,6 @@ class FlowStatusAjax
         add_action('wp_ajax_dm_refresh_flow_status', [$instance, 'handle_refresh_flow_status']);
     }
 
-    /**
-     * Flow-scoped status refresh (handler config, scheduling, flow settings).
-     */
     public function handle_refresh_flow_status()
     {
         check_ajax_referer('dm_ajax_actions', 'nonce');
@@ -38,7 +35,6 @@ class FlowStatusAjax
             wp_send_json_error(['message' => __('Flow ID required', 'data-machine')]);
         }
 
-        // Get flow configuration (single query, no pipeline data needed)
         $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
 
         if (empty($flow_config)) {
@@ -49,12 +45,10 @@ class FlowStatusAjax
             return;
         }
 
-        // Get individual status for each flow step
         $step_statuses = [];
         foreach ($flow_config as $flow_step_id => $step_config) {
             $step_type = $step_config['step_type'] ?? '';
 
-            // Use flow-specific status context for targeted checks
             $step_status = apply_filters('dm_detect_status', 'green', 'flow_step_status', [
                 'flow_id' => $flow_id,
                 'flow_step_id' => $flow_step_id,

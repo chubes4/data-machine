@@ -21,9 +21,6 @@ class PipelineStatusAjax
         add_action('wp_ajax_dm_refresh_pipeline_status', [$instance, 'handle_refresh_pipeline_status']);
     }
 
-    /**
-     * Pipeline-wide status with viability and cascade effect checks.
-     */
     public function handle_refresh_pipeline_status()
     {
         check_ajax_referer('dm_ajax_actions', 'nonce');
@@ -38,7 +35,6 @@ class PipelineStatusAjax
             wp_send_json_error(['message' => __('Pipeline ID required', 'data-machine')]);
         }
 
-        // Get all pipeline steps
         $pipeline_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
 
         if (empty($pipeline_steps)) {
@@ -49,7 +45,6 @@ class PipelineStatusAjax
             return;
         }
 
-        // Get individual status for each step
         $step_statuses = [];
         foreach ($pipeline_steps as $pipeline_step_id => $step_config) {
             $step_type = $step_config['step_type'] ?? '';

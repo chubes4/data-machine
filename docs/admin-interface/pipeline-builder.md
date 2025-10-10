@@ -120,9 +120,17 @@ Visual drag-and-drop interface for creating and managing Pipeline+Flow configura
 
 **AJAX Operations**: Asynchronous operations for:
 - Configuration saving
-- Status updates
+- Status updates with specialized handlers
 - Authentication flows
 - Import/export operations
+
+**AJAX Status Refresh System**: Two specialized handlers for optimized status updates:
+- **FlowStatusAjax** (`wp_ajax_dm_refresh_flow_status`): Flow-scoped refresh for handler configuration, scheduling, and flow settings using `flow_step_status` context
+- **PipelineStatusAjax** (`wp_ajax_dm_refresh_pipeline_status`): Pipeline-wide refresh for step add/delete and AI configuration using `pipeline_step_status` context
+
+**Status Detection Contexts**:
+- `pipeline_step_status`: Pipeline-wide validation including AI cascade effects and architectural checks
+- `flow_step_status`: Flow-specific validation for handler configuration, authentication, and settings completeness
 
 **Caching**: Client-side caching of configuration data and interface states.
 

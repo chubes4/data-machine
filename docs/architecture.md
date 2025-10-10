@@ -178,10 +178,23 @@ Centralized WordPress transient-based cache system:
 ### Admin Interface
 WordPress admin integration with `manage_options` security:
 - Drag & drop pipeline builder
-- Real-time status indicators  
+- Real-time status indicators with AJAX refresh system
 - Modal-based configuration
 - Auto-save functionality
 - Import/export capabilities
+
+**AJAX Status System**: Two specialized AJAX handlers for optimized status refresh operations:
+- **FlowStatusAjax** (`wp_ajax_dm_refresh_flow_status`): Flow-scoped status refresh for single flow operations (handler configuration, scheduling, flow settings) using `flow_step_status` context
+- **PipelineStatusAjax** (`wp_ajax_dm_refresh_pipeline_status`): Pipeline-wide status refresh for template modifications (add/delete steps, AI configuration) using `pipeline_step_status` context
+
+**Status Detection Contexts**:
+- `pipeline_step_status`: Pipeline-wide checks including AI configuration cascade effects and architectural validation
+- `flow_step_status`: Flow-scoped checks for handler configuration, authentication, and settings completeness
+- `ai_step`: AI configuration validation (provider, model, system prompt)
+- `handler_auth`: Authentication status for OAuth/API key requirements
+- `files_status`: Files handler readiness with upload validation
+- `wordpress_draft`: Draft mode warning for WordPress publish handler
+- `subsequent_publish_step`: Warning for publish steps following other publish steps
 
 ### Extension Framework
 Complete extension system for custom handlers and tools:

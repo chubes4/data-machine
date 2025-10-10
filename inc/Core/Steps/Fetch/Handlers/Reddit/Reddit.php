@@ -25,9 +25,6 @@ class Reddit {
 		return $repositories['files'] ?? null;
 	}
 
-	/**
-	 * Store Reddit image with proper user agent.
-	 */
 	private function store_reddit_image(string $image_url, string $flow_step_id, string $item_id): ?array {
 		$repository = $this->get_repository();
 		if (!$repository) {
@@ -53,10 +50,6 @@ class Reddit {
 		return $repository->store_remote_file($image_url, $filename, $flow_step_id, $options);
 	}
 
-
-	/**
-	 * Fetch Reddit content with timeframe and keyword filtering.
-	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
 		$flow_step_id = $handler_config['flow_step_id'] ?? null;
@@ -146,7 +139,7 @@ class Reddit {
 			if (in_array($sort, ['top', 'controversial']) && $timeframe_limit !== 'all_time') {
 				$reddit_time_map = [
 					'24_hours' => 'day',
-					'72_hours' => 'week',   // Reddit's closest option (no native 72h support)
+					'72_hours' => 'week',
 					'7_days'   => 'week',
 					'30_days'  => 'month'
 				];
@@ -224,13 +217,9 @@ class Reddit {
 				$item_data = $post_wrapper['data'];
 				$current_item_id = $item_data['id'];
 
-				$is_stickied = $item_data['stickied'] ?? false;
-				$is_pinned = $item_data['pinned'] ?? false;
-				if ($is_stickied || $is_pinned) {
+				if (($item_data['stickied'] ?? false) || ($item_data['pinned'] ?? false)) {
 					do_action('dm_log', 'debug', 'Reddit Input: Skipping pinned/stickied post.', [
 						'item_id' => $current_item_id,
-						'stickied' => $is_stickied,
-						'pinned' => $is_pinned,
 						'pipeline_id' => $pipeline_id
 					]);
 					continue;
@@ -517,9 +506,6 @@ class Reddit {
 	}
 
 
-	/**
-	 * Sanitize Reddit handler settings.
-	 */
 	public function sanitize_settings(array $raw_settings): array {
 		$sanitized = [];
 		$subreddit = sanitize_text_field($raw_settings['subreddit'] ?? '');

@@ -3,7 +3,7 @@
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/data-machine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:         0.1.1
+ * Version:         0.1.2
  * Author:          Chris Huber
  * Author URI:      https://chubes.net
  * Text Domain:     data-machine
@@ -19,7 +19,7 @@ if ( ! dm_check_requirements() ) {
 	return;
 }
 
-define( 'DATA_MACHINE_VERSION', '0.1.1' );
+define( 'DATA_MACHINE_VERSION', '0.1.2' );
 
 define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATA_MACHINE_URL', plugin_dir_url( __FILE__ ) );

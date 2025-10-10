@@ -449,13 +449,14 @@ $data = apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $ste
 **Return**: Status string ('red', 'yellow', 'green')
 
 **Status Contexts**:
-- `ai_step` - AI step configuration validation
-- `handler_auth` - Handler authentication status
-- `wordpress_draft` - WordPress draft post status
-- `files_status` - Files repository status
-- `subsequent_publish_step` - Publishing step validation
-- `pipeline_step_status` - Pipeline-wide status refresh (template modifications)
-- `flow_step_status` - Flow-scoped status refresh (handler config, scheduling)
+- `pipeline_step_status` - Pipeline-wide status refresh for template modifications (add/delete steps, AI configuration) using RED/YELLOW/GREEN priority with cascade effects
+- `flow_step_status` - Flow-scoped status refresh for single flow operations (handler configuration, scheduling, flow settings) with optimized validation
+- `ai_step` - AI configuration validation (provider, model, system prompt)
+- `handler_auth` - Handler authentication status for OAuth/API key requirements
+- `wordpress_draft` - WordPress draft post status warning
+- `files_status` - Files handler readiness with upload validation
+- `subsequent_publish_step` - Warning for publish steps following other publish steps
+- `pipeline_viability` - Architectural validation (pipeline must end with publish, contain AI step)
 
 
 ## Files Repository Filters

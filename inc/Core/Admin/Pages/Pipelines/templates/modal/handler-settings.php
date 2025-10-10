@@ -14,7 +14,6 @@ $step_type = $context['step_type'] ?? ($step_type ?? null);
 $flow_step_id = $context['flow_step_id'] ?? ($flow_step_id ?? null);
 $pipeline_id = $context['pipeline_id'] ?? ($pipeline_id ?? null);
 
-
 $handler_info = [];
 $handler_settings = null;
 $settings_fields = [];
@@ -23,10 +22,8 @@ if ($handler_slug) {
     $all_handlers = apply_filters('dm_handlers', [], $step_type);
     $handler_info = $all_handlers[$handler_slug] ?? [];
 
-    $settings_key = $handler_slug;
-
     $all_settings = apply_filters('dm_handler_settings', [], $handler_slug);
-    $handler_settings = $all_settings[$settings_key] ?? null;
+    $handler_settings = $all_settings[$handler_slug] ?? null;
 
     $step_config = [];
     if (!empty($flow_step_id) && !empty($handler_slug)) {
@@ -38,7 +35,7 @@ if ($handler_slug) {
         if (!empty($step_config)) {
             $current_settings_for_fields = $step_config['handler']['settings'][$handler_slug] ?? [];
         }
-    $all_fields = $handler_settings::get_fields();
+        $all_fields = $handler_settings::get_fields();
         $settings_fields = apply_filters('dm_enabled_settings', $all_fields, $handler_slug, $step_type, [
             'flow_step_id' => $flow_step_id,
             'pipeline_id' => $pipeline_id,

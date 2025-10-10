@@ -19,18 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class BlueskyAuth {
 
-    /**
-     * Constructor - parameter-less for pure filter-based architecture
-     */
     public function __construct() {
-        // No parameters needed - all services accessed via filters
     }
 
-    /**
-     * Checks if admin has valid Bluesky authentication
-     *
-     * @return bool True if authenticated, false otherwise
-     */
     public function is_authenticated(): bool {
         $auth_data = apply_filters('dm_retrieve_oauth_account', [], 'bluesky');
         return !empty($auth_data) &&
@@ -38,21 +29,10 @@ class BlueskyAuth {
                !empty($auth_data['app_password']);
     }
 
-    /**
-     * Check if Bluesky authentication is properly configured.
-     * For simple auth providers, configured = authenticated.
-     *
-     * @return bool True if configured, false otherwise
-     */
     public function is_configured(): bool {
         return $this->is_authenticated();
     }
 
-    /**
-     * Get Bluesky configuration field definitions.
-     *
-     * @return array Configuration fields
-     */
     public function get_config_fields(): array {
         return [
             'username' => [
@@ -71,13 +51,9 @@ class BlueskyAuth {
     }
 
     /**
-     * Gets an authenticated Bluesky session.
-     *
-     * @return array|\WP_Error Session data array or WP_Error on failure.
+     * Gets authenticated Bluesky session with access token and DID.
      */
     public function get_session() {
-
-        // Get credentials from centralized OAuth filter
         $auth_data = apply_filters('dm_retrieve_oauth_account', [], 'bluesky');
         $handle = $auth_data['username'] ?? '';
         $password = $auth_data['app_password'] ?? '';
@@ -87,10 +63,8 @@ class BlueskyAuth {
             return new \WP_Error('bluesky_config_missing', __('Bluesky handle and app password must be configured.', 'data-machine'));
         }
 
-        // Authenticate with Bluesky and get session
         $session_data = $this->create_bluesky_session($handle, $password);
-        
-        // Clear password from memory
+
         unset($password);
 
         if (is_wp_error($session_data)) {
@@ -114,19 +88,13 @@ class BlueskyAuth {
             return new \WP_Error('bluesky_session_incomplete', __('Bluesky authentication succeeded but returned incomplete session data (missing accessJwt, did, or pds_url).', 'data-machine'));
         }
 
-        // Add handle to session data for URL building
         $session_data['handle'] = $handle;
-
 
         return $session_data;
     }
 
     /**
-     * Authenticates with Bluesky and creates a session.
-     *
-     * @param string $handle User handle (e.g., user.bsky.social).
-     * @param string $password App password.
-     * @return array|\WP_Error Session data array on success, WP_Error on failure.
+     * Creates Bluesky session via AT Protocol authentication.
      */
     private function create_bluesky_session(string $handle, string $password) {
         $url = 'https://bsky.social/xrpc/com.atproto.server.createSession';
@@ -199,7 +167,6 @@ class BlueskyAuth {
                 sprintf(__('Bluesky authentication failed: %1$s (Code: %2$d)', 'data-machine'), $error_message, $response_code));
         }
 
-        // Require PDS URL in session data - no defaults or inference
         if (empty($session_data['pdsUrl'])) {
             do_action('dm_log', 'error', 'Bluesky session response missing required pdsUrl field.', [
                 'handle' => $handle,
@@ -207,14 +174,13 @@ class BlueskyAuth {
             ]);
             return new \WP_Error('bluesky_missing_pds_url', __('Bluesky authentication response missing required PDS URL. Server configuration issue.', 'data-machine'));
         }
-        
-        // Ensure PDS URL has https:// prefix
+
         if (!str_starts_with($session_data['pdsUrl'], 'http')) {
             $session_data['pds_url'] = 'https://' . ltrim($session_data['pdsUrl'], '/');
         } else {
             $session_data['pds_url'] = $session_data['pdsUrl'];
         }
-        
+
         do_action('dm_log', 'debug', 'Using PDS URL from session response.', [
             'handle' => $handle,
             'pds_url' => $session_data['pds_url']
@@ -223,21 +189,15 @@ class BlueskyAuth {
         return $session_data;
     }
 
-    /**
-     * Retrieves the stored Bluesky account details.
-     * Uses centralized OAuth filter for admin-global authentication.
-     *
-     * @return array|null Account details array or null if not found/invalid.
-     */
     public function get_account_details(): ?array {
         $auth_data = apply_filters('dm_retrieve_oauth_account', [], 'bluesky');
         $handle = $auth_data['username'] ?? '';
         $password = $auth_data['app_password'] ?? '';
-        
+
         if (empty($handle) || empty($password)) {
             return null;
         }
-        
+
         return [
             'handle' => $handle,
             'configured' => true,
@@ -245,12 +205,6 @@ class BlueskyAuth {
         ];
     }
 
-    /**
-     * Removes the stored Bluesky account details.
-     * Uses centralized OAuth filter for admin-global authentication.
-     *
-     * @return bool True on success, false on failure.
-     */
     public function remove_account(): bool {
         return apply_filters('dm_clear_oauth_account', false, 'bluesky');
     }
