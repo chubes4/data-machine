@@ -266,26 +266,12 @@ class Twitter {
                 'temp_image_path' => $temp_image_path,
                 'mime_type' => $mime_type,
                 'file_size' => $file_size,
-                'upload_method' => $file_size > 1048576 ? 'chunked' : 'simple'
+                'upload_method' => 'chunked'
             ]);
 
             $connection->setApiVersion('1.1');
-            
-            $media_id = null;
-            
-            if ($file_size > 1048576) {
-                $media_id = $this->upload_image_chunked($connection, $temp_image_path, $mime_type);
-            } else {
-                $media_id = $this->upload_image_simple($connection, $temp_image_path, $mime_type);
-                
-                if (!$media_id && $file_size > 0) {
-                    do_action('dm_log', 'debug', 'Simple upload failed, attempting chunked upload.', [
-                        'file_size' => $file_size,
-                        'image_url' => $image_url
-                    ]);
-                    $media_id = $this->upload_image_chunked($connection, $temp_image_path, $mime_type);
-                }
-            }
+
+            $media_id = $this->upload_image_chunked($connection, $temp_image_path, $mime_type);
 
             $connection->setApiVersion('2');
 
@@ -300,7 +286,7 @@ class Twitter {
                 do_action('dm_log', 'debug', 'Successfully uploaded image to Twitter.', ['media_id' => $media_id]);
                 return $media_id;
             } else {
-                do_action('dm_log', 'error', 'All Twitter media upload methods failed.', [
+                do_action('dm_log', 'error', 'Twitter media upload failed.', [
                     'image_url' => $image_url,
                     'file_size' => $file_size,
                     'mime_type' => $mime_type
@@ -323,53 +309,6 @@ class Twitter {
         }
     }
 
-    private function upload_image_simple($connection, string $temp_image_path, string $mime_type): ?string {
-        do_action('dm_log', 'debug', 'Twitter: Attempting simple image upload using TwitterOAuth.', [
-            'temp_image_path' => $temp_image_path,
-            'mime_type' => $mime_type
-        ]);
-
-        try {
-            $media_result = $connection->upload('media/upload', [
-                'media' => $temp_image_path,
-                'media_category' => 'TWEET_IMAGE'
-            ]);
-
-            $http_code = $connection->getLastHttpCode();
-            do_action('dm_log', 'debug', 'Twitter: Simple upload response received.', [
-                'http_code' => $http_code,
-                'has_media_id' => isset($media_result->media_id_string),
-                'response_type' => gettype($media_result)
-            ]);
-
-            if ($http_code == 200 && isset($media_result->media_id_string)) {
-                do_action('dm_log', 'debug', 'Twitter: Simple upload successful.', [
-                    'media_id' => $media_result->media_id_string
-                ]);
-                return $media_result->media_id_string;
-            } else {
-                $error_details = [
-                    'http_code' => $http_code,
-                    'has_errors' => isset($media_result->errors),
-                    'response' => $media_result
-                ];
-                
-                if (isset($media_result->errors)) {
-                    $error_details['first_error'] = $media_result->errors[0]->message ?? 'Unknown API error';
-                }
-                
-                do_action('dm_log', 'warning', 'Twitter: Simple upload failed.', $error_details);
-                return null;
-            }
-        } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Twitter: Simple upload exception.', [
-                'exception' => $e->getMessage(),
-                'exception_type' => get_class($e)
-            ]);
-            return null;
-        }
-    }
-
     private function upload_image_chunked($connection, string $temp_image_path, string $mime_type): ?string {
         try {
             $file_size = filesize($temp_image_path);
@@ -382,7 +321,7 @@ class Twitter {
             $init_response = $connection->post('media/upload', [
                 'command' => 'INIT',
                 'media_type' => $mime_type,
-                'media_category' => 'TWEET_IMAGE',  
+                'media_category' => 'tweet_image',
                 'total_bytes' => $file_size
             ]);
 

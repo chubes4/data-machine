@@ -63,40 +63,41 @@
             const $modal = $('#dm-modal');
             let $form = null;
             
-            // Find the appropriate form based on tool type
-            if (contextData.tool_id === 'google_search') {
-                $form = $('#dm-google-search-config-form');
-            } else if (contextData.tool_id === 'google_search_console') {
-                $form = $('#dm-google-search-console-config-form');
-            }
+            // Find the form by tool ID (matches template generation)
+            $form = $modal.find(`#dm-${contextData.tool_id}-config-form`);
             
             if (!$form || !$form.length) {
                 console.error('Tool config save: Form not found in modal for tool:', contextData.tool_id);
                 return;
             }
             
-            // Collect configuration data based on tool type
+            // Collect configuration data from form fields
             let configData = {};
             let validationError = '';
             
-            if (contextData.tool_id === 'google_search') {
-                configData = {
-                    api_key: $('#google_search_api_key').val(),
-                    search_engine_id: $('#google_search_engine_id').val()
-                };
-                
-                if (!configData.api_key || !configData.search_engine_id) {
-                    validationError = 'Please fill in all required fields for Google Search';
+            // Get all form inputs and build config data
+            $form.find('input, select, textarea').each(function() {
+                const $field = $(this);
+                const fieldName = $field.attr('name');
+                if (fieldName) {
+                    configData[fieldName] = $field.val();
                 }
-            } else if (contextData.tool_id === 'google_search_console') {
-                configData = {
-                    client_id: $('#google_search_console_client_id').val(),
-                    client_secret: $('#google_search_console_client_secret').val()
-                };
-                
-                if (!configData.client_id || !configData.client_secret) {
-                    validationError = 'Please fill in both Client ID and Client Secret for Google Search Console';
+            });
+            
+            // Basic validation - ensure required fields are filled
+            const requiredFields = $form.find('[required]');
+            let missingFields = [];
+            requiredFields.each(function() {
+                const $field = $(this);
+                const fieldName = $field.attr('name');
+                if (!configData[fieldName] || configData[fieldName].trim() === '') {
+                    const label = $field.closest('tr').find('label').text() || fieldName;
+                    missingFields.push(label);
                 }
+            });
+            
+            if (missingFields.length > 0) {
+                validationError = `Please fill in all required fields: ${missingFields.join(', ')}`;
             }
             
             // Validate required fields

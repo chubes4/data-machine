@@ -100,7 +100,7 @@ class Bluesky {
         $ellipsis = '…';
         $ellipsis_len = mb_strlen($ellipsis, 'UTF-8');
         $link = ($link_handling === 'append' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) ? "\n\n" . $source_url : '';
-        $link_length = $link ? (mb_strlen("\n\n", 'UTF-8') + 22) : 0; // URLs count as 22 chars in Bluesky
+        $link_length = $link ? mb_strlen($link, 'UTF-8') : 0; // Bluesky counts full URL length
         $available_chars = 300 - $link_length;
         
         if ($available_chars < $ellipsis_len) {

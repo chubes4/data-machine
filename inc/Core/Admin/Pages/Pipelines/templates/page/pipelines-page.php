@@ -104,9 +104,6 @@ if (!empty($selected_pipeline_id)) {
             <?php else: ?>
                 <div class="dm-no-pipelines">
                     <p><?php esc_html_e('No pipelines found.', 'data-machine'); ?></p>
-                    <button type="button" class="button button-primary dm-modal-open" data-template="pipeline-templates">
-                        <?php esc_html_e('Create Your First Pipeline', 'data-machine'); ?>
-                    </button>
                 </div>
             <?php endif; ?>
         </div>

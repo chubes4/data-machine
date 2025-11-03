@@ -40,7 +40,9 @@ $tool_config = apply_filters('dm_get_tool_config', [], $tool_id);
 
         // Check if the tool has configuration fields
         if (class_exists($tool_class) && method_exists($tool_class, 'get_config_fields')) {
-            $config_fields = call_user_func([$tool_class, 'get_config_fields']);
+            // Instantiate the tool class to call the instance method
+            $tool_instance = new $tool_class();
+            $config_fields = $tool_instance->get_config_fields();
 
             if (!empty($config_fields)) {
                 // Generate dynamic configuration UI

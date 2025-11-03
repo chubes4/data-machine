@@ -167,24 +167,27 @@ class BlueskyAuth {
                 sprintf(__('Bluesky authentication failed: %1$s (Code: %2$d)', 'data-machine'), $error_message, $response_code));
         }
 
-        if (empty($session_data['pdsUrl'])) {
-            do_action('dm_log', 'error', 'Bluesky session response missing required pdsUrl field.', [
+        // Use pdsUrl from response if available, otherwise default to bsky.social
+        if (!empty($session_data['pdsUrl'])) {
+            if (!str_starts_with($session_data['pdsUrl'], 'http')) {
+                $session_data['pds_url'] = 'https://' . ltrim($session_data['pdsUrl'], '/');
+            } else {
+                $session_data['pds_url'] = $session_data['pdsUrl'];
+            }
+
+            do_action('dm_log', 'debug', 'Using PDS URL from session response.', [
                 'handle' => $handle,
-                'response_keys' => array_keys($session_data)
+                'pds_url' => $session_data['pds_url']
             ]);
-            return new \WP_Error('bluesky_missing_pds_url', __('Bluesky authentication response missing required PDS URL. Server configuration issue.', 'data-machine'));
-        }
-
-        if (!str_starts_with($session_data['pdsUrl'], 'http')) {
-            $session_data['pds_url'] = 'https://' . ltrim($session_data['pdsUrl'], '/');
         } else {
-            $session_data['pds_url'] = $session_data['pdsUrl'];
-        }
+            // Fallback to default Bluesky PDS when API doesn't return pdsUrl
+            $session_data['pds_url'] = 'https://bsky.social';
 
-        do_action('dm_log', 'debug', 'Using PDS URL from session response.', [
-            'handle' => $handle,
-            'pds_url' => $session_data['pds_url']
-        ]);
+            do_action('dm_log', 'debug', 'Using default Bluesky PDS URL (pdsUrl not in response).', [
+                'handle' => $handle,
+                'pds_url' => $session_data['pds_url']
+            ]);
+        }
 
         return $session_data;
     }
