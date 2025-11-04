@@ -76,26 +76,33 @@ function dm_get_wordpress_base_tool(): array {
             'content' => [
                 'type' => 'string',
                 'required' => true,
-                'description' => 'Post content MUST be valid Gutenberg blocks.
+                'description' => 'Post content MUST be valid Gutenberg block HTML.
 
-RULES (keep it simple and exact):
-1) Always wrap blocks with opening and closing comments. Structure:
-   <!-- wp:block {"attrs":...} -->[inner HTML]<!-- /wp:block -->
-   - If you include {"attrs":...}, close it with } --> on the same line.
-   - Use straight quotes in JSON, no trailing commas.
-2) Use only core blocks needed here: heading, paragraph, list, separator, image, quote.
-3) No Markdown, no raw HTML outside blocks. Wrap ALL URLs in <a href="URL">Text</a>.
-4) Heading levels: default H2, or set {"level":3} for H3, {"level":4} for H4.
-5) Do not include the image or source url in the post content, these are handled by the system automatically
-6) Do not repeat the post title header in the post content, it is visible via the title field
+STRUCTURE:
+1) Every block uses comment wrappers. Pattern: <!-- wp:block {"attrs":...} -->[inner HTML]<!-- /wp:block -->
+   - JSON lives on the opening line, uses straight quotes, no trailing commas.
+   - Always include the closing comment, even for single-line blocks.
+2) Only use core blocks from this palette: heading, paragraph, list, quote, separator, image.
+3) No Markdown or raw HTML wrappers outside blocks. All links use <a href="URL">Text</a>.
+4) Do not repeat the post title. Do not embed source links or featured images; the system injects them.
 
-EXAMPLES:
-- H2: <!-- wp:heading --><h2 class="wp-block-heading">Section Title</h2><!-- /wp:heading -->
-- H3: <!-- wp:heading {"level":3} --><h3 class="wp-block-heading">Subsection</h3><!-- /wp:heading -->
-- Paragraph: <!-- wp:paragraph --><p>Text with <a href="https://example.com">link</a>.</p><!-- /wp:paragraph -->
-- Unordered list: <!-- wp:list --><ul class="wp-block-list"><li>Item 1</li><li>Item 2</li></ul><!-- /wp:list -->
-- Ordered list: <!-- wp:list {"ordered":true} --><ol class="wp-block-list"><li>Step 1</li><li>Step 2</li></ol><!-- /wp:list -->
-- Separator: <!-- wp:separator --><hr class="wp-block-separator has-alpha-channel-opacity"/><!-- /wp:separator -->'
+CORE BLOCK DETAILS:
+- heading: default H2. Add {"level":3} for H3, {"level":4} for H4. Inner HTML must keep class="wp-block-heading".
+- paragraph: wrap prose in <p>…</p>. Keep inline elements valid HTML.
+- list: <!-- wp:list --> for unordered, add {"ordered":true} for ordered. Use class="wp-block-list" on <ul>/<ol>.
+- quote: include citation text in <cite> when needed.
+- separator: <!-- wp:separator --><hr class="wp-block-separator has-alpha-channel-opacity"/><!-- /wp:separator -->.
+- image: only when supplied. Opening JSON must include url, alt when known, optionally caption. Inner HTML should be <figure class="wp-block-image"><img src="..." alt="..."/><figcaption>…</figcaption></figure>.
+
+INLINE FORMATTING:
+- Use standard HTML tags inside headings/paragraphs: <strong>, <em>, <code>, <sup>, <sub>, <a>.
+- Tags must be balanced inside the same block and never wrap entire blocks.
+
+VALIDATION CHECKLIST:
+- Confirm every opening comment has a matching closing comment.
+- JSON braces/quotes balanced and closed on the same line.
+- Inline tags open and close properly; no dangling markup.
+'
             ]
         ]
     ];

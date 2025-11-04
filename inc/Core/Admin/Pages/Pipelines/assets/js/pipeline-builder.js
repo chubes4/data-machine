@@ -350,7 +350,6 @@
                     if (response.success) {
                         // Add the new pipeline card to the page
                         this.addNewPipelineCardToPage(response.data);
-                        this.showNotice('Custom pipeline created successfully', 'success');
                     } else {
                         this.showNotice(response.data.message || 'Error creating custom pipeline', 'error');
                     }
@@ -377,8 +376,6 @@
                     if (response.success) {
                         // Add the new pipeline to dropdown and switch to it
                         this.addNewPipelineCardToPage(response.data);
-
-                        this.showNotice(response.data.message || 'Pipeline created from template successfully', 'success');
                     } else {
                         this.showNotice(response.data.message || 'Error creating pipeline from template', 'error');
                     }

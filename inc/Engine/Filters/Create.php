@@ -239,14 +239,9 @@ class Create {
             $pipeline = $db_pipelines->get_pipeline($pipeline_id);
             $existing_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
 
-            $message = $creation_type === 'complete'
-                ? __('Complete pipeline created successfully', 'data-machine')
-                : __('Pipeline created successfully', 'data-machine');
-
             do_action('dm_clear_pipelines_list_cache');
 
             wp_send_json_success([
-                'message' => $message,
                 'pipeline_id' => $pipeline_id,
                 'pipeline_name' => $pipeline_name,
                 'pipeline_data' => $pipeline,

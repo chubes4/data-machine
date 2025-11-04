@@ -91,7 +91,7 @@ if (!empty($_POST) && isset($_POST['dm_logs_action'])) {
         </p>
         
         <div class="dm-log-actions">
-            <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=dm-logs')); ?>" class="dm-clear-logs-form" data-confirm-message="<?php esc_attr_e('Are you sure you want to clear all logs? This action cannot be undone.', 'data-machine'); ?>">
+            <form method="post" action="" class="dm-clear-logs-form" data-confirm-message="<?php esc_attr_e('Are you sure you want to clear all logs? This action cannot be undone.', 'data-machine'); ?>">
                 <?php wp_nonce_field('dm_logs_action', 'dm_logs_nonce'); ?>
                 <input type="hidden" name="dm_logs_action" value="clear_all">
                 <button type="submit" class="button">

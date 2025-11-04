@@ -15,11 +15,15 @@
     function initLogsPage() {
         // Handle clear logs confirmation
         $('.dm-clear-logs-form').on('submit', function(e) {
+            e.preventDefault(); // Prevent default form submission
+            
             const confirmed = confirm($(this).data('confirm-message') || 'Are you sure you want to clear all logs? This action cannot be undone.');
             if (!confirmed) {
-                e.preventDefault();
                 return false;
             }
+            
+            // Use AJAX to clear logs
+            clearLogsViaAjax();
         });
 
         // Handle refresh logs button
@@ -183,6 +187,55 @@
                 if ($logViewer.data('current-mode') !== 'full') {
                     $button.text(originalButtonText);
                 }
+            }
+        });
+    }
+
+    /**
+     * Clear logs via AJAX and refresh the page
+     */
+    function clearLogsViaAjax() {
+        const $form = $('.dm-clear-logs-form');
+        const $button = $form.find('button[type="submit"]');
+        const nonce = $form.find('input[name="dm_logs_nonce"]').val();
+        
+        if (!nonce) {
+            showStatusMessage('Security error: Missing nonce.', 'error');
+            return;
+        }
+
+        // Set loading state
+        const originalButtonText = $button.text();
+        $button.prop('disabled', true).text('Clearing...');
+        showStatusMessage('Clearing logs...', 'info');
+
+        // AJAX request to clear logs
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'dm_clear_logs',
+                dm_logs_nonce: nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    showStatusMessage(response.data.message || 'Logs cleared successfully.', 'success');
+                    // Refresh the page after a short delay to show the cleared logs
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showStatusMessage('Error: ' + (response.data || 'Failed to clear logs'), 'error');
+                    $button.prop('disabled', false).text(originalButtonText);
+                }
+            },
+            error: function(xhr, status, error) {
+                let errorMessage = 'Failed to clear logs.';
+                if (xhr.responseJSON && xhr.responseJSON.data) {
+                    errorMessage = xhr.responseJSON.data;
+                }
+                showStatusMessage(errorMessage, 'error');
+                $button.prop('disabled', false).text(originalButtonText);
             }
         });
     }
