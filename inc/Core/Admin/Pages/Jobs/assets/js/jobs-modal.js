@@ -4,7 +4,7 @@
  * Handles interactions WITHIN jobs modal content only.
  * Form submissions, validations, visual feedback.
  * Emits limited events for page communication.
- * Modal lifecycle managed by vanilla JS, page actions by data-machine-jobs.js.
+ * Modal lifecycle managed by vanilla JS, page actions by datamachine-jobs.js.
  *
  * @package DataMachine\Core\Admin\Pages\Jobs
  * @since NEXT_VERSION

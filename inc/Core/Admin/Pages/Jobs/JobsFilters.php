@@ -53,7 +53,7 @@ function datamachine_register_jobs_admin_page_filters() {
                 ],
                 'js' => [
                     'datamachine-jobs-admin' => [
-                        'file' => 'inc/Core/Admin/Pages/Jobs/assets/js/data-machine-jobs.js',
+                        'file' => 'inc/Core/Admin/Pages/Jobs/assets/js/datamachine-jobs.js',
                         'deps' => ['wp-api-fetch'],
                         'in_footer' => true
                     ],

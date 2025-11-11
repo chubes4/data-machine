@@ -19,10 +19,10 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATA_MACHINE_VERSION', '0.1.2' );
+define( 'DATAMACHINE_VERSION', '0.1.2' );
 
-define( 'DATA_MACHINE_PATH', plugin_dir_path( __FILE__ ) );
-define( 'DATA_MACHINE_URL', plugin_dir_url( __FILE__ ) );
+define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
+define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
 
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -31,7 +31,7 @@ if ( ! class_exists( 'ActionScheduler' ) ) {
 }
 
 
-function run_data_machine() {
+function run_datamachine() {
 
 	datamachine_register_database_service_system();
 	datamachine_register_database_filters();
@@ -56,7 +56,7 @@ function run_data_machine() {
 }
 
 
-add_action('plugins_loaded', 'run_data_machine', 20);
+add_action('plugins_loaded', 'run_datamachine', 20);
 
 
 function datamachine_allow_json_upload($mimes) {
@@ -65,13 +65,13 @@ function datamachine_allow_json_upload($mimes) {
 }
 add_filter( 'upload_mimes', 'datamachine_allow_json_upload' );
 
-register_activation_hook( __FILE__, 'activate_data_machine' );
+register_activation_hook( __FILE__, 'activate_datamachine' );
 register_deactivation_hook( __FILE__, 'datamachine_deactivate_plugin' );
 
 function datamachine_deactivate_plugin() {
 }
 
-function activate_data_machine() {
+function activate_datamachine() {
 	datamachine_register_database_service_system();
 
 	$all_databases = apply_filters('datamachine_db', []);
