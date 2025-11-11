@@ -53,7 +53,7 @@ Retrieves WordPress post and page content from the local installation using WP_Q
 
 ### Engine Data Filter Architecture
 
-The WordPress Local handler generates clean data packets for AI processing while storing engine parameters in database for later retrieval via dm_engine_data filter.
+The WordPress Local handler generates clean data packets for AI processing while storing engine parameters in database for later retrieval via datamachine_engine_data filter.
 
 ### Clean Data Packet (AI-Visible)
 
@@ -77,9 +77,9 @@ The WordPress Local handler generates clean data packets for AI processing while
 ### Engine Parameters Storage
 
 ```php
-// Stored in database via centralized dm_engine_data filter
+// Stored in database via centralized datamachine_engine_data filter
 if ($job_id) {
-    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
 }
 ```
 
@@ -111,7 +111,7 @@ return [
 Uses processed items tracking to prevent duplicate processing:
 
 ```php
-$is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'wordpress_local', $post_id);
+$is_processed = apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'wordpress_local', $post_id);
 ```
 
 **Tracking**: Each processed post is marked by flow step and post ID
@@ -147,7 +147,7 @@ $handler_config = [
 
 $result = $wordpress_handler->get_fetch_data($pipeline_id, $handler_config, $job_id);
 // Returns: ['processed_items' => [...]]
-// Engine parameters (source_url, image_url) stored in database via centralized dm_engine_data filter
+// Engine parameters (source_url, image_url) stored in database via centralized engine_data filter
 ```
 
 ### Specific Post Targeting

@@ -21,11 +21,11 @@ class WordPressMedia {
 
     /**
      * Fetch WordPress media with optional parent content inclusion.
-     * Engine data (source_url, image_url) stored via dm_engine_data filter.
+     * Engine data (source_url, image_url) stored via datamachine_engine_data filter.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
-            do_action('dm_log', 'error', 'WordPress Media: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
+            do_action('datamachine_log', 'error', 'WordPress Media: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
         
@@ -34,7 +34,7 @@ class WordPressMedia {
         
         // Handle null flow_step_id gracefully - skip processed items tracking when flow context missing
         if ($flow_step_id === null) {
-            do_action('dm_log', 'debug', 'WordPress Media fetch called without flow_step_id - processed items tracking disabled');
+            do_action('datamachine_log', 'debug', 'WordPress Media fetch called without flow_step_id - processed items tracking disabled');
         }
         
         $user_id = get_current_user_id();
@@ -82,7 +82,7 @@ class WordPressMedia {
         $search = trim($config['search'] ?? '');
 
         // Calculate date query parameters
-        $cutoff_timestamp = apply_filters('dm_timeframe_limit', null, $timeframe_limit);
+        $cutoff_timestamp = apply_filters('datamachine_timeframe_limit', null, $timeframe_limit);
         $date_query = [];
         if ($cutoff_timestamp !== null) {
             $date_query = [
@@ -142,7 +142,7 @@ class WordPressMedia {
         // Find first unprocessed media item
         foreach ($posts as $post) {
             $post_id = $post->ID;
-            $is_processed = ($flow_step_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_step_id, 'wordpress_media', $post_id) : false;
+            $is_processed = ($flow_step_id !== null) ? apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'wordpress_media', $post_id) : false;
             if ($is_processed) {
                 continue;
             }
@@ -150,7 +150,7 @@ class WordPressMedia {
             // Apply client-side keyword search filter if needed
             if ($use_client_side_search && !empty($search)) {
                 $search_text = $post->post_title . ' ' . wp_strip_all_tags($post->post_content . ' ' . $post->post_excerpt);
-                $matches = apply_filters('dm_keyword_search_match', false, $search_text, $search);
+                $matches = apply_filters('datamachine_keyword_search_match', false, $search_text, $search);
                 if (!$matches) {
                     continue; // Skip media that don't match search keywords
                 }
@@ -158,7 +158,7 @@ class WordPressMedia {
 
             // Found first eligible item - mark as processed and return
             if ($flow_step_id) {
-                do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_media', $post_id, $job_id);
+                do_action('datamachine_mark_item_processed', $flow_step_id, 'wordpress_media', $post_id, $job_id);
             }
 
             // Extract media data using universal pattern (identical to all other handlers)
@@ -212,7 +212,7 @@ class WordPressMedia {
                 'site_name' => $site_name
             ];
 
-            // Create clean data packet for AI processing (matches dm_create_data_packet action output)
+            // Create clean data packet for AI processing (matches datamachine_create_data_packet action output)
             $input_data = [
                 'data' => array_merge($content_data, ['file_info' => $file_info]),
                 'metadata' => $metadata
@@ -225,7 +225,7 @@ class WordPressMedia {
                 if ($include_parent_content && $post->post_parent > 0) {
                     $source_url = get_permalink($post->post_parent) ?: '';
                 }
-                apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url ?: '');
+                apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url ?: '');
             }
 
             return ['processed_items' => [$input_data]];

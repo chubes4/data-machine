@@ -12,15 +12,15 @@ defined('ABSPATH') || exit;
 class GoogleSearch {
 
     public function __construct() {
-        add_filter('dm_tool_success_message', [$this, 'format_success_message'], 10, 4);
+        add_filter('datamachine_tool_success_message', [$this, 'format_success_message'], 10, 4);
         $this->register_configuration();
     }
 
     private function register_configuration() {
         add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
-        add_filter('dm_tool_configured', [$this, 'check_configuration'], 10, 2);
-        add_filter('dm_get_tool_config', [$this, 'get_configuration'], 10, 2);
-        add_action('dm_save_tool_config', [$this, 'save_configuration'], 10, 2);
+        add_filter('datamachine_tool_configured', [$this, 'check_configuration'], 10, 2);
+        add_filter('datamachine_get_tool_config', [$this, 'get_configuration'], 10, 2);
+        add_action('datamachine_save_tool_config', [$this, 'save_configuration'], 10, 2);
     }
 
     /**
@@ -40,7 +40,7 @@ class GoogleSearch {
             ];
         }
 
-        $config = get_site_option('dm_search_config', []);
+        $config = get_site_option('datamachine_search_config', []);
         $google_config = $config['google_search'] ?? [];
         
         if (empty($google_config['api_key']) || empty($google_config['search_engine_id'])) {
@@ -159,14 +159,14 @@ class GoogleSearch {
     }
 
     public static function is_configured(): bool {
-        $config = get_site_option('dm_search_config', []);
+        $config = get_site_option('datamachine_search_config', []);
         $google_config = $config['google_search'] ?? [];
 
         return !empty($google_config['api_key']) && !empty($google_config['search_engine_id']);
     }
     
     public static function get_config(): array {
-        $config = get_site_option('dm_search_config', []);
+        $config = get_site_option('datamachine_search_config', []);
         return $config['google_search'] ?? [];
     }
 
@@ -199,13 +199,13 @@ class GoogleSearch {
             return;
         }
 
-        $stored_config = get_site_option('dm_search_config', []);
+        $stored_config = get_site_option('datamachine_search_config', []);
         $stored_config['google_search'] = [
             'api_key' => $api_key,
             'search_engine_id' => $search_engine_id
         ];
 
-        if (update_site_option('dm_search_config', $stored_config)) {
+        if (update_site_option('datamachine_search_config', $stored_config)) {
             wp_send_json_success([
                 'message' => __('Google Search configuration saved successfully', 'data-machine'),
                 'configured' => true

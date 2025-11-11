@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class GoogleSheetsAuth {
 
-    const STATE_TRANSIENT_PREFIX = 'dm_googlesheets_state_'; // Prefix + state value
+    const STATE_TRANSIENT_PREFIX = 'datamachine_googlesheets_state_'; // Prefix + state value
     const SCOPES = 'https://www.googleapis.com/auth/spreadsheets'; // Google Sheets read/write scope
 
     /**
@@ -35,7 +35,7 @@ class GoogleSheetsAuth {
      * @return bool True if authenticated, false otherwise
      */
     public function is_authenticated(): bool {
-        $account = apply_filters('dm_retrieve_oauth_account', [], 'googlesheets');
+        $account = apply_filters('datamachine_retrieve_oauth_account', [], 'googlesheets');
         return !empty($account) && 
                is_array($account) && 
                !empty($account['access_token']) && 
@@ -70,7 +70,7 @@ class GoogleSheetsAuth {
      * @return bool True if OAuth credentials are configured, false otherwise
      */
     public function is_configured(): bool {
-        $config = apply_filters('dm_retrieve_oauth_keys', [], 'googlesheets');
+        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'googlesheets');
         return !empty($config['client_id']) && !empty($config['client_secret']);
     }
 
@@ -80,11 +80,11 @@ class GoogleSheetsAuth {
      * @return string|\WP_Error Access token string or WP_Error on failure.
      */
     public function get_service() {
-        do_action('dm_log', 'debug', 'Attempting to get authenticated Google Sheets access token.');
+        do_action('datamachine_log', 'debug', 'Attempting to get authenticated Google Sheets access token.');
 
-        $credentials = apply_filters('dm_retrieve_oauth_account', [], 'googlesheets');
+        $credentials = apply_filters('datamachine_retrieve_oauth_account', [], 'googlesheets');
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['refresh_token'])) {
-            do_action('dm_log', 'error', 'Missing Google Sheets credentials in options.');
+            do_action('datamachine_log', 'error', 'Missing Google Sheets credentials in options.');
             return new \WP_Error('googlesheets_missing_credentials', __('Google Sheets credentials not found. Please authenticate.', 'data-machine'));
         }
 
@@ -95,7 +95,7 @@ class GoogleSheetsAuth {
         // Check if access token needs refreshing
         $expires_at = $credentials['expires_at'] ?? 0;
         if (time() >= $expires_at - 300) { // Refresh 5 minutes before expiry
-            do_action('dm_log', 'debug', 'Google Sheets access token expired, attempting refresh.');
+            do_action('datamachine_log', 'debug', 'Google Sheets access token expired, attempting refresh.');
             
             $refreshed_token = $this->refresh_access_token($refresh_token);
             if (is_wp_error($refreshed_token)) {
@@ -105,7 +105,7 @@ class GoogleSheetsAuth {
             return $refreshed_token; // Return the new access token
         }
 
-        do_action('dm_log', 'debug', 'Successfully retrieved valid Google Sheets access token.');
+        do_action('datamachine_log', 'debug', 'Successfully retrieved valid Google Sheets access token.');
         return $access_token;
     }
 
@@ -117,16 +117,16 @@ class GoogleSheetsAuth {
      */
     private function refresh_access_token(string $refresh_token) {
         
-        $config = apply_filters('dm_retrieve_oauth_keys', [], 'googlesheets');
+        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'googlesheets');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
         
         if (empty($client_id) || empty($client_secret)) {
-            do_action('dm_log', 'error', 'Missing Google OAuth client credentials.');
+            do_action('datamachine_log', 'error', 'Missing Google OAuth client credentials.');
             return new \WP_Error('googlesheets_missing_oauth_config', __('Google OAuth configuration is incomplete.', 'data-machine'));
         }
 
-        $result = apply_filters('dm_request', null, 'POST', 'https://oauth2.googleapis.com/token', [
+        $result = apply_filters('datamachine_request', null, 'POST', 'https://oauth2.googleapis.com/token', [
             'body' => [
                 'client_id' => $client_id,
                 'client_secret' => $client_secret,
@@ -136,7 +136,7 @@ class GoogleSheetsAuth {
         ], 'Google Sheets OAuth');
 
         if (!$result['success']) {
-            do_action('dm_log', 'error', 'Google token refresh request failed.', [
+            do_action('datamachine_log', 'error', 'Google token refresh request failed.', [
                 'error' => $result['error']
             ]);
             return new \WP_Error('googlesheets_refresh_failed', __('Failed to refresh Google Sheets access token.', 'data-machine'));
@@ -146,7 +146,7 @@ class GoogleSheetsAuth {
         $response_body = $result['data'];
         
         if ($response_code !== 200) {
-            do_action('dm_log', 'error', 'Google token refresh failed.', [
+            do_action('datamachine_log', 'error', 'Google token refresh failed.', [
                 'response_code' => $response_code,
                 'response_body' => $response_body
             ]);
@@ -155,14 +155,14 @@ class GoogleSheetsAuth {
 
         $token_data = json_decode($response_body, true);
         if (empty($token_data['access_token'])) {
-            do_action('dm_log', 'error', 'Invalid token refresh response from Google.');
+            do_action('datamachine_log', 'error', 'Invalid token refresh response from Google.');
             return new \WP_Error('googlesheets_invalid_refresh_response', __('Invalid response from Google during token refresh.', 'data-machine'));
         }
 
         // Update stored credentials with new access token
         $this->update_credentials($token_data['access_token'], $refresh_token, $token_data['expires_in'] ?? 3600);
         
-        do_action('dm_log', 'debug', 'Successfully refreshed Google Sheets access token.');
+        do_action('datamachine_log', 'debug', 'Successfully refreshed Google Sheets access token.');
         return $token_data['access_token'];
     }
 
@@ -183,7 +183,7 @@ class GoogleSheetsAuth {
             'last_refreshed_at' => time()
         ];
 
-        apply_filters('dm_store_oauth_account', $account_data, 'googlesheets');
+        apply_filters('datamachine_store_oauth_account', $account_data, 'googlesheets');
     }
 
 
@@ -194,12 +194,12 @@ class GoogleSheetsAuth {
      */
     public function get_authorization_url(): string {
         // 1. Get OAuth configuration
-        $config = apply_filters('dm_retrieve_oauth_keys', [], 'googlesheets');
+        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'googlesheets');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
         
         if (empty($client_id) || empty($client_secret)) {
-            do_action('dm_log', 'error', 'Google Sheets OAuth Error: Client ID/Secret not configured.', [
+            do_action('datamachine_log', 'error', 'Google Sheets OAuth Error: Client ID/Secret not configured.', [
                 'handler' => 'googlesheets',
                 'operation' => 'get_authorization_url'
             ]);
@@ -207,11 +207,11 @@ class GoogleSheetsAuth {
         }
 
         // 2. Generate state parameter for security
-        $state = wp_create_nonce('dm_googlesheets_oauth_state');
+        $state = wp_create_nonce('datamachine_googlesheets_oauth_state');
         set_transient(self::STATE_TRANSIENT_PREFIX . $state, 'admin_authenticated', 15 * MINUTE_IN_SECONDS);
 
         // 3. Build authorization URL
-        $callback_url = apply_filters('dm_oauth_callback', '', 'googlesheets');
+        $callback_url = apply_filters('datamachine_oauth_callback', '', 'googlesheets');
         
         $auth_params = [
             'client_id' => $client_id,
@@ -228,28 +228,28 @@ class GoogleSheetsAuth {
 
     /**
      * Handles the callback from Google after user authorization.
-     * Called via the unified OAuth rewrite system at /dm-oauth/googlesheets/.
+     * Called via the unified OAuth rewrite system at /datamachine-auth/googlesheets/.
      */
     public function handle_oauth_callback() {
         
         // 1. Initial checks
         if (!current_user_can('manage_options')) {
-             wp_redirect(add_query_arg('auth_error', 'googlesheets_permission_denied', admin_url('admin.php?page=dm-pipelines')));
+             wp_redirect(add_query_arg('auth_error', 'googlesheets_permission_denied', admin_url('admin.php?page=datamachine-pipelines')));
              exit;
         }
 
         // Check for error parameter
         if (isset($_GET['error'])) {
             $error = sanitize_text_field(wp_unslash($_GET['error']));
-            do_action('dm_log', 'warning', 'Google OAuth error returned.', ['error' => $error]);
-            wp_redirect(add_query_arg('auth_error', 'googlesheets_oauth_error', admin_url('admin.php?page=dm-pipelines')));
+            do_action('datamachine_log', 'warning', 'Google OAuth error returned.', ['error' => $error]);
+            wp_redirect(add_query_arg('auth_error', 'googlesheets_oauth_error', admin_url('admin.php?page=datamachine-pipelines')));
             exit;
         }
 
         // Check for required parameters
         if (!isset($_GET['code']) || !isset($_GET['state'])) {
-            do_action('dm_log', 'error', 'Missing code or state parameter in Google OAuth callback.');
-            wp_redirect(add_query_arg('auth_error', 'googlesheets_missing_callback_params', admin_url('admin.php?page=dm-pipelines')));
+            do_action('datamachine_log', 'error', 'Missing code or state parameter in Google OAuth callback.');
+            wp_redirect(add_query_arg('auth_error', 'googlesheets_missing_callback_params', admin_url('admin.php?page=datamachine-pipelines')));
             exit;
         }
 
@@ -260,19 +260,19 @@ class GoogleSheetsAuth {
         $stored_state_marker = get_transient(self::STATE_TRANSIENT_PREFIX . $state);
         delete_transient(self::STATE_TRANSIENT_PREFIX . $state);
 
-        if (empty($stored_state_marker) || !wp_verify_nonce($state, 'dm_googlesheets_oauth_state')) {
-            do_action('dm_log', 'error', 'Invalid or expired state parameter in Google OAuth callback.');
-            wp_redirect(add_query_arg('auth_error', 'googlesheets_invalid_state', admin_url('admin.php?page=dm-pipelines')));
+        if (empty($stored_state_marker) || !wp_verify_nonce($state, 'datamachine_googlesheets_oauth_state')) {
+            do_action('datamachine_log', 'error', 'Invalid or expired state parameter in Google OAuth callback.');
+            wp_redirect(add_query_arg('auth_error', 'googlesheets_invalid_state', admin_url('admin.php?page=datamachine-pipelines')));
             exit;
         }
 
         // 3. Exchange authorization code for tokens
-        $config = apply_filters('dm_retrieve_oauth_keys', [], 'googlesheets');
+        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'googlesheets');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
-        $callback_url = apply_filters('dm_oauth_callback', '', 'googlesheets');
+        $callback_url = apply_filters('datamachine_oauth_callback', '', 'googlesheets');
 
-        $result = apply_filters('dm_request', null, 'POST', 'https://oauth2.googleapis.com/token', [
+        $result = apply_filters('datamachine_request', null, 'POST', 'https://oauth2.googleapis.com/token', [
             'body' => [
                 'client_id' => $client_id,
                 'client_secret' => $client_secret,
@@ -283,10 +283,10 @@ class GoogleSheetsAuth {
         ], 'Google Sheets OAuth');
 
         if (!$result['success']) {
-            do_action('dm_log', 'error', 'Google token exchange request failed.', [
+            do_action('datamachine_log', 'error', 'Google token exchange request failed.', [
                 'error' => $result['error']
             ]);
-            wp_redirect(add_query_arg('auth_error', 'googlesheets_token_exchange_failed', admin_url('admin.php?page=dm-pipelines')));
+            wp_redirect(add_query_arg('auth_error', 'googlesheets_token_exchange_failed', admin_url('admin.php?page=datamachine-pipelines')));
             exit;
         }
 
@@ -294,18 +294,18 @@ class GoogleSheetsAuth {
         $response_body = $result['data'];
         
         if ($response_code !== 200) {
-            do_action('dm_log', 'error', 'Google token exchange failed.', [
+            do_action('datamachine_log', 'error', 'Google token exchange failed.', [
                 'response_code' => $response_code,
                 'response_body' => $response_body
             ]);
-            wp_redirect(add_query_arg('auth_error', 'googlesheets_token_exchange_error', admin_url('admin.php?page=dm-pipelines')));
+            wp_redirect(add_query_arg('auth_error', 'googlesheets_token_exchange_error', admin_url('admin.php?page=datamachine-pipelines')));
             exit;
         }
 
         $token_data = json_decode($response_body, true);
         if (empty($token_data['access_token']) || empty($token_data['refresh_token'])) {
-            do_action('dm_log', 'error', 'Invalid token response from Google.');
-            wp_redirect(add_query_arg('auth_error', 'googlesheets_invalid_token_response', admin_url('admin.php?page=dm-pipelines')));
+            do_action('datamachine_log', 'error', 'Invalid token response from Google.');
+            wp_redirect(add_query_arg('auth_error', 'googlesheets_invalid_token_response', admin_url('admin.php?page=datamachine-pipelines')));
             exit;
         }
 
@@ -318,11 +318,11 @@ class GoogleSheetsAuth {
             'last_verified_at' => time()
         ];
 
-        apply_filters('dm_store_oauth_account', $account_data, 'googlesheets');
+        apply_filters('datamachine_store_oauth_account', $account_data, 'googlesheets');
 
 
         // 5. Redirect on success
-        wp_redirect(add_query_arg('auth_success', 'googlesheets', admin_url('admin.php?page=dm-pipelines')));
+        wp_redirect(add_query_arg('auth_success', 'googlesheets', admin_url('admin.php?page=datamachine-pipelines')));
         exit;
     }
 
@@ -333,7 +333,7 @@ class GoogleSheetsAuth {
      * @return array|null Account details array or null if not found/invalid.
      */
     public function get_account_details(): ?array {
-        $account = apply_filters('dm_retrieve_oauth_account', [], 'googlesheets');
+        $account = apply_filters('datamachine_retrieve_oauth_account', [], 'googlesheets');
         if (empty($account) || !is_array($account) || empty($account['access_token']) || empty($account['refresh_token'])) {
             return null;
         }
@@ -347,6 +347,6 @@ class GoogleSheetsAuth {
      * @return bool True on success, false on failure.
      */
     public function remove_account(): bool {
-        return apply_filters('dm_clear_oauth_account', false, 'googlesheets');
+        return apply_filters('datamachine_clear_oauth_account', false, 'googlesheets');
     }
 }

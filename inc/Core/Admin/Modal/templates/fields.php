@@ -25,7 +25,7 @@ $disabled_attr = $is_disabled ? ' disabled' : '';
     <?php endif; ?>
 
 <?php else: ?>
-    <div class="dm-form-field">
+    <div class="datamachine-form-field">
         <?php if ($label && $field_type !== 'checkbox'): ?>
             <label for="<?php echo esc_attr($field_name); ?>"><?php echo esc_html($label); ?></label>
         <?php endif; ?>
@@ -102,7 +102,7 @@ $disabled_attr = $is_disabled ? ' disabled' : '';
                 break;
                 
             case 'readonly':
-                $merged_classes = $custom_classes ? 'regular-text dm-readonly-field ' . $custom_classes : 'regular-text dm-readonly-field';
+                $merged_classes = $custom_classes ? 'regular-text datamachine-readonly-field ' . $custom_classes : 'regular-text datamachine-readonly-field';
                 ?>
                 <input type="text"
                        id="<?php echo esc_attr($field_name); ?>"
@@ -116,7 +116,7 @@ $disabled_attr = $is_disabled ? ' disabled' : '';
         ?>
         
         <?php if ($global_indicator): ?>
-            <p class="description dm-global-indicator">
+            <p class="description datamachine-global-indicator">
                 <strong><?php echo esc_html($global_indicator); ?></strong>
             </p>
         <?php elseif ($description): ?>

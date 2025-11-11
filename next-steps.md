@@ -20,8 +20,8 @@
 
 ### Pipeline Bulk Operations
 - "Run All" button for pipeline page - executes all flows in pipeline
-- Action: `dm_run_pipeline_now`
+- Action: `datamachine_run_flow_now`
 
 ## Known Issues
-- Status detection for Update step types needs comprehensive testing
+- Replace removed status detection system with lightweight health checks once new design lands
 - AI Step sometimes calls tools repeatedly

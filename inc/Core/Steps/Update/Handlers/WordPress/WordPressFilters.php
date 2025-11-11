@@ -9,8 +9,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-function dm_register_wordpress_update_filters() {
-    add_filter('dm_handlers', function($handlers, $step_type = null) {
+function datamachine_register_wordpress_update_filters() {
+    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'update') {
             $handlers['wordpress_update'] = [
                 'type' => 'update',
@@ -22,7 +22,7 @@ function dm_register_wordpress_update_filters() {
         return $handlers;
     }, 10, 2);
 
-    add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
+    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
         if ($handler_slug === null || $handler_slug === 'wordpress_update') {
             $all_settings['wordpress_update'] = new WordPressSettings();
         }
@@ -31,7 +31,7 @@ function dm_register_wordpress_update_filters() {
 
     add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
         if ($handler_slug === 'wordpress_update') {
-            $tools['wordpress_update'] = dm_get_dynamic_wordpress_update_tool($handler_config);
+            $tools['wordpress_update'] = datamachine_get_dynamic_wordpress_update_tool($handler_config);
         }
         return $tools;
     }, 10, 3);
@@ -40,7 +40,7 @@ function dm_register_wordpress_update_filters() {
 /**
  * Base tool configuration with conditional parameters based on settings.
  */
-function dm_get_wordpress_update_base_tool(array $handler_config = []): array {
+function datamachine_get_wordpress_update_base_tool(array $handler_config = []): array {
     $tool = [
         'class' => 'DataMachine\\Core\\Steps\\Update\\Handlers\\WordPress\\WordPress',
         'method' => 'handle_tool_call',
@@ -83,10 +83,10 @@ function dm_get_wordpress_update_base_tool(array $handler_config = []): array {
 /**
  * Generate dynamic WordPress update tool with taxonomy parameters based on AI Decides selections.
  */
-function dm_get_dynamic_wordpress_update_tool(array $handler_config): array {
+function datamachine_get_dynamic_wordpress_update_tool(array $handler_config): array {
     $wordpress_config = $handler_config['wordpress_update'] ?? $handler_config;
 
-    $tool = dm_get_wordpress_update_base_tool($wordpress_config);
+    $tool = datamachine_get_wordpress_update_base_tool($wordpress_config);
     $tool['handler_config'] = $wordpress_config;
 
     if (!is_array($handler_config)) {
@@ -107,7 +107,8 @@ function dm_get_dynamic_wordpress_update_tool(array $handler_config): array {
     $taxonomies = get_taxonomies(['public' => true], 'objects');
 
     foreach ($taxonomies as $taxonomy) {
-        if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+        $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
+        if (in_array($taxonomy->name, $excluded)) {
             continue;
         }
 
@@ -137,4 +138,4 @@ function dm_get_dynamic_wordpress_update_tool(array $handler_config): array {
     return $tool;
 }
 
-dm_register_wordpress_update_filters();
+datamachine_register_wordpress_update_filters();

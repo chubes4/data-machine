@@ -3,7 +3,7 @@
  * Pipelines Admin Page Registration
  * 
  * Self-contained admin page registration following filter-based discovery architecture.
- * Registers page, assets, and modal integration via dm_admin_pages filter.
+ * Registers page, assets, and modal integration via datamachine_admin_pages filter.
  * 
  * @package DataMachine\Core\Admin\Pages\Pipelines
  * @since 1.0.0
@@ -20,12 +20,12 @@ if (!defined('ABSPATH')) {
  * Register Pipelines admin page components
  * 
  * Self-registration pattern using filter-based discovery.
- * Engine discovers page capabilities through dm_admin_pages filter.
+ * Engine discovers page capabilities through datamachine_admin_pages filter.
  */
-function dm_register_pipelines_admin_page_filters() {
+function datamachine_register_pipelines_admin_page_filters() {
     
     // Pure discovery mode - matches actual system usage
-    add_filter('dm_admin_pages', function($pages) {
+    add_filter('datamachine_admin_pages', function($pages) {
         $pages['pipelines'] = [
             'page_title' => __('Pipelines', 'data-machine'),
             'menu_title' => __('Pipelines', 'data-machine'),
@@ -34,24 +34,19 @@ function dm_register_pipelines_admin_page_filters() {
             'templates' => __DIR__ . '/templates/',
             'assets' => [
                 'css' => [
-                    'dm-core-modal' => [
+                    'datamachine-core-modal' => [
                         'file' => 'inc/Core/Admin/Modal/assets/css/core-modal.css',
                         'deps' => [],
                         'media' => 'all'
                     ],
-                    'dm-pipelines-page' => [
+                    'datamachine-pipelines-page' => [
                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/pipelines-page.css',
-                        'deps' => ['dm-core-modal'],
+                        'deps' => ['datamachine-core-modal'],
                         'media' => 'all'
                     ],
-                    'dm-pipeline-status' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/pipeline-status.css',
-                        'deps' => ['dm-pipelines-page'],
-                        'media' => 'all'
-                    ],
-                    'dm-pipelines-modal' => [
+                    'datamachine-pipelines-modal' => [
                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/pipelines-modal.css',
-                        'deps' => ['dm-core-modal', 'dm-pipelines-page', 'dm-pipeline-status'],
+                        'deps' => ['datamachine-core-modal', 'datamachine-pipelines-page'],
                         'media' => 'all'
                     ],
                     'ai-http-components' => [
@@ -59,161 +54,49 @@ function dm_register_pipelines_admin_page_filters() {
                         'deps' => [],
                         'media' => 'all'
                     ],
-                    'dm-import-export' => [
+                    'datamachine-import-export' => [
                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/import-export.css',
                         'deps' => [],
                         'media' => 'all'
                     ]
                 ],
                 'js' => [
-                    'dm-core-modal' => [
-                        'file' => 'inc/Core/Admin/Modal/assets/js/core-modal.js',
-                        'deps' => ['jquery'],
+                    // React bundle (only script needed)
+                    'dm-pipelines-react' => [
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/build/pipelines-react.js',
+                        'deps' => ['wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'wp-dom-ready', 'wp-notices'],
                         'in_footer' => true,
                         'localize' => [
-                            'object' => 'dmCoreModal',
+                            'object' => 'dataMachineConfig',
                             'data' => [
-                                'ajax_url' => admin_url('admin-ajax.php'),
-                                'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
-                                'strings' => [
-                                    'loading' => __('Loading...', 'data-machine'),
-                                    'error' => __('Error', 'data-machine'),
-                                    'close' => __('Close', 'data-machine')
-                                ]
+                                'restUrl' => rest_url('datamachine/v1'),
+                                'restNonce' => wp_create_nonce('wp_rest'),
+                                'stepTypes' => apply_filters('datamachine_step_types', []),
+                                'handlers' => apply_filters('datamachine_handlers', []),
+                                'stepSettings' => apply_filters('datamachine_step_settings', []),
+                                'aiProviders' => datamachine_get_ai_providers_for_react(),
+                                'aiTools' => datamachine_get_ai_tools_for_react(),
+                                'handlerSettings' => apply_filters('datamachine_handler_settings', []),
                             ]
                         ]
-                    ],
-                    'dm-pipeline-auth' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipeline-auth.js',
-                        'deps' => [],
-                        'in_footer' => true
-                    ],
-                    'dm-pipeline-status' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipeline-status.js',
-                        'deps' => ['jquery'],
-                        'in_footer' => true
-                    ],
-                    'dm-flow-status' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/flow-status.js',
-                        'deps' => ['jquery', 'dm-pipeline-status'],
-                        'in_footer' => true
-                    ],
-                    'dm-pipeline-cards-ui' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipeline-cards-ui.js',
-                        'deps' => ['jquery', 'jquery-ui-sortable'],
-                        'in_footer' => true
-                    ],
-                    'dm-pipelines-page' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipelines-page.js',
-                        'deps' => ['jquery', 'dm-pipeline-status', 'dm-pipeline-cards-ui'],
-                        'in_footer' => true,
-                        'localize' => [
-                            'object' => 'dmPipelineBuilder',
-                            'data' => [
-                                'ajax_url' => admin_url('admin-ajax.php'),
-                                'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
-                                'ai_http_nonce' => wp_create_nonce('ai_http_nonce'),
-                                'strings' => [
-                                    'error' => __('An error occurred', 'data-machine'),
-                                    'success' => __('Success', 'data-machine'),
-                                    'confirm' => __('Are you sure?', 'data-machine'),
-                                    'cancel' => __('Cancel', 'data-machine'),
-                                    'delete' => __('Delete', 'data-machine'),
-                                    'errorRemovingStep' => __('Error removing pipeline step', 'data-machine'),
-                                    'saving' => __('Saving...', 'data-machine'),
-                                    'loading' => __('Loading...', 'data-machine'),
-                                    'pipelineNameRequired' => __('Pipeline name is required', 'data-machine'),
-                                    'atLeastOneStep' => __('At least one step is required', 'data-machine'),
-                                    'noFlows' => __('0 flows', 'data-machine'),
-                                    'noFlowsMessage' => __('No flows configured for this pipeline.', 'data-machine'),
-                                    'configureHandlers' => __('Configure handlers for each step above', 'data-machine')
-                                ]
-                            ]
-                        ]
-                    ],
-                    'dm-pipeline-builder' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipeline-builder.js',
-                        'deps' => ['jquery', 'dm-pipelines-page', 'dm-pipeline-status'],
-                        'in_footer' => true
-                    ],
-                    'dm-flow-builder' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/flow-builder.js',
-                        'deps' => ['jquery', 'dm-pipelines-page', 'dm-pipeline-status', 'dm-flow-status'],
-                        'in_footer' => true
-                    ],
-                    'dm-pipelines-modal' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipelines-modal.js',
-                        'deps' => ['jquery', 'dm-core-modal'],
-                        'in_footer' => true,
-                        'localize' => [
-                            'object' => 'dmPipelineModal',
-                            'data' => [
-                                'ajax_url' => admin_url('admin-ajax.php'),
-                                'admin_post_url' => admin_url('admin-post.php'),
-                                'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
-                                'strings' => [
-                                    'connecting' => __('Connecting...', 'data-machine'),
-                                    'disconnecting' => __('Disconnecting...', 'data-machine'),
-                                    'saving' => __('Saving...', 'data-machine'),
-                                    'confirmDisconnect' => __('Are you sure you want to disconnect this account? You will need to reconnect to use this handler.', 'data-machine')
-                                ]
-                            ]
-                        ]
-                    ],
-                    'dm-file-uploads' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/file-uploads.js',
-                        'deps' => ['jquery', 'dm-pipelines-modal'],
-                        'in_footer' => true
-                    ],
-                    'ai-http-provider-manager' => [
-                        'file' => 'vendor/chubes4/ai-http-client/assets/js/provider-manager.js',
-                        'deps' => ['jquery'],
-                        'in_footer' => true
-                    ],
-                    'dm-import-export' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/import-export.js',
-                        'deps' => ['jquery', 'dm-core-modal'],
-                        'in_footer' => true
-                    ],
-                    'dm-pipeline-auto-save' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/js/pipeline-auto-save.js',
-                        'deps' => ['jquery'],
-                        'in_footer' => true,
-                        'localize' => [
-                            'object' => 'dmPipelineAutoSave',
-                            'data' => [
-                                'ajax_url' => admin_url('admin-ajax.php'),
-                                'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
-                                // Status strings removed for silent auto-save
-                            ]
-                        ]
-                    ],
-                    // Tool configuration moved to Settings page for better UX
+                    ]
                 ]
             ]
         ];
         return $pages;
     });
-    
-    // Register authentication AJAX handlers
-    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineAuthAjax::register();
 
     // Pipeline auto-save hook moved to DataMachineActions.php for architectural consistency
     
     // Universal modal AJAX integration - no component-specific handlers needed
     // All modal content routed through unified ModalAjax.php endpoint
     
-    // Modal registration - Two-layer architecture: metadata only, content via dm_render_template
-    add_filter('dm_modals', function($modals) {
-        // Static pipeline modals - metadata only, content generated during AJAX via dm_render_template
+    // Modal registration - Two-layer architecture: metadata only, content via datamachine_render_template
+    add_filter('datamachine_modals', function($modals) {
+        // Static pipeline modals - metadata only, content generated during AJAX via datamachine_render_template
         $modals['step-selection'] = [
             'template' => 'modal/step-selection-cards',
             'title' => __('Select Step Type', 'data-machine')
-        ];
-
-        $modals['pipeline-templates'] = [
-            'template' => 'modal/pipeline-templates',
-            'title' => __('Choose a Pipeline Template', 'data-machine')
         ];
 
         $modals['handler-selection'] = [
@@ -256,5 +139,51 @@ function dm_register_pipelines_admin_page_filters() {
     });
 }
 
+/**
+ * Get AI providers formatted for React
+ *
+ * @return array AI providers with models
+ */
+function datamachine_get_ai_providers_for_react() {
+    // Get AI providers from HTTP client library
+    $http_providers = apply_filters('ai_http_providers', []);
+
+    $providers = [];
+    foreach ($http_providers as $key => $provider_data) {
+        $providers[$key] = [
+            'label' => $provider_data['label'] ?? ucfirst($key),
+            'models' => $provider_data['models'] ?? []
+        ];
+    }
+
+    return $providers;
+}
+
+/**
+ * Get AI tools formatted for React
+ *
+ * @return array AI tools with configuration status
+ */
+function datamachine_get_ai_tools_for_react() {
+    // Get all available tools
+    $all_tools = apply_filters('ai_tools', []);
+
+    // Filter to only general tools (no handler property)
+    $general_tools = array_filter($all_tools, function($tool_def) {
+        return !isset($tool_def['handler']);
+    });
+
+    $tools = [];
+    foreach ($general_tools as $tool_id => $tool_def) {
+        $tools[$tool_id] = [
+            'label' => $tool_def['label'] ?? ucfirst(str_replace('_', ' ', $tool_id)),
+            'description' => $tool_def['description'] ?? '',
+            'configured' => apply_filters('datamachine_tool_configured', false, $tool_id)
+        ];
+    }
+
+    return $tools;
+}
+
 // Auto-register when file loads - achieving complete self-containment
-dm_register_pipelines_admin_page_filters();
+datamachine_register_pipelines_admin_page_filters();

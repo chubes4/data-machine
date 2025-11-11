@@ -1,58 +1,22 @@
-## Data Machine: Agent Guide
-
-Purpose-built instructions for AI agents working in this repo. Read alongside: `README.md`, `docs/architecture.md`, `docs/overview.md`, `CLAUDE.md`.
-
-### Architecture
-- Pipeline → Flow → Job → Step (`fetch|ai|publish|update`). Steps pass a newest-first DataPacket array (use `apply_filters('dm_data_packet', ...)` which prepends; do not append or mutate history).
-- Service discovery is filter-driven; never instantiate directly. Register via `*Filters.php` under `inc/**` (autoloaded by composer).
-
-### Core Conventions
-- Parameters into steps: `job_id`, `flow_step_id`, `flow_step_config`, `data`. Fetch handlers may store engine parameters (e.g., `source_url`, `image_url`) into DB; retrieve via `apply_filters('dm_engine_data', [], $job_id)`.
-- Logging: `do_action('dm_log', $level, $message, $context)`. Log shapes/lengths, not raw bodies.
-- Caching: clear via actions (`dm_clear_pipeline_cache`, `dm_clear_flow_cache`, `dm_clear_jobs_cache`, `dm_clear_all_cache`). Don’t write transients/options directly.
-- IDs: `flow_step_id = {pipeline_step_id}_{flow_id}`; dedupe via `dm_mark_item_processed`/`dm_is_item_processed` (WordPress Media uses attachment ID; updates use `source_url`).
-
-### Data Packet Shape (conceptual)
-```php
-[
-  'type' => 'fetch|ai|publish|update',
-  'handler' => 'rss|reddit|wordpress|...', // optional for ai
-  'content' => ['title' => string, 'body' => string],
-  'metadata' => [...],
-  'attachments' => [...],
-  'timestamp' => int
-]
-```
-
-### Key Filters & Actions (entry points)
-- Discovery: `dm_handlers`, `dm_steps`, `dm_db`, `dm_auth_providers`
-- Flow config: `dm_get_flow_config`, `dm_get_flow_step_config`, `dm_get_next_flow_step_id`
-- Execution: `dm_run_flow_now`, `dm_execute_step`, `dm_schedule_next_step`
-- Data packets: `dm_data_packet`
-- Engine data: `dm_engine_data` (fetch stores; publish/update read)
-- Tools: `ai_tools`, `dm_tool_configured`, `dm_get_tool_config`
-
-### Patterns That Matter Here
-- Handlers return `['processed_items' => [$item, ...]]`. Each `$item` typically has `data` (clean content) and `metadata`. Example: WordPress Media populates `data.title` + `data.content` when `include_parent_content` is enabled, and stores `source_url`/`image_url` via DB for later use.
-- Steps must not mutate prior packets. To add a packet: `$data = apply_filters('dm_data_packet', $data, $entry, $flow_step_id, 'fetch|ai|publish|update');`.
-- Admin/AJAX: always `wp_unslash($_POST[...])` before `sanitize_text_field()` (see `PipelineModalAjax.php`, `ModalAjax.php`).
-
-### Developer Workflows
-- Install deps/tests: `composer install` → `composer test` (unit: `composer test:unit`, coverage: `composer test:coverage`).
-- Build plugin zip: `./build.sh` → outputs to `/dist/data-machine.zip`.
-- VS Code tasks available: Install Dependencies, Run Tests, Build Data Machine Plugin.
-
-### Where to Add/Change
-- Steps/Handlers: `inc/Core/Steps/**` + register in matching `*Filters.php`; ensure composer autoload includes the file (then `composer dump-autoload`).
-- Engine: `inc/Engine/Actions/*` (execution, scheduling), `inc/Engine/Filters/*` (config/db/access).
-- Admin UI: `inc/Core/Admin/**` with template rendering via `dm_render_template` filter. Universal handler settings template lives at `inc/Core/Admin/Pages/Pipelines/templates/modal/handler-settings.php`.
-
-### WordPress Publish/Update Specifics
-- Publish/Update handler: `inc/Core/Steps/Publish/Handlers/WordPress/WordPress.php` (uses `FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`). Always sanitize (`wp_kses_post` + block parse/serialize). `source_url` is the canonical link for updates.
-
-### Gotchas (from this repo)
-- Don’t double-escape AJAX payloads; `wp_unslash()` then sanitize.
-- Media fetches: keep `processed_items` flat; include parent post content when configured; store `source_url`/`image_url` to DB (not in the packet) and access via `dm_engine_data`.
-- When adding packets, avoid direct `array_unshift`; use `dm_data_packet` filter to maintain standardized fields.
-
-Feedback: If any part of this is unclear for a task, point to the file/handler and we’ll refine this guide.
+## Data Machine Copilot Guide
+- **Start here** Skim `docs/overview.md`, `docs/architecture.md`, and `CLAUDE.md`; `data-machine.php` bootstraps core services once `datamachine_check_requirements()` succeeds.
+- **Autoload pattern** `composer.json` maps `DataMachine\Core\` and `DataMachine\Engine\` to `inc/`; any `*Filters.php` file registers hooks on load, so new services belong in that pattern and require no manual includes.
+- **Pipeline lifecycle** Pipelines (templates) → flows (configured instances) → jobs (executions via Action Scheduler under `inc/Engine/Actions`); the execution loop is `datamachine_run_flow_now` → `datamachine_execute_step` → `datamachine_schedule_next_step`.
+- **Identifier helpers** Step IDs stay in UUID form at pipeline level; use `datamachine_generate_flow_step_id` / `datamachine_split_*` helpers for `{pipeline_step_id}_{flow_id}` values instead of string manipulation.
+- **Database access** Retrieve repositories through `apply_filters('datamachine_db', [])`; concrete services live in `inc/Core/Database/**` and manage the `wp_dm_*` tables until the Phase 3 rename lands.
+- **Fetch handler contract** Return `['processed_items' => [['data' => ..., 'metadata' => ...], …]]`, mark dedupe state with `datamachine_mark_item_processed`, and reuse `datamachine_timeframe_limit` + `datamachine_keyword_search_match` from `inc/Engine/Filters/Handlers.php`.
+- **Data separation** Keep AI-visible packets clean via `datamachine_data_packet`; store source_url/image_url with `datamachine_engine_data` and read them inside publish/update handlers rather than embedding URLs in packets.
+- **AI directives** System prompts stack at priorities 10→50 (PluginCore, GlobalSystem, PipelineSystem, ToolDefinitions, SiteContext); `AIStepConversationManager` tracks turns and `AIStepToolParameters` builds flat tool payloads.
+- **Tool enablement** Tools only execute when globally enabled, selected in the pipeline modal, and `datamachine_tool_configured` confirms credentials—mirror that three-layer check before exposing new capabilities.
+- **Handler registration** Register handlers, auth providers, and tools via filters (`datamachine_handlers`, `datamachine_auth_providers`, `ai_tools`) from dedicated namespace files; follow existing array shape for label, description, and `requires_auth` metadata.
+- **WordPress publish modules** `inc/Core/Steps/Publish/Handlers/WordPress` delegates to `FeaturedImageHandler`, `TaxonomyHandler`, and `SourceUrlHandler`; respect the config hierarchy where system defaults override per-step settings.
+- **Update workflows** Update steps expect a stored `source_url`; ensure upstream fetch/tools populate engine data or the update handler will no-op.
+- **REST surface** REST routes live in `inc/Api/*.php` and self-register during `run_data_machine()`; use the existing `->register()` structure and `manage_options` capability checks when adding endpoints.
+- **Caching** Mutations must clear caches through `datamachine_clear_*` actions in `inc/Engine/Actions/Cache.php`; never touch transients directly.
+- **Logging** Emit diagnostics with `do_action('datamachine_log', $level, $message, $context_array)` so Monolog + rotation stay centralized.
+- **OAuth & storage** Route new providers through `datamachine_auth_providers`, persist secrets with `datamachine_store_oauth_account` / `_keys`, and keep matchers compatible with legacy `/dm-oauth/` URLs while Phase 2 migration is in flight.
+- **Prefix migration** Code now prefers the `datamachine_` prefix, but tables, options, and cache keys still use `dm_`; write tolerant lookups and avoid renaming runtime keys until migration directives say otherwise.
+- **Admin UX** Modify admin assets in `inc/Core/Admin/Pages/Pipelines/assets` (not `dist/`), and lean on the universal handler settings template + `datamachine_get_handler_settings_display` filter for customization.
+- **Scheduler assumptions** Vendor Action Scheduler (`vendor/woocommerce/action-scheduler`) must be loaded before scheduling helpers in `inc/Core/Steps/**`; check for queue availability in long-running jobs.
+- **Tests & builds** Run `composer install` for setup, `composer test` / `composer test:unit` for PHPUnit (WordPress polyfills included), and `./build.sh` for release zips—build script reinstalls dev deps automatically.
+- **Ecosystem impact** Extensions in sibling repos consume these filters; coordinate breaking changes and update migration guidance in `MIGRATION-PLAN.md` when altering hook signatures.

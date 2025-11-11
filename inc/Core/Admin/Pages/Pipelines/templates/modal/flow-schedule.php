@@ -21,16 +21,16 @@ $last_run_at = $last_run_at ?? null;
 $next_run_time = $next_run_time ?? null;
 
 ?>
-<div class="dm-flow-schedule-container">
-    <div class="dm-flow-schedule-header">
+<div class="datamachine-flow-schedule-container">
+    <div class="datamachine-flow-schedule-header">
         <?php /* translators: %s: Flow name */ ?>
         <h3><?php echo esc_html(sprintf(__('Schedule Configuration: %s', 'data-machine'), $flow_name)); ?></h3>
         <p><?php esc_html_e('Configure when this flow should run automatically', 'data-machine'); ?></p>
     </div>
     
-    <div class="dm-flow-schedule-form" data-flow-id="<?php echo esc_attr($flow_id); ?>">
+    <div class="datamachine-flow-schedule-form" data-flow-id="<?php echo esc_attr($flow_id); ?>">
         <!-- Schedule Interval -->
-        <div class="dm-form-field dm-schedule-interval-field">
+        <div class="datamachine-form-field datamachine-schedule-interval-field">
             <label for="schedule_interval"><?php esc_html_e('Schedule Interval', 'data-machine'); ?></label>
             <select id="schedule_interval" name="schedule_interval" class="regular-text">
                 <option value="manual" <?php selected($current_interval, 'manual'); ?>><?php esc_html_e('Manual Only', 'data-machine'); ?></option>
@@ -46,9 +46,9 @@ $next_run_time = $next_run_time ?? null;
         </div>
         
         <!-- Schedule Information -->
-        <div class="dm-schedule-info">
+        <div class="datamachine-schedule-info">
             <h4><?php esc_html_e('Schedule Information', 'data-machine'); ?></h4>
-            <div class="dm-schedule-details">
+            <div class="datamachine-schedule-details">
                 <?php if ($last_run_at): ?>
                     <p><strong><?php esc_html_e('Last Run:', 'data-machine'); ?></strong> <?php echo esc_html(wp_date('M j, Y g:i A', strtotime($last_run_at))); ?></p>
                 <?php else: ?>
@@ -64,13 +64,13 @@ $next_run_time = $next_run_time ?? null;
         </div>
         
         <!-- Actions -->
-        <div class="dm-schedule-actions">
-            <button type="button" class="button button-secondary dm-cancel-schedule dm-modal-close"
+        <div class="datamachine-schedule-actions">
+            <button type="button" class="button button-secondary datamachine-cancel-schedule datamachine-modal-close"
                     <?php /* translators: %s: Flow name */ ?>
                     aria-label="<?php echo esc_attr(sprintf(__('Cancel: %s', 'data-machine'), $flow_name)); ?>">
                 <?php esc_html_e('Cancel', 'data-machine'); ?>
             </button>
-            <button type="button" class="button button-primary dm-modal-close" 
+            <button type="button" class="button button-primary datamachine-modal-close" 
                     data-template="save-schedule-action"
                     data-context='<?php echo esc_attr(wp_json_encode(['flow_id' => $flow_id])); ?>'
                     <?php /* translators: %s: Flow name */ ?>

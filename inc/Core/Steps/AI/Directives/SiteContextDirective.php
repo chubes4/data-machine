@@ -44,7 +44,7 @@ class SiteContextDirective {
         $context_message = self::generate_site_context();
         
         if (empty($context_message)) {
-            do_action('dm_log', 'warning', 'Site Context Directive: Empty context generated');
+            do_action('datamachine_log', 'warning', 'Site Context Directive: Empty context generated');
             return $request;
         }
 
@@ -53,7 +53,7 @@ class SiteContextDirective {
             'content' => $context_message
         ]);
 
-        do_action('dm_log', 'debug', 'Site Context Directive: Injected site context', [
+        do_action('datamachine_log', 'debug', 'Site Context Directive: Injected site context', [
             'context_length' => strlen($context_message),
             'provider' => $provider_name,
             'total_messages' => count($request['messages'])
@@ -68,7 +68,7 @@ class SiteContextDirective {
      * @return bool True if enabled, false otherwise
      */
     public static function is_site_context_enabled(): bool {
-        $settings = dm_get_data_machine_settings();
+        $settings = datamachine_get_data_machine_settings();
         
         return $settings['site_context_enabled'] ?? true;
     }
@@ -98,7 +98,7 @@ class SiteContextDirective {
  * @param string $directive_class The directive class to use for site context
  * @return string The filtered directive class
  */
-$site_context_directive = apply_filters('dm_site_context_directive', SiteContextDirective::class);
+$site_context_directive = apply_filters('datamachine_site_context_directive', SiteContextDirective::class);
 
 // Register the filtered directive (allows replacement by multisite plugin)
 if ($site_context_directive) {

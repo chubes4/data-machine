@@ -21,7 +21,7 @@ class GoogleSheetsFetch {
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
-            do_action('dm_log', 'error', 'Google Sheets Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
+            do_action('datamachine_log', 'error', 'Google Sheets Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
         
@@ -34,7 +34,7 @@ class GoogleSheetsFetch {
         // Configuration validation
         $spreadsheet_id = trim($config['spreadsheet_id'] ?? '');
         if (empty($spreadsheet_id)) {
-            do_action('dm_log', 'error', 'Google Sheets Input: Spreadsheet ID is required.', ['pipeline_id' => $pipeline_id]);
+            do_action('datamachine_log', 'error', 'Google Sheets Input: Spreadsheet ID is required.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
         
@@ -43,17 +43,17 @@ class GoogleSheetsFetch {
         $has_header_row = !empty($config['has_header_row']);
 
         // Get Google Sheets authentication service
-        $all_auth = apply_filters('dm_auth_providers', []);
+        $all_auth = apply_filters('datamachine_auth_providers', []);
         $auth_service = $all_auth['googlesheets'] ?? null;
         if (!$auth_service) {
-            do_action('dm_log', 'error', 'Google Sheets Input: Authentication service not available.', ['pipeline_id' => $pipeline_id]);
+            do_action('datamachine_log', 'error', 'Google Sheets Input: Authentication service not available.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
 
         // Get authenticated access token
         $access_token = $auth_service->get_service();
         if (is_wp_error($access_token)) {
-            do_action('dm_log', 'error', 'Google Sheets Input: Authentication failed.', [
+            do_action('datamachine_log', 'error', 'Google Sheets Input: Authentication failed.', [
                 'pipeline_id' => $pipeline_id,
                 'error' => $access_token->get_error_message()
             ]);
@@ -64,7 +64,7 @@ class GoogleSheetsFetch {
         $range_param = urlencode($worksheet_name);
         $api_url = "https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheet_id}/values/{$range_param}";
         
-        do_action('dm_log', 'debug', 'Google Sheets Fetch: Fetching spreadsheet data.', [
+        do_action('datamachine_log', 'debug', 'Google Sheets Fetch: Fetching spreadsheet data.', [
             'spreadsheet_id' => $spreadsheet_id,
             'worksheet_name' => $worksheet_name,
             'processing_mode' => $processing_mode,
@@ -72,7 +72,7 @@ class GoogleSheetsFetch {
         ]);
 
         // Make API request
-        $result = apply_filters('dm_request', null, 'GET', $api_url, [
+        $result = apply_filters('datamachine_request', null, 'GET', $api_url, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $access_token,
                 'Accept' => 'application/json',
@@ -81,7 +81,7 @@ class GoogleSheetsFetch {
         ], 'Google Sheets API');
 
         if (!$result['success']) {
-            do_action('dm_log', 'error', 'Google Sheets Input: Failed to fetch data.', [
+            do_action('datamachine_log', 'error', 'Google Sheets Input: Failed to fetch data.', [
                 'pipeline_id' => $pipeline_id,
                 'error' => $result['error'],
                 'spreadsheet_id' => $spreadsheet_id
@@ -96,7 +96,7 @@ class GoogleSheetsFetch {
             $error_data = json_decode($response_body, true);
             $error_message = $error_data['error']['message'] ?? 'Unknown API error';
             
-            do_action('dm_log', 'error', 'Google Sheets Input: API request failed.', [
+            do_action('datamachine_log', 'error', 'Google Sheets Input: API request failed.', [
                 'pipeline_id' => $pipeline_id,
                 'status_code' => $response_code,
                 'error_message' => $error_message,
@@ -107,12 +107,12 @@ class GoogleSheetsFetch {
 
         $sheet_data = json_decode($response_body, true);
         if (empty($sheet_data['values'])) {
-            do_action('dm_log', 'debug', 'Google Sheets Fetch: No data found in specified range.', ['pipeline_id' => $pipeline_id]);
+            do_action('datamachine_log', 'debug', 'Google Sheets Fetch: No data found in specified range.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
 
         $rows = $sheet_data['values'];
-        do_action('dm_log', 'debug', 'Google Sheets Fetch: Retrieved spreadsheet data.', [
+        do_action('datamachine_log', 'debug', 'Google Sheets Fetch: Retrieved spreadsheet data.', [
             'total_rows' => count($rows),
             'processing_mode' => $processing_mode,
             'pipeline_id' => $pipeline_id
@@ -125,7 +125,7 @@ class GoogleSheetsFetch {
         if ($has_header_row && !empty($rows)) {
             $headers = array_map('trim', $rows[0]);
             $data_start_index = 1;
-            do_action('dm_log', 'debug', 'Google Sheets Fetch: Using header row.', [
+            do_action('datamachine_log', 'debug', 'Google Sheets Fetch: Using header row.', [
                 'headers' => $headers,
                 'pipeline_id' => $pipeline_id
             ]);
@@ -152,9 +152,9 @@ class GoogleSheetsFetch {
         $sheet_identifier = $spreadsheet_id . '_' . $worksheet_name . '_full';
         
         // Check if already processed
-        $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'googlesheets_fetch', $sheet_identifier);
+        $is_processed = apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'googlesheets_fetch', $sheet_identifier);
         if ($is_processed) {
-            do_action('dm_log', 'debug', 'Google Sheets Fetch: Full spreadsheet already processed.', [
+            do_action('datamachine_log', 'debug', 'Google Sheets Fetch: Full spreadsheet already processed.', [
                 'sheet_identifier' => $sheet_identifier,
                 'pipeline_id' => $pipeline_id
             ]);
@@ -163,7 +163,7 @@ class GoogleSheetsFetch {
         
         // Mark as processed
         if ($flow_step_id) {
-            do_action('dm_mark_item_processed', $flow_step_id, 'googlesheets_fetch', $sheet_identifier, $job_id);
+            do_action('datamachine_mark_item_processed', $flow_step_id, 'googlesheets_fetch', $sheet_identifier, $job_id);
         }
 
         // Build data for all rows
@@ -209,10 +209,10 @@ class GoogleSheetsFetch {
 
         // Store empty engine data for downstream handlers
         if ($job_id) {
-            apply_filters('dm_engine_data', null, $job_id, '', '');
+            apply_filters('datamachine_engine_data', null, $job_id, '', '');
         }
 
-        do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed full spreadsheet.', [
+        do_action('datamachine_log', 'debug', 'Google Sheets Fetch: Processed full spreadsheet.', [
             'total_rows' => count($all_data),
             'pipeline_id' => $pipeline_id
         ]);
@@ -236,14 +236,14 @@ class GoogleSheetsFetch {
             $row_identifier = $spreadsheet_id . '_' . $worksheet_name . '_row_' . ($i + 1);
             
             // Check if already processed
-            $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'googlesheets_fetch', $row_identifier);
+            $is_processed = apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'googlesheets_fetch', $row_identifier);
             if ($is_processed) {
                 continue;
             }
             
             // Mark as processed
             if ($flow_step_id) {
-                do_action('dm_mark_item_processed', $flow_step_id, 'googlesheets_fetch', $row_identifier, $job_id);
+                do_action('datamachine_mark_item_processed', $flow_step_id, 'googlesheets_fetch', $row_identifier, $job_id);
             }
 
             // Build row data
@@ -281,10 +281,10 @@ class GoogleSheetsFetch {
             
             // Store empty engine data via centralized filter
             if ($job_id) {
-                apply_filters('dm_engine_data', null, $job_id, '', '');
+                apply_filters('datamachine_engine_data', null, $job_id, '', '');
             }
 
-            do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed row.', [
+            do_action('datamachine_log', 'debug', 'Google Sheets Fetch: Processed row.', [
                 'row_number' => $i + 1,
                 'pipeline_id' => $pipeline_id
             ]);
@@ -293,7 +293,7 @@ class GoogleSheetsFetch {
         }
 
         // No unprocessed rows found
-        do_action('dm_log', 'debug', 'Google Sheets Fetch: No unprocessed rows found.', ['pipeline_id' => $pipeline_id]);
+        do_action('datamachine_log', 'debug', 'Google Sheets Fetch: No unprocessed rows found.', ['pipeline_id' => $pipeline_id]);
         return ['processed_items' => []];
     }
 
@@ -317,7 +317,7 @@ class GoogleSheetsFetch {
             $column_identifier = $spreadsheet_id . '_' . $worksheet_name . '_col_' . $column_letter;
             
             // Check if already processed
-            $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'googlesheets_fetch', $column_identifier);
+            $is_processed = apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'googlesheets_fetch', $column_identifier);
             if ($is_processed) {
                 continue;
             }
@@ -339,7 +339,7 @@ class GoogleSheetsFetch {
             
             // Mark as processed
             if ($flow_step_id) {
-                do_action('dm_mark_item_processed', $flow_step_id, 'googlesheets_fetch', $column_identifier, $job_id);
+                do_action('datamachine_mark_item_processed', $flow_step_id, 'googlesheets_fetch', $column_identifier, $job_id);
             }
 
             $metadata = [
@@ -364,10 +364,10 @@ class GoogleSheetsFetch {
 
             // Store empty engine data via centralized filter
             if ($job_id) {
-                apply_filters('dm_engine_data', null, $job_id, '', '');
+                apply_filters('datamachine_engine_data', null, $job_id, '', '');
             }
 
-            do_action('dm_log', 'debug', 'Google Sheets Fetch: Processed column.', [
+            do_action('datamachine_log', 'debug', 'Google Sheets Fetch: Processed column.', [
                 'column_letter' => $column_letter,
                 'column_header' => $column_header,
                 'pipeline_id' => $pipeline_id
@@ -377,7 +377,7 @@ class GoogleSheetsFetch {
         }
 
         // No unprocessed columns found
-        do_action('dm_log', 'debug', 'Google Sheets Fetch: No unprocessed columns found.', ['pipeline_id' => $pipeline_id]);
+        do_action('datamachine_log', 'debug', 'Google Sheets Fetch: No unprocessed columns found.', ['pipeline_id' => $pipeline_id]);
         return ['processed_items' => []];
     }
 

@@ -21,18 +21,18 @@ class WordPress {
 
     /**
      * Fetch local WordPress content with timeframe and keyword filtering.
-     * Engine data (source_url, image_url) stored via dm_engine_data filter.
+     * Engine data (source_url, image_url) stored via datamachine_engine_data filter.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
-            do_action('dm_log', 'error', 'WordPress Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
+            do_action('datamachine_log', 'error', 'WordPress Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
         
         $flow_step_id = $handler_config['flow_step_id'] ?? null;
 
         if ($flow_step_id === null) {
-            do_action('dm_log', 'debug', 'WordPress fetch called without flow_step_id - processed items tracking disabled');
+            do_action('datamachine_log', 'debug', 'WordPress fetch called without flow_step_id - processed items tracking disabled');
         }
         
         $user_id = get_current_user_id();
@@ -53,7 +53,7 @@ class WordPress {
             if ($post_id > 0) {
                 return $this->process_single_post($post_id, $flow_step_id, $job_id, $handler_config);
             } else {
-                do_action('dm_log', 'warning', 'WordPress Fetch: Could not extract post ID from URL', [
+                do_action('datamachine_log', 'warning', 'WordPress Fetch: Could not extract post ID from URL', [
                     'source_url' => $source_url
                 ]);
                 return ['processed_items' => []];
@@ -68,7 +68,7 @@ class WordPress {
 
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
         $search = trim($config['search'] ?? '');
-        $cutoff_timestamp = apply_filters('dm_timeframe_limit', null, $timeframe_limit);
+        $cutoff_timestamp = apply_filters('datamachine_timeframe_limit', null, $timeframe_limit);
         $date_query = [];
         if ($cutoff_timestamp !== null) {
             $date_query = [
@@ -130,14 +130,14 @@ class WordPress {
         }
         foreach ($posts as $post) {
             $post_id = $post->ID;
-            $is_processed = ($flow_step_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_step_id, 'wordpress_local', $post_id) : false;
+            $is_processed = ($flow_step_id !== null) ? apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'wordpress_local', $post_id) : false;
             if ($is_processed) {
                 continue;
             }
 
             if ($use_client_side_search && !empty($search)) {
                 $search_text = $post->post_title . ' ' . wp_strip_all_tags($post->post_content . ' ' . $post->post_excerpt);
-                $matches = apply_filters('dm_keyword_search_match', false, $search_text, $search);
+                $matches = apply_filters('datamachine_keyword_search_match', false, $search_text, $search);
                 if (!$matches) {
                     continue;
                 }
@@ -150,13 +150,13 @@ class WordPress {
 
 
     /**
-     * Process single post with engine data storage via dm_engine_data filter.
+     * Process single post with engine data storage via datamachine_engine_data filter.
      */
     private function process_single_post(int $post_id, ?string $flow_step_id, ?string $job_id, array $handler_config): array {
         $post = get_post($post_id);
 
         if (!$post || $post->post_status === 'trash') {
-            do_action('dm_log', 'warning', 'WordPress fetch: Post not found or trashed', [
+            do_action('datamachine_log', 'warning', 'WordPress fetch: Post not found or trashed', [
                 'post_id' => $post_id,
                 'flow_step_id' => $flow_step_id
             ]);
@@ -164,7 +164,7 @@ class WordPress {
         }
 
         if ($flow_step_id) {
-            do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_local', $post_id, $job_id);
+            do_action('datamachine_mark_item_processed', $flow_step_id, 'wordpress_local', $post_id, $job_id);
         }
 
         $title = $post->post_title ?: 'N/A';
@@ -187,7 +187,7 @@ class WordPress {
                     'file_size' => $file_size
                 ];
 
-                do_action('dm_log', 'debug', 'WordPress Local: Including featured image file_info for AI processing', [
+                do_action('datamachine_log', 'debug', 'WordPress Local: Including featured image file_info for AI processing', [
                     'post_id' => $post_id,
                     'featured_image_id' => $featured_image_id,
                     'file_path' => $file_path,
@@ -225,7 +225,7 @@ class WordPress {
 
         // Store URLs in engine_data via centralized filter
         if ($job_id) {
-            apply_filters('dm_engine_data', null, $job_id, get_permalink($post_id) ?: '', $image_url ?: '');
+            apply_filters('datamachine_engine_data', null, $job_id, get_permalink($post_id) ?: '', $image_url ?: '');
         }
 
         return [

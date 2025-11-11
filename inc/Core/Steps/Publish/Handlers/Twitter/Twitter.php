@@ -12,7 +12,7 @@ class Twitter {
     private $auth;
 
     public function __construct() {
-        $all_auth = apply_filters('dm_auth_providers', []);
+        $all_auth = apply_filters('datamachine_auth_providers', []);
         $this->auth = $all_auth['twitter'] ?? null;
     }
 
@@ -23,18 +23,18 @@ class Twitter {
         $content = $parameters['content'] ?? '';
 
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;
-        
+
         $include_images = $twitter_config['include_images'] ?? true;
-        $link_handling = $twitter_config['link_handling'] ?? 'append'; // 'none', 'append', or 'reply'
+        $link_handling = $twitter_config['link_handling'] ?? 'append';
 
         $connection = $this->auth->get_connection();
         if (is_wp_error($connection)) {
             $error_msg = 'Twitter authentication failed: ' . $connection->get_error_message();
-            do_action('dm_log', 'error', $error_msg, [
+            do_action('datamachine_log', 'error', $error_msg, [
                 'error_code' => $connection->get_error_code()
             ]);
 
@@ -51,7 +51,7 @@ class Twitter {
 
         $should_append_url = $link_handling === 'append' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL);
         $link = $should_append_url ? ' ' . $source_url : '';
-        $link_length = $link ? 24 : 0; // t.co link length
+        $link_length = $link ? 24 : 0;
         $available_chars = 280 - $link_length;
 
         if ($available_chars < $ellipsis_len) {
@@ -67,23 +67,8 @@ class Twitter {
         try {
             $connection->setApiVersion('2');
 
-            do_action('dm_log', 'debug', 'Twitter Tool: Using X API v2 for tweet posting', [
-                'api_version' => '2',
-                'tweet_length' => mb_strlen($tweet_text, 'UTF-8')
-            ]);
-            
             $v2_payload = ['text' => $tweet_text];
-            
             $media_id = null;
-            
-            do_action('dm_log', 'debug', 'Twitter Handler: Image upload processing', [
-                'include_images' => $include_images,
-                'image_url_provided' => !empty($image_url),
-                'image_url' => $image_url ?? 'not_provided',
-                'image_url_empty' => empty($image_url),
-                'image_url_is_string' => is_string($image_url),
-                'image_url_length' => $image_url ? strlen($image_url) : 0
-            ]);
 
             if ($include_images && !empty($image_url)) {
                 if (filter_var($image_url, FILTER_VALIDATE_URL) && $this->is_image_accessible($image_url)) {
@@ -103,11 +88,6 @@ class Twitter {
                 $account_details = $this->auth->get_account_details();
                 $screen_name = $account_details['screen_name'] ?? 'twitter';
                 $tweet_url = "https://twitter.com/{$screen_name}/status/{$tweet_id}";
-                
-                do_action('dm_log', 'debug', 'Twitter Tool: Tweet posted successfully', [
-                    'tweet_id' => $tweet_id,
-                    'tweet_url' => $tweet_url
-                ]);
 
                 $reply_result = null;
                 if ($link_handling === 'reply' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
@@ -124,7 +104,7 @@ class Twitter {
                     $result_data['reply_tweet_id'] = $reply_result['reply_tweet_id'];
                     $result_data['reply_tweet_url'] = $reply_result['reply_tweet_url'];
                 } elseif ($reply_result && !$reply_result['success']) {
-                    do_action('dm_log', 'warning', 'Twitter Tool: Main tweet posted but reply failed', [
+                    do_action('datamachine_log', 'warning', 'Twitter Tool: Main tweet posted but reply failed', [
                         'tweet_id' => $tweet_id,
                         'reply_error' => $reply_result['error']
                     ]);
@@ -141,7 +121,7 @@ class Twitter {
                     $error_msg = "Twitter API error: {$response->title}";
                 }
 
-                do_action('dm_log', 'error', $error_msg, [
+                do_action('datamachine_log', 'error', $error_msg, [
                     'http_code' => $http_code,
                     'raw_api_response' => json_encode($response, JSON_PRETTY_PRINT),
                     'response_headers' => $connection->getLastXHeaders() ?? 'unavailable'
@@ -154,7 +134,7 @@ class Twitter {
                 ];
             }
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Twitter Tool: Exception during posting', [
+            do_action('datamachine_log', 'error', 'Twitter Tool: Exception during posting', [
                 'exception' => $e->getMessage()
             ]);
             
@@ -167,11 +147,6 @@ class Twitter {
     }
 
     private function post_reply_tweet($connection, string $original_tweet_id, string $source_url, string $screen_name): array {
-        do_action('dm_log', 'debug', 'Twitter Tool: Posting URL as reply tweet', [
-            'original_tweet_id' => $original_tweet_id,
-            'source_url' => $source_url
-        ]);
-
         try {
             $connection->setApiVersion('2');
             
@@ -188,12 +163,6 @@ class Twitter {
             if ($http_code == 201 && isset($response->data->id)) {
                 $reply_tweet_id = $response->data->id;
                 $reply_tweet_url = "https://twitter.com/{$screen_name}/status/{$reply_tweet_id}";
-                
-                do_action('dm_log', 'debug', 'Twitter Tool: Reply tweet posted successfully', [
-                    'reply_tweet_id' => $reply_tweet_id,
-                    'reply_tweet_url' => $reply_tweet_url,
-                    'original_tweet_id' => $original_tweet_id
-                ]);
 
                 return [
                     'success' => true,
@@ -206,7 +175,7 @@ class Twitter {
                     $error_msg = "Twitter API error: {$response->title}";
                 }
                 
-                do_action('dm_log', 'warning', 'Twitter Tool: Reply tweet failed', [
+                do_action('datamachine_log', 'warning', 'Twitter Tool: Reply tweet failed', [
                     'http_code' => $http_code,
                     'api_response' => $response,
                     'original_tweet_id' => $original_tweet_id
@@ -218,7 +187,7 @@ class Twitter {
                 ];
             }
         } catch (\Exception $e) {
-            do_action('dm_log', 'warning', 'Twitter Tool: Exception during reply posting', [
+            do_action('datamachine_log', 'warning', 'Twitter Tool: Exception during reply posting', [
                 'exception' => $e->getMessage(),
                 'original_tweet_id' => $original_tweet_id
             ]);
@@ -232,15 +201,13 @@ class Twitter {
 
 
     private function upload_image_to_twitter($connection, string $image_url, string $alt_text): ?string {
-        do_action('dm_log', 'debug', 'Attempting to upload image to Twitter using v1.1 media API.', ['image_url' => $image_url]);
-        
         if (!function_exists('download_url')) {
             require_once(ABSPATH . 'wp-admin/includes/file.php');
         }
         
         $temp_image_path = download_url($image_url);
         if (is_wp_error($temp_image_path)) {
-            do_action('dm_log', 'warning', 'Failed to download image for Twitter upload.', [
+            do_action('datamachine_log', 'warning', 'Failed to download image for Twitter upload.', [
                 'url' => $image_url, 
                 'error' => $temp_image_path->get_error_message()
             ]);
@@ -253,7 +220,7 @@ class Twitter {
             finfo_close($finfo);
 
             if (empty($mime_type) || !preg_match('/^image\/(jpeg|png|gif|webp)$/', $mime_type)) {
-                do_action('dm_log', 'warning', 'Invalid or unsupported image type for Twitter.', [
+                do_action('datamachine_log', 'warning', 'Invalid or unsupported image type for Twitter.', [
                     'path' => $temp_image_path, 
                     'detected_mime' => $mime_type
                 ]);
@@ -261,13 +228,6 @@ class Twitter {
             }
 
             $file_size = filesize($temp_image_path);
-            
-            do_action('dm_log', 'debug', 'Twitter image upload: File analysis complete.', [
-                'temp_image_path' => $temp_image_path,
-                'mime_type' => $mime_type,
-                'file_size' => $file_size,
-                'upload_method' => 'chunked'
-            ]);
 
             $connection->setApiVersion('1.1');
 
@@ -276,17 +236,9 @@ class Twitter {
             $connection->setApiVersion('2');
 
             if ($media_id) {
-                if (!empty($alt_text)) {
-                    do_action('dm_log', 'debug', 'Alt text provided but not yet implemented.', [
-                        'media_id' => $media_id,
-                        'alt_text_length' => strlen($alt_text)
-                    ]);
-                }
-
-                do_action('dm_log', 'debug', 'Successfully uploaded image to Twitter.', ['media_id' => $media_id]);
                 return $media_id;
             } else {
-                do_action('dm_log', 'error', 'Twitter media upload failed.', [
+                do_action('datamachine_log', 'error', 'Twitter media upload failed.', [
                     'image_url' => $image_url,
                     'file_size' => $file_size,
                     'mime_type' => $mime_type
@@ -296,7 +248,7 @@ class Twitter {
         } catch (\Exception $e) {
             $connection->setApiVersion('2');
             
-            do_action('dm_log', 'error', 'Twitter image upload exception: ' . $e->getMessage(), [
+            do_action('datamachine_log', 'error', 'Twitter image upload exception: ' . $e->getMessage(), [
                 'exception_type' => get_class($e),
                 'image_url' => $image_url
             ]);
@@ -304,7 +256,6 @@ class Twitter {
         } finally {
             if ($temp_image_path && file_exists($temp_image_path)) {
                 wp_delete_file($temp_image_path);
-                do_action('dm_log', 'debug', 'Temporary image file cleaned up.', ['image_url' => $image_url]);
             }
         }
     }
@@ -312,11 +263,6 @@ class Twitter {
     private function upload_image_chunked($connection, string $temp_image_path, string $mime_type): ?string {
         try {
             $file_size = filesize($temp_image_path);
-            
-            do_action('dm_log', 'debug', 'Twitter: Chunked upload INIT phase.', [
-                'total_bytes' => $file_size,
-                'media_type' => $mime_type
-            ]);
 
             $init_response = $connection->post('media/upload', [
                 'command' => 'INIT',
@@ -327,7 +273,7 @@ class Twitter {
 
             $http_code = $connection->getLastHttpCode();
             if ($http_code !== 200 || !isset($init_response->media_id_string)) {
-                do_action('dm_log', 'error', 'Twitter: Chunked upload INIT failed.', [
+                do_action('datamachine_log', 'error', 'Twitter: Chunked upload INIT failed.', [
                     'http_code' => $http_code,
                     'response' => $init_response
                 ]);
@@ -335,9 +281,6 @@ class Twitter {
             }
 
             $media_id = $init_response->media_id_string;
-            do_action('dm_log', 'debug', 'Twitter: Chunked upload INIT successful.', [
-                'media_id' => $media_id
-            ]);
 
             if (!function_exists('WP_Filesystem')) {
                 require_once(ABSPATH . 'wp-admin/includes/file.php');
@@ -345,7 +288,7 @@ class Twitter {
 
             $filesystem_init = WP_Filesystem();
             if (!$filesystem_init) {
-                do_action('dm_log', 'error', 'Twitter: WP_Filesystem initialization failed', [
+                do_action('datamachine_log', 'error', 'Twitter: WP_Filesystem initialization failed', [
                     'temp_image_path' => $temp_image_path
                 ]);
                 return null;
@@ -355,7 +298,7 @@ class Twitter {
 
             $file_contents = $wp_filesystem->get_contents($temp_image_path);
             if (false === $file_contents) {
-                do_action('dm_log', 'error', 'Twitter: Cannot read image file for chunked upload.', [
+                do_action('datamachine_log', 'error', 'Twitter: Cannot read image file for chunked upload.', [
                     'temp_image_path' => $temp_image_path
                 ]);
                 return null;
@@ -369,11 +312,6 @@ class Twitter {
             while ($offset < $file_length) {
                 $chunk = substr($file_contents, $offset, $chunk_size);
 
-                do_action('dm_log', 'debug', 'Twitter: Uploading chunk.', [
-                    'segment_index' => $segment_index,
-                    'chunk_size' => strlen($chunk)
-                ]);
-
                 $append_response = $connection->post('media/upload', [
                     'command' => 'APPEND',
                     'media_id' => $media_id,
@@ -382,8 +320,8 @@ class Twitter {
                 ]);
 
                 $http_code = $connection->getLastHttpCode();
-                if ($http_code !== 204) { // APPEND returns 204 on success
-                    do_action('dm_log', 'error', 'Twitter: Chunked upload APPEND failed.', [
+                if ($http_code !== 204) {
+                    do_action('datamachine_log', 'error', 'Twitter: Chunked upload APPEND failed.', [
                         'http_code' => $http_code,
                         'segment_index' => $segment_index,
                         'response' => $append_response
@@ -395,10 +333,6 @@ class Twitter {
                 $segment_index++;
             }
 
-            do_action('dm_log', 'debug', 'Twitter: Chunked upload FINALIZE phase.', [
-                'media_id' => $media_id
-            ]);
-
             $finalize_response = $connection->post('media/upload', [
                 'command' => 'FINALIZE',
                 'media_id' => $media_id
@@ -406,33 +340,17 @@ class Twitter {
 
             $http_code = $connection->getLastHttpCode();
             if ($http_code !== 200 || !isset($finalize_response->media_id_string)) {
-                do_action('dm_log', 'error', 'Twitter: Chunked upload FINALIZE failed.', [
+                do_action('datamachine_log', 'error', 'Twitter: Chunked upload FINALIZE failed.', [
                     'http_code' => $http_code,
                     'response' => $finalize_response
                 ]);
                 return null;
             }
 
-            if (isset($finalize_response->processing_info)) {
-                $processing_info = $finalize_response->processing_info;
-                do_action('dm_log', 'debug', 'Twitter: Media processing required.', [
-                    'media_id' => $media_id,
-                    'processing_state' => $processing_info->state ?? 'unknown',
-                    'check_after_secs' => $processing_info->check_after_secs ?? 0
-                ]);
-
-                if (($processing_info->state ?? '') === 'pending') {
-                    do_action('dm_log', 'debug', 'Twitter: Media upload pending processing, but proceeding.', [
-                        'media_id' => $media_id
-                    ]);
-                }
-            }
-
-
             return $finalize_response->media_id_string;
 
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Twitter: Chunked upload exception.', [
+            do_action('datamachine_log', 'error', 'Twitter: Chunked upload exception.', [
                 'exception' => $e->getMessage(),
                 'exception_type' => get_class($e)
             ]);
@@ -454,7 +372,7 @@ class Twitter {
         
         foreach ($problematic_patterns as $pattern) {
             if (strpos($image_url, $pattern) !== false) {
-                do_action('dm_log', 'warning', 'Twitter: Skipping problematic image URL pattern', ['url' => $image_url, 'pattern' => $pattern]);
+                do_action('datamachine_log', 'warning', 'Twitter: Skipping problematic image URL pattern', ['url' => $image_url, 'pattern' => $pattern]);
                 return false;
             }
         }
@@ -464,7 +382,7 @@ class Twitter {
         ]);
 
         if (is_wp_error($response)) {
-            do_action('dm_log', 'warning', 'Twitter: Image URL not accessible', ['url' => $image_url, 'error' => $response->get_error_message()]);
+            do_action('datamachine_log', 'warning', 'Twitter: Image URL not accessible', ['url' => $image_url, 'error' => $response->get_error_message()]);
             return false;
         }
 
@@ -475,7 +393,7 @@ class Twitter {
             return true;
         }
 
-        do_action('dm_log', 'warning', 'Twitter: Image URL validation failed', [
+        do_action('datamachine_log', 'warning', 'Twitter: Image URL validation failed', [
             'url' => $image_url,
             'http_code' => $http_code,
             'content_type' => $content_type

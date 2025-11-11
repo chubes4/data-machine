@@ -19,7 +19,7 @@ Posts content to Meta's Threads platform using OAuth2 authentication with two-st
 
 ## Source URL Attribution
 
-**Engine Data Source**: `source_url` retrieved from fetch handlers via `dm_engine_data` filter
+**Engine Data Source**: `source_url` retrieved from fetch handlers via `datamachine_engine_data` filter
 
 **Link Handling** (`link_handling: 'append'`):
 - Source URL appended to post content with double newline separator (`\n\n`)
@@ -185,4 +185,4 @@ $tool_def = [
 5. **Publishing**: Publishes the container to make it live on Threads
 6. **Response**: Returns media ID and constructed post URL
 
-**Logging**: Uses `dm_log` action with debug/error levels for API interactions, authentication checks, and error handling.
+**Logging**: Uses `datamachine_log` action with debug/error levels for API interactions, authentication checks, and error handling.

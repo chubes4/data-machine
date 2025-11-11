@@ -142,7 +142,7 @@ $parameters = [
 
 **Purpose**: Source URL processing with configuration hierarchy and Gutenberg block generation for link attribution.
 
-**Engine Data Source**: `source_url` retrieved from fetch handlers via `dm_engine_data` filter
+**Engine Data Source**: `source_url` retrieved from fetch handlers via `datamachine_engine_data` filter
 
 ### Configuration Hierarchy
 
@@ -183,7 +183,7 @@ $final_content = $source_handler->processSourceUrl($content, $engine_data, $hand
 
 // Engine data access (from WordPress publish handler)
 $job_id = $parameters['job_id'] ?? null;
-$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 $source_url = $engine_data['source_url'] ?? null;
 
 // Returns content with appended Gutenberg source attribution blocks

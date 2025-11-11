@@ -1,0 +1,163 @@
+/**
+ * Import Tab Component
+ *
+ * CSV upload interface with drag-drop support.
+ */
+
+import { useState } from '@wordpress/element';
+import { Button, Notice } from '@wordpress/components';
+import { __ } from '@wordpress/i18n';
+import { importPipelines } from '../../../utils/api';
+import CSVDropzone from './CSVDropzone';
+
+/**
+ * Import Tab Component
+ *
+ * @param {Object} props - Component props
+ * @param {Function} props.onSuccess - Success callback
+ * @param {Function} props.onClose - Close handler
+ * @returns {React.ReactElement} Import tab
+ */
+export default function ImportTab({ onSuccess, onClose }) {
+	const [csvContent, setCsvContent] = useState(null);
+	const [fileName, setFileName] = useState('');
+	const [isImporting, setIsImporting] = useState(false);
+	const [error, setError] = useState(null);
+	const [success, setSuccess] = useState(null);
+
+	/**
+	 * Handle file selection
+	 */
+	const handleFileSelected = (content, name) => {
+		setCsvContent(content);
+		setFileName(name);
+		setError(null);
+		setSuccess(null);
+	};
+
+	/**
+	 * Handle import action
+	 */
+	const handleImport = async () => {
+		if (!csvContent) {
+			setError(__('Please select a CSV file to import.', 'data-machine'));
+			return;
+		}
+
+		setIsImporting(true);
+		setError(null);
+		setSuccess(null);
+
+		try {
+			const response = await importPipelines(csvContent);
+
+			if (response.success) {
+				const count = response.data?.created_count || 0;
+				setSuccess(
+					count > 0
+						? __(`Successfully imported ${count} pipeline(s)!`, 'data-machine')
+						: __('Import completed!', 'data-machine')
+				);
+
+				// Clear file after successful import
+				setCsvContent(null);
+				setFileName('');
+
+				// Call success callback after short delay
+				setTimeout(() => {
+					if (onSuccess) {
+						onSuccess();
+					}
+				}, 1500);
+			} else {
+				setError(response.message || __('Failed to import pipelines', 'data-machine'));
+			}
+		} catch (err) {
+			console.error('Import error:', err);
+			setError(err.message || __('An error occurred during import', 'data-machine'));
+		} finally {
+			setIsImporting(false);
+		}
+	};
+
+	/**
+	 * Clear selected file
+	 */
+	const handleClear = () => {
+		setCsvContent(null);
+		setFileName('');
+		setError(null);
+		setSuccess(null);
+	};
+
+	return (
+		<div className="dm-import-tab">
+			{error && (
+				<Notice status="error" isDismissible onRemove={() => setError(null)}>
+					<p>{error}</p>
+				</Notice>
+			)}
+
+			{success && (
+				<Notice status="success" isDismissible onRemove={() => setSuccess(null)}>
+					<p>{success}</p>
+				</Notice>
+			)}
+
+			<p style={{ marginBottom: '20px', color: '#757575' }}>
+				{__('Upload a CSV file to import pipelines:', 'data-machine')}
+			</p>
+
+			<CSVDropzone
+				onFileSelected={handleFileSelected}
+				fileName={fileName}
+				disabled={isImporting}
+			/>
+
+			{fileName && (
+				<div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+					<span style={{ color: '#46b450', fontWeight: '500' }}>
+						{__('Selected:', 'data-machine')} {fileName}
+					</span>
+					<Button
+						variant="link"
+						onClick={handleClear}
+						disabled={isImporting}
+						style={{ color: '#dc3232' }}
+					>
+						{__('Clear', 'data-machine')}
+					</Button>
+				</div>
+			)}
+
+			<div
+				style={{
+					display: 'flex',
+					justifyContent: 'space-between',
+					marginTop: '24px',
+					paddingTop: '20px',
+					borderTop: '1px solid #dcdcde'
+				}}
+			>
+				<Button
+					variant="secondary"
+					onClick={onClose}
+					disabled={isImporting}
+				>
+					{__('Cancel', 'data-machine')}
+				</Button>
+
+				<Button
+					variant="primary"
+					onClick={handleImport}
+					disabled={isImporting || !csvContent}
+					isBusy={isImporting}
+				>
+					{isImporting
+						? __('Importing...', 'data-machine')
+						: __('Import Pipelines', 'data-machine')}
+				</Button>
+			</div>
+		</div>
+	);
+}

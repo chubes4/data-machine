@@ -23,7 +23,7 @@ class BlueskyAuth {
     }
 
     public function is_authenticated(): bool {
-        $auth_data = apply_filters('dm_retrieve_oauth_account', [], 'bluesky');
+        $auth_data = apply_filters('datamachine_retrieve_oauth_account', [], 'bluesky');
         return !empty($auth_data) &&
                !empty($auth_data['username']) &&
                !empty($auth_data['app_password']);
@@ -54,12 +54,12 @@ class BlueskyAuth {
      * Gets authenticated Bluesky session with access token and DID.
      */
     public function get_session() {
-        $auth_data = apply_filters('dm_retrieve_oauth_account', [], 'bluesky');
+        $auth_data = apply_filters('datamachine_retrieve_oauth_account', [], 'bluesky');
         $handle = $auth_data['username'] ?? '';
         $password = $auth_data['app_password'] ?? '';
 
         if (empty($handle) || empty($password)) {
-            do_action('dm_log', 'error', 'Bluesky handle or app password missing in site options.');
+            do_action('datamachine_log', 'error', 'Bluesky handle or app password missing in site options.');
             return new \WP_Error('bluesky_config_missing', __('Bluesky handle and app password must be configured.', 'data-machine'));
         }
 
@@ -68,7 +68,7 @@ class BlueskyAuth {
         unset($password);
 
         if (is_wp_error($session_data)) {
-            do_action('dm_log', 'error', 'Bluesky authentication failed.', [
+            do_action('datamachine_log', 'error', 'Bluesky authentication failed.', [
                 'error_code' => $session_data->get_error_code(),
                 'error_message' => $session_data->get_error_message()
             ]);
@@ -80,7 +80,7 @@ class BlueskyAuth {
         $pds_url = $session_data['pds_url'] ?? null;
 
         if (empty($access_token) || empty($did) || empty($pds_url)) {
-            do_action('dm_log', 'error', 'Bluesky session data incomplete after authentication.', [
+            do_action('datamachine_log', 'error', 'Bluesky session data incomplete after authentication.', [
                 'has_token' => !empty($access_token),
                 'has_did' => !empty($did),
                 'has_pds_url' => !empty($pds_url)
@@ -105,12 +105,12 @@ class BlueskyAuth {
         ]);
 
         if (false === $body) {
-            do_action('dm_log', 'error', 'Failed to JSON encode Bluesky session request body.', ['handle' => $handle]);
+            do_action('datamachine_log', 'error', 'Failed to JSON encode Bluesky session request body.', ['handle' => $handle]);
             return new \WP_Error('bluesky_json_encode_error', __('Could not encode authentication request.', 'data-machine'));
         }
 
 
-        $result = apply_filters('dm_request', null, 'POST', $url, [
+        $result = apply_filters('datamachine_request', null, 'POST', $url, [
             'headers' => [
                 'Content-Type' => 'application/json'
             ],
@@ -118,7 +118,7 @@ class BlueskyAuth {
         ], 'Bluesky Authentication');
 
         if (!$result['success']) {
-            do_action('dm_log', 'error', 'Bluesky session request failed.', [
+            do_action('datamachine_log', 'error', 'Bluesky session request failed.', [
                 'handle' => $handle,
                 'error' => $result['error']
             ]);
@@ -129,7 +129,7 @@ class BlueskyAuth {
         $response_code = $result['status_code'];
         $response_body = $result['data'];
         
-        do_action('dm_log', 'debug', 'Bluesky session response received.', [
+        do_action('datamachine_log', 'debug', 'Bluesky session response received.', [
             'handle' => $handle,
             'code' => $response_code,
             'body_snippet' => substr($response_body, 0, 200)
@@ -137,7 +137,7 @@ class BlueskyAuth {
 
         $session_data = json_decode($response_body, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            do_action('dm_log', 'error', 'Failed to decode Bluesky session response JSON.', [
+            do_action('datamachine_log', 'error', 'Failed to decode Bluesky session response JSON.', [
                 'handle' => $handle,
                 'json_error' => json_last_error_msg()
             ]);
@@ -146,7 +146,7 @@ class BlueskyAuth {
 
         if ($response_code !== 200) {
             if (empty($session_data['message'])) {
-                do_action('dm_log', 'error', 'Bluesky authentication failed with no error message provided.', [
+                do_action('datamachine_log', 'error', 'Bluesky authentication failed with no error message provided.', [
                     'handle' => $handle,
                     'code' => $response_code,
                     'response_data' => $session_data
@@ -157,7 +157,7 @@ class BlueskyAuth {
             }
             
             $error_message = $session_data['message'];
-            do_action('dm_log', 'error', 'Bluesky authentication failed (non-200 response).', [
+            do_action('datamachine_log', 'error', 'Bluesky authentication failed (non-200 response).', [
                 'handle' => $handle,
                 'code' => $response_code,
                 'response_message' => $error_message
@@ -175,7 +175,7 @@ class BlueskyAuth {
                 $session_data['pds_url'] = $session_data['pdsUrl'];
             }
 
-            do_action('dm_log', 'debug', 'Using PDS URL from session response.', [
+            do_action('datamachine_log', 'debug', 'Using PDS URL from session response.', [
                 'handle' => $handle,
                 'pds_url' => $session_data['pds_url']
             ]);
@@ -183,7 +183,7 @@ class BlueskyAuth {
             // Fallback to default Bluesky PDS when API doesn't return pdsUrl
             $session_data['pds_url'] = 'https://bsky.social';
 
-            do_action('dm_log', 'debug', 'Using default Bluesky PDS URL (pdsUrl not in response).', [
+            do_action('datamachine_log', 'debug', 'Using default Bluesky PDS URL (pdsUrl not in response).', [
                 'handle' => $handle,
                 'pds_url' => $session_data['pds_url']
             ]);
@@ -193,7 +193,7 @@ class BlueskyAuth {
     }
 
     public function get_account_details(): ?array {
-        $auth_data = apply_filters('dm_retrieve_oauth_account', [], 'bluesky');
+        $auth_data = apply_filters('datamachine_retrieve_oauth_account', [], 'bluesky');
         $handle = $auth_data['username'] ?? '';
         $password = $auth_data['app_password'] ?? '';
 
@@ -209,6 +209,6 @@ class BlueskyAuth {
     }
 
     public function remove_account(): bool {
-        return apply_filters('dm_clear_oauth_account', false, 'bluesky');
+        return apply_filters('datamachine_clear_oauth_account', false, 'bluesky');
     }
 }

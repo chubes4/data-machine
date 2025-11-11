@@ -22,18 +22,18 @@ delete_option( 'ai_http_client_selected_provider_data-machine' );
 // Note: Shared API keys preserved for other plugins using AI HTTP Client library
 
 // Delete options from different storage system
-delete_option( 'dm_openai_api_key' );
-delete_option( 'dm_openai_user_meta' );
-delete_option( 'dm_bluesky_user_meta' );
-delete_option( 'dm_twitter_user_meta' );
-delete_option( 'dm_reddit_user_meta' );
-delete_option( 'dm_threads_user_meta' );
-delete_option( 'dm_facebook_user_meta' );
+delete_option( 'datamachine_openai_api_key' );
+delete_option( 'datamachine_openai_user_meta' );
+delete_option( 'datamachine_bluesky_user_meta' );
+delete_option( 'datamachine_twitter_user_meta' );
+delete_option( 'datamachine_reddit_user_meta' );
+delete_option( 'datamachine_threads_user_meta' );
+delete_option( 'datamachine_facebook_user_meta' );
 
 // Delete user meta for all users - WordPress compliant approach
 global $wpdb;
 // Use prepared statement for security and WordPress compliance
-$pattern = 'dm_%';
+$pattern = 'datamachine_%';
 $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE %s", $pattern ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 
 // Clear any related caches
@@ -67,4 +67,4 @@ if ( function_exists( 'as_unschedule_all_actions' ) ) {
 }
 
 // Clear transients
-delete_transient( 'dm_activation_notice' ); 
+delete_transient( 'datamachine_activation_notice' ); 

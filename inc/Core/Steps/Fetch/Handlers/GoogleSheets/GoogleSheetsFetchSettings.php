@@ -125,7 +125,7 @@ class GoogleSheetsFetchSettings {
      * @return bool|\WP_Error True if authenticated, WP_Error if not.
      */
     public static function validate_authentication(int $user_id) {
-        $all_auth = apply_filters('dm_auth_providers', []);
+        $all_auth = apply_filters('datamachine_auth_providers', []);
         $auth_service = $all_auth['googlesheets'] ?? null;
         if (!$auth_service) {
             return new \WP_Error('googlesheets_auth_unavailable', __('Google Sheets authentication service not available.', 'data-machine'));

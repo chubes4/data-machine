@@ -1,0 +1,251 @@
+/**
+ * Configure Step Modal Component
+ *
+ * Modal for configuring AI provider and model for AI steps.
+ */
+
+import { useState, useEffect, useMemo } from '@wordpress/element';
+import { Modal, Button, SelectControl, TextareaControl } from '@wordpress/components';
+import { __ } from '@wordpress/i18n';
+import { updateSystemPrompt } from '../../utils/api';
+import AIToolsSelector from './configure-step/AIToolsSelector';
+
+/**
+ * Configure Step Modal Component
+ *
+ * @param {Object} props - Component props
+ * @param {boolean} props.isOpen - Modal open state
+ * @param {Function} props.onClose - Close handler
+ * @param {number} props.pipelineId - Pipeline ID
+ * @param {string} props.pipelineStepId - Pipeline step ID
+ * @param {string} props.stepType - Step type
+ * @param {Object} props.currentConfig - Current configuration
+ * @param {Function} props.onSuccess - Success callback
+ * @returns {React.ReactElement|null} Configure step modal
+ */
+export default function ConfigureStepModal({
+	isOpen,
+	onClose,
+	pipelineId,
+	pipelineStepId,
+	stepType,
+	currentConfig,
+	onSuccess
+}) {
+	const [provider, setProvider] = useState(currentConfig?.ai_provider || '');
+	const [model, setModel] = useState(currentConfig?.ai_model || '');
+	const [systemPrompt, setSystemPrompt] = useState(currentConfig?.system_prompt || '');
+	const [selectedTools, setSelectedTools] = useState(currentConfig?.enabled_tools || []);
+	const [isSaving, setIsSaving] = useState(false);
+	const [error, setError] = useState(null);
+
+	/**
+	 * Reset form when modal opens with new config
+	 */
+	useEffect(() => {
+		if (isOpen) {
+			setProvider(currentConfig?.ai_provider || '');
+			setModel(currentConfig?.ai_model || '');
+			setSystemPrompt(currentConfig?.system_prompt || '');
+			setSelectedTools(currentConfig?.enabled_tools || []);
+			setError(null);
+		}
+	}, [isOpen, currentConfig]);
+
+	if (!isOpen) {
+		return null;
+	}
+
+	/**
+	 * Get AI providers from WordPress globals
+	 */
+	const aiProviders = window.dataMachineConfig?.aiProviders || {};
+
+	/**
+	 * Get provider options
+	 */
+	const providerOptions = useMemo(() => {
+		const options = [{ value: '', label: __('Select Provider...', 'data-machine') }];
+
+		Object.entries(aiProviders).forEach(([key, providerData]) => {
+			options.push({
+				value: key,
+				label: providerData.label || key
+			});
+		});
+
+		return options;
+	}, [aiProviders]);
+
+	/**
+	 * Get model options for selected provider
+	 */
+	const modelOptions = useMemo(() => {
+		if (!provider || !aiProviders[provider]) {
+			return [{ value: '', label: __('Select provider first...', 'data-machine') }];
+		}
+
+		const options = [{ value: '', label: __('Select Model...', 'data-machine') }];
+		const providerData = aiProviders[provider];
+
+		if (providerData.models && Array.isArray(providerData.models)) {
+			providerData.models.forEach((modelData) => {
+				options.push({
+					value: modelData.id,
+					label: modelData.name || modelData.id
+				});
+			});
+		}
+
+		return options;
+	}, [provider, aiProviders]);
+
+	/**
+	 * Handle provider change (reset model)
+	 */
+	const handleProviderChange = (value) => {
+		setProvider(value);
+		setModel(''); // Reset model when provider changes
+	};
+
+	/**
+	 * Handle save
+	 */
+	const handleSave = async () => {
+		if (!provider) {
+			setError(__('Please select an AI provider', 'data-machine'));
+			return;
+		}
+
+		if (!model) {
+			setError(__('Please select an AI model', 'data-machine'));
+			return;
+		}
+
+		setIsSaving(true);
+		setError(null);
+
+		try {
+			const response = await updateSystemPrompt(
+				pipelineId,
+				pipelineStepId,
+				systemPrompt,
+				provider,
+				model,
+				selectedTools
+			);
+
+			if (response.success) {
+				if (onSuccess) {
+					onSuccess();
+				}
+				onClose();
+			} else {
+				setError(response.message || __('Failed to update configuration', 'data-machine'));
+			}
+		} catch (err) {
+			console.error('Configuration update error:', err);
+			setError(err.message || __('An error occurred', 'data-machine'));
+		} finally {
+			setIsSaving(false);
+		}
+	};
+
+	/**
+	 * Check if config changed
+	 */
+	const hasChanged =
+		provider !== (currentConfig?.ai_provider || '') ||
+		model !== (currentConfig?.ai_model || '') ||
+		systemPrompt !== (currentConfig?.system_prompt || '') ||
+		JSON.stringify(selectedTools) !== JSON.stringify(currentConfig?.enabled_tools || []);
+
+	return (
+		<Modal
+			title={__('Configure AI Step', 'data-machine')}
+			onRequestClose={onClose}
+			className="dm-modal dm-configure-step-modal"
+			style={{ maxWidth: '600px' }}
+		>
+			<div className="dm-modal-content">
+				{error && (
+					<div className="notice notice-error" style={{ marginBottom: '16px' }}>
+						<p>{error}</p>
+					</div>
+				)}
+
+				<SelectControl
+					label={__('AI Provider', 'data-machine')}
+					value={provider}
+					options={providerOptions}
+					onChange={handleProviderChange}
+					help={__('Choose the AI provider for this step.', 'data-machine')}
+				/>
+
+				<SelectControl
+					label={__('AI Model', 'data-machine')}
+					value={model}
+					options={modelOptions}
+					onChange={setModel}
+					disabled={!provider}
+					help={__('Choose the AI model to use.', 'data-machine')}
+				/>
+
+				<AIToolsSelector
+					selectedTools={selectedTools}
+					onSelectionChange={setSelectedTools}
+				/>
+
+				<TextareaControl
+					label={__('System Prompt', 'data-machine')}
+					value={systemPrompt}
+					onChange={setSystemPrompt}
+					placeholder={__('Enter system prompt for AI processing...', 'data-machine')}
+					rows={8}
+					help={__('Optional: Provide instructions for the AI to follow during processing.', 'data-machine')}
+				/>
+
+				<div
+					style={{
+						marginTop: '16px',
+						padding: '12px',
+						background: '#f9f9f9',
+						border: '1px solid #dcdcde',
+						borderRadius: '4px'
+					}}
+				>
+					<p style={{ margin: 0, fontSize: '12px', color: '#757575' }}>
+						<strong>{__('Note:', 'data-machine')}</strong> {__('The system prompt is shared across all flows using this pipeline. To add flow-specific instructions, use the user message field in the flow step card.', 'data-machine')}
+					</p>
+				</div>
+
+				<div
+					style={{
+						display: 'flex',
+						justifyContent: 'space-between',
+						marginTop: '24px',
+						paddingTop: '20px',
+						borderTop: '1px solid #dcdcde'
+					}}
+				>
+					<Button
+						variant="secondary"
+						onClick={onClose}
+						disabled={isSaving}
+					>
+						{__('Cancel', 'data-machine')}
+					</Button>
+
+					<Button
+						variant="primary"
+						onClick={handleSave}
+						disabled={isSaving || !hasChanged || !provider || !model}
+						isBusy={isSaving}
+					>
+						{isSaving ? __('Saving...', 'data-machine') : __('Save Configuration', 'data-machine')}
+					</Button>
+				</div>
+			</div>
+		</Modal>
+	);
+}

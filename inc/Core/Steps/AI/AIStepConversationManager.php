@@ -22,7 +22,7 @@ class AIStepConversationManager {
 
         $default_message = "SUCCESS: " . ucwords(str_replace('_', ' ', $tool_name)) . " completed successfully. The requested operation has been finished as requested.";
 
-        return apply_filters('dm_tool_success_message', $default_message, $tool_name, $tool_result, $tool_parameters);
+        return apply_filters('datamachine_tool_success_message', $default_message, $tool_name, $tool_result, $tool_parameters);
     }
 
     public static function updateDataPacketMessages(array $conversation_messages, array $data): array {

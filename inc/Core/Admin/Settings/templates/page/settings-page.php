@@ -24,11 +24,11 @@ if (!in_array($active_tab, $valid_tabs)) {
 }
 
 ?>
-<div class="wrap dm-settings-page">
+<div class="wrap datamachine-settings-page">
     <h1><?php echo esc_html($page_title ?? __('Data Machine Settings', 'data-machine')); ?></h1>
     
     <!-- Tab Navigation -->
-    <h2 class="nav-tab-wrapper dm-nav-tab-wrapper">
+    <h2 class="nav-tab-wrapper datamachine-nav-tab-wrapper">
         <a href="?page=data-machine-settings&tab=admin" 
            class="nav-tab <?php echo $active_tab === 'admin' ? 'nav-tab-active' : ''; ?>">
             <?php esc_html_e('Admin', 'data-machine'); ?>
@@ -44,22 +44,22 @@ if (!in_array($active_tab, $valid_tabs)) {
     </h2>
     
     <!-- Tab Content -->
-    <form method="post" action="options.php" class="dm-settings-form">
+    <form method="post" action="options.php" class="datamachine-settings-form">
         <?php settings_fields('data_machine_settings'); ?>
         
-        <div id="dm-tab-admin" class="dm-tab-content <?php echo $active_tab === 'admin' ? 'active' : ''; ?>">
-            <?php echo wp_kses(apply_filters('dm_render_template', '', 'page/admin-tab'), dm_allowed_html()); ?>
+        <div id="datamachine-tab-admin" class="datamachine-tab-content <?php echo $active_tab === 'admin' ? 'active' : ''; ?>">
+            <?php echo wp_kses(apply_filters('datamachine_render_template', '', 'page/admin-tab'), datamachine_allowed_html()); ?>
         </div>
         
-        <div id="dm-tab-agent" class="dm-tab-content <?php echo $active_tab === 'agent' ? 'active' : ''; ?>">
-            <?php echo wp_kses(apply_filters('dm_render_template', '', 'page/agent-tab'), dm_allowed_html()); ?>
+        <div id="datamachine-tab-agent" class="datamachine-tab-content <?php echo $active_tab === 'agent' ? 'active' : ''; ?>">
+            <?php echo wp_kses(apply_filters('datamachine_render_template', '', 'page/agent-tab'), datamachine_allowed_html()); ?>
         </div>
         
-        <div id="dm-tab-wordpress" class="dm-tab-content <?php echo $active_tab === 'wordpress' ? 'active' : ''; ?>">
-            <?php echo wp_kses(apply_filters('dm_render_template', '', 'page/wordpress-tab'), dm_allowed_html()); ?>
+        <div id="datamachine-tab-wordpress" class="datamachine-tab-content <?php echo $active_tab === 'wordpress' ? 'active' : ''; ?>">
+            <?php echo wp_kses(apply_filters('datamachine_render_template', '', 'page/wordpress-tab'), datamachine_allowed_html()); ?>
         </div>
         
-        <div class="dm-submit-container">
+        <div class="datamachine-submit-container">
             <?php submit_button(); ?>
         </div>
     </form>

@@ -14,16 +14,16 @@ if (!defined('WPINC')) {
 }
 
 ?>
-<div class="dm-step-selection-container" data-pipeline-id="<?php echo esc_attr($pipeline_id ?? ''); ?>">
+<div class="datamachine-step-selection-container" data-pipeline-id="<?php echo esc_attr($pipeline_id ?? ''); ?>">
     <input type="hidden" name="pipeline_id" value="<?php echo esc_attr($pipeline_id ?? ''); ?>" />
     
-    <div class="dm-step-selection-header">
+    <div class="datamachine-step-selection-header">
         <p><?php esc_html_e('Select a step type to add to your pipeline', 'data-machine'); ?></p>
     </div>
     
-    <div class="dm-step-cards">
+    <div class="datamachine-step-cards">
         <?php 
-        $all_steps = apply_filters('dm_steps', []);
+        $all_steps = apply_filters('datamachine_step_types', []);
         uasort($all_steps, function($a, $b) {
             $pos_a = $a['position'] ?? 999;
             $pos_b = $b['position'] ?? 999;
@@ -36,7 +36,7 @@ if (!defined('WPINC')) {
             $description = $step_config['description'] ?? '';
             
             $handlers_list = '';
-            $handlers = apply_filters('dm_handlers', [], $step_type);
+            $handlers = apply_filters('datamachine_handlers', [], $step_type);
             
             if (!empty($handlers)) {
                 $handler_labels = [];
@@ -46,22 +46,22 @@ if (!defined('WPINC')) {
                 $handlers_list = implode(', ', $handler_labels);
             }
             ?>
-            <div class="dm-step-selection-card dm-modal-close" 
+            <div class="datamachine-step-selection-card datamachine-modal-close" 
                  data-template="add-step-action"
                  data-context='<?php echo esc_attr(wp_json_encode(['step_type' => $step_type, 'pipeline_id' => $pipeline_id ?? ''])); ?>'
                  data-step-type="<?php echo esc_attr($step_type); ?>"
                  role="button" 
                  tabindex="0">
-                <div class="dm-step-card-header">
-                    <h5 class="dm-step-card-title"><?php echo esc_html($label); ?></h5>
+                <div class="datamachine-step-card-header">
+                    <h5 class="datamachine-step-card-title"><?php echo esc_html($label); ?></h5>
                 </div>
                 <?php if ($description): ?>
-                    <div class="dm-step-card-body">
-                        <p class="dm-step-card-description"><?php echo esc_html($description); ?></p>
+                    <div class="datamachine-step-card-body">
+                        <p class="datamachine-step-card-description"><?php echo esc_html($description); ?></p>
                         <?php if (!empty($handlers_list)): ?>
-                            <div class="dm-step-handlers">
-                                <span class="dm-handlers-label"><?php esc_html_e('Available handlers:', 'data-machine'); ?></span>
-                                <span class="dm-handlers-list"><?php echo esc_html($handlers_list); ?></span>
+                            <div class="datamachine-step-handlers">
+                                <span class="datamachine-handlers-label"><?php esc_html_e('Available handlers:', 'data-machine'); ?></span>
+                                <span class="datamachine-handlers-list"><?php echo esc_html($handlers_list); ?></span>
                             </div>
                         <?php endif; ?>
                     </div>

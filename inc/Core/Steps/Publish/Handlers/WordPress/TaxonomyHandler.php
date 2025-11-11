@@ -67,7 +67,7 @@ class TaxonomyHandler {
     }
 
     private function shouldSkipTaxonomy(string $taxonomy_name): bool {
-        $excluded_taxonomies = ['post_format', 'nav_menu', 'link_category'];
+        $excluded_taxonomies = apply_filters('datamachine_wordpress_system_taxonomies', []);
         return in_array($taxonomy_name, $excluded_taxonomies);
     }
 
@@ -133,9 +133,9 @@ class TaxonomyHandler {
      */
     private function processPreSelectedTaxonomy(int $post_id, string $taxonomy_name, string $selection): ?array {
         $term_id = absint($selection);
-        $term = get_term($term_id, $taxonomy_name);
+        $term_name = apply_filters('datamachine_wordpress_term_name', null, $term_id, $taxonomy_name);
 
-        if (!is_wp_error($term) && $term) {
+        if ($term_name !== null) {
             $result = wp_set_object_terms($post_id, [$term_id], $taxonomy_name);
 
             if (is_wp_error($result)) {
@@ -244,6 +244,6 @@ class TaxonomyHandler {
     }
 
     private function logTaxonomyOperation(string $level, string $message, array $context): void {
-        do_action('dm_log', $level, $message, $context);
+        do_action('datamachine_log', $level, $message, $context);
     }
 }

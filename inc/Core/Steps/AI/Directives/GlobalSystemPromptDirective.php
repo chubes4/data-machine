@@ -35,7 +35,7 @@ class GlobalSystemPromptDirective {
             return $request;
         }
 
-        $settings = get_option('dm_data_machine_settings', []);
+        $settings = get_option('datamachine_data_machine_settings', []);
         $global_prompt = $settings['global_system_prompt'] ?? '';
         
         if (empty($global_prompt)) {
@@ -47,7 +47,7 @@ class GlobalSystemPromptDirective {
             'content' => trim($global_prompt)
         ]);
 
-        do_action('dm_log', 'debug', 'Global System Prompt: Injected background guidance', [
+        do_action('datamachine_log', 'debug', 'Global System Prompt: Injected background guidance', [
             'prompt_length' => strlen($global_prompt),
             'provider' => $provider_name,
             'total_messages' => count($request['messages'])

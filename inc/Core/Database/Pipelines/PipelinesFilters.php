@@ -28,10 +28,10 @@ if (!defined('ABSPATH')) {
  *
  * @since 0.1.0
  */
-function dm_register_pipelines_database_filters() {
+function datamachine_register_pipelines_database_filters() {
 
     // Database service registration - Pure discovery pattern (collection building)
-    add_filter('dm_db', function($services) {
+    add_filter('datamachine_db', function($services) {
         if (!isset($services['pipelines'])) {
             $services['pipelines'] = new Pipelines();
         }
@@ -39,11 +39,11 @@ function dm_register_pipelines_database_filters() {
     });
 
     // Cache clearing integration - respond to clear all cache action
-    add_action('dm_clear_all_cache', function() {
+    add_action('datamachine_clear_all_cache', function() {
         // Clear PIPELINE_PATTERN cache using new bulk clearing action
-        do_action('dm_clear_all_pipelines_cache');
+        do_action('datamachine_clear_all_pipelines_cache');
     });
 }
 
 // Auto-register when file loads - achieving complete self-containment
-dm_register_pipelines_database_filters();
+datamachine_register_pipelines_database_filters();

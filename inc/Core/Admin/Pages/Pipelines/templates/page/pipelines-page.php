@@ -14,7 +14,7 @@ if (!defined('WPINC')) {
 }
 
 // Get lightweight pipelines list for dropdown (optimization: only IDs and names)
-$pipelines_list = apply_filters('dm_get_pipelines_list', []);
+$pipelines_list = apply_filters('datamachine_get_pipelines_list', []);
 
 // Get selected pipeline ID with priority: URL parameter → saved preference → newest pipeline
 $selected_pipeline_id = '';
@@ -24,7 +24,7 @@ if (isset($_GET['selected_pipeline_id']) && isset($_GET['_wpnonce']) && wp_verif
 
 if (empty($selected_pipeline_id)) {
     // Check user's saved preference
-    $selected_pipeline_id = get_user_meta(get_current_user_id(), 'dm_selected_pipeline_id', true);
+    $selected_pipeline_id = get_user_meta(get_current_user_id(), 'datamachine_selected_pipeline_id', true);
 }
 
 if (empty($selected_pipeline_id) && !empty($pipelines_list)) {
@@ -45,33 +45,33 @@ if (!empty($selected_pipeline_id) && !empty($pipelines_list)) {
 $selected_pipeline = null;
 $selected_pipeline_flows = [];
 if (!empty($selected_pipeline_id)) {
-    $selected_pipeline = apply_filters('dm_get_pipelines', [], $selected_pipeline_id);
+    $selected_pipeline = apply_filters('datamachine_get_pipelines', [], $selected_pipeline_id);
     if ($selected_pipeline) {
-        $selected_pipeline_flows = apply_filters('dm_get_pipeline_flows', [], $selected_pipeline_id);
+        $selected_pipeline_flows = apply_filters('datamachine_get_pipeline_flows', [], $selected_pipeline_id);
     }
 }
 
 ?>
-<div class="dm-admin-wrap dm-pipelines-page">
-    <div class="dm-admin-header">
-        <div class="dm-admin-header-left">
-            <h1 class="dm-admin-title">
+<div class="datamachine-admin-wrap datamachine-pipelines-page">
+    <div class="datamachine-admin-header">
+        <div class="datamachine-admin-header-left">
+            <h1 class="datamachine-admin-title">
                 <?php esc_html_e('Pipeline + Flow Management', 'data-machine'); ?>
             </h1>
-            <p class="dm-admin-subtitle">
+            <p class="datamachine-admin-subtitle">
                 <?php esc_html_e('Configure automated workflow pipelines', 'data-machine'); ?>
             </p>
         </div>
         
-        <div class="dm-admin-header-right">
-            <button type="button" class="button dm-import-export-btn">
+        <div class="datamachine-admin-header-right">
+            <button type="button" class="button datamachine-import-export-btn">
                 <?php esc_html_e('Import / Export', 'data-machine'); ?>
             </button>
         </div>
     </div>
     
-    <div class="dm-pipeline-page-header">
-        <select class="dm-pipeline-dropdown <?php echo empty($pipelines_list) ? 'dm-hidden' : ''; ?>" id="dm-pipeline-selector">
+    <div class="datamachine-pipeline-page-header">
+        <select class="datamachine-pipeline-dropdown <?php echo empty($pipelines_list) ? 'datamachine-hidden' : ''; ?>" id="datamachine-pipeline-selector">
             <?php foreach ($pipelines_list as $pipeline): ?>
                 <option value="<?php echo esc_attr($pipeline['pipeline_id']); ?>"
                     <?php selected($selected_pipeline_id, $pipeline['pipeline_id']); ?>>
@@ -80,29 +80,33 @@ if (!empty($selected_pipeline_id)) {
             <?php endforeach; ?>
         </select>
         
-        <button type="button" class="button button-primary dm-modal-open" data-template="pipeline-templates">
+        <button type="button" id="datamachine-add-new-pipeline" class="button button-primary">
             <?php esc_html_e('Add New Pipeline', 'data-machine'); ?>
         </button>
     </div>
 
-    <div class="dm-pipeline-cards-container">
-        <div class="dm-pipelines-list">
+    <!-- React root container (active) -->
+    <div id="datamachine-react-root"></div>
+
+    <!-- jQuery container (deprecated, hidden during React cutover) -->
+    <div class="datamachine-pipeline-cards-container" style="display: none;">
+        <div class="datamachine-pipelines-list">
             <?php if (!empty($selected_pipeline)): ?>
-                <div class="dm-pipeline-wrapper" data-pipeline-id="<?php echo esc_attr($selected_pipeline_id); ?>">
+                <div class="datamachine-pipeline-wrapper" data-pipeline-id="<?php echo esc_attr($selected_pipeline_id); ?>">
                     <?php
-                    echo wp_kses(apply_filters('dm_render_template', '', 'page/pipeline-card', [
+                    echo wp_kses(apply_filters('datamachine_render_template', '', 'page/pipeline-card', [
                         'pipeline' => $selected_pipeline,
                         'existing_flows' => $selected_pipeline_flows,
                         'pipelines_instance' => null
-                    ]), dm_allowed_html());
+                    ]), datamachine_allowed_html());
                     ?>
                 </div>
             <?php elseif (!empty($pipelines_list)): ?>
-                <div class="dm-pipeline-loading">
+                <div class="datamachine-pipeline-loading">
                     <?php esc_html_e('Loading pipeline...', 'data-machine'); ?>
                 </div>
             <?php else: ?>
-                <div class="dm-no-pipelines">
+                <div class="datamachine-no-pipelines">
                     <p><?php esc_html_e('No pipelines found.', 'data-machine'); ?></p>
                 </div>
             <?php endif; ?>

@@ -23,13 +23,13 @@ class Files {
      * Get repository instance via filter discovery
      */
 	private function get_repository(): ?\DataMachine\Engine\FilesRepository {
-		$repositories = apply_filters('dm_files_repository', []);
+		$repositories = apply_filters('datamachine_files_repository', []);
 		return $repositories['files'] ?? null;
 	}
 
 	/**
 	 * Process uploaded files with universal image handling.
-	 * For images: stores image_url via dm_engine_data filter.
+	 * For images: stores image_url via datamachine_engine_data filter.
 	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         $repository = $this->get_repository();
@@ -40,7 +40,7 @@ class Files {
         if (empty($uploaded_files)) {
             $repo_files = $repository->get_all_files($flow_step_id);
             if (empty($repo_files)) {
-                do_action('dm_log', 'debug', 'Files Input: No files available in repository.', [
+                do_action('datamachine_log', 'debug', 'Files Input: No files available in repository.', [
                     'pipeline_id' => $pipeline_id,
                     'flow_step_id' => $flow_step_id
                 ]);
@@ -61,12 +61,12 @@ class Files {
         $next_file = $this->find_next_unprocessed_file($flow_step_id, ['uploaded_files' => $uploaded_files], $job_id);
 
         if (!$next_file) {
-            do_action('dm_log', 'debug', 'Files Input: No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
+            do_action('datamachine_log', 'debug', 'Files Input: No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
 
         if (!file_exists($next_file['persistent_path'])) {
-            do_action('dm_log', 'error', 'Files Input: File not found.', ['pipeline_id' => $pipeline_id, 'file_path' => $next_file['persistent_path']]);
+            do_action('datamachine_log', 'error', 'Files Input: File not found.', ['pipeline_id' => $pipeline_id, 'file_path' => $next_file['persistent_path']]);
             return ['processed_items' => []];
         }
 
@@ -103,7 +103,7 @@ class Files {
         $file_url = '';
         if (strpos($mime_type, 'image/') === 0) {
             // For image files, provide public URL for publish handlers
-            $repositories = apply_filters('dm_files_repository', []);
+            $repositories = apply_filters('datamachine_files_repository', []);
             $file_repository = $repositories['files'] ?? null;
             if ($file_repository && $flow_step_id) {
                 $file_url = trailingslashit($file_repository->get_repository_url($flow_step_id)) . $next_file['original_name'];
@@ -112,10 +112,10 @@ class Files {
 
         // Store URLs in engine_data via centralized filter
         if ($job_id) {
-            apply_filters('dm_engine_data', null, $job_id, '', $file_url); // No source URL for local files, image URL for images
+            apply_filters('datamachine_engine_data', null, $job_id, '', $file_url); // No source URL for local files, image URL for images
         }
 
-        do_action('dm_log', 'debug', 'Files Input: Found unprocessed file for processing.', [
+        do_action('datamachine_log', 'debug', 'Files Input: Found unprocessed file for processing.', [
             'pipeline_id' => $pipeline_id,
             'flow_step_id' => $flow_step_id,
             'file_path' => $file_identifier,
@@ -141,16 +141,16 @@ class Files {
         foreach ($uploaded_files as $file) {
             $file_identifier = $file['persistent_path'];
             
-            $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'files', $file_identifier);
+            $is_processed = apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'files', $file_identifier);
             
-            do_action('dm_log', 'debug', 'Files Input: Checking file processed status', [
+            do_action('datamachine_log', 'debug', 'Files Input: Checking file processed status', [
                 'flow_step_id' => $flow_step_id,
                 'file_identifier' => basename($file_identifier),
                 'is_processed' => $is_processed
             ]);
             
             if (!$is_processed) {
-                do_action('dm_mark_item_processed', $flow_step_id, 'files', $file_identifier, $job_id);
+                do_action('datamachine_mark_item_processed', $flow_step_id, 'files', $file_identifier, $job_id);
                 return $file;
             }
         }
@@ -210,12 +210,12 @@ class Files {
         $file_extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
         if (in_array($file_extension, $dangerous_extensions)) {
-            do_action('dm_log', 'error', 'Files Input: File type not allowed for security reasons.', ['file_extension' => $file_extension]);
+            do_action('datamachine_log', 'error', 'Files Input: File type not allowed for security reasons.', ['file_extension' => $file_extension]);
             return false;
         }
 
         if (!file_exists($file_path) || !is_readable($file_path)) {
-            do_action('dm_log', 'error', 'Files Input: File is not accessible.', ['file_path' => $file_path]);
+            do_action('datamachine_log', 'error', 'Files Input: File is not accessible.', ['file_path' => $file_path]);
             return false;
         }
 

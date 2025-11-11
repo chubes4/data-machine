@@ -12,13 +12,13 @@ defined('ABSPATH') || exit;
 class WordPressPostReader {
 
     public function __construct() {
-        add_filter('dm_tool_success_message', [$this, 'format_success_message'], 10, 4);
+        add_filter('datamachine_tool_success_message', [$this, 'format_success_message'], 10, 4);
         $this->register_configuration();
     }
 
     private function register_configuration() {
         add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
-        add_filter('dm_tool_configured', [$this, 'check_configuration'], 10, 2);
+        add_filter('datamachine_tool_configured', [$this, 'check_configuration'], 10, 2);
     }
 
     public function handle_tool_call(array $parameters, array $tool_def = []): array {

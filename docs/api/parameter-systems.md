@@ -8,7 +8,7 @@ Data Machine uses an engine data filter architecture that provides clean data se
 
 ### Core Design Principles
 
-1. **Engine Data Filter Access** - Fetch handlers store engine data in database; steps retrieve via centralized dm_engine_data filter
+1. **Engine Data Filter Access** - Fetch handlers store engine data in database; steps retrieve via centralized datamachine_engine_data filter
 2. **Clean Data Separation** - AI receives clean data packets without URLs; handlers receive engine parameters via filter access
 3. **Unified Interface** - All steps, handlers, and tools use consistent parameter formats
 4. **Tool-Based Parameter Building** - AIStepToolParameters class provides standardized parameter construction
@@ -28,16 +28,16 @@ $core_parameters = [
 ```
 
 ### Engine Data
-Engine data is stored in database by fetch handlers and retrieved via centralized dm_engine_data filter:
+Engine data is stored in database by fetch handlers and retrieved via centralized datamachine_engine_data filter:
 
 ```php
 // 1. Fetch handlers store in database via centralized filter
 if ($job_id) {
-    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
 }
 
 // 2. Steps retrieve engine data via centralized filter
-$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 $source_url = $engine_data['source_url'] ?? null;
 $image_url = $engine_data['image_url'] ?? null;
 ```
@@ -63,7 +63,7 @@ class MyStep {
         $result = $this->process_data($data, $flow_step_config);
 
         // Mark items processed
-        do_action('dm_mark_item_processed', $flow_step_id, 'my_step', $item_id, $job_id);
+        do_action('datamachine_mark_item_processed', $flow_step_id, 'my_step', $item_id, $job_id);
 
         // Return updated data packet array
         return $result;
@@ -87,9 +87,9 @@ class MyFetchHandler {
             'metadata' => ['source_type' => 'my_handler', 'original_id' => $item_id]
         ];
 
-        // Store engine parameters in database via centralized dm_engine_data filter
+        // Store engine parameters in database via centralized datamachine_engine_data filter
         if ($job_id) {
-            apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
+            apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
         }
 
         return ['processed_items' => [$clean_data]];
@@ -111,7 +111,7 @@ class MyPublishHandler {
 
         // Access engine data via centralized filter pattern
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;
 
@@ -121,14 +121,14 @@ class MyPublishHandler {
 ```
 
 ### Update Handlers (Engine Data)
-Require `source_url` from engine data stored by fetch handlers and retrieved via dm_engine_data filter:
+Require `source_url` from engine data stored by fetch handlers and retrieved via datamachine_engine_data filter:
 
 ```php
 class MyUpdateHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         // Access engine data via centralized filter pattern
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $source_url = $engine_data['source_url'] ?? null;
 
         if (empty($source_url)) {
@@ -210,7 +210,7 @@ Each fetch handler stores specific engine parameters in the database:
 ```php
 // Reddit Handler - stores via centralized filter
 if ($job_id) {
-    apply_filters('dm_engine_data', null, $job_id,
+    apply_filters('datamachine_engine_data', null, $job_id,
         'https://reddit.com' . $item_data['permalink'],
         $stored_image['url'] ?? ''
     );
@@ -218,7 +218,7 @@ if ($job_id) {
 
 // WordPress Local Handler - stores via centralized filter
 if ($job_id) {
-    apply_filters('dm_engine_data', null, $job_id,
+    apply_filters('datamachine_engine_data', null, $job_id,
         get_permalink($post_id),
         $this->extract_image_url($post_id)
     );
@@ -226,7 +226,7 @@ if ($job_id) {
 
 // RSS Handler - stores via centralized filter
 if ($job_id) {
-    apply_filters('dm_engine_data', null, $job_id, $item_link, $enclosure_url);
+    apply_filters('datamachine_engine_data', null, $job_id, $item_link, $enclosure_url);
 }
 ```
 

@@ -1,37 +1,37 @@
 /* Import/Export - Simple and functional */
-.dm-import-export-btn {
+.datamachine-import-export-btn {
     margin-left: 10px;
 }
 
-.dm-modal-tabs {
+.datamachine-modal-tabs {
     border-bottom: 1px solid #ddd;
     margin-bottom: 20px;
 }
 
-.dm-modal-tab {
+.datamachine-modal-tab {
     padding: 10px 15px;
     background: none;
     border: none;
     cursor: pointer;
 }
 
-.dm-modal-tab.active {
+.datamachine-modal-tab.active {
     border-bottom: 2px solid #0073aa;
 }
 
-.dm-modal-tab-content {
+.datamachine-modal-tab-content {
     display: none;
 }
 
-.dm-modal-tab-content.active {
+.datamachine-modal-tab-content.active {
     display: block;
 }
 
-.dm-export-table {
+.datamachine-export-table {
     margin: 15px 0;
 }
 
-.dm-import-dropzone {
+.datamachine-import-dropzone {
     border: 2px dashed #ccc;
     padding: 40px;
     text-align: center;
@@ -39,11 +39,11 @@
     margin: 20px 0;
 }
 
-.dm-import-dropzone:hover {
+.datamachine-import-dropzone:hover {
     border-color: #0073aa;
 }
 
-.dm-import-preview {
+.datamachine-import-preview {
     margin: 10px 0;
     padding: 10px;
     background: #f0f0f1;

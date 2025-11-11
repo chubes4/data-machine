@@ -73,7 +73,7 @@ class AIStep {
             }
 
             if (empty($flow_step_config['pipeline_step_id'])) {
-                do_action('dm_log', 'error', 'AI Agent: Missing required pipeline_step_id from pipeline configuration', [
+                do_action('datamachine_log', 'error', 'AI Agent: Missing required pipeline_step_id from pipeline configuration', [
                     'flow_step_id' => $flow_step_id,
                     'flow_step_config' => $flow_step_config
                 ]);
@@ -81,13 +81,13 @@ class AIStep {
             }
             $pipeline_step_id = $flow_step_config['pipeline_step_id'];
             
-            $step_ai_config = apply_filters('dm_ai_config', [], $pipeline_step_id);
+            $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id);
 
-            $previous_flow_step_id = apply_filters('dm_get_previous_flow_step_id', null, $flow_step_id);
-            $previous_step_config = $previous_flow_step_id ? apply_filters('dm_get_flow_step_config', [], $previous_flow_step_id) : null;
+            $previous_flow_step_id = apply_filters('datamachine_get_previous_flow_step_id', null, $flow_step_id);
+            $previous_step_config = $previous_flow_step_id ? apply_filters('datamachine_get_flow_step_config', [], $previous_flow_step_id) : null;
 
-            $next_flow_step_id = apply_filters('dm_get_next_flow_step_id', null, $flow_step_id);
-            $next_step_config = $next_flow_step_id ? apply_filters('dm_get_flow_step_config', [], $next_flow_step_id) : null;
+            $next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $flow_step_id);
+            $next_step_config = $next_flow_step_id ? apply_filters('datamachine_get_flow_step_config', [], $next_flow_step_id) : null;
             
             $available_tools = AIStepTools::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id);
             $ai_request = [
@@ -100,7 +100,7 @@ class AIStep {
             $provider_name = $step_ai_config['selected_provider'] ?? '';
             if (empty($provider_name)) {
                 $error_message = 'AI step not configured: No provider selected';
-                do_action('dm_log', 'error', 'AI Agent: No provider configured', [
+                do_action('datamachine_log', 'error', 'AI Agent: No provider configured', [
                     'flow_step_id' => $flow_step_id,
                     'pipeline_step_id' => $pipeline_step_id
                 ]);
@@ -136,7 +136,7 @@ class AIStep {
                     'model' => $step_ai_config['model'] ?? null
                 ];
                 
-                do_action('dm_log', 'debug', 'AI Agent: Full conversation being sent to AI', [
+                do_action('datamachine_log', 'debug', 'AI Agent: Full conversation being sent to AI', [
                     'flow_step_id' => $flow_step_id,
                     'turn_count' => $turn_count,
                     'message_count' => count($current_request['messages']),
@@ -147,14 +147,14 @@ class AIStep {
 
                 if (!$ai_response['success']) {
                     $error_message = 'AI processing failed: ' . ($ai_response['error'] ?? 'Unknown error');
-                    do_action('dm_log', 'error', 'AI Agent: Processing failed on turn ' . $turn_count, [
+                    do_action('datamachine_log', 'error', 'AI Agent: Processing failed on turn ' . $turn_count, [
                         'flow_step_id' => $flow_step_id,
                         'turn_count' => $turn_count,
                         'error' => $ai_response['error'] ?? 'Unknown error',
                         'provider' => $ai_response['provider'] ?? 'Unknown'
                     ]);
                     
-                    do_action('dm_fail_job', $job_id, 'ai_processing_failed', [
+                    do_action('datamachine_fail_job', $job_id, 'ai_processing_failed', [
                         'flow_step_id' => $flow_step_id,
                         'turn_count' => $turn_count,
                         'ai_error' => $ai_response['error'] ?? 'Unknown error',
@@ -177,7 +177,7 @@ class AIStep {
                         $response_body = "AI executed " . count($tool_calls) . " tool(s): " . implode(', ', $tool_names);
                     }
                     
-                    $data = apply_filters('dm_data_packet', $data, [
+                    $data = apply_filters('datamachine_data_packet', $data, [
                         'type' => 'ai_response',
                         'content' => [
                             'title' => $ai_title,
@@ -204,7 +204,7 @@ class AIStep {
                         $tool_name = $tool_call['name'] ?? '';
                         $tool_parameters = $tool_call['parameters'] ?? [];
                         if (empty($tool_name)) {
-                            do_action('dm_log', 'warning', 'AI Agent: Tool call missing name', [
+                            do_action('datamachine_log', 'warning', 'AI Agent: Tool call missing name', [
                                 'flow_step_id' => $flow_step_id,
                                 'turn_count' => $turn_count,
                                 'tool_call' => $tool_call
@@ -220,7 +220,7 @@ class AIStep {
                             $correction_message = AIStepConversationManager::generateDuplicateToolCallMessage($tool_name);
                             array_push($conversation_messages, $correction_message);
 
-                            do_action('dm_log', 'info', 'AI Agent: Duplicate tool call prevented', [
+                            do_action('datamachine_log', 'info', 'AI Agent: Duplicate tool call prevented', [
                                 'flow_step_id' => $flow_step_id,
                                 'turn_count' => $turn_count,
                                 'tool_name' => $tool_name,
@@ -280,12 +280,12 @@ class AIStep {
                                 'timestamp' => time()
                             ];
                             
-                            $data = apply_filters('dm_data_packet', $data, $tool_result_entry, $flow_step_id, 'ai');
+                            $data = apply_filters('datamachine_data_packet', $data, $tool_result_entry, $flow_step_id, 'ai');
                             
                         } else {
                             $success_message = AIStepConversationManager::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
                             
-                            $data = apply_filters('dm_data_packet', $data, [
+                            $data = apply_filters('datamachine_data_packet', $data, [
                                 'type' => 'tool_result',
                                 'tool_name' => $tool_name,
                                 'content' => [
@@ -309,7 +309,7 @@ class AIStep {
             } while (!$conversation_complete && $turn_count < $max_turns);
             
             if ($turn_count >= $max_turns && !$conversation_complete) {
-                do_action('dm_log', 'warning', 'AI Agent: Conversation hit max turns limit', [
+                do_action('datamachine_log', 'warning', 'AI Agent: Conversation hit max turns limit', [
                     'flow_step_id' => $flow_step_id,
                     'max_turns' => $max_turns,
                     'final_turn_count' => $turn_count
@@ -319,7 +319,7 @@ class AIStep {
             return $data;
 
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'AI Agent: Exception during processing', [
+            do_action('datamachine_log', 'error', 'AI Agent: Exception during processing', [
                 'flow_step_id' => $flow_step_id,
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()

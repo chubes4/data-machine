@@ -1,0 +1,125 @@
+/**
+ * Pipeline Header Component
+ *
+ * Pipeline title input with auto-save and delete button.
+ */
+
+import { useState, useEffect, useCallback, useRef } from '@wordpress/element';
+import { TextControl, Button } from '@wordpress/components';
+import { __ } from '@wordpress/i18n';
+import { updatePipelineTitle, deletePipeline } from '../../utils/api';
+import { AUTO_SAVE_DELAY } from '../../utils/constants';
+
+/**
+ * Pipeline Header Component
+ *
+ * @param {Object} props - Component props
+ * @param {number} props.pipelineId - Pipeline ID
+ * @param {string} props.pipelineName - Pipeline name
+ * @param {Function} props.onNameChange - Called after successful save
+ * @param {Function} props.onDelete - Called after successful deletion
+ * @returns {React.ReactElement} Pipeline header
+ */
+export default function PipelineHeader({ pipelineId, pipelineName, onNameChange, onDelete }) {
+	const [localName, setLocalName] = useState(pipelineName);
+	const saveTimeout = useRef(null);
+
+	/**
+	 * Sync local name with prop changes
+	 */
+	useEffect(() => {
+		setLocalName(pipelineName);
+	}, [pipelineName]);
+
+	/**
+	 * Save pipeline name to API (silent auto-save)
+	 */
+	const saveName = useCallback(async (name) => {
+		if (!name || name === pipelineName) {
+			return;
+		}
+
+		try {
+			const response = await updatePipelineTitle(pipelineId, name);
+
+			if (response.success && onNameChange) {
+				onNameChange(name);
+			}
+		} catch (err) {
+			console.error('Pipeline title save failed:', err);
+		}
+	}, [pipelineId, pipelineName, onNameChange]);
+
+	/**
+	 * Handle name input change with debouncing
+	 */
+	const handleNameChange = useCallback((value) => {
+		setLocalName(value);
+
+		// Clear existing timeout
+		if (saveTimeout.current) {
+			clearTimeout(saveTimeout.current);
+		}
+
+		// Set new timeout for debounced save
+		saveTimeout.current = setTimeout(() => {
+			saveName(value);
+		}, AUTO_SAVE_DELAY);
+	}, [saveName]);
+
+	/**
+	 * Handle pipeline deletion
+	 */
+	const handleDelete = useCallback(async () => {
+		const confirmed = window.confirm(__('Are you sure you want to delete this pipeline? This action cannot be undone.', 'data-machine'));
+
+		if (!confirmed) {
+			return;
+		}
+
+		try {
+			const response = await deletePipeline(pipelineId);
+
+			if (response.success && onDelete) {
+				onDelete(pipelineId);
+			}
+		} catch (err) {
+			console.error('Pipeline deletion error:', err);
+		}
+	}, [pipelineId, onDelete]);
+
+	/**
+	 * Cleanup timeout on unmount
+	 */
+	useEffect(() => {
+		return () => {
+			if (saveTimeout.current) {
+				clearTimeout(saveTimeout.current);
+			}
+		};
+	}, []);
+
+	return (
+		<div className="dm-pipeline-header">
+			<div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+				<div style={{ flex: 1 }}>
+					<TextControl
+						value={localName}
+						onChange={handleNameChange}
+						placeholder={__('Pipeline name', 'data-machine')}
+						className="dm-pipeline-name-input"
+						style={{ fontSize: '20px', fontWeight: '600' }}
+					/>
+				</div>
+
+				<Button
+					isDestructive
+					variant="secondary"
+					onClick={handleDelete}
+					icon="trash"
+					label={__('Delete Pipeline', 'data-machine')}
+				/>
+			</div>
+		</div>
+	);
+}

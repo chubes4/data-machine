@@ -7,14 +7,14 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
-$settings = dm_get_data_machine_settings();
+$settings = datamachine_get_data_machine_settings();
 $engine_mode = $settings['engine_mode'];
 $enabled_pages = $settings['enabled_pages'];
 $cleanup_enabled = $settings['cleanup_job_data_on_failure'] ?? true;
 $file_retention_days = $settings['file_retention_days'] ?? 7;
 
 $disabled_attr = $engine_mode ? 'disabled' : '';
-$all_pages = apply_filters('dm_admin_pages', []);
+$all_pages = apply_filters('datamachine_admin_pages', []);
 ?>
 
 <table class="form-table">
@@ -46,7 +46,7 @@ $all_pages = apply_filters('dm_admin_pages', []);
                         $page_title = $page_config['menu_title'] ?? $page_config['page_title'] ?? ucfirst($slug);
                         $is_enabled = !$enabled_pages || ($enabled_pages[$slug] ?? false);
                         ?>
-                        <label class="dm-settings-page-item">
+                        <label class="datamachine-settings-page-item">
                             <input type="checkbox" 
                                    name="data_machine_settings[enabled_pages][<?php echo esc_attr($slug); ?>]" 
                                    value="1" 
@@ -123,7 +123,7 @@ $all_pages = apply_filters('dm_admin_pages', []);
         <td>
             <fieldset <?php echo esc_attr($disabled_attr); ?>>
                 <button type="button"
-                        id="dm-clear-cache-btn"
+                        id="datamachine-clear-cache-btn"
                         class="button button-secondary"
                         <?php echo esc_attr($disabled_attr); ?>>
                     <?php esc_html_e('Clear Now', 'data-machine'); ?>
@@ -131,7 +131,7 @@ $all_pages = apply_filters('dm_admin_pages', []);
                 <p class="description">
                     <?php esc_html_e('Clear all cached pipeline and flow configurations. Use this to resolve cache inconsistencies or after database modifications.', 'data-machine'); ?>
                 </p>
-                <div id="dm-cache-clear-result" class="dm-admin-notice dm-hidden"></div>
+                <div id="datamachine-cache-clear-result" class="datamachine-admin-notice datamachine-hidden"></div>
                 <?php if ($engine_mode): ?>
                     <p class="description">
                         <?php esc_html_e('Cache controls are disabled when Engine Mode is active.', 'data-machine'); ?>

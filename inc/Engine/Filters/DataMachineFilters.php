@@ -14,9 +14,9 @@ if (!defined('WPINC')) {
     die;
 }
 
-function dm_register_importexport_filters() {
+function datamachine_register_importexport_filters() {
     
-    add_filter('dm_modals', function($modals) {
+    add_filter('datamachine_modals', function($modals) {
         $modals['import-export'] = [
             'title' => __('Import / Export Pipelines', 'data-machine'),
             'template' => 'modal/import-export',
@@ -25,7 +25,7 @@ function dm_register_importexport_filters() {
         return $modals;
     }, 10, 1);
     
-    add_filter('dm_importer', function($service) {
+    add_filter('datamachine_importer', function($service) {
         if ($service === null) {
             require_once DATA_MACHINE_PATH . 'inc/Engine/Actions/ImportExport.php';
             return new \DataMachine\Engine\Actions\ImportExport();
@@ -34,7 +34,7 @@ function dm_register_importexport_filters() {
     }, 10, 1);
 }
 
-dm_register_importexport_filters();
+datamachine_register_importexport_filters();
 
 /**
  * Register backend processing filters for engine operations.
@@ -44,18 +44,18 @@ dm_register_importexport_filters();
  *
  * @since 0.1.0
  */
-function dm_register_utility_filters() {
+function datamachine_register_utility_filters() {
     
-    add_filter('dm_auth_providers', function($providers) {
+    add_filter('datamachine_auth_providers', function($providers) {
         return $providers;
     }, 5, 1);
     
     
-    add_filter('dm_request', function($default, $method, $url, $args, $context) {
+    add_filter('datamachine_request', function($default, $method, $url, $args, $context) {
         $valid_methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
         $method = strtoupper($method);
         if (!in_array($method, $valid_methods)) {
-            do_action('dm_log', 'error', 'HTTP Request: Invalid method', ['method' => $method, 'context' => $context]);
+            do_action('datamachine_log', 'error', 'HTTP Request: Invalid method', ['method' => $method, 'context' => $context]);
             return ['success' => false, 'error' => __('Invalid HTTP method', 'data-machine')];
         }
 
@@ -80,7 +80,7 @@ function dm_register_utility_filters() {
                 $response->get_error_message()
             );
             
-            do_action('dm_log', 'error', 'HTTP Request: Connection failed', [
+            do_action('datamachine_log', 'error', 'HTTP Request: Connection failed', [
                 'context' => $context,
                 'url' => $url,
                 'method' => $method,
@@ -142,7 +142,7 @@ function dm_register_utility_filters() {
                 $error_message .= ': ' . $error_details;
             }
 
-            do_action('dm_log', 'error', 'HTTP Request: Error response', [
+            do_action('datamachine_log', 'error', 'HTTP Request: Error response', [
                 'context' => $context,
                 'url' => $url,
                 'method' => $method,
@@ -162,7 +162,7 @@ function dm_register_utility_filters() {
             'response' => $response
         ];
     }, 10, 5);
-    add_filter('dm_scheduler_intervals', function($intervals) {
+    add_filter('datamachine_scheduler_intervals', function($intervals) {
         return [
             'every_5_minutes' => [
                 'label' => __('Every 5 Minutes', 'data-machine'),
@@ -200,12 +200,12 @@ function dm_register_utility_filters() {
     }, 10);
     
     
-    add_filter('dm_step_settings', function($configs) {
+    add_filter('datamachine_step_settings', function($configs) {
         return $configs;
     }, 5);
-    add_filter('dm_generate_flow_step_id', function($existing_id, $pipeline_step_id, $flow_id) {
+    add_filter('datamachine_generate_flow_step_id', function($existing_id, $pipeline_step_id, $flow_id) {
         if (empty($pipeline_step_id) || empty($flow_id)) {
-            do_action('dm_log', 'error', 'Invalid flow step ID generation parameters', [
+            do_action('datamachine_log', 'error', 'Invalid flow step ID generation parameters', [
                 'pipeline_step_id' => $pipeline_step_id,
                 'flow_id' => $flow_id
             ]);
@@ -215,7 +215,7 @@ function dm_register_utility_filters() {
         return $pipeline_step_id . '_' . $flow_id;
     }, 10, 3);
 
-    add_filter('dm_split_pipeline_step_id', function($default, $pipeline_step_id) {
+    add_filter('datamachine_split_pipeline_step_id', function($default, $pipeline_step_id) {
         if (empty($pipeline_step_id) || strpos($pipeline_step_id, '_') === false) {
             return null; // Old UUID4 format or invalid
         }
@@ -232,15 +232,15 @@ function dm_register_utility_filters() {
     }, 10, 2);
     
     add_action('ai_api_error', function($error_data) {
-        do_action('dm_log', 'error', $error_data['message'], $error_data);
+        do_action('datamachine_log', 'error', $error_data['message'], $error_data);
     });
     
     // Global execution context for directives
-    add_filter('dm_current_flow_step_id', function($default) {
+    add_filter('datamachine_current_flow_step_id', function($default) {
         return $default;
     }, 5, 1);
-    
-    add_filter('dm_current_job_id', function($default) {
+
+    add_filter('datamachine_current_job_id', function($default) {
         return $default;
     }, 5, 1);
 

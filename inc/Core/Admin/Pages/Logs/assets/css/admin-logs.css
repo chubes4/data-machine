@@ -2,134 +2,134 @@
  * Data Machine Logs Admin Page Styles
  * 
  * Component-owned styles following WordPress and Gutenberg patterns.
- * All classes use dm- prefix for namespace isolation.
+ * All classes use datamachine- prefix for namespace isolation.
  *
  * @package DataMachine\Core\Admin\Pages\Logs
  * @since 1.0.0
  */
 
 /* Main logs page container */
-.dm-logs-page {
+.datamachine-logs-page {
     padding: 20px;
 }
 
 /* Inline form elements in logs container */
-.dm-logs-container .dm-inline-form {
+.datamachine-logs-container .datamachine-inline-form {
     display: inline;
 }
 
 /* Spinner positioning in logs container */
-.dm-logs-container .spinner {
+.datamachine-logs-container .spinner {
     float: none;
     vertical-align: middle;
 }
 
 /* Log configuration section */
-.dm-log-configuration {
+.datamachine-log-configuration {
     background: #fff;
     border: 1px solid #ccd0d4;
     padding: 20px;
     margin-bottom: 20px;
 }
 
-.dm-log-configuration h2 {
+.datamachine-log-configuration h2 {
     margin-top: 0;
 }
 
-.dm-log-level-field {
+.datamachine-log-level-field {
     margin-bottom: 15px;
 }
 
-.dm-log-level-label {
+.datamachine-log-level-label {
     display: block;
     font-weight: 600;
     margin-bottom: 5px;
 }
 
-.dm-log-level-select {
+.datamachine-log-level-select {
     min-width: 250px;
 }
 
-.dm-log-level-description {
+.datamachine-log-level-description {
     color: #666;
     margin: 5px 0 0 0;
     font-size: 13px;
 }
 
 /* Log file information section */
-.dm-log-file-info {
+.datamachine-log-file-info {
     background: #fff;
     border: 1px solid #ccd0d4;
     padding: 20px;
     margin-bottom: 20px;
 }
 
-.dm-log-file-info h2 {
+.datamachine-log-file-info h2 {
     margin-top: 0;
 }
 
-.dm-log-file-info p {
+.datamachine-log-file-info p {
     margin: 10px 0;
 }
 
-.dm-log-file-path {
+.datamachine-log-file-path {
     background: #f1f1f1;
     padding: 2px 6px;
     margin-left: 5px;
 }
 
-.dm-log-actions {
+.datamachine-log-actions {
     margin-top: 15px;
 }
 
-.dm-log-actions form {
+.datamachine-log-actions form {
     display: inline;
 }
 
-.dm-refresh-logs {
+.datamachine-refresh-logs {
     margin-left: 10px;
 }
 
-.dm-copy-logs {
+.datamachine-copy-logs {
     margin-left: 10px;
 }
 
-.dm-copy-logs.dm-copy-success {
+.datamachine-copy-logs.datamachine-copy-success {
     background-color: #00a32a;
     color: white;
 }
 
-.dm-copy-logs.dm-copy-error {
+.datamachine-copy-logs.datamachine-copy-error {
     background-color: #d63638;
     color: white;
 }
 
-.dm-load-full-logs {
+.datamachine-load-full-logs {
     margin-left: 10px;
 }
 
-.dm-load-full-logs:disabled {
+.datamachine-load-full-logs:disabled {
     cursor: not-allowed;
     opacity: 0.6;
 }
 
 /* Recent logs section */
-.dm-recent-logs {
+.datamachine-recent-logs {
     background: #fff;
     border: 1px solid #ccd0d4;
     padding: 20px;
 }
 
-.dm-recent-logs h2 {
+.datamachine-recent-logs h2 {
     margin-top: 0;
 }
 
-.dm-no-logs-message {
+.datamachine-no-logs-message {
     color: #666;
     font-style: italic;
 }
 
-.dm-log-viewer {
+.datamachine-log-viewer {
     background: #f9f9f9;
     border: 1px solid #ddd;
     padding: 15px;
@@ -142,26 +142,26 @@
 }
 
 /* Status message styling */
-.dm-log-status-message {
+.datamachine-log-status-message {
     padding: 8px 12px;
     margin: 10px 0;
     border-radius: 3px;
     font-size: 13px;
 }
 
-.dm-log-status-message.dm-status-success {
+.datamachine-log-status-message.datamachine-status-success {
     background-color: #d1ecf1;
     border: 1px solid #bee5eb;
     color: #0c5460;
 }
 
-.dm-log-status-message.dm-status-error {
+.datamachine-log-status-message.datamachine-status-error {
     background-color: #f8d7da;
     border: 1px solid #f5c6cb;
     color: #721c24;
 }
 
-.dm-log-status-message.dm-status-info {
+.datamachine-log-status-message.datamachine-status-info {
     background-color: #cce7ff;
     border: 1px solid #b3d7ff;
     color: #0c5460;

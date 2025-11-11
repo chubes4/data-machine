@@ -11,13 +11,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WebFetch {
 
     public function __construct() {
-        add_filter('dm_tool_success_message', [$this, 'format_success_message'], 10, 4);
+        add_filter('datamachine_tool_success_message', [$this, 'format_success_message'], 10, 4);
         $this->register_configuration();
     }
 
     private function register_configuration() {
         add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
-        add_filter('dm_tool_configured', [$this, 'check_configuration'], 10, 2);
+        add_filter('datamachine_tool_configured', [$this, 'check_configuration'], 10, 2);
     }
 
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
@@ -47,7 +47,7 @@ class WebFetch {
         ]);
 
         if (is_wp_error($response)) {
-            do_action('dm_log', 'error', 'Web Fetch: HTTP request failed', [
+            do_action('datamachine_log', 'error', 'Web Fetch: HTTP request failed', [
                 'url' => $url,
                 'error' => $response->get_error_message()
             ]);
@@ -61,7 +61,7 @@ class WebFetch {
 
         $status_code = wp_remote_retrieve_response_code($response);
         if ($status_code !== 200) {
-            do_action('dm_log', 'error', 'Web Fetch: HTTP error response', [
+            do_action('datamachine_log', 'error', 'Web Fetch: HTTP error response', [
                 'url' => $url,
                 'status_code' => $status_code
             ]);

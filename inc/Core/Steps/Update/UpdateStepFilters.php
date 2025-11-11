@@ -28,10 +28,10 @@ if (!defined('ABSPATH')) {
  * 
  * @since 0.1.0
  */
-function dm_register_update_step_filters() {
+function datamachine_register_update_step_filters() {
     
     // Step registration - Update Step declares itself (pure discovery mode)
-    add_filter('dm_steps', function($steps) {
+    add_filter('datamachine_step_types', function($steps) {
         $steps['update'] = [
             'label' => __('Update', 'data-machine'),
             'description' => __('Update existing content with processed data', 'data-machine'),
@@ -43,4 +43,4 @@ function dm_register_update_step_filters() {
 }
 
 // Auto-register when file loads - achieving complete self-containment
-dm_register_update_step_filters();
+datamachine_register_update_step_filters();

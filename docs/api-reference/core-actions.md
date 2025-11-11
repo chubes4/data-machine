@@ -4,7 +4,7 @@ Comprehensive reference for all WordPress actions used by Data Machine for pipel
 
 ## Pipeline Execution Actions
 
-### `dm_run_flow_now`
+### `datamachine_run_flow_now`
 
 **Purpose**: Entry point for all pipeline execution
 
@@ -14,7 +14,7 @@ Comprehensive reference for all WordPress actions used by Data Machine for pipel
 
 **Usage**:
 ```php
-do_action('dm_run_flow_now', $flow_id, 'manual');
+do_action('datamachine_run_flow_now', $flow_id, 'manual');
 ```
 
 **Process**:
@@ -23,7 +23,7 @@ do_action('dm_run_flow_now', $flow_id, 'manual');
 3. Identifies first step (execution_order = 0)
 4. Schedules initial step execution
 
-### `dm_execute_step`
+### `datamachine_execute_step`
 
 **Purpose**: Core step execution orchestration
 
@@ -34,7 +34,7 @@ do_action('dm_run_flow_now', $flow_id, 'manual');
 
 **Usage**:
 ```php
-do_action('dm_execute_step', $job_id, $flow_step_id, $data);
+do_action('datamachine_execute_step', $job_id, $flow_step_id, $data);
 ```
 
 **Internal Process**:
@@ -43,7 +43,7 @@ do_action('dm_execute_step', $job_id, $flow_step_id, $data);
 3. Instantiates and executes step class
 4. Schedules next step or completes pipeline
 
-### `dm_schedule_next_step`
+### `datamachine_schedule_next_step`
 
 **Purpose**: Action Scheduler integration for step transitions
 
@@ -54,7 +54,7 @@ do_action('dm_execute_step', $job_id, $flow_step_id, $data);
 
 **Usage**:
 ```php
-do_action('dm_schedule_next_step', $job_id, $next_flow_step_id, $data);
+do_action('datamachine_schedule_next_step', $job_id, $next_flow_step_id, $data);
 ```
 
 **Process**:
@@ -64,7 +64,7 @@ do_action('dm_schedule_next_step', $job_id, $next_flow_step_id, $data);
 
 ## Data Processing Actions
 
-### `dm_mark_item_processed`
+### `datamachine_mark_item_processed`
 
 **Purpose**: Mark items as processed for deduplication
 
@@ -76,7 +76,7 @@ do_action('dm_schedule_next_step', $job_id, $next_flow_step_id, $data);
 
 **Usage**:
 ```php
-do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_local', $post_id, $job_id);
+do_action('datamachine_mark_item_processed', $flow_step_id, 'wordpress_local', $post_id, $job_id);
 ```
 
 **Database Operation**:
@@ -85,7 +85,7 @@ do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_local', $post_id, 
 
 ## Job Management Actions
 
-### `dm_update_job_status`
+### `datamachine_update_job_status`
 
 **Purpose**: Update job execution status
 
@@ -96,10 +96,10 @@ do_action('dm_mark_item_processed', $flow_step_id, 'wordpress_local', $post_id, 
 
 **Usage**:
 ```php
-do_action('dm_update_job_status', $job_id, 'completed', 'Pipeline executed successfully');
+do_action('datamachine_update_job_status', $job_id, 'completed', 'Pipeline executed successfully');
 ```
 
-### `dm_fail_job`
+### `datamachine_fail_job`
 
 **Purpose**: Mark job as failed with detailed error information
 
@@ -110,7 +110,7 @@ do_action('dm_update_job_status', $job_id, 'completed', 'Pipeline executed succe
 
 **Usage**:
 ```php
-do_action('dm_fail_job', $job_id, 'step_execution_failure', [
+do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
     'flow_step_id' => $flow_step_id,
     'exception_message' => $e->getMessage(),
     'reason' => 'detailed_error_reason'
@@ -125,7 +125,7 @@ do_action('dm_fail_job', $job_id, 'step_execution_failure', [
 
 ## Configuration Actions
 
-### `dm_update_system_prompt`
+### `datamachine_update_system_prompt`
 
 **Purpose**: Update pipeline-level system prompts
 
@@ -135,12 +135,12 @@ do_action('dm_fail_job', $job_id, 'step_execution_failure', [
 
 **Usage**:
 ```php
-do_action('dm_update_system_prompt', $pipeline_step_id, $system_prompt);
+do_action('datamachine_update_system_prompt', $pipeline_step_id, $system_prompt);
 ```
 
 **Storage**: Stored in pipeline_config as reusable template
 
-### `dm_update_flow_user_message`
+### `datamachine_update_flow_user_message`
 
 **Purpose**: Update flow-level user messages
 
@@ -150,12 +150,12 @@ do_action('dm_update_system_prompt', $pipeline_step_id, $system_prompt);
 
 **Usage**:
 ```php
-do_action('dm_update_flow_user_message', $flow_step_id, $user_message);
+do_action('datamachine_update_flow_user_message', $flow_step_id, $user_message);
 ```
 
 **Storage**: Stored in flow_config for instance-specific customization
 
-### `dm_save_tool_config`
+### `datamachine_save_tool_config`
 
 **Purpose**: Save tool configuration data
 
@@ -165,7 +165,7 @@ do_action('dm_update_flow_user_message', $flow_step_id, $user_message);
 
 **Usage**:
 ```php
-do_action('dm_save_tool_config', 'google_search', [
+do_action('datamachine_save_tool_config', 'google_search', [
     'api_key' => $api_key,
     'search_engine_id' => $search_engine_id
 ]);
@@ -173,7 +173,7 @@ do_action('dm_save_tool_config', 'google_search', [
 
 ## System Maintenance Actions
 
-### `dm_auto_save`
+### `datamachine_auto_save`
 
 **Purpose**: Automatic pipeline configuration saving
 
@@ -182,16 +182,16 @@ do_action('dm_save_tool_config', 'google_search', [
 
 **Usage**:
 ```php
-do_action('dm_auto_save', $pipeline_id);
+do_action('datamachine_auto_save', $pipeline_id);
 ```
 
-### `dm_cleanup_old_files`
+### `datamachine_cleanup_old_files`
 
 **Purpose**: File repository maintenance
 
 **Usage**:
 ```php
-do_action('dm_cleanup_old_files');
+do_action('datamachine_cleanup_old_files');
 ```
 
 **Process**:
@@ -201,7 +201,7 @@ do_action('dm_cleanup_old_files');
 
 ## Cache Management Actions
 
-### `dm_clear_pipeline_cache`
+### `datamachine_clear_pipeline_cache`
 
 **Purpose**: Clear caches for a specific pipeline
 
@@ -210,7 +210,7 @@ do_action('dm_cleanup_old_files');
 
 **Usage**:
 ```php
-do_action('dm_clear_pipeline_cache', $pipeline_id);
+do_action('datamachine_clear_pipeline_cache', $pipeline_id);
 ```
 
 **Process**:
@@ -220,12 +220,12 @@ do_action('dm_clear_pipeline_cache', $pipeline_id);
 4. Uses centralized cache constants for consistency
 
 **Cache Types Cleared**:
-- `dm_pipeline_{id}` - Pipeline configuration
-- `dm_pipeline_config_{id}` - Pipeline configuration
-- `dm_pipeline_flows_{id}` - Pipeline flows
+- `datamachine_pipeline_{id}` - Pipeline configuration
+- `datamachine_pipeline_config_{id}` - Pipeline configuration
+- `datamachine_pipeline_flows_{id}` - Pipeline flows
 - Flow and job related caches
 
-### `dm_clear_flow_cache`
+### `datamachine_clear_flow_cache`
 
 **Purpose**: Clear caches for a specific flow
 
@@ -234,7 +234,7 @@ do_action('dm_clear_pipeline_cache', $pipeline_id);
 
 **Usage**:
 ```php
-do_action('dm_clear_flow_cache', $flow_id);
+do_action('datamachine_clear_flow_cache', $flow_id);
 ```
 
 **Process**:
@@ -243,7 +243,7 @@ do_action('dm_clear_flow_cache', $flow_id);
 3. Clears pipeline flow aggregation cache
 4. Clears global flow caches
 
-### `dm_clear_flow_config_cache`
+### `datamachine_clear_flow_config_cache`
 
 **Purpose**: Clear configuration cache for a specific flow
 
@@ -252,10 +252,10 @@ do_action('dm_clear_flow_cache', $flow_id);
 
 **Usage**:
 ```php
-do_action('dm_clear_flow_config_cache', $flow_id);
+do_action('datamachine_clear_flow_config_cache', $flow_id);
 ```
 
-### `dm_clear_flow_scheduling_cache`
+### `datamachine_clear_flow_scheduling_cache`
 
 **Purpose**: Clear scheduling cache for a specific flow
 
@@ -264,10 +264,10 @@ do_action('dm_clear_flow_config_cache', $flow_id);
 
 **Usage**:
 ```php
-do_action('dm_clear_flow_scheduling_cache', $flow_id);
+do_action('datamachine_clear_flow_scheduling_cache', $flow_id);
 ```
 
-### `dm_clear_flow_steps_cache`
+### `datamachine_clear_flow_steps_cache`
 
 **Purpose**: Clear steps cache for a specific flow
 
@@ -276,16 +276,16 @@ do_action('dm_clear_flow_scheduling_cache', $flow_id);
 
 **Usage**:
 ```php
-do_action('dm_clear_flow_steps_cache', $flow_id);
+do_action('datamachine_clear_flow_steps_cache', $flow_id);
 ```
 
-### `dm_clear_jobs_cache`
+### `datamachine_clear_jobs_cache`
 
 **Purpose**: Clear all job-related caches
 
 **Usage**:
 ```php
-do_action('dm_clear_jobs_cache');
+do_action('datamachine_clear_jobs_cache');
 ```
 
 **Process**:
@@ -294,7 +294,7 @@ do_action('dm_clear_jobs_cache');
 3. Clears flow jobs cache
 4. Uses pattern-based clearing for efficiency
 
-### `dm_cache_set`
+### `datamachine_cache_set`
 
 **Purpose**: Standardized cache storage with logging
 
@@ -306,7 +306,7 @@ do_action('dm_clear_jobs_cache');
 
 **Usage**:
 ```php
-do_action('dm_cache_set', $key, $data, $timeout, $group);
+do_action('datamachine_cache_set', $key, $data, $timeout, $group);
 ```
 
 **Features**:
@@ -314,13 +314,13 @@ do_action('dm_cache_set', $key, $data, $timeout, $group);
 - WordPress transient integration
 - Data size and type tracking
 
-### `dm_clear_all_cache`
+### `datamachine_clear_all_cache`
 
 **Purpose**: Clear all Data Machine caches (complete reset)
 
 **Usage**:
 ```php
-do_action('dm_clear_all_cache');
+do_action('datamachine_clear_all_cache');
 ```
 
 **Process**:
@@ -329,12 +329,12 @@ do_action('dm_clear_all_cache');
 3. Removes both data and timeout transients
 
 **Cache Patterns Cleared**:
-- `dm_pipeline_*` - All pipeline-related caches
-- `dm_flow_*` - All flow-related caches
-- `dm_job_*` - All job-related caches
-- `dm_recent_jobs*` - Recent jobs caches
-- `dm_flow_jobs*` - Flow jobs caches
-- `dm_all_pipelines` - Complete pipeline list cache
+- `datamachine_pipeline_*` - All pipeline-related caches
+- `datamachine_flow_*` - All flow-related caches
+- `datamachine_job_*` - All job-related caches
+- `datamachine_recent_jobs*` - Recent jobs caches
+- `datamachine_flow_jobs*` - Flow jobs caches
+- `datamachine_all_pipelines` - Complete pipeline list cache
 
 **Performance Note**: Use sparingly - only when complete cache reset is necessary
 
@@ -350,28 +350,28 @@ do_action('dm_clear_all_cache');
 **Cache Keys Structure**:
 ```php
 // Pipeline caches
-'dm_pipeline_' . $pipeline_id
-'dm_pipeline_steps_' . $pipeline_id
-'dm_pipeline_config_' . $pipeline_id
+'datamachine_pipeline_' . $pipeline_id
+'datamachine_pipeline_steps_' . $pipeline_id
+'datamachine_pipeline_config_' . $pipeline_id
 
 // Flow caches
-'dm_flow_' . $flow_id
-'dm_pipeline_flows_' . $pipeline_id
-'dm_flow_step_' . $flow_step_id
+'datamachine_flow_' . $flow_id
+'datamachine_pipeline_flows_' . $pipeline_id
+'datamachine_flow_step_' . $flow_step_id
 
 // System caches
-'dm_all_pipelines'
-'dm_recent_jobs_' . $context
+'datamachine_all_pipelines'
+'datamachine_recent_jobs_' . $context
 ```
 
 **Cache Invalidation**: Cache clears explicitly on:
-- Pipeline/flow/step operations (explicit `dm_clear_cache` calls)
-- System-wide operations (`dm_clear_all_cache`)
+- Pipeline/flow/step operations (explicit `datamachine_clear_cache` calls)
+- System-wide operations (`datamachine_clear_all_cache`)
 - Manual cache clearing operations
 
 ## Import/Export Actions
 
-### `dm_import`
+### `datamachine_import`
 
 **Purpose**: Import pipeline or flow data
 
@@ -381,10 +381,10 @@ do_action('dm_clear_all_cache');
 
 **Usage**:
 ```php
-do_action('dm_import', 'pipelines', $csv_data);
+do_action('datamachine_import', 'pipelines', $csv_data);
 ```
 
-### `dm_export`
+### `datamachine_export`
 
 **Purpose**: Export pipeline or flow data
 
@@ -394,12 +394,12 @@ do_action('dm_import', 'pipelines', $csv_data);
 
 **Usage**:
 ```php
-do_action('dm_export', 'pipelines', [$pipeline_id]);
+do_action('datamachine_export', 'pipelines', [$pipeline_id]);
 ```
 
 ## Logging Action
 
-### `dm_log`
+### `datamachine_log`
 
 **Purpose**: Centralized logging for all system operations
 
@@ -410,7 +410,7 @@ do_action('dm_export', 'pipelines', [$pipeline_id]);
 
 **Usage**:
 ```php
-do_action('dm_log', 'debug', 'AI Step Directive: Injected system directive', [
+do_action('datamachine_log', 'debug', 'AI Step Directive: Injected system directive', [
     'tool_count' => count($tools),
     'available_tools' => array_keys($tools),
     'directive_length' => strlen($directive)
@@ -423,83 +423,65 @@ do_action('dm_log', 'debug', 'AI Step Directive: Injected system directive', [
 - **warning** - Non-critical issues that should be noted
 - **error** - Critical errors that affect functionality
 
-## AJAX Actions
+## REST Endpoints
 
-### `wp_ajax_dm_refresh_flow_status`
+### `GET /datamachine/v1/status`
 
-**Purpose**: Flow-scoped status refresh for single flow operations
+**Purpose**: Consolidated status refresh for flows and pipelines
 
-**Handler Class**: `FlowStatusAjax`
+**Handler Class**: `DataMachine\Api\Status`
 
-**Request Parameters**:
-- `flow_id` (int) - Flow ID to refresh status for
-- `nonce` (string) - AJAX nonce for verification
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "step_statuses": {
-      "flow_step_id_1": "green",
-      "flow_step_id_2": "yellow",
-      "flow_step_id_3": "red"
-    },
-    "flow_id": 123
-  }
-}
-```
-
-**Use Cases**:
-- Handler configuration changes
-- Scheduling updates
-- Flow settings modifications
-
-**Status Context**: Uses `flow_step_status` context for optimized flow-scoped validation
-
-### `wp_ajax_dm_refresh_pipeline_status`
-
-**Purpose**: Pipeline-wide status refresh for template modifications
-
-**Handler Class**: `PipelineStatusAjax`
-
-**Request Parameters**:
-- `pipeline_id` (int) - Pipeline ID to refresh status for
-- `nonce` (string) - AJAX nonce for verification
+**Query Parameters**:
+- `flow_id` (int|string|array) - One or more flow IDs (supports `flow_id[]=1&flow_id[]=2` or comma-separated string)
+- `pipeline_id` (int|string|array) - One or more pipeline IDs (supports `pipeline_id[]=3&pipeline_id[]=4` or comma-separated string)
 
 **Response**:
 ```json
 {
-  "success": true,
-  "data": {
-    "step_statuses": {
-      "pipeline_step_id_1": "green",
-      "pipeline_step_id_2": "yellow",
-      "pipeline_step_id_3": "red"
+    "success": true,
+    "requested": {
+        "flows": [123],
+        "pipelines": [456]
     },
-    "pipeline_id": 456
-  }
+    "flows": {
+        "123": {
+            "step_statuses": {
+                "flow_step_id_1": "green",
+                "flow_step_id_2": "yellow"
+            }
+        }
+    },
+    "pipelines": {
+        "456": {
+            "step_statuses": {
+                "pipeline_step_id_1": "green",
+                "pipeline_step_id_2": "red"
+            }
+        }
+    }
 }
 ```
 
 **Use Cases**:
-- Add/delete steps
-- AI configuration changes
-- Pipeline architectural modifications
+- Flow handler configuration changes
+- Pipeline template modifications
+- Batch polling for multiple flows/pipelines in UI dashboards
 
-**Status Context**: Uses `pipeline_step_status` context for pipeline-wide validation with cascade effects
+**Status Contexts**:
+- `flow_step_status` for flow-scoped validation (handler configuration, scheduling, settings)
+- `pipeline_step_status` for pipeline-wide validation (template architecture, AI cascade effects)
 
-**Security**: Both AJAX actions require:
-- `manage_options` capability
-- Valid `dm_ajax_actions` nonce
+**Security**:
+- Requires `manage_options` capability
+- Requires REST nonce (`X-WP-Nonce`) when called from authenticated admin JavaScript
 
 ## Action Scheduler Integration
 
 ### Action Types
 
 **Primary Actions**:
-- `dm_execute_step` - Step execution
-- `dm_cleanup_old_files` - Maintenance
+- `datamachine_execute_step` - Step execution
+- `datamachine_cleanup_old_files` - Maintenance
 - Custom actions for scheduled flows
 
 **Queue Management**:
@@ -513,7 +495,7 @@ do_action('dm_log', 'debug', 'AI Step Directive: Injected system directive', [
 // Schedule action
 $action_id = as_schedule_single_action(
     time(), // Immediate execution
-    'dm_execute_step',
+    'datamachine_execute_step',
     [
         'job_id' => $job_id,
         'flow_step_id' => $flow_step_id,
@@ -534,18 +516,18 @@ try {
     
     if (!empty($result)) {
         // Success - schedule next step
-        do_action('dm_schedule_next_step', $job_id, $next_step_id, $result);
+        do_action('datamachine_schedule_next_step', $job_id, $next_step_id, $result);
     } else {
         // Failure - fail job
-        do_action('dm_fail_job', $job_id, 'empty_result', $context);
+        do_action('datamachine_fail_job', $job_id, 'empty_result', $context);
     }
 } catch (\Throwable $e) {
     // Exception - log and fail
-    do_action('dm_log', 'error', 'Step execution exception', [
+    do_action('datamachine_log', 'error', 'Step execution exception', [
         'exception' => $e->getMessage(),
         'trace' => $e->getTraceAsString()
     ]);
-    do_action('dm_fail_job', $job_id, 'exception', $context);
+    do_action('datamachine_fail_job', $job_id, 'exception', $context);
 }
 ```
 
@@ -554,7 +536,7 @@ try {
 All actions integrate with centralized logging:
 
 ```php
-do_action('dm_log', 'info', 'Flow execution started successfully', [
+do_action('datamachine_log', 'info', 'Flow execution started successfully', [
     'flow_id' => $flow_id,
     'job_id' => $job_id,
     'first_step' => $first_flow_step_id
@@ -587,7 +569,7 @@ $config_json = wp_json_encode($config_data);
 AJAX actions require nonce validation:
 
 ```php
-if (!wp_verify_nonce($_POST['nonce'], 'dm_ajax_actions')) {
+if (!wp_verify_nonce($_POST['nonce'], 'datamachine_ajax_actions')) {
     wp_die(__('Security check failed'));
 }
 ```

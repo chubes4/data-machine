@@ -15,7 +15,7 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-if ( ! dm_check_requirements() ) {
+if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
@@ -33,52 +33,50 @@ if ( ! class_exists( 'ActionScheduler' ) ) {
 
 function run_data_machine() {
 
-    dm_register_database_service_system();
-    dm_register_database_filters();
-    dm_register_utility_filters();
-    dm_register_admin_filters();
-    dm_register_logger_filters();
-    dm_register_oauth_system();
-    dm_register_status_detection_filters();
-    dm_register_core_actions();
+	datamachine_register_database_service_system();
+	datamachine_register_database_filters();
+	datamachine_register_utility_filters();
+	datamachine_register_admin_filters();
+	datamachine_register_logger_filters();
+	datamachine_register_oauth_system();
+	datamachine_register_core_actions();
     
     \DataMachine\Engine\Filters\Create::register();
-    
-    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelinePageAjax::register();
-    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineModalAjax::register();
-    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineSwitcherAjax::register();
-    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineDeleteAjax::register();
-    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineImportExportAjax::register();
-    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineAutoSaveAjax::register();
-    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineFlowCreateAjax::register();
-    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineFileUploadAjax::register();
-    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineStatusAjax::register();
-    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\FlowStatusAjax::register();
-    \DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineReorderAjax::register();
 
-    \DataMachine\Engine\Rest\Trigger::register();
+	\DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineModalAjax::register();
+
+    \DataMachine\Api\Execute::register();
+    \DataMachine\Api\Pipelines::register();
+    \DataMachine\Api\Flows::register();
+	\DataMachine\Api\Files::register();
+	\DataMachine\Api\Users::register();
+	\DataMachine\Api\Logs::register();
+	\DataMachine\Api\ProcessedItems::register();
+	\DataMachine\Api\Jobs::register();
+	\DataMachine\Api\Settings::register();
+	\DataMachine\Api\Auth::register();
 }
 
 
 add_action('plugins_loaded', 'run_data_machine', 20);
 
 
-function dm_allow_json_upload($mimes) {
+function datamachine_allow_json_upload($mimes) {
     $mimes['json'] = 'application/json';
     return $mimes;
 }
-add_filter( 'upload_mimes', 'dm_allow_json_upload' );
+add_filter( 'upload_mimes', 'datamachine_allow_json_upload' );
 
 register_activation_hook( __FILE__, 'activate_data_machine' );
-register_deactivation_hook( __FILE__, 'dm_deactivate_plugin' );
+register_deactivation_hook( __FILE__, 'datamachine_deactivate_plugin' );
 
-function dm_deactivate_plugin() {
+function datamachine_deactivate_plugin() {
 }
 
 function activate_data_machine() {
-	dm_register_database_service_system();
+	datamachine_register_database_service_system();
 
-	$all_databases = apply_filters('dm_db', []);
+	$all_databases = apply_filters('datamachine_db', []);
 	$db_pipelines = $all_databases['pipelines'] ?? null;
 	if ($db_pipelines) {
 		$db_pipelines->create_table();
@@ -99,10 +97,20 @@ function activate_data_machine() {
 		$db_processed_items->create_table();
 	}
 
+	// Create log directory during activation
+	$upload_dir = wp_upload_dir();
+	$log_dir = $upload_dir['basedir'] . '/data-machine-logs';
+	if (!file_exists($log_dir)) {
+		$created = wp_mkdir_p($log_dir);
+		if (!$created) {
+			error_log('Data Machine: Failed to create log directory during activation: ' . $log_dir);
+		}
+	}
+
 	$timeout = defined( 'MINUTE_IN_SECONDS' ) ? 5 * MINUTE_IN_SECONDS : 5 * 60;
-	set_transient( 'dm_activation_notice', true, $timeout );
+	set_transient( 'datamachine_activation_notice', true, $timeout );
 }
-function dm_check_requirements() {
+function datamachine_check_requirements() {
 	if ( version_compare( PHP_VERSION, '8.0', '<' ) ) {
 		add_action( 'admin_notices', function() {
 			echo '<div class="notice notice-error"><p>';

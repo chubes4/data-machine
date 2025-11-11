@@ -14,7 +14,7 @@
      */
     function initLogsPage() {
         // Handle clear logs confirmation
-        $('.dm-clear-logs-form').on('submit', function(e) {
+        $('.datamachine-clear-logs-form').on('submit', function(e) {
             e.preventDefault(); // Prevent default form submission
             
             const confirmed = confirm($(this).data('confirm-message') || 'Are you sure you want to clear all logs? This action cannot be undone.');
@@ -27,13 +27,13 @@
         });
 
         // Handle refresh logs button
-        $('.dm-refresh-logs').on('click', function(e) {
+        $('.datamachine-refresh-logs').on('click', function(e) {
             e.preventDefault();
             location.reload();
         });
 
         // Handle copy logs button
-        $('.dm-copy-logs').on('click', function(e) {
+        $('.datamachine-copy-logs').on('click', function(e) {
             e.preventDefault();
 
             const $button = $(this);
@@ -69,7 +69,7 @@
         });
 
         // Handle load full logs button
-        $('.dm-load-full-logs').on('click', function(e) {
+        $('.datamachine-load-full-logs').on('click', function(e) {
             e.preventDefault();
             handleFullLogLoad();
         });
@@ -100,9 +100,9 @@
      * Show success feedback for copy operation
      */
     function showCopySuccess($button, originalText) {
-        $button.text('Copied!').addClass('dm-copy-success');
+        $button.text('Copied!').addClass('datamachine-copy-success');
         setTimeout(function() {
-            $button.text(originalText).removeClass('dm-copy-success');
+            $button.text(originalText).removeClass('datamachine-copy-success');
         }, 2000);
     }
 
@@ -110,20 +110,19 @@
      * Show error feedback for copy operation
      */
     function showCopyError($button, originalText) {
-        $button.text('Copy Failed').addClass('dm-copy-error');
+        $button.text('Copy Failed').addClass('datamachine-copy-error');
         setTimeout(function() {
-            $button.text(originalText).removeClass('dm-copy-error');
+            $button.text(originalText).removeClass('datamachine-copy-error');
         }, 2000);
     }
 
     /**
-     * Handle loading full log content via AJAX
+     * Handle loading full log content via REST API
      */
     function handleFullLogLoad() {
-        const $button = $('#dm-load-full-logs-btn');
-        const $logViewer = $('.dm-log-viewer');
-        const $sectionTitle = $('.dm-log-section-title');
-        const $statusMessage = $('.dm-log-status-message');
+        const $button = $('#datamachine-load-full-logs-btn');
+        const $logViewer = $('.datamachine-log-viewer');
+        const $sectionTitle = $('.datamachine-log-section-title');
         const currentMode = $logViewer.data('current-mode');
 
         // Toggle between full and recent modes
@@ -135,108 +134,71 @@
 
         // Proceed with loading full logs
         const originalButtonText = $button.text();
-        const nonce = $button.data('nonce');
-
-        if (!nonce) {
-            showStatusMessage('Security error: Missing nonce.', 'error');
-            return;
-        }
 
         // Set loading state
         $button.prop('disabled', true).text('Loading...');
         showStatusMessage('Loading full log file...', 'info');
 
-        // AJAX request to load full logs
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'dm_load_full_logs',
-                dm_logs_nonce: nonce
-            },
-            timeout: 30000, // 30 second timeout for large files
-            success: function(response) {
-                if (response.success) {
-                    // Update log viewer with full content
-                    $logViewer.text(response.data.content).data('current-mode', 'full');
+        // REST API request to load full logs
+        wp.apiFetch({
+            path: '/datamachine/v1/logs/content?mode=full',
+            method: 'GET'
+        }).then(function(response) {
+            // Update log viewer with full content
+            $logViewer.text(response.content).data('current-mode', 'full');
 
-                    // Update section title
-                    $sectionTitle.text('Full Log File (' + response.data.total_lines + ' entries)');
+            // Update section title
+            $sectionTitle.text('Full Log File (' + response.total_lines + ' entries)');
 
-                    // Update button text
-                    $button.text('Show Recent Only');
+            // Update button text
+            $button.text('Show Recent Only');
 
-                    // Show success message
-                    showStatusMessage(response.data.message, 'success');
-                } else {
-                    showStatusMessage('Error: ' + (response.data || 'Unknown error occurred'), 'error');
-                }
-            },
-            error: function(xhr, status, error) {
-                let errorMessage = 'Failed to load full logs.';
-                if (status === 'timeout') {
-                    errorMessage = 'Request timed out. Log file may be too large.';
-                } else if (xhr.responseJSON && xhr.responseJSON.data) {
-                    errorMessage = xhr.responseJSON.data;
-                }
-                showStatusMessage(errorMessage, 'error');
-            },
-            complete: function() {
-                // Reset button state
-                $button.prop('disabled', false);
-                if ($logViewer.data('current-mode') !== 'full') {
-                    $button.text(originalButtonText);
-                }
+            // Show success message
+            showStatusMessage(response.message, 'success');
+
+            // Reset button state
+            $button.prop('disabled', false);
+        }).catch(function(error) {
+            let errorMessage = 'Failed to load full logs.';
+            if (error.message) {
+                errorMessage = error.message;
             }
+            showStatusMessage(errorMessage, 'error');
+
+            // Reset button state
+            $button.prop('disabled', false).text(originalButtonText);
         });
     }
 
     /**
-     * Clear logs via AJAX and refresh the page
+     * Clear logs via REST API and refresh the page
      */
     function clearLogsViaAjax() {
-        const $form = $('.dm-clear-logs-form');
+        const $form = $('.datamachine-clear-logs-form');
         const $button = $form.find('button[type="submit"]');
-        const nonce = $form.find('input[name="dm_logs_nonce"]').val();
-        
-        if (!nonce) {
-            showStatusMessage('Security error: Missing nonce.', 'error');
-            return;
-        }
 
         // Set loading state
         const originalButtonText = $button.text();
         $button.prop('disabled', true).text('Clearing...');
         showStatusMessage('Clearing logs...', 'info');
 
-        // AJAX request to clear logs
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'dm_clear_logs',
-                dm_logs_nonce: nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    showStatusMessage(response.data.message || 'Logs cleared successfully.', 'success');
-                    // Refresh the page after a short delay to show the cleared logs
-                    setTimeout(function() {
-                        location.reload();
-                    }, 1000);
-                } else {
-                    showStatusMessage('Error: ' + (response.data || 'Failed to clear logs'), 'error');
-                    $button.prop('disabled', false).text(originalButtonText);
-                }
-            },
-            error: function(xhr, status, error) {
-                let errorMessage = 'Failed to clear logs.';
-                if (xhr.responseJSON && xhr.responseJSON.data) {
-                    errorMessage = xhr.responseJSON.data;
-                }
-                showStatusMessage(errorMessage, 'error');
-                $button.prop('disabled', false).text(originalButtonText);
+        // REST API request to clear logs
+        wp.apiFetch({
+            path: '/datamachine/v1/logs',
+            method: 'DELETE'
+        }).then(function(response) {
+            showStatusMessage(response.message || 'Logs cleared successfully.', 'success');
+            // Refresh the page after a short delay to show the cleared logs
+            setTimeout(function() {
+                location.reload();
+            }, 1000);
+        }).catch(function(error) {
+            let errorMessage = 'Failed to clear logs.';
+            if (error.message) {
+                errorMessage = error.message;
             }
+            showStatusMessage(errorMessage, 'error');
+            $button.prop('disabled', false).text(originalButtonText);
         });
     }
 
@@ -244,11 +206,11 @@
      * Show status message to user
      */
     function showStatusMessage(message, type) {
-        const $statusMessage = $('.dm-log-status-message');
-        const typeClass = 'dm-status-' + type;
+        const $statusMessage = $('.datamachine-log-status-message');
+        const typeClass = 'datamachine-status-' + type;
 
         // Remove any existing type classes
-        $statusMessage.removeClass('dm-status-success dm-status-error dm-status-info');
+        $statusMessage.removeClass('datamachine-status-success datamachine-status-error datamachine-status-info');
 
         // Add new type class and show message
         $statusMessage.addClass(typeClass).text(message).show();

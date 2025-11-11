@@ -101,7 +101,7 @@ Source URL: {item_link}
 - Invalid XML format
 - Unsupported feed structure
 
-**Logging**: Uses `dm_log` action with debug/error levels for feed parsing and item processing status.
+**Logging**: Uses `datamachine_log` action with debug/error levels for feed parsing and item processing status.
 
 ## Media Support
 
@@ -111,7 +111,7 @@ Source URL: {item_link}
 
 ## Engine Data Storage
 
-In addition to the clean data packets above, the RSS handler stores engine parameters in the database for access by downstream handlers via the centralized `dm_engine_data` filter:
+In addition to the clean data packets above, the RSS handler stores engine parameters in the database for access by downstream handlers via the centralized `datamachine_engine_data` filter:
 
 **Stored Engine Data**:
 ```php
@@ -123,7 +123,7 @@ In addition to the clean data packets above, the RSS handler stores engine param
 
 **Access by Steps**:
 ```php
-$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 $source_url = $engine_data['source_url'] ?? null;
 $image_url = $engine_data['image_url'] ?? null;
 ```

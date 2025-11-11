@@ -8,58 +8,52 @@ if (!defined('ABSPATH')) {
 
 
 /**
- * Fetch step with timeframe and keyword filtering capabilities.
+ * Executes fetch handlers to collect data from external sources.
  */
 class FetchStep {
 
-    /**
-     * Execute fetch handler to collect data from external sources.
-     */
     public function execute(array $parameters): array {
         $job_id = $parameters['job_id'];
         $flow_step_id = $parameters['flow_step_id'];
         $data = $parameters['data'] ?? [];
         $flow_step_config = $parameters['flow_step_config'] ?? [];
         try {
-            do_action('dm_log', 'debug', 'Fetch Step: Starting data collection', [
+            do_action('datamachine_log', 'debug', 'Fetch Step: Starting data collection', [
                 'flow_step_id' => $flow_step_id,
                 'existing_items' => count($data)
             ]);
 
             if (empty($flow_step_config)) {
-                do_action('dm_log', 'error', 'Fetch Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);
+                do_action('datamachine_log', 'error', 'Fetch Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);
                 return [];
             }
 
-            $handler_data = $flow_step_config['handler'] ?? null;
-            
-            if (!$handler_data || empty($handler_data['handler_slug'])) {
-                do_action('dm_log', 'error', 'Fetch Step: Fetch step requires handler configuration', [
+            $handler = $flow_step_config['handler_slug'] ?? '';
+
+            if (empty($handler)) {
+                do_action('datamachine_log', 'error', 'Fetch Step: Fetch step requires handler configuration', [
                     'flow_step_id' => $flow_step_id,
-                    'available_flow_step_config' => array_keys($flow_step_config),
-                    'handler_data' => $handler_data
+                    'available_flow_step_config' => array_keys($flow_step_config)
                 ]);
                 return [];
             }
-            
-            $handler = $handler_data['handler_slug'];
-            $handler_settings = $handler_data['settings'] ?? [];
-            
+
+            $handler_settings = $flow_step_config['handler_config'] ?? [];
             $handler_settings['flow_step_id'] = $flow_step_config['flow_step_id'] ?? null;
 
             $fetch_entry = $this->execute_handler($handler, $flow_step_config, $handler_settings, $job_id);
 
             if (!$fetch_entry) {
-                do_action('dm_log', 'error', 'Fetch handler returned no content', ['flow_step_id' => $flow_step_id]);
+                do_action('datamachine_log', 'error', 'Fetch handler returned no content', ['flow_step_id' => $flow_step_id]);
                 return $data; // Return unchanged array
             }
 
-            $data = apply_filters('dm_data_packet', $data, $fetch_entry, $flow_step_id, 'fetch');
+            $data = apply_filters('datamachine_data_packet', $data, $fetch_entry, $flow_step_id, 'fetch');
 
             return $data;
 
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Fetch Step: Exception during data collection', [
+            do_action('datamachine_log', 'error', 'Fetch Step: Exception during data collection', [
                 'flow_step_id' => $flow_step_id,
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -68,18 +62,13 @@ class FetchStep {
         }
     }
 
-
     /**
-     * @param string $handler_name Handler slug
-     * @param array $flow_step_config Step configuration
-     * @param array $handler_settings Handler settings
-     * @param string $job_id Job identifier
-     * @return array|null Fetch entry or null
+     * Executes handler and builds standardized fetch entry with content extraction.
      */
     private function execute_handler(string $handler_name, array $flow_step_config, array $handler_settings, string $job_id): ?array {
         $handler = $this->get_handler_object($handler_name);
         if (!$handler) {
-            do_action('dm_log', 'error', 'Fetch Step: Handler not found or invalid', [
+            do_action('datamachine_log', 'error', 'Fetch Step: Handler not found or invalid', [
                 'handler' => $handler_name,
                 'flow_step_config' => array_keys($flow_step_config)
             ]);
@@ -91,7 +80,7 @@ class FetchStep {
             $flow_id = $flow_step_config['flow_id'] ?? null;
             
             if (!$pipeline_id) {
-                do_action('dm_log', 'error', 'Fetch Step: Pipeline ID not found in step config', [
+                do_action('datamachine_log', 'error', 'Fetch Step: Pipeline ID not found in step config', [
                     'flow_step_config_keys' => array_keys($flow_step_config)
                 ]);
                 return null;
@@ -123,7 +112,7 @@ class FetchStep {
                     $items = $result; // flat list form
                 }
 
-                do_action('dm_log', 'debug', 'FetchStep: Handler output shape', [
+                do_action('datamachine_log', 'debug', 'FetchStep: Handler output shape', [
                     'flow_step_id' => $flow_step_config['flow_step_id'] ?? null,
                     'handler' => $handler_name,
                     'has_processed_items_key' => $has_processed_items_key,
@@ -145,7 +134,6 @@ class FetchStep {
                     $has_data_title_key = array_key_exists('title', $item_data['data'] ?? []);
                     $has_data_content_key = array_key_exists('content', $item_data['data'] ?? []);
 
-                    // Handle file info if present
                     $file_info = $item_data['data']['file_info'] ?? null;
                     if ($file_info) {
                         $file_path_meta = $item_data['file_path'] ?? null;
@@ -167,8 +155,7 @@ class FetchStep {
                     $has_data_content_key = array_key_exists('body', $result);
                 }
 
-                // Observability: confirm presence of keys and non-emptiness without logging content
-                do_action('dm_log', 'debug', 'FetchStep: Content presence check', [
+                do_action('datamachine_log', 'debug', 'FetchStep: Content presence check', [
                     'flow_step_id' => $flow_step_config['flow_step_id'] ?? null,
                     'handler' => $handler_name,
                     'has_title' => !empty($title),
@@ -181,9 +168,8 @@ class FetchStep {
                     'file_info_path' => $file_info['file_path'] ?? null
                 ]);
 
-                // Validate that we have meaningful content after extraction
                 if (empty($title) && empty($body)) {
-                    do_action('dm_log', 'error', 'Fetch handler returned no content after extraction', [
+                    do_action('datamachine_log', 'error', 'Fetch handler returned no content after extraction', [
                         'handler' => $handler_name,
                         'pipeline_id' => $context['pipeline_id'],
                         'flow_id' => $context['flow_id']
@@ -191,7 +177,6 @@ class FetchStep {
                     return null;
                 }
 
-                // Build content array with file_info if available
                 $content_array = [
                     'title' => $title,
                     'body' => $body
@@ -215,7 +200,7 @@ class FetchStep {
                 ];
                 
             } catch (\Exception $e) {
-                do_action('dm_log', 'error', 'Fetch Step: Failed to create data entry from handler output', [
+                do_action('datamachine_log', 'error', 'Fetch Step: Failed to create data entry from handler output', [
                     'handler' => $handler_name,
                     'pipeline_id' => $pipeline_id,
                     'flow_id' => $flow_id,
@@ -228,7 +213,7 @@ class FetchStep {
             return $fetch_entry;
 
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Fetch Step: Handler execution failed', [
+            do_action('datamachine_log', 'error', 'Fetch Step: Handler execution failed', [
                 'handler' => $handler_name,
                 'pipeline_id' => $pipeline_id ?? 'unknown',
                 'flow_id' => $flow_id ?? 'unknown',
@@ -238,13 +223,8 @@ class FetchStep {
         }
     }
 
-
-    /**
-     * @param string $handler_name Handler slug from dm_handlers filter
-     * @return object|null Instantiated handler object or null if not found
-     */
     private function get_handler_object(string $handler_name): ?object {
-        $all_handlers = apply_filters('dm_handlers', [], 'fetch');
+        $all_handlers = apply_filters('datamachine_handlers', [], 'fetch');
         $handler_info = $all_handlers[$handler_name] ?? null;
 
         if (!$handler_info || !isset($handler_info['class'])) {

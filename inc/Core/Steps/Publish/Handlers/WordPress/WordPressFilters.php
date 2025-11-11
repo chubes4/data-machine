@@ -13,8 +13,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-function dm_register_wordpress_publish_filters() {
-    add_filter('dm_handlers', function($handlers, $step_type = null) {
+function datamachine_register_wordpress_publish_filters() {
+    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'publish') {
             $handlers['wordpress_publish'] = [
                 'type' => 'publish',
@@ -26,7 +26,7 @@ function dm_register_wordpress_publish_filters() {
         return $handlers;
     }, 10, 2);
 
-    add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
+    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
         if ($handler_slug === null || $handler_slug === 'wordpress_publish') {
             $all_settings['wordpress_publish'] = new WordPressSettings();
         }
@@ -35,12 +35,12 @@ function dm_register_wordpress_publish_filters() {
 
     add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
         if ($handler_slug === 'wordpress_publish') {
-            $tools['wordpress_publish'] = dm_get_dynamic_wordpress_tool($handler_config);
+            $tools['wordpress_publish'] = datamachine_get_dynamic_wordpress_tool($handler_config);
         }
         return $tools;
     }, 10, 3);
 
-    add_filter('dm_tool_success_message', function($default_message, $tool_name, $tool_result) {
+    add_filter('datamachine_tool_success_message', function($default_message, $tool_name, $tool_result) {
         if ($tool_name === 'wordpress_publish' && !empty($tool_result['data']['post_title'])) {
             $title = $tool_result['data']['post_title'];
             $url = $tool_result['data']['post_url'] ?? '';
@@ -61,7 +61,7 @@ function dm_register_wordpress_publish_filters() {
  *
  * @return array Base WordPress tool configuration.
  */
-function dm_get_wordpress_base_tool(): array {
+function datamachine_get_wordpress_base_tool(): array {
     return [
         'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\WordPress\\WordPress',
         'method' => 'handle_tool_call',
@@ -85,11 +85,12 @@ STRUCTURE:
 2) Only use core blocks from this palette: heading, paragraph, list, quote, separator, image.
 3) No Markdown or raw HTML wrappers outside blocks. All links use <a href="URL">Text</a>.
 4) Do not repeat the post title. Do not embed source links or featured images; the system injects them.
+5) Only output attributes explicitly documented below for each block.
 
 CORE BLOCK DETAILS:
 - heading: default H2. Add {"level":3} for H3, {"level":4} for H4. Inner HTML must keep class="wp-block-heading".
 - paragraph: wrap prose in <p>…</p>. Keep inline elements valid HTML.
-- list: <!-- wp:list --> for unordered, add {"ordered":true} for ordered. Use class="wp-block-list" on <ul>/<ol>.
+- list: <!-- wp:list --> for unordered, add {"ordered":true} for ordered. Use class="wp-block-list" on <ul>/<ol>; no extra list attributes.
 - quote: include citation text in <cite> when needed.
 - separator: <!-- wp:separator --><hr class="wp-block-separator has-alpha-channel-opacity"/><!-- /wp:separator -->.
 - image: only when supplied. Opening JSON must include url, alt when known, optionally caption. Inner HTML should be <figure class="wp-block-image"><img src="..." alt="..."/><figcaption>…</figcaption></figure>.
@@ -114,15 +115,15 @@ VALIDATION CHECKLIST:
  * @param array $handler_config Handler configuration containing taxonomy selections.
  * @return array Dynamic tool configuration with taxonomy parameters.
  */
-function dm_get_dynamic_wordpress_tool(array $handler_config): array {
+function datamachine_get_dynamic_wordpress_tool(array $handler_config): array {
     // Extract WordPress-specific config from nested structure
     $wordpress_config = $handler_config['wordpress_publish'] ?? $handler_config;
     
     // Apply global WordPress defaults from settings page before processing
-    $wordpress_config = apply_filters('dm_apply_global_defaults', $wordpress_config, 'wordpress_publish', 'publish');
+    $wordpress_config = apply_filters('datamachine_apply_global_defaults', $wordpress_config, 'wordpress_publish', 'publish');
     
     // Start with base tool
-    $tool = dm_get_wordpress_base_tool();
+    $tool = datamachine_get_wordpress_base_tool();
     
     // Store resolved configuration for execution (flat structure) with defaults applied
     $tool['handler_config'] = $wordpress_config;
@@ -130,7 +131,7 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
     
     // Input validation
     if (!is_array($handler_config)) {
-        do_action('dm_log', 'error', 'WordPress Tool: Invalid handler config type', [
+        do_action('datamachine_log', 'error', 'WordPress Tool: Invalid handler config type', [
             'expected' => 'array',
             'received' => gettype($handler_config),
             'value' => $handler_config
@@ -147,7 +148,7 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
     }
     
     if (empty($sanitized_config)) {
-        do_action('dm_log', 'warning', 'WordPress Tool: Empty or invalid config, using base tool', [
+        do_action('datamachine_log', 'warning', 'WordPress Tool: Empty or invalid config, using base tool', [
             'original_config' => $handler_config
         ]);
         return $tool;
@@ -156,21 +157,22 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
     // Get all public taxonomies
     $taxonomies = get_taxonomies(['public' => true], 'objects');
     
-    do_action('dm_log', 'debug', 'WordPress Tool: Taxonomies found', [
+    do_action('datamachine_log', 'debug', 'WordPress Tool: Taxonomies found', [
         'taxonomy_count' => count($taxonomies),
         'taxonomy_names' => array_keys($taxonomies)
     ]);
     
     foreach ($taxonomies as $taxonomy) {
-        // Skip built-in formats and other non-content taxonomies
-        if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+        // Skip built-in formats and other non-content taxonomies using centralized filter
+        $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
+        if (in_array($taxonomy->name, $excluded)) {
             continue;
         }
-        
+
         $field_key = "taxonomy_{$taxonomy->name}_selection";
         $selection = $sanitized_config[$field_key] ?? 'skip';
         
-        do_action('dm_log', 'debug', 'WordPress Tool: Processing taxonomy', [
+        do_action('datamachine_log', 'debug', 'WordPress Tool: Processing taxonomy', [
             'taxonomy_name' => $taxonomy->name,
             'field_key' => $field_key,
             'selection' => $selection,
@@ -199,7 +201,7 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
                 ];
             }
             
-            do_action('dm_log', 'debug', 'WordPress Tool: Added ai_decides taxonomy parameter', [
+            do_action('datamachine_log', 'debug', 'WordPress Tool: Added ai_decides taxonomy parameter', [
                 'taxonomy_name' => $taxonomy->name,
                 'parameter_name' => $parameter_name,
                 'required' => true
@@ -207,7 +209,7 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
         } else {
             // Skip and Specific Selection: NOT included in tool parameters
             // These are handled automatically during publishing via publish_config
-            do_action('dm_log', 'debug', 'WordPress Tool: Taxonomy excluded from AI tool', [
+            do_action('datamachine_log', 'debug', 'WordPress Tool: Taxonomy excluded from AI tool', [
                 'taxonomy_name' => $taxonomy->name,
                 'selection_type' => $selection,
                 'reason' => $selection === 'skip' ? 'skipped by config' : 'pre-selected via config'
@@ -215,7 +217,7 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
         }
     }
     
-    do_action('dm_log', 'debug', 'WordPress Tool: Generation complete', [
+    do_action('datamachine_log', 'debug', 'WordPress Tool: Generation complete', [
         'parameter_count' => count($tool['parameters']),
         'parameter_names' => array_keys($tool['parameters'])
     ]);
@@ -225,4 +227,4 @@ function dm_get_dynamic_wordpress_tool(array $handler_config): array {
 
 
 // Auto-register when file loads - achieving complete self-containment
-dm_register_wordpress_publish_filters();
+datamachine_register_wordpress_publish_filters();

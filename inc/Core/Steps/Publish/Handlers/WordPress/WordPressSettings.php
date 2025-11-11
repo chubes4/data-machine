@@ -107,8 +107,9 @@ class WordPressSettings {
         $taxonomies = get_taxonomies(['public' => true], 'objects');
         
         foreach ($taxonomies as $taxonomy) {
-            // Skip built-in formats and other non-content taxonomies
-            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+            // Skip built-in formats and other non-content taxonomies using centralized filter
+            $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
+            if (in_array($taxonomy->name, $excluded)) {
                 continue;
             }
             
@@ -194,7 +195,7 @@ class WordPressSettings {
         $valid_date_sources = ['current_date', 'source_date'];
         $date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
         if (!in_array($date_source, $valid_date_sources)) {
-            do_action('dm_log', 'error', 'WordPress Settings: Invalid post_date_source parameter provided', [
+            do_action('datamachine_log', 'error', 'WordPress Settings: Invalid post_date_source parameter provided', [
                 'provided_value' => $date_source,
                 'valid_options' => $valid_date_sources
             ]);
@@ -237,8 +238,9 @@ class WordPressSettings {
         $taxonomies = get_taxonomies(['public' => true], 'objects');
         
         foreach ($taxonomies as $taxonomy) {
-            // Skip built-in formats and other non-content taxonomies
-            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+            // Skip built-in formats and other non-content taxonomies using centralized filter
+            $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
+            if (in_array($taxonomy->name, $excluded)) {
                 continue;
             }
             
@@ -249,10 +251,10 @@ class WordPressSettings {
             if ($raw_value === 'skip' || $raw_value === 'ai_decides') {
                 $sanitized[$field_key] = $raw_value;
             } else {
-                // Must be a term ID - validate it exists in this taxonomy
+                // Must be a term ID - validate it exists in this taxonomy using centralized filter
                 $term_id = absint($raw_value);
-                $term = get_term($term_id, $taxonomy->name);
-                if (!is_wp_error($term) && $term) {
+                $term_name = apply_filters('datamachine_wordpress_term_name', null, $term_id, $taxonomy->name);
+                if ($term_name !== null) {
                     $sanitized[$field_key] = $term_id;
                 } else {
                     // Invalid term ID - default to skip
@@ -276,8 +278,9 @@ class WordPressSettings {
         $taxonomies = get_taxonomies(['public' => true], 'objects');
         
         foreach ($taxonomies as $taxonomy) {
-            // Skip built-in formats and other non-content taxonomies
-            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+            // Skip built-in formats and other non-content taxonomies using centralized filter
+            $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
+            if (in_array($taxonomy->name, $excluded)) {
                 continue;
             }
             

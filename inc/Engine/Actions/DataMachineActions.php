@@ -13,20 +13,20 @@
  * - Service Discovery: Filter-based service access for architectural consistency
  *
  * Core Workflow and Utility Actions Registered:
- * - dm_run_flow_now: Central flow execution trigger for manual/scheduled runs
- * - dm_execute_step: Core step execution engine for Action Scheduler pipeline processing
- * - dm_schedule_next_step: Central pipeline step scheduling eliminating Action Scheduler duplication
- * - dm_mark_item_processed: Universal processed item marking across all handlers
- * - dm_log: Central logging operations eliminating logger service discovery
+ * - datamachine_run_flow_now: Central flow execution trigger for manual/scheduled runs
+ * - datamachine_execute_step: Core step execution engine for Action Scheduler pipeline processing
+ * - datamachine_schedule_next_step: Central pipeline step scheduling eliminating Action Scheduler duplication
+ * - datamachine_mark_item_processed: Universal processed item marking across all handlers
+ * - datamachine_log: Central logging operations eliminating logger service discovery
  *
  * ORGANIZED ACTIONS (WordPress-native registration):
- * - dm_create, dm_delete: CRUD operations via organized action classes
- * - dm_update_job_status, dm_update_flow_schedule, dm_auto_save, dm_update_flow_handler, dm_sync_steps_to_flow: Update operations (Update.php)
- * - dm_fail_job: Explicit job failure with configurable cleanup (Update.php)
+ * - datamachine_create, datamachine_delete: CRUD operations via organized action classes
+ * - datamachine_update_job_status, datamachine_update_flow_schedule, datamachine_auto_save, datamachine_update_flow_handler, datamachine_sync_steps_to_flow: Update operations (Update.php)
+ * - datamachine_fail_job: Explicit job failure with configurable cleanup (Update.php)
  * - External Plugin Actions: Plugins register custom actions using standard add_action() patterns
  *
  * EXTENSIBILITY EXAMPLES:
- * External plugins can add: dm_transform, dm_validate, dm_backup, dm_migrate, dm_sync, dm_analyze
+ * External plugins can add: datamachine_transform, datamachine_validate, datamachine_backup, datamachine_migrate, datamachine_sync, datamachine_analyze
  *
  * ARCHITECTURAL BENEFITS:
  * - WordPress-native action registration: Direct add_action() calls, zero overhead
@@ -57,12 +57,12 @@ require_once __DIR__ . '/Cache.php';
  *
  * @since 0.1.0
  */
-function dm_register_core_actions() {
+function datamachine_register_core_actions() {
     
-    add_action('dm_mark_item_processed', function($flow_step_id, $source_type, $item_identifier, $job_id) {
+    add_action('datamachine_mark_item_processed', function($flow_step_id, $source_type, $item_identifier, $job_id) {
         
         if (empty($job_id) || !is_numeric($job_id) || $job_id <= 0) {
-            do_action('dm_log', 'error', 'dm_mark_item_processed called without valid job_id', [
+            do_action('datamachine_log', 'error', 'datamachine_mark_item_processed called without valid job_id', [
                 'flow_step_id' => $flow_step_id,
                 'source_type' => $source_type,
                 'item_identifier' => substr($item_identifier, 0, 50) . '...',
@@ -73,11 +73,11 @@ function dm_register_core_actions() {
             return;
         }
         
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $processed_items = $all_databases['processed_items'] ?? null;
         
         if (!$processed_items) {
-                do_action('dm_log', 'error', 'ProcessedItems service unavailable for item marking', [
+                do_action('datamachine_log', 'error', 'ProcessedItems service unavailable for item marking', [
                 'flow_step_id' => $flow_step_id, 
                 'source_type' => $source_type,
                 'identifier' => substr($item_identifier, 0, 50) . '...',
@@ -94,22 +94,22 @@ function dm_register_core_actions() {
     
     
     // Central logging hook - eliminates logger service discovery across all components  
-    add_action('dm_log', function($operation, $param2 = null, $param3 = null, &$result = null) {
+    add_action('datamachine_log', function($operation, $param2 = null, $param3 = null, &$result = null) {
         $management_operations = ['clear_all', 'cleanup', 'set_level'];
         if (in_array($operation, $management_operations)) {
             switch ($operation) {
                 case 'clear_all':
-                    $result = dm_clear_log_files();
+                    $result = datamachine_clear_log_files();
                     return $result;
 
                 case 'cleanup':
                     $max_size_mb = $param2 ?? 10;
                     $max_age_days = $param3 ?? 30;
-                    $result = dm_cleanup_log_files($max_size_mb, $max_age_days);
+                    $result = datamachine_cleanup_log_files($max_size_mb, $max_age_days);
                     return $result;
 
                 case 'set_level':
-                    return dm_set_log_level($param2);
+                    return datamachine_set_log_level($param2);
             }
         }
 
@@ -120,7 +120,7 @@ function dm_register_core_actions() {
             return false;
         }
 
-        $function_name = 'dm_log_' . $operation;
+        $function_name = 'datamachine_log_' . $operation;
         if (function_exists($function_name)) {
             $function_name($param2, $context);
             return true;
@@ -129,7 +129,7 @@ function dm_register_core_actions() {
         return false;
     }, 10, 4);
 
-    dm_register_execution_engine();
+    datamachine_register_execution_engine();
     
     \DataMachine\Engine\Actions\Delete::register();
     \DataMachine\Engine\Actions\Update::register();

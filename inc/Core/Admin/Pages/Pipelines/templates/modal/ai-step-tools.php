@@ -35,7 +35,7 @@ if (empty($global_enabled_tools)) {
             <?php foreach ($global_enabled_tools as $tool_id => $tool_config): ?>
                 <?php
                 // Configuration requirements
-                $tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
+                $tool_configured = apply_filters('datamachine_tool_configured', false, $tool_id);
                 $requires_config = !empty($tool_config['requires_config']);
                 $config_needed = $requires_config && !$tool_configured;
                 
@@ -52,7 +52,7 @@ if (empty($global_enabled_tools)) {
                 $tool_description = $tool_config['description'] ?? '';
                 ?>
                 
-                <div class="dm-tool-option">
+                <div class="datamachine-tool-option">
                     <label>
                         <input type="checkbox" 
                                name="enabled_tools[]" 
@@ -62,12 +62,12 @@ if (empty($global_enabled_tools)) {
                         <span><?php echo esc_html($tool_name); ?></span>
                         
                         <?php if (!empty($tool_description)): ?>
-                            <span class="dm-tool-info" data-tooltip="<?php echo esc_attr($tool_description); ?>">ⓘ</span>
+                            <span class="datamachine-tool-info" data-tooltip="<?php echo esc_attr($tool_description); ?>">ⓘ</span>
                         <?php endif; ?>
                     </label>
                     
                     <?php if ($config_needed): ?>
-                        <span class="dm-tool-config-warning">
+                        <span class="datamachine-tool-config-warning">
                             ⚠ <a href="<?php echo esc_url(admin_url('options-general.php?page=data-machine-settings')); ?>" target="_blank">
                                 <?php echo esc_html__('Configure in settings', 'data-machine'); ?>
                             </a>

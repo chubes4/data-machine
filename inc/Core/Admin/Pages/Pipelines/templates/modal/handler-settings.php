@@ -19,24 +19,24 @@ $handler_settings = null;
 $settings_fields = [];
 
 if ($handler_slug) {
-    $all_handlers = apply_filters('dm_handlers', [], $step_type);
+    $all_handlers = apply_filters('datamachine_handlers', [], $step_type);
     $handler_info = $all_handlers[$handler_slug] ?? [];
 
-    $all_settings = apply_filters('dm_handler_settings', [], $handler_slug);
+    $all_settings = apply_filters('datamachine_handler_settings', [], $handler_slug);
     $handler_settings = $all_settings[$handler_slug] ?? null;
 
     $step_config = [];
     if (!empty($flow_step_id) && !empty($handler_slug)) {
-        $step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
+        $step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
     }
 
     if ($handler_settings && method_exists($handler_settings, 'get_fields')) {
         $current_settings_for_fields = [];
         if (!empty($step_config)) {
-            $current_settings_for_fields = $step_config['handler']['settings'][$handler_slug] ?? [];
+            $current_settings_for_fields = $step_config['handler_config'] ?? [];
         }
         $all_fields = $handler_settings::get_fields();
-        $settings_fields = apply_filters('dm_enabled_settings', $all_fields, $handler_slug, $step_type, [
+        $settings_fields = apply_filters('datamachine_enabled_settings', $all_fields, $handler_slug, $step_type, [
             'flow_step_id' => $flow_step_id,
             'pipeline_id' => $pipeline_id,
             'current_settings' => $current_settings_for_fields
@@ -49,8 +49,8 @@ $handler_label = $handler_info['label'] ?? ucfirst(str_replace('_', ' ', $handle
 $has_auth_system = $handler_info['requires_auth'] ?? false;
 
 ?>
-<div class="dm-handler-settings-container">
-    <div class="dm-handler-settings-header">
+<div class="datamachine-handler-settings-container">
+    <div class="datamachine-handler-settings-header">
     <h3><?php
     /* translators: %s: Handler label */
     echo esc_html( sprintf( __( 'Configure %s Handler', 'data-machine' ), $handler_label ) );
@@ -62,15 +62,15 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
     </div>
     
     <?php if ($has_auth_system): ?>
-        <div class="dm-auth-link-section">
-            <div class="dm-auth-link-info">
+        <div class="datamachine-auth-link-section">
+            <div class="datamachine-auth-link-info">
                 <span class="dashicons dashicons-admin-network"></span>
                 <span><?php
                 /* translators: %s: Handler label */
                 echo esc_html( sprintf( __( '%s requires authentication to function properly.', 'data-machine' ), $handler_label ) );
                 ?></span>
             </div>
-            <button type="button" class="button button-secondary dm-modal-content" 
+            <button type="button" class="button button-secondary datamachine-modal-content" 
                     data-template="modal/handler-auth-form"
                     data-context='<?php echo esc_attr(wp_json_encode(['handler_slug' => $handler_slug, 'step_type' => $step_type ?? '', 'flow_step_id' => $flow_step_id ?? '', 'pipeline_id' => $pipeline_id ?? '', 'flow_id' => $flow_id ?? ''])); ?>'>
                 <?php esc_html_e('Manage Authentication', 'data-machine'); ?>
@@ -78,7 +78,7 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
         </div>
     <?php endif; ?>
     
-    <div class="dm-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
+    <div class="datamachine-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
         
         <input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('dm_ajax_actions')); ?>" />
         <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
@@ -86,14 +86,14 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
         <input type="hidden" name="flow_step_id" value="<?php echo esc_attr($flow_step_id); ?>" />
         <input type="hidden" name="pipeline_id" value="<?php echo esc_attr($pipeline_id); ?>" />
         
-        <div class="dm-settings-fields">
+        <div class="datamachine-settings-fields">
             <?php
             $current_settings = [];
             if (!empty($step_config)) {
-                $current_settings = $step_config['handler']['settings'][$handler_slug] ?? [];
+                $current_settings = $step_config['handler_config'] ?? [];
             }
 
-            $current_settings = apply_filters('dm_apply_global_defaults', $current_settings, $handler_slug, $step_type);
+            $current_settings = apply_filters('datamachine_apply_global_defaults', $current_settings, $handler_slug, $step_type);
             
             
             if (!empty($settings_fields)) {
@@ -106,7 +106,7 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
                             $field_config,
                             $current_value
                         ),
-                        dm_allowed_html()
+                        datamachine_allowed_html()
                     );
                 }
             } else {
@@ -124,8 +124,8 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
             $global_settings = [];
 
             if (!empty($wp_settings['default_author_id'])) {
-                $user = get_userdata($wp_settings['default_author_id']);
-                $author_name = $user ? $user->display_name : 'Unknown';
+                $author_name = apply_filters('datamachine_wordpress_user_display_name', null, $wp_settings['default_author_id']);
+                $author_name = $author_name ?? 'Unknown';
                 /* translators: %s: Author display name */
                 $global_settings[] = sprintf( __( 'Author: %s', 'data-machine' ), $author_name );
             }
@@ -155,7 +155,7 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
 
             if (!empty($global_settings)) {
                 ?>
-                <div class="dm-global-settings-notice" style="background: #f0f6fc; border: 1px solid #c3d8e8; padding: 12px; margin: 16px 0; border-radius: 4px;">
+                <div class="datamachine-global-settings-notice" style="background: #f0f6fc; border: 1px solid #c3d8e8; padding: 12px; margin: 16px 0; border-radius: 4px;">
                     <p style="margin: 0; color: #2c3e50;">
                         <strong><?php esc_html_e('Global Settings Active:', 'data-machine'); ?></strong>
                         <?php echo esc_html(implode(', ', $global_settings)); ?>.
@@ -169,16 +169,16 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
         }
         ?>
 
-        <div class="dm-settings-actions">
-            <button type="button" class="button button-secondary dm-cancel-settings">
+        <div class="datamachine-settings-actions">
+            <button type="button" class="button button-secondary datamachine-cancel-settings">
                 <?php esc_html_e('Cancel', 'data-machine'); ?>
             </button>
-            <button type="button" class="button button-secondary dm-modal-content" 
+            <button type="button" class="button button-secondary datamachine-modal-content" 
                     data-template="handler-selection"
                     data-context='<?php echo esc_attr(wp_json_encode(['flow_step_id' => $flow_step_id, 'step_type' => $step_type, 'pipeline_id' => $pipeline_id])); ?>'>
                 <?php esc_html_e('Change Handler Type', 'data-machine'); ?>
             </button>
-            <button type="button" class="button button-primary dm-modal-close" 
+            <button type="button" class="button button-primary datamachine-modal-close" 
                     data-template="add-handler-action"
                     data-context='<?php echo esc_attr(wp_json_encode(['handler_slug' => $handler_slug, 'step_type' => $step_type ?? '', 'flow_step_id' => $flow_step_id ?? '', 'pipeline_id' => $pipeline_id ?? ''])); ?>'>
                 <?php esc_html_e('Save Handler Settings', 'data-machine'); ?>

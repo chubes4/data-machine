@@ -130,7 +130,7 @@ Title: {post_title}
 - Missing required post fields
 - Inaccessible featured images
 
-**Logging**: Uses `dm_log` action with debug/error levels for API calls, data extraction, and error conditions.
+**Logging**: Uses `datamachine_log` action with debug/error levels for API calls, data extraction, and error conditions.
 
 ## Performance Considerations
 

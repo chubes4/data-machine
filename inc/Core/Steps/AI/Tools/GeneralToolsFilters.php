@@ -9,8 +9,8 @@
 defined('ABSPATH') || exit;
 
 /**
- * Fallback for dm_save_tool_config - if no tool handles the save, show error
+ * Fallback for datamachine_save_tool_config - if no tool handles the save, show error
  */
-add_action('dm_save_tool_config', function($tool_id, $config_data) {
+add_action('datamachine_save_tool_config', function($tool_id, $config_data) {
     wp_send_json_error(['message' => __('Unknown tool configuration', 'data-machine')]);
 }, 999, 2);

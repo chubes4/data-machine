@@ -7,32 +7,25 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-function dm_register_admin_filters() {
+function datamachine_register_admin_filters() {
     
     
-    add_filter('dm_admin_pages', function($pages) {
+    add_filter('datamachine_admin_pages', function($pages) {
         return $pages;
     }, 5, 1);
     
     
-    add_filter('dm_modals', function($modals) {
+    add_filter('datamachine_modals', function($modals) {
         // Components self-register via this same filter with higher priority
         // Bootstrap provides discovery infrastructure for ModalAjax
         return $modals;
     }, 5, 1);
 
-
-    add_filter('dm_pipeline_templates', function($templates) {
-        // Pipeline templates self-register via this same filter with higher priority
-        // Enables guided pipeline creation with pre-configured step sequences
-        return $templates;
-    }, 5, 1);
-    
     // Template rendering with dynamic discovery
-    add_filter('dm_render_template', function($content, $template_name, $data = []) {
+    add_filter('datamachine_render_template', function($content, $template_name, $data = []) {
         // Template discovery and rendering
         // Dynamic discovery of all registered admin pages and their template directories
-        $all_pages = apply_filters('dm_admin_pages', []);
+        $all_pages = apply_filters('datamachine_admin_pages', []);
         
         foreach ($all_pages as $slug => $page_config) {
             if (!empty($page_config['templates'])) {
@@ -65,30 +58,30 @@ function dm_register_admin_filters() {
     }, 10, 3);
     
     // WordPress-native admin hook registration  
-    add_action('admin_menu', 'dm_register_admin_menu');
-    add_action('admin_enqueue_scripts', 'dm_enqueue_admin_assets');
+    add_action('admin_menu', 'datamachine_register_admin_menu');
+    add_action('admin_enqueue_scripts', 'datamachine_enqueue_admin_assets');
 }
 
 // Split composite flow_step_id: {pipeline_step_id}_{flow_id}
-add_filter('dm_split_flow_step_id', function($null, $flow_step_id) {
+add_filter('datamachine_split_flow_step_id', function($null, $flow_step_id) {
     if (empty($flow_step_id) || !is_string($flow_step_id)) {
         return null;
     }
-    
+
     // Split on last underscore to handle UUIDs with dashes
     $last_underscore_pos = strrpos($flow_step_id, '_');
     if ($last_underscore_pos === false) {
         return null;
     }
-    
+
     $pipeline_step_id = substr($flow_step_id, 0, $last_underscore_pos);
     $flow_id = substr($flow_step_id, $last_underscore_pos + 1);
-    
+
     // Validate flow_id is numeric
     if (!is_numeric($flow_id)) {
         return null;
     }
-    
+
     return [
         'pipeline_step_id' => $pipeline_step_id,
         'flow_id' => (int)$flow_id
@@ -96,9 +89,9 @@ add_filter('dm_split_flow_step_id', function($null, $flow_step_id) {
 }, 10, 2);
 
 
-function dm_register_admin_menu() {
+function datamachine_register_admin_menu() {
     // Get enabled admin pages based on settings (includes Engine Mode check)
-    $registered_pages = dm_get_enabled_admin_pages();
+    $registered_pages = datamachine_get_enabled_admin_pages();
     
     // Only create Data Machine menu if pages are available and not in Engine Mode
     if (empty($registered_pages)) {
@@ -135,8 +128,8 @@ function dm_register_admin_menu() {
     );
     
     // Store hook suffix and page config for first page
-    dm_store_hook_suffix($first_slug, $main_menu_hook);
-    dm_store_page_config($first_slug, $first_page);
+    datamachine_store_hook_suffix($first_slug, $main_menu_hook);
+    datamachine_store_page_config($first_slug, $first_page);
     
     // Add first page as submenu with its proper title
     $first_submenu_hook = add_submenu_page(
@@ -146,7 +139,7 @@ function dm_register_admin_menu() {
         $first_page['capability'] ?? 'manage_options',
         'dm-' . $first_slug,
         function() use ($first_page, $first_slug) {
-            dm_render_admin_page_content($first_page, $first_slug);
+            datamachine_render_admin_page_content($first_page, $first_slug);
         }
     );
     
@@ -160,13 +153,13 @@ function dm_register_admin_menu() {
             $page_config['capability'] ?? 'manage_options',
             'dm-' . $slug,
             function() use ($page_config, $slug) {
-                dm_render_admin_page_content($page_config, $slug);
+                datamachine_render_admin_page_content($page_config, $slug);
             }
         );
         
         // Store hook suffixes and page config for asset loading
-        dm_store_hook_suffix($slug, $hook_suffix);
-        dm_store_page_config($slug, $page_config);
+        datamachine_store_hook_suffix($slug, $hook_suffix);
+        datamachine_store_page_config($slug, $page_config);
     }
 }
 
@@ -179,7 +172,7 @@ add_action('init', function() {
 /**
  * Get Data Machine settings with defaults.
  */
-function dm_get_data_machine_settings() {
+function datamachine_get_data_machine_settings() {
     return get_option('data_machine_settings', [
         'engine_mode' => false,
         'enabled_pages' => [],
@@ -195,14 +188,14 @@ function dm_get_data_machine_settings() {
 /**
  * Get enabled admin pages based on settings.
  */
-function dm_get_enabled_admin_pages() {
-    $settings = dm_get_data_machine_settings();
+function datamachine_get_enabled_admin_pages() {
+    $settings = datamachine_get_data_machine_settings();
 
     if ($settings['engine_mode']) {
         return [];
     }
 
-    $all_pages = apply_filters('dm_admin_pages', []);
+    $all_pages = apply_filters('datamachine_admin_pages', []);
 
     if (empty($settings['enabled_pages'])) {
         return $all_pages;
@@ -215,8 +208,8 @@ function dm_get_enabled_admin_pages() {
 /**
  * Get enabled general AI tools (non-handler-specific).
  */
-function dm_get_enabled_general_tools() {
-    $settings = dm_get_data_machine_settings();
+function datamachine_get_enabled_general_tools() {
+    $settings = datamachine_get_data_machine_settings();
     $all_tools = apply_filters('ai_tools', []);
 
     $general_tools = array_filter($all_tools, function($tool_config) {
@@ -230,10 +223,10 @@ function dm_get_enabled_general_tools() {
     return array_intersect_key($general_tools, array_filter($settings['enabled_tools']));
 }
 
-function dm_store_hook_suffix($page_slug, $hook_suffix) {
-    $page_hook_suffixes = get_option('dm_page_hook_suffixes', []);
+function datamachine_store_hook_suffix($page_slug, $hook_suffix) {
+    $page_hook_suffixes = get_option('datamachine_page_hook_suffixes', []);
     $page_hook_suffixes[$page_slug] = $hook_suffix;
-    update_option('dm_page_hook_suffixes', $page_hook_suffixes);
+    update_option('datamachine_page_hook_suffixes', $page_hook_suffixes);
 }
 
 /**
@@ -242,10 +235,10 @@ function dm_store_hook_suffix($page_slug, $hook_suffix) {
  * @param string $page_slug Page slug
  * @param array $page_config Page configuration
  */
-function dm_store_page_config($page_slug, $page_config) {
-    $page_configs = get_option('dm_page_configs', []);
+function datamachine_store_page_config($page_slug, $page_config) {
+    $page_configs = get_option('datamachine_page_configs', []);
     $page_configs[$page_slug] = $page_config;
-    update_option('dm_page_configs', $page_configs);
+    update_option('datamachine_page_configs', $page_configs);
 }
 
 /**
@@ -254,7 +247,7 @@ function dm_store_page_config($page_slug, $page_config) {
  * @param array $page_config Page configuration
  * @param string $page_slug Page slug
  */
-function dm_render_admin_page_content($page_config, $page_slug) {
+function datamachine_render_admin_page_content($page_config, $page_slug) {
     // Special handling for logs page to use Logs class render_content method
     if ($page_slug === 'logs') {
         // Use Logs class to render content properly
@@ -264,13 +257,13 @@ function dm_render_admin_page_content($page_config, $page_slug) {
     }
 
     // Direct template rendering using standardized template name pattern for other pages
-    $content = apply_filters('dm_render_template', '', "page/{$page_slug}-page", [
+    $content = apply_filters('datamachine_render_template', '', "page/{$page_slug}-page", [
         'page_slug' => $page_slug,
         'page_config' => $page_config
     ]);
 
     if (!empty($content)) {
-        echo wp_kses($content, dm_allowed_html());
+        echo wp_kses($content, datamachine_allowed_html());
     } else {
         // Default empty state
         echo '<div class="wrap"><h1>' . esc_html($page_config['page_title'] ?? ucfirst($page_slug)) . '</h1>';
@@ -286,7 +279,7 @@ function dm_render_admin_page_content($page_config, $page_slug) {
  *
  * @return array Allowed HTML tags and attributes
  */
-function dm_allowed_html(): array {
+function datamachine_allowed_html(): array {
     // Start with WordPress post allowed HTML as base
     $allowed_html = wp_kses_allowed_html('post');
 
@@ -377,8 +370,8 @@ function dm_allowed_html(): array {
     return $allowed_html;
 }
 
-function dm_enqueue_admin_assets( $hook_suffix ) {
-    $page_hook_suffixes = get_option('dm_page_hook_suffixes', []);
+function datamachine_enqueue_admin_assets( $hook_suffix ) {
+    $page_hook_suffixes = get_option('datamachine_page_hook_suffixes', []);
     
     // Find matching page slug for this hook suffix
     $current_page_slug = null;
@@ -393,7 +386,7 @@ function dm_enqueue_admin_assets( $hook_suffix ) {
         return;
     }
     
-    $page_configs = get_option('dm_page_configs', []);
+    $page_configs = get_option('datamachine_page_configs', []);
     
     // Get page assets from unified configuration
     $page_config = $page_configs[$current_page_slug] ?? [];
@@ -401,11 +394,11 @@ function dm_enqueue_admin_assets( $hook_suffix ) {
     
     
     if (!empty($page_assets['css']) || !empty($page_assets['js'])) {
-        dm_enqueue_page_assets($page_assets, $current_page_slug);
+        datamachine_enqueue_page_assets($page_assets, $current_page_slug);
     }
 }
 
-function dm_enqueue_page_assets($assets, $page_slug) {
+function datamachine_enqueue_page_assets($assets, $page_slug) {
     $plugin_base_path = DATA_MACHINE_PATH;
     $plugin_base_url = DATA_MACHINE_URL;
     $version = DATA_MACHINE_VERSION;

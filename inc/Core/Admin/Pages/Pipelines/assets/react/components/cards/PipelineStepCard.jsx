@@ -1,0 +1,177 @@
+/**
+ * Pipeline Step Card Component
+ *
+ * Display individual pipeline step with configuration.
+ */
+
+import { useState, useEffect, useCallback, useRef } from '@wordpress/element';
+import { Card, CardBody, Button, TextareaControl, Notice } from '@wordpress/components';
+import { __ } from '@wordpress/i18n';
+import StepTypeIcon from '../shared/StepTypeIcon';
+import { updateSystemPrompt } from '../../utils/api';
+import { AUTO_SAVE_DELAY } from '../../utils/constants';
+import { slugToLabel } from '../../utils/formatters';
+
+/**
+ * Pipeline Step Card Component
+ *
+ * @param {Object} props - Component props
+ * @param {Object} props.step - Step data
+ * @param {number} props.pipelineId - Pipeline ID
+ * @param {Object} props.pipelineConfig - AI configuration keyed by pipeline_step_id
+ * @param {Function} props.onDelete - Delete handler
+ * @param {Function} props.onConfigure - Configure handler
+ * @returns {React.ReactElement} Pipeline step card
+ */
+export default function PipelineStepCard({ step, pipelineId, pipelineConfig, onDelete, onConfigure }) {
+	const aiConfig = step.step_type === 'ai' ? pipelineConfig[step.pipeline_step_id] : null;
+
+	const [localPrompt, setLocalPrompt] = useState(aiConfig?.system_prompt || '');
+	const [isSaving, setIsSaving] = useState(false);
+	const [error, setError] = useState(null);
+	const saveTimeout = useRef(null);
+
+	/**
+	 * Sync local prompt with config changes
+	 */
+	useEffect(() => {
+		if (aiConfig) {
+			setLocalPrompt(aiConfig.system_prompt || '');
+		}
+	}, [aiConfig]);
+
+	/**
+	 * Save system prompt to API
+	 */
+	const savePrompt = useCallback(async (prompt) => {
+		if (!aiConfig) return;
+
+		const currentPrompt = aiConfig.system_prompt || '';
+		if (prompt === currentPrompt) return;
+
+		setIsSaving(true);
+		setError(null);
+
+		try {
+			const response = await updateSystemPrompt(
+				pipelineId,
+				step.pipeline_step_id,
+				prompt,
+				aiConfig.ai_provider,
+				aiConfig.ai_model
+			);
+
+			if (!response.success) {
+				setError(response.message || __('Failed to update prompt', 'data-machine'));
+				setLocalPrompt(currentPrompt); // Revert on error
+			}
+		} catch (err) {
+			console.error('Prompt update error:', err);
+			setError(err.message || __('An error occurred', 'data-machine'));
+			setLocalPrompt(currentPrompt); // Revert on error
+		} finally {
+			setIsSaving(false);
+		}
+	}, [pipelineId, step.pipeline_step_id, aiConfig]);
+
+	/**
+	 * Handle prompt change with debouncing
+	 */
+	const handlePromptChange = useCallback((value) => {
+		setLocalPrompt(value);
+
+		// Clear existing timeout
+		if (saveTimeout.current) {
+			clearTimeout(saveTimeout.current);
+		}
+
+		// Set new timeout for debounced save
+		saveTimeout.current = setTimeout(() => {
+			savePrompt(value);
+		}, AUTO_SAVE_DELAY);
+	}, [savePrompt]);
+
+	/**
+	 * Handle step deletion
+	 */
+	const handleDelete = useCallback(() => {
+		const confirmed = window.confirm(__('Are you sure you want to remove this step?', 'data-machine'));
+
+		if (confirmed && onDelete) {
+			onDelete(step.pipeline_step_id);
+		}
+	}, [step.pipeline_step_id, onDelete]);
+
+	/**
+	 * Cleanup timeout on unmount
+	 */
+	useEffect(() => {
+		return () => {
+			if (saveTimeout.current) {
+				clearTimeout(saveTimeout.current);
+			}
+		};
+	}, []);
+
+	return (
+		<Card className={`dm-pipeline-step-card dm-step-type--${step.step_type}`} size="small">
+			<CardBody>
+				{error && (
+					<Notice status="error" isDismissible onRemove={() => setError(null)}>
+						{error}
+					</Notice>
+				)}
+
+				<div style={{ marginBottom: '12px' }}>
+					<div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+						<StepTypeIcon stepType={step.step_type} size={20} />
+						<strong>{step.label || slugToLabel(step.step_type)}</strong>
+						<span style={{ color: '#757575', fontSize: '12px' }}>
+							(Order: {step.execution_order})
+						</span>
+					</div>
+
+					{/* AI Configuration Display */}
+					{aiConfig && (
+						<div className="dm-ai-config-display" style={{ marginTop: '12px' }}>
+							<div style={{ fontSize: '12px', color: '#757575', marginBottom: '8px' }}>
+								<strong>{__('AI Provider:', 'data-machine')}</strong> {aiConfig.ai_provider || 'Not configured'}
+								{' | '}
+								<strong>{__('Model:', 'data-machine')}</strong> {aiConfig.ai_model || 'Not configured'}
+							</div>
+
+							<TextareaControl
+								label={__('System Prompt', 'data-machine')}
+								value={localPrompt}
+								onChange={handlePromptChange}
+								placeholder={__('Enter system prompt for AI processing...', 'data-machine')}
+								rows={6}
+								help={isSaving ? __('Saving...', 'data-machine') : null}
+							/>
+						</div>
+					)}
+				</div>
+
+				{/* Action Buttons */}
+				<div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+					<Button
+						variant="secondary"
+						size="small"
+						onClick={() => onConfigure && onConfigure(step)}
+					>
+						{__('Configure', 'data-machine')}
+					</Button>
+
+					<Button
+						variant="secondary"
+						size="small"
+						isDestructive
+						onClick={handleDelete}
+					>
+						{__('Delete', 'data-machine')}
+					</Button>
+				</div>
+			</CardBody>
+		</Card>
+	);
+}

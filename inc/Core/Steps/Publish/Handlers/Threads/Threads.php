@@ -23,16 +23,13 @@ class Threads {
      */
     private $auth;
 
-    /**
-     * Constructor - direct auth initialization for security
-     */
     public function __construct() {
         // Use filter-based auth access following pure discovery architectural standards
-        $all_auth = apply_filters('dm_auth_providers', []);
+        $all_auth = apply_filters('datamachine_auth_providers', []);
         $this->auth = $all_auth['threads'] ?? null;
         
         if ($this->auth === null) {
-            do_action('dm_log', 'error', 'Threads Handler: Authentication service not available', [
+            do_action('datamachine_log', 'error', 'Threads Handler: Authentication service not available', [
                 'missing_service' => 'threads',
                 'available_providers' => array_keys($all_auth)
             ]);
@@ -40,15 +37,8 @@ class Threads {
         }
     }
 
-    /**
-     * Handle AI tool call for Threads publishing.
-     *
-     * @param array $parameters Structured parameters from AI tool call.
-     * @param array $tool_def Tool definition including handler configuration.
-     * @return array Tool execution result.
-     */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        do_action('dm_log', 'debug', 'Threads Tool: Handling tool call', [
+        do_action('datamachine_log', 'debug', 'Threads Tool: Handling tool call', [
             'parameters' => $parameters,
             'parameter_keys' => array_keys($parameters),
             'has_handler_config' => !empty($tool_def['handler_config']),
@@ -57,7 +47,7 @@ class Threads {
 
         if (empty($parameters['content'])) {
             $error_msg = 'Threads tool call missing required content parameter';
-            do_action('dm_log', 'error', $error_msg, [
+            do_action('datamachine_log', 'error', $error_msg, [
                 'provided_parameters' => array_keys($parameters),
                 'required_parameters' => ['content']
             ]);
@@ -72,13 +62,13 @@ class Threads {
         $handler_config = $parameters['handler_config'] ?? [];
         $threads_config = $handler_config['threads'] ?? $handler_config;
         
-        do_action('dm_log', 'debug', 'Threads Tool: Using handler configuration', [
+        do_action('datamachine_log', 'debug', 'Threads Tool: Using handler configuration', [
             'include_images' => $threads_config['include_images'] ?? true,
             'link_handling' => $threads_config['link_handling'] ?? 'append'
         ]);
 
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
@@ -146,7 +136,7 @@ class Threads {
             $container_response = $this->create_media_container($page_id, $container_data, $access_token);
             if (!$container_response['success']) {
                 $error_msg = 'Threads API error: Failed to create media container - ' . $container_response['error'];
-                do_action('dm_log', 'error', $error_msg);
+                do_action('datamachine_log', 'error', $error_msg);
 
                 return [
                     'success' => false,
@@ -161,7 +151,7 @@ class Threads {
             $publish_response = $this->publish_media_container($page_id, $creation_id, $access_token);
             if (!$publish_response['success']) {
                 $error_msg = 'Threads API error: Failed to publish - ' . $publish_response['error'];
-                do_action('dm_log', 'error', $error_msg);
+                do_action('datamachine_log', 'error', $error_msg);
 
                 return [
                     'success' => false,
@@ -173,7 +163,7 @@ class Threads {
             $media_id = $publish_response['media_id'];
             $post_url = "https://www.threads.net/t/{$media_id}";
             
-            do_action('dm_log', 'debug', 'Threads Tool: Post created successfully', [
+            do_action('datamachine_log', 'debug', 'Threads Tool: Post created successfully', [
                 'media_id' => $media_id,
                 'post_url' => $post_url
             ]);
@@ -188,7 +178,7 @@ class Threads {
                 'tool_name' => 'threads_publish'
             ];
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Threads Tool: Exception during posting', [
+            do_action('datamachine_log', 'error', 'Threads Tool: Exception during posting', [
                 'exception' => $e->getMessage()
             ]);
             
@@ -201,12 +191,7 @@ class Threads {
     }
 
     /**
-     * Create a media container for Threads.
-     *
-     * @param string $user_id_threads Threads user ID.
-     * @param array $container_data Container data.
-     * @param string $access_token Access token.
-     * @return array Response array.
+     * Step 1 of Threads 2-step publishing: creates media container (TEXT or IMAGE type).
      */
     private function create_media_container(string $user_id_threads, array $container_data, string $access_token): array {
         $endpoint = "https://graph.threads.net/v1.0/{$user_id_threads}/threads";
@@ -220,7 +205,7 @@ class Threads {
             'body' => json_encode($container_data),
         ];
 
-        $result = apply_filters('dm_request', null, 'POST', $endpoint, $args, 'Threads API');
+        $result = apply_filters('datamachine_request', null, 'POST', $endpoint, $args, 'Threads API');
         
         if (!$result['success']) {
             return [
@@ -248,12 +233,7 @@ class Threads {
     }
 
     /**
-     * Publish a media container to Threads.
-     *
-     * @param string $user_id_threads Threads user ID.
-     * @param string $creation_id Media container creation ID.
-     * @param string $access_token Access token.
-     * @return array Response array.
+     * Step 2 of Threads 2-step publishing: publishes created media container.
      */
     private function publish_media_container(string $user_id_threads, string $creation_id, string $access_token): array {
         $endpoint = "https://graph.threads.net/v1.0/{$user_id_threads}/threads_publish";
@@ -269,7 +249,7 @@ class Threads {
             ]),
         ];
 
-        $result = apply_filters('dm_request', null, 'POST', $endpoint, $args, 'Threads API');
+        $result = apply_filters('datamachine_request', null, 'POST', $endpoint, $args, 'Threads API');
         
         if (!$result['success']) {
             return [
@@ -297,22 +277,11 @@ class Threads {
     }
 
 
-    /**
-     * Sanitize settings for the Threads publish handler.
-     *
-     * @param array $raw_settings Raw settings array.
-     * @return array Sanitized settings.
-     */
     public function sanitize_settings(array $raw_settings): array {
         // No specific settings to sanitize for Threads
         return [];
     }
 
-    /**
-     * Get the user-friendly label for this handler.
-     *
-     * @return string Handler label.
-     */
     public static function get_label(): string {
         return __('Threads', 'data-machine');
     }

@@ -66,7 +66,7 @@ class JobsStatus {
 
         // Clear job-related caches after starting job
         if ($updated !== false) {
-            do_action('dm_clear_jobs_cache');
+            do_action('datamachine_clear_jobs_cache');
         }
 
         return $updated !== false;
@@ -89,7 +89,7 @@ class JobsStatus {
         }
 
         // Get job details once for both operations
-        $job = apply_filters('dm_get_job', null, $job_id);
+        $job = apply_filters('datamachine_get_job', null, $job_id);
         if (!$job) {
             return false;
         }
@@ -115,7 +115,7 @@ class JobsStatus {
         }
 
         // Update flow last_run_at using existing services if available
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         if ($db_flows && !empty($job->flow_id)) {
             // Update flow's last_run_at in scheduling configuration
@@ -123,7 +123,7 @@ class JobsStatus {
             
             // Log flow update failure if logger available
             if (!$flow_updated) {
-                do_action('dm_log', 'warning', 'Failed to update flow last_run_at', [
+                do_action('datamachine_log', 'warning', 'Failed to update flow last_run_at', [
                     'job_id' => $job_id,
                     'flow_id' => $job->flow_id
                 ]);
@@ -131,7 +131,7 @@ class JobsStatus {
         }
 
         // Clear job-related caches after completing job
-        do_action('dm_clear_jobs_cache');
+        do_action('datamachine_clear_jobs_cache');
 
         return true;
     }
@@ -163,7 +163,7 @@ class JobsStatus {
 
         // Clear job-related caches after status update
         if ($updated !== false) {
-            do_action('dm_clear_jobs_cache');
+            do_action('datamachine_clear_jobs_cache');
         }
 
         return $updated !== false;

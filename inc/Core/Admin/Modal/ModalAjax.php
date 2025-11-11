@@ -10,7 +10,7 @@ namespace DataMachine\Core\Admin\Modal;
 defined('ABSPATH') || exit;
 
 /**
- * Single AJAX endpoint for all modal content via dm_modals filter system.
+ * Single AJAX endpoint for all modal content via datamachine_modals filter system.
  */
 class ModalAjax
 {
@@ -19,7 +19,7 @@ class ModalAjax
      */
     public function __construct()
     {
-        add_action('wp_ajax_dm_get_modal_content', [$this, 'handle_get_modal_content']);
+        add_action('wp_ajax_datamachine_get_modal_content', [$this, 'handle_get_modal_content']);
     }
 
     /**
@@ -51,7 +51,7 @@ class ModalAjax
         }
 
         // Check registered modals
-        $all_modals = apply_filters('dm_modals', []);
+        $all_modals = apply_filters('datamachine_modals', []);
         $modal_data = $all_modals[$template] ?? null;
 
         // Handler-specific modal fallback
@@ -118,28 +118,28 @@ class ModalAjax
             $handler_template_slug = substr($template, strlen('handler-settings/'));
             
             // Try handler-specific template first
-            $handler_specific_content = apply_filters('dm_render_template', '', "modal/handler-settings/{$handler_template_slug}", $context);
+            $handler_specific_content = apply_filters('datamachine_render_template', '', "modal/handler-settings/{$handler_template_slug}", $context);
             
             if (!empty($handler_specific_content)) {
                 return $handler_specific_content;
             }
             
             // Fallback to universal handler-settings template
-            return apply_filters('dm_render_template', '', 'modal/handler-settings', $context);
+            return apply_filters('datamachine_render_template', '', 'modal/handler-settings', $context);
         }
         
         // Flow-schedule modal data preparation
         if ($template === 'modal/flow-schedule') {
-            $context['intervals'] = apply_filters('dm_scheduler_intervals', []);
+            $context['intervals'] = apply_filters('datamachine_scheduler_intervals', []);
             
             // Get flow scheduling data
             if (!empty($context['flow_id'])) {
                 // Query flow data from database
-                $all_databases = apply_filters('dm_db', []);
+                $all_databases = apply_filters('datamachine_db', []);
                 $db_flows = $all_databases['flows'] ?? null;
                 
                 if ($db_flows) {
-                    $flow = apply_filters('dm_get_flow', null, $context['flow_id']);
+                    $flow = apply_filters('datamachine_get_flow', null, $context['flow_id']);
                     if ($flow) {
                         // Handle flow scheduling configuration
                         $scheduling_config = $flow['scheduling_config'] ?? [];
@@ -150,7 +150,7 @@ class ModalAjax
                         // Query next scheduled run time
                         $next_run_time = null;
                         if (function_exists('as_next_scheduled_action')) {
-                            $next_action = as_next_scheduled_action('dm_run_flow_now', [absint($context['flow_id'])], 'data-machine');
+                            $next_action = as_next_scheduled_action('datamachine_run_flow_now', [absint($context['flow_id'])], 'data-machine');
                             if ($next_action) {
                                 $next_run_time = wp_date('Y-m-d H:i:s', $next_action);
                             }
@@ -159,14 +159,14 @@ class ModalAjax
                         $context['flow_name'] = $flow['flow_name'] ?? 'Flow';
                     } else {
                         // Critical error: flow not found
-                        do_action('dm_log', 'error', 'Flow-schedule modal failed - flow not found', [
+                        do_action('datamachine_log', 'error', 'Flow-schedule modal failed - flow not found', [
                             'flow_id' => $context['flow_id']
                         ]);
                         return '<!-- Flow not found: Critical system error -->';
                     }
                 } else {
                     // Critical error: database service unavailable
-                    do_action('dm_log', 'error', 'Flow-schedule modal failed - database service unavailable', [
+                    do_action('datamachine_log', 'error', 'Flow-schedule modal failed - database service unavailable', [
                         'flow_id' => $context['flow_id']
                     ]);
                     return '<!-- Database service unavailable: Critical system error -->';
@@ -175,7 +175,7 @@ class ModalAjax
         }
         
         // Use universal template filter
-        return apply_filters('dm_render_template', '', $template, $context);
+        return apply_filters('datamachine_render_template', '', $template, $context);
     }
     
     
@@ -202,6 +202,6 @@ class ModalAjax
             'options' => $field_config['options'] ?? []
         ];
         
-        return apply_filters('dm_render_template', '', 'modal/fields', $template_data);
+        return apply_filters('datamachine_render_template', '', 'modal/fields', $template_data);
     }
 }

@@ -8,19 +8,19 @@
  */
 
 /* Jobs page post boxes */
-.dm-jobs-container .postbox {
+.datamachine-jobs-container .postbox {
     margin-top: 20px;
 }
 
 
 
 /* Jobs page layout */
-.dm-jobs-page {
+.datamachine-jobs-page {
     padding: 20px;
 }
 
 /* Empty state styling */
-.dm-jobs-empty-state {
+.datamachine-jobs-empty-state {
     background: #fff;
     border: 1px solid #ccd0d4;
     padding: 20px;
@@ -28,191 +28,191 @@
     color: #666;
 }
 
-.dm-jobs-empty-message {
+.datamachine-jobs-empty-message {
     margin: 0;
     font-style: italic;
 }
 
 /* Jobs table container */
-.dm-jobs-table-container {
+.datamachine-jobs-table-container {
     background: #fff;
     border: 1px solid #ccd0d4;
 }
 
 /* Jobs table column widths */
-.dm-jobs-table th.dm-col-job-id {
+.datamachine-jobs-table th.datamachine-col-job-id {
     width: 80px;
 }
 
-.dm-jobs-table th.dm-col-status {
+.datamachine-jobs-table th.datamachine-col-status {
     width: 100px;
 }
 
-.dm-jobs-table th.dm-col-created,
-.dm-jobs-table th.dm-col-started,
-.dm-jobs-table th.dm-col-completed {
+.datamachine-jobs-table th.datamachine-col-created,
+.datamachine-jobs-table th.datamachine-col-started,
+.datamachine-jobs-table th.datamachine-col-completed {
     width: 140px;
 }
 
 /* Job status colors */
-.dm-job-status--failed {
+.datamachine-job-status--failed {
     color: #d63638;
 }
 
-.dm-job-status--completed {
+.datamachine-job-status--completed {
     color: #00a32a;
 }
 
-.dm-job-status--other {
+.datamachine-job-status--other {
     color: #646970;
 }
 
 /* Job result text styling */
-.dm-job-result {
+.datamachine-job-result {
     font-size: 11px;
     color: #646970;
 }
 
 /* Page header with admin button */
-.dm-page-header {
+.datamachine-page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
 }
 
-.dm-page-header h1 {
+.datamachine-page-header h1 {
     margin: 0;
     padding: 0;
 }
 
-.dm-page-actions {
+.datamachine-page-actions {
     display: flex;
     gap: 10px;
 }
 
-.dm-admin-btn .dashicons {
+.datamachine-admin-btn .dashicons {
     vertical-align: middle;
     margin-right: 4px;
 }
 
 
 /* Jobs Admin Modal Styles */
-.dm-jobs-admin-modal {
+.datamachine-jobs-admin-modal {
     max-width: 600px;
 }
 
-.dm-admin-section {
+.datamachine-admin-section {
     margin-bottom: 2rem;
 }
 
-.dm-admin-section h3 {
+.datamachine-admin-section h3 {
     margin-top: 0;
     margin-bottom: 0.5rem;
     font-size: 1.1em;
     font-weight: 600;
 }
 
-.dm-form-field {
+.datamachine-form-field {
     margin: 1.5rem 0;
 }
 
-.dm-form-field label {
+.datamachine-form-field label {
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 600;
 }
 
-.dm-form-field select {
+.datamachine-form-field select {
     width: 100%;
     max-width: 400px;
 }
 
-.dm-form-field .description {
+.datamachine-form-field .description {
     margin-top: 0.5rem;
     color: #666;
     font-size: 13px;
 }
 
-.dm-form-actions {
+.datamachine-form-actions {
     margin-top: 1.5rem;
     display: flex;
     align-items: center;
     gap: 1rem;
 }
 
-.dm-form-actions .spinner {
+.datamachine-form-actions .spinner {
     float: none;
     margin: 0;
 }
 
-.dm-admin-notice {
+.datamachine-admin-notice {
     margin-top: 1rem;
     padding: 12px;
     border-left: 4px solid;
     background: #fff;
 }
 
-.dm-admin-notice.success {
+.datamachine-admin-notice.success {
     border-left-color: #46b450;
     background-color: #f0f8f0;
     color: #2e7d32;
 }
 
-.dm-admin-notice.error {
+.datamachine-admin-notice.error {
     border-left-color: #dc3232;
     background-color: #fef5f5;
     color: #a94442;
 }
 
-.dm-admin-notice.warning {
+.datamachine-admin-notice.warning {
     border-left-color: #ffb900;
     background-color: #fffbf0;
     color: #856404;
 }
 
 /* Clear Jobs Section Styles */
-.dm-admin-section + .dm-admin-section {
+.datamachine-admin-section + .datamachine-admin-section {
     border-top: 1px solid #e0e0e0;
     padding-top: 2rem;
     margin-top: 2rem;
 }
 
-.dm-form-field fieldset {
+.datamachine-form-field fieldset {
     border: none;
     padding: 0;
     margin: 0;
 }
 
-.dm-form-field fieldset label {
+.datamachine-form-field fieldset label {
     display: inline;
     font-weight: normal;
     margin-right: 1.5rem;
     margin-bottom: 0.5rem;
 }
 
-.dm-form-field fieldset input[type="radio"] {
+.datamachine-form-field fieldset input[type="radio"] {
     margin-right: 0.5rem;
     vertical-align: middle;
 }
 
-.dm-form-field input[type="checkbox"] {
+.datamachine-form-field input[type="checkbox"] {
     margin-right: 0.5rem;
     vertical-align: middle;
 }
 
 /* Utility classes for inline style replacement */
-.dm-hidden {
+.datamachine-hidden {
     display: none;
 }
 
-.dm-section-border {
+.datamachine-section-border {
     margin-top: 2rem;
     padding-top: 2rem;
     border-top: 1px solid #ddd;
 }
 
-.dm-muted-text {
+.datamachine-muted-text {
     color: #666;
     font-style: italic;
 }

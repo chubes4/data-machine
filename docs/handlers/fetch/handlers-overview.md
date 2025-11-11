@@ -88,16 +88,16 @@ public function get_fetch_data(int $pipeline_id, array $handler_config, ?string 
 
 ### Engine Data (Database Storage)
 
-Fetch handlers store engine parameters in database for centralized access via `dm_engine_data` filter:
+Fetch handlers store engine parameters in database for centralized access via `datamachine_engine_data` filter:
 
 ```php
 // Stored by fetch handlers via centralized filter
 if ($job_id) {
-    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
 }
 
 // Retrieved by handlers via centralized filter
-$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 $source_url = $engine_data['source_url'] ?? null;
 $image_url = $engine_data['image_url'] ?? null;
 ```
@@ -110,11 +110,11 @@ All fetch handlers use the processed items system:
 
 ```php
 // Check if already processed
-$is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, $source_type, $item_id);
+$is_processed = apply_filters('datamachine_is_item_processed', false, $flow_step_id, $source_type, $item_id);
 
 if (!$is_processed) {
     // Mark as processed
-    do_action('dm_mark_item_processed', $flow_step_id, $source_type, $item_id, $job_id);
+    do_action('datamachine_mark_item_processed', $flow_step_id, $source_type, $item_id, $job_id);
     
     // Process item
     return [$data_packet];
@@ -172,7 +172,7 @@ $handler_config = [
 **Missing Required Settings**:
 ```php
 if (empty($required_setting)) {
-    do_action('dm_log', 'error', 'Handler: Missing required setting', [
+    do_action('datamachine_log', 'error', 'Handler: Missing required setting', [
         'handler' => 'handler_name',
         'setting' => 'required_setting'
     ]);
@@ -221,7 +221,7 @@ Most handlers return exactly one item per execution:
 
 Fetch handlers provide essential metadata that AI steps use for content processing and tool execution:
 
-**Source URL Storage**: WordPress Local, WordPress API, and WordPress Media handlers store `source_url` in database via centralized `dm_engine_data` filter enabling both publish handlers (link attribution) and update handlers (post identification) to access URLs.
+**Source URL Storage**: WordPress Local, WordPress API, and WordPress Media handlers store `source_url` in database via centralized `datamachine_engine_data` filter enabling both publish handlers (link attribution) and update handlers (post identification) to access URLs.
 
 **Content Structure**: All handlers structure content in consistent format that AI steps process through the modular AI directive system.
 
@@ -234,11 +234,11 @@ Fetch handlers seamlessly integrate with the tool-first AI architecture using ce
 ```php
 // Fetch stores engine data via centralized filter (separate from AI data)
 if ($job_id) {
-    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
 }
 
 // AI step processes clean content without URL pollution
-// Update tools access source_url via centralized dm_engine_data filter
+// Update tools access source_url via centralized datamachine_engine_data filter
 // Publishing tools receive clean content via AIStepToolParameters
 ```
 
@@ -254,18 +254,18 @@ $result = $wordpress_handler->get_fetch_data(
     $job_id
 );
 // Returns: ['processed_items' => [...]]
-// Engine data stored separately in database via centralized dm_engine_data filter
+// Engine data stored separately in database via centralized datamachine_engine_data filter
 ```
 
 ### With Deduplication
 
 ```php
 foreach ($potential_items as $item) {
-    $is_processed = apply_filters('dm_is_item_processed', false, 
+    $is_processed = apply_filters('datamachine_is_item_processed', false, 
         $flow_step_id, 'my_source', $item['id']);
     
     if (!$is_processed) {
-        do_action('dm_mark_item_processed', $flow_step_id, 
+        do_action('datamachine_mark_item_processed', $flow_step_id, 
             'my_source', $item['id'], $job_id);
         return [$this->create_data_packet($item)];
     }
@@ -290,18 +290,18 @@ class CustomFetchHandler {
         // Process first unprocessed item
         foreach ($items as $item) {
             if ($flow_step_id) {
-                $is_processed = apply_filters('dm_is_item_processed', false,
+                $is_processed = apply_filters('datamachine_is_item_processed', false,
                     $flow_step_id, 'custom_source', $item['id']);
 
                 if ($is_processed) continue;
 
-                do_action('dm_mark_item_processed', $flow_step_id,
+                do_action('datamachine_mark_item_processed', $flow_step_id,
                     'custom_source', $item['id'], $job_id);
             }
 
             // Store engine data via centralized filter
             if ($job_id) {
-                apply_filters('dm_engine_data', null, $job_id, $item['url'], $item['image'] ?? '');
+                apply_filters('datamachine_engine_data', null, $job_id, $item['url'], $item['image'] ?? '');
             }
 
             return ['processed_items' => [$this->create_data_packet($item)]];

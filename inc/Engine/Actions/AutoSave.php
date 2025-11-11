@@ -23,7 +23,7 @@ class AutoSave
     public static function register() {
         $instance = new self();
 
-        add_action('dm_auto_save', [$instance, 'handle_pipeline_auto_save'], 10, 1);
+        add_action('datamachine_auto_save', [$instance, 'handle_pipeline_auto_save'], 10, 1);
     }
 
     /**
@@ -40,12 +40,12 @@ class AutoSave
      * @return bool Success status - true if all operations complete successfully
      */
     public function handle_pipeline_auto_save($pipeline_id) {
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         $db_flows = $all_databases['flows'] ?? null;
 
         if (!$db_pipelines || !$db_flows) {
-            do_action('dm_log', 'error', 'Database services unavailable for auto-save', [
+            do_action('datamachine_log', 'error', 'Database services unavailable for auto-save', [
                 'pipeline_id' => $pipeline_id,
                 'pipelines_db' => $db_pipelines ? 'available' : 'missing',
                 'flows_db' => $db_flows ? 'available' : 'missing'
@@ -53,16 +53,16 @@ class AutoSave
             return false;
         }
 
-        $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
+        $pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
         if (!$pipeline) {
-            do_action('dm_log', 'error', 'Pipeline not found for auto-save', [
+            do_action('datamachine_log', 'error', 'Pipeline not found for auto-save', [
                 'pipeline_id' => $pipeline_id
             ]);
             return false;
         }
 
         $pipeline_name = $pipeline['pipeline_name'];
-        $pipeline_config = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+        $pipeline_config = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
 
         $pipeline_success = $db_pipelines->update_pipeline($pipeline_id, [
             'pipeline_name' => $pipeline_name,
@@ -70,13 +70,13 @@ class AutoSave
         ]);
 
         if (!$pipeline_success) {
-            do_action('dm_log', 'error', 'Pipeline save failed during auto-save', [
+            do_action('datamachine_log', 'error', 'Pipeline save failed during auto-save', [
                 'pipeline_id' => $pipeline_id
             ]);
             return false;
         }
 
-        $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
+        $flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
         $flows_saved = 0;
         $flow_steps_saved = 0;
 
@@ -91,7 +91,7 @@ class AutoSave
                 }
             }
 
-            $flow_success = apply_filters('dm_update_flow', false, $flow_id, [
+            $flow_success = apply_filters('datamachine_update_flow', false, $flow_id, [
                 'flow_name' => $flow['flow_name'],
                 'flow_config' => wp_json_encode($flow_config),
                 'scheduling_config' => wp_json_encode($flow['scheduling_config'])
@@ -103,13 +103,13 @@ class AutoSave
             }
         }
 
-        do_action('dm_log', 'debug', 'Auto-save completed', [
+        do_action('datamachine_log', 'debug', 'Auto-save completed', [
             'pipeline_id' => $pipeline_id,
             'flows_saved' => $flows_saved,
             'flow_steps_saved' => $flow_steps_saved
         ]);
 
-        do_action('dm_clear_pipeline_cache', $pipeline_id);
+        do_action('datamachine_clear_pipeline_cache', $pipeline_id);
 
         return true;
     }

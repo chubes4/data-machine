@@ -4,7 +4,7 @@ Comprehensive reference for all WordPress filters used by Data Machine for servi
 
 ## Service Discovery Filters
 
-### `dm_handlers`
+### `datamachine_handlers`
 
 **Purpose**: Register fetch, publish, and update handlers
 
@@ -26,7 +26,7 @@ $handlers['handler_slug'] = [
 
 **Usage Example**:
 ```php
-add_filter('dm_handlers', function($handlers) {
+add_filter('datamachine_handlers', function($handlers) {
     $handlers['twitter'] = [
         'type' => 'publish',
         'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
@@ -43,7 +43,7 @@ add_filter('dm_handlers', function($handlers) {
 - Eliminates auth provider instantiation during handler settings modal load
 - Auth-enabled handlers: Twitter, Bluesky, Facebook, Threads, Google Sheets (publish & fetch), Reddit (fetch)
 
-### `dm_steps`
+### `datamachine_step_types`
 
 **Purpose**: Register step types for pipeline execution
 
@@ -61,7 +61,7 @@ $steps['step_type'] = [
 ];
 ```
 
-### `dm_db`
+### `datamachine_db`
 
 **Purpose**: Register database service classes
 
@@ -159,7 +159,7 @@ add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
 
 ## Pipeline Operations Filters
 
-### `dm_create_pipeline`
+### `datamachine_create_pipeline`
 
 **Purpose**: Create new pipeline
 
@@ -177,17 +177,17 @@ $data = [
 ];
 ```
 
-### `dm_create_flow`
+### `datamachine_create_flow`
 
 **Purpose**: Create new flow instance
 
 **Parameters**:
-- `$flow_id` (null) - Placeholder for return value  
+- `$flow_id` (null) - Placeholder for return value
 - `$data` (array) - Flow creation data
 
 **Return**: Integer flow ID or false
 
-### `dm_get_pipelines`
+### `datamachine_get_pipelines`
 
 **Purpose**: Retrieve pipeline data
 
@@ -197,7 +197,7 @@ $data = [
 
 **Return**: Array of pipeline data
 
-### `dm_get_flow_config`
+### `datamachine_get_flow_config`
 
 **Purpose**: Get flow configuration
 
@@ -207,7 +207,7 @@ $data = [
 
 **Return**: Array of flow configuration
 
-### `dm_get_flow_step_config`
+### `datamachine_get_flow_step_config`
 
 **Purpose**: Get specific flow step configuration
 
@@ -219,7 +219,7 @@ $data = [
 
 ## Authentication Filters
 
-### `dm_auth_providers`
+### `datamachine_auth_providers`
 
 **Purpose**: Register OAuth authentication providers
 
@@ -233,7 +233,7 @@ $data = [
 $providers['provider_slug'] = new AuthProviderClass();
 ```
 
-### `dm_retrieve_oauth_account`
+### `datamachine_retrieve_oauth_account`
 
 **Purpose**: Get stored OAuth account data
 
@@ -243,7 +243,7 @@ $providers['provider_slug'] = new AuthProviderClass();
 
 **Return**: Array of account information
 
-### `dm_oauth_callback`
+### `datamachine_oauth_callback`
 
 **Purpose**: Generate OAuth authorization URL
 
@@ -255,7 +255,7 @@ $providers['provider_slug'] = new AuthProviderClass();
 
 ## Configuration Filters
 
-### `dm_tool_configured`
+### `datamachine_tool_configured`
 
 **Purpose**: Check if tool is properly configured
 
@@ -265,7 +265,7 @@ $providers['provider_slug'] = new AuthProviderClass();
 
 **Return**: Boolean configuration status
 
-### `dm_get_tool_config`
+### `datamachine_get_tool_config`
 
 **Purpose**: Retrieve tool configuration data
 
@@ -275,7 +275,7 @@ $providers['provider_slug'] = new AuthProviderClass();
 
 **Return**: Array of tool configuration
 
-### `dm_handler_settings`
+### `datamachine_handler_settings`
 
 **Purpose**: Register handler settings classes
 
@@ -286,7 +286,7 @@ $providers['provider_slug'] = new AuthProviderClass();
 
 ## Parameter Processing Filters
 
-### `dm_engine_data`
+### `datamachine_engine_data`
 
 **Purpose**: Centralized engine data access filter for retrieving stored engine parameters
 
@@ -307,13 +307,13 @@ $engine_data = [
 
 **Core Implementation (EngineData.php)**:
 ```php
-add_filter('dm_engine_data', function($engine_data, $job_id) {
+add_filter('datamachine_engine_data', function($engine_data, $job_id) {
     if (empty($job_id)) {
         return [];
     }
 
     // Use established filter pattern for database service discovery
-    $all_databases = apply_filters('dm_db', []);
+    $all_databases = apply_filters('datamachine_db', []);
     $db_jobs = $all_databases['jobs'] ?? null;
 
     if (!$db_jobs) {
@@ -328,7 +328,7 @@ add_filter('dm_engine_data', function($engine_data, $job_id) {
 **Usage by Steps**:
 ```php
 // Steps access engine data as needed
-$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 $source_url = $engine_data['source_url'] ?? null;
 $image_url = $engine_data['image_url'] ?? null;
 ```
@@ -337,7 +337,7 @@ $image_url = $engine_data['image_url'] ?? null;
 ```php
 // Fetch handlers store engine parameters in database via centralized filter
 if ($job_id) {
-    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
 }
 ```
 
@@ -349,7 +349,7 @@ if ($job_id) {
 
 ## Centralized Handler Filters
 
-### `dm_timeframe_limit`
+### `datamachine_timeframe_limit`
 
 **Purpose**: Shared timeframe parsing across fetch handlers with discovery and conversion modes
 
@@ -361,7 +361,7 @@ if ($job_id) {
 
 **Discovery Mode** (when `$timeframe_limit` is null):
 ```php
-$timeframe_options = apply_filters('dm_timeframe_limit', null, null);
+$timeframe_options = apply_filters('datamachine_timeframe_limit', null, null);
 // Returns:
 [
     'all_time' => __('All Time', 'data-machine'),
@@ -374,11 +374,11 @@ $timeframe_options = apply_filters('dm_timeframe_limit', null, null);
 
 **Conversion Mode** (when `$timeframe_limit` is a string):
 ```php
-$cutoff_timestamp = apply_filters('dm_timeframe_limit', null, '24_hours');
+$cutoff_timestamp = apply_filters('datamachine_timeframe_limit', null, '24_hours');
 // Returns: Unix timestamp for 24 hours ago or null for 'all_time'
 ```
 
-### `dm_keyword_search_match`
+### `datamachine_keyword_search_match`
 
 **Purpose**: Universal keyword matching with OR logic for all fetch handlers
 
@@ -391,7 +391,7 @@ $cutoff_timestamp = apply_filters('dm_timeframe_limit', null, '24_hours');
 
 **Usage**:
 ```php
-$matches = apply_filters('dm_keyword_search_match', true, $content, 'wordpress,ai,automation');
+$matches = apply_filters('datamachine_keyword_search_match', true, $content, 'wordpress,ai,automation');
 // Returns true if content contains 'wordpress' OR 'ai' OR 'automation'
 ```
 
@@ -401,7 +401,7 @@ $matches = apply_filters('dm_keyword_search_match', true, $content, 'wordpress,a
 - **Comma Separated**: Supports multiple keywords separated by commas
 - **Empty Filter**: Returns true when no search term provided (match all)
 
-### `dm_data_packet`
+### `datamachine_data_packet`
 
 **Purpose**: Centralized data packet creation with standardized structure
 
@@ -415,7 +415,7 @@ $matches = apply_filters('dm_keyword_search_match', true, $content, 'wordpress,a
 
 **Usage**:
 ```php
-$data = apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $step_type);
+$data = apply_filters('datamachine_data_packet', $data, $packet_data, $flow_step_id, $step_type);
 ```
 
 **Features**:
@@ -425,7 +425,7 @@ $data = apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $ste
 
 ## Data Processing Filters
 
-### `dm_is_item_processed`
+### `datamachine_is_item_processed`
 
 **Purpose**: Check if item was already processed
 
@@ -437,31 +437,14 @@ $data = apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $ste
 
 **Return**: Boolean processed status
 
-### `dm_detect_status`
+### `datamachine_detect_status` *(removed)*
 
-**Purpose**: Determine system/component status
-
-**Parameters**:
-- `$status` (string) - Default status ('green')
-- `$context` (string) - Status context
-- `$data` (array) - Additional data for status determination
-
-**Return**: Status string ('red', 'yellow', 'green')
-
-**Status Contexts**:
-- `pipeline_step_status` - Pipeline-wide status refresh for template modifications (add/delete steps, AI configuration) using RED/YELLOW/GREEN priority with cascade effects
-- `flow_step_status` - Flow-scoped status refresh for single flow operations (handler configuration, scheduling, flow settings) with optimized validation
-- `ai_step` - AI configuration validation (provider, model, system prompt)
-- `handler_auth` - Handler authentication status for OAuth/API key requirements
-- `wordpress_draft` - WordPress draft post status warning
-- `files_status` - Files handler readiness with upload validation
-- `subsequent_publish_step` - Warning for publish steps following other publish steps
-- `pipeline_viability` - Architectural validation (pipeline must end with publish, contain AI step)
+**Status**: Deprecated and removed with the legacy status detection system. References should be migrated to the forthcoming health-check API once available.
 
 
 ## Files Repository Filters
 
-### `dm_files_repository`
+### `datamachine_files_repository`
 
 **Purpose**: Access files repository service
 
@@ -472,7 +455,7 @@ $data = apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $ste
 
 ## Settings Filters
 
-### `dm_enabled_settings`
+### `datamachine_enabled_settings`
 
 **Purpose**: Get enabled settings for handlers/steps
 
@@ -484,7 +467,7 @@ $data = apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $ste
 
 **Return**: Array of enabled settings fields
 
-### `dm_apply_global_defaults`
+### `datamachine_apply_global_defaults`
 
 **Purpose**: Apply global default settings
 
@@ -497,7 +480,7 @@ $data = apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $ste
 
 ## Navigation Filters
 
-### `dm_get_next_flow_step_id`
+### `datamachine_get_next_flow_step_id`
 
 **Purpose**: Find next step in flow execution sequence
 

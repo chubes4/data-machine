@@ -23,22 +23,22 @@ class ImportExport {
      */
     public static function register() {
         $instance = new self();
-        add_action('dm_import', [$instance, 'handle_import'], 10, 2);
-        add_action('dm_export', [$instance, 'handle_export'], 10, 2);
+        add_action('datamachine_import', [$instance, 'handle_import'], 10, 2);
+        add_action('datamachine_export', [$instance, 'handle_export'], 10, 2);
     }
     
     /**
-     * Handle dm_import action
+     * Handle datamachine_import action
      */
     public function handle_import($type, $data) {
         // Capability check
         if (!current_user_can('manage_options')) {
-            do_action('dm_log', 'error', 'Import requires manage_options capability');
+            do_action('datamachine_log', 'error', 'Import requires manage_options capability');
             return false;
         }
         
         if ($type !== 'pipelines') {
-            do_action('dm_log', 'error', "Unknown import type: {$type}");
+            do_action('datamachine_log', 'error', "Unknown import type: {$type}");
             return false;
         }
         
@@ -66,7 +66,7 @@ class ImportExport {
                 
                 if (!$existing_id) {
                     // Create new pipeline using filter
-                    $existing_id = apply_filters('dm_create_pipeline', false, ['pipeline_name' => $pipeline_name]);
+                    $existing_id = apply_filters('datamachine_create_pipeline', false, ['pipeline_name' => $pipeline_name]);
                 }
                 
                 if ($existing_id) {
@@ -77,7 +77,7 @@ class ImportExport {
             
             // Add steps
             if (isset($processed[$pipeline_name]) && $step_config) {
-                apply_filters('dm_create_step', false, [
+                apply_filters('datamachine_create_step', false, [
                     'pipeline_id' => $processed[$pipeline_name],
                     'step_type' => $step_type,
                     'step_config' => $step_config
@@ -87,29 +87,29 @@ class ImportExport {
         
         // Store result for filter access
         $result = ['imported' => array_unique($imported_pipelines)];
-        add_filter('dm_import_result', function() use ($result) { return $result; });
+        add_filter('datamachine_import_result', function() use ($result) { return $result; });
         
-        do_action('dm_log', 'debug', 'Pipeline import completed', ['count' => count($result['imported'])]);
+        do_action('datamachine_log', 'debug', 'Pipeline import completed', ['count' => count($result['imported'])]);
         return $result;
     }
     
     /**
-     * Handle dm_export action
+     * Handle datamachine_export action
      */
     public function handle_export($type, $ids) {
         // Capability check
         if (!current_user_can('manage_options')) {
-            do_action('dm_log', 'error', 'Export requires manage_options capability');
+            do_action('datamachine_log', 'error', 'Export requires manage_options capability');
             return false;
         }
         
         if ($type !== 'pipelines') {
-            do_action('dm_log', 'error', "Unknown export type: {$type}");
+            do_action('datamachine_log', 'error', "Unknown export type: {$type}");
             return false;
         }
         
         // Generate CSV
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         
         if (!$db_pipelines) {
@@ -125,7 +125,7 @@ class ImportExport {
             if (!$pipeline) continue;
 
             $pipeline_config = json_decode($pipeline['pipeline_config'], true) ?: [];
-            $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
+            $flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
 
             $position = 0;
             // Sort steps by execution_order for consistent export
@@ -150,10 +150,10 @@ class ImportExport {
                 // Export flow configurations
                 foreach ($flows as $flow) {
                     $flow_config = json_decode($flow['flow_config'], true) ?: [];
-                    $flow_step_id = apply_filters('dm_generate_flow_step_id', '', $step['pipeline_step_id'], $flow['flow_id']);
+                    $flow_step_id = apply_filters('datamachine_generate_flow_step_id', '', $step['pipeline_step_id'], $flow['flow_id']);
                     $flow_step = $flow_config[$flow_step_id] ?? [];
 
-                    if (!empty($flow_step['handler'])) {
+                    if (!empty($flow_step['handler_slug'])) {
                         $csv_rows[] = [
                             $pipeline_id,
                             $pipeline['pipeline_name'],
@@ -162,8 +162,8 @@ class ImportExport {
                             json_encode($step),
                             $flow['flow_id'],
                             $flow['flow_name'],
-                            $flow_step['handler'],
-                            json_encode($flow_step['settings'] ?? [])
+                            $flow_step['handler_slug'],
+                            json_encode($flow_step['handler_config'] ?? [])
                         ];
                     }
                 }
@@ -174,9 +174,9 @@ class ImportExport {
         $csv = $this->array_to_csv($csv_rows);
         
         // Store result for filter access
-        add_filter('dm_export_result', function() use ($csv) { return $csv; });
+        add_filter('datamachine_export_result', function() use ($csv) { return $csv; });
         
-        do_action('dm_log', 'debug', 'Pipeline export completed', ['count' => count($ids)]);
+        do_action('datamachine_log', 'debug', 'Pipeline export completed', ['count' => count($ids)]);
         return $csv;
     }
     
@@ -184,7 +184,7 @@ class ImportExport {
      * Find pipeline by name
      */
     private function find_pipeline_by_name($name) {
-        $all_pipelines = apply_filters('dm_get_pipelines', []);
+        $all_pipelines = apply_filters('datamachine_get_pipelines', []);
         foreach ($all_pipelines as $pipeline) {
             if ($pipeline['pipeline_name'] === $name) {
                 return $pipeline['pipeline_id'];

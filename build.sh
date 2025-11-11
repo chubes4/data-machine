@@ -107,8 +107,7 @@ zip -r "../$ZIP_NAME" "data-machine/" -q
 
 cd ../../
 
-# Keep clean plugin directory alongside zip
-mv "$TEMP_DIR/data-machine" "$BUILD_DIR/data-machine"
+# Remove temporary build artifacts
 rm -rf "$TEMP_DIR"
 
 # Restore dev dependencies
@@ -117,12 +116,10 @@ composer install --no-interaction
 
 # Final output
 BUILD_PATH="$BUILD_DIR/$ZIP_NAME"
-DIRECTORY_PATH="$BUILD_DIR/data-machine"
 FILE_SIZE=$(du -h "$BUILD_PATH" | cut -f1)
 
 echo -e "${GREEN}✅ Build complete!${NC}"
 echo -e "${GREEN}📦 ZIP file: $BUILD_PATH ($FILE_SIZE)${NC}"
-echo -e "${GREEN}📁 Clean directory: $DIRECTORY_PATH${NC}"
 echo -e "${GREEN}🚀 Ready for WordPress installation${NC}"
 
 # Optional: Show zip contents

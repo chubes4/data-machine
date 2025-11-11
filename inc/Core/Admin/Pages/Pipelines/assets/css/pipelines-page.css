@@ -10,36 +10,36 @@
 
 /* CSS Custom Properties for consistent values */
 :root {
-    --dm-color-text-muted: #666;
-    --dm-color-text-secondary: #646970;
-    --dm-color-border: #ddd;
-    --dm-color-border-light: #e1e1e1;
-    --dm-spacing-xs: 4px;
-    --dm-spacing-sm: 8px;
-    --dm-spacing-md: 12px;
-    --dm-spacing-lg: 20px;
-    --dm-border-radius: 4px;
-    --dm-border-radius-lg: 8px;
+    --datamachine-color-text-muted: #666;
+    --datamachine-color-text-secondary: #646970;
+    --datamachine-color-border: #ddd;
+    --datamachine-color-border-light: #e1e1e1;
+    --datamachine-spacing-xs: 4px;
+    --datamachine-spacing-sm: 8px;
+    --datamachine-spacing-md: 12px;
+    --datamachine-spacing-lg: 20px;
+    --datamachine-border-radius: 4px;
+    --datamachine-border-radius-lg: 8px;
 }
 
 /* Base page container */
-.dm-pipelines-page {
+.datamachine-pipelines-page {
     padding: 20px;
 }
 
 /* Admin header layout */
-.dm-admin-header {
+.datamachine-admin-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
 }
 
-.dm-admin-header-left {
+.datamachine-admin-header-left {
     flex: 1;
 }
 
-.dm-admin-header-right {
+.datamachine-admin-header-right {
     flex-shrink: 0;
     margin-left: 20px;
     align-self: flex-start;
@@ -47,7 +47,7 @@
 }
 
 /* Pipeline cards */
-.dm-pipeline-card {
+.datamachine-pipeline-card {
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -55,17 +55,17 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.dm-placeholder-pipeline {
+.datamachine-placeholder-pipeline {
     border: 2px dashed #ddd;
     background: #fafafa;
 }
 
 /* Separator between pipeline cards - simple, clean, aligned with card content */
-.dm-pipelines-list .dm-pipeline-card {
+.datamachine-pipelines-list .datamachine-pipeline-card {
     position: relative; /* enable pseudo-element positioning */
 }
 
-.dm-pipelines-list .dm-pipeline-card + .dm-pipeline-card::before {
+.datamachine-pipelines-list .datamachine-pipeline-card + .datamachine-pipeline-card::before {
     content: "";
     position: absolute;
     top: -12px; /* sits slightly above the card to visually separate */
@@ -79,7 +79,7 @@
 }
 
 /* Explicit separator element between pipeline cards */
-.dm-pipelines-list .dm-separator {
+.datamachine-pipelines-list .datamachine-separator {
     height: 1px;
     background: linear-gradient(to right, rgba(0,0,0,0.06), rgba(0,0,0,0.03));
     margin: 12px 20px; /* aligns with card padding */
@@ -89,13 +89,13 @@
 
 /* Slightly larger gap on small screens for touch targets */
 @media (max-width: 600px) {
-    .dm-pipelines-list .dm-separator {
+    .datamachine-pipelines-list .datamachine-separator {
         margin: 18px 12px;
     }
 }
 
 /* Pipeline header */
-.dm-pipeline-header {
+.datamachine-pipeline-header {
     padding: 16px 20px;
     border-bottom: 1px solid #eee;
     display: flex;
@@ -103,22 +103,22 @@
     align-items: center;
 }
 
-.dm-pipeline-title-section {
+.datamachine-pipeline-title-section {
     flex: 1;
 }
 
-.dm-pipeline-title-input {
+.datamachine-pipeline-title-input {
     font-size: 18px;
     font-weight: 600;
     border: 1px solid transparent;
     background: transparent;
     padding: 4px 8px;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
     width: 100%;
     max-width: 400px;
 }
 
-.dm-pipeline-title-input:focus {
+.datamachine-pipeline-title-input:focus {
     border-color: #0073aa;
     background: #fff;
     outline: none;
@@ -126,31 +126,31 @@
 
 
 /* Pipeline sections */
-.dm-pipeline-steps-section,
-.dm-pipeline-flows {
+.datamachine-pipeline-steps-section,
+.datamachine-pipeline-flows {
     padding: 20px;
 }
 
-.dm-section-header h4 {
+.datamachine-section-header h4 {
     margin: 0 0 5px 0;
     color: #333;
 }
 
-.dm-section-description {
+.datamachine-section-description {
     margin: 0 0 15px 0;
     color: #666;
     font-size: 13px;
 }
 
 /* Pipeline steps - horizontal flexbox layout */
-.dm-pipeline-steps {
+.datamachine-pipeline-steps {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
 }
 
 /* Universal step containers */
-.dm-step-container {
+.datamachine-step-container {
     display: flex;
     align-items: center;
     flex: 0 0 160px;
@@ -158,7 +158,7 @@
 }
 
 /* Step cards */
-.dm-step-card {
+.datamachine-step-card {
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 6px;
@@ -171,37 +171,37 @@
 }
 
 /* Expandable card states */
-.dm-step-card.dm-expanded {
+.datamachine-step-card.datamachine-expanded {
     height: auto;
     overflow: visible;
     transition: all 0.3s ease;
 }
 
 /* AI Step horizontal expansion - pattern-aligned container expansion */
-.dm-step-container[data-step-type="ai"] .dm-step-card.dm-expanded {
+.datamachine-step-container[data-step-type="ai"] .datamachine-step-card.datamachine-expanded {
     min-width: auto;        /* Override fixed 150px width */
     max-width: none;        /* Remove width constraints */  
     width: 200px;           /* Expand to 200px */
 }
 
 /* Expand container to accommodate wider AI card */
-.dm-step-container[data-step-type="ai"]:has(.dm-step-card.dm-expanded) {
+.datamachine-step-container[data-step-type="ai"]:has(.datamachine-step-card.datamachine-expanded) {
     flex: 0 0 220px;        /* Expand from 160px to 220px */
 }
 
 /* AI Prompt Display and Editing */
-.dm-prompt-display {
+.datamachine-prompt-display {
     margin-top: 8px;
 }
 
 /* Prompt excerpt styling removed - single textarea used for all states */
 
 /* AI prompt textarea styling */
-.dm-ai-prompt-input {
+.datamachine-ai-prompt-input {
     width: 100%;
     padding: 12px;
     border: 1px solid #ddd;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 14px;
     line-height: 1.5;
@@ -211,13 +211,13 @@
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-.dm-ai-prompt-input:focus {
+.datamachine-ai-prompt-input:focus {
     outline: none;
     border-color: #007cba;
     box-shadow: 0 0 0 1px #007cba;
 }
 
-.dm-ai-prompt-input::placeholder {
+.datamachine-ai-prompt-input::placeholder {
     color: #999;
     font-style: italic;
 }
@@ -225,15 +225,15 @@
 /* AI prompt always visible - no expansion state visibility rules */
 
 /* User message styling for flow step cards */
-.dm-user-message-display {
+.datamachine-user-message-display {
     margin-top: 8px;
 }
 
-.dm-user-message-input {
+.datamachine-user-message-input {
     width: 100%;
     padding: 8px 12px;
     border: 1px solid #ddd;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 13px;
     line-height: 1.4;
@@ -243,18 +243,18 @@
     box-sizing: border-box;
 }
 
-.dm-user-message-input:focus {
+.datamachine-user-message-input:focus {
     outline: none;
     border-color: #007cba;
     box-shadow: 0 0 0 1px #007cba;
 }
 
-.dm-user-message-input::placeholder {
+.datamachine-user-message-input::placeholder {
     color: #999;
     font-style: italic;
 }
 
-.dm-expand-toggle {
+.datamachine-expand-toggle {
     position: absolute;
     bottom: 4px;
     right: 4px;
@@ -267,24 +267,24 @@
     z-index: 1;
 }
 
-.dm-expand-toggle:hover {
+.datamachine-expand-toggle:hover {
     background: #fff;
     border-color: #999;
 }
 
-.dm-expand-toggle .dashicons {
+.datamachine-expand-toggle .dashicons {
     width: 12px;
     height: 12px;
     font-size: 12px;
 }
 
 /* Initial state - expansion toggle is hidden by default until JavaScript determines if it's needed */
-.dm-expand-toggle--hidden {
+.datamachine-expand-toggle--hidden {
     display: none;
 }
 
 
-.dm-step-header {
+.datamachine-step-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -292,7 +292,7 @@
 }
 
 
-.dm-step-title {
+.datamachine-step-title {
     font-weight: 600;
     color: #333;
 }
@@ -301,24 +301,24 @@
 
 
 /* Flow section */
-.dm-flows-header h4 {
+.datamachine-flows-header h4 {
     margin: 0 0 15px 0;
     color: #333;
 }
 
-.dm-placeholder-message {
+.datamachine-placeholder-message {
     text-align: center;
     padding: 30px;
     color: #666;
     font-style: italic;
 }
 
-.dm-placeholder-message p {
+.datamachine-placeholder-message p {
     margin: 0;
 }
 
 /* Flow instance cards */
-.dm-flow-instance-card {
+.datamachine-flow-instance-card {
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 6px;
@@ -328,7 +328,7 @@
 
 
 /* Flow header */
-.dm-flow-header {
+.datamachine-flow-header {
     padding: 12px 16px;
     border-bottom: 1px solid #eee;
     display: flex;
@@ -337,37 +337,37 @@
     background: #fafafa;
 }
 
-.dm-flow-title-section {
+.datamachine-flow-title-section {
     flex: 1;
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-.dm-flow-title-input {
+.datamachine-flow-title-input {
     font-size: 16px;
     font-weight: 500;
     border: 1px solid transparent;
     background: transparent;
     padding: 6px 8px;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
     flex: 1;
     max-width: 300px;
     height: 28px;
     box-sizing: border-box;
 }
 
-.dm-flow-title-input:focus {
+.datamachine-flow-title-input:focus {
     border-color: #0073aa;
     background: #fff;
     outline: none;
 }
 
-.dm-flow-status {
+.datamachine-flow-status {
     margin-top: 4px;
 }
 
-.dm-schedule-status {
+.datamachine-schedule-status {
     font-size: 12px;
     padding: 2px 6px;
     border-radius: 3px;
@@ -377,50 +377,50 @@
 
 
 /* Flow steps section */
-.dm-flow-steps-section {
+.datamachine-flow-steps-section {
     padding: 36px 18px;
 }
 
-.dm-flow-steps-header {
+.datamachine-flow-steps-header {
     margin-bottom: 12px;
 }
 
-.dm-flow-steps-header h5 {
+.datamachine-flow-steps-header h5 {
     margin: 0;
     color: #555;
     font-size: 14px;
     font-weight: 600;
 }
 
-.dm-flow-steps {
+.datamachine-flow-steps {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
 }
 
 /* Flow step containers - uniform sizing, just different styling */
-.dm-flow-steps .dm-step-card {
+.datamachine-flow-steps .datamachine-step-card {
     background: #f9f9f9;
     display: flex;
     flex-direction: column;
 }
 
-.dm-flow-steps .dm-step-body {
+.datamachine-flow-steps .datamachine-step-body {
     flex: 1;
     display: flex;
     flex-direction: column;
 }
 
-.dm-flow-step-info {
+.datamachine-flow-step-info {
     padding-top: 8px;
 }
 
 /* Handler settings display */
-.dm-handler-settings-display {
+.datamachine-handler-settings-display {
     margin-top: 8px;
 }
 
-.dm-handler-settings-display div {
+.datamachine-handler-settings-display div {
     display: inline-block;
     padding: 2px 6px;
     margin: 2px 0;
@@ -431,31 +431,31 @@
     box-sizing: border-box;
 }
 
-.dm-handler-settings-display div {
+.datamachine-handler-settings-display div {
     background: #f0f0f0;
 }
 
 /* Flow placeholder when no pipeline steps exist */
-.dm-flow-placeholder {
+.datamachine-flow-placeholder {
     text-align: center;
     padding: 30px 20px;
     color: #666;
     font-style: italic;
 }
 
-.dm-flow-placeholder-text {
+.datamachine-flow-placeholder-text {
     margin: 0;
     font-size: 14px;
 }
 
-.dm-no-config {
+.datamachine-no-config {
     font-size: 12px;
     color: #888;
     font-style: italic;
 }
 
 
-.dm-flow-meta {
+.datamachine-flow-meta {
     padding: 8px 16px;
     border-top: 1px solid #eee;
     background: #f9f9f9;
@@ -464,69 +464,69 @@
 
 /* Responsive design */
 @media (max-width: 768px) {
-    .dm-pipelines-page {
+    .datamachine-pipelines-page {
         padding: 10px;
     }
     
-    .dm-pipeline-steps,
-    .dm-flow-steps {
+    .datamachine-pipeline-steps,
+    .datamachine-flow-steps {
         flex-direction: column;
     }
     
-    .dm-step-container,
-    .dm-step-card {
+    .datamachine-step-container,
+    .datamachine-step-card {
         min-width: auto;
         max-width: none;
         flex: 1;
     }
     
-    .dm-pipeline-header,
-    .dm-flow-header {
+    .datamachine-pipeline-header,
+    .datamachine-flow-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
     }
     
-    .dm-flow-title-section {
+    .datamachine-flow-title-section {
         flex-direction: column;
         align-items: stretch;
         gap: 8px;
     }
     
-    .dm-flow-instance-card {
+    .datamachine-flow-instance-card {
         margin-bottom: 20px;
     }
     
-    .dm-pipeline-title-input,
-    .dm-flow-title-input {
+    .datamachine-pipeline-title-input,
+    .datamachine-flow-title-input {
         max-width: none;
         width: 100%;
     }
     
     /* AI step expansion disabled on mobile - follows responsive pattern */
-    .dm-step-container[data-step-type="ai"] .dm-step-card.dm-expanded {
+    .datamachine-step-container[data-step-type="ai"] .datamachine-step-card.datamachine-expanded {
         width: auto !important; /* Disable expansion on mobile */
     }
     
-    .dm-step-container[data-step-type="ai"]:has(.dm-step-card.dm-expanded) {
+    .datamachine-step-container[data-step-type="ai"]:has(.datamachine-step-card.datamachine-expanded) {
         flex: 1 !important;     /* Mobile flex pattern */
     }
 }
 
 /* Empty step styling - minimal visual distinction */
-.dm-step-card--empty {
+.datamachine-step-card--empty {
     border: 1px dashed #ddd !important;
 }
 
 /* Empty step content styling - uses same card structure as populated steps */
-.dm-step-empty-content {
+.datamachine-step-empty-content {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100%;
 }
 
-.dm-step-add-button {
+.datamachine-step-add-button {
     margin: 0;
 }
 
@@ -575,7 +575,7 @@
 }
 
 /* Universal data flow arrows - proper flexbox child */
-.dm-data-flow-arrow {
+.datamachine-data-flow-arrow {
     margin: 12px;
     color: #666;
     font-size: 16px;
@@ -584,46 +584,46 @@
     flex-shrink: 0;
 }
 
-.dm-data-flow-arrow .dashicons {
+.datamachine-data-flow-arrow .dashicons {
     width: 16px;
     height: 16px;
     font-size: 16px;
 }
 
 /* Flow context - smaller arrows for nested flow steps */
-.dm-flow-steps .dm-data-flow-arrow {
+.datamachine-flow-steps .datamachine-data-flow-arrow {
     color: #888;
     font-size: 14px;
 }
 
-.dm-flow-steps .dm-data-flow-arrow .dashicons {
+.datamachine-flow-steps .datamachine-data-flow-arrow .dashicons {
     width: 14px;
     height: 14px;
     font-size: 14px;
 }
 /* Page-level pipeline header with dropdown and add button */
-.dm-pipeline-page-header {
+.datamachine-pipeline-page-header {
     display: flex;
     align-items: center;
-    gap: var(--dm-spacing-md);
+    gap: var(--datamachine-spacing-md);
     margin: 15px 0;
     flex-wrap: wrap;
 }
 
 /* Pipeline selection dropdown */
-.dm-pipeline-dropdown {
+.datamachine-pipeline-dropdown {
     min-width: 200px;
     max-width: 300px;
     flex-grow: 1;
     font-size: 14px;
     line-height: 1.4;
     padding: 6px 8px;
-    border: 1px solid var(--dm-color-border);
-    border-radius: var(--dm-border-radius);
+    border: 1px solid var(--datamachine-color-border);
+    border-radius: var(--datamachine-border-radius);
     background: #fff;
 }
 
-.dm-pipeline-dropdown:focus {
+.datamachine-pipeline-dropdown:focus {
     border-color: #007cba;
     box-shadow: 0 0 0 1px #007cba;
     outline: none;
@@ -631,22 +631,22 @@
 
 /* Responsive behavior for smaller screens */
 @media screen and (max-width: 782px) {
-    .dm-pipeline-page-header {
+    .datamachine-pipeline-page-header {
         flex-direction: column;
         align-items: stretch;
     }
     
-    .dm-pipeline-dropdown {
+    .datamachine-pipeline-dropdown {
         max-width: none;
-        margin-bottom: var(--dm-spacing-sm);
+        margin-bottom: var(--datamachine-spacing-sm);
     }
 }
 
 /* Loading state for pipeline switching */
-.dm-pipeline-loading {
+.datamachine-pipeline-loading {
     padding: 20px;
     text-align: center;
-    color: var(--dm-color-text-muted);
+    color: var(--datamachine-color-text-muted);
     font-style: italic;
 }
 
@@ -656,7 +656,7 @@
 /* Drag & Drop Styling */
 
 /* Hover state for draggable step cards - ONLY pipeline step cards */
-.dm-pipeline-steps .dm-step-card:not(.dm-step-card--empty):hover {
+.datamachine-pipeline-steps .datamachine-step-card:not(.datamachine-step-card--empty):hover {
     cursor: grab;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
@@ -665,7 +665,7 @@
 }
 
 /* Dragging state */
-.dm-step-container.dm-dragging .dm-step-card {
+.datamachine-step-container.datamachine-dragging .datamachine-step-card {
     cursor: grabbing;
     transform: rotate(3deg);
     opacity: 0.8;
@@ -673,7 +673,7 @@
 }
 
 /* Drag placeholder styling */
-.dm-step-drag-placeholder {
+.datamachine-step-drag-placeholder {
     border: 2px dashed #0073aa !important;
     background: rgba(0, 115, 170, 0.1) !important;
     border-radius: 6px;
@@ -686,7 +686,7 @@
     justify-content: center;
 }
 
-.dm-step-drag-placeholder::before {
+.datamachine-step-drag-placeholder::before {
     content: "Drop here";
     color: #0073aa;
     font-size: 12px;
@@ -706,12 +706,12 @@
 /* ===== UTILITY CLASSES ===== */
 
 /* Hidden element utility */
-.dm-hidden {
+.datamachine-hidden {
     display: none;
 }
 
 /* WordPress-style admin notices */
-.dm-admin-notice {
+.datamachine-admin-notice {
     background: #fff;
     border-left: 4px solid #00a32a;
     box-shadow: 0 1px 1px rgba(0,0,0,0.04);
@@ -721,29 +721,29 @@
     border-radius: 3px;
 }
 
-.dm-admin-notice--error {
+.datamachine-admin-notice--error {
     border-left-color: #d63638;
 }
 
-.dm-admin-notice--warning {
+.datamachine-admin-notice--warning {
     border-left-color: #dba617;
 }
 
-.dm-admin-notice--info {
+.datamachine-admin-notice--info {
     border-left-color: #72aee6;
 }
 
-.dm-admin-notice p {
+.datamachine-admin-notice p {
     margin: 0.5em 0;
     padding: 2px;
 }
 
-.dm-admin-notice--dismissible {
+.datamachine-admin-notice--dismissible {
     padding-right: 38px;
     position: relative;
 }
 
-.dm-admin-notice .notice-dismiss {
+.datamachine-admin-notice .notice-dismiss {
     background: none;
     border: none;
     border-radius: 0;
@@ -764,12 +764,12 @@
     z-index: 1;
 }
 
-.dm-admin-notice .notice-dismiss:hover,
-.dm-admin-notice .notice-dismiss:active {
+.datamachine-admin-notice .notice-dismiss:hover,
+.datamachine-admin-notice .notice-dismiss:active {
     color: #d63638;
 }
 
-.dm-admin-notice .notice-dismiss:focus {
+.datamachine-admin-notice .notice-dismiss:focus {
     box-shadow: 0 0 0 1px #72aee6, 0 0 2px 1px rgba(54, 144, 192, 0.8);
     outline: 2px solid transparent;
 }
@@ -777,7 +777,7 @@
 /* === Flow Reordering Controls === */
 
 /* Flow reorder controls container */
-.dm-flow-reorder-controls {
+.datamachine-flow-reorder-controls {
     display: flex;
     flex-direction: column;
     gap: 1px;
@@ -786,7 +786,7 @@
 
 
 /* Update flow header to accommodate reorder controls */
-.dm-flow-header {
+.datamachine-flow-header {
     display: flex;
     align-items: center;
     gap: 0;
@@ -795,14 +795,14 @@
 /* === Flow Actions === */
 
 /* Flow actions container */
-.dm-flow-actions {
+.datamachine-flow-actions {
     display: flex;
     gap: 8px;
     align-items: center;
 }
 
 /* Duplicate flow button styling - neutral gray style */
-.dm-duplicate-flow-btn {
+.datamachine-duplicate-flow-btn {
     background: #fff !important;
     border-color: #7e8993 !important;
     color: #7e8993 !important;
@@ -810,15 +810,15 @@
     font-size: 12px;
 }
 
-.dm-duplicate-flow-btn:hover,
-.dm-duplicate-flow-btn:focus {
+.datamachine-duplicate-flow-btn:hover,
+.datamachine-duplicate-flow-btn:focus {
     background: #f8f9fa !important;
     border-color: #646970 !important;
     color: #646970 !important;
     box-shadow: 0 0 0 1px #646970;
 }
 
-.dm-duplicate-flow-btn:disabled {
+.datamachine-duplicate-flow-btn:disabled {
     background: #f0f0f1 !important;
     border-color: #dcdcde !important;
     color: #a7aaad !important;
@@ -826,14 +826,14 @@
 }
 
 /* Duplicated flow highlight animation */
-.dm-flow-duplicated {
+.datamachine-flow-duplicated {
     border-color: #00a32a !important;
     background: #f0f8f1 !important;
     box-shadow: 0 2px 8px rgba(0, 163, 42, 0.15);
-    animation: dm-duplicate-highlight 2s ease-in-out;
+    animation: datamachine-duplicate-highlight 2s ease-in-out;
 }
 
-@keyframes dm-duplicate-highlight {
+@keyframes datamachine-duplicate-highlight {
     0% {
         border-color: #00a32a;
         background: #f0f8f1;
@@ -853,12 +853,12 @@
 
 /* Responsive flow actions - stack on small screens */
 @media (max-width: 600px) {
-    .dm-flow-actions {
+    .datamachine-flow-actions {
         flex-wrap: wrap;
         gap: 6px;
     }
 
-    .dm-flow-actions .button-small {
+    .datamachine-flow-actions .button-small {
         font-size: 11px;
         padding: 2px 8px;
         min-height: 28px;

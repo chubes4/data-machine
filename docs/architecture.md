@@ -11,9 +11,9 @@ Data Machine is an AI-first WordPress plugin that uses a Pipeline+Flow architect
 
 ### Execution Engine
 Three-action execution cycle:
-1. `dm_run_flow_now` - Initiates flow execution
-2. `dm_execute_step` - Processes individual steps
-3. `dm_schedule_next_step` - Continues to next step or completes
+1. `datamachine_run_flow_now` - Initiates flow execution
+2. `datamachine_execute_step` - Processes individual steps
+3. `datamachine_schedule_next_step` - Continues to next step or completes
 
 ### Database Schema
 - `wp_dm_pipelines` - Pipeline templates (reusable)
@@ -25,17 +25,17 @@ Three-action execution cycle:
 
 **Clean Data Separation**: AI agents receive clean data packets without URLs while handlers access engine parameters via centralized filter pattern.
 
-**Enhanced Database Storage + Filter Access**: Fetch handlers store engine parameters (source_url, image_url) in database; steps retrieve via centralized `dm_engine_data` filter with storage/retrieval mode detection for unified access.
+**Enhanced Database Storage + Filter Access**: Fetch handlers store engine parameters (source_url, image_url) in database; steps retrieve via centralized `datamachine_engine_data` filter with storage/retrieval mode detection for unified access.
 
 **Core Pattern**:
 ```php
 // Fetch handlers store via centralized filter
 if ($job_id) {
-    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
 }
 
 // Steps retrieve via centralized filter (EngineData.php)
-$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 $source_url = $engine_data['source_url'] ?? null;
 $image_url = $engine_data['image_url'] ?? null;
 ```
@@ -92,10 +92,10 @@ AI agents use tools to interact with handlers:
 
 ### Filter-Based Discovery
 All components self-register via WordPress filters:
-- `dm_handlers` - Register fetch/publish/update handlers
+- `datamachine_handlers` - Register fetch/publish/update handlers
 - `ai_tools` - Register AI tools and capabilities
 - `dm_auth_providers` - Register authentication providers
-- `dm_steps` - Register custom step types
+- `datamachine_step_types` - Register custom step types
 
 ### Centralized Handler Filter System
 
@@ -118,15 +118,15 @@ All components self-register via WordPress filters:
 **Implementation**:
 ```php
 // Timeframe parsing example
-$cutoff_timestamp = apply_filters('dm_timeframe_limit', null, '24_hours');
+$cutoff_timestamp = apply_filters('datamachine_timeframe_limit', null, '24_hours');
 $date_query = $cutoff_timestamp ? ['after' => gmdate('Y-m-d H:i:s', $cutoff_timestamp)] : [];
 
 // Keyword matching example
-$matches = apply_filters('dm_keyword_search_match', true, $content, $search_keywords);
+$matches = apply_filters('datamachine_keyword_search_match', true, $content, $search_keywords);
 if (!$matches) continue; // Skip non-matching items
 
 // Data packet creation example
-$data = apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $step_type);
+$data = apply_filters('datamachine_data_packet', $data, $packet_data, $flow_step_id, $step_type);
 ```
 
 **Benefits**:
@@ -178,23 +178,12 @@ Centralized WordPress transient-based cache system:
 ### Admin Interface
 WordPress admin integration with `manage_options` security:
 - Drag & drop pipeline builder
-- Real-time status indicators with AJAX refresh system
+- Legacy status indicators removed pending replacement health checks
 - Modal-based configuration
 - Auto-save functionality
 - Import/export capabilities
 
-**AJAX Status System**: Two specialized AJAX handlers for optimized status refresh operations:
-- **FlowStatusAjax** (`wp_ajax_dm_refresh_flow_status`): Flow-scoped status refresh for single flow operations (handler configuration, scheduling, flow settings) using `flow_step_status` context
-- **PipelineStatusAjax** (`wp_ajax_dm_refresh_pipeline_status`): Pipeline-wide status refresh for template modifications (add/delete steps, AI configuration) using `pipeline_step_status` context
-
-**Status Detection Contexts**:
-- `pipeline_step_status`: Pipeline-wide checks including AI configuration cascade effects and architectural validation
-- `flow_step_status`: Flow-scoped checks for handler configuration, authentication, and settings completeness
-- `ai_step`: AI configuration validation (provider, model, system prompt)
-- `handler_auth`: Authentication status for OAuth/API key requirements
-- `files_status`: Files handler readiness with upload validation
-- `wordpress_draft`: Draft mode warning for WordPress publish handler
-- `subsequent_publish_step`: Warning for publish steps following other publish steps
+**Status System**: Retired. Future iterations will reintroduce health indicators once the new telemetry pipeline lands.
 
 ### Extension Framework
 Complete extension system for custom handlers and tools:
@@ -230,7 +219,7 @@ Complete extension system for custom handlers and tools:
 
 ### Data Processing
 - **Explicit Data Separation Architecture**: Clean data packets for AI processing vs engine parameters for handlers
-- **Engine Data Filter Architecture**: Fetch handlers store engine_data (source_url, image_url) in database; steps retrieve via centralized `dm_engine_data` filter
+- **Engine Data Filter Architecture**: Fetch handlers store engine_data (source_url, image_url) in database; steps retrieve via centralized `datamachine_engine_data` filter
 - DataPacket structure for consistent data flow with chronological ordering
 - Clear data packet structure for AI agents with chronological ordering:
   - Root wrapper with data_packets array
@@ -238,7 +227,6 @@ Complete extension system for custom handlers and tools:
   - Type-specific fields (handler, attachments, tool_name)
   - Workflow dynamics and turn-based updates
 - Deduplication tracking
-- Status detection system
 - Comprehensive logging
 
 ### Scheduling

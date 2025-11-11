@@ -149,4 +149,4 @@ $parameters = [
 
 **Metadata Preservation**: Ensures important workflow metadata is captured in structured format.
 
-**Logging**: Uses `dm_log` action with debug/error levels for API operations, data preparation, and error conditions.
+**Logging**: Uses `datamachine_log` action with debug/error levels for API operations, data preparation, and error conditions.

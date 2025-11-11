@@ -17,8 +17,8 @@ if (!defined('ABSPATH')) {
 /**
  * Register files fetch handler filters.
  */
-function dm_register_files_fetch_filters() {
-    add_filter('dm_handlers', function($handlers, $step_type = null) {
+function datamachine_register_files_fetch_filters() {
+    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'fetch') {
             $handlers['files'] = [
                 'type' => 'fetch',
@@ -30,14 +30,14 @@ function dm_register_files_fetch_filters() {
         return $handlers;
     }, 10, 2);
 
-    add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
+    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
         if ($handler_slug === null || $handler_slug === 'files') {
             $all_settings['files'] = new FilesSettings();
         }
         return $all_settings;
     }, 10, 2);
 
-    add_filter('dm_render_template', function($content, $template_name, $data = []) {
+    add_filter('datamachine_render_template', function($content, $template_name, $data = []) {
         if ($template_name === 'modal/handler-settings/files') {
             $template_path = dirname(__DIR__, 4) . '/admin/pages/pipelines/templates/modal/handler-settings/files.php';
             if (file_exists($template_path)) {
@@ -51,4 +51,4 @@ function dm_register_files_fetch_filters() {
     }, 10, 3);
 }
 
-dm_register_files_fetch_filters();
+datamachine_register_files_fetch_filters();

@@ -48,7 +48,7 @@ Publish handlers distribute processed content to external platforms using AI too
 
 **Purpose**: All publish handlers support automatic source URL attribution for link attribution and content sourcing.
 
-**Engine Data Source**: `source_url` retrieved from fetch handlers via `dm_engine_data` filter
+**Engine Data Source**: `source_url` retrieved from fetch handlers via `datamachine_engine_data` filter
 
 ### Link Handling Modes
 
@@ -81,7 +81,7 @@ Publish handlers distribute processed content to external platforms using AI too
 ```php
 // Standard pattern across all handlers
 $job_id = $parameters['job_id'] ?? null;
-$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 $source_url = $engine_data['source_url'] ?? null;
 $image_url = $engine_data['image_url'] ?? null;
 
@@ -252,7 +252,7 @@ if (is_wp_error($connection)) {
 
 ```php
 if ($http_code !== 200) {
-    do_action('dm_log', 'error', 'Platform API error', [
+    do_action('datamachine_log', 'error', 'Platform API error', [
         'http_code' => $http_code,
         'response' => $api_response
     ]);

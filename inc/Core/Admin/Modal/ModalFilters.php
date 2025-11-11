@@ -9,7 +9,7 @@
  * capabilities in their own *Filters.php files following true modular architecture.
  * 
  * The modal system is a Universal HTML Popup Component that serves any component's
- * self-generated content via the dm_modals filter.
+ * self-generated content via the datamachine_modals filter.
  * 
  * @package DataMachine
  * @subpackage Core\Admin\Modal
@@ -34,15 +34,15 @@ if (!defined('ABSPATH')) {
  * 
  * @since 0.1.0
  */
-function dm_register_modal_system_filters() {
+function datamachine_register_modal_system_filters() {
     
     // Note: Modal assets are now included directly in page-specific asset configurations
-    // This eliminates the unused dm_get_page_assets filter and simplifies the asset loading system
+    // This eliminates the unused datamachine_get_page_assets filter and simplifies the asset loading system
     
     // Include modal template dynamically when universal modal system is loaded
     add_action('admin_footer', function() {
         // Check if universal modal JavaScript is enqueued
-        if (wp_script_is('dm-core-modal', 'enqueued')) {
+        if (wp_script_is('datamachine-core-modal', 'enqueued')) {
             // Include template file (defines function) and call render function
             require_once __DIR__ . '/ModalTemplate.php';
             dm_render_modal_template();
@@ -57,11 +57,11 @@ function dm_register_modal_system_filters() {
     
     // Pure infrastructure - NO component-specific logic
     // Individual components register their own modal content generators
-    // in their own *Filters.php files using the dm_modals collection filter
+    // in their own *Filters.php files using the datamachine_modals collection filter
     
     // Components register modals using the collection-based pattern:
     // See PipelinesFilters.php and WordPressFilters.php for examples
 }
 
 // Auto-register when file loads - achieving complete self-containment
-dm_register_modal_system_filters();
+datamachine_register_modal_system_filters();

@@ -33,7 +33,7 @@ class AIStepTools {
             return [];
         }
         
-        $saved_step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
+        $saved_step_config = apply_filters('datamachine_get_pipeline_step_config', [], $pipeline_step_id);
         $modal_enabled_tools = $saved_step_config['enabled_tools'] ?? [];
         
         return is_array($modal_enabled_tools) ? $modal_enabled_tools : [];
@@ -52,7 +52,7 @@ class AIStepTools {
                 }
                 
                 $tool_config = $global_enabled_tools[$tool_id];
-                $tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
+                $tool_configured = apply_filters('datamachine_tool_configured', false, $tool_id);
                 $requires_config = !empty($tool_config['requires_config']);
                 
                 if (!$requires_config || $tool_configured) {
@@ -92,22 +92,22 @@ class AIStepTools {
     
     public static function getAvailableTools(?array $previous_step_config = null, ?array $next_step_config = null, ?string $current_pipeline_step_id = null): array {
         $available_tools = [];
-        
+
         if ($previous_step_config) {
-            $prev_handler_slug = $previous_step_config['handler']['handler_slug'] ?? null;
-            $prev_handler_config = $previous_step_config['handler']['settings'] ?? [];
-            
+            $prev_handler_slug = $previous_step_config['handler_slug'] ?? null;
+            $prev_handler_config = $previous_step_config['handler_config'] ?? [];
+
             if ($prev_handler_slug) {
                 $prev_tools = apply_filters('ai_tools', [], $prev_handler_slug, $prev_handler_config);
                 $allowed_prev_tools = self::getAllowedTools($prev_tools, $prev_handler_slug, $current_pipeline_step_id);
                 $available_tools = array_merge($available_tools, $allowed_prev_tools);
             }
         }
-        
+
         if ($next_step_config) {
-            $next_handler_slug = $next_step_config['handler']['handler_slug'] ?? null;
-            $next_handler_config = $next_step_config['handler']['settings'] ?? [];
-            
+            $next_handler_slug = $next_step_config['handler_slug'] ?? null;
+            $next_handler_config = $next_step_config['handler_config'] ?? [];
+
             if ($next_handler_slug) {
                 $next_tools = apply_filters('ai_tools', [], $next_handler_slug, $next_handler_config);
                 $allowed_next_tools = self::getAllowedTools($next_tools, $next_handler_slug, $current_pipeline_step_id);
@@ -141,7 +141,7 @@ class AIStepTools {
                 $step_enabled = self::isGeneralToolEnabled($tool_name);
             }
             
-            $tool_configured = apply_filters('dm_tool_configured', false, $tool_name);
+            $tool_configured = apply_filters('datamachine_tool_configured', false, $tool_name);
             $requires_config = !empty($tool_config['requires_config']);
             
             if ($step_enabled && (!$requires_config || $tool_configured)) {
@@ -153,7 +153,7 @@ class AIStepTools {
     }
 
     private static function isGeneralToolEnabled(string $tool_name): bool {
-        $tool_configured = apply_filters('dm_tool_configured', false, $tool_name);
+        $tool_configured = apply_filters('datamachine_tool_configured', false, $tool_name);
         $all_tools = apply_filters('ai_tools', []);
         $tool_config = $all_tools[$tool_name] ?? [];
         $requires_config = !empty($tool_config['requires_config']);
@@ -197,7 +197,7 @@ class AIStepTools {
             return $tool_result;
             
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'AIStepTools: Tool execution exception', [
+            do_action('datamachine_log', 'error', 'AIStepTools: Tool execution exception', [
                 'flow_step_id' => $flow_step_id,
                 'tool_name' => $tool_name,
                 'exception' => $e->getMessage(),

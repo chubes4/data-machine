@@ -19,18 +19,18 @@ class WordPressAPI {
 
     /**
      * Fetch WordPress REST API content with timeframe and keyword filtering.
-     * Engine data (source_url, image_url) stored via dm_engine_data filter.
+     * Engine data (source_url, image_url) stored via datamachine_engine_data filter.
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
-            do_action('dm_log', 'error', 'WordPress API Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
+            do_action('datamachine_log', 'error', 'WordPress API Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
         
         $flow_step_id = $handler_config['flow_step_id'] ?? null;
 
         if ($flow_step_id === null) {
-            do_action('dm_log', 'debug', 'WordPress API fetch called without flow_step_id - processed items tracking disabled');
+            do_action('datamachine_log', 'debug', 'WordPress API fetch called without flow_step_id - processed items tracking disabled');
         }
 
         $config = $handler_config['wordpress_api'] ?? [];
@@ -38,12 +38,12 @@ class WordPressAPI {
         // Configuration validation
         $endpoint_url = trim($config['endpoint_url'] ?? '');
         if (empty($endpoint_url)) {
-            do_action('dm_log', 'error', 'WordPress API Input: Endpoint URL is required.', ['pipeline_id' => $pipeline_id]);
+            do_action('datamachine_log', 'error', 'WordPress API Input: Endpoint URL is required.', ['pipeline_id' => $pipeline_id]);
             return ['processed_items' => []];
         }
 
         if (!filter_var($endpoint_url, FILTER_VALIDATE_URL)) {
-            do_action('dm_log', 'error', 'WordPress API Input: Invalid endpoint URL format.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
+            do_action('datamachine_log', 'error', 'WordPress API Input: Invalid endpoint URL format.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
             return ['processed_items' => []];
         }
 
@@ -75,21 +75,21 @@ class WordPressAPI {
         // WordPress REST APIs - try server-side search, fallback to client-side
         if (strpos($endpoint_url, '/wp-json/') !== false && !empty($search)) {
             $endpoint_url = add_query_arg('search', $search, $endpoint_url);
-            do_action('dm_log', 'debug', 'REST API: Added server-side search parameter to WordPress endpoint', [
+            do_action('datamachine_log', 'debug', 'REST API: Added server-side search parameter to WordPress endpoint', [
                 'search_term' => $search,
                 'modified_url' => $endpoint_url
             ]);
         }
 
-        // Make HTTP request using dm_request filter
+        // Make HTTP request using datamachine_request filter
         $args = [
             'user-agent' => 'DataMachine WordPress Plugin/' . DATA_MACHINE_VERSION
         ];
 
-        $result = apply_filters('dm_request', null, 'GET', $endpoint_url, $args, 'REST API');
+        $result = apply_filters('datamachine_request', null, 'GET', $endpoint_url, $args, 'REST API');
 
         if (!$result['success']) {
-            do_action('dm_log', 'error', 'REST API Input: Failed to fetch from endpoint.', [
+            do_action('datamachine_log', 'error', 'REST API Input: Failed to fetch from endpoint.', [
                 'pipeline_id' => $pipeline_id,
                 'error' => $result['error'],
                 'endpoint_url' => $endpoint_url
@@ -99,14 +99,14 @@ class WordPressAPI {
 
         $response_data = $result['data'];
         if (empty($response_data)) {
-            do_action('dm_log', 'error', 'REST API Input: Empty response from endpoint.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
+            do_action('datamachine_log', 'error', 'REST API Input: Empty response from endpoint.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
             return [];
         }
 
         // Parse JSON response
         $items = json_decode($response_data, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            do_action('dm_log', 'error', 'REST API Input: Invalid JSON response.', [
+            do_action('datamachine_log', 'error', 'REST API Input: Invalid JSON response.', [
                 'pipeline_id' => $pipeline_id,
                 'json_error' => json_last_error_msg(),
                 'endpoint_url' => $endpoint_url
@@ -127,14 +127,14 @@ class WordPressAPI {
 
             $unique_id = md5($endpoint_url . '_' . $item_id);
 
-            $is_processed = ($flow_step_id !== null) ? apply_filters('dm_is_item_processed', false, $flow_step_id, 'rest_api', $unique_id) : false;
+            $is_processed = ($flow_step_id !== null) ? apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'rest_api', $unique_id) : false;
             if ($is_processed) {
                 continue;
             }
 
             // Found first eligible item - mark as processed and return
             if ($flow_step_id) {
-                do_action('dm_mark_item_processed', $flow_step_id, 'rest_api', $unique_id, $job_id);
+                do_action('datamachine_mark_item_processed', $flow_step_id, 'rest_api', $unique_id, $job_id);
             }
 
             // Extract item data flexibly
@@ -146,7 +146,7 @@ class WordPressAPI {
 
             // Apply timeframe filtering
             if ($timeframe_limit !== 'all_time' && $item_date) {
-                $cutoff_timestamp = apply_filters('dm_timeframe_limit', null, $timeframe_limit);
+                $cutoff_timestamp = apply_filters('datamachine_timeframe_limit', null, $timeframe_limit);
                 if ($cutoff_timestamp !== null) {
                     $item_timestamp = strtotime($item_date);
                     if ($item_timestamp && $item_timestamp < $cutoff_timestamp) {
@@ -157,7 +157,7 @@ class WordPressAPI {
 
             // Apply keyword search filter
             $search_text = $title . ' ' . wp_strip_all_tags($content . ' ' . $excerpt);
-            $matches = apply_filters('dm_keyword_search_match', false, $search_text, $search);
+            $matches = apply_filters('datamachine_keyword_search_match', false, $search_text, $search);
             if (!$matches) {
                 continue; // Skip items that don't match search keywords
             }
@@ -168,7 +168,7 @@ class WordPressAPI {
             // Download remote image if present
             $file_info = null;
             if (!empty($image_url) && $flow_step_id) {
-                $repositories = apply_filters('dm_files_repository', []);
+                $repositories = apply_filters('datamachine_files_repository', []);
                 $files_repo = $repositories['files'] ?? null;
 
                 if ($files_repo) {
@@ -199,14 +199,14 @@ class WordPressAPI {
                             'file_size' => $download_result['size']
                         ];
 
-                        do_action('dm_log', 'debug', 'WordPress API Input: Downloaded remote image for AI processing', [
+                        do_action('datamachine_log', 'debug', 'WordPress API Input: Downloaded remote image for AI processing', [
                             'item_id' => $unique_id,
                             'source_url' => $image_url,
                             'local_path' => $download_result['path'],
                             'file_size' => $download_result['size']
                         ]);
                     } else {
-                        do_action('dm_log', 'warning', 'WordPress API Input: Failed to download remote image', [
+                        do_action('datamachine_log', 'warning', 'WordPress API Input: Failed to download remote image', [
                             'item_id' => $unique_id,
                             'image_url' => $image_url
                         ]);
@@ -246,7 +246,7 @@ class WordPressAPI {
 
             // Store URLs in engine_data via centralized filter
             if ($job_id) {
-                apply_filters('dm_engine_data', null, $job_id, $source_link, $image_url ?: '');
+                apply_filters('datamachine_engine_data', null, $job_id, $source_link, $image_url ?: '');
             }
 
             // Return clean data packet (no URLs in metadata for AI)

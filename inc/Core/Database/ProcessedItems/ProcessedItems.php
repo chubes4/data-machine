@@ -106,7 +106,7 @@ class ProcessedItems {
              }
              
              // Use Logger Service if available for actual errors
-             do_action('dm_log', 'error', "Failed to insert processed item.", [
+             do_action('datamachine_log', 'error', "Failed to insert processed item.", [
                  'flow_step_id' => $flow_step_id,
                  'source_type' => $source_type,
                  'item_identifier' => substr($item_identifier, 0, 100) . '...', // Avoid logging potentially huge identifiers
@@ -136,7 +136,7 @@ class ProcessedItems {
     public function delete_processed_items(array $criteria = []): int|false {
         
         if (empty($criteria)) {
-            do_action('dm_log', 'warning', 'No criteria provided for processed items deletion');
+            do_action('datamachine_log', 'warning', 'No criteria provided for processed items deletion');
             return false;
         }
         
@@ -167,17 +167,17 @@ class ProcessedItems {
 
             // Clear processed items cache after deletion
             if ( $result !== false ) {
-                $this->clear_cache_pattern( 'dm_processed_*' );
+                $this->clear_cache_pattern( 'datamachine_processed_*' );
             }
         } 
         // Handle pipeline_id (get all flows for pipeline and delete their processed items)
         else if (!empty($criteria['pipeline_id']) && empty($criteria['flow_step_id'])) {
             // Get all flows for this pipeline using the existing filter
-            $pipeline_flows = apply_filters('dm_get_pipeline_flows', [], $criteria['pipeline_id']);
+            $pipeline_flows = apply_filters('datamachine_get_pipeline_flows', [], $criteria['pipeline_id']);
             $flow_ids = array_column($pipeline_flows, 'flow_id');
             
             if (empty($flow_ids)) {
-                do_action('dm_log', 'debug', 'No flows found for pipeline, nothing to delete', [
+                do_action('datamachine_log', 'debug', 'No flows found for pipeline, nothing to delete', [
                     'pipeline_id' => $criteria['pipeline_id']
                 ]);
                 return 0;
@@ -201,12 +201,12 @@ class ProcessedItems {
 
             // Clear processed items cache after deletion
             if ( $result !== false ) {
-                $this->clear_cache_pattern( 'dm_processed_*' );
+                $this->clear_cache_pattern( 'datamachine_processed_*' );
             }
         }
         else if (!empty($where)) {
             // Build cache key and log what we're about to delete
-            $cache_key = 'dm_count_processed_' . md5(serialize($where));
+            $cache_key = 'datamachine_count_processed_' . md5(serialize($where));
             $cached_count = get_transient( $cache_key );
 
             if ( false === $cached_count ) {
@@ -240,7 +240,7 @@ class ProcessedItems {
                 $count = $cached_count;
             }
 
-            do_action('dm_log', 'debug', 'Processed items deletion query analysis', [
+            do_action('datamachine_log', 'debug', 'Processed items deletion query analysis', [
                 'where_conditions' => $where,
                 'where_format' => $where_format,
                 'items_to_delete' => $count,
@@ -253,15 +253,15 @@ class ProcessedItems {
 
             // Clear processed items cache after deletion
             if ( $result !== false ) {
-                $this->clear_cache_pattern( 'dm_processed_*' );
+                $this->clear_cache_pattern( 'datamachine_processed_*' );
             }
         } else {
-            do_action('dm_log', 'warning', 'No valid criteria provided for processed items deletion');
+            do_action('datamachine_log', 'warning', 'No valid criteria provided for processed items deletion');
             return false;
         }
         
         // Log the operation
-        do_action('dm_log', 'debug', 'Deleted processed items', [
+        do_action('datamachine_log', 'debug', 'Deleted processed items', [
             'criteria' => $criteria,
             'items_deleted' => $result !== false ? $result : 0,
             'success' => $result !== false
@@ -279,19 +279,19 @@ class ProcessedItems {
      * @return string Cache key
      */
     private function get_processed_item_cache_key( $flow_step_id, $source_type, $item_identifier ) {
-        return 'dm_processed_' . $flow_step_id . '_' . $source_type . '_' . md5( $item_identifier );
+        return 'datamachine_processed_' . $flow_step_id . '_' . $source_type . '_' . md5( $item_identifier );
     }
 
     /**
      * Clear all processed items cache entries
      *
-     * Called by dm_clear_all_cache action to ensure processed items cache
+     * Called by datamachine_clear_all_cache action to ensure processed items cache
      * is included in system-wide cache clearing operations.
      *
      * @return int Number of cache entries cleared
      */
     public function clear_all_processed_cache() {
-        return $this->clear_cache_pattern( 'dm_processed_*' );
+        return $this->clear_cache_pattern( 'datamachine_processed_*' );
     }
 
     /**
@@ -344,7 +344,7 @@ class ProcessedItems {
         dbDelta( $sql );
         
         // Log table creation
-        do_action('dm_log', 'debug', 'Created processed items database table', [
+        do_action('datamachine_log', 'debug', 'Created processed items database table', [
             'table_name' => $this->table_name,
             'action' => 'create_table'
         ]);

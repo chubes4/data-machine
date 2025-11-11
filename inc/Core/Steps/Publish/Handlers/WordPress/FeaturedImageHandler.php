@@ -106,6 +106,6 @@ class FeaturedImageHandler {
     }
 
     private function logImageOperation(string $level, string $message, array $context): void {
-        do_action('dm_log', $level, $message, $context);
+        do_action('datamachine_log', $level, $message, $context);
     }
 }

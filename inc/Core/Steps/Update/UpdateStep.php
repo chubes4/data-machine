@@ -23,24 +23,25 @@ class UpdateStep {
         
         try {
             if (empty($flow_step_config)) {
-                do_action('dm_log', 'error', 'Update Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);
+                do_action('datamachine_log', 'error', 'Update Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);
                 return $data;
             }
 
-            $handler = $flow_step_config['handler'] ?? [];
-            $handler_slug = $handler['handler_slug'] ?? '';
-            
+            $handler_slug = $flow_step_config['handler_slug'] ?? '';
+
             if (empty($handler_slug)) {
-                do_action('dm_log', 'error', 'Update Step: No handler configured', ['flow_step_id' => $flow_step_id]);
+                do_action('datamachine_log', 'error', 'Update Step: No handler configured', ['flow_step_id' => $flow_step_id]);
                 return $data;
             }
+
+            $handler_config = $flow_step_config['handler_config'] ?? [];
 
             if (empty($data)) {
-                do_action('dm_log', 'error', 'Update Step: No data to process', ['flow_step_id' => $flow_step_id]);
+                do_action('datamachine_log', 'error', 'Update Step: No data to process', ['flow_step_id' => $flow_step_id]);
                 return $data;
             }
 
-            do_action('dm_log', 'debug', 'Update Step: Starting update processing', [
+            do_action('datamachine_log', 'debug', 'Update Step: Starting update processing', [
                 'flow_step_id' => $flow_step_id,
                 'handler_slug' => $handler_slug,
                 'data_entries' => count($data)
@@ -48,7 +49,7 @@ class UpdateStep {
 
             $tool_result_entry = $this->find_tool_result_for_handler($data, $handler_slug);
             if ($tool_result_entry) {
-                do_action('dm_log', 'debug', 'Update Step: Tool already executed by AI step', [
+                do_action('datamachine_log', 'debug', 'Update Step: Tool already executed by AI step', [
                     'flow_step_id' => $flow_step_id,
                     'handler' => $handler_slug,
                     'tool_name' => $tool_result_entry['metadata']['tool_name'] ?? 'unknown'
@@ -57,10 +58,10 @@ class UpdateStep {
                 return $this->create_update_entry_from_tool_result($tool_result_entry, $data, $handler_slug, $flow_step_id);
             }
 
-            $handler_result = $this->execute_handler($handler_slug, $data, $handler, $flow_step_config, $parameters);
+            $handler_result = $this->execute_handler($handler_slug, $data, $handler_config, $flow_step_config, $parameters);
             
             if ($handler_result === null) {
-                do_action('dm_log', 'error', 'Update Step: Handler execution failed', [
+                do_action('datamachine_log', 'error', 'Update Step: Handler execution failed', [
                     'handler_slug' => $handler_slug,
                     'flow_step_id' => $flow_step_id
                 ]);
@@ -81,11 +82,11 @@ class UpdateStep {
                 'attachments' => []
             ];
 
-            $data = apply_filters('dm_data_packet', $data, $update_entry, $flow_step_id, 'update');
+            $data = apply_filters('datamachine_data_packet', $data, $update_entry, $flow_step_id, 'update');
 
             $handler_success = $handler_result['success'] ?? false;
             if (!$handler_success) {
-                do_action('dm_fail_job', $job_id, 'update_handler_failed', [
+                do_action('datamachine_fail_job', $job_id, 'update_handler_failed', [
                     'handler_slug' => $handler_slug,
                     'flow_step_id' => $flow_step_id,
                     'handler_error' => $handler_result['error'] ?? 'Unknown handler error',
@@ -96,12 +97,12 @@ class UpdateStep {
             return $data;
 
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Update Step: Exception during processing', [
+            do_action('datamachine_log', 'error', 'Update Step: Exception during processing', [
                 'flow_step_id' => $flow_step_id,
                 'exception' => $e->getMessage()
             ]);
             
-            do_action('dm_fail_job', $job_id, 'update_step_exception', [
+            do_action('datamachine_fail_job', $job_id, 'update_step_exception', [
                 'flow_step_id' => $flow_step_id,
                 'exception_message' => $e->getMessage(),
                 'exception_trace' => $e->getTraceAsString()
@@ -123,10 +124,10 @@ class UpdateStep {
      */
     private function execute_handler($handler_slug, $data, $handler_config, $flow_step_config, $parameters) {
         try {
-            $update_handlers = apply_filters('dm_handlers', [], 'update');
+            $update_handlers = apply_filters('datamachine_handlers', [], 'update');
 
             if (!isset($update_handlers[$handler_slug])) {
-                do_action('dm_log', 'error', 'Update Step: Handler not found', [
+                do_action('datamachine_log', 'error', 'Update Step: Handler not found', [
                     'handler_slug' => $handler_slug,
                     'available_handlers' => array_keys($update_handlers)
                 ]);
@@ -137,7 +138,7 @@ class UpdateStep {
             $handler_class = $handler_def['class'] ?? '';
 
             if (empty($handler_class) || !class_exists($handler_class)) {
-                do_action('dm_log', 'error', 'Update Step: Handler class not found', [
+                do_action('datamachine_log', 'error', 'Update Step: Handler class not found', [
                     'handler_slug' => $handler_slug,
                     'handler_class' => $handler_class
                 ]);
@@ -152,7 +153,7 @@ class UpdateStep {
             $job_id = $parameters['job_id'];
 
             // Access engine data via centralized filter pattern (source_url, image_url from fetch handlers)
-            $engine_data = apply_filters('dm_engine_data', [], $job_id);
+            $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 
             $source_url = $engine_data['source_url'] ?? null;
             $image_url = $engine_data['image_url'] ?? null;
@@ -193,7 +194,7 @@ class UpdateStep {
                 $tool_def = $handler_tools[$tool_name];
                 $tool_def['handler_config'] = $handler_config;
 
-                do_action('dm_log', 'debug', 'Update Step: Executing handler via tool calling', [
+                do_action('datamachine_log', 'debug', 'Update Step: Executing handler via tool calling', [
                     'handler' => $handler_slug,
                     'tool_name' => $tool_name,
                     'parameters_count' => count($handler_parameters)
@@ -202,14 +203,14 @@ class UpdateStep {
                 return $handler_instance->handle_tool_call($handler_parameters, $tool_def);
             }
 
-            do_action('dm_log', 'error', 'Update Step: Handler has no execution method available', [
+            do_action('datamachine_log', 'error', 'Update Step: Handler has no execution method available', [
                 'handler' => $handler_slug,
                 'has_tools' => !empty($handler_tools)
             ]);
             return null;
 
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Update Step: Handler execution failed', [
+            do_action('datamachine_log', 'error', 'Update Step: Handler execution failed', [
                 'handler' => $handler_slug,
                 'exception' => $e->getMessage()
             ]);
@@ -276,7 +277,7 @@ class UpdateStep {
             'attachments' => []
         ];
         
-        $data = apply_filters('dm_data_packet', $data, $update_entry, $flow_step_id, 'update');
+        $data = apply_filters('datamachine_data_packet', $data, $update_entry, $flow_step_id, 'update');
 
         return $data;
     }

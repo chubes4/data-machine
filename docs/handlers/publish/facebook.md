@@ -21,7 +21,7 @@ Posts content to Facebook Pages using OAuth2 authentication with media upload su
 
 ## Source URL Attribution
 
-**Engine Data Source**: `source_url` retrieved from fetch handlers via `dm_engine_data` filter
+**Engine Data Source**: `source_url` retrieved from fetch handlers via `datamachine_engine_data` filter
 
 ### Link Handling Modes
 

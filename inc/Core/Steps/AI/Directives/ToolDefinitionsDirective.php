@@ -39,8 +39,8 @@ class ToolDefinitionsDirective {
             return $request;
         }
 
-    $flow_step_id = apply_filters('dm_current_flow_step_id', null);
-        
+    $flow_step_id = apply_filters('datamachine_current_flow_step_id', null);
+
     $directive = self::generate_dynamic_directive($tools, $request, $pipeline_step_id, $flow_step_id);
 
         array_push($request['messages'], [
@@ -48,7 +48,7 @@ class ToolDefinitionsDirective {
             'content' => $directive
         ]);
 
-        do_action('dm_log', 'debug', 'AI Step Directive: Injected system directive', [
+        do_action('datamachine_log', 'debug', 'AI Step Directive: Injected system directive', [
             'tool_count' => count($tools),
             'available_tools' => array_keys($tools),
             'directive_length' => strlen($directive)

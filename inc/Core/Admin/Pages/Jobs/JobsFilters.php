@@ -28,10 +28,10 @@ if (!defined('ABSPATH')) {
  * 
  * @since 0.1.0
  */
-function dm_register_jobs_admin_page_filters() {
+function datamachine_register_jobs_admin_page_filters() {
     
     // Pure discovery mode - matches actual system usage
-    add_filter('dm_admin_pages', function($pages) {
+    add_filter('datamachine_admin_pages', function($pages) {
         $pages['jobs'] = [
             'page_title' => __('Jobs', 'data-machine'),
             'menu_title' => __('Jobs', 'data-machine'),  
@@ -40,19 +40,19 @@ function dm_register_jobs_admin_page_filters() {
             'templates' => __DIR__ . '/templates/',
             'assets' => [
                 'css' => [
-                    'dm-core-modal' => [
+                    'datamachine-core-modal' => [
                         'file' => 'inc/Core/Admin/Modal/assets/css/core-modal.css',
                         'deps' => [],
                         'media' => 'all'
                     ],
-                    'dm-admin-jobs' => [
+                    'datamachine-admin-jobs' => [
                         'file' => 'inc/Core/Admin/Pages/Jobs/assets/css/admin-jobs.css',
-                        'deps' => ['dm-core-modal'],
+                        'deps' => ['datamachine-core-modal'],
                         'media' => 'all'
                     ]
                 ],
                 'js' => [
-                    'dm-core-modal' => [
+                    'datamachine-core-modal' => [
                         'file' => 'inc/Core/Admin/Modal/assets/js/core-modal.js',
                         'deps' => ['jquery'],
                         'in_footer' => true,
@@ -69,7 +69,7 @@ function dm_register_jobs_admin_page_filters() {
                             ]
                         ]
                     ],
-                    'dm-jobs-admin' => [
+                    'datamachine-jobs-admin' => [
                         'file' => 'inc/Core/Admin/Pages/Jobs/assets/js/data-machine-jobs.js',
                         'deps' => ['jquery'],
                         'in_footer' => true,
@@ -84,9 +84,9 @@ function dm_register_jobs_admin_page_filters() {
                             ]
                         ]
                     ],
-                    'dm-jobs-modal' => [
+                    'datamachine-jobs-modal' => [
                         'file' => 'inc/Core/Admin/Pages/Jobs/assets/js/jobs-modal.js',
-                        'deps' => ['jquery', 'dm-core-modal'],
+                        'deps' => ['jquery', 'datamachine-core-modal'],
                         'in_footer' => true,
                         'localize' => [
                             'object' => 'dmJobsModal',
@@ -108,122 +108,17 @@ function dm_register_jobs_admin_page_filters() {
 }
 
 // Auto-register when file loads - achieving complete self-containment
-dm_register_jobs_admin_page_filters();
+datamachine_register_jobs_admin_page_filters();
 
 /**
  * Register Jobs Admin modal
  * 
  * @since NEXT_VERSION
  */
-add_filter('dm_modals', function($modals) {
+add_filter('datamachine_modals', function($modals) {
     $modals['jobs-admin'] = [
         'title' => __('Jobs Administration', 'data-machine'),
         'template' => 'modal/jobs-admin'
     ];
     return $modals;
-});
-
-/**
- * AJAX handler for manual processed items deletion
- * Uses the existing dm_delete action infrastructure
- * 
- * @since NEXT_VERSION
- */
-add_action('wp_ajax_dm_clear_processed_items_manual', function() {
-    // Security checks
-    if (!check_ajax_referer('dm_ajax_actions', 'nonce', false)) {
-        wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
-    }
-    
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
-    }
-    
-    // Get parameters
-    $clear_type = sanitize_text_field(wp_unslash($_POST['clear_type'] ?? ''));
-    $target_id = intval(sanitize_text_field(wp_unslash($_POST['target_id'] ?? '0')));
-    
-    if (!in_array($clear_type, ['pipeline', 'flow'])) {
-        wp_send_json_error(['message' => __('Invalid clear type', 'data-machine')]);
-    }
-    
-    if (!$target_id) {
-        wp_send_json_error(['message' => __('Invalid target ID', 'data-machine')]);
-    }
-    
-    if ($clear_type === 'pipeline') {
-        do_action('dm_delete_processed_items', ['pipeline_id' => (int)$target_id]);
-    } else {
-        do_action('dm_delete_processed_items', ['flow_id' => (int)$target_id]);
-    }
-    
-    // The dm_delete action handles the response via wp_send_json_success/error
-    // If we get here without a response sent, send a generic success
-    // (This shouldn't happen as Delete.php sends the response)
-});
-
-/**
- * AJAX handler to get flows for a specific pipeline
- * 
- * @since NEXT_VERSION
- */
-add_action('wp_ajax_dm_get_pipeline_flows_for_select', function() {
-    // Security checks
-    if (!check_ajax_referer('dm_ajax_actions', 'nonce', false)) {
-        wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
-    }
-    
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
-    }
-    
-    $pipeline_id = intval(sanitize_text_field(wp_unslash($_POST['pipeline_id'] ?? '0')));
-    
-    if (!$pipeline_id) {
-        wp_send_json_error(['message' => __('Invalid pipeline ID', 'data-machine')]);
-    }
-    
-    // Use the existing filter to get flows for the pipeline
-    $pipeline_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
-    
-    $flows = [];
-    foreach ($pipeline_flows as $flow) {
-        $flows[] = [
-            'flow_id' => $flow['flow_id'],
-            'flow_name' => $flow['flow_name']
-        ];
-    }
-    
-    wp_send_json_success(['flows' => $flows]);
-});
-
-/**
- * AJAX handler for manual jobs deletion
- * Uses the existing dm_delete action infrastructure
- * 
- * @since NEXT_VERSION
- */
-add_action('wp_ajax_dm_clear_jobs_manual', function() {
-    // Security checks
-    if (!check_ajax_referer('dm_ajax_actions', 'nonce', false)) {
-        wp_send_json_error(['message' => __('Security verification failed', 'data-machine')]);
-    }
-    
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
-    }
-    
-    // Get parameters
-    $clear_type = sanitize_text_field(wp_unslash($_POST['clear_jobs_type'] ?? ''));
-    $cleanup_processed = !empty(sanitize_text_field(wp_unslash($_POST['cleanup_processed'] ?? '')));
-    
-    if (!in_array($clear_type, ['all', 'failed'])) {
-        wp_send_json_error(['message' => __('Invalid clear type', 'data-machine')]);
-    }
-    
-    do_action('dm_delete_jobs', $clear_type, $cleanup_processed);
-    
-    // The dm_delete action handles the response via wp_send_json_success/error
-    // If we get here without a response sent, send a generic success
-    // (This shouldn't happen as Delete.php sends the response)
 });

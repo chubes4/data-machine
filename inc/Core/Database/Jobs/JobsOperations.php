@@ -29,7 +29,7 @@ class JobsOperations {
         $flow_id = absint($job_data['flow_id'] ?? 0);
         
         if (empty($pipeline_id) || empty($flow_id)) {
-            do_action('dm_log', 'error', 'Invalid pipeline+flow-based job data', [
+            do_action('datamachine_log', 'error', 'Invalid pipeline+flow-based job data', [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id
             ]);
@@ -48,7 +48,7 @@ class JobsOperations {
         $inserted = $this->wpdb->insert($this->table_name, $data, $format);
         
         if (false === $inserted) {
-            do_action('dm_log', 'error', 'Failed to insert pipeline+flow-based job', [
+            do_action('datamachine_log', 'error', 'Failed to insert pipeline+flow-based job', [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id,
                 'db_error' => $this->wpdb->last_error
@@ -58,7 +58,7 @@ class JobsOperations {
         
         $job_id = $this->wpdb->insert_id;
 
-        do_action('dm_clear_jobs_cache');
+        do_action('datamachine_clear_jobs_cache');
 
         return $job_id;
     }
@@ -73,7 +73,7 @@ class JobsOperations {
         if ( false === $cached_result ) {
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             $job = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE job_id = %d", $this->table_name, $job_id ), OBJECT );
-            do_action('dm_cache_set', $cache_key, $job, 300, 'jobs'); // 5 min cache for job data
+            do_action('datamachine_cache_set', $cache_key, $job, 300, 'jobs'); // 5 min cache for job data
             $cached_result = $job;
         } else {
             $job = $cached_result;
@@ -89,7 +89,7 @@ class JobsOperations {
         if ( false === $cached_result ) {
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(job_id) FROM %i", $this->table_name ) );
-            do_action('dm_cache_set', $cache_key, $count, 300, 'jobs'); // 5 min cache for counts
+            do_action('datamachine_cache_set', $cache_key, $count, 300, 'jobs'); // 5 min cache for counts
             $cached_result = $count;
         } else {
             $count = $cached_result;
@@ -126,7 +126,7 @@ class JobsOperations {
             $sql = "SELECT j.*, p.pipeline_name, f.flow_name FROM {$this->table_name} j LEFT JOIN {$pipelines_table} p ON j.pipeline_id = p.pipeline_id LEFT JOIN {$flows_table} f ON j.flow_id = f.flow_id ORDER BY $orderby $order";
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             $results = $this->wpdb->get_results( $this->wpdb->prepare( $sql . " LIMIT %d OFFSET %d", $per_page, $offset ), ARRAY_A );
-            do_action('dm_cache_set', $cache_key, $results, 60, 'jobs'); // 1 min cache for recent jobs
+            do_action('datamachine_cache_set', $cache_key, $results, 60, 'jobs'); // 1 min cache for recent jobs
             $cached_result = $results;
         } else {
             $results = $cached_result;
@@ -143,13 +143,13 @@ class JobsOperations {
             return [];
         }
         
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {
             return [];
         }
         
-        $flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
+        $flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
         if (empty($flows)) {
             return [];
         }
@@ -187,7 +187,7 @@ class JobsOperations {
         if ( false === $cached_result ) {
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             $results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE flow_id = %d ORDER BY created_at DESC", $this->table_name, $flow_id ), ARRAY_A );
-            do_action('dm_cache_set', $cache_key, $results, 300, 'jobs'); // 5 min cache for flow jobs
+            do_action('datamachine_cache_set', $cache_key, $results, 300, 'jobs'); // 5 min cache for flow jobs
             $cached_result = $results;
         } else {
             $results = $cached_result;
@@ -202,7 +202,7 @@ class JobsOperations {
     public function delete_jobs(array $criteria = []): int|false {
         
         if (empty($criteria)) {
-            do_action('dm_log', 'warning', 'No criteria provided for jobs deletion');
+            do_action('datamachine_log', 'warning', 'No criteria provided for jobs deletion');
             return false;
         }
         
@@ -214,7 +214,7 @@ class JobsOperations {
             $result = $this->wpdb->query( $this->wpdb->prepare( "DELETE FROM %i", $this->table_name ) );
         }
         
-        do_action('dm_log', 'debug', 'Deleted jobs', [
+        do_action('datamachine_log', 'debug', 'Deleted jobs', [
             'criteria' => $criteria,
             'jobs_deleted' => $result !== false ? $result : 0,
             'success' => $result !== false
@@ -222,18 +222,18 @@ class JobsOperations {
 
         // Invalidate job caches
         if ($result !== false && $result > 0) {
-            do_action('dm_clear_jobs_cache');
+            do_action('datamachine_clear_jobs_cache');
         }
 
         return $result;
     }
 
     /**
-     * Store engine data for centralized access via dm_engine_data filter.
+     * Store engine data for centralized access via datamachine_engine_data filter.
      */
     public function store_engine_data(int $job_id, array $data): bool {
         if ($job_id <= 0) {
-            do_action('dm_log', 'error', 'Invalid job ID for engine_data storage', ['job_id' => $job_id]);
+            do_action('datamachine_log', 'error', 'Invalid job ID for engine_data storage', ['job_id' => $job_id]);
             return false;
         }
 
@@ -248,7 +248,7 @@ class JobsOperations {
         );
 
         if (false === $result) {
-            do_action('dm_log', 'error', 'Failed to store engine_data', [
+            do_action('datamachine_log', 'error', 'Failed to store engine_data', [
                 'job_id' => $job_id,
                 'db_error' => $this->wpdb->last_error
             ]);
@@ -259,7 +259,7 @@ class JobsOperations {
         $cache_key = Cache::JOB_CACHE_KEY . $job_id;
         delete_transient($cache_key);
 
-        do_action('dm_log', 'debug', 'Stored engine_data successfully', [
+        do_action('datamachine_log', 'debug', 'Stored engine_data successfully', [
             'job_id' => $job_id,
             'data_keys' => array_keys($data)
         ]);
@@ -268,7 +268,7 @@ class JobsOperations {
     }
 
     /**
-     * Retrieve stored engine data for dm_engine_data filter access.
+     * Retrieve stored engine data for datamachine_engine_data filter access.
      */
     public function retrieve_engine_data(int $job_id): array {
         if ($job_id <= 0) {

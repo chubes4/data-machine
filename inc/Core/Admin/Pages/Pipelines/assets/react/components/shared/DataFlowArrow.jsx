@@ -1,0 +1,33 @@
+/**
+ * Data Flow Arrow Component
+ *
+ * Visual arrow between pipeline steps showing data flow direction.
+ */
+
+/**
+ * Data Flow Arrow Component
+ *
+ * @returns {React.ReactElement} Arrow SVG
+ */
+export default function DataFlowArrow() {
+	return (
+		<div className="dm-data-flow-arrow" style={{ display: 'flex', alignItems: 'center', padding: '0 10px' }}>
+			<svg
+				width="40"
+				height="20"
+				viewBox="0 0 40 20"
+				fill="none"
+				xmlns="http://www.w3.org/2000/svg"
+				aria-hidden="true"
+			>
+				<path
+					d="M0 10 L30 10 L25 5 M30 10 L25 15"
+					stroke="#8c8f94"
+					strokeWidth="2"
+					strokeLinecap="round"
+					strokeLinejoin="round"
+				/>
+			</svg>
+		</div>
+	);
+}

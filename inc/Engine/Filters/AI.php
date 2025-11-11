@@ -13,17 +13,22 @@ defined('WPINC') || exit;
 /**
  * Register AI integration filters for pipeline-aware AI configuration.
  */
-function dm_register_ai_filters() {
+function datamachine_register_ai_filters() {
     
-    add_filter('dm_ai_config', function($default, $pipeline_step_id = null) {
+    add_filter('datamachine_ai_config', function($default, $pipeline_step_id = null) {
         if (!$pipeline_step_id) {
             return [];
         }
 
-        $step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
+        $job_id = apply_filters('datamachine_current_job_id', null);
+
+        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+        $pipeline_config = $engine_data['pipeline_config'] ?? [];
+
+        $step_config = $pipeline_config[$pipeline_step_id] ?? [];
 
         if (empty($step_config)) {
-            do_action('dm_log', 'debug', 'AI Config: No step configuration found in pipeline database', [
+            do_action('datamachine_log', 'debug', 'AI Config: No step configuration found in engine data', [
                 'pipeline_step_id' => $pipeline_step_id
             ]);
 
@@ -45,4 +50,4 @@ function dm_register_ai_filters() {
 }
 
 // Initialize AI filters on WordPress init
-add_action('init', 'dm_register_ai_filters');
+add_action('init', 'datamachine_register_ai_filters');

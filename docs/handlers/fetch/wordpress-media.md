@@ -64,7 +64,7 @@ $handler_config = [
 
 **Parent Content Integration**: When enabled, includes formatted parent post content with AI instruction prompts.
 
-**Engine Data Storage**: URLs are stored in database via centralized `dm_engine_data` filter for access by handlers.
+**Engine Data Storage**: URLs are stored in database via centralized `datamachine_engine_data` filter for access by handlers.
 
 ## Content Format
 
@@ -115,7 +115,7 @@ Content:
 ]
 ```
 
-**Engine Data** (stored in database, accessed via `dm_engine_data` filter):
+**Engine Data** (stored in database, accessed via `datamachine_engine_data` filter):
 ```php
 [
     'source_url' => 'parent_post_permalink',    // When include_parent_content enabled
@@ -158,4 +158,4 @@ Content:
 - Inaccessible media files
 - Missing attachment metadata
 
-**Logging**: Uses `dm_log` action with debug/error levels for media discovery, parent content integration, and file system access.
+**Logging**: Uses `datamachine_log` action with debug/error levels for media discovery, parent content integration, and file system access.

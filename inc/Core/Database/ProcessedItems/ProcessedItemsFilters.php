@@ -28,10 +28,10 @@ if (!defined('ABSPATH')) {
  * 
  * @since 0.1.0
  */
-function dm_register_processed_items_database_filters() {
+function datamachine_register_processed_items_database_filters() {
     
     // Database service registration - Pure discovery pattern (collection building)
-    add_filter('dm_db', function($services) {
+    add_filter('datamachine_db', function($services) {
         if (!isset($services['processed_items'])) {
             $services['processed_items'] = new ProcessedItems();
         }
@@ -39,8 +39,8 @@ function dm_register_processed_items_database_filters() {
     });
 
     // Cache clearing integration - respond to clear all cache action
-    add_action('dm_clear_all_cache', function() {
-        $all_databases = apply_filters('dm_db', []);
+    add_action('datamachine_clear_all_cache', function() {
+        $all_databases = apply_filters('datamachine_db', []);
         $processed_items = $all_databases['processed_items'] ?? null;
         if ($processed_items) {
             $processed_items->clear_all_processed_cache();
@@ -50,4 +50,4 @@ function dm_register_processed_items_database_filters() {
 }
 
 // Auto-register when file loads - achieving complete self-containment
-dm_register_processed_items_database_filters();
+datamachine_register_processed_items_database_filters();

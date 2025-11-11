@@ -93,7 +93,7 @@ Top Comments:
 
 ### Engine Data Filter Architecture
 
-The Reddit handler generates clean data packets for AI processing while storing engine parameters in database for later retrieval via dm_engine_data filter.
+The Reddit handler generates clean data packets for AI processing while storing engine parameters in database for later retrieval via datamachine_engine_data filter.
 
 ### Clean Data Packet (AI-Visible)
 ```php
@@ -127,7 +127,7 @@ $engine_parameters = [
 
 ### Return Structure
 ```php
-// Engine parameters are stored in database via centralized dm_engine_data filter
+// Engine parameters are stored in database via centralized datamachine_engine_data filter
 // Only clean data returned for AI processing
 return [
     'processed_items' => [$clean_data_packet]
@@ -151,4 +151,4 @@ return [
 - Unsupported sort options
 - Malformed search terms
 
-**Logging**: Uses `dm_log` action with debug/error levels for API calls, token management, and item processing.
+**Logging**: Uses `datamachine_log` action with debug/error levels for API calls, token management, and item processing.

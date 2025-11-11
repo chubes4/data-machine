@@ -39,7 +39,7 @@ Posts content to Bluesky using app passwords and AT Protocol integration with me
 
 ## Source URL Attribution
 
-**Engine Data Source**: `source_url` retrieved from fetch handlers via `dm_engine_data` filter
+**Engine Data Source**: `source_url` retrieved from fetch handlers via `datamachine_engine_data` filter
 
 **Link Handling** (`link_handling: 'append'`):
 - Source URL appended to post content with double newline separator (`\n\n`)

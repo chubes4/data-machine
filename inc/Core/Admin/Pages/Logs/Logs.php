@@ -48,13 +48,12 @@ class Logs
         // Set log file path
         $upload_dir = wp_upload_dir();
         $this->log_file_path = $upload_dir['basedir'] . '/data-machine-logs/data-machine.log';
-        
+
         // Admin page registration now handled by LogsFilters.php
-        
+
         // Form handling moved to template - admin_init timing issues
-        
-        // AJAX handlers - dm_clear_logs and dm_load_full_logs are registered in LogsFilters.php
-        add_action('wp_ajax_dm_update_log_level', [$this, 'ajax_update_log_level']);
+
+        // AJAX replaced by REST API - see /inc/Api/Logs.php
     }
 
 
@@ -73,12 +72,12 @@ class Logs
         $recent_logs = $this->get_recent_logs();
 
         // Use universal template system
-        echo wp_kses(apply_filters('dm_render_template', '', 'page/logs-page', [
+        echo wp_kses(apply_filters('datamachine_render_template', '', 'page/logs-page', [
             'current_log_level' => $current_log_level,
             'log_file_info' => $log_file_info,
             'recent_logs' => $recent_logs,
             'log_file_path' => $this->log_file_path
-        ]), dm_allowed_html());
+        ]), datamachine_allowed_html());
     }
 
     /**
@@ -157,7 +156,7 @@ class Logs
      */
     private function get_current_log_level()
     {
-        return apply_filters('dm_log_file', 'error', 'get_level');
+        return apply_filters('datamachine_log_file', 'error', 'get_level');
     }
 
     /**
@@ -174,20 +173,20 @@ class Logs
      */
     public function handle_form_actions()
     {
-        $nonce = sanitize_text_field(wp_unslash($_POST['dm_logs_nonce'] ?? ''));
-        if (!wp_verify_nonce($nonce, 'dm_logs_action')) {
+        $nonce = sanitize_text_field(wp_unslash($_POST['datamachine_logs_nonce'] ?? ''));
+        if (!wp_verify_nonce($nonce, 'datamachine_logs_action')) {
             return;
         }
 
-        if (!isset($_POST['dm_logs_action'])) {
+        if (!isset($_POST['datamachine_logs_action'])) {
             return;
         }
 
-        $action = sanitize_text_field(wp_unslash($_POST['dm_logs_action']));
+        $action = sanitize_text_field(wp_unslash($_POST['datamachine_logs_action']));
 
         switch ($action) {
             case 'clear_all':
-                do_action('dm_log', 'clear_all');
+                do_action('datamachine_log', 'clear_all');
                 $this->add_admin_notice(
                     __('Logs cleared successfully.', 'data-machine'),
                     'success'
@@ -196,9 +195,9 @@ class Logs
 
             case 'update_log_level':
                 $new_level = sanitize_text_field(wp_unslash($_POST['log_level'] ?? ''));
-                $available_levels = apply_filters('dm_log_file', [], 'get_available_levels');
+                $available_levels = apply_filters('datamachine_log_file', [], 'get_available_levels');
                 if (array_key_exists($new_level, $available_levels)) {
-                    do_action('dm_log', 'set_level', $new_level);
+                    do_action('datamachine_log', 'set_level', $new_level);
                     $this->add_admin_notice(
                         /* translators: %s: Log level name (e.g., debug, info, error) */
                         sprintf(esc_html__('Log level updated to %s.', 'data-machine'), ucfirst($new_level)),
@@ -224,87 +223,6 @@ class Logs
             echo '</div>';
         });
     }
-
-    /**
-     * AJAX: Clear logs - delegated to central dm_delete action
-     */
-    public function ajax_clear_logs()
-    {
-        $nonce = sanitize_text_field(wp_unslash($_POST['dm_logs_nonce'] ?? ''));
-        if (!wp_verify_nonce($nonce, 'dm_logs_action')) {
-            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
-        }
-
-        do_action('dm_delete_logs');
-    }
-
-    /**
-     * AJAX: Update log level.
-     */
-    public function ajax_update_log_level()
-    {
-        $nonce = sanitize_text_field(wp_unslash($_POST['dm_logs_nonce'] ?? ''));
-        if (!wp_verify_nonce($nonce, 'dm_logs_action')) {
-            wp_die(esc_html__('Security check failed.', 'data-machine'), 403);
-        }
-
-        $new_level = sanitize_text_field(wp_unslash($_POST['level'] ?? ''));
-        
-        $available_levels = apply_filters('dm_log_file', [], 'get_available_levels');
-        if (!array_key_exists($new_level, $available_levels)) {
-            wp_send_json_error(__('Invalid log level.', 'data-machine'));
-        }
-
-        do_action('dm_log', 'set_level', $new_level);
-        /* translators: %s: Log level name (e.g., debug, info, error) */
-        wp_send_json_success(sprintf(esc_html__('Log level updated to %s.', 'data-machine'), ucfirst($new_level)));
-    }
-
-    /**
-     * AJAX: Load full log file content.
-     */
-    public function ajax_load_full_logs()
-    {
-        $nonce = sanitize_text_field(wp_unslash($_POST['dm_logs_nonce'] ?? ''));
-        if (!wp_verify_nonce($nonce, 'dm_logs_action')) {
-            wp_send_json_error(__('Security check failed.', 'data-machine'));
-        }
-
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Insufficient permissions.', 'data-machine'));
-        }
-
-        if (!file_exists($this->log_file_path)) {
-            wp_send_json_error(__('Log file not found.', 'data-machine'));
-        }
-
-        $file_content = file_get_contents($this->log_file_path);
-        if ($file_content === false) {
-            wp_send_json_error(__('Unable to read log file.', 'data-machine'));
-        }
-
-        // Split into lines and reverse to show newest first
-        $lines = explode("\n", $file_content);
-        $lines = array_filter($lines, function($line) {
-            return trim($line) !== '';
-        });
-        $lines = array_reverse($lines);
-
-        $total_lines = count($lines);
-        $full_content = implode("\n", $lines);
-
-        wp_send_json_success([
-            'content' => $full_content,
-            'total_lines' => $total_lines,
-            'message' => sprintf(
-                /* translators: %d: Total number of log entries loaded */
-                esc_html__('Loaded %d total log entries.', 'data-machine'),
-                $total_lines
-            )
-        ]);
-    }
-
-
 }
 
 // Instance creation handled by LogsFilters.php as needed

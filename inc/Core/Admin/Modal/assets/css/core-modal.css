@@ -12,7 +12,7 @@
 
 /* ===== UNIVERSAL MODAL STRUCTURE ===== */
 
-.dm-modal {
+.datamachine-modal {
     display: none;
     position: fixed;
     top: 0;
@@ -22,13 +22,13 @@
     z-index: 9999;
 }
 
-.dm-modal.dm-modal-active {
+.datamachine-modal.datamachine-modal-active {
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.dm-modal-overlay {
+.datamachine-modal-overlay {
     position: absolute;
     top: 0;
     left: 0;
@@ -37,7 +37,7 @@
     background: rgba(0, 0, 0, 0.5);
 }
 
-.dm-modal-container {
+.datamachine-modal-container {
     position: relative;
     background: #fff;
     border-radius: 8px;
@@ -48,7 +48,7 @@
     overflow: hidden;
 }
 
-.dm-modal-header {
+.datamachine-modal-header {
     padding: 20px;
     border-bottom: 1px solid #eee;
     display: flex;
@@ -56,14 +56,14 @@
     align-items: center;
 }
 
-.dm-modal-title {
+.datamachine-modal-title {
     margin: 0;
     font-size: 20px;
     color: #333;
 }
 
 
-.dm-modal-body {
+.datamachine-modal-body {
     padding: 20px;
     max-height: 60vh;
     overflow-y: auto;
@@ -71,128 +71,128 @@
 
 /* ===== MODAL ANIMATIONS ===== */
 
-.dm-modal {
+.datamachine-modal {
     opacity: 0;
     transition: opacity 0.3s ease;
 }
 
-.dm-modal.dm-modal-active {
+.datamachine-modal.datamachine-modal-active {
     opacity: 1;
 }
 
-.dm-modal-container {
+.datamachine-modal-container {
     transform: translateY(-50px);
     transition: transform 0.3s ease;
 }
 
-.dm-modal.dm-modal-active .dm-modal-container {
+.datamachine-modal.datamachine-modal-active .datamachine-modal-container {
     transform: translateY(0);
 }
 
 /* ===== RESPONSIVE DESIGN ===== */
 
 @media (max-width: 768px) {
-    .dm-modal-container {
+    .datamachine-modal-container {
         width: 95%;
         max-height: 90vh;
     }
     
-    .dm-modal-header {
+    .datamachine-modal-header {
         padding: 15px;
     }
     
-    .dm-modal-body {
+    .datamachine-modal-body {
         padding: 15px;
         max-height: 70vh;
     }
     
-    .dm-modal-title {
+    .datamachine-modal-title {
         font-size: 18px;
     }
 }
 
 /* ===== ACCESSIBILITY ===== */
 
-.dm-modal[aria-hidden="true"] {
+.datamachine-modal[aria-hidden="true"] {
     display: none !important;
 }
 
-.dm-modal-container {
+.datamachine-modal-container {
     outline: none;
 }
 
-.dm-modal-close:focus {
+.datamachine-modal-close:focus {
     outline: 2px solid #0073aa;
     outline-offset: 2px;
 }
 
 /* ===== LOADING STATE ===== */
 
-.dm-modal-loading .dm-modal-body {
+.datamachine-modal-loading .datamachine-modal-body {
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 200px;
 }
 
-.dm-modal-loading .dm-modal-body::before {
+.datamachine-modal-loading .datamachine-modal-body::before {
     content: "";
     width: 32px;
     height: 32px;
     border: 3px solid #f3f3f3;
     border-top: 3px solid #0073aa;
     border-radius: 50%;
-    animation: dm-modal-spin 1s linear infinite;
+    animation: datamachine-modal-spin 1s linear infinite;
 }
 
-@keyframes dm-modal-spin {
+@keyframes datamachine-modal-spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
 
 /* ===== MODAL NOTICE SYSTEM ===== */
 
-.dm-modal-notice {
+.datamachine-modal-notice {
     padding: 12px 20px;
     margin: 0;
     border-left: 4px solid;
     font-size: 14px;
     line-height: 1.4;
     position: relative;
-    animation: dm-modal-notice-slide-in 0.3s ease-out;
+    animation: datamachine-modal-notice-slide-in 0.3s ease-out;
 }
 
-.dm-modal-notice--success {
+.datamachine-modal-notice--success {
     border-color: #46b450;
     background: #ecf7ed;
     color: #155724;
 }
 
-.dm-modal-notice--error {
+.datamachine-modal-notice--error {
     border-color: #dc3232;
     background: #f8d7da;
     color: #721c24;
 }
 
-.dm-modal-notice--warning {
+.datamachine-modal-notice--warning {
     border-color: #ffb900;
     background: #fff3cd;
     color: #856404;
 }
 
-.dm-modal-notice--info {
+.datamachine-modal-notice--info {
     border-color: #0073aa;
     background: #e6f3ff;
     color: #0c5460;
 }
 
 /* Modal error message styling */
-.dm-modal-error-message {
+.datamachine-modal-error-message {
     color: #d63638;
     margin: 20px 0;
 }
 
-@keyframes dm-modal-notice-slide-in {
+@keyframes datamachine-modal-notice-slide-in {
     0% {
         opacity: 0;
         transform: translateY(-10px);
@@ -206,7 +206,7 @@
 /* ===== FORM FIELD STYLING ===== */
 
 /* Readonly field styling */
-.dm-readonly-field {
+.datamachine-readonly-field {
     background-color: #f9f9f9 !important;
     color: #666 !important;
 }

@@ -11,12 +11,12 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-function dm_register_settings_admin_page_filters() {
-    add_action('admin_menu', 'dm_register_settings_page');
-    add_action('admin_init', 'dm_register_settings');
-    add_action('admin_enqueue_scripts', 'dm_enqueue_settings_assets');
+function datamachine_register_settings_admin_page_filters() {
+    add_action('admin_menu', 'datamachine_register_settings_page');
+    add_action('admin_init', 'datamachine_register_settings');
+    add_action('admin_enqueue_scripts', 'datamachine_enqueue_settings_assets');
     
-    add_filter('dm_modals', function($modals) {
+    add_filter('datamachine_modals', function($modals) {
         $modals['tool-config'] = [
             'template' => 'modal/tool-config',
             'title' => __('Configure Tool', 'data-machine')
@@ -24,7 +24,7 @@ function dm_register_settings_admin_page_filters() {
         return $modals;
     });
     
-    add_filter('dm_render_template', function($content, $template_name, $data = []) {
+    add_filter('datamachine_render_template', function($content, $template_name, $data = []) {
         $settings_template_path = DATA_MACHINE_PATH . 'inc/Core/Admin/Settings/templates/' . $template_name . '.php';
         if (file_exists($settings_template_path)) {
             ob_start();
@@ -35,27 +35,27 @@ function dm_register_settings_admin_page_filters() {
         return $content;
     }, 15, 3);
     
-    add_filter('dm_admin_assets', function($assets, $context) {
+    add_filter('datamachine_admin_assets', function($assets, $context) {
         if ($context === 'settings') {
             $assets['css'] = [
-                'dm-core-modal' => [
+                'datamachine-core-modal' => [
                     'src' => '../Modal/assets/css/core-modal.css',
                     'deps' => []
                 ],
-                'dm-settings-page' => [
+                'datamachine-settings-page' => [
                     'src' => 'assets/css/settings-page.css',
-                    'deps' => ['dm-core-modal']
+                    'deps' => ['datamachine-core-modal']
                 ]
             ];
             $assets['js'] = [
-                'dm-core-modal' => [
+                'datamachine-core-modal' => [
                     'src' => '../Modal/assets/js/core-modal.js',
                     'deps' => ['jquery'],
                     'localize' => [
-                        'object' => 'dmCoreModal',
+                        'object' => 'datamachineCoreModal',
                         'data' => [
                             'ajax_url' => admin_url('admin-ajax.php'),
-                            'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
+                            'datamachine_ajax_nonce' => wp_create_nonce('datamachine_ajax_actions'),
                             'strings' => [
                                 'loading' => __('Loading...', 'data-machine'),
                                 'error' => __('Error', 'data-machine'),
@@ -64,14 +64,14 @@ function dm_register_settings_admin_page_filters() {
                         ]
                     ]
                 ],
-                'dm-settings-page' => [
+                'datamachine-settings-page' => [
                     'src' => 'assets/js/settings-page.js',
-                    'deps' => ['jquery', 'dm-core-modal'],
+                    'deps' => ['jquery', 'datamachine-core-modal'],
                     'localize' => [
-                        'object' => 'dmSettings',
+                        'object' => 'datamachineSettings',
                         'data' => [
                             'ajax_url' => admin_url('admin-ajax.php'),
-                            'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
+                            'datamachine_ajax_nonce' => wp_create_nonce('datamachine_ajax_actions'),
                             'strings' => [
                                 'saving' => __('Saving...', 'data-machine'),
                                 'clearing' => __('Clearing...', 'data-machine')
@@ -83,43 +83,41 @@ function dm_register_settings_admin_page_filters() {
         }
         return $assets;
     }, 10, 2);
-    
-    \DataMachine\Core\Admin\Settings\SettingsPageAjax::register();
 }
 
-function dm_register_settings_page() {
+function datamachine_register_settings_page() {
     $hook = add_options_page(
         __('Data Machine Settings', 'data-machine'),
         __('Data Machine', 'data-machine'),
         'manage_options',
         'data-machine-settings',
-        'dm_render_settings_page_template'
+        'datamachine_render_settings_page_template'
     );
     
-    dm_store_settings_hook_suffix($hook);
+    datamachine_store_settings_hook_suffix($hook);
 }
 
-function dm_register_settings() {
+function datamachine_register_settings() {
     register_setting('data_machine_settings', 'data_machine_settings', [
-        'sanitize_callback' => 'dm_sanitize_settings'
+        'sanitize_callback' => 'datamachine_sanitize_settings'
     ]);
 }
 
-function dm_render_settings_page_template() {
-    $content = apply_filters('dm_render_template', '', 'page/settings-page', [
+function datamachine_render_settings_page_template() {
+    $content = apply_filters('datamachine_render_template', '', 'page/settings-page', [
         'page_title' => __('Data Machine Settings', 'data-machine')
     ]);
 
-    echo wp_kses($content, dm_allowed_html());
+    echo wp_kses($content, datamachine_allowed_html());
 }
 
-function dm_enqueue_settings_assets($hook) {
-    $settings_hook = dm_get_settings_hook_suffix();
+function datamachine_enqueue_settings_assets($hook) {
+    $settings_hook = datamachine_get_settings_hook_suffix();
     if ($hook !== $settings_hook) {
         return;
     }
     
-    $assets = apply_filters('dm_admin_assets', [], 'settings');
+    $assets = apply_filters('datamachine_admin_assets', [], 'settings');
     
     foreach ($assets['css'] ?? [] as $handle => $css_config) {
         $css_url = DATA_MACHINE_URL . 'inc/Core/Admin/Settings/' . $css_config['src'];
@@ -158,7 +156,7 @@ function dm_enqueue_settings_assets($hook) {
     }
 }
 
-function dm_sanitize_settings($input) {
+function datamachine_sanitize_settings($input) {
     $sanitized = [];
     
     $sanitized['engine_mode'] = !empty($input['engine_mode']);
@@ -216,9 +214,10 @@ function dm_sanitize_settings($input) {
         $sanitized['wordpress_settings']['enabled_taxonomies'] = [];
         if (is_array($wp_input['enabled_taxonomies'] ?? [])) {
             $valid_taxonomies = get_taxonomies(['public' => true]);
+            $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
             foreach ($wp_input['enabled_taxonomies'] as $taxonomy => $value) {
                 if (in_array($taxonomy, $valid_taxonomies) && $value) {
-                    if (!in_array($taxonomy, ['post_format', 'nav_menu', 'link_category'])) {
+                    if (!in_array($taxonomy, $excluded)) {
                         $sanitized['wordpress_settings']['enabled_taxonomies'][$taxonomy] = 1;
                     }
                 }
@@ -228,7 +227,8 @@ function dm_sanitize_settings($input) {
         $sanitized['wordpress_settings']['default_author_id'] = 0;
         if (isset($wp_input['default_author_id'])) {
             $author_id = absint($wp_input['default_author_id']);
-            if (get_userdata($author_id)) {
+            $display_name = apply_filters('datamachine_wordpress_user_display_name', null, $author_id);
+            if ($display_name !== null) {
                 $sanitized['wordpress_settings']['default_author_id'] = $author_id;
             }
         }
@@ -256,7 +256,7 @@ function dm_sanitize_settings($input) {
     return $sanitized;
 }
 
-add_filter('dm_enabled_settings', function($fields, $handler_slug, $step_type, $context) {
+add_filter('datamachine_enabled_settings', function($fields, $handler_slug, $step_type, $context) {
     if (!in_array($handler_slug, ['wordpress_posts', 'wordpress_publish'])) {
         return $fields;
     }
@@ -315,7 +315,7 @@ add_filter('dm_enabled_settings', function($fields, $handler_slug, $step_type, $
     return $fields;
 }, 10, 4);
 
-add_filter('dm_apply_global_defaults', function($current_settings, $handler_slug, $step_type) {
+add_filter('datamachine_apply_global_defaults', function($current_settings, $handler_slug, $step_type) {
     if (!in_array($handler_slug, ['wordpress_posts', 'wordpress_publish'])) {
         return $current_settings;
     }
@@ -344,12 +344,12 @@ add_filter('dm_apply_global_defaults', function($current_settings, $handler_slug
     return $current_settings;
 }, 10, 3);
 
-function dm_store_settings_hook_suffix($hook) {
-    update_option('dm_settings_hook_suffix', $hook);
+function datamachine_store_settings_hook_suffix($hook) {
+    update_option('datamachine_settings_hook_suffix', $hook);
 }
 
-function dm_get_settings_hook_suffix() {
-    return get_option('dm_settings_hook_suffix', '');
+function datamachine_get_settings_hook_suffix() {
+    return get_option('datamachine_settings_hook_suffix', '');
 }
 
-dm_register_settings_admin_page_filters();
+datamachine_register_settings_admin_page_filters();

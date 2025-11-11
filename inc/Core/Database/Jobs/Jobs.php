@@ -100,7 +100,7 @@ class Jobs {
 
         dbDelta( $sql );
 
-        do_action('dm_log', 'debug', 'Created jobs database table with pipeline+flow architecture', [
+        do_action('datamachine_log', 'debug', 'Created jobs database table with pipeline+flow architecture', [
             'table_name' => $table_name,
             'action' => 'create_table'
         ]);

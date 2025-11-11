@@ -21,7 +21,7 @@
                 return;
             }
 
-            const $modal = $('#dm-modal');
+            const $modal = $('#datamachine-modal');
             if ($modal.length === 0) {
                 return;
             }
@@ -30,15 +30,15 @@
             this.showLoading();
             
             const ajaxData = {
-                action: 'dm_get_modal_content',
+                action: 'datamachine_get_modal_content',
                 template: template,
                 context: context,
-                nonce: dmCoreModal.dm_ajax_nonce
+                nonce: datamachineCoreModal.datamachine_ajax_nonce
             };
             
 
             $.ajax({
-                url: dmCoreModal.ajax_url,
+                url: datamachineCoreModal.ajax_url,
                 type: 'POST',
                 data: ajaxData,
                 success: (response) => {
@@ -64,29 +64,29 @@
          * Close the modal
          */
         close: function() {
-            const $modal = $('#dm-modal');
-            $modal.removeClass('dm-modal-active');
+            const $modal = $('#datamachine-modal');
+            $modal.removeClass('datamachine-modal-active');
             $modal.attr('aria-hidden', 'true');
-            $('body').removeClass('dm-modal-active');
+            $('body').removeClass('datamachine-modal-active');
             
             // Trigger close event for cleanup
-            $(document).trigger('dm-core-modal-closed');
+            $(document).trigger('datamachine-core-modal-closed');
         },
 
         /**
          * Show loading state
          */
         showLoading: function() {
-            const $modal = $('#dm-modal');
-            const $modalTitle = $modal.find('.dm-modal-title');
-            const $modalBody = $modal.find('.dm-modal-body');
+            const $modal = $('#datamachine-modal');
+            const $modalTitle = $modal.find('.datamachine-modal-title');
+            const $modalBody = $modal.find('.datamachine-modal-body');
 
-            $modalTitle.text(dmCoreModal.strings?.loading || 'Loading...');
+            $modalTitle.text(datamachineCoreModal.strings?.loading || 'Loading...');
             $modalBody.html('');
             
-            $modal.addClass('dm-modal-loading dm-modal-active');
+            $modal.addClass('datamachine-modal-loading datamachine-modal-active');
             $modal.attr('aria-hidden', 'false');
-            $('body').addClass('dm-modal-active');
+            $('body').addClass('datamachine-modal-active');
 
             // Focus management
             $modal.focus();
@@ -99,19 +99,19 @@
          * @param {string} content - Modal HTML content
          */
         showContent: function(title, content) {
-            const $modal = $('#dm-modal');
-            const $modalTitle = $modal.find('.dm-modal-title');
-            const $modalBody = $modal.find('.dm-modal-body');
+            const $modal = $('#datamachine-modal');
+            const $modalTitle = $modal.find('.datamachine-modal-title');
+            const $modalBody = $modal.find('.datamachine-modal-body');
 
             // Set content
             $modalTitle.text(title);
             $modalBody.html(content);
             
             // Remove loading state
-            $modal.removeClass('dm-modal-loading');
+            $modal.removeClass('datamachine-modal-loading');
             
             // Trigger content loaded event
-            $(document).trigger('dm-core-modal-content-loaded', [title, content]);
+            $(document).trigger('datamachine-core-modal-content-loaded', [title, content]);
         },
 
         /**
@@ -120,22 +120,22 @@
          * @param {string} message - Error message to display
          */
         showError: function(message) {
-            const $modal = $('#dm-modal');
-            const $modalTitle = $modal.find('.dm-modal-title');
-            const $modalBody = $modal.find('.dm-modal-body');
+            const $modal = $('#datamachine-modal');
+            const $modalTitle = $modal.find('.datamachine-modal-title');
+            const $modalBody = $modal.find('.datamachine-modal-body');
 
-            $modalTitle.text(dmCoreModal.strings?.error || 'Error');
+            $modalTitle.text(datamachineCoreModal.strings?.error || 'Error');
             $modalBody.html(`
-                <div class="dm-modal-error">
-                    <p class="dm-modal-error-message">${message}</p>
+                <div class="datamachine-modal-error">
+                    <p class="datamachine-modal-error-message">${message}</p>
                     <button type="button" class="button" onclick="dmCoreModal.close()">
-                        ${dmCoreModal.strings?.close || 'Close'}
+                        ${datamachineCoreModal.strings?.close || 'Close'}
                     </button>
                 </div>
             `);
             
             // Remove loading state
-            $modal.removeClass('dm-modal-loading');
+            $modal.removeClass('datamachine-modal-loading');
         }
     });
 
@@ -145,26 +145,26 @@
     $(document).ready(function() {
         
         // Modal close trigger - clean, direct class-based trigger
-        $(document).on('click', '.dm-modal-close, .dm-cancel-settings', function(e) {
+        $(document).on('click', '.datamachine-modal-close, .datamachine-cancel-settings', function(e) {
             dmCoreModal.close();
         });
 
         // Escape key to close modal
         $(document).on('keydown', function(e) {
-            if (e.keyCode === 27 && $('#dm-modal').hasClass('dm-modal-active')) {
+            if (e.keyCode === 27 && $('#datamachine-modal').hasClass('datamachine-modal-active')) {
                 dmCoreModal.close();
             }
         });
 
         // Focus trap within modal for accessibility
         $(document).on('keydown', function(e) {
-            if (e.keyCode === 9 && $('#dm-modal').hasClass('dm-modal-active')) {
+            if (e.keyCode === 9 && $('#datamachine-modal').hasClass('datamachine-modal-active')) {
                 trapFocus(e);
             }
         });
 
         // Modal open trigger - clean, direct class-based trigger
-        $(document).on('click', '.dm-modal-open', function(e) {
+        $(document).on('click', '.datamachine-modal-open', function(e) {
             e.preventDefault();
             
             const $button = $(e.currentTarget);
@@ -187,7 +187,7 @@
         });
 
         // Modal content trigger - changes modal content without closing/reopening
-        $(document).on('click', '.dm-modal-content', function(e) {
+        $(document).on('click', '.datamachine-modal-content', function(e) {
             e.preventDefault();
             
             const $button = $(e.currentTarget);
@@ -213,7 +213,7 @@
      * @param {Event} e - Keyboard event
      */
     function trapFocus(e) {
-        const $modal = $('#dm-modal');
+        const $modal = $('#datamachine-modal');
         const $focusableElements = $modal.find('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
         const $firstElement = $focusableElements.first();
         const $lastElement = $focusableElements.last();

@@ -94,7 +94,7 @@ add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = 
 
 **Configuration Check**:
 ```php
-$tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
+$tool_configured = apply_filters('datamachine_tool_configured', false, $tool_id);
 ```
 
 ## Tool Interface
@@ -156,10 +156,10 @@ if (empty($parameters['query'])) {
 ### Configuration Validation
 
 ```php
-add_filter('dm_tool_configured', function($configured, $tool_id) {
+add_filter('datamachine_tool_configured', function($configured, $tool_id) {
     switch ($tool_id) {
         case 'google_search':
-            $config = get_option('dm_search_config', []);
+            $config = get_option('datamachine_search_config', []);
             $google_config = $config['google_search'] ?? [];
             return !empty($google_config['api_key']) && !empty($google_config['search_engine_id']);
         
@@ -219,7 +219,7 @@ All tool results flow through AIStepConversationManager for consistent conversat
 ```php
 class GoogleSearch {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        $config = apply_filters('dm_get_tool_config', [], 'google_search');
+        $config = apply_filters('datamachine_get_tool_config', [], 'google_search');
         $api_key = $config['api_key'] ?? '';
         $search_engine_id = $config['search_engine_id'] ?? '';
         if (empty($api_key) || empty($search_engine_id)) {

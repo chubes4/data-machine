@@ -12,38 +12,38 @@
 
 
 /* File status section */
-.dm-uploaded-files-section {
+.datamachine-uploaded-files-section {
     margin-top: 20px;
     border-top: 1px solid #e1e1e1;
     padding-top: 20px;
 }
 
-.dm-files-section-header {
+.datamachine-files-section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
 }
 
-.dm-files-section-header h5 {
+.datamachine-files-section-header h5 {
     margin: 0;
     color: #1d2327;
 }
 
-.dm-refresh-files .dashicons {
+.datamachine-refresh-files .dashicons {
     font-size: 14px;
     line-height: 1;
     margin-right: 4px;
 }
 
 /* File states */
-.dm-files-state {
+.datamachine-files-state {
     padding: 20px;
     text-align: center;
     color: #646970;
 }
 
-.dm-loading-files .dashicons {
+.datamachine-loading-files .dashicons {
     animation: spin 1s linear infinite;
 }
 
@@ -52,54 +52,54 @@
     100% { transform: rotate(360deg); }
 }
 
-.dm-empty-files {
+.datamachine-empty-files {
     background: #f9f9f9;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
 }
 
-.dm-empty-icon {
+.datamachine-empty-icon {
     font-size: 48px;
     color: #c3c4c7;
     margin-bottom: 10px;
 }
 
-.dm-empty-message {
+.datamachine-empty-message {
     margin: 0 0 8px 0;
     color: #50575e;
     font-weight: 500;
 }
 
-.dm-empty-hint {
+.datamachine-empty-hint {
     margin: 0;
     font-size: 12px;
     color: #8c8f94;
 }
 
 
-.dm-file-row.dm-file-status-processed {
+.datamachine-file-row.datamachine-file-status-processed {
     background: #f8fff8;
 }
 
-.dm-file-row.dm-file-status-pending {
+.datamachine-file-row.datamachine-file-status-pending {
     background: #fffef7;
 }
 
-.dm-file-name {
+.datamachine-file-name {
     font-weight: 500;
 }
 
-.dm-file-actions-col {
+.datamachine-file-actions-col {
     width: 60px;
     text-align: center;
 }
 
-.dm-delete-file {
+.datamachine-delete-file {
     padding: 4px 6px;
     min-height: unset;
     line-height: 1;
 }
 
-.dm-delete-file .dashicons {
+.datamachine-delete-file .dashicons {
     font-size: 14px;
     line-height: 1;
 }
@@ -108,30 +108,30 @@
 /* ===== STEP SELECTION MODAL ===== */
 
 /* Step selection container */
-.dm-step-selection-container {
+.datamachine-step-selection-container {
     padding: 0;
 }
 
-.dm-step-selection-header {
+.datamachine-step-selection-header {
     margin-bottom: 20px;
     text-align: center;
 }
 
-.dm-step-selection-header p {
+.datamachine-step-selection-header p {
     margin: 0;
     color: #666;
     font-size: 14px;
 }
 
 /* Step selection cards grid */
-.dm-step-cards {
+.datamachine-step-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 15px;
 }
 
 /* Individual step selection cards */
-.dm-step-selection-card {
+.datamachine-step-selection-card {
     background: #fff;
     border: 2px solid #e1e1e1;
     border-radius: 8px;
@@ -142,38 +142,38 @@
     text-align: left;
 }
 
-.dm-step-selection-card:hover {
+.datamachine-step-selection-card:hover {
     border-color: #0073aa;
     box-shadow: 0 4px 12px rgba(0, 115, 170, 0.1);
     transform: translateY(-2px);
 }
 
-.dm-step-selection-card:focus {
+.datamachine-step-selection-card:focus {
     outline: 2px solid #0073aa;
     outline-offset: 2px;
     border-color: #0073aa;
 }
 
 /* Step selection card content */
-.dm-step-card-header {
+.datamachine-step-card-header {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 10px;
 }
 
-.dm-step-card-title {
+.datamachine-step-card-title {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
     color: #333;
 }
 
-.dm-step-card-body {
+.datamachine-step-card-body {
     margin-top: 12px;
 }
 
-.dm-step-card-description {
+.datamachine-step-card-description {
     margin: 0 0 10px 0;
     color: #666;
     font-size: 14px;
@@ -181,13 +181,13 @@
 }
 
 /* Step handlers in modal cards */
-.dm-step-handlers {
+.datamachine-step-handlers {
     margin-top: 10px;
     padding-top: 8px;
     border-top: 1px solid #eee;
 }
 
-.dm-handlers-label {
+.datamachine-handlers-label {
     font-size: 12px;
     font-weight: 600;
     color: #666;
@@ -195,7 +195,7 @@
     margin-bottom: 4px;
 }
 
-.dm-handlers-list {
+.datamachine-handlers-list {
     font-size: 12px;
     color: #888;
     font-style: italic;
@@ -203,28 +203,28 @@
 
 /* ===== HANDLER SELECTION MODAL ===== */
 
-.dm-handler-selection-container {
+.datamachine-handler-selection-container {
     padding: 0;
 }
 
-.dm-handler-selection-header {
+.datamachine-handler-selection-header {
     margin-bottom: 20px;
     text-align: center;
 }
 
-.dm-handler-selection-header p {
+.datamachine-handler-selection-header p {
     margin: 0;
     color: #666;
     font-size: 14px;
 }
 
-.dm-handler-cards {
+.datamachine-handler-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 12px;
 }
 
-.dm-handler-selection-card {
+.datamachine-handler-selection-card {
     background: #fff;
     border: 2px solid #e1e1e1;
     border-radius: 6px;
@@ -234,20 +234,20 @@
     text-align: center;
 }
 
-.dm-handler-selection-card:hover {
+.datamachine-handler-selection-card:hover {
     border-color: #0073aa;
     box-shadow: 0 3px 8px rgba(0, 115, 170, 0.1);
     transform: translateY(-1px);
 }
 
-.dm-handler-card-title {
+.datamachine-handler-card-title {
     margin: 0 0 8px 0;
     font-size: 14px;
     font-weight: 600;
     color: #333;
 }
 
-.dm-handler-card-description {
+.datamachine-handler-card-description {
     margin: 0;
     font-size: 12px;
     color: #666;
@@ -256,91 +256,91 @@
 
 /* ===== DELETE STEP MODAL ===== */
 
-.dm-delete-step-container {
+.datamachine-delete-step-container {
     padding: 0;
 }
 
-.dm-delete-warning {
+.datamachine-delete-warning {
     background: #fff3cd;
     border: 1px solid #ffeaa7;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
     padding: 15px;
     margin: 15px 0;
 }
 
-.dm-delete-warning h4 {
+.datamachine-delete-warning h4 {
     margin: 0 0 10px 0;
     color: #856404;
 }
 
 /* Affected flows styling - moved from page file */
-.dm-affected-flows {
+.datamachine-affected-flows {
     background: #fff3cd;
     border: 1px solid #ffeaa7;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
     padding: 15px;
     margin: 15px 0;
 }
 
-.dm-affected-flows h4 {
+.datamachine-affected-flows h4 {
     margin: 0 0 10px 0;
     color: #856404;
 }
 
-.dm-flows-list {
+.datamachine-flows-list {
     margin: 10px 0;
 }
 
-.dm-flow-item {
+.datamachine-flow-item {
     margin-bottom: 5px;
 }
 
-.dm-flow-name {
+.datamachine-flow-name {
     font-weight: 600;
 }
 
-.dm-flow-info {
+.datamachine-flow-info {
     color: #666;
     font-size: 12px;
 }
 
-.dm-cascade-warning {
+.datamachine-cascade-warning {
     margin-top: 15px;
     color: #856404;
     font-size: 14px;
 }
 
-.dm-no-flows {
+.datamachine-no-flows {
     background: #d1ecf1;
     border: 1px solid #bee5eb;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
     padding: 15px;
     margin: 15px 0;
 }
 
-.dm-no-flows .dm-info {
+.datamachine-no-flows .datamachine-info {
     margin: 0;
     color: #0c5460;
 }
 
 /* ===== HANDLER SETTINGS MODAL ===== */
 
-.dm-handler-settings-container {
+.datamachine-handler-settings-container {
     padding: 0;
 }
 
-.dm-handler-settings-header {
+.datamachine-handler-settings-header {
     margin-bottom: 20px;
     text-align: center;
 }
 
-.dm-handler-settings-header h3 {
+.datamachine-handler-settings-header h3 {
     margin: 0 0 8px 0;
     font-size: 18px;
     color: #333;
 }
 
-.dm-handler-settings-header p {
+.datamachine-handler-settings-header p {
     margin: 0;
     color: #666;
     font-size: 14px;
@@ -348,7 +348,7 @@
 
 /* ===== ENHANCED TAB SYSTEM ===== */
 
-.dm-handler-config-tabs {
+.datamachine-handler-config-tabs {
     display: flex;
     border-bottom: 2px solid #e1e1e1;
     margin-bottom: 20px;
@@ -356,7 +356,7 @@
     border-radius: 6px 6px 0 0;
 }
 
-.dm-tab-button {
+.datamachine-tab-button {
     background: none;
     border: none;
     padding: 12px 20px;
@@ -370,78 +370,78 @@
     text-align: center;
 }
 
-.dm-tab-button.active {
+.datamachine-tab-button.active {
     border-bottom-color: #0073aa;
     color: #0073aa;
     font-weight: 600;
     background: #fff;
 }
 
-.dm-tab-button:not(.disabled):hover {
+.datamachine-tab-button:not(.disabled):hover {
     background: #f0f8ff;
     color: #0073aa;
 }
 
-.dm-tab-button.disabled {
+.datamachine-tab-button.disabled {
     color: #ccc;
     cursor: not-allowed;
     opacity: 0.6;
 }
 
-.dm-tab-content {
+.datamachine-tab-content {
     padding: 0;
 }
 
-.dm-tab-content.active {
+.datamachine-tab-content.active {
     display: block;
 }
 
 /* ===== SETTINGS TAB STYLES ===== */
 
-.dm-settings-fields {
+.datamachine-settings-fields {
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
-.dm-form-field {
+.datamachine-form-field {
     display: flex;
     flex-direction: column;
     gap: 5px;
 }
 
-.dm-form-field label {
+.datamachine-form-field label {
     font-weight: 600;
     color: #333;
     font-size: 14px;
 }
 
-.dm-form-field input,
-.dm-form-field select,
-.dm-form-field textarea {
+.datamachine-form-field input,
+.datamachine-form-field select,
+.datamachine-form-field textarea {
     padding: 8px 12px;
     border: 1px solid #ddd;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
     font-size: 14px;
     transition: border-color 0.2s ease;
 }
 
-.dm-form-field input:focus,
-.dm-form-field select:focus,
-.dm-form-field textarea:focus {
+.datamachine-form-field input:focus,
+.datamachine-form-field select:focus,
+.datamachine-form-field textarea:focus {
     border-color: #0073aa;
     outline: none;
     box-shadow: 0 0 0 1px #0073aa;
 }
 
-.dm-form-field .description {
+.datamachine-form-field .description {
     font-size: 12px;
     color: #666;
     margin: 0;
     font-style: italic;
 }
 
-.dm-no-settings {
+.datamachine-no-settings {
     text-align: center;
     padding: 30px 20px;
     background: #f8f9fa;
@@ -449,12 +449,12 @@
     border: 1px solid #e1e1e1;
 }
 
-.dm-no-settings p {
+.datamachine-no-settings p {
     margin: 0 0 10px 0;
     color: #666;
 }
 
-.dm-settings-actions {
+.datamachine-settings-actions {
     display: flex;
     gap: 10px;
     justify-content: flex-end;
@@ -465,41 +465,41 @@
 
 /* ===== AUTHENTICATION TAB STYLES ===== */
 
-.dm-auth-content {
+.datamachine-auth-content {
     padding: 0;
 }
 
 /* Auth configuration section */
-.dm-auth-config-section {
+.datamachine-auth-config-section {
     margin-bottom: 20px;
 }
 
-.dm-auth-config-form {
+.datamachine-auth-config-form {
     margin-bottom: 20px;
 }
 
-.dm-redirect-uri-section {
+.datamachine-redirect-uri-section {
     margin-top: 20px;
     padding: 15px;
     background: #f9f9f9;
     border-left: 4px solid #0073aa;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
 }
 
-.dm-redirect-uri-section h5 {
+.datamachine-redirect-uri-section h5 {
     margin: 0 0 10px 0;
     color: #1d2327;
     font-size: 14px;
     font-weight: 600;
 }
 
-.dm-redirect-uri-section p {
+.datamachine-redirect-uri-section p {
     margin: 0 0 10px 0;
     color: #646970;
     font-size: 13px;
 }
 
-.dm-redirect-uri-code {
+.datamachine-redirect-uri-code {
     display: block;
     padding: 8px;
     background: white;
@@ -512,11 +512,11 @@
     line-height: 1.4;
 }
 
-.dm-auth-connection-section {
+.datamachine-auth-connection-section {
     margin-top: 20px;
 }
 
-.dm-auth-status {
+.datamachine-auth-status {
     background: #f8f9fa;
     border: 1px solid #dee2e6;
     border-radius: 6px;
@@ -528,72 +528,72 @@
     gap: 20px;
 }
 
-.dm-auth-status--connected {
+.datamachine-auth-status--connected {
     background: #d4edda;
     border-color: #c3e6cb;
 }
 
-.dm-auth-status--connected strong {
+.datamachine-auth-status--connected strong {
     color: #155724;
 }
 
-.dm-auth-status--disconnected {
+.datamachine-auth-status--disconnected {
     background: #f8d7da;
     border-color: #f5c6cb;
 }
 
-.dm-auth-status--disconnected strong {
+.datamachine-auth-status--disconnected strong {
     color: #721c24;
 }
 
-.dm-auth-status-info {
+.datamachine-auth-status-info {
     flex: 1;
 }
 
-.dm-auth-status-info strong {
+.datamachine-auth-status-info strong {
     display: block;
     font-size: 16px;
     margin-bottom: 8px;
 }
 
-.dm-auth-account-details {
+.datamachine-auth-account-details {
     margin-top: 10px;
 }
 
-.dm-auth-account-details p {
+.datamachine-auth-account-details p {
     margin: 4px 0;
     font-size: 13px;
     color: #666;
 }
 
-.dm-auth-actions {
+.datamachine-auth-actions {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
     align-items: flex-start;
 }
 
-.dm-auth-help {
+.datamachine-auth-help {
     background: #fff;
     border: 1px solid #e1e1e1;
     border-radius: 6px;
     padding: 15px;
 }
 
-.dm-auth-help h4 {
+.datamachine-auth-help h4 {
     margin: 0 0 10px 0;
     font-size: 14px;
     color: #333;
 }
 
-.dm-auth-help p {
+.datamachine-auth-help p {
     margin: 0;
     color: #666;
     font-size: 13px;
     line-height: 1.4;
 }
 
-.dm-auth-not-available {
+.datamachine-auth-not-available {
     text-align: center;
     padding: 30px 20px;
     background: #f8f9fa;
@@ -601,12 +601,12 @@
     border: 1px solid #e1e1e1;
 }
 
-.dm-auth-not-available h4 {
+.datamachine-auth-not-available h4 {
     margin: 0 0 10px 0;
     color: #666;
 }
 
-.dm-auth-not-available p {
+.datamachine-auth-not-available p {
     margin: 0;
     color: #888;
     font-size: 14px;
@@ -614,7 +614,7 @@
 
 /* ===== FLOW MANAGEMENT STYLES ===== */
 
-.dm-flows-header {
+.datamachine-flows-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -624,151 +624,151 @@
     border-bottom: 1px solid #e1e1e1;
 }
 
-.dm-flows-header-content {
+.datamachine-flows-header-content {
     flex: 1;
 }
 
-.dm-flows-header-content h4 {
+.datamachine-flows-header-content h4 {
     margin: 0 0 5px 0;
     font-size: 16px;
     color: #333;
 }
 
-.dm-flows-header-content .dm-section-description {
+.datamachine-flows-header-content .datamachine-section-description {
     margin: 0;
     color: #666;
     font-size: 14px;
 }
 
-.dm-flows-header-actions {
+.datamachine-flows-header-actions {
     flex-shrink: 0;
 }
 
-.dm-add-flow-btn {
+.datamachine-add-flow-btn {
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 8px 16px;
     font-size: 14px;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
     transition: all 0.2s ease;
 }
 
-.dm-add-flow-btn .dashicons {
+.datamachine-add-flow-btn .dashicons {
     font-size: 16px;
     width: 16px;
     height: 16px;
 }
 
-.dm-add-flow-btn:hover:not(:disabled) {
+.datamachine-add-flow-btn:hover:not(:disabled) {
     background: #005a87;
     border-color: #005a87;
 }
 
-.dm-add-flow-btn:disabled {
+.datamachine-add-flow-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
 
 /* ===== FLOW SCHEDULING MODAL STYLES ===== */
 
-.dm-flow-schedule-container {
+.datamachine-flow-schedule-container {
     padding: 0;
 }
 
-.dm-flow-schedule-header {
+.datamachine-flow-schedule-header {
     margin-bottom: 20px;
     text-align: center;
 }
 
-.dm-flow-schedule-header h3 {
+.datamachine-flow-schedule-header h3 {
     margin: 0 0 8px 0;
     font-size: 18px;
     color: #333;
 }
 
-.dm-flow-schedule-header p {
+.datamachine-flow-schedule-header p {
     margin: 0;
     color: #666;
     font-size: 14px;
 }
 
-.dm-flow-schedule-form {
+.datamachine-flow-schedule-form {
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
-.dm-radio-group {
+.datamachine-radio-group {
     display: flex;
     flex-direction: column;
     gap: 10px;
     margin-top: 8px;
 }
 
-.dm-radio-option {
+.datamachine-radio-option {
     display: flex;
     align-items: flex-start;
     gap: 8px;
     padding: 12px;
     border: 1px solid #e1e1e1;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.dm-radio-option:hover {
+.datamachine-radio-option:hover {
     border-color: #0073aa;
     background: #f8f9fa;
 }
 
-.dm-radio-option input[type="radio"] {
+.datamachine-radio-option input[type="radio"] {
     margin: 2px 0 0 0;
 }
 
-.dm-radio-option span {
+.datamachine-radio-option span {
     font-weight: 600;
     color: #333;
 }
 
-.dm-radio-option small {
+.datamachine-radio-option small {
     display: block;
     color: #666;
     font-size: 12px;
     margin-top: 2px;
 }
 
-.dm-schedule-interval-field {
+.datamachine-schedule-interval-field {
     background: #f8f9fa;
     border: 1px solid #e1e1e1;
     border-radius: 6px;
     padding: 15px;
 }
 
-.dm-schedule-info {
+.datamachine-schedule-info {
     background: #fff;
     border: 1px solid #e1e1e1;
     border-radius: 6px;
     padding: 15px;
 }
 
-.dm-schedule-info h4 {
+.datamachine-schedule-info h4 {
     margin: 0 0 10px 0;
     font-size: 14px;
     color: #333;
 }
 
-.dm-schedule-details p {
+.datamachine-schedule-details p {
     margin: 5px 0;
     font-size: 14px;
     color: #666;
 }
 
-.dm-schedule-details strong {
+.datamachine-schedule-details strong {
     color: #333;
 }
 
-.dm-schedule-actions {
+.datamachine-schedule-actions {
     display: flex;
     gap: 10px;
     justify-content: flex-end;
@@ -776,12 +776,12 @@
     border-top: 1px solid #e1e1e1;
 }
 
-.dm-run-now-btn {
+.datamachine-run-now-btn {
     color: #d63638;
     border-color: #d63638;
 }
 
-.dm-run-now-btn:hover {
+.datamachine-run-now-btn:hover {
     background: #d63638;
     border-color: #d63638;
     color: #fff;
@@ -791,68 +791,68 @@
 /* ===== RESPONSIVE DESIGN ===== */
 
 @media (max-width: 768px) {
-    .dm-step-cards,
-    .dm-handler-cards {
+    .datamachine-step-cards,
+    .datamachine-handler-cards {
         grid-template-columns: 1fr;
     }
     
-    .dm-step-selection-card,
-    .dm-handler-selection-card {
+    .datamachine-step-selection-card,
+    .datamachine-handler-selection-card {
         padding: 15px;
     }
     
-    .dm-step-card-title {
+    .datamachine-step-card-title {
         font-size: 15px;
     }
     
-    .dm-step-card-description {
+    .datamachine-step-card-description {
         font-size: 13px;
     }
     
     /* Auth modal responsive adjustments */
-    .dm-auth-status {
+    .datamachine-auth-status {
         flex-direction: column;
         gap: 15px;
     }
     
-    .dm-auth-actions {
+    .datamachine-auth-actions {
         justify-content: center;
         width: 100%;
     }
     
-    .dm-auth-actions .button {
+    .datamachine-auth-actions .button {
         flex: 1;
         min-width: 120px;
         text-align: center;
     }
     
-    .dm-handler-config-tabs {
+    .datamachine-handler-config-tabs {
         flex-direction: column;
     }
     
-    .dm-tab-button {
+    .datamachine-tab-button {
         border-bottom: none;
         border-right: 3px solid transparent;
         text-align: left;
     }
     
-    .dm-tab-button.active {
+    .datamachine-tab-button.active {
         border-bottom: none;
         border-right-color: #0073aa;
     }
     
     /* Flow header responsive adjustments */
-    .dm-flows-header {
+    .datamachine-flows-header {
         flex-direction: column;
         gap: 15px;
         align-items: stretch;
     }
     
-    .dm-flows-header-actions {
+    .datamachine-flows-header-actions {
         align-self: flex-start;
     }
     
-    .dm-add-flow-btn {
+    .datamachine-add-flow-btn {
         width: 100%;
         justify-content: center;
     }
@@ -862,13 +862,13 @@
 /* ===== FILES HANDLER MODAL STYLES ===== */
 
 /* Main file upload interface */
-.dm-file-upload-interface {
+.datamachine-file-upload-interface {
     padding: 20px;
 }
 
 /* Drag and drop zone - consolidated from duplicate selectors */
-.dm-file-drop-zone,
-#dm-file-drop-zone {
+.datamachine-file-drop-zone,
+#datamachine-file-drop-zone {
     border: 2px dashed #ccc;
     border-radius: 8px;
     padding: 40px 20px;
@@ -879,15 +879,15 @@
     position: relative;
 }
 
-.dm-file-drop-zone:hover,
-#dm-file-drop-zone:hover {
+.datamachine-file-drop-zone:hover,
+#datamachine-file-drop-zone:hover {
     border-color: #0073aa;
     background: #f0f8ff;
     transform: translateY(-1px);
 }
 
-.dm-file-drop-zone.dragover,
-#dm-file-drop-zone.dm-drag-over {
+.datamachine-file-drop-zone.dragover,
+#datamachine-file-drop-zone.datamachine-drag-over {
     border-color: #0073aa;
     background: #e8f4ff;
     box-shadow: 0 4px 12px rgba(0, 115, 170, 0.1);
@@ -895,7 +895,7 @@
 }
 
 /* Upload icon */
-.dm-file-upload-icon {
+.datamachine-file-upload-icon {
     font-size: 48px;
     color: #ccc;
     margin-bottom: 15px;
@@ -903,53 +903,53 @@
     transition: color 0.3s ease;
 }
 
-.dm-file-drop-zone:hover .dm-file-upload-icon,
-#dm-file-drop-zone:hover .dm-file-upload-icon {
+.datamachine-file-drop-zone:hover .datamachine-file-upload-icon,
+#datamachine-file-drop-zone:hover .datamachine-file-upload-icon {
     color: #0073aa;
 }
 
 /* Upload instructions */
-.dm-file-upload-hint {
+.datamachine-file-upload-hint {
     font-size: 16px;
     color: #333;
     margin-bottom: 8px;
     font-weight: 500;
 }
 
-.dm-file-upload-formats {
+.datamachine-file-upload-formats {
     font-size: 14px;
     color: #666;
     margin: 0;
 }
 
 /* Progress indicators */
-.dm-upload-progress {
+.datamachine-upload-progress {
     margin-top: 20px;
     display: none;
 }
 
-.dm-upload-progress.active {
+.datamachine-upload-progress.active {
     display: block;
 }
 
-.dm-progress-bar {
+.datamachine-progress-bar {
     width: 100%;
     height: 8px;
     background: #e1e1e1;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
     overflow: hidden;
     margin-bottom: 8px;
 }
 
-.dm-progress-fill {
+.datamachine-progress-fill {
     height: 100%;
     background: linear-gradient(90deg, #0073aa, #005a87);
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
     transition: width 0.3s ease;
     width: 0%;
 }
 
-.dm-progress-text {
+.datamachine-progress-text {
     font-size: 14px;
     color: #666;
     text-align: center;
@@ -957,65 +957,65 @@
 }
 
 /* File status section */
-.dm-file-status-section {
+.datamachine-file-status-section {
     margin-top: 30px;
     border-top: 1px solid #e1e1e1;
     padding-top: 20px;
 }
 
-.dm-section-header {
+.datamachine-section-header {
     display: flex;
     flex-direction: column;
     margin-bottom: 15px;
 }
 
-.dm-section-header h4 {
+.datamachine-section-header h4 {
     margin: 0;
     font-size: 16px;
     color: #333;
     font-weight: 600;
 }
 
-.dm-refresh-files {
+.datamachine-refresh-files {
     display: flex;
     align-items: center;
     gap: 5px;
     padding: 6px 12px;
     font-size: 13px;
     border: 1px solid #ddd;
-    border-radius: var(--dm-border-radius);
+    border-radius: var(--datamachine-border-radius);
     background: #fff;
     color: #666;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.dm-refresh-files:hover {
+.datamachine-refresh-files:hover {
     border-color: #0073aa;
     color: #0073aa;
     background: #f8f9fa;
 }
 
-.dm-refresh-files .dashicons {
+.datamachine-refresh-files .dashicons {
     font-size: 14px;
     width: 14px;
     height: 14px;
 }
 
 /* Loading and empty states */
-.dm-loading-files {
+.datamachine-loading-files {
     text-align: center;
     padding: 30px;
     color: #666;
 }
 
-.dm-loading-files .dashicons {
+.datamachine-loading-files .dashicons {
     font-size: 24px;
     margin-bottom: 10px;
     animation: spin 1s linear infinite;
 }
 
-.dm-empty-files {
+.datamachine-empty-files {
     text-align: center;
     padding: 40px 20px;
     color: #888;
@@ -1024,26 +1024,26 @@
     border-radius: 6px;
 }
 
-.dm-empty-files .dashicons {
+.datamachine-empty-files .dashicons {
     font-size: 32px;
     margin-bottom: 12px;
     color: #ccc;
     display: block;
 }
 
-.dm-empty-files p {
+.datamachine-empty-files p {
     margin: 0;
     font-size: 14px;
     font-style: italic;
 }
 
 /* File status icons */
-.dm-file-status-icon[data-status="processed"] {
+.datamachine-file-status-icon[data-status="processed"] {
     color: #46b450;
     margin-right: 4px;
 }
 
-.dm-file-status-icon[data-status="pending"] {
+.datamachine-file-status-icon[data-status="pending"] {
     color: #ffb900;
     margin-right: 4px;
 }
@@ -1053,23 +1053,23 @@
 }
 
 /* Upload progress - initially hidden */
-.dm-file-upload-progress {
+.datamachine-file-upload-progress {
     display: none;
 }
 
-.dm-file-upload-progress.active {
+.datamachine-file-upload-progress.active {
     display: block;
 }
 
 /* Import file input - hidden by default */
-.dm-import-file {
+.datamachine-import-file {
     display: none;
 }
 
 
 /* File status table - consolidated from duplicate selectors */
-.dm-files-table,
-.dm-file-status-table {
+.datamachine-files-table,
+.datamachine-file-status-table {
     width: 100%;
     border-collapse: collapse;
     background: #fff;
@@ -1078,23 +1078,23 @@
     overflow: hidden;
 }
 
-.dm-files-table thead,
-.dm-file-status-table thead {
+.datamachine-files-table thead,
+.datamachine-file-status-table thead {
     background: #f8f9fa;
 }
 
-.dm-files-table th,
-.dm-files-table td,
-.dm-file-status-table th,
-.dm-file-status-table td {
+.datamachine-files-table th,
+.datamachine-files-table td,
+.datamachine-file-status-table th,
+.datamachine-file-status-table td {
     padding: 12px 15px;
     text-align: left;
     border-bottom: 1px solid #e1e1e1;
     font-size: 14px;
 }
 
-.dm-files-table th,
-.dm-file-status-table th {
+.datamachine-files-table th,
+.datamachine-file-status-table th {
     font-weight: 600;
     color: #333;
     font-size: 13px;
@@ -1102,71 +1102,71 @@
     letter-spacing: 0.5px;
 }
 
-.dm-files-table tbody tr:last-child td,
-.dm-file-status-table tbody tr:last-child td {
+.datamachine-files-table tbody tr:last-child td,
+.datamachine-file-status-table tbody tr:last-child td {
     border-bottom: none;
 }
 
-.dm-files-table tbody tr:hover,
-.dm-file-status-table tbody tr:hover {
+.datamachine-files-table tbody tr:hover,
+.datamachine-file-status-table tbody tr:hover {
     background: #fafafa;
 }
 
 /* File list body and rows */
-.dm-file-list-body {
+.datamachine-file-list-body {
     /* Inherits table styling */
 }
 
-.dm-file-row {
+.datamachine-file-row {
     transition: background-color 0.2s ease;
 }
 
 /* File status indicators */
-.dm-file--pending {
+.datamachine-file--pending {
     border-left: 4px solid #f39c12;
 }
 
-.dm-file--pending .dm-file-status {
+.datamachine-file--pending .datamachine-file-status {
     color: #f39c12;
     font-weight: 600;
 }
 
-.dm-file--processed {
+.datamachine-file--processed {
     border-left: 4px solid #27ae60;
 }
 
-.dm-file--processed .dm-file-status {
+.datamachine-file--processed .datamachine-file-status {
     color: #27ae60;
     font-weight: 600;
 }
 
 /* File actions */
-.dm-file-actions {
+.datamachine-file-actions {
     display: flex;
     gap: 8px;
     align-items: center;
 }
 
-.dm-file-actions .button {
+.datamachine-file-actions .button {
     font-size: 12px;
     padding: 4px 8px;
     height: auto;
     line-height: 1.2;
 }
 
-.dm-file-actions .button-small {
+.datamachine-file-actions .button-small {
     min-height: 26px;
 }
 
 
 /* File size formatting */
-.dm-file-size {
+.datamachine-file-size {
     color: #888;
     font-size: 13px;
 }
 
 /* File name styling */
-.dm-file-name {
+.datamachine-file-name {
     font-weight: 500;
     color: #333;
     max-width: 200px;
@@ -1177,8 +1177,8 @@
 }
 
 /* File type icons in table */
-.dm-files-table .dashicons,
-.dm-file-status-table .dashicons {
+.datamachine-files-table .dashicons,
+.datamachine-file-status-table .dashicons {
     margin-right: 8px;
     color: #666;
     font-size: 16px;
@@ -1187,49 +1187,49 @@
 }
 
 /* Specific icon styles for file uploads */
-.dm-file-type-icon {
+.datamachine-file-type-icon {
     margin-right: 8px;
 }
 
-.dm-file-status-pending-icon {
+.datamachine-file-status-pending-icon {
     color: #ffb900;
     margin-right: 4px;
 }
 
 /* Upload message styling */
-.dm-upload-message {
+.datamachine-upload-message {
     margin: 10px 0;
     padding: 8px 12px;
     display: flex;
     align-items: center;
 }
 
-.dm-upload-message .dashicons {
+.datamachine-upload-message .dashicons {
     margin-right: 8px;
 }
 
 /* Authentication status modal styles */
-.dm-auth-status-modal {
+.datamachine-auth-status-modal {
     font-size: 48px;
     margin-bottom: 16px;
 }
 
-.dm-auth-status-title {
+.datamachine-auth-status-title {
     font-size: 20px;
     margin-bottom: 8px;
 }
 
-.dm-auth-status-message {
+.datamachine-auth-status-message {
     opacity: 0.8;
 }
 
-.dm-auth-status-message--with-margin {
+.datamachine-auth-status-message--with-margin {
     opacity: 0.8;
     margin-bottom: 16px;
 }
 
 /* Status badges */
-.dm-file-status {
+.datamachine-file-status {
     display: inline-flex;
     align-items: center;
     gap: 5px;
@@ -1240,17 +1240,17 @@
     background: #f8f9fa;
 }
 
-.dm-file--pending .dm-file-status {
+.datamachine-file--pending .datamachine-file-status {
     background: #fff3cd;
     color: #856404;
 }
 
-.dm-file--processed .dm-file-status {
+.datamachine-file--processed .datamachine-file-status {
     background: #d4edda;
     color: #155724;
 }
 
-.dm-file-status .dashicons {
+.datamachine-file-status .dashicons {
     font-size: 12px;
     width: 12px;
     height: 12px;
@@ -1259,49 +1259,49 @@
 
 /* Responsive adjustments for files interface */
 @media (max-width: 768px) {
-    .dm-file-drop-zone {
+    .datamachine-file-drop-zone {
         padding: 30px 15px;
     }
     
-    .dm-file-upload-icon {
+    .datamachine-file-upload-icon {
         font-size: 36px;
         margin-bottom: 12px;
     }
     
-    .dm-file-upload-hint {
+    .datamachine-file-upload-hint {
         font-size: 15px;
     }
     
-    .dm-files-table,
-    .dm-file-status-table {
+    .datamachine-files-table,
+    .datamachine-file-status-table {
         font-size: 13px;
     }
     
-    .dm-files-table th,
-    .dm-files-table td,
-    .dm-file-status-table th,
-    .dm-file-status-table td {
+    .datamachine-files-table th,
+    .datamachine-files-table td,
+    .datamachine-file-status-table th,
+    .datamachine-file-status-table td {
         padding: 10px 12px;
     }
     
-    .dm-section-header {
+    .datamachine-section-header {
         flex-direction: column;
         gap: 10px;
         align-items: stretch;
     }
     
-    .dm-refresh-files {
+    .datamachine-refresh-files {
         align-self: flex-start;
     }
     
     /* Stack file actions vertically on mobile */
-    .dm-file-actions {
+    .datamachine-file-actions {
         flex-direction: column;
         gap: 5px;
         align-items: stretch;
     }
     
-    .dm-file-actions .button {
+    .datamachine-file-actions .button {
         width: 100%;
         text-align: center;
     }
@@ -1309,35 +1309,35 @@
 
 /* ===== AI TOOL OPTIONS STYLES ===== */
 
-.dm-tool-option {
+.datamachine-tool-option {
     margin-bottom: 8px;
 }
 
-.dm-tool-option label {
+.datamachine-tool-option label {
     display: inline-block;
     margin-right: 10px;
 }
 
-.dm-tool-option span {
+.datamachine-tool-option span {
     margin-left: 4px;
 }
 
-.dm-tool-config-warning {
+.datamachine-tool-config-warning {
     color: #d63638;
     font-size: 12px;
 }
 
-.dm-tool-config-warning a {
+.datamachine-tool-config-warning a {
     color: #d63638;
     text-decoration: none;
 }
 
-.dm-tool-config-warning a:hover {
+.datamachine-tool-config-warning a:hover {
     text-decoration: underline;
 }
 
 /* Tool info icon and tooltip styles */
-.dm-tool-info {
+.datamachine-tool-info {
     cursor: help;
     color: #666;
     font-size: 14px;
@@ -1349,16 +1349,16 @@
     transition: color 0.2s ease;
 }
 
-.dm-tool-info:hover {
+.datamachine-tool-info:hover {
     color: #0073aa;
 }
 
 /* Tooltip implementation using pure CSS */
-.dm-tool-info[data-tooltip] {
+.datamachine-tool-info[data-tooltip] {
     position: relative;
 }
 
-.dm-tool-info[data-tooltip]:hover::after {
+.datamachine-tool-info[data-tooltip]:hover::after {
     content: attr(data-tooltip);
     position: absolute;
     bottom: 125%;
@@ -1377,10 +1377,10 @@
     text-align: left;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     opacity: 0;
-    animation: dm-tooltip-appear 0.2s ease forwards;
+    animation: datamachine-tooltip-appear 0.2s ease forwards;
 }
 
-.dm-tool-info[data-tooltip]:hover::before {
+.datamachine-tool-info[data-tooltip]:hover::before {
     content: '';
     position: absolute;
     bottom: 115%;
@@ -1390,10 +1390,10 @@
     border-top-color: #333;
     z-index: 1001;
     opacity: 0;
-    animation: dm-tooltip-appear 0.2s ease forwards;
+    animation: datamachine-tooltip-appear 0.2s ease forwards;
 }
 
-@keyframes dm-tooltip-appear {
+@keyframes datamachine-tooltip-appear {
     from {
         opacity: 0;
         transform: translateX(-50%) translateY(5px);
@@ -1405,7 +1405,7 @@
 }
 
 /* Tooltip positioning adjustments for viewport edges */
-.dm-tool-info[data-tooltip]:hover::after {
+.datamachine-tool-info[data-tooltip]:hover::after {
     /* Smart positioning - adjust if tooltip would overflow */
     max-width: calc(100vw - 40px);
     word-wrap: break-word;
@@ -1413,152 +1413,35 @@
 
 /* Responsive tooltip adjustments */
 @media (max-width: 768px) {
-    .dm-tool-info[data-tooltip]:hover::after {
+    .datamachine-tool-info[data-tooltip]:hover::after {
         width: 250px;
         font-size: 12px;
         padding: 8px 10px;
         bottom: 120%;
     }
     
-    .dm-tool-info[data-tooltip]:hover::before {
+    .datamachine-tool-info[data-tooltip]:hover::before {
         bottom: 110%;
     }
 }
 
 /* ===== UTILITY CLASSES ===== */
 
-.dm-no-handlers {
+.datamachine-no-handlers {
     text-align: center;
     padding: 20px;
     color: #666;
     font-style: italic;
 }
 
-.dm-modal-error {
+.datamachine-modal-error {
     text-align: center;
     padding: 20px;
     color: #d63638;
 }
 
-.dm-loading {
+.datamachine-loading {
     text-align: center;
     padding: 40px;
     color: #666;
-}
-
-/* ===== PIPELINE TEMPLATE SELECTION MODAL ===== */
-
-.dm-template-selection-container {
-    max-width: 800px;
-}
-
-.dm-template-selection-header {
-    text-align: center;
-    margin-bottom: 30px;
-}
-
-.dm-template-selection-header h3 {
-    margin: 0 0 8px 0;
-    color: #1d2327;
-    font-size: 20px;
-}
-
-.dm-template-selection-header p {
-    margin: 0;
-    color: #646970;
-    font-size: 14px;
-}
-
-.dm-template-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 16px;
-    margin-top: 20px;
-}
-
-.dm-template-card {
-    border: 1px solid #c3c4c7;
-    border-radius: 4px;
-    background: #fff;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    padding: 16px;
-    position: relative;
-}
-
-.dm-template-card:hover {
-    border-color: #2271b1;
-    box-shadow: 0 0 0 1px #2271b1;
-    transform: translateY(-1px);
-}
-
-.dm-template-card:focus {
-    outline: none;
-    border-color: #2271b1;
-    box-shadow: 0 0 0 1px #2271b1;
-}
-
-.dm-custom-pipeline-card {
-    border: 2px dashed #c3c4c7;
-    background: #f9f9f9;
-}
-
-.dm-custom-pipeline-card:hover {
-    border-color: #2271b1;
-    background: #fff;
-}
-
-.dm-template-card-header {
-    margin-bottom: 12px;
-}
-
-.dm-template-card-title {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: #1d2327;
-}
-
-.dm-template-card-body {
-    color: #646970;
-}
-
-.dm-template-card-description {
-    margin: 0 0 12px 0;
-    font-size: 14px;
-    line-height: 1.4;
-}
-
-.dm-template-steps-preview {
-    margin-top: 12px;
-}
-
-.dm-steps-flow {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.dm-step-badge {
-    background: #f0f6fc;
-    color: #0073aa;
-    padding: 4px 8px;
-    border-radius: 3px;
-    font-size: 12px;
-    font-weight: 500;
-    text-transform: capitalize;
-}
-
-.dm-step-placeholder {
-    background: #f6f7f7;
-    color: #646970;
-    border: 1px dashed #c3c4c7;
-}
-
-.dm-step-arrow {
-    color: #646970;
-    font-size: 12px;
-    font-weight: bold;
 }

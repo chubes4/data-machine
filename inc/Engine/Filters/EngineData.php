@@ -1,6 +1,6 @@
 <?php
 /**
- * Centralized engine data storage and retrieval via dm_engine_data filter.
+ * Centralized engine data storage and retrieval.
  *
  * @package DataMachine\Engine\Filters
  */
@@ -9,77 +9,57 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-function dm_register_engine_data_filter() {
+function datamachine_register_engine_data_filter() {
 
     /**
-     * Parameter count determines mode: 4 = storage, 2 = retrieval.
+     * Flexible key/value storage for engine data.
      *
-     * @param array $default Default value for retrieval
-     * @param int $job_id Job ID
-     * @param string $source_url Source URL (storage only)
-     * @param string $image_url Image URL (storage only)
-     * @return array|null Engine data for retrieval, null for storage
+     * Storage mode: apply_filters('datamachine_engine_data', null, $job_id, $key, $value)
+     * Retrieval mode: apply_filters('datamachine_engine_data', [], $job_id)
      */
-    add_filter('dm_engine_data', function($default, $job_id, $source_url = null, $image_url = null) {
+    add_filter('datamachine_engine_data', function($default, $job_id, $key = null, $value = null) {
         if (empty($job_id)) {
-            return [];
+            return $default;
         }
 
-        if (func_num_args() >= 4) {
-            $all_databases = apply_filters('dm_db', []);
-            $db_jobs = $all_databases['jobs'] ?? null;
+        $all_databases = apply_filters('datamachine_db', []);
+        $db_jobs = $all_databases['jobs'] ?? null;
 
-            if (!$db_jobs) {
-                do_action('dm_log', 'debug', 'Engine Data Storage: Database service unavailable', [
-                    'job_id' => $job_id
-                ]);
-                return null;
-            }
+        if (!$db_jobs) {
+            do_action('datamachine_log', 'debug', 'Engine Data: Database service unavailable', [
+                'job_id' => $job_id
+            ]);
+            return $default;
+        }
 
-            $engine_data = [
-                'source_url' => $source_url ?? '',
-                'image_url' => $image_url ?? ''
-            ];
+        // Storage mode: when key and value are provided
+        if ($key !== null && $value !== null) {
+            $current_data = $db_jobs->retrieve_engine_data($job_id);
+            $current_data[$key] = $value;
+            $db_jobs->update_job_engine_data($job_id, $current_data);
 
-            $db_jobs->store_engine_data($job_id, $engine_data);
-
-            do_action('dm_log', 'debug', 'Engine Data: Stored via centralized filter', [
+            do_action('datamachine_log', 'debug', 'Engine Data: Stored key/value', [
                 'job_id' => $job_id,
-                'source_url' => $engine_data['source_url'],
-                'has_image_url' => !empty($engine_data['image_url']),
-                'param_count' => func_num_args()
+                'key' => $key,
+                'value_type' => gettype($value)
             ]);
 
             return null;
         }
 
-        $all_databases = apply_filters('dm_db', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-
-        if (!$db_jobs) {
-            do_action('dm_log', 'debug', 'Engine Data: Database service unavailable', [
-                'job_id' => $job_id
-            ]);
-            return [];
-        }
-
+        // Retrieval mode: return all engine data
         $retrieved_data = $db_jobs->retrieve_engine_data($job_id);
 
         if (empty($retrieved_data)) {
-            do_action('dm_log', 'debug', 'Engine Data: No engine_data found for job', [
+            do_action('datamachine_log', 'debug', 'Engine Data: No data found for job', [
                 'job_id' => $job_id
             ]);
             return [];
         }
 
-        do_action('dm_log', 'debug', 'Engine Data: Retrieved via centralized filter', [
+        do_action('datamachine_log', 'debug', 'Engine Data: Retrieved all data', [
             'job_id' => $job_id,
-            'has_source_url' => isset($retrieved_data['source_url']),
-            'source_url' => $retrieved_data['source_url'] ?? 'NOT_SET',
-            'has_image_url' => isset($retrieved_data['image_url']),
-            'image_url' => $retrieved_data['image_url'] ?? 'NOT_SET',
-            'data_keys' => array_keys($retrieved_data),
-            'param_count' => func_num_args()
+            'data_keys' => array_keys($retrieved_data)
         ]);
 
         return $retrieved_data;
@@ -88,4 +68,4 @@ function dm_register_engine_data_filter() {
 
 }
 
-dm_register_engine_data_filter();
+datamachine_register_engine_data_filter();

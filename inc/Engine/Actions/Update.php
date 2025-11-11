@@ -28,30 +28,30 @@ class Update {
         $instance = new self();
         
         // Central job status update hook - eliminates confusion about which method to use
-        add_action('dm_update_job_status', [$instance, 'handle_job_status_update'], 10, 4);
+        add_action('datamachine_update_job_status', [$instance, 'handle_job_status_update'], 10, 4);
         
         // Central flow scheduling hook - direct Action Scheduler integration
-        add_action('dm_update_flow_schedule', [$instance, 'handle_flow_schedule_update'], 10, 3);
+        add_action('datamachine_update_flow_schedule', [$instance, 'handle_flow_schedule_update'], 10, 3);
         
         
         // Flow handler management action hook - eliminates 50+ line handler update patterns
-        add_action('dm_update_flow_handler', [$instance, 'handle_flow_handler_update'], 10, 3);
+        add_action('datamachine_update_flow_handler', [$instance, 'handle_flow_handler_update'], 10, 3);
         
         // Flow step synchronization action hook - unifies single and bulk step sync operations
-        add_action('dm_sync_steps_to_flow', [$instance, 'handle_flow_steps_sync'], 10, 3);
+        add_action('datamchine_sync_steps_to_flow', [$instance, 'handle_flow_steps_sync'], 10, 3);
         
         // Flow user message management action hook - enables AI steps to run standalone
-        add_action('dm_update_flow_user_message', [$instance, 'handle_flow_user_message_update'], 10, 2);
+        add_action('datamachine_update_flow_user_message', [$instance, 'handle_flow_user_message_update'], 10, 2);
 
         // Pipeline system prompt management action hook - enables AI step template updates
-        add_action('dm_update_system_prompt', [$instance, 'handle_system_prompt_update'], 10, 2);
+        add_action('datamachine_update_system_prompt', [$instance, 'handle_system_prompt_update'], 10, 2);
 
         // Filter-based versions for AJAX validation
-        add_filter('dm_update_flow_user_message_result', [$instance, 'handle_flow_user_message_update'], 10, 3);
-        add_filter('dm_update_system_prompt_result', [$instance, 'handle_system_prompt_update'], 10, 3);
+        add_filter('datamachine_update_flow_user_message_result', [$instance, 'handle_flow_user_message_update'], 10, 3);
+        add_filter('datamachine_update_system_prompt_result', [$instance, 'handle_system_prompt_update'], 10, 3);
         
         // Explicit job failure action hook - simplified job failure interface
-        add_action('dm_fail_job', [$instance, 'handle_job_failure'], 10, 3);
+        add_action('datamachine_fail_job', [$instance, 'handle_job_failure'], 10, 3);
     }
 
     /**
@@ -68,11 +68,11 @@ class Update {
      * @since 1.0.0
      */
     public function handle_job_status_update($job_id, $new_status, $context = 'update', $old_status = null) {
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $db_jobs = $all_databases['jobs'] ?? null;
         
         if (!$db_jobs) {
-            do_action('dm_log', 'error', 'Job status update failed - database service unavailable', [
+            do_action('datamachine_log', 'error', 'Job status update failed - database service unavailable', [
                 'job_id' => $job_id, 'new_status' => $new_status
             ]);
             return false;
@@ -98,7 +98,7 @@ class Update {
         
         // Clean up processed items if job failed (allows retry without processed item conflicts)
         if ($new_status === 'failed' && $success) {
-            do_action('dm_delete_processed_items', ['job_id' => (int)$job_id]);
+            do_action('datamachine_delete_processed_items', ['job_id' => (int)$job_id]);
         }
         
         
@@ -108,43 +108,18 @@ class Update {
     /**
      * Handle flow schedule updates with Action Scheduler integration.
      *
-     * Provides direct Action Scheduler integration eliminating wrapper patterns.
-     * Uses interval-only logic: manual = run-now only, others = scheduled.
+     * DEPRECATED: Use datamachine_run_flow_later action directly instead.
+     * Kept for backwards compatibility only.
      *
+     * @deprecated Use do_action('datamachine_run_flow_later', $flow_id, $interval) instead
      * @param int $flow_id Flow ID to update scheduling for
      * @param string $schedule_interval Schedule interval key
-     * @param string $old_interval Previous schedule interval
+     * @param string $old_interval Previous schedule interval (unused)
      * @since 1.0.0
      */
     public function handle_flow_schedule_update($flow_id, $schedule_interval, $old_interval = '') {
-        // Always unschedule first to prevent duplicates
-        if (function_exists('as_unschedule_action')) {
-            as_unschedule_action('dm_run_flow_now', [$flow_id], 'data-machine');
-        }
-        
-        if ($schedule_interval !== 'manual') {
-            $interval_seconds = $this->get_schedule_interval_seconds($schedule_interval);
-            if (!$interval_seconds) {
-                do_action('dm_log', 'error', 'Invalid schedule interval', [
-                    'flow_id' => $flow_id,
-                    'interval' => $schedule_interval
-                ]);
-                return;
-            }
-            
-            // Direct Action Scheduler call using universal flow execution entry point
-            if (function_exists('as_schedule_recurring_action')) {
-                $action_id = as_schedule_recurring_action(
-                    time() + $interval_seconds,
-                    $interval_seconds,
-                    'dm_run_flow_now',
-                    [$flow_id],
-                    'data-machine'
-                );
-                
-            }
-        } else {
-        }
+        // DEPRECATED: Delegate to new datamachine_run_flow_later action
+        do_action('datamachine_run_flow_later', $flow_id, $schedule_interval);
     }
 
 
@@ -161,17 +136,17 @@ class Update {
      * @since 1.0.0
      */
     public function handle_flow_handler_update($flow_step_id, $handler_slug, $handler_settings = []) {
-        $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+        $parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
         if (!$parts) {
-            do_action('dm_log', 'error', 'Invalid flow_step_id format for handler update', ['flow_step_id' => $flow_step_id]);
+            do_action('datamachine_log', 'error', 'Invalid flow_step_id format for handler update', ['flow_step_id' => $flow_step_id]);
             return false;
         }
         $flow_id = $parts['flow_id'];
         
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         if (!$db_flows) {
-            do_action('dm_log', 'error', 'Flow handler update failed - database service unavailable', [
+            do_action('datamachine_log', 'error', 'Flow handler update failed - database service unavailable', [
                 'flow_step_id' => $flow_step_id,
                 'handler_slug' => $handler_slug
             ]);
@@ -179,9 +154,9 @@ class Update {
         }
         
         // Get current flow
-        $flow = apply_filters('dm_get_flow', null, $flow_id);
+        $flow = apply_filters('datamachine_get_flow', null, $flow_id);
         if (!$flow) {
-            do_action('dm_log', 'error', 'Flow handler update failed - flow not found', [
+            do_action('datamachine_log', 'error', 'Flow handler update failed - flow not found', [
                 'flow_id' => $flow_id,
                 'flow_step_id' => $flow_step_id
             ]);
@@ -201,26 +176,21 @@ class Update {
         }
         
         // Check if handler already exists
-        $handler_exists = isset($flow_config[$flow_step_id]['handler']) && 
-                         ($flow_config[$flow_step_id]['handler']['handler_slug'] ?? '') === $handler_slug;
-        
+        $handler_exists = isset($flow_config[$flow_step_id]['handler_slug']) &&
+                         $flow_config[$flow_step_id]['handler_slug'] === $handler_slug;
+
         // UPDATE existing handler settings OR ADD new handler (single handler per step)
-        $nested_settings = [
-            $handler_slug => $handler_settings
-        ];
-        $flow_config[$flow_step_id]['handler'] = [
-            'handler_slug' => $handler_slug,
-            'settings' => $nested_settings,
-            'enabled' => true
-         ];
+        $flow_config[$flow_step_id]['handler_slug'] = $handler_slug;
+        $flow_config[$flow_step_id]['handler_config'] = $handler_settings;
+        $flow_config[$flow_step_id]['enabled'] = true;
 
          // Update flow with new configuration
-         $success = apply_filters('dm_update_flow', false, $flow_id, [
+         $success = apply_filters('datamachine_update_flow', false, $flow_id, [
              'flow_config' => wp_json_encode($flow_config)
          ]);
          
          if (!$success) {
-             do_action('dm_log', 'error', 'Flow handler update failed - database update failed', [
+             do_action('datamachine_log', 'error', 'Flow handler update failed - database update failed', [
                  'flow_id' => $flow_id,
                  'flow_step_id' => $flow_step_id,
                  'handler_slug' => $handler_slug
@@ -244,11 +214,11 @@ class Update {
      * @since 1.0.0
      */
     public function handle_flow_steps_sync($flow_id, $steps, $context = []) {
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         
         if (!$db_flows) {
-            do_action('dm_log', 'error', 'Flow steps sync failed - flows database service unavailable', [
+            do_action('datamachine_log', 'error', 'Flow steps sync failed - flows database service unavailable', [
                 'flow_id' => $flow_id,
                 'steps_count' => count($steps),
                 'context' => $context
@@ -257,9 +227,9 @@ class Update {
         }
         
         // Validate flow exists
-        $flow = apply_filters('dm_get_flow', null, $flow_id);
+        $flow = apply_filters('datamachine_get_flow', null, $flow_id);
         if (!$flow) {
-            do_action('dm_log', 'error', 'Flow steps sync failed - flow not found', [
+            do_action('datamachine_log', 'error', 'Flow steps sync failed - flow not found', [
                 'flow_id' => $flow_id,
                 'steps_count' => count($steps),
                 'context' => $context
@@ -273,7 +243,7 @@ class Update {
             $pipeline_step_id = $step['pipeline_step_id'] ?? null;
             
             if (!$pipeline_step_id) {
-                do_action('dm_log', 'warning', 'Skipping step sync - missing pipeline_step_id', [
+                do_action('datamachine_log', 'warning', 'Skipping step sync - missing pipeline_step_id', [
                     'flow_id' => $flow_id,
                     'step_data' => $step,
                     'context' => $context
@@ -282,7 +252,7 @@ class Update {
             }
             
             // Generate flow step ID using existing filter pattern
-            $flow_step_id = apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
+            $flow_step_id = apply_filters('datamachine_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
             
             // Create flow step configuration
             $flow_config[$flow_step_id] = [
@@ -297,12 +267,12 @@ class Update {
         }
 
         // Update flow configuration
-        $success = apply_filters('dm_update_flow', false, $flow_id, [
+        $success = apply_filters('datamachine_update_flow', false, $flow_id, [
             'flow_config' => wp_json_encode($flow_config)
         ]);
         
         if (!$success) {
-            do_action('dm_log', 'error', 'Flow steps sync failed - database update failed', [
+            do_action('datamachine_log', 'error', 'Flow steps sync failed - database update failed', [
                 'flow_id' => $flow_id,
                 'steps_count' => count($steps),
                 'context' => $context
@@ -310,7 +280,7 @@ class Update {
             return false;
         }
 
-        do_action('dm_log', 'debug', 'Flow steps sync completed successfully', [
+        do_action('datamachine_log', 'debug', 'Flow steps sync completed successfully', [
             'flow_id' => $flow_id,
             'pipeline_id' => $flow['pipeline_id'],
             'steps_count' => count($steps),
@@ -342,18 +312,18 @@ class Update {
             $user_message = $flow_step_id;
             $flow_step_id = $result;
         }
-        $parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+        $parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
         if (!$parts) {
-            do_action('dm_log', 'error', 'Invalid flow_step_id format for user message update', ['flow_step_id' => $flow_step_id]);
+            do_action('datamachine_log', 'error', 'Invalid flow_step_id format for user message update', ['flow_step_id' => $flow_step_id]);
             return false;
         }
         $flow_id = $parts['flow_id'];
 
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $db_flows = $all_databases['flows'] ?? null;
         
         if (!$db_flows) {
-            do_action('dm_log', 'error', 'Flow user message update failed - flows database service unavailable', [
+            do_action('datamachine_log', 'error', 'Flow user message update failed - flows database service unavailable', [
                 'flow_id' => $flow_id,
                 'flow_step_id' => $flow_step_id
             ]);
@@ -361,9 +331,9 @@ class Update {
         }
 
         // Get current flow
-        $flow = apply_filters('dm_get_flow', null, $flow_id);
+        $flow = apply_filters('datamachine_get_flow', null, $flow_id);
         if (!$flow) {
-            do_action('dm_log', 'error', 'Flow user message update failed - flow not found', [
+            do_action('datamachine_log', 'error', 'Flow user message update failed - flow not found', [
                 'flow_id' => $flow_id,
                 'flow_step_id' => $flow_step_id
             ]);
@@ -375,7 +345,7 @@ class Update {
 
         // Update user message in the specific flow step
         if (!isset($flow_config[$flow_step_id])) {
-            do_action('dm_log', 'error', 'Flow user message update failed - flow step not found', [
+            do_action('datamachine_log', 'error', 'Flow user message update failed - flow step not found', [
                 'flow_id' => $flow_id,
                 'flow_step_id' => $flow_step_id,
                 'existing_steps' => array_keys($flow_config)
@@ -387,12 +357,12 @@ class Update {
         $flow_config[$flow_step_id]['user_message'] = wp_unslash(sanitize_textarea_field($user_message));
 
         // Update flow with new configuration
-        $success = apply_filters('dm_update_flow', false, $flow_id, [
+        $success = apply_filters('datamachine_update_flow', false, $flow_id, [
             'flow_config' => wp_json_encode($flow_config)
         ]);
 
         if (!$success) {
-            do_action('dm_log', 'error', 'Flow user message update failed - database update error', [
+            do_action('datamachine_log', 'error', 'Flow user message update failed - database update error', [
                 'flow_id' => $flow_id,
                 'flow_step_id' => $flow_step_id
             ]);
@@ -425,21 +395,21 @@ class Update {
             $pipeline_step_id = $result;
         }
         // Get database services
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         
         if (!$db_pipelines) {
-            do_action('dm_log', 'error', 'System prompt update failed - pipelines database service unavailable', [
+            do_action('datamachine_log', 'error', 'System prompt update failed - pipelines database service unavailable', [
                 'pipeline_step_id' => $pipeline_step_id
             ]);
             return false;
         }
 
         // Get step configuration using existing filter
-        $step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
+        $step_config = apply_filters('datamachine_get_pipeline_step_config', [], $pipeline_step_id);
 
         if (empty($step_config) || empty($step_config['pipeline_id'])) {
-            do_action('dm_log', 'error', 'System prompt update failed - pipeline step not found', [
+            do_action('datamachine_log', 'error', 'System prompt update failed - pipeline step not found', [
                 'pipeline_step_id' => $pipeline_step_id
             ]);
             return false;
@@ -448,9 +418,9 @@ class Update {
         $pipeline_id = $step_config['pipeline_id'];
 
         // Get the complete pipeline data
-        $target_pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
+        $target_pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
         if (!$target_pipeline) {
-            do_action('dm_log', 'error', 'System prompt update failed - pipeline not found', [
+            do_action('datamachine_log', 'error', 'System prompt update failed - pipeline not found', [
                 'pipeline_id' => $pipeline_id,
                 'pipeline_step_id' => $pipeline_step_id
             ]);
@@ -472,7 +442,7 @@ class Update {
         ]);
 
         if (!$success) {
-            do_action('dm_log', 'error', 'System prompt update failed - database update error', [
+            do_action('datamachine_log', 'error', 'System prompt update failed - database update error', [
                 'pipeline_id' => $target_pipeline['pipeline_id'],
                 'pipeline_step_id' => $pipeline_step_id
             ]);
@@ -495,11 +465,11 @@ class Update {
      * @since 1.0.0
      */
     public function handle_job_failure($job_id, $reason, $context_data = []) {
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $db_jobs = $all_databases['jobs'] ?? null;
         
         if (!$db_jobs) {
-            do_action('dm_log', 'error', 'Job failure failed - database service unavailable', [
+            do_action('datamachine_log', 'error', 'Job failure failed - database service unavailable', [
                 'job_id' => $job_id,
                 'reason' => $reason,
                 'context' => $context_data
@@ -511,7 +481,7 @@ class Update {
         $success = $db_jobs->complete_job($job_id, 'failed');
         
         if (!$success) {
-            do_action('dm_log', 'error', 'Failed to mark job as failed in database', [
+            do_action('datamachine_log', 'error', 'Failed to mark job as failed in database', [
                 'job_id' => $job_id,
                 'reason' => $reason
             ]);
@@ -519,26 +489,31 @@ class Update {
         }
         
         // Clean up processed items to allow retry (existing logic from handle_job_status_update)
-        do_action('dm_delete_processed_items', ['job_id' => (int)$job_id]);
+        do_action('datamachine_delete_processed_items', ['job_id' => (int)$job_id]);
         
         // Conditional file cleanup based on settings
-        $settings = dm_get_data_machine_settings();
+        $settings = datamachine_get_data_machine_settings();
         $cleanup_files = $settings['cleanup_job_data_on_failure'] ?? true;
         $files_cleaned = false;
-        
+
         if ($cleanup_files) {
-            $files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
+            $files_repo = apply_filters('datamachine_files_repository', [])['files'] ?? null;
             if ($files_repo) {
-                $deleted_count = $files_repo->cleanup_job_data_packets($job_id);
-                $files_cleaned = $deleted_count > 0;
+                // Get flow_id from job to build file context
+                $job = $db_jobs->get_job($job_id);
+                if ($job && function_exists('datamachine_get_file_context')) {
+                    $context = datamachine_get_file_context($job['flow_id']);
+                    $deleted_count = $files_repo->cleanup_job_data_packets($job_id, $context);
+                    $files_cleaned = $deleted_count > 0;
+                }
             }
         }
         
         // Enhanced logging with failure details
-        do_action('dm_log', 'error', 'Job marked as failed', [
+        do_action('datamachine_log', 'error', 'Job marked as failed', [
             'job_id' => $job_id,
             'failure_reason' => $reason,
-            'triggered_by' => 'dm_fail_job_action',
+            'triggered_by' => 'datamachine_fail_job_action',
             'context_data' => $context_data,
             'processed_items_cleaned' => true,
             'files_cleanup_enabled' => $cleanup_files,
@@ -546,20 +521,5 @@ class Update {
         ]);
         
         return true;
-    }
-
-    /**
-     * Get schedule interval in seconds for Action Scheduler usage.
-     *
-     * Utility method for converting schedule interval keys to seconds
-     * for direct Action Scheduler integration.
-     *
-     * @param string $interval Schedule interval key
-     * @return int|false Interval in seconds or false if invalid
-     * @since 1.0.0
-     */
-    private function get_schedule_interval_seconds($interval) {
-        $intervals = apply_filters('dm_scheduler_intervals', []);
-        return $intervals[$interval]['seconds'] ?? false;
     }
 }

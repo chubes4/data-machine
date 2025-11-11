@@ -93,9 +93,9 @@ docs/
 ### ✅ Core System Components
 
 **Engine Execution**
-- Three-action cycle (run_flow_now → execute_step → schedule_next_step)
+- Three-action cycle (datamachine_run_flow_now → datamachine_execute_step → datamachine_schedule_next_step)
 - Action Scheduler integration
-- Enhanced centralized engine data architecture with `EngineData.php` filter providing unified `dm_engine_data` access with storage/retrieval mode detection - clean AI data packets with structured engine parameters via database storage and filter retrieval
+- Enhanced centralized engine data architecture with `EngineData.php` filter providing unified `datamachine_engine_data` access with storage/retrieval mode detection - clean AI data packets with structured engine parameters via database storage and filter retrieval
 - Job management and status tracking
 - Error handling and failure recovery
 - AutoSave system with complete pipeline persistence, flow synchronization, and cache invalidation
@@ -108,9 +108,9 @@ docs/
 
 **Advanced Cache Management**
 - Enhanced centralized cache system via Actions/Cache.php with comprehensive WordPress action-based clearing and database component integration
-- Granular WordPress action-based cache clearing (dm_clear_pipeline_cache, dm_clear_flow_cache, dm_clear_flow_config_cache, dm_clear_flow_scheduling_cache, dm_clear_flow_steps_cache, dm_clear_jobs_cache, dm_clear_all_cache)
+- Granular WordPress action-based cache clearing (datamachine_clear_pipeline_cache, datamachine_clear_flow_cache, datamachine_clear_flow_config_cache, datamachine_clear_flow_scheduling_cache, datamachine_clear_flow_steps_cache, datamachine_clear_jobs_cache, datamachine_clear_all_cache)
 - Advanced pattern-based cache invalidation with wildcard support and extensible action-based architecture
-- Standardized cache storage via dm_cache_set action with validation, logging, and performance optimization
+- Standardized cache storage via datamachine_cache_set action with validation, logging, and performance optimization
 - Comprehensive logging for cache operations and AI HTTP Client integration
 - Database query optimization for improved pipeline page performance
 
@@ -122,8 +122,8 @@ docs/
 - Files - Local and remote file processing with flow-isolated storage
 
 **External Sources**
-- RSS - Feed parsing with deduplication, timeframe filtering, keyword search, and centralized engine data storage (source_url, image_url via dm_engine_data filter)
-- Reddit - OAuth2 subreddit fetching with timeframe filtering, keyword search, and centralized engine data storage (source_url, image_url via dm_engine_data filter)
+- RSS - Feed parsing with deduplication, timeframe filtering, keyword search, and centralized engine data storage (source_url, image_url via datamachine_engine_data filter)
+- Reddit - OAuth2 subreddit fetching with timeframe filtering, keyword search, and centralized engine data storage (source_url, image_url via datamachine_engine_data filter)
 - Google Sheets - OAuth2 spreadsheet data extraction
 - WordPress API - External WordPress sites via REST API with timeframe filtering, keyword search, and centralized engine data storage
 
@@ -142,7 +142,7 @@ docs/
 ### ✅ Update Handlers (1 handler)
 
 **Content Modification**
-- WordPress Update - Modify existing posts/pages using source_url from centralized engine data via dm_engine_data filter with advanced tool discovery (exact handler matching and partial name matching for flexible tool result detection)
+- WordPress Update - Modify existing posts/pages using source_url from centralized engine data via datamachine_engine_data filter with advanced tool discovery (exact handler matching and partial name matching for flexible tool result detection)
 
 ### ✅ AI Tools (4 general + handler tools)
 
@@ -155,6 +155,8 @@ docs/
 **Handler Tools** (Generated per handler)
 - Publishing tools for each platform (twitter_publish, facebook_publish, etc.)
 - Update tools for content modification
+
+**Note**: Data Machine core plugin implements 9 REST API endpoint files with comprehensive functionality (Execute, Flows, Pipelines, Files, Users, Logs, Status, Jobs, ProcessedItems). REST API migration from AJAX is in progress for admin interface.
 
 ### ✅ Authentication Systems
 

@@ -18,7 +18,7 @@ Posts content to Twitter with media support, authentication via OAuth 1.0a, and 
 3. Configure OAuth in Data Machine settings
 4. Test connection via OAuth popup flow
 
-**OAuth URLs**: `/dm-oauth/twitter/` (requires `manage_options` capability)
+**OAuth URLs**: `/datamachine-auth/twitter/` (requires `manage_options` capability)
 
 ## Configuration Options
 
@@ -37,7 +37,7 @@ Posts content to Twitter with media support, authentication via OAuth 1.0a, and 
 
 ### Source URL Attribution
 
-**Engine Data Source**: `source_url` retrieved from fetch handlers via `dm_engine_data` filter
+**Engine Data Source**: `source_url` retrieved from fetch handlers via `datamachine_engine_data` filter
 
 **Append Mode** (`link_handling: 'append'`):
 - Source URL appended to tweet content with space separator
@@ -65,7 +65,7 @@ Posts content to Twitter with media support, authentication via OAuth 1.0a, and 
 - `job_id` (string) - Job identifier for engine data access
 - `handler_config` (array) - Handler configuration from tool_def
 
-**Engine Data Access** (via `dm_engine_data` filter):
+**Engine Data Access** (via `datamachine_engine_data` filter):
 - `source_url` (string, optional) - Source URL stored by fetch handlers
 - `image_url` (string, optional) - Image URL stored by fetch handlers
 
@@ -211,14 +211,14 @@ $result = $twitter_handler->handle_tool_call([
 
 ```php
 // Engine data (source_url, image_url) automatically retrieved from database
-// via dm_engine_data filter - stored by fetch handlers
+// via datamachine_engine_data filter - stored by fetch handlers
 $result = $twitter_handler->handle_tool_call([
     'content' => 'Check out this image!',
     'job_id' => $job_id  // Used to retrieve engine data
 ], $tool_definition);
 
 // Internal engine data access:
-$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 $source_url = $engine_data['source_url'] ?? null;   // From fetch handler
 $image_url = $engine_data['image_url'] ?? null;     // From fetch handler
 ```

@@ -21,7 +21,7 @@ class PluginCoreDirective {
             'content' => $directive
         ]);
 
-        do_action('dm_log', 'debug', 'Plugin Core Directive: Injected foundational identity', [
+        do_action('datamachine_log', 'debug', 'Plugin Core Directive: Injected foundational identity', [
             'directive_length' => strlen($directive),
             'provider' => $provider_name,
             'total_messages' => count($request['messages'])

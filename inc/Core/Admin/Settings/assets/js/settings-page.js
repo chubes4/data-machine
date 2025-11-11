@@ -35,18 +35,18 @@
             $(document).on('click', '[data-template="tool-config-save"]', this.handleToolConfigSave.bind(this));
 
             // Cache clearing handler
-            $(document).on('click', '#dm-clear-cache-btn', this.handleClearCache.bind(this));
+            $(document).on('click', '#datamachine-clear-cache-btn', this.handleClearCache.bind(this));
 
             // Tab navigation handlers
-            $('.dm-nav-tab-wrapper .nav-tab').on('click', this.handleTabClick.bind(this));
+            $('.datamachine-nav-tab-wrapper .nav-tab').on('click', this.handleTabClick.bind(this));
 
             // Form submission handler to preserve tab state
-            $('.dm-settings-form').on('submit', this.handleFormSubmit.bind(this));
+            $('.datamachine-settings-form').on('submit', this.handleFormSubmit.bind(this));
         },
 
         /**
          * Handle tool configuration save action
-         * Intercepts click before dm-modal-close to perform AJAX save
+         * Intercepts click before datamachine-modal-close to perform AJAX save
          */
         handleToolConfigSave: function(e) {
             e.preventDefault();
@@ -60,11 +60,11 @@
             }
             
             // Collect form data from the modal
-            const $modal = $('#dm-modal');
+            const $modal = $('#datamachine-modal');
             let $form = null;
             
             // Find the form by tool ID (matches template generation)
-            $form = $modal.find(`#dm-${contextData.tool_id}-config-form`);
+            $form = $modal.find(`#datamachine-${contextData.tool_id}-config-form`);
             
             if (!$form || !$form.length) {
                 console.error('Tool config save: Form not found in modal for tool:', contextData.tool_id);
@@ -106,43 +106,44 @@
                 return;
             }
             
-            // Prepare AJAX data
-            const ajaxData = {
-                action: 'dm_save_tool_config',
-                tool_id: contextData.tool_id,
-                config_data: configData,
-                nonce: dmSettings.dm_ajax_nonce
-            };
-            
             // Show loading state
             const originalText = $button.text();
-            $button.text(dmSettings.strings.saving || 'Saving...');
+            $button.text(datamachineSettings.strings.saving || 'Saving...');
             $button.prop('disabled', true);
-            
-            // Send AJAX request
+
+            // Use REST API endpoint
+            const restUrl = wpApiSettings.root + 'datamachine/v1/settings/tools/' + contextData.tool_id;
+
+            // Send REST request
             $.ajax({
-                url: dmSettings.ajax_url,
+                url: restUrl,
                 type: 'POST',
-                data: ajaxData,
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    config_data: configData
+                }),
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('X-WP-Nonce', wpApiSettings.nonce);
+                },
                 success: (response) => {
                     if (response.success) {
                         // Handle Google Search Console OAuth flow
                         if (contextData.tool_id === 'google_search_console' && response.data.requires_auth) {
                             // Show success message but keep modal open for OAuth
-                            const $modalBody = $('.dm-modal-body');
+                            const $modalBody = $('.datamachine-modal-body');
                             $modalBody.find('.notice').remove();
                             $modalBody.prepend(
                                 `<div class="notice notice-success"><p>${response.data.message}</p></div>`
                             );
                             
                             // Add OAuth connect button if not already present
-                            if (!$('#dm-gsc-connect-btn').length) {
-                                const $authSection = $modalBody.find('tr:has(.dm-status-indicator)').find('td');
+                            if (!$('#datamachine-gsc-connect-btn').length) {
+                                const $authSection = $modalBody.find('tr:has(.datamachine-status-indicator)').find('td');
                                 if ($authSection.length) {
-                                    $authSection.append('<br><button type="button" class="button button-primary" id="dm-gsc-connect-btn">Connect to Google Search Console</button>');
+                                    $authSection.append('<br><button type="button" class="button button-primary" id="datamachine-gsc-connect-btn">Connect to Google Search Console</button>');
                                     
                                     // Bind OAuth connect handler
-                                    $('#dm-gsc-connect-btn').on('click', function() {
+                                    $('#datamachine-gsc-connect-btn').on('click', function() {
                                         window.dmSettingsPage.handleOAuthConnect('google_search_console');
                                     });
                                 }
@@ -164,8 +165,10 @@
                     }
                 },
                 error: (xhr, status, error) => {
-                    // Show network error
-                    this.showError('Network error: Unable to save configuration');
+                    // Show error from REST API or network error
+                    const errorMessage = xhr.responseJSON && xhr.responseJSON.message ?
+                        xhr.responseJSON.message : 'Network error: Unable to save configuration';
+                    this.showError(errorMessage);
                 },
                 complete: () => {
                     // Restore button state
@@ -181,7 +184,7 @@
             e.preventDefault();
 
             const $button = $(e.currentTarget);
-            const $result = $('#dm-cache-clear-result');
+            const $result = $('#datamachine-cache-clear-result');
 
             // Show confirmation dialog
             if (!confirm('Are you sure you want to clear all cache? This will force Data Machine to reload all configurations from the database.')) {
@@ -191,35 +194,39 @@
             // Show loading state
             const originalText = $button.text();
             $button.text('Clearing...').prop('disabled', true);
-            $result.removeClass('dm-hidden notice-success notice-error').text('');
+            $result.removeClass('datamachine-hidden notice-success notice-error').text('');
 
-            // Send AJAX request
+            // Use REST API endpoint
+            const restUrl = wpApiSettings.root + 'datamachine/v1/cache';
+
+            // Send REST request
             $.ajax({
-                url: dmSettings.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'dm_clear_cache',
-                    nonce: dmSettings.dm_ajax_nonce
+                url: restUrl,
+                type: 'DELETE',
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('X-WP-Nonce', wpApiSettings.nonce);
                 },
                 success: (response) => {
                     if (response.success) {
-                        $result.addClass('notice-success').text(response.data.message).removeClass('dm-hidden');
+                        const message = response.message || 'Cache cleared successfully';
+                        $result.addClass('notice-success').text(message).removeClass('datamachine-hidden');
                         // Hide success message after 3 seconds
                         setTimeout(() => {
                             $result.fadeOut(300, () => {
-                                $result.addClass('dm-hidden').show();
+                                $result.addClass('datamachine-hidden').show();
                             });
                         }, 3000);
                     } else {
-                        const errorMessage = response.data && response.data.message ?
-                            response.data.message : 'Cache clearing failed';
-                        $result.addClass('notice-error').text(errorMessage).removeClass('dm-hidden');
+                        const errorMessage = response.message || 'Cache clearing failed';
+                        $result.addClass('notice-error').text(errorMessage).removeClass('datamachine-hidden');
                     }
                 },
-                error: () => {
+                error: (xhr) => {
+                    const errorMessage = xhr.responseJSON && xhr.responseJSON.message ?
+                        xhr.responseJSON.message : 'Network error: Unable to clear cache';
                     $result.addClass('notice-error')
-                           .text('Network error: Unable to clear cache')
-                           .removeClass('dm-hidden');
+                           .text(errorMessage)
+                           .removeClass('datamachine-hidden');
                 },
                 complete: () => {
                     // Restore button state
@@ -232,7 +239,7 @@
          * Show error message in modal
          */
         showError: function(message) {
-            const $modalBody = $('.dm-modal-body');
+            const $modalBody = $('.datamachine-modal-body');
             
             // Remove existing error messages
             $modalBody.find('.notice-error').remove();
@@ -249,12 +256,12 @@
         handleOAuthConnect: function(provider) {
             // Get authorization URL from the auth provider
             $.ajax({
-                url: dmSettings.ajax_url,
+                url: datamachineSettings.ajax_url,
                 type: 'POST',
                 data: {
                     action: 'dm_oauth_url',
                     provider: provider,
-                    nonce: dmSettings.dm_ajax_nonce
+                    nonce: datamachineSettings.datamachine_ajax_nonce
                 },
                 success: (response) => {
                     if (response.success && response.data.auth_url) {
@@ -306,14 +313,14 @@
                     }
                     
                     // Fallback to localStorage
-                    return localStorage.getItem('dm_settings_active_tab') || 'admin';
+                    return localStorage.getItem('datamachine_settings_active_tab') || 'admin';
                 },
                 
                 /**
                  * Set active tab in localStorage and URL
                  */
                 setActiveTab: function(tab) {
-                    localStorage.setItem('dm_settings_active_tab', tab);
+                    localStorage.setItem('datamachine_settings_active_tab', tab);
                     
                     // Update URL without page reload
                     if (history.pushState) {
@@ -328,14 +335,14 @@
                  */
                 showTab: function(tab) {
                     // Hide all tab content
-                    $('.dm-tab-content').removeClass('active').hide();
+                    $('.datamachine-tab-content').removeClass('active').hide();
                     
                     // Show selected tab
-                    $('#dm-tab-' + tab).addClass('active').fadeIn(200);
+                    $('#datamachine-tab-' + tab).addClass('active').fadeIn(200);
                     
                     // Update nav tab active state
-                    $('.dm-nav-tab-wrapper .nav-tab').removeClass('nav-tab-active');
-                    $('.dm-nav-tab-wrapper .nav-tab[href*="tab=' + tab + '"]').addClass('nav-tab-active');
+                    $('.datamachine-nav-tab-wrapper .nav-tab').removeClass('nav-tab-active');
+                    $('.datamachine-nav-tab-wrapper .nav-tab[href*="tab=' + tab + '"]').addClass('nav-tab-active');
                     
                     // Store selection
                     this.setActiveTab(tab);
@@ -370,11 +377,11 @@
             
             // Add hidden field with current tab to preserve state after form submission
             const $form = $(e.currentTarget);
-            $form.find('input[name="dm_active_tab"]').remove(); // Remove existing if any
-            $form.append('<input type="hidden" name="dm_active_tab" value="' + activeTab + '">');
+            $form.find('input[name="datamachine_active_tab"]').remove(); // Remove existing if any
+            $form.append('<input type="hidden" name="datamachine_active_tab" value="' + activeTab + '">');
             
             // Store in localStorage as backup
-            localStorage.setItem('dm_settings_active_tab', activeTab);
+            localStorage.setItem('datamachine_settings_active_tab', activeTab);
         }
     };
 

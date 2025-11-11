@@ -38,7 +38,7 @@ class PipelineSystemPromptDirective {
 
         self::require_pipeline_context($pipeline_step_id, __METHOD__);
 
-        $step_ai_config = apply_filters('dm_ai_config', [], $pipeline_step_id);
+        $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id);
         $system_prompt = $step_ai_config['system_prompt'] ?? '';
 
         if (empty($system_prompt)) {
@@ -46,10 +46,10 @@ class PipelineSystemPromptDirective {
         }
 
         // Extract current pipeline step ID for "YOU ARE HERE" context
-        $current_flow_step_id = apply_filters('dm_current_flow_step_id', null);
+        $current_flow_step_id = apply_filters('datamachine_current_flow_step_id', null);
         $current_pipeline_step_id = null;
         if ($current_flow_step_id) {
-            $flow_parts = apply_filters('dm_split_flow_step_id', null, $current_flow_step_id);
+            $flow_parts = apply_filters('datamachine_split_flow_step_id', null, $current_flow_step_id);
             $current_pipeline_step_id = $flow_parts['pipeline_step_id'] ?? null;
         }
 
@@ -68,7 +68,7 @@ class PipelineSystemPromptDirective {
             'content' => $content
         ]);
 
-        do_action('dm_log', 'debug', 'Pipeline System Prompt: Injected user configuration with workflow', [
+        do_action('datamachine_log', 'debug', 'Pipeline System Prompt: Injected user configuration with workflow', [
             'pipeline_step_id' => $pipeline_step_id,
             'prompt_length' => strlen($system_prompt),
             'workflow_visualization' => $workflow_visualization,
@@ -82,7 +82,7 @@ class PipelineSystemPromptDirective {
     /**
      * Build workflow visualization string from flow configuration.
      *
-     * Uses dm_get_flow_steps filter for optimized handler loading.
+     * Uses datamachine_get_flow_steps filter for optimized handler loading.
      *
      * @param string|null $pipeline_step_id Pipeline step ID for context
      * @param string|null $current_pipeline_step_id Currently executing pipeline step ID
@@ -94,24 +94,24 @@ class PipelineSystemPromptDirective {
         }
 
         // Get flow_id from current execution context
-        $current_flow_step_id = apply_filters('dm_current_flow_step_id', null);
+        $current_flow_step_id = apply_filters('datamachine_current_flow_step_id', null);
         if (!$current_flow_step_id) {
-            do_action('dm_log', 'debug', 'Workflow visualization: No flow context available');
+            do_action('datamachine_log', 'debug', 'Workflow visualization: No flow context available');
             return '';
         }
 
-        $flow_parts = apply_filters('dm_split_flow_step_id', null, $current_flow_step_id);
+        $flow_parts = apply_filters('datamachine_split_flow_step_id', null, $current_flow_step_id);
         $flow_id = $flow_parts['flow_id'] ?? null;
 
         if (!$flow_id) {
-            do_action('dm_log', 'debug', 'Workflow visualization: Could not extract flow_id');
+            do_action('datamachine_log', 'debug', 'Workflow visualization: Could not extract flow_id');
             return '';
         }
 
         // Get enriched flow steps (handlers pre-loaded and optimized)
-        $flow_steps = apply_filters('dm_get_flow_steps', [], $flow_id);
+        $flow_steps = apply_filters('datamachine_get_flow_steps', [], $flow_id);
         if (empty($flow_steps)) {
-            do_action('dm_log', 'debug', 'Workflow visualization: No flow steps found', [
+            do_action('datamachine_log', 'debug', 'Workflow visualization: No flow steps found', [
                 'flow_id' => $flow_id
             ]);
             return '';
@@ -123,7 +123,7 @@ class PipelineSystemPromptDirective {
             $execution_order = $step_config['execution_order'] ?? -1;
             if ($execution_order >= 0) {
                 // Extract pipeline_step_id from flow_step_id for "YOU ARE HERE" matching
-                $step_parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+                $step_parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
                 $step_pipeline_step_id = $step_parts['pipeline_step_id'] ?? '';
 
                 $sorted_steps[$execution_order] = [
@@ -157,7 +157,7 @@ class PipelineSystemPromptDirective {
 
         $workflow_string = implode(' → ', $workflow_parts);
 
-        do_action('dm_log', 'debug', 'Workflow visualization: Built from flow config', [
+        do_action('datamachine_log', 'debug', 'Workflow visualization: Built from flow config', [
             'flow_id' => $flow_id,
             'steps_count' => count($sorted_steps),
             'current_pipeline_step_id' => $current_pipeline_step_id,
@@ -175,13 +175,13 @@ class PipelineSystemPromptDirective {
      */
     private static function require_pipeline_context($pipeline_step_id, string $context): void {
         if (empty($pipeline_step_id)) {
-            do_action('dm_log', 'error', 'Pipeline context missing', [
+            do_action('datamachine_log', 'error', 'Pipeline context missing', [
                 'context' => $context,
                 'pipeline_step_id' => $pipeline_step_id
             ]);
-            $job_id = apply_filters('dm_current_job_id', null);
+            $job_id = apply_filters('datamachine_current_job_id', null);
             if ($job_id) {
-                do_action('dm_fail_job', $job_id, 'missing_pipeline_context', [
+                do_action('datamachine_fail_job', $job_id, 'missing_pipeline_context', [
                     'context' => $context,
                     'pipeline_step_id' => $pipeline_step_id
                 ]);

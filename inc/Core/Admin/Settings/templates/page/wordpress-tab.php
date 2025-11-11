@@ -7,7 +7,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
-$settings = dm_get_data_machine_settings();
+$settings = datamachine_get_data_machine_settings();
 $wp_settings = $settings['wordpress_settings'] ?? [];
 $engine_mode = $settings['engine_mode'];
 
@@ -22,9 +22,10 @@ $disabled_attr = $engine_mode ? 'disabled' : '';
 
 $post_types = get_post_types(['public' => true], 'objects');
 $taxonomies = get_taxonomies(['public' => true], 'objects');
+$excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
 $filtered_taxonomies = [];
 foreach ($taxonomies as $taxonomy) {
-    if (!in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+    if (!in_array($taxonomy->name, $excluded)) {
         $filtered_taxonomies[] = $taxonomy;
     }
 }
@@ -33,7 +34,7 @@ $users = get_users(['capability' => 'publish_posts', 'number' => 100]);
 $post_statuses = get_post_stati(['public' => true, 'private' => true]);
 ?>
 
-<div class="dm-inline-note" style="margin: 8px 0 16px; padding: 8px 10px; border: 1px solid #e2e8f0; background: #f8fafc;">
+<div class="datamachine-inline-note" style="margin: 8px 0 16px; padding: 8px 10px; border: 1px solid #e2e8f0; background: #f8fafc;">
     <strong><?php esc_html_e('Note', 'data-machine'); ?>:</strong>
     <?php esc_html_e('These are global overrides. If set here, they take precedence over pipeline/handler settings; if not set, pipelines remain in control.', 'data-machine'); ?>
  </div>
@@ -46,7 +47,7 @@ $post_statuses = get_post_stati(['public' => true, 'private' => true]);
                 <fieldset <?php echo esc_attr($disabled_attr); ?>>
                     <?php foreach ($post_types as $post_type): ?>
                         <?php $is_enabled = !$enabled_post_types || ($enabled_post_types[$post_type->name] ?? false); ?>
-                        <label class="dm-settings-page-item">
+                        <label class="datamachine-settings-page-item">
                             <input type="checkbox" 
                                    name="data_machine_settings[wordpress_settings][enabled_post_types][<?php echo esc_attr($post_type->name); ?>]" 
                                    value="1" 
@@ -81,7 +82,7 @@ $post_statuses = get_post_stati(['public' => true, 'private' => true]);
                         $taxonomy_label = $taxonomy->labels->name ?? $taxonomy->label;
                         $is_enabled = !$enabled_taxonomies || ($enabled_taxonomies[$taxonomy->name] ?? false);
                         ?>
-                        <label class="dm-settings-page-item">
+                        <label class="datamachine-settings-page-item">
                             <input type="checkbox" 
                                    name="data_machine_settings[wordpress_settings][enabled_taxonomies][<?php echo esc_attr($taxonomy->name); ?>]" 
                                    value="1" 

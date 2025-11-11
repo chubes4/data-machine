@@ -1,6 +1,6 @@
 # Pipeline Builder Interface
 
-Visual drag-and-drop interface for creating and managing Pipeline+Flow configurations with real-time step arrangement, handler selection, and configuration.
+Modern React-based interface for creating and managing Pipeline+Flow configurations with real-time updates, zero page reloads, and complete REST API integration.
 
 ## Pipeline Management
 
@@ -106,7 +106,7 @@ Visual drag-and-drop interface for creating and managing Pipeline+Flow configura
 
 ## User Experience Features
 
-**Drag & Drop**: Visual step arrangement with live preview and validation.
+**Modern React Interface**: Component-based architecture with instant visual feedback and zero page reloads.
 
 **Keyboard Navigation**: Full keyboard accessibility with tab navigation and shortcut keys.
 
@@ -116,23 +116,20 @@ Visual drag-and-drop interface for creating and managing Pipeline+Flow configura
 
 ## Performance Optimization
 
-**Lazy Loading**: Dynamic loading of configuration interfaces and modal content.
+**React-Based Performance**: Component-level optimizations with:
+- Lazy loading of modal content
+- Efficient re-renders via React reconciliation
+- Client-side caching of configuration data
+- Optimistic UI updates reducing perceived latency
 
-**AJAX Operations**: Asynchronous operations for:
-- Configuration saving
-- Status updates with specialized handlers
+**REST API Operations**: All operations use REST endpoints:
+- Pipeline and flow CRUD operations
+- Configuration saving and retrieval
+- Status updates via `/datamachine/v1/status`
 - Authentication flows
 - Import/export operations
 
-**AJAX Status Refresh System**: Two specialized handlers for optimized status updates:
-- **FlowStatusAjax** (`wp_ajax_dm_refresh_flow_status`): Flow-scoped refresh for handler configuration, scheduling, and flow settings using `flow_step_status` context
-- **PipelineStatusAjax** (`wp_ajax_dm_refresh_pipeline_status`): Pipeline-wide refresh for step add/delete and AI configuration using `pipeline_step_status` context
-
-**Status Detection Contexts**:
-- `pipeline_step_status`: Pipeline-wide validation including AI cascade effects and architectural checks
-- `flow_step_status`: Flow-specific validation for handler configuration, authentication, and settings completeness
-
-**Caching**: Client-side caching of configuration data and interface states.
+**State Management**: React Context API and custom hooks provide efficient state synchronization across components without prop drilling.
 
 ## Error Handling
 
@@ -141,3 +138,163 @@ Visual drag-and-drop interface for creating and managing Pipeline+Flow configura
 **Graceful Degradation**: Fallback interfaces when JavaScript disabled or AJAX failures occur.
 
 **Error Recovery**: Automatic retry mechanisms and user-guided error resolution workflows.
+
+## React Architecture
+
+### Overview
+
+The Pipelines page uses modern React architecture built with WordPress components, eliminating all jQuery/AJAX dependencies in favor of a clean, maintainable component-based system with complete REST API integration.
+
+**Code Statistics:**
+- 6,591 lines of React code
+- 50+ specialized components
+- 2,223 lines of jQuery removed
+- 6 PHP template files removed
+- 2 AJAX endpoint classes eliminated (PipelinePageAjax, PipelineStatusAjax)
+
+### Component Structure
+
+**Core Components:**
+
+- `PipelinesApp.jsx` - Root application component managing global application state
+- `PipelineContext.jsx` - Context provider for global state management and data synchronization
+- Custom hooks for data fetching and state management:
+  - `usePipelines` - Pipeline data and operations
+  - `useFlows` - Flow instance management
+  - `useStepTypes` - Available step types discovery
+  - `useHandlers` - Handler discovery and configuration
+  - `useStepSettings` - Step configuration management
+  - `useModal` - Modal state and operations
+
+**Card Components:**
+
+- `PipelineCard` - Pipeline template visualization with step display
+- `FlowCard` - Flow instance display with scheduling and status
+- `PipelineStepCard` - Individual pipeline step cards with handler info
+- `FlowStepCard` - Configured flow step display with settings
+- `EmptyStepCard` - Add new step interface
+- `EmptyFlowCard` - Create new flow interface
+
+**Modal Components:**
+
+- `ConfigureStepModal` - AI configuration, system prompts, and tool selection
+- `HandlerSettingsModal` - Handler-specific configuration with dynamic field rendering
+- `OAuthAuthenticationModal` - OAuth provider authentication with popup handling
+- `StepSelectionModal` - Step type selection interface
+- `HandlerSelectionModal` - Handler selection with capability display
+- `FlowScheduleModal` - Flow scheduling configuration
+- `ImportExportModal` - Pipeline import/export operations with CSV handling
+
+**Shared Components:**
+
+- `LoadingSpinner` - Loading state visualization
+- `StepTypeIcon` - Step type icons with consistent styling
+- `DataFlowArrow` - Visual data flow indicators between steps
+- `PipelineSelector` - Pipeline selection dropdown with preferences
+
+**Specialized Sub-Components:**
+
+- OAuth components: `ConnectionStatus`, `AccountDetails`, `APIConfigForm`, `OAuthPopupHandler`
+- Files handler components: `FilesHandlerSettings`, `FileUploadInterface`, `FileStatusTable`, `AutoCleanupOption`
+- Configure step components: `AIToolsSelector`, `ToolCheckbox`, `ConfigurationWarning`
+- Import/export components: `ImportTab`, `ExportTab`, `CSVDropzone`, `PipelineCheckboxTable`
+- Context files components: `PipelineContextFiles`, `FileUploadDropzone`, `ContextFilesTable`
+
+### State Management
+
+**Global State (PipelineContext):**
+- Selected pipeline tracking
+- Modal state management
+- Data refresh triggers
+- Loading states
+- Error handling
+
+**Custom Hooks Pattern:**
+
+All data operations use custom hooks that provide:
+- Automatic loading states
+- Error handling with WordPress notices
+- Data caching
+- Real-time updates
+- Optimistic UI updates
+
+Example hook structure:
+```javascript
+const { pipelines, loading, error, refetch } = usePipelines();
+const { flows, createFlow, deleteFlow, duplicateFlow } = useFlows(pipelineId);
+```
+
+### REST API Integration
+
+**Complete REST API Usage:**
+
+All operations consume REST API endpoints with zero AJAX dependencies:
+
+*Pipeline Operations:*
+- `GET /datamachine/v1/pipelines` - Fetch pipelines list
+- `POST /datamachine/v1/pipelines` - Create pipeline
+- `DELETE /datamachine/v1/pipelines/{id}` - Delete pipeline
+- `POST /datamachine/v1/pipelines/{id}/steps` - Add step
+- `DELETE /datamachine/v1/pipelines/{id}/steps/{step_id}` - Remove step
+
+*Flow Operations:*
+- `POST /datamachine/v1/flows` - Create flow
+- `DELETE /datamachine/v1/flows/{id}` - Delete flow
+- `POST /datamachine/v1/flows/{id}/duplicate` - Duplicate flow
+- `GET /datamachine/v1/flows/{id}/config` - Flow configuration
+- `GET /datamachine/v1/flows/steps/{flow_step_id}/config` - Flow step config
+
+*Status Operations:*
+- `GET /datamachine/v1/status` - Flow and pipeline status with query batching
+
+**Authentication:**
+All requests use WordPress REST API nonce from `wpApiSettings.nonce` with `manage_options` capability validation.
+
+### Benefits of React Architecture
+
+**User Experience:**
+- Zero page reloads for all operations
+- Instant visual feedback
+- Optimistic UI updates
+- Real-time status updates
+- Modern, responsive interface
+
+**Developer Experience:**
+- Component reusability
+- Clear separation of concerns
+- Testable code structure
+- Maintainable state management
+- Type-safe operations (via PropTypes)
+
+**Performance:**
+- Client-side caching
+- Efficient re-renders via React optimization
+- Lazy loading of modal content
+- Reduced server load (REST API vs repeated page loads)
+
+**Extensibility:**
+- Easy to add new features
+- Filter-based handler discovery
+- Dynamic field rendering
+- Plugin-friendly architecture
+
+### Migration Impact
+
+**Eliminated Code:**
+- 2,223 lines of jQuery removed from 12 JavaScript files
+- 6 PHP template files removed (pipeline-card.php, flow-instance-card.php, pipeline-step-card.php, flow-step-card.php, flow-instance-footer.php, pipeline-templates.php)
+- 2 AJAX endpoint classes deleted (PipelinePageAjax, PipelineStatusAjax)
+
+**Simplified Maintenance:**
+- Single responsibility components
+- Declarative UI rendering
+- Centralized state management
+- Consistent error handling patterns
+
+**Future Enhancements:**
+React architecture enables future features like:
+- Drag-and-drop step reordering (planned)
+- Real-time collaboration (possible)
+- Advanced validation UI (easy to implement)
+- Undo/redo functionality (state-based)
+- Keyboard shortcuts (event-based)

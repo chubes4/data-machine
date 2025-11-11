@@ -1,19 +1,20 @@
 <?php
 namespace DataMachine\Engine\Actions;
 
+use WP_Error;
 
 /**
- * Centralized deletion operations with cascade support via dm_delete action.
+ * Centralized deletion operations with cascade support.
  *
  * @package DataMachine\Engine\Actions
  */
 
-if ( ! defined( 'WPINC' ) ) {
-	die;
+if (!defined('WPINC')) {
+    die;
 }
 
 /**
- * Centralized deletion operations via dm_delete action hook.
+ * Centralized deletion operations exposed for both REST and legacy hooks.
  */
 class Delete {
 
@@ -23,12 +24,12 @@ class Delete {
     public static function register() {
         $instance = new self();
         // Granular deletion actions
-        add_action('dm_delete_pipeline', [$instance, 'handle_pipeline_deletion'], 10, 1);
-        add_action('dm_delete_flow', [$instance, 'handle_flow_deletion'], 10, 1);
-        add_action('dm_delete_step', [$instance, 'handle_step_deletion'], 10, 2);
-        add_action('dm_delete_processed_items', [$instance, 'handle_processed_items_deletion'], 10, 1);
-        add_action('dm_delete_jobs', [$instance, 'handle_jobs_deletion'], 10, 2);
-        add_action('dm_delete_logs', [$instance, 'handle_logs_deletion'], 10, 0);
+        add_action('datamachine_delete_pipeline', [$instance, 'handle_pipeline_deletion'], 10, 1);
+        add_action('datamachine_delete_flow', [$instance, 'handle_flow_deletion'], 10, 1);
+        add_action('datamachine_delete_step', [$instance, 'handle_step_deletion'], 10, 2);
+        add_action('datamachine_delete_processed_items', [$instance, 'handle_processed_items_deletion'], 10, 1);
+        add_action('datamachine_delete_jobs', [$instance, 'handle_jobs_deletion'], 10, 2);
+        add_action('datamachine_delete_logs', [$instance, 'handle_logs_deletion'], 10, 0);
     }
 
     /**
@@ -41,64 +42,20 @@ class Delete {
      * @since 1.0.0
      */
     public function handle_pipeline_deletion($pipeline_id) {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
-            return;
-        }
+        $result = self::delete_pipeline((int) $pipeline_id);
 
-        $pipeline_id = (int)$pipeline_id;
-        if ($pipeline_id <= 0) {
-            wp_send_json_error(['message' => __('Valid pipeline ID is required.', 'data-machine')]);
-            return;
-        }
-
-        $all_databases = apply_filters('dm_db', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        $db_flows = $all_databases['flows'] ?? null;
-
-        if (!$db_pipelines || !$db_flows) {
-            wp_send_json_error(['message' => __('Database services unavailable.', 'data-machine')]);
-            return;
-        }
-
-        $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
-        if (!$pipeline) {
-            wp_send_json_error(['message' => __('Pipeline not found.', 'data-machine')]);
-            return;
-        }
-
-        $pipeline_name = $pipeline['pipeline_name'];
-        $affected_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
-        $flow_count = count($affected_flows);
-
-        foreach ($affected_flows as $flow) {
-            $flow_id = $flow['flow_id'];
-            $success = $db_flows->delete_flow($flow_id);
-            if (!$success) {
-                wp_send_json_error(['message' => __('Failed to delete associated flows.', 'data-machine')]);
-                return;
+        if (is_wp_error($result)) {
+            if (wp_doing_ajax()) {
+                wp_send_json_error(['message' => $result->get_error_message()], $result->get_error_data()['status'] ?? null);
             }
+            return $result;
         }
 
-        $success = $db_pipelines->delete_pipeline($pipeline_id);
-        if (!$success) {
-            wp_send_json_error(['message' => __('Failed to delete pipeline.', 'data-machine')]);
-            return;
+        if (wp_doing_ajax()) {
+            wp_send_json_success($result);
         }
 
-        do_action('dm_clear_pipelines_list_cache');
-
-        wp_send_json_success([
-            'message' => sprintf(
-                /* translators: %1$s: Pipeline name, %2$d: Number of flows deleted */
-                __('Pipeline "%1$s" deleted successfully. %2$d flows were also deleted. Associated job records are preserved as historical data.', 'data-machine'),
-                $pipeline_name,
-                $flow_count
-            ),
-            'pipeline_id' => $pipeline_id,
-            'pipeline_name' => $pipeline_name,
-            'deleted_flows' => $flow_count
-        ]);
+        return $result;
     }
 
     /**
@@ -111,52 +68,20 @@ class Delete {
      * @since 1.0.0
      */
     public function handle_flow_deletion($flow_id) {
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
-            return;
+        $result = self::delete_flow((int) $flow_id);
+
+        if (is_wp_error($result)) {
+            if (wp_doing_ajax()) {
+                wp_send_json_error(['message' => $result->get_error_message()], $result->get_error_data()['status'] ?? null);
+            }
+            return $result;
         }
 
-        $flow_id = (int)$flow_id;
-        if ($flow_id <= 0) {
-            wp_send_json_error(['message' => __('Valid flow ID is required.', 'data-machine')]);
-            return;
+        if (wp_doing_ajax()) {
+            wp_send_json_success($result);
         }
 
-        $all_databases = apply_filters('dm_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-
-        if (!$db_flows) {
-            wp_send_json_error(['message' => __('Database services unavailable.', 'data-machine')]);
-            return;
-        }
-
-        $flow = apply_filters('dm_get_flow', null, $flow_id);
-        if (!$flow) {
-            wp_send_json_error(['message' => __('Flow not found.', 'data-machine')]);
-            return;
-        }
-
-        $flow_name = $flow['flow_name'];
-        $pipeline_id = $flow['pipeline_id'];
-
-        $success = $db_flows->delete_flow($flow_id);
-        if (!$success) {
-            wp_send_json_error(['message' => __('Failed to delete flow.', 'data-machine')]);
-            return;
-        }
-
-        do_action('dm_clear_pipeline_cache', $pipeline_id);
-
-        wp_send_json_success([
-            'message' => sprintf(
-                /* translators: %s: Flow name */
-                __('Flow "%s" deleted successfully. Associated job records are preserved as historical data.', 'data-machine'),
-                $flow_name
-            ),
-            'flow_id' => $flow_id,
-            'flow_name' => $flow_name,
-            'pipeline_id' => $pipeline_id
-        ]);
+        return $result;
     }
 
     /**
@@ -171,37 +96,227 @@ class Delete {
      * @since 1.0.0
      */
     public function handle_step_deletion($pipeline_step_id, $pipeline_id) {
+        $result = self::delete_pipeline_step((string) $pipeline_step_id, (int) $pipeline_id);
+
+        if (is_wp_error($result)) {
+            if (wp_doing_ajax()) {
+                wp_send_json_error(['message' => $result->get_error_message()], $result->get_error_data()['status'] ?? null);
+            }
+            return $result;
+        }
+
+        if (wp_doing_ajax()) {
+            wp_send_json_success($result);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Perform pipeline deletion and return operation metadata.
+     */
+    public static function delete_pipeline(int $pipeline_id)
+    {
         if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions', 'data-machine')]);
-            return;
+            return new WP_Error(
+                'rest_forbidden',
+                __('Insufficient permissions', 'data-machine'),
+                ['status' => 403]
+            );
         }
 
-        $pipeline_id = (int)$pipeline_id;
-        if ($pipeline_id <= 0 || empty($pipeline_step_id)) {
-            wp_send_json_error(['message' => __('Valid pipeline ID and step ID are required.', 'data-machine')]);
-            return;
+        $pipeline_id = absint($pipeline_id);
+        if ($pipeline_id <= 0) {
+            return new WP_Error(
+                'invalid_pipeline_id',
+                __('Valid pipeline ID is required.', 'data-machine'),
+                ['status' => 400]
+            );
         }
 
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $db_pipelines = $all_databases['pipelines'] ?? null;
         $db_flows = $all_databases['flows'] ?? null;
 
         if (!$db_pipelines || !$db_flows) {
-            wp_send_json_error(['message' => __('Database services unavailable.', 'data-machine')]);
-            return;
+            return new WP_Error(
+                'database_unavailable',
+                __('Database services unavailable.', 'data-machine'),
+                ['status' => 500]
+            );
         }
 
-        $pipeline = apply_filters('dm_get_pipelines', [], $pipeline_id);
+        $pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
         if (!$pipeline) {
-            wp_send_json_error(['message' => __('Pipeline not found.', 'data-machine')]);
-            return;
+            return new WP_Error(
+                'pipeline_not_found',
+                __('Pipeline not found.', 'data-machine'),
+                ['status' => 404]
+            );
         }
 
-        $pipeline_name = $pipeline['pipeline_name'];
-        $affected_flows = apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
+        $pipeline_name = $pipeline['pipeline_name'] ?? '';
+        $affected_flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
         $flow_count = count($affected_flows);
 
-        $current_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+        foreach ($affected_flows as $flow) {
+            $flow_id = (int) ($flow['flow_id'] ?? 0);
+            if ($flow_id > 0) {
+                $success = $db_flows->delete_flow($flow_id);
+                if (!$success) {
+                    return new WP_Error(
+                        'flow_deletion_failed',
+                        __('Failed to delete associated flows.', 'data-machine'),
+                        ['status' => 500]
+                    );
+                }
+            }
+        }
+
+        $success = $db_pipelines->delete_pipeline($pipeline_id);
+        if (!$success) {
+            return new WP_Error(
+                'pipeline_deletion_failed',
+                __('Failed to delete pipeline.', 'data-machine'),
+                ['status' => 500]
+            );
+        }
+
+        do_action('datamachine_clear_pipelines_list_cache');
+
+        return [
+            'message' => sprintf(
+                /* translators: %1$s: Pipeline name, %2$d: Number of flows deleted */
+                __('Pipeline "%1$s" deleted successfully. %2$d flows were also deleted. Associated job records are preserved as historical data.', 'data-machine'),
+                $pipeline_name,
+                $flow_count
+            ),
+            'pipeline_id' => $pipeline_id,
+            'pipeline_name' => $pipeline_name,
+            'deleted_flows' => $flow_count
+        ];
+    }
+
+    /**
+     * Perform flow deletion and return operation metadata.
+     */
+    public static function delete_flow(int $flow_id)
+    {
+        if (!current_user_can('manage_options')) {
+            return new WP_Error(
+                'rest_forbidden',
+                __('Insufficient permissions', 'data-machine'),
+                ['status' => 403]
+            );
+        }
+
+        $flow_id = absint($flow_id);
+        if ($flow_id <= 0) {
+            return new WP_Error(
+                'invalid_flow_id',
+                __('Valid flow ID is required.', 'data-machine'),
+                ['status' => 400]
+            );
+        }
+
+        $all_databases = apply_filters('datamachine_db', []);
+        $db_flows = $all_databases['flows'] ?? null;
+
+        if (!$db_flows) {
+            return new WP_Error(
+                'database_unavailable',
+                __('Database services unavailable.', 'data-machine'),
+                ['status' => 500]
+            );
+        }
+
+        $flow = apply_filters('datamachine_get_flow', null, $flow_id);
+        if (!$flow) {
+            return new WP_Error(
+                'flow_not_found',
+                __('Flow not found.', 'data-machine'),
+                ['status' => 404]
+            );
+        }
+
+        $flow_name = $flow['flow_name'] ?? '';
+        $pipeline_id = (int) ($flow['pipeline_id'] ?? 0);
+
+        $success = $db_flows->delete_flow($flow_id);
+        if (!$success) {
+            return new WP_Error(
+                'flow_deletion_failed',
+                __('Failed to delete flow.', 'data-machine'),
+                ['status' => 500]
+            );
+        }
+
+        if ($pipeline_id > 0) {
+            do_action('datamachine_clear_pipeline_cache', $pipeline_id);
+        }
+
+        return [
+            'message' => sprintf(
+                /* translators: %s: Flow name */
+                __('Flow "%s" deleted successfully. Associated job records are preserved as historical data.', 'data-machine'),
+                $flow_name
+            ),
+            'flow_id' => $flow_id,
+            'flow_name' => $flow_name,
+            'pipeline_id' => $pipeline_id
+        ];
+    }
+
+    /**
+     * Perform pipeline step deletion and return operation metadata.
+     */
+    public static function delete_pipeline_step(string $pipeline_step_id, int $pipeline_id)
+    {
+        if (!current_user_can('manage_options')) {
+            return new WP_Error(
+                'rest_forbidden',
+                __('Insufficient permissions', 'data-machine'),
+                ['status' => 403]
+            );
+        }
+
+        $pipeline_id = absint($pipeline_id);
+        $pipeline_step_id = trim($pipeline_step_id);
+
+        if ($pipeline_id <= 0 || $pipeline_step_id === '') {
+            return new WP_Error(
+                'invalid_step_parameters',
+                __('Valid pipeline ID and step ID are required.', 'data-machine'),
+                ['status' => 400]
+            );
+        }
+
+        $all_databases = apply_filters('datamachine_db', []);
+        $db_pipelines = $all_databases['pipelines'] ?? null;
+        $db_flows = $all_databases['flows'] ?? null;
+
+        if (!$db_pipelines || !$db_flows) {
+            return new WP_Error(
+                'database_unavailable',
+                __('Database services unavailable.', 'data-machine'),
+                ['status' => 500]
+            );
+        }
+
+        $pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
+        if (!$pipeline) {
+            return new WP_Error(
+                'pipeline_not_found',
+                __('Pipeline not found.', 'data-machine'),
+                ['status' => 404]
+            );
+        }
+
+        $pipeline_name = $pipeline['pipeline_name'] ?? '';
+        $affected_flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
+        $flow_count = count($affected_flows);
+
+        $current_steps = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
         $remaining_steps = [];
         $step_found = false;
 
@@ -213,15 +328,18 @@ class Delete {
             }
         }
 
+        if (!$step_found) {
+            return new WP_Error(
+                'step_not_found',
+                __('Step not found in pipeline.', 'data-machine'),
+                ['status' => 404]
+            );
+        }
+
         $updated_steps = [];
         foreach ($remaining_steps as $index => $step) {
             $step['execution_order'] = $index;
             $updated_steps[$step['pipeline_step_id']] = $step;
-        }
-
-        if (!$step_found) {
-            wp_send_json_error(['message' => __('Step not found in pipeline.', 'data-machine')]);
-            return;
         }
 
         $success = $db_pipelines->update_pipeline($pipeline_id, [
@@ -229,12 +347,19 @@ class Delete {
         ]);
 
         if (!$success) {
-            wp_send_json_error(['message' => __('Failed to delete step from pipeline.', 'data-machine')]);
-            return;
+            return new WP_Error(
+                'step_deletion_failed',
+                __('Failed to delete step from pipeline.', 'data-machine'),
+                ['status' => 500]
+            );
         }
 
         foreach ($affected_flows as $flow) {
-            $flow_id = $flow['flow_id'];
+            $flow_id = (int) ($flow['flow_id'] ?? 0);
+            if ($flow_id <= 0) {
+                continue;
+            }
+
             $flow_config = $flow['flow_config'] ?? [];
 
             foreach ($flow_config as $flow_step_id => $step_data) {
@@ -243,28 +368,28 @@ class Delete {
                 }
             }
 
-            apply_filters('dm_update_flow', false, $flow_id, [
+            apply_filters('datamachine_update_flow', false, $flow_id, [
                 'flow_config' => json_encode($flow_config)
             ]);
         }
 
-        do_action('dm_clear_pipeline_cache', $pipeline_id);
-        do_action('dm_auto_save', $pipeline_id);
+        do_action('datamachine_clear_pipeline_cache', $pipeline_id);
+        do_action('datamachine_auto_save', $pipeline_id);
 
-        $remaining_steps = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+        $remaining_steps = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
 
-        wp_send_json_success([
+        return [
             'message' => sprintf(
                 /* translators: %1$s: Pipeline name, %2$d: Number of affected flows */
                 __('Step deleted successfully from pipeline "%1$s". %2$d flows were affected.', 'data-machine'),
                 $pipeline_name,
                 $flow_count
             ),
-            'pipeline_id' => (int)$pipeline_id,
+            'pipeline_id' => $pipeline_id,
             'pipeline_step_id' => $pipeline_step_id,
             'affected_flows' => $flow_count,
             'remaining_steps' => count($remaining_steps)
-        ]);
+        ];
     }
     
     /**
@@ -277,11 +402,11 @@ class Delete {
      * @since 1.0.0
      */
     public function handle_processed_items_deletion($criteria) {
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $processed_items = $all_databases['processed_items'] ?? null;
 
         if (!$processed_items) {
-            do_action('dm_log', 'error', 'ProcessedItems service unavailable for cleanup');
+            do_action('datamachine_log', 'error', 'ProcessedItems service unavailable for cleanup');
             if (wp_doing_ajax()) {
                 wp_send_json_error(['message' => __('ProcessedItems service unavailable.', 'data-machine')]);
             }
@@ -289,7 +414,7 @@ class Delete {
         }
 
         if (empty($criteria) || !is_array($criteria)) {
-            do_action('dm_log', 'error', 'Invalid criteria for processed items deletion', ['criteria' => $criteria]);
+            do_action('datamachine_log', 'error', 'Invalid criteria for processed items deletion', ['criteria' => $criteria]);
             if (wp_doing_ajax()) {
                 wp_send_json_error(['message' => __('Invalid deletion criteria.', 'data-machine')]);
             }
@@ -299,7 +424,7 @@ class Delete {
         $result = $processed_items->delete_processed_items($criteria);
 
         if ($result === false) {
-            do_action('dm_log', 'error', 'Processed items deletion failed', [
+            do_action('datamachine_log', 'error', 'Processed items deletion failed', [
                 'criteria' => $criteria,
                 'context' => wp_doing_ajax() ? 'AJAX' : 'non-AJAX'
             ]);
@@ -331,7 +456,7 @@ class Delete {
      * @since 1.0.0
      */
     public function handle_jobs_deletion($clear_type, $cleanup_processed = false) {
-        $all_databases = apply_filters('dm_db', []);
+        $all_databases = apply_filters('datamachine_db', []);
         $db_jobs = $all_databases['jobs'] ?? null;
 
         if (!$db_jobs) {
@@ -367,7 +492,7 @@ class Delete {
 
         if ($cleanup_processed && !empty($job_ids_to_delete)) {
             foreach ($job_ids_to_delete as $job_id) {
-                do_action('dm_delete_processed_items', ['job_id' => (int)$job_id]);
+                do_action('datamachine_delete_processed_items', ['job_id' => (int)$job_id]);
             }
         }
 
@@ -382,7 +507,7 @@ class Delete {
         $message = implode(' ', $message_parts) . '.';
 
         if ($deleted_count > 0) {
-            do_action('dm_clear_jobs_cache');
+            do_action('datamachine_clear_jobs_cache');
         }
 
         wp_send_json_success([
@@ -400,7 +525,7 @@ class Delete {
      * @since 1.0.0
      */
     public function handle_logs_deletion() {
-        $log_file = apply_filters('dm_log_file', null, 'get', null);
+        $log_file = apply_filters('datamachine_log_file', null, 'get', null);
 
         if (!$log_file || !file_exists($log_file)) {
             wp_send_json_success(['message' => __('No log file to clear.', 'data-machine')]);

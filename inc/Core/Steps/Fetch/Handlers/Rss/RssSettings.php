@@ -38,7 +38,7 @@ class RssSettings {
                 'type' => 'select',
                 'label' => __('Process Items Within', 'data-machine'),
                 'description' => __('Only consider RSS items published within this timeframe.', 'data-machine'),
-                'options' => apply_filters('dm_timeframe_limit', [], null),
+                'options' => apply_filters('datamachine_timeframe_limit', [], null),
             ],
             'search' => [
                 'type' => 'text',

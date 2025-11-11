@@ -44,7 +44,7 @@ class Flows {
         
         $result = dbDelta($sql);
         
-        do_action('dm_log', 'debug', 'Flows table creation completed', [
+        do_action('datamachine_log', 'debug', 'Flows table creation completed', [
             'table_name' => $table_name,
             'result' => $result
         ]);
@@ -56,7 +56,7 @@ class Flows {
         $required_fields = ['pipeline_id', 'flow_name', 'flow_config', 'scheduling_config'];
         foreach ($required_fields as $field) {
             if (!isset($flow_data[$field])) {
-                do_action('dm_log', 'error', 'Missing required field for flow creation', [
+                do_action('datamachine_log', 'error', 'Missing required field for flow creation', [
                     'missing_field' => $field,
                     'provided_data' => array_keys($flow_data)
                 ]);
@@ -94,7 +94,7 @@ class Flows {
         );
         
         if ($result === false) {
-            do_action('dm_log', 'error', 'Failed to create flow', [
+            do_action('datamachine_log', 'error', 'Failed to create flow', [
                 'wpdb_error' => $this->wpdb->last_error,
                 'flow_data' => $flow_data
             ]);
@@ -103,14 +103,14 @@ class Flows {
         
         $flow_id = $this->wpdb->insert_id;
         
-        do_action('dm_log', 'debug', 'Flow created successfully', [
+        do_action('datamachine_log', 'debug', 'Flow created successfully', [
             'flow_id' => $flow_id,
             'pipeline_id' => $flow_data['pipeline_id'],
             'flow_name' => $flow_data['flow_name']
         ]);
 
         // Clear pipeline flows cache since a new flow was created
-        do_action('dm_clear_pipeline_cache', $flow_data['pipeline_id']);
+        do_action('datamachine_clear_pipeline_cache', $flow_data['pipeline_id']);
 
         return $flow_id;
     }
@@ -125,7 +125,7 @@ class Flows {
             $flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE flow_id = %d", $this->table_name, $flow_id ), ARRAY_A );
 
             if ($flow === null) {
-                do_action('dm_log', 'warning', 'Flow not found', [
+                do_action('datamachine_log', 'warning', 'Flow not found', [
                     'flow_id' => $flow_id
                 ]);
                 return null;
@@ -134,7 +134,7 @@ class Flows {
             $flow['flow_config'] = json_decode($flow['flow_config'], true) ?: [];
             $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true) ?: [];
 
-            do_action('dm_cache_set', $cache_key, $flow, 0, 'flows');
+            do_action('datamachine_cache_set', $cache_key, $flow, 0, 'flows');
             return $flow;
         }
 
@@ -151,7 +151,7 @@ class Flows {
             $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE pipeline_id = %d ORDER BY flow_id DESC", $this->table_name, $pipeline_id ), ARRAY_A );
 
             if ($flows === null) {
-                do_action('dm_log', 'warning', 'No flows found for pipeline', [
+                do_action('datamachine_log', 'warning', 'No flows found for pipeline', [
                     'pipeline_id' => $pipeline_id
                 ]);
                 return [];
@@ -162,7 +162,7 @@ class Flows {
                 $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true) ?: [];
             }
 
-            do_action('dm_cache_set', $cache_key, $flows, 0, 'flows');
+            do_action('datamachine_cache_set', $cache_key, $flows, 0, 'flows');
             return $flows;
         }
 
@@ -198,7 +198,7 @@ class Flows {
         }
         
         if (empty($update_data)) {
-            do_action('dm_log', 'warning', 'No valid update data provided for flow', [
+            do_action('datamachine_log', 'warning', 'No valid update data provided for flow', [
                 'flow_id' => $flow_id
             ]);
             return false;
@@ -213,7 +213,7 @@ class Flows {
         );
         
         if ($result === false) {
-            do_action('dm_log', 'error', 'Failed to update flow', [
+            do_action('datamachine_log', 'error', 'Failed to update flow', [
                 'flow_id' => $flow_id,
                 'wpdb_error' => $this->wpdb->last_error,
                 'update_data' => array_keys($update_data)
@@ -223,13 +223,13 @@ class Flows {
 
         // Intelligent cache clearing based on what's actually being updated
         if (isset($flow_data['scheduling_config'])) {
-            do_action('dm_clear_flow_scheduling_cache', $flow_id);
+            do_action('datamachine_clear_flow_scheduling_cache', $flow_id);
         } elseif (isset($flow_data['flow_config'])) {
-            do_action('dm_clear_flow_config_cache', $flow_id);
-            do_action('dm_clear_flow_steps_cache', $flow_id);
+            do_action('datamachine_clear_flow_config_cache', $flow_id);
+            do_action('datamachine_clear_flow_steps_cache', $flow_id);
         } else {
             // Structural flow changes - clear everything
-            do_action('dm_clear_flow_cache', $flow_id);
+            do_action('datamachine_clear_flow_cache', $flow_id);
         }
 
         return true;
@@ -247,7 +247,7 @@ class Flows {
         );
         
         if ($result === false) {
-            do_action('dm_log', 'error', 'Failed to delete flow', [
+            do_action('datamachine_log', 'error', 'Failed to delete flow', [
                 'flow_id' => $flow_id,
                 'wpdb_error' => $this->wpdb->last_error
             ]);
@@ -255,18 +255,18 @@ class Flows {
         }
         
         if ($result === 0) {
-            do_action('dm_log', 'warning', 'Flow not found for deletion', [
+            do_action('datamachine_log', 'warning', 'Flow not found for deletion', [
                 'flow_id' => $flow_id
             ]);
             return false;
         }
         
-        do_action('dm_log', 'debug', 'Flow deleted successfully', [
+        do_action('datamachine_log', 'debug', 'Flow deleted successfully', [
             'flow_id' => $flow_id
         ]);
 
         // Clear flow cache after successful deletion
-        do_action('dm_clear_flow_cache', $flow_id);
+        do_action('datamachine_clear_flow_cache', $flow_id);
 
         return true;
     }
@@ -285,7 +285,7 @@ class Flows {
         );
         
         if ($result === false) {
-            do_action('dm_log', 'error', 'Failed to update flow scheduling', [
+            do_action('datamachine_log', 'error', 'Failed to update flow scheduling', [
                 'flow_id' => $flow_id,
                 'wpdb_error' => $this->wpdb->last_error,
                 'scheduling_config' => $scheduling_config
@@ -294,7 +294,7 @@ class Flows {
         }
 
         // Clear flow cache after successful scheduling update
-        do_action('dm_clear_flow_cache', $flow_id);
+        do_action('datamachine_clear_flow_cache', $flow_id);
 
         return true;
     }
@@ -309,7 +309,7 @@ class Flows {
             $scheduling_config_json = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT scheduling_config FROM %i WHERE flow_id = %d", $this->table_name, $flow_id ) );
 
             if ($scheduling_config_json === null) {
-                do_action('dm_log', 'warning', 'Flow scheduling configuration not found', [
+                do_action('datamachine_log', 'warning', 'Flow scheduling configuration not found', [
                     'flow_id' => $flow_id
                 ]);
                 return null;
@@ -319,14 +319,14 @@ class Flows {
             $decoded_config = json_decode($scheduling_config_json, true);
 
             if ($decoded_config === null) {
-                do_action('dm_log', 'error', 'Failed to decode flow scheduling configuration', [
+                do_action('datamachine_log', 'error', 'Failed to decode flow scheduling configuration', [
                     'flow_id' => $flow_id,
                     'raw_config' => $scheduling_config_json
                 ]);
                 return null;
             }
 
-            do_action('dm_cache_set', $cache_key, $decoded_config, 0, 'flows');
+            do_action('datamachine_cache_set', $cache_key, $decoded_config, 0, 'flows');
             return $decoded_config;
         }
 
@@ -346,7 +346,7 @@ class Flows {
         if ( false === $cached_result ) {
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual' AND (JSON_EXTRACT(scheduling_config, '$.last_run_at') IS NULL OR JSON_EXTRACT(scheduling_config, '$.last_run_at') < %s) ORDER BY flow_id ASC", $this->table_name, $current_time ), ARRAY_A );
-            do_action('dm_cache_set', $cache_key, $flows, 60, 'flows'); // 1 min cache for due flows
+            do_action('datamachine_cache_set', $cache_key, $flows, 60, 'flows'); // 1 min cache for due flows
             $cached_result = $flows;
         } else {
             $flows = $cached_result;
@@ -368,7 +368,7 @@ class Flows {
             }
         }
         
-        do_action('dm_log', 'debug', 'Retrieved flows ready for execution', [
+        do_action('datamachine_log', 'debug', 'Retrieved flows ready for execution', [
             'ready_flow_count' => count($ready_flows),
             'current_time' => $current_time
         ]);

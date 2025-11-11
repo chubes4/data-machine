@@ -174,7 +174,7 @@ $flow_id = $db_flows->create_flow([
 
 **Get Flow Config**:
 ```php
-$config = apply_filters('dm_get_flow_config', [], $flow_id);
+$config = apply_filters('datamachine_get_flow_config', [], $flow_id);
 ```
 
 ### Job Operations
@@ -189,19 +189,19 @@ $job_id = $db_jobs->create_job([
 
 **Update Status**:
 ```php
-do_action('dm_update_job_status', $job_id, 'completed', 'Success message');
+do_action('datamachine_update_job_status', $job_id, 'completed', 'Success message');
 ```
 
 ### Processed Items
 
 **Mark Item Processed**:
 ```php
-do_action('dm_mark_item_processed', $flow_step_id, 'rss', $item_id, $job_id);
+do_action('datamachine_mark_item_processed', $flow_step_id, 'rss', $item_id, $job_id);
 ```
 
 **Check If Processed**:
 ```php
-$is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'rss', $item_id);
+$is_processed = apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'rss', $item_id);
 ```
 
 ## Configuration Storage
@@ -251,7 +251,7 @@ $is_processed = apply_filters('dm_is_item_processed', false, $flow_step_id, 'rss
 All database operations use filter-based discovery:
 
 ```php
-$all_databases = apply_filters('dm_db', []);
+$all_databases = apply_filters('datamachine_db', []);
 $db_pipelines = $all_databases['pipelines'] ?? null;
 $db_flows = $all_databases['flows'] ?? null;
 $db_jobs = $all_databases['jobs'] ?? null;

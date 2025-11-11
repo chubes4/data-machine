@@ -4,7 +4,7 @@ The Data Machine engine uses a three-action execution cycle that orchestrates al
 
 ## Execution Cycle
 
-### 1. Flow Initiation (`dm_run_flow_now`)
+### 1. Flow Initiation (`datamachine_run_flow_now`)
 
 **Purpose**: Entry point for all pipeline execution
 
@@ -19,10 +19,10 @@ The Data Machine engine uses a three-action execution cycle that orchestrates al
 
 **Usage**:
 ```php
-do_action('dm_run_flow_now', $flow_id, 'manual');
+do_action('datamachine_run_flow_now', $flow_id, 'manual');
 ```
 
-### 2. Step Execution (`dm_execute_step`)
+### 2. Step Execution (`datamachine_execute_step`)
 
 **Purpose**: Core functional pipeline orchestration - processes individual steps
 
@@ -34,7 +34,7 @@ do_action('dm_run_flow_now', $flow_id, 'manual');
 **Process**:
 1. Retrieves data from storage if reference provided
 2. Loads complete flow step configuration
-3. Discovers step class via `dm_steps` filter
+3. Discovers step class via `datamachine_step_types` filter
 4. Creates step instance and executes with parameters
 5. Determines next step or completes pipeline
 
@@ -46,11 +46,11 @@ $parameters = [
     'flow_step_config' => $flow_step_config,
     'data' => $data
 ];
-// Engine data accessed by steps via centralized dm_engine_data filter
+// Engine data accessed by steps via centralized datamachine_engine_data filter
 $data = $flow_step->execute($parameters);
 ```
 
-### 3. Step Scheduling (`dm_schedule_next_step`)
+### 3. Step Scheduling (`datamachine_schedule_next_step`)
 
 **Purpose**: Action Scheduler integration for step transitions
 
@@ -88,10 +88,10 @@ wp-content/uploads/data-machine/files/
 
 ### Step Registration
 
-Steps register via `dm_steps` filter:
+Steps register via `datamachine_step_types` filter:
 
 ```php
-add_filter('dm_steps', function($steps) {
+add_filter('datamachine_step_types', function($steps) {
     $steps['my_step'] = [
         'name' => __('My Step'),
         'class' => 'MyStep',
@@ -114,8 +114,8 @@ class MyStep {
         $data = $parameters['data'] ?? [];
         $flow_step_config = $parameters['flow_step_config'] ?? [];
         
-        // Access engine data via centralized dm_engine_data filter
-        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        // Access engine data via centralized datamachine_engine_data filter
+        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;
         
@@ -147,8 +147,8 @@ $parameters = [
     'data' => $data
 ];
 
-// Centralized engine data access via dm_engine_data filter
-$engine_data = apply_filters('dm_engine_data', [], $job_id);
+// Centralized engine data access via datamachine_engine_data filter
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 ```
 
 **Benefits**:
@@ -167,8 +167,8 @@ class MyStep {
         $data = $parameters['data'] ?? [];
         $flow_step_config = $parameters['flow_step_config'] ?? [];
 
-        // Access engine data via centralized dm_engine_data filter
-        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        // Access engine data via centralized datamachine_engine_data filter
+        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;
 
@@ -207,12 +207,12 @@ $job_id = $db_jobs->create_job([
 
 **Update Status**:
 ```php
-do_action('dm_update_job_status', $job_id, 'completed', 'Pipeline executed successfully');
+do_action('datamachine_update_job_status', $job_id, 'completed', 'Pipeline executed successfully');
 ```
 
 **Fail Job**:
 ```php
-do_action('dm_fail_job', $job_id, 'step_execution_failure', [
+do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
     'flow_step_id' => $flow_step_id,
     'reason' => 'detailed_error_reason'
 ]);
@@ -229,11 +229,11 @@ try {
     $data = $flow_step->execute($parameters);
     return !empty($data); // Success = non-empty data packet
 } catch (\Throwable $e) {
-    do_action('dm_log', 'error', 'Step execution failed', [
+    do_action('datamachine_log', 'error', 'Step execution failed', [
         'exception' => $e->getMessage(),
         'trace' => $e->getTraceAsString()
     ]);
-    do_action('dm_fail_job', $job_id, 'step_execution_failure', $context);
+    do_action('datamachine_fail_job', $job_id, 'step_execution_failure', $context);
     return false;
 }
 ```
@@ -281,7 +281,7 @@ try {
 
 **Usage**:
 ```php
-do_action('dm_auto_save', $pipeline_id);
+do_action('datamachine_auto_save', $pipeline_id);
 ```
 
 **Process**:

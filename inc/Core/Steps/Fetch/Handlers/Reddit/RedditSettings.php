@@ -50,7 +50,7 @@ class RedditSettings {
                 'type' => 'select',
                 'label' => __('Process Posts Within', 'data-machine'),
                 'description' => __('Only consider posts created within this timeframe.', 'data-machine'),
-                'options' => apply_filters('dm_timeframe_limit', [], null),
+                'options' => apply_filters('datamachine_timeframe_limit', [], null),
             ],
             'min_upvotes' => [
                 'type' => 'number',
@@ -94,7 +94,7 @@ class RedditSettings {
         $valid_sorts = ['hot', 'new', 'top', 'rising', 'controversial'];
         $sort_by = sanitize_text_field($raw_settings['sort_by'] ?? 'hot');
         if (!in_array($sort_by, $valid_sorts)) {
-            do_action('dm_log', 'error', 'Reddit Settings: Invalid sort parameter provided in settings.', ['sort_by' => $sort_by]);
+            do_action('datamachine_log', 'error', 'Reddit Settings: Invalid sort parameter provided in settings.', ['sort_by' => $sort_by]);
             return [];
         }
         $sanitized['sort_by'] = $sort_by;

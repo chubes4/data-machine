@@ -105,8 +105,9 @@ class WordPressSettings {
             if (!is_object($taxonomy)) {
                 continue;
             }
-            // Skip built-in formats and other non-content taxonomies
-            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+            // Skip built-in formats and other non-content taxonomies using centralized filter
+            $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
+            if (in_array($taxonomy->name, $excluded)) {
                 continue;
             }
             
@@ -159,7 +160,7 @@ class WordPressSettings {
                 'type' => 'select',
                 'label' => __('Process Items Within', 'data-machine'),
                 'description' => __('Only consider items published within this timeframe.', 'data-machine'),
-                'options' => apply_filters('dm_timeframe_limit', [], null),
+                'options' => apply_filters('datamachine_timeframe_limit', [], null),
             ],
             'search' => [
                 'type' => 'text',
@@ -227,8 +228,9 @@ class WordPressSettings {
             if (!is_object($taxonomy)) {
                 continue;
             }
-            // Skip built-in formats and other non-content taxonomies
-            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+            // Skip built-in formats and other non-content taxonomies using centralized filter
+            $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
+            if (in_array($taxonomy->name, $excluded)) {
                 continue;
             }
             
@@ -245,8 +247,8 @@ class WordPressSettings {
                     // Invalid numeric value - default to all
                     $sanitized[$field_key] = 0;
                 } else {
-                    $term = get_term($term_id, $taxonomy->name);
-                    if (!is_wp_error($term) && $term) {
+                    $term_name = apply_filters('datamachine_wordpress_term_name', null, $term_id, $taxonomy->name);
+                    if ($term_name !== null) {
                         $sanitized[$field_key] = $term_id;
                     } else {
                         // Invalid term ID - default to all
@@ -275,8 +277,9 @@ class WordPressSettings {
             if (!is_object($taxonomy)) {
                 continue;
             }
-            // Skip built-in formats and other non-content taxonomies
-            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+            // Skip built-in formats and other non-content taxonomies using centralized filter
+            $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
+            if (in_array($taxonomy->name, $excluded)) {
                 continue;
             }
             

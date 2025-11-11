@@ -96,9 +96,9 @@ The Google Sheets fetch handler generates clean data packets for AI processing w
 ### Engine Parameters Storage
 
 ```php
-// Stored in database via centralized dm_engine_data filter
+// Stored in database via centralized datamachine_engine_data filter
 if ($job_id) {
-    apply_filters('dm_engine_data', null, $job_id, '', '');  // Empty URLs for spreadsheet data
+    apply_filters('datamachine_engine_data', null, $job_id, '', '');  // Empty URLs for spreadsheet data
 }
 ```
 
@@ -136,7 +136,7 @@ return [
 - Empty spreadsheet or range
 - Malformed row data
 
-**Logging**: Uses `dm_log` action with debug/error levels for API calls, authentication, and data processing status.
+**Logging**: Uses `datamachine_log` action with debug/error levels for API calls, authentication, and data processing status.
 
 ## Row Processing
 

@@ -14,25 +14,25 @@ if (!defined('WPINC')) {
 }
 
 // Handle form submissions directly in template (admin_init timing issues)
-if (!empty($_POST) && isset($_POST['dm_logs_action'])) {
+if (!empty($_POST) && isset($_POST['datamachine_logs_action'])) {
     // Verify nonce for security
-    $nonce = sanitize_text_field(wp_unslash($_POST['dm_logs_nonce'] ?? ''));
-    if (!wp_verify_nonce($nonce, 'dm_logs_action')) {
+    $nonce = sanitize_text_field(wp_unslash($_POST['datamachine_logs_nonce'] ?? ''));
+    if (!wp_verify_nonce($nonce, 'datamachine_logs_action')) {
         wp_die(esc_html__('Security check failed.', 'data-machine'));
     }
 
-    $action = sanitize_text_field(wp_unslash($_POST['dm_logs_action']));
+    $action = sanitize_text_field(wp_unslash($_POST['datamachine_logs_action']));
 
     switch ($action) {
         case 'clear_all':
-            do_action('dm_log', 'clear_all');
+            do_action('datamachine_log', 'clear_all');
             break;
 
         case 'update_log_level':
             $new_level = sanitize_text_field(wp_unslash($_POST['log_level'] ?? ''));
-            $available_levels = apply_filters('dm_log_file', [], 'get_available_levels');
+            $available_levels = apply_filters('datamachine_log_file', [], 'get_available_levels');
             if (array_key_exists($new_level, $available_levels)) {
-                do_action('dm_log', 'set_level', $new_level);
+                do_action('datamachine_log', 'set_level', $new_level);
             }
             break;
     }
@@ -42,30 +42,30 @@ if (!empty($_POST) && isset($_POST['dm_logs_action'])) {
 // Variables available: $current_log_level, $log_file_info, $recent_logs, $log_file_path
 ?>
 
-<div class="dm-logs-page">
+<div class="datamachine-logs-page">
     
     <!-- Log Configuration Section -->
-    <div class="dm-log-configuration">
+    <div class="datamachine-log-configuration">
         <h2><?php esc_html_e('Log Configuration', 'data-machine'); ?></h2>
         
         <form method="post" action="">
-            <?php wp_nonce_field('dm_logs_action', 'dm_logs_nonce'); ?>
-            <input type="hidden" name="dm_logs_action" value="update_log_level">
+            <?php wp_nonce_field('datamachine_logs_action', 'datamachine_logs_nonce'); ?>
+            <input type="hidden" name="datamachine_logs_action" value="update_log_level">
             
-            <div class="dm-log-level-field">
-                <label for="log_level" class="dm-log-level-label">
+            <div class="datamachine-log-level-field">
+                <label for="log_level" class="datamachine-log-level-label">
                     <?php esc_html_e('Log Level', 'data-machine'); ?>
                 </label>
-                <select id="log_level" name="log_level" class="dm-log-level-select">
+                <select id="log_level" name="log_level" class="datamachine-log-level-select">
                     <?php 
-                    $available_levels = apply_filters('dm_log_file', [], 'get_available_levels');
+                    $available_levels = apply_filters('datamachine_log_file', [], 'get_available_levels');
                     foreach ($available_levels as $level => $description): ?>
                         <option value="<?php echo esc_attr($level); ?>" <?php selected($current_log_level, $level); ?>>
                             <?php echo esc_html($description); ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <p class="dm-log-level-description">
+                <p class="datamachine-log-level-description">
                     <?php esc_html_e('Controls what messages are written to the log file. Debug level creates the most verbose logs.', 'data-machine'); ?>
                 </p>
             </div>
@@ -77,12 +77,12 @@ if (!empty($_POST) && isset($_POST['dm_logs_action'])) {
     </div>
 
     <!-- Log File Information Section -->
-    <div class="dm-log-file-info">
+    <div class="datamachine-log-file-info">
         <h2><?php esc_html_e('Log File Information', 'data-machine'); ?></h2>
         
         <p>
             <strong><?php esc_html_e('File Location:', 'data-machine'); ?></strong>
-            <code class="dm-log-file-path"><?php echo esc_html($log_file_path); ?></code>
+            <code class="datamachine-log-file-path"><?php echo esc_html($log_file_path); ?></code>
         </p>
         
         <p>
@@ -90,41 +90,41 @@ if (!empty($_POST) && isset($_POST['dm_logs_action'])) {
             <?php echo esc_html($log_file_info['size_formatted']); ?>
         </p>
         
-        <div class="dm-log-actions">
-            <form method="post" action="" class="dm-clear-logs-form" data-confirm-message="<?php esc_attr_e('Are you sure you want to clear all logs? This action cannot be undone.', 'data-machine'); ?>">
-                <?php wp_nonce_field('dm_logs_action', 'dm_logs_nonce'); ?>
-                <input type="hidden" name="dm_logs_action" value="clear_all">
+        <div class="datamachine-log-actions">
+            <form method="post" action="" class="datamachine-clear-logs-form" data-confirm-message="<?php esc_attr_e('Are you sure you want to clear all logs? This action cannot be undone.', 'data-machine'); ?>">
+                <?php wp_nonce_field('datamachine_logs_action', 'datamachine_logs_nonce'); ?>
+                <input type="hidden" name="datamachine_logs_action" value="clear_all">
                 <button type="submit" class="button">
                     <?php esc_html_e('Clear All Logs', 'data-machine'); ?>
                 </button>
             </form>
             
-            <button type="button" class="button dm-refresh-logs">
+            <button type="button" class="button datamachine-refresh-logs">
                 <?php esc_html_e('Refresh Logs', 'data-machine'); ?>
             </button>
             
-            <button type="button" class="button dm-copy-logs" data-copy-target=".dm-log-viewer">
+            <button type="button" class="button datamachine-copy-logs" data-copy-target=".datamachine-log-viewer">
                 <?php esc_html_e('Copy Logs', 'data-machine'); ?>
             </button>
 
-            <button type="button" class="button dm-load-full-logs" id="dm-load-full-logs-btn" data-nonce="<?php echo esc_attr(wp_create_nonce('dm_logs_action')); ?>">
+            <button type="button" class="button datamachine-load-full-logs" id="datamachine-load-full-logs-btn" data-nonce="<?php echo esc_attr(wp_create_nonce('datamachine_logs_action')); ?>">
                 <?php esc_html_e('Load Full Log', 'data-machine'); ?>
             </button>
         </div>
     </div>
 
     <!-- Log Entries Section -->
-    <div class="dm-recent-logs">
-        <h2 class="dm-log-section-title"><?php esc_html_e('Recent Log Entries (Last 200)', 'data-machine'); ?></h2>
+    <div class="datamachine-recent-logs">
+        <h2 class="datamachine-log-section-title"><?php esc_html_e('Recent Log Entries (Last 200)', 'data-machine'); ?></h2>
 
-        <div class="dm-log-status-message" style="display: none;"></div>
+        <div class="datamachine-log-status-message" style="display: none;"></div>
 
         <?php if (empty($recent_logs)): ?>
-            <p class="dm-no-logs-message">
+            <p class="datamachine-no-logs-message">
                 <?php esc_html_e('No log entries found.', 'data-machine'); ?>
             </p>
         <?php else: ?>
-            <div class="dm-log-viewer" data-current-mode="recent">
+            <div class="datamachine-log-viewer" data-current-mode="recent">
 <?php echo esc_html(implode("\n", $recent_logs)); ?>
             </div>
         <?php endif; ?>

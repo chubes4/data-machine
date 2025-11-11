@@ -28,10 +28,10 @@ if (!defined('ABSPATH')) {
  * 
  * @since 1.0.0
  */
-function dm_register_wordpress_api_fetch_filters() {
+function datamachine_register_wordpress_api_fetch_filters() {
 
     // Handler registration - WordPress REST API declares itself as fetch handler (pure discovery mode)
-    add_filter('dm_handlers', function($handlers, $step_type = null) {
+    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'fetch') {
             $handlers['wordpress_api'] = [
                 'type' => 'fetch',
@@ -44,7 +44,7 @@ function dm_register_wordpress_api_fetch_filters() {
     }, 10, 2);
 
     // Settings registration - pure discovery mode
-    add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
+    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
         if ($handler_slug === null || $handler_slug === 'wordpress_api') {
             $all_settings['wordpress_api'] = new WordPressAPISettings();
         }
@@ -54,4 +54,4 @@ function dm_register_wordpress_api_fetch_filters() {
 }
 
 // Auto-register when file loads - achieving complete self-containment
-dm_register_wordpress_api_fetch_filters();
+datamachine_register_wordpress_api_fetch_filters();

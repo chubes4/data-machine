@@ -82,7 +82,7 @@ $handler_config = [
 
 **Engine Data Storage (Database)**:
 ```php
-// Stored in database for downstream handler access via dm_engine_data filter
+// Stored in database for downstream handler access via datamachine_engine_data filter
 [
     'source_url' => '',           // Empty for local files
     'image_url' => $public_url    // Public URL for image files only, empty for non-images
@@ -123,20 +123,20 @@ $handler_config = [
 
 **Flow Isolation**: Maintains strict flow-level file separation to prevent data leakage between different pipeline instances.
 
-**Clean Data Separation**: Returns clean data packets to AI agents without URLs, while storing engine parameters (image_url for images) in database for downstream handler access via `dm_engine_data` filter.
+**Clean Data Separation**: Returns clean data packets to AI agents without URLs, while storing engine parameters (image_url for images) in database for downstream handler access via `datamachine_engine_data` filter.
 
 **Engine Data Architecture**: Uses centralized filter pattern for engine data access:
 ```php
 // Storage by Files handler via centralized filter
 if ($job_id) {
-    apply_filters('dm_engine_data', null, $job_id, '', $file_url);
+    apply_filters('datamachine_engine_data', null, $job_id, '', $file_url);
 }
 
 // Retrieval by downstream handlers (via filter)
-$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 $image_url = $engine_data['image_url'] ?? null;
 ```
 
 **Image URL Generation**: For image files, generates public URLs for use by publish handlers (WordPress featured images, social media uploads, etc.).
 
-**Logging**: Uses `dm_log` action with debug/error levels for file discovery, processing status, and error conditions.
+**Logging**: Uses `datamachine_log` action with debug/error levels for file discovery, processing status, and error conditions.

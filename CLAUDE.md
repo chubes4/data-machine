@@ -6,161 +6,235 @@ Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and mult
 
 *For user documentation, see `docs/README.md` | For GitHub overview, see `README.md`*
 
+## Current Implementation Status
+
+**Prefix Convention:**
+- Current: `datamachine_` prefix used throughout codebase (filters, actions, functions)
+- Migration: Transitioning from `dm_` to `datamachine_` prefix (early stages)
+- Status: Migration plugin ready, code refactoring in progress
+
+**API Architecture:**
+- REST API: 10 endpoint files implemented (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users)
+- **Pipelines Page**: React-only architecture, zero jQuery/AJAX (complete migration, 2,223 lines jQuery removed, 6 PHP templates removed, 2 AJAX endpoints removed)
+- **Settings/Jobs Pages**: Still use AJAX for admin operations (migration pending)
+- Migration Status: REST API complete for all data operations. DM Events calendar serves as reference implementation (831 lines removed)
+
+## Phase 2 Migration Scope (Detailed Status)
+
+**Completed in Phase 2 (~40% complete):**
+- ✅ Filter hooks (161 occurrences across 50 files) - all converted to `datamachine_*`
+- ✅ Action hooks (100+ occurrences) - all converted to `datamachine_*`
+- ✅ Core function names - all converted to `datamachine_*`
+
+**Pending in Phase 2 (~150+ occurrences):**
+
+### 1. OAuth URL Routes (Code change required)
+- **Current**: `/datamachine-auth/{provider}/` (WordPress rewrite rules)
+- **Target**: `/datamachine-auth/{provider}/`
+- **Location**: `inc/Engine/Filters/OAuth.php`
+- **Implementation**: WordPress `add_rewrite_rule()` + `template_redirect` hook (NOT REST API, NOT AJAX)
+- **Files affected**: OAuth.php + 6 OAuth handler files (Twitter, Facebook, Reddit, Google Sheets, Threads, Bluesky)
+
+### 2. Cache Keys (30+ constants)
+- **Current**: `dm_pipeline_*`, `dm_flow_*`, `dm_job_*`, `dm_all_pipelines`, etc.
+- **Target**: `datamachine_pipeline_*`, `datamachine_flow_*`, `datamachine_job_*`, etc.
+- **Location**: `inc/Engine/Actions/Cache.php` (lines 16-39)
+- **Type**: WordPress transients (runtime-only, cleared on update)
+
+### 3. WordPress Options (7+ option names)
+- **Current**: `dm_auth_data`, `dm_data_machine_settings`, `dm_search_config`, `dm_selected_pipeline_id`, `dm_page_hook_suffixes`, `dm_page_configs`, `dm_settings_hook_suffix`
+- **Target**: `datamachine_auth_data`, `datamachine_data_machine_settings`, etc.
+- **Locations**: OAuth.php, Settings, GoogleSearch.php, Admin filters, User preferences
+- **Migration**: Phase 3 migration plugin handles data conversion automatically
+
+### 4. Transients (10+ transient names)
+- **Current**: `dm_oauth_error_*`, `dm_oauth_success_*`, `dm_*_oauth_state`, `dm_twitter_req_secret_*`, `dm_site_context_data`, `dm_activation_notice`
+- **Target**: `datamachine_oauth_error_*`, `datamachine_oauth_success_*`, etc.
+- **Type**: Runtime state (temporary, auto-expiring)
+
+### 5. AJAX Nonce (security token)
+- **Current**: `dm_ajax_actions`
+- **Target**: `datamachine_ajax_actions`
+- **Locations**: 20+ admin files (created via `wp_create_nonce()`, verified via `wp_verify_nonce()`)
+- **Type**: Security token for AJAX requests
+
+### 6. Query Variables (OAuth routing)
+- **Current**: `dm_oauth_provider`
+- **Target**: `datamachine_oauth_provider`
+- **Location**: OAuth.php rewrite rules
+- **Type**: WordPress query var for OAuth callback routing
+
+### 7. CSS Classes (cosmetic, low priority)
+- **Current**: `dm-*` prefix in templates and stylesheets
+- **Target**: `datamachine-*` prefix
+- **Type**: Visual styling (no functional impact)
+
+**Database Tables (Phase 3 pending):**
+- `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`
+- Migration blocked until Phase 2 code refactoring completes
+- Migration plugin ready to execute table rename operations in Phase 3
+
 ## Core Filters & Actions
 
 ```php
 // Service Discovery
-$handlers = apply_filters('dm_handlers', []);
-$steps = apply_filters('dm_steps', []);
-$databases = apply_filters('dm_db', []);
-$providers = apply_filters('dm_auth_providers', []);
+$handlers = apply_filters('datamachine_handlers', []);
+$steps = apply_filters('datamachine_step_types', []);
+$databases = apply_filters('datamachine_db', []);
+$providers = apply_filters('datamachine_auth_providers', []);
 
 // Pipeline & Flow Operations
-$pipeline_id = apply_filters('dm_create_pipeline', null, $data); // Accepts simple or complete pipeline data with steps array
-$step_id = apply_filters('dm_create_step', null, $data);
-$flow_id = apply_filters('dm_create_flow', null, $data);
-$flow_id = apply_filters('dm_duplicate_flow', null, $source_flow_id);
-apply_filters('dm_get_pipelines', [], $pipeline_id);
-apply_filters('dm_get_pipelines_list', []);
-apply_filters('dm_get_flow_config', [], $flow_id);
-apply_filters('dm_get_pipeline_flows', [], $pipeline_id);
-apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
+$pipeline_id = apply_filters('datamachine_create_pipeline', null, $data); // Accepts simple or complete pipeline data with steps array
+$step_id = apply_filters('datamachine_create_step', null, $data);
+$flow_id = apply_filters('datamachine_create_flow', null, $data);
+$flow_id = apply_filters('datamachine_duplicate_flow', null, $source_flow_id);
+apply_filters('datamachine_get_pipelines', [], $pipeline_id);
+apply_filters('datamachine_get_pipelines_list', []);
+apply_filters('datamachine_get_flow_config', [], $flow_id);
+apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
+apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
 
 // Step Configuration & Navigation
-$flow_step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
-$pipeline_step_config = apply_filters('dm_get_pipeline_step_config', [], $pipeline_step_id);
-$next_flow_step_id = apply_filters('dm_get_next_flow_step_id', null, $flow_step_id);
-$prev_flow_step_id = apply_filters('dm_get_previous_flow_step_id', null, $flow_step_id);
-$next_pipeline_step_id = apply_filters('dm_get_next_pipeline_step_id', null, $pipeline_step_id);
-$prev_pipeline_step_id = apply_filters('dm_get_previous_pipeline_step_id', null, $pipeline_step_id);
+$flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
+$pipeline_step_config = apply_filters('datamachine_get_pipeline_step_config', [], $pipeline_step_id);
+$next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $flow_step_id);
+$prev_flow_step_id = apply_filters('datamachine_get_previous_flow_step_id', null, $flow_step_id);
+$next_pipeline_step_id = apply_filters('datamachine_get_next_pipeline_step_id', null, $pipeline_step_id);
+$prev_pipeline_step_id = apply_filters('datamachine_get_previous_pipeline_step_id', null, $pipeline_step_id);
 
 // Step ID Management
-$flow_step_id = apply_filters('dm_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
-$parts = apply_filters('dm_split_pipeline_step_id', null, $pipeline_step_id);
-$parts = apply_filters('dm_split_flow_step_id', null, $flow_step_id);
+$flow_step_id = apply_filters('datamachine_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
+$parts = apply_filters('datamachine_split_pipeline_step_id', null, $pipeline_step_id);
+$parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
 
 // Engine Data Access
-$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 
 // AI & Tools
 $result = apply_filters('ai_request', $request, 'anthropic');
 $tools = apply_filters('ai_tools', []);
-$ai_config = apply_filters('dm_ai_config', [], $pipeline_step_id);
-apply_filters('dm_tool_configured', false, $tool_id);
-apply_filters('dm_get_tool_config', [], $tool_id);
-apply_filters('dm_tool_success_message', $message, $tool_name, $result, $parameters);
-apply_filters('dm_parse_ai_response', []);
-do_action('dm_save_tool_config', $tool_id, $config_data);
+$ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id);
+apply_filters('datamachine_tool_configured', false, $tool_id);
+apply_filters('datamachine_get_tool_config', [], $tool_id);
+apply_filters('datamachine_tool_success_message', $message, $tool_name, $result, $parameters);
+apply_filters('datamachine_parse_ai_response', []);
+do_action('datamachine_save_tool_config', $tool_id, $config_data);
 do_action('ai_api_error', $error_data);
 
 // OAuth & Authentication
-apply_filters('dm_retrieve_oauth_account', [], 'handler');
-apply_filters('dm_store_oauth_account', $data, 'handler');
-apply_filters('dm_clear_oauth_account', false, 'handler');
-apply_filters('dm_retrieve_oauth_keys', [], 'handler');
-apply_filters('dm_store_oauth_keys', $data, 'handler');
-apply_filters('dm_oauth_callback', '', 'provider');
-apply_filters('dm_oauth_url', $auth_url, 'provider');
+apply_filters('datamachine_retrieve_oauth_account', [], 'handler');
+apply_filters('datamachine_store_oauth_account', $data, 'handler');
+apply_filters('datamachine_clear_oauth_account', false, 'handler');
+apply_filters('datamachine_retrieve_oauth_keys', [], 'handler');
+apply_filters('datamachine_store_oauth_keys', $data, 'handler');
+apply_filters('datamachine_oauth_callback', '', 'provider');
+apply_filters('datamachine_oauth_url', $auth_url, 'provider');
 
 // Execution
-do_action('dm_run_flow_now', $flow_id, $context);
-do_action('dm_execute_step', $job_id, $flow_step_id, $data);
-do_action('dm_schedule_next_step', $job_id, $flow_step_id, $data);
+do_action('datamachine_run_flow_now', $flow_id, $context);
+do_action('datamachine_execute_step', $job_id, $flow_step_id, $data);
+do_action('datamachine_schedule_next_step', $job_id, $flow_step_id, $data);
 
 // Job Management
-do_action('dm_update_job_status', $job_id, $status, $context);
-do_action('dm_fail_job', $job_id, $reason, $context_data);
+do_action('datamachine_update_job_status', $job_id, $status, $context);
+do_action('datamachine_fail_job', $job_id, $reason, $context_data);
 
 // Processing & Status
-do_action('dm_mark_item_processed', $flow_step_id, $source_type, $item_id, $job_id);
-apply_filters('dm_is_item_processed', false, $flow_step_id, $source_type, $item_id);
-apply_filters('dm_detect_status', 'green', 'context', $data);
-apply_filters('dm_get_handler_settings_display', [], $flow_step_id);
+do_action('datamachine_mark_item_processed', $flow_step_id, $source_type, $item_id, $job_id);
+apply_filters('datamachine_is_item_processed', false, $flow_step_id, $source_type, $item_id);
+apply_filters('datamachine_detect_status', 'green', 'context', $data);
+apply_filters('datamachine_get_handler_settings_display', [], $flow_step_id, $step_type); // Handler settings display with smart defaults (priority 5) and handler-specific customization (priority 10+)
 
 // Data Processing
-apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $step_type);
-apply_filters('dm_request', [], $method, $url, $args, $context);
+apply_filters('datamachine_data_packet', $data, $packet_data, $flow_step_id, $step_type);
+apply_filters('datamachine_request', [], $method, $url, $args, $context);
 
 // Centralized Handler Filters
-apply_filters('dm_timeframe_limit', null, $timeframe_limit); // Shared timeframe parsing across fetch handlers
-apply_filters('dm_keyword_search_match', true, $content, $search_term); // Universal keyword matching with OR logic
+apply_filters('datamachine_timeframe_limit', null, $timeframe_limit); // Shared timeframe parsing across fetch handlers
+apply_filters('datamachine_keyword_search_match', true, $content, $search_term); // Universal keyword matching with OR logic
+
+// WordPress Utilities (Engine/Filters/WordPress.php)
+apply_filters('datamachine_wordpress_user_display_name', null, $user_id); // Convert user ID to display name
+apply_filters('datamachine_wordpress_term_name', null, $term_id, $taxonomy); // Convert term ID to term name
+apply_filters('datamachine_wordpress_system_taxonomies', []); // Get excluded system taxonomies list
+apply_filters('datamachine_wordpress_public_taxonomies', [], $args); // Get public taxonomies (with exclusion)
 
 // Delete Operations
-do_action('dm_delete_pipeline', $pipeline_id);
-do_action('dm_delete_flow', $flow_id);
-do_action('dm_delete_step', $pipeline_step_id, $pipeline_id);
-do_action('dm_delete_processed_items', $criteria); // Criteria array: ['job_id' => 123] or ['flow_id' => 456]
-do_action('dm_delete_jobs', $clear_type, $cleanup_processed); // clear_type: 'all' or 'failed'
-do_action('dm_delete_logs'); // Clear log file
+do_action('datamachine_delete_pipeline', $pipeline_id);
+do_action('datamachine_delete_flow', $flow_id);
+do_action('datamachine_delete_step', $pipeline_step_id, $pipeline_id);
+do_action('datamachine_delete_processed_items', $criteria); // Criteria array: ['job_id' => 123] or ['flow_id' => 456]
+do_action('datamachine_delete_jobs', $clear_type, $cleanup_processed); // clear_type: 'all' or 'failed'
+do_action('datamachine_delete_logs'); // Clear log file
 
 // Update Operations
-do_action('dm_update_flow_handler', $flow_step_id, $handler_slug, $settings);
-do_action('dm_update_flow_schedule', $flow_id, $interval, $context);
-do_action('dm_update_system_prompt', $pipeline_step_id, $system_prompt);
-do_action('dm_update_flow_user_message', $flow_step_id, $user_message);
-do_action('dm_sync_steps_to_flow', $flow_id, $step_data, $context);
+do_action('datamachine_update_flow_handler', $flow_step_id, $handler_slug, $settings);
+do_action('datamachine_update_flow_schedule', $flow_id, $interval, $context);
+do_action('datamachine_update_system_prompt', $pipeline_step_id, $system_prompt);
+do_action('datamachine_update_flow_user_message', $flow_step_id, $user_message);
+do_action('datamchine_sync_steps_to_flow', $flow_id, $step_data, $context);
 
 // Template & UI System
-apply_filters('dm_render_template', '', $template_name, $data);
-apply_filters('dm_modals', []);
-apply_filters('dm_admin_pages', []);
-apply_filters('dm_admin_assets', [], $page_slug);
-apply_filters('dm_pipeline_templates', []);
+apply_filters('datamachine_render_template', '', $template_name, $data);
+apply_filters('datamachine_modals', []);
+apply_filters('datamachine_admin_pages', []);
+apply_filters('datamachine_admin_assets', [], $page_slug);
+apply_filters('datamachine_pipeline_templates', []);
 
 // Settings & Configuration
-apply_filters('dm_handler_settings', [], $handler_slug); // Pass handler_slug to load only specific handler's settings
-apply_filters('dm_step_settings', []);
-apply_filters('dm_scheduler_intervals', []);
-$settings = dm_get_data_machine_settings(); // Direct function access
-$enabled_pages = dm_get_enabled_admin_pages(); // Direct function access
-$enabled_tools = dm_get_enabled_general_tools(); // Direct function access
+apply_filters('datamachine_handler_settings', [], $handler_slug); // Pass handler_slug to load only specific handler's settings
+apply_filters('datamachine_step_settings', []);
+apply_filters('datamachine_scheduler_intervals', []);
+$settings = datamachine_get_data_machine_settings(); // Direct function access
+$enabled_pages = datamachine_get_enabled_admin_pages(); // Direct function access
+$enabled_tools = datamachine_get_enabled_general_tools(); // Direct function access
 
 // Context Management
-apply_filters('dm_current_flow_step_id', null);
-apply_filters('dm_current_job_id', null);
+apply_filters('datamachine_current_flow_step_id', null);
+apply_filters('datamachine_current_job_id', null);
 $context = SiteContext::get_context(); // Direct class access
 SiteContext::clear_cache(); // Direct class access
 
 // Import/Export
-apply_filters('dm_importer', null);
-apply_filters('dm_import_result', []);
-apply_filters('dm_export_result', '');
+apply_filters('datamachine_importer', null);
+apply_filters('datamachine_import_result', []);
+apply_filters('datamachine_export_result', '');
 
 // Files Repository
-$files_repo = apply_filters('dm_files_repository', [])['files'] ?? null;
+$files_repo = apply_filters('datamachine_files_repository', [])['files'] ?? null;
 
 // System & Logging
-do_action('dm_log', $level, $message, $context);
-apply_filters('dm_log_file', null, $operation, $param);
-do_action('dm_auto_save', $pipeline_id);
-do_action('dm_cleanup_old_files'); // File repository maintenance via Action Scheduler
+do_action('datamachine_log', $level, $message, $context);
+apply_filters('datamachine_log_file', null, $operation, $param);
+do_action('datamachine_auto_save', $pipeline_id);
+do_action('datamachine_cleanup_old_files'); // File repository maintenance via Action Scheduler
 
 // Cache Management
-do_action('dm_clear_pipeline_cache', $pipeline_id);
-do_action('dm_clear_flow_cache', $flow_id);
-do_action('dm_clear_flow_config_cache', $flow_id);
-do_action('dm_clear_flow_scheduling_cache', $flow_id);
-do_action('dm_clear_flow_steps_cache', $flow_id);
-do_action('dm_clear_jobs_cache');
-do_action('dm_clear_all_cache');
-do_action('dm_clear_pipelines_list_cache');
-do_action('dm_cache_set', $key, $data, $timeout, $group);
+do_action('datamachine_clear_pipeline_cache', $pipeline_id);
+do_action('datamachine_clear_flow_cache', $flow_id);
+do_action('datamachine_clear_flow_config_cache', $flow_id);
+do_action('datamachine_clear_flow_scheduling_cache', $flow_id);
+do_action('datamachine_clear_flow_steps_cache', $flow_id);
+do_action('datamachine_clear_jobs_cache');
+do_action('datamachine_clear_all_cache');
+do_action('datamachine_clear_pipelines_list_cache');
+do_action('datamachine_cache_set', $key, $data, $timeout, $group);
 
 // Engine Data Storage & Retrieval
-apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url); // Store source_url, image_url
-$engine_data = apply_filters('dm_engine_data', [], $job_id); // Retrieve for handlers
+apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url); // Store source_url, image_url
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id); // Retrieve for handlers
 ```
 
 ## Architecture
 
-**Engine**: Three-action execution cycle: `dm_run_flow_now` → `dm_execute_step` → `dm_schedule_next_step`
+**Engine**: Three-action execution cycle: `datamachine_run_flow_now` → `datamachine_execute_step` → `datamachine_schedule_next_step`
 
 **Job Status**: `completed`, `failed`, `completed_no_items`
 
 **Self-Registration**: Components auto-register via `*Filters.php` files loaded through composer.json:
 ```php
-function dm_register_twitter_filters() {
-    add_filter('dm_handlers', function($handlers) {
+function datamachine_register_twitter_filters() {
+    add_filter('datamachine_handlers', function($handlers) {
         $handlers['twitter'] = [
             'type' => 'publish',
             'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
@@ -169,7 +243,7 @@ function dm_register_twitter_filters() {
         ];
         return $handlers;
     });
-    add_filter('dm_auth_providers', function($providers) {
+    add_filter('datamachine_auth_providers', function($providers) {
         $providers['twitter'] = new TwitterAuth();
         return $providers;
     });
@@ -187,7 +261,7 @@ function dm_register_twitter_filters() {
         return $tools;
     }, 10, 3);
 }
-dm_register_twitter_filters(); // Auto-execute at file load
+datamachine_register_twitter_filters(); // Auto-execute at file load
 ```
 
 **Core Components**:
@@ -294,7 +368,7 @@ $global_tools = AIStepTools->get_global_enabled_tools();
 $modal_tools = AIStepTools->get_step_enabled_tools($pipeline_step_id);
 
 // Runtime validation (configuration requirements)
-$tool_configured = apply_filters('dm_tool_configured', false, $tool_id);
+$tool_configured = apply_filters('datamachine_tool_configured', false, $tool_id);
 ```
 
 **Tool Categories**:
@@ -361,7 +435,7 @@ class Twitter {
 
         // Access engine data via centralized filter pattern
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;
 
@@ -379,7 +453,7 @@ class Twitter {
 ### Tool Configuration
 
 **AIStepToolParameters**: Centralized flat parameter building with `buildParameters()` and `buildForHandlerTool()` methods for unified tool execution
-**Configuration**: `dm_tool_configured`, `dm_get_tool_config`, `dm_save_tool_config` filters
+**Configuration**: `datamachine_tool_configured`, `datamachine_get_tool_config`, `datamachine_save_tool_config` filters
 
 
 ## Handler Matrix
@@ -438,7 +512,7 @@ class Twitter {
 
 // Engine parameters stored in database by fetch handlers via centralized filter
 if ($job_id) {
-    apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
 }
 
 // Return structure from fetch handlers (engine parameters stored separately in database)
@@ -475,7 +549,7 @@ class WordPress {
 **Complete Pipeline Persistence**: Single action handles all pipeline data, flows, configurations, and cache invalidation:
 
 ```php
-do_action('dm_auto_save', $pipeline_id);
+do_action('datamachine_auto_save', $pipeline_id);
 ```
 
 ## Step Configuration Persistence
@@ -486,17 +560,41 @@ do_action('dm_auto_save', $pipeline_id);
 
 **Access Pattern**:
 ```php
-$flow_step_config = apply_filters('dm_get_flow_step_config', [], $flow_step_id);
-$pipeline_config = apply_filters('dm_get_pipeline_steps', [], $pipeline_id);
-$flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
+$flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
+$pipeline_config = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
+$flow_config = apply_filters('datamachine_get_flow_config', [], $flow_id);
 ```
+
+**Flow Handler Structure** (Flat):
+```php
+// Flow step configuration structure (flat, simplified)
+$flow_config[$flow_step_id] = [
+    'flow_step_id' => 'step_uuid_flow_123',
+    'pipeline_step_id' => 'step_uuid',
+    'step_type' => 'publish',
+    'execution_order' => 2,
+    'handler_slug' => 'twitter',           // Handler identifier
+    'handler_config' => [                  // Handler settings (flat)
+        'setting1' => 'value1',
+        'setting2' => 'value2'
+    ],
+    'enabled' => true
+];
+
+// Access handler configuration
+$handler_slug = $flow_step_config['handler_slug'];
+$handler_settings = $flow_step_config['handler_config'];
+```
+
+**Migration Note**: Flow handler structure is flat in current implementation (v0.1.2) using `handler_slug + handler_config` pattern.
 
 ## Admin Interface
 
-**Pages**: Pipelines, Jobs, Logs
+**Pages**: Pipelines (React), Jobs, Logs
 **Settings**: WordPress Settings → Data Machine
-**Features**: Drag & drop, auto-save, status indicators, modal configuration
-**OAuth**: `/dm-oauth/{provider}/` URLs with popup flow
+**Pipelines Architecture**: React 18 with WordPress Components (zero jQuery/AJAX)
+**Features**: Drag & drop, silent auto-save, status indicators, modal configuration
+**OAuth**: `/datamachine-auth/{provider}/` URLs with popup flow
 
 ### Universal Handler Settings Template System
 
@@ -506,9 +604,9 @@ $flow_config = apply_filters('dm_get_flow_config', [], $flow_id);
 
 ```php
 // Universal template approach
-$handler_settings = apply_filters('dm_handler_settings', [], $handler_slug)[$handler_slug] ?? null;
+$handler_settings = apply_filters('datamachine_handler_settings', [], $handler_slug)[$handler_slug] ?? null;
 if ($handler_settings && method_exists($handler_settings, 'get_fields')) {
-    $settings_fields = apply_filters('dm_enabled_settings',
+    $settings_fields = apply_filters('datamachine_enabled_settings',
         $handler_settings::get_fields($current_settings),
         $handler_slug, $step_type, $context
     );
@@ -520,19 +618,19 @@ if ($handler_settings && method_exists($handler_settings, 'get_fields')) {
 ### Performance Optimizations
 
 **Handler Settings Modal Load** (50% query reduction):
-- Single `dm_get_flow_step_config` query (eliminated duplicate at line 100)
+- Single `datamachine_get_flow_step_config` query (eliminated duplicate at line 100)
 - Direct metadata check via `$handler_info['requires_auth']` instead of auth provider instantiation
 - Zero auth object overhead during modal load
 
-**Handler Settings Save** (50% query reduction):
+**Handler Settings Save** (React implementation):
 - Step config built from memory instead of database query
-- Eliminated redundant `dm_get_flow_step_config` call in `PipelineModalAjax::handle_save_handler_settings()`
+- Direct REST API calls with optimized payload structure
 - Single targeted flow query for execution_order only
 
 **Handler Metadata Pattern**:
 All auth-enabled handlers include `'requires_auth' => true` flag:
 ```php
-add_filter('dm_handlers', function($handlers, $step_type = null) {
+add_filter('datamachine_handlers', function($handlers, $step_type = null) {
     $handlers['twitter'] = [
         'type' => 'publish',
         'class' => Twitter::class,
@@ -556,13 +654,13 @@ add_filter('dm_handlers', function($handlers, $step_type = null) {
 
 ```php
 // Direct function access (internal system components)
-$settings = dm_get_data_machine_settings();
-$enabled_pages = dm_get_enabled_admin_pages();
-$enabled_tools = dm_get_enabled_general_tools();
+$settings = datamachine_get_data_machine_settings();
+$enabled_pages = datamachine_get_enabled_admin_pages();
+$enabled_tools = datamachine_get_enabled_general_tools();
 
 // Filter-based configuration handling
-apply_filters('dm_enabled_settings', $fields, $handler_slug, $step_type, $context);
-apply_filters('dm_apply_global_defaults', $current_settings, $handler_slug, $step_type);
+apply_filters('datamachine_enabled_settings', $fields, $handler_slug, $step_type, $context);
+apply_filters('datamachine_apply_global_defaults', $current_settings, $handler_slug, $step_type);
 ```
 
 ## Parameter Systems
@@ -581,7 +679,7 @@ $core_parameters = [
 ```
 
 ### 2. Engine Data Filter-Based Access
-Fetch handlers store `source_url`, `image_url` in database; steps retrieve engine data via centralized `dm_engine_data` filter for unified access
+Fetch handlers store `source_url`, `image_url` in database; steps retrieve engine data via centralized `datamachine_engine_data` filter for unified access
 
 
 
@@ -598,7 +696,7 @@ class MyStep {
         $data = $parameters['data'] ?? [];
         $flow_step_config = $parameters['flow_step_config'] ?? [];
 
-        do_action('dm_mark_item_processed', $flow_step_id, 'my_step', $item_id, $job_id);
+        do_action('datamachine_mark_item_processed', $flow_step_id, 'my_step', $item_id, $job_id);
 
         array_unshift($data, [
             'type' => 'my_step',
@@ -618,7 +716,7 @@ class MyFetchHandler {
 
         // Mark as processed for deduplication
         if ($flow_step_id) {
-            do_action('dm_mark_item_processed', $flow_step_id, 'my_handler', $item_id, $job_id);
+            do_action('datamachine_mark_item_processed', $flow_step_id, 'my_handler', $item_id, $job_id);
         }
 
         // Create clean data packet (no URLs)
@@ -634,9 +732,9 @@ class MyFetchHandler {
             ]
         ];
 
-        // Store engine parameters in database via centralized dm_engine_data filter
+        // Store engine parameters in database via centralized datamachine_engine_data filter
         if ($job_id) {
-            apply_filters('dm_engine_data', null, $job_id, $source_url, $image_url);
+            apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
         }
 
         return ['processed_items' => [$clean_data]];
@@ -650,7 +748,7 @@ class MyPublishHandler {
 
         // Access engine data via centralized filter pattern
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;
 
@@ -664,72 +762,118 @@ class MyPublishHandler {
 
 **Import/Export**:
 ```php
-do_action('dm_import', 'pipelines', $csv_data);
-do_action('dm_export', 'pipelines', [$pipeline_id]);
+do_action('datamachine_import', 'pipelines', $csv_data);
+do_action('datamachine_export', 'pipelines', [$pipeline_id]);
 ```
 
-**REST API Trigger Endpoint**:
+**REST API**:
+
+All REST API endpoints are implemented in `inc/Api/` directory with automatic registration via `rest_api_init`.
+
+**Execute Endpoint** (`POST /datamachine/v1/execute`):
+
+Unified execution endpoint supporting both database flows and ephemeral workflows.
+
 ```php
-// Endpoint: POST /wp-json/dm/v1/trigger
-// Implementation: inc/Engine/Rest/Trigger.php
-// Registration: Automatic via rest_api_init action
+// Implementation: inc/Api/Execute.php
 
-POST /wp-json/dm/v1/trigger
+// DATABASE FLOW - IMMEDIATE
+POST /datamachine/v1/execute
+{"flow_id": 123}
+
+// DATABASE FLOW - DELAYED (one-time)
+POST /datamachine/v1/execute
+{"flow_id": 123, "timestamp": 1704153600}
+
+// DATABASE FLOW - RECURRING
+POST /datamachine/v1/execute
+{"flow_id": 123, "interval": "hourly"}
+
+// EPHEMERAL WORKFLOW - IMMEDIATE
+POST /datamachine/v1/execute
 {
-    "flow_id": 123
+  "workflow": {
+    "steps": [
+      {"type": "fetch", "handler": "rss", "config": {"feed_url": "https://..."}},
+      {"type": "ai", "provider": "anthropic", "model": "claude-sonnet-4", "system_prompt": "Summarize"},
+      {"type": "publish", "handler": "twitter", "config": {...}}
+    ]
+  }
 }
 
-// Success Response
+// EPHEMERAL WORKFLOW - DELAYED (one-time only, no recurring)
+POST /datamachine/v1/execute
 {
-    "success": true,
-    "flow_id": 123,
-    "flow_name": "My Flow",
-    "message": "Flow triggered successfully."
+  "workflow": {...},
+  "timestamp": 1704153600
 }
 
-// Error Responses
-// 403 Forbidden - Insufficient permissions
-{
-    "code": "rest_forbidden",
-    "message": "You do not have permission to trigger flows.",
-    "data": {"status": 403}
-}
-
-// 404 Not Found - Invalid flow
-{
-    "code": "invalid_flow",
-    "message": "Flow not found.",
-    "data": {"status": 404}
-}
-
-// Requirements:
-// - manage_options capability (WordPress admin/editor)
-// - WordPress application password or cookie authentication
-// - Works with any flow (scheduled or manual)
-// - Triggers via dm_run_flow_now action with 'rest_api_trigger' context
-// - Logs execution with user info via dm_log action
+// Authentication: manage_options capability via WordPress application password or cookie
+// See docs/api-reference/rest-api.md for complete documentation
 ```
 
-**AJAX**: WordPress hooks with `dm_ajax_actions` nonce + `manage_options`
+**Complete REST Endpoint Catalog**:
+
+*Flow Management:*
+- `POST /datamachine/v1/flows` - Create flows
+- `DELETE /datamachine/v1/flows/{id}` - Delete flows
+- `POST /datamachine/v1/flows/{id}/duplicate` - Duplicate flows
+- `GET /datamachine/v1/flows/{id}/config` - Flow configuration
+- `GET /datamachine/v1/flows/steps/{flow_step_id}/config` - Flow step configuration
+
+*Pipeline Management:*
+- `GET /datamachine/v1/pipelines` - List pipelines
+- `POST /datamachine/v1/pipelines` - Create pipelines
+- `DELETE /datamachine/v1/pipelines/{id}` - Delete pipelines
+- `POST /datamachine/v1/pipelines/{id}/steps` - Add pipeline steps
+- `DELETE /datamachine/v1/pipelines/{id}/steps/{step_id}` - Remove pipeline steps
+- `PUT /datamachine/v1/pipelines/{id}/steps/reorder` - Reorder pipeline steps
+- `GET /datamachine/v1/pipelines/{id}/flows` - Get flows for pipeline
+
+*Files & Storage:*
+- `POST /datamachine/v1/files` - Upload files
+- `GET /datamachine/v1/files` - List uploaded files
+- `DELETE /datamachine/v1/files/{filename}` - Delete files
+
+*User Management:*
+- `GET /datamachine/v1/users/{id}` - User preferences
+- `POST /datamachine/v1/users/{id}` - Update user preferences
+- `GET /datamachine/v1/users/me` - Current user
+- `POST /datamachine/v1/users/me` - Update current user
+
+*System & Monitoring:*
+- `GET /datamachine/v1/status` - Flow/pipeline status (query params: flow_id[], pipeline_id[])
+- `GET /datamachine/v1/logs` - Retrieve logs
+- `GET /datamachine/v1/logs/content` - Log file content
+- `PUT /datamachine/v1/logs/level` - Set log level
+- `DELETE /datamachine/v1/logs` - Clear logs
+- `GET /datamachine/v1/jobs` - Job history
+- `DELETE /datamachine/v1/jobs` - Clear jobs
+- `GET /datamachine/v1/processed-items` - Processed items tracking
+- `DELETE /datamachine/v1/processed-items` - Clear processed items
+
+All REST endpoints require `manage_options` capability except `/users/me` (requires authentication only).
+
+**AJAX**: WordPress hooks with `datamachine_ajax_actions` nonce + `manage_options`
 **Templates**: Filter-based rendering
 **Jobs**: Clear processed items/jobs via modal
 
 ## Logging & Debugging
 
-**Centralized Logging**: All components use `dm_log` action for consistent debug output
+**Centralized Logging**: All components use `datamachine_log` action for consistent debug output
 
 ```php
 // Standard logging format
-do_action('dm_log', $level, $message, $context_array);
+do_action('datamachine_log', $level, $message, $context_array);
 
 // Examples from codebase
-do_action('dm_log', 'debug', 'AI Step Directive: Injected system directive', [
+do_action('datamachine_log', 'debug', 'AI Step Directive: Injected system directive', [
     'tool_count' => count($tools),
     'available_tools' => array_keys($tools),
     'directive_length' => strlen($directive)
 ]);
 
-do_action('dm_log', 'debug', 'AIStepTools: Generated HTML attributes', [
+do_action('datamachine_log', 'debug', 'AIStepTools: Generated HTML attributes', [
     'pipeline_step_id' => $pipeline_step_id,
     'tool_id' => $tool_id,
     'checked_attr_output' => $checked_attr,
@@ -744,35 +888,35 @@ do_action('dm_log', 'debug', 'AIStepTools: Generated HTML attributes', [
 
 **Single Platform (Recommended)**:
 ```php
-$pipeline_id = apply_filters('dm_create_pipeline', null, ['pipeline_name' => 'RSS to Twitter']);
-apply_filters('dm_create_step', null, ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
-apply_filters('dm_create_step', null, ['step_type' => 'ai', 'pipeline_id' => $pipeline_id]);
-apply_filters('dm_create_step', null, ['step_type' => 'publish', 'pipeline_id' => $pipeline_id]);
-$flow_id = apply_filters('dm_create_flow', null, ['pipeline_id' => $pipeline_id]);
-do_action('dm_run_flow_now', $flow_id, 'manual');
+$pipeline_id = apply_filters('datamachine_create_pipeline', null, ['pipeline_name' => 'RSS to Twitter']);
+apply_filters('datamachine_create_step', null, ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
+apply_filters('datamachine_create_step', null, ['step_type' => 'ai', 'pipeline_id' => $pipeline_id]);
+apply_filters('datamachine_create_step', null, ['step_type' => 'publish', 'pipeline_id' => $pipeline_id]);
+$flow_id = apply_filters('datamachine_create_flow', null, ['pipeline_id' => $pipeline_id]);
+do_action('datamachine_run_flow_now', $flow_id, 'manual');
 ```
 
 **Multi-Platform (AI→Publish→AI→Publish pattern)**:
 ```php
 // Fetch → AI → Publish → AI → Publish
-$pipeline_id = apply_filters('dm_create_pipeline', null, ['pipeline_name' => 'Multi-Platform']);
+$pipeline_id = apply_filters('datamachine_create_pipeline', null, ['pipeline_name' => 'Multi-Platform']);
 // Add steps: fetch, ai (twitter), publish (twitter), ai (facebook), publish (facebook)
 ```
 
 **Content Update (Fetch→AI→Update pattern)**:
 ```php
-// WordPress content enhancement workflow  
-$pipeline_id = apply_filters('dm_create_pipeline', null, ['pipeline_name' => 'Content Enhancement']);
-apply_filters('dm_create_step', null, ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
-apply_filters('dm_create_step', null, ['step_type' => 'ai', 'pipeline_id' => $pipeline_id]);
-apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' => $pipeline_id]);
+// WordPress content enhancement workflow
+$pipeline_id = apply_filters('datamachine_create_pipeline', null, ['pipeline_name' => 'Content Enhancement']);
+apply_filters('datamachine_create_step', null, ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
+apply_filters('datamachine_create_step', null, ['step_type' => 'ai', 'pipeline_id' => $pipeline_id]);
+apply_filters('datamachine_create_step', null, ['step_type' => 'update', 'pipeline_id' => $pipeline_id]);
 ```
 
-> **Critical**: Update steps require `source_url` from engine data to identify target content. All fetch handlers store this data in database via centralized `dm_engine_data` filter for later retrieval. AI agents discover handler tools for immediate next step only.
+> **Critical**: Update steps require `source_url` from engine data to identify target content. All fetch handlers store this data in database via centralized `datamachine_engine_data` filter for later retrieval. AI agents discover handler tools for immediate next step only.
 
 ## Handler-Specific Engine Parameters
 
-**Database Storage + Filter Access**: Each fetch handler stores specific engine parameters in database for downstream handlers accessed via `dm_engine_data` filter:
+**Database Storage + Filter Access**: Each fetch handler stores specific engine parameters in database for downstream handlers accessed via `datamachine_engine_data` filter:
 
 - **Reddit**: `source_url` (Reddit post URL), `image_url` (stored image URL)
 - **WordPress Local**: `source_url` (permalink), `image_url` (featured image URL)
@@ -789,21 +933,21 @@ apply_filters('dm_create_step', null, ['step_type' => 'update', 'pipeline_id' =>
 **Cache Actions**:
 ```php
 // Granular cache clearing
-do_action('dm_clear_pipeline_cache', $pipeline_id); // Pipeline + flows + jobs
-do_action('dm_clear_flow_cache', $flow_id); // Flow-specific caches
-do_action('dm_clear_flow_config_cache', $flow_id); // Flow configuration cache
-do_action('dm_clear_flow_scheduling_cache', $flow_id); // Flow scheduling cache
-do_action('dm_clear_flow_steps_cache', $flow_id); // Flow steps cache
-do_action('dm_clear_jobs_cache'); // All job-related caches
-do_action('dm_clear_all_cache'); // Complete cache reset
+do_action('datamachine_clear_pipeline_cache', $pipeline_id); // Pipeline + flows + jobs
+do_action('datamachine_clear_flow_cache', $flow_id); // Flow-specific caches
+do_action('datamachine_clear_flow_config_cache', $flow_id); // Flow configuration cache
+do_action('datamachine_clear_flow_scheduling_cache', $flow_id); // Flow scheduling cache
+do_action('datamachine_clear_flow_steps_cache', $flow_id); // Flow steps cache
+do_action('datamachine_clear_jobs_cache'); // All job-related caches
+do_action('datamachine_clear_all_cache'); // Complete cache reset
 
 // Standardized cache storage
-do_action('dm_cache_set', $key, $data, $timeout, $group);
+do_action('datamachine_cache_set', $key, $data, $timeout, $group);
 ```
 
 **Cache Architecture**: Pipeline/Flow/Job caches with pattern-based clearing, WordPress transients, action-based database component integration
 
-**Key Features**: Centralized cache key constants, granular invalidation with targeted methods (`dm_clear_flow_config_cache`, `dm_clear_flow_scheduling_cache`, `dm_clear_flow_steps_cache`), comprehensive logging, and extensible action-based architecture for database components
+**Key Features**: Centralized cache key constants, granular invalidation with targeted methods (`datamachine_clear_flow_config_cache`, `datamachine_clear_flow_scheduling_cache`, `datamachine_clear_flow_steps_cache`), comprehensive logging, and extensible action-based architecture for database components
 
 ## Development
 
@@ -812,6 +956,9 @@ composer install    # Install dependencies
 composer test       # Run tests (PHPUnit configured, test files pending implementation)
 ./build.sh          # Production build to /dist/data-machine.zip
 ```
+
+**Required Dependencies**:
+- Action Scheduler: Required for scheduled flow execution (woocommerce/action-scheduler via Composer)
 
 **PSR-4 Structure**: `inc/Core/`, `inc/Engine/` - strict case-sensitive paths
 **Filter Registration**: 40+ `*Filters.php` files auto-loaded via composer.json - handle registration, settings, auth providers, and centralized cross-cutting functionality
@@ -822,8 +969,8 @@ composer test       # Run tests (PHPUnit configured, test files pending implemen
 
 **Streamlined Engine Filters** (`inc/Engine/Filters/`):
 - **Create.php**: Centralized creation operations with comprehensive validation and permission checking
-- **StatusDetection.php**: Filter-based status detection system with RED/YELLOW/GREEN priority architecture
-- **EngineData.php**: Centralized engine data access via `dm_engine_data` filter - replaces direct database access patterns
+- **StatusDetection.php**: Legacy status detection removed; health check replacement pending implementation
+- **EngineData.php**: Centralized engine data access via `datamachine_engine_data` filter - replaces direct database access patterns
 - **Handlers.php**: Cross-cutting handler filters for shared functionality (timeframe parsing, keyword matching, data packet creation)
 - **DataPacket.php**: Centralized data packet creation with standardized structure and timestamp management
 - **Comment Cleanup**: Engine filters maintain clean, focused documentation without redundant comments
@@ -834,27 +981,27 @@ composer test       # Run tests (PHPUnit configured, test files pending implemen
 
 ```php
 // Timeframe parsing with discovery and conversion modes
-$timeframe_options = apply_filters('dm_timeframe_limit', null, null); // Discovery mode
-$cutoff_timestamp = apply_filters('dm_timeframe_limit', null, '24_hours'); // Conversion mode
+$timeframe_options = apply_filters('datamachine_timeframe_limit', null, null); // Discovery mode
+$cutoff_timestamp = apply_filters('datamachine_timeframe_limit', null, '24_hours'); // Conversion mode
 
 // Universal keyword matching with OR logic
-$matches = apply_filters('dm_keyword_search_match', true, $content, 'keyword1,keyword2');
+$matches = apply_filters('datamachine_keyword_search_match', true, $content, 'keyword1,keyword2');
 
 // Standardized data packet creation
-$data = apply_filters('dm_data_packet', $data, $packet_data, $flow_step_id, $step_type);
+$data = apply_filters('datamachine_data_packet', $data, $packet_data, $flow_step_id, $step_type);
 ```
 
-**Engine Data Centralization**: The `dm_engine_data` filter provides unified access to source_url, image_url stored by fetch handlers:
+**Engine Data Centralization**: The `datamachine_engine_data` filter provides unified access to source_url, image_url stored by fetch handlers:
 
 ```php
 // Centralized engine data access (replaces direct database calls)
-$engine_data = apply_filters('dm_engine_data', [], $job_id);
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 $source_url = $engine_data['source_url'] ?? null;
 $image_url = $engine_data['image_url'] ?? null;
 
 // Filter registration pattern maintains architectural consistency
-add_filter('dm_engine_data', function($engine_data, $job_id) {
-    $all_databases = apply_filters('dm_db', []);
+add_filter('datamachine_engine_data', function($engine_data, $job_id) {
+    $all_databases = apply_filters('datamachine_db', []);
     $db_jobs = $all_databases['jobs'] ?? null;
     return $db_jobs ? $db_jobs->retrieve_engine_data($job_id) : [];
 }, 10, 2);
@@ -870,15 +1017,106 @@ add_filter('dm_engine_data', function($engine_data, $job_id) {
 
 **Extension Points**:
 ```php
-add_filter('dm_handlers', [$this, 'register_handlers']);     // Fetch/publish/update handlers
+add_filter('datamachine_handlers', [$this, 'register_handlers']);     // Fetch/publish/update handlers
 add_filter('ai_tools', [$this, 'register_ai_tools']);       // AI capabilities
-add_filter('dm_steps', [$this, 'register_steps']);          // Custom step types
-add_filter('dm_db', [$this, 'register_database']);          // Database services
-add_filter('dm_admin_pages', [$this, 'register_pages']);    // Admin interfaces
-add_filter('dm_tool_configured', [$this, 'check_config']);  // Configuration validation
+add_filter('datamachine_step_types', [$this, 'register_steps']);          // Custom step types
+add_filter('datamachine_db', [$this, 'register_database']);          // Database services
+add_filter('datamachine_admin_pages', [$this, 'register_pages']);    // Admin interfaces
+add_filter('datamachine_tool_configured', [$this, 'check_config']);  // Configuration validation
+add_filter('datamachine_get_handler_settings_display', [$this, 'customize_display'], 20, 3); // Flow step card display customization (priority 20+ for extensions)
 ```
 
-**Extension Pattern**: WordPress plugin with `dm_handlers`, `ai_tools`, `dm_tool_configured` filters
+**Handler Display Customization**:
+Extensions get smart display defaults for free (auto-capitalized labels, acronym handling). Only customize when needed for special formatting.
+
+**Smart Defaults (Priority 5 - Base Implementation)**:
+- Auto-capitalizes field names: `'post_type'` → `'Post Type'`
+- Handles common acronyms: `'ai'` → `'AI'`, `'api'` → `'API'`, `'url'` → `'URL'`, `'id'` → `'ID'`
+- Formats values from field options automatically
+- Extensions receive clean display without any customization
+
+**Custom Display (Priority 10+ - Handler-Specific)**:
+Extensions customize by hooking into `datamachine_get_handler_settings_display` at priority 10 or higher:
+
+```php
+// Example: Convert venue term IDs to full venue metadata display
+add_filter('datamachine_get_handler_settings_display', function($settings_display, $flow_step_id, $step_type) {
+    // Get flow step config to identify handler
+    $flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
+    $handler_slug = $flow_step_config['handler_slug'] ?? '';
+
+    // Only customize for your handler
+    if ($handler_slug !== 'my_handler') {
+        return $settings_display;
+    }
+
+    $customized_display = [];
+    foreach ($settings_display as $setting) {
+        // Convert IDs to human-readable names
+        if ($setting['key'] === 'venue' && is_numeric($setting['value'])) {
+            $venue_data = get_venue_metadata($setting['value']);
+
+            // Replace single venue ID with comprehensive venue data
+            $customized_display[] = [
+                'key' => 'venue',
+                'label' => 'Venue',
+                'value' => $setting['value'],
+                'display_value' => $venue_data['name']
+            ];
+
+            // Add additional venue fields
+            foreach ($venue_data as $field => $value) {
+                $customized_display[] = [
+                    'key' => "venue_{$field}",
+                    'label' => ucfirst($field),
+                    'value' => $value,
+                    'display_value' => $value
+                ];
+            }
+            continue;
+        }
+
+        // Keep other settings unchanged
+        $customized_display[] = $setting;
+    }
+
+    return $customized_display;
+}, 20, 3); // Priority 20+ for extensions (core handlers use 10-15)
+```
+
+**Filter Parameters**:
+- `$settings_display` (array): Current settings display array from base implementation or previous filters
+- `$flow_step_id` (string): Flow step identifier for loading configuration
+- `$step_type` (string): Step type ('fetch', 'publish', 'update')
+
+**Priority System**:
+- **Priority 5**: Base implementation with smart defaults (Engine/Filters/Handlers.php)
+- **Priority 10**: WordPress core handlers (wordpress_publish, wordpress_posts, wordpress_update)
+- **Priority 15**: Reddit handler (subreddit formatting)
+- **Priority 20**: Facebook handler (OAuth field hiding)
+- **Priority 20+**: Extension handlers (custom transformations)
+
+**WordPress Utilities for Extensions**:
+Extensions can access centralized WordPress utilities via filters (no imports needed):
+
+```php
+// Convert user ID to display name
+$display_name = apply_filters('datamachine_wordpress_user_display_name', null, $user_id);
+
+// Convert term ID to term name
+$term_name = apply_filters('datamachine_wordpress_term_name', null, $term_id, $taxonomy);
+
+// Get system taxonomies to exclude
+$excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
+// Returns: ['post_format', 'nav_menu', 'link_category']
+
+// Get public taxonomies (with system taxonomies excluded)
+$taxonomies = apply_filters('datamachine_wordpress_public_taxonomies', [], ['public' => true]);
+```
+
+These utilities are provided by `Engine/Filters/WordPress.php` and available to **all handlers and extensions** without requiring class imports. This prevents duplication of WordPress-specific logic across the ecosystem.
+
+**Extension Pattern**: WordPress plugin with `datamachine_handlers`, `ai_tools`, `datamachine_tool_configured` filters
 
 **Required Interfaces**:
 - **Fetch**: `get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array`
@@ -886,7 +1124,7 @@ add_filter('dm_tool_configured', [$this, 'check_config']);  // Configuration val
 - **Update**: `handle_tool_call(array $parameters, array $tool_def = []): array` (requires `source_url` from metadata)
 - **Steps**: `execute(array $parameters): array`
 
-**Error Handling**: Exception logging via `dm_log` action
+**Error Handling**: Exception logging via `datamachine_log` action
 
 ## OAuth Integration
 
@@ -894,21 +1132,21 @@ add_filter('dm_tool_configured', [$this, 'check_config']);  // Configuration val
 
 ```php
 // Account operations
-$account = apply_filters('dm_retrieve_oauth_account', [], 'twitter');
-apply_filters('dm_store_oauth_account', $account_data, 'twitter');
-apply_filters('dm_clear_oauth_account', false, 'twitter');
+$account = apply_filters('datamachine_retrieve_oauth_account', [], 'twitter');
+apply_filters('datamachine_store_oauth_account', $account_data, 'twitter');
+apply_filters('datamachine_clear_oauth_account', false, 'twitter');
 
 // Configuration with validation  
-$is_configured = apply_filters('dm_tool_configured', false, 'twitter');
-$provider_url = apply_filters('dm_oauth_callback', '', 'twitter');
+$is_configured = apply_filters('datamachine_tool_configured', false, 'twitter');
+$provider_url = apply_filters('datamachine_oauth_callback', '', 'twitter');
 
 // Provider discovery
-$providers = apply_filters('dm_auth_providers', []);
+$providers = apply_filters('datamachine_auth_providers', []);
 ```
 
-**Configuration Validation**: Auto-validated via `dm_tool_configured` filter, UI disabled if unconfigured
+**Configuration Validation**: Auto-validated via `datamachine_tool_configured` filter, UI disabled if unconfigured
 
-**URLs**: `/dm-oauth/{provider}/` with `manage_options` security - all OAuth operations require admin capabilities
+**URLs**: `/datamachine-auth/{provider}/` with `manage_options` security - all OAuth operations require admin capabilities
 **Storage**: Dual-path authentication storage based on auth type detection
 - **OAuth providers** (Reddit, Twitter, Facebook, Threads, Google Sheets): Save to `oauth_keys` (API configuration)
 - **Simple auth providers** (Bluesky): Save to `oauth_account` (final credentials)
@@ -925,13 +1163,12 @@ $providers = apply_filters('dm_auth_providers', []);
 
 ## Status & Rules
 
-**Status Detection**: `apply_filters('dm_detect_status', 'green', $context, $data)`
+**Status Detection**: Legacy filter removed; pending replacement health APIs
 - Values: `red` (error), `yellow` (warning), `green` (ready)
 - Contexts: `ai_step`, `handler_auth`, `wordpress_draft`, `files_status`, `subsequent_publish_step`, `pipeline_step_status`, `flow_step_status`
 
-**AJAX Status System**: Two specialized AJAX handlers for optimized status refresh operations
-- **FlowStatusAjax** (`wp_ajax_dm_refresh_flow_status`): Flow-scoped status refresh for single flow operations (handler configuration, scheduling, flow settings) - uses `flow_step_status` context
-- **PipelineStatusAjax** (`wp_ajax_dm_refresh_pipeline_status`): Pipeline-wide status refresh for template modifications (add/delete steps, AI configuration) - uses `pipeline_step_status` context
+**Status System**: Two specialized transports for optimized status refresh operations
+- **Status REST** (`GET /datamachine/v1/status`): Returns flow and pipeline status maps using `flow_id[]` / `pipeline_id[]` query parameters; reuses `flow_step_status` and `pipeline_step_status` contexts for validation
 
 **Core Rules**:
 - Engine agnostic (no hardcoded step types in `/inc/Engine/`)
@@ -940,4 +1177,4 @@ $providers = apply_filters('dm_auth_providers', []);
 - CSS namespace: `dm-` prefix
 - Auth: `manage_options` only
 - Field naming: `pipeline_step_id` (UUID4)
-- AJAX: `dm_ajax_actions` nonce validation
+- AJAX: `datamachine_ajax_actions` nonce validation

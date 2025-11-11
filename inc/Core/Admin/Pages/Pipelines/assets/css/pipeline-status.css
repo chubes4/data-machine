@@ -11,30 +11,30 @@
 /* ===== FLOW STEP STATUS (LEFT BORDER) ===== */
 
 /* Flow steps use left border indicators for status */
-.dm-step-card--status-red {
+.datamachine-step-card--status-red {
     border-left: 4px solid #dc3232;
 }
 
-.dm-step-card--status-yellow {
+.datamachine-step-card--status-yellow {
     border-left: 4px solid #f0a000;
 }
 
-.dm-step-card--status-green {
+.datamachine-step-card--status-green {
     border-left: 4px solid #00a32a;
 }
 
 /* ===== PIPELINE STEP STATUS (FULL BORDER) ===== */
 
 /* Pipeline steps use full border indicators for status */
-.dm-pipeline-step-card--status-red {
+.datamachine-pipeline-step-card--status-red {
     border: 1px solid #dc3232 !important;
 }
 
-.dm-pipeline-step-card--status-yellow {
+.datamachine-pipeline-step-card--status-yellow {
     border: 1px solid #f0a000 !important;
 }
 
-.dm-pipeline-step-card--status-green {
+.datamachine-pipeline-step-card--status-green {
     border: 1px solid #00a32a !important;
 }
 
@@ -59,17 +59,17 @@
 /* ===== BUTTON STATUS INDICATORS ===== */
 
 /* Run button status states using circular progress and icons */
-.dm-run-now-btn {
+.datamachine-run-now-btn {
     position: relative;
     overflow: hidden;
 }
 
 /* Loading state with circular progress animation */
-.dm-run-now-btn--loading {
+.datamachine-run-now-btn--loading {
     pointer-events: none;
 }
 
-.dm-run-now-btn--loading::before {
+.datamachine-run-now-btn--loading::before {
     content: '';
     position: absolute;
     top: 0;
@@ -79,11 +79,11 @@
     border-radius: inherit;
     border: 2px solid transparent;
     border-top: 2px solid #666;
-    animation: dm-button-progress 2s linear forwards;
+    animation: datamachine-button-progress 2s linear forwards;
     box-sizing: border-box;
 }
 
-@keyframes dm-button-progress {
+@keyframes datamachine-button-progress {
     0% {
         transform: rotate(-90deg);
         border-color: transparent;
@@ -113,12 +113,12 @@
 }
 
 /* Success state with green border and checkmark */
-.dm-run-now-btn--success {
+.datamachine-run-now-btn--success {
     border-color: #00a32a !important;
     position: relative;
 }
 
-.dm-run-now-btn--success::after {
+.datamachine-run-now-btn--success::after {
     content: '\f147'; /* WordPress Dashicon checkmark */
     font-family: dashicons;
     position: absolute;
@@ -133,20 +133,20 @@
     font-size: 20px;
     font-weight: normal;
     line-height: 1;
-    animation: dm-status-fade-in 0.3s ease-in;
+    animation: datamachine-status-fade-in 0.3s ease-in;
 }
 
-.dm-run-now-btn--success .button-text {
+.datamachine-run-now-btn--success .button-text {
     opacity: 0;
 }
 
 /* Error state with red border and X */
-.dm-run-now-btn--error {
+.datamachine-run-now-btn--error {
     border-color: #dc3232 !important;
     position: relative;
 }
 
-.dm-run-now-btn--error::after {
+.datamachine-run-now-btn--error::after {
     content: '\f335'; /* WordPress Dashicon X */
     font-family: dashicons;
     position: absolute;
@@ -161,14 +161,14 @@
     font-size: 20px;
     font-weight: normal;
     line-height: 1;
-    animation: dm-status-fade-in 0.3s ease-in;
+    animation: datamachine-status-fade-in 0.3s ease-in;
 }
 
-.dm-run-now-btn--error .button-text {
+.datamachine-run-now-btn--error .button-text {
     opacity: 0;
 }
 
-@keyframes dm-status-fade-in {
+@keyframes datamachine-status-fade-in {
     0% {
         opacity: 0;
         transform: scale(0.8);

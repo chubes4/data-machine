@@ -17,10 +17,11 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
 **Features**:
+- Modern React Admin Interface (Pipelines page) with 6,591 lines of React code using @wordpress/element and @wordpress/components
 - Tool-First AI with enhanced multi-turn conversation management and duplicate detection
-- Visual Pipeline Builder with drag & drop interface and status detection
+- Visual Pipeline Builder with real-time updates and zero page reloads
 - Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter) with 5-tier directive system
-- REST API Flow Trigger Endpoint with authentication and error handling
+- REST API Architecture: 10 comprehensive endpoints for flow execution, pipeline management, and system monitoring
 - Centralized Engine Data Architecture with unified filter access pattern
 - Enhanced Unified Handler Filter System with shared functionality patterns
 - AIStepConversationManager with Turn Tracking, temporal context, and validation
@@ -32,7 +33,7 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 - Performance Optimizations: 50% query reduction in handler settings operations
 - Advanced Centralized Cache Management with granular controls and action-based architecture
 
-**Requirements**: WordPress 6.2+, PHP 8.0+, Composer (for development)
+**Requirements**: WordPress 6.2+, PHP 8.0+, Action Scheduler (woocommerce/action-scheduler), Composer (for development)
 
 **Pipeline+Flow**: Pipelines are reusable templates, Flows are configured instances
 
@@ -70,7 +71,7 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 - Reddit/Facebook/Threads/Google Sheets: OAuth2
 - Bluesky: App Password
 
-Auth via `/dm-oauth/{provider}/` popup flow.
+Auth via `/datamachine-auth/{provider}/` popup flow.
 
 ### Quick Example: Document Processing System
 
@@ -121,10 +122,10 @@ Auth via `/dm-oauth/{provider}/` popup flow.
 
 ```php
 // Pipeline creation and execution
-$pipeline_id = apply_filters('dm_create_pipeline', null, ['pipeline_name' => 'My Pipeline']);
-$step_id = apply_filters('dm_create_step', null, ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
-$flow_id = apply_filters('dm_create_flow', null, ['pipeline_id' => $pipeline_id]);
-do_action('dm_run_flow_now', $flow_id, 'manual');
+$pipeline_id = apply_filters('datamachine_create_pipeline', null, ['pipeline_name' => 'My Pipeline']);
+$step_id = apply_filters('datamachine_create_step', null, ['step_type' => 'fetch', 'pipeline_id' => $pipeline_id]);
+$flow_id = apply_filters('datamachine_create_flow', null, ['pipeline_id' => $pipeline_id]);
+do_action('datamachine_run_flow_now', $flow_id, 'manual');
 
 // AI integration
 $response = apply_filters('ai_request', [
@@ -135,41 +136,86 @@ $response = apply_filters('ai_request', [
 
 ### REST API
 
-Trigger flow execution via REST API endpoint (`POST /wp-json/dm/v1/trigger`):
+Data Machine provides comprehensive REST API access via 10 endpoint files (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users) for flow execution, pipeline management, and system monitoring.
+
+**Unified Execute Endpoint** (`POST /datamachine/v1/execute`):
 
 ```bash
-# Trigger any flow via REST API
-curl -X POST https://example.com/wp-json/dm/v1/trigger \
+# Database Flow - Immediate
+curl -X POST https://example.com/wp-json/datamachine/v1/execute \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{"flow_id": 123}'
 
+# Database Flow - Recurring
+curl -X POST https://example.com/wp-json/datamachine/v1/execute \
+  -H "Content-Type: application/json" \
+  -u username:application_password \
+  -d '{"flow_id": 123, "interval": "hourly"}'
+
+# Database Flow - Delayed (one-time)
+curl -X POST https://example.com/wp-json/datamachine/v1/execute \
+  -H "Content-Type: application/json" \
+  -u username:application_password \
+  -d '{"flow_id": 123, "timestamp": 1704153600}'
+
+# Ephemeral Workflow - Immediate
+curl -X POST https://example.com/wp-json/datamachine/v1/execute \
+  -H "Content-Type: application/json" \
+  -u username:application_password \
+  -d '{"workflow": {"steps": [{"type": "fetch", "handler": "rss"}, {"type": "ai"}, {"type": "publish", "handler": "twitter"}]}}'
+
 # Success Response
 {
   "success": true,
+  "execution_type": "immediate",
   "flow_id": 123,
-  "flow_name": "My Flow",
-  "message": "Flow triggered successfully."
-}
-
-# Error Response (403 Forbidden)
-{
-  "code": "rest_forbidden",
-  "message": "You do not have permission to trigger flows.",
-  "data": {"status": 403}
-}
-
-# Error Response (404 Not Found)
-{
-  "code": "invalid_flow",
-  "message": "Flow not found.",
-  "data": {"status": 404}
+  "message": "Flow execution started successfully."
 }
 ```
 
-**Implementation**: `inc/Engine/Rest/Trigger.php`
-**Requirements**: WordPress application password or cookie authentication with `manage_options` capability
-**Context**: Triggers flows via `dm_run_flow_now` action with `'rest_api_trigger'` context
+**Available Endpoints**:
+
+*Execution:*
+- `POST /datamachine/v1/execute` - Execute flows or ephemeral workflows (immediate, recurring, delayed)
+
+*Flow Management:*
+- `POST /datamachine/v1/flows` - Create flows
+- `DELETE /datamachine/v1/flows/{id}` - Delete flows
+- `POST /datamachine/v1/flows/{id}/duplicate` - Duplicate flows
+
+*Pipeline Management:*
+- `GET /datamachine/v1/pipelines` - Retrieve pipelines
+- `POST /datamachine/v1/pipelines` - Create pipelines
+- `DELETE /datamachine/v1/pipelines/{id}` - Delete pipelines
+- `POST /datamachine/v1/pipelines/{id}/steps` - Add steps
+- `DELETE /datamachine/v1/pipelines/{id}/steps/{step_id}` - Remove steps
+
+*Files & Storage:*
+- `POST /datamachine/v1/files` - Upload files
+- `GET /datamachine/v1/files` - List files
+- `DELETE /datamachine/v1/files/{filename}` - Delete files
+
+*User Management:*
+- `GET /datamachine/v1/users/{id}` - User preferences
+- `POST /datamachine/v1/users/{id}` - Update preferences
+- `GET /datamachine/v1/users/me` - Current user
+- `POST /datamachine/v1/users/me` - Update current user
+
+*System & Monitoring:*
+- `GET /datamachine/v1/status` - Flow/pipeline status
+- `GET /datamachine/v1/logs` - Retrieve logs
+- `DELETE /datamachine/v1/logs` - Clear logs
+- `GET /datamachine/v1/jobs` - Job history
+- `DELETE /datamachine/v1/jobs` - Clear jobs
+- `GET /datamachine/v1/processed-items` - Processed items
+- `DELETE /datamachine/v1/processed-items` - Clear processed items
+
+**Implementation**: 10 endpoint files in `inc/Api/` directory (Auth.php, Execute.php, Files.php, Flows.php, Jobs.php, Logs.php, Pipelines.php, ProcessedItems.php, Settings.php, Users.php) with automatic REST route registration
+
+**Requirements**: WordPress application password or cookie authentication with `manage_options` capability (except `/users/me` which requires authentication only). Action Scheduler required for scheduled flow execution (woocommerce/action-scheduler via Composer).
+
+**Frontend Integration**: Pipelines admin page uses complete React architecture (6,591 lines) with zero jQuery/AJAX dependencies. Settings and Jobs pages still use AJAX (migration pending).
 
 *For complete REST API documentation, see `docs/api-reference/rest-api.md` | For technical specifications, see `CLAUDE.md`*
 
@@ -208,10 +254,10 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 
 **Architecture Highlights**:
 - **Centralized Engine Data**:
-  - `dm_engine_data` filter provides unified access to source_url, image_url
+  - `datamachine_engine_data` filter provides unified access to source_url, image_url
   - Clean separation between AI data packets and handler engine parameters
 - **Universal Handler Filters**:
-  - Shared functionality (`dm_timeframe_limit`, `dm_keyword_search_match`, `dm_data_packet`)
+  - Shared functionality (`datamachine_timeframe_limit`, `datamachine_keyword_search_match`, `datamachine_data_packet`)
   - Eliminates code duplication across multiple handlers
 - **Tool-First AI Integration**:
   - Multi-turn conversation management with `AIStepConversationManager`
@@ -220,9 +266,14 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
   - Specialized components (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`)
   - Configuration hierarchy system
 - **Complete AutoSave System**:
-  - Single `dm_auto_save` action handles pipeline persistence, flow synchronization, and cache invalidation
+  - Single `datamachine_auto_save` action handles pipeline persistence, flow synchronization, and cache invalidation
 - **Filter-Based Discovery**:
   - All components self-register via WordPress filters maintaining consistent architectural patterns
+- **Migration Status** (dm_ → datamachine_):
+  - Filters/actions: ✅ Complete (`datamachine_` prefix)
+  - Database tables: ⏳ Pending (`wp_dm_*` tables, Phase 3 blocked)
+  - OAuth URLs, cache, options: ⏳ Pending (`dm_` prefix, Phase 2 work)
+  - See `MIGRATION-PLAN.md` for detailed Phase 2 task checklist
 
 *All handlers are fully functional with OAuth authentication where required and comprehensive error handling*
 
@@ -241,7 +292,7 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 
 ## Administration
 
-**Pages**: Pipelines, Flows, Jobs, Logs
+**Pages**: Pipelines (React), Jobs, Logs
 
 **Settings** (WordPress Settings → Data Machine):
 - Engine Mode (headless), page controls, tool toggles
@@ -255,7 +306,7 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 - WordPress defaults (post types, taxonomies, author, status)
 - Three-layer tool management (global → modal → validation)
 
-**Features**: Drag & drop, auto-save, status indicators, real-time monitoring
+**Features**: React interface with real-time updates, zero page reloads, auto-save, status indicators, modern WordPress components
 
 ## Development
 
@@ -266,11 +317,17 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
 ```
 
 **Architecture**:
+- **React Frontend Architecture**:
+  - Pipelines page: 6,591 lines of React code (50+ components)
+  - Modern state management with custom hooks (usePipelines, useFlows, useStepTypes, useHandlers)
+  - Context API for global state (PipelineContext)
+  - Complete REST API integration for all data operations
+  - Zero jQuery/AJAX dependencies (2,223 lines removed)
 - **PSR-4 Autoloading**: Composer-managed dependency structure
 - **Filter-Based Service Discovery**: WordPress hooks for component registration
 - **Unified Handler Filter System**:
-  - Centralized cross-cutting filters (`dm_timeframe_limit`, `dm_keyword_search_match`, `dm_data_packet`)
-- **Centralized Engine Data**: `EngineData.php` filter providing unified `dm_engine_data` access with clean AI data packets
+  - Centralized cross-cutting filters (`datamachine_timeframe_limit`, `datamachine_keyword_search_match`, `datamachine_data_packet`)
+- **Centralized Engine Data**: `EngineData.php` filter providing unified `datamachine_engine_data` access with clean AI data packets
 - **Centralized Cache System**: Actions/Cache.php with comprehensive WordPress action-based clearing and granular methods
 - **5-Tier AI Directive System**: Auto-registering directive classes with priority spacing from PluginCoreDirective to SiteContextDirective
 - **Intelligent Tool Discovery**: UpdateStep and PublishStep with exact handler matching and partial name matching
@@ -285,12 +342,13 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
 - **Performance Optimizations**:
   - Handler settings modal load: 50% query reduction (single flow config query, metadata-based auth check)
   - Handler settings save: 50% query reduction (memory-based config building)
-  - AJAX status system: Flow-scoped (`FlowStatusAjax`) and pipeline-wide (`PipelineStatusAjax`) handlers
-  - Status detection contexts: `pipeline_step_status` and `flow_step_status` for targeted checks
+  - Status system: Unified REST endpoint (`GET /datamachine/v1/status`) serving flow and pipeline requests via query batching
+  - Legacy status detection contexts removed pending new health indicators
   - Composer-managed ai-http-client dependency
 - **REST API Integration**:
-  - Flow trigger endpoint with authentication and comprehensive error handling
-  - Complete REST API documentation with integration examples
+  - 10 comprehensive endpoints (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users)
+  - Complete authentication and error handling
+  - React frontend consumes all data via REST API
 
 See `CLAUDE.md` for complete technical specifications.
 

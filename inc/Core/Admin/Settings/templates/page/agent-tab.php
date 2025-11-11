@@ -7,7 +7,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
-$settings = dm_get_data_machine_settings();
+$settings = datamachine_get_data_machine_settings();
 $engine_mode = $settings['engine_mode'];
 $global_prompt = $settings['global_system_prompt'];
 $site_context_enabled = $settings['site_context_enabled'];
@@ -28,18 +28,18 @@ foreach ($all_tools as $tool_name => $tool_config) {
         <th scope="row"><?php esc_html_e('Tool Configuration', 'data-machine'); ?></th>
         <td>
             <?php if ($configurable_tools): ?>
-                <div class="dm-tool-config-grid">
+                <div class="datamachine-tool-config-grid">
                     <?php foreach ($configurable_tools as $tool_name => $tool_config): ?>
-                        <div class="dm-tool-config-item">
+                        <div class="datamachine-tool-config-item">
                             <h4><?php echo esc_html(ucfirst(str_replace('_', ' ', $tool_name))); ?></h4>
                             <p class="description"><?php echo esc_html($tool_config['description'] ?? ''); ?></p>
-                            <?php $is_configured = apply_filters('dm_tool_configured', false, $tool_name); ?>
-                            <span class="dm-config-status <?php echo $is_configured ? 'configured' : 'not-configured'; ?>">
+                            <?php $is_configured = apply_filters('datamachine_tool_configured', false, $tool_name); ?>
+                            <span class="datamachine-config-status <?php echo $is_configured ? 'configured' : 'not-configured'; ?>">
                                 <?php echo $is_configured ? esc_html__('Configured', 'data-machine') : esc_html__('Not Configured', 'data-machine'); ?>
                             </span>
                             <?php if (!$engine_mode): ?>
                                 <button type="button" 
-                                        class="button dm-modal-open" 
+                                        class="button datamachine-modal-open" 
                                         data-template="tool-config"
                                         data-context='<?php echo esc_attr(wp_json_encode(['tool_id' => $tool_name])); ?>'>
                                     <?php esc_html_e('Configure', 'data-machine'); ?>

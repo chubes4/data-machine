@@ -18,7 +18,7 @@ Searches Google for current information, facts, and external context. Provides r
 
 ### Configuration Storage
 
-**Option Key**: `dm_search_config`
+**Option Key**: `datamachine_search_config`
 **Structure**:
 ```php
 [
@@ -190,5 +190,5 @@ $result = $google_search_tool->handle_tool_call([
 
 **Permissions**: Requires `manage_options` capability for configuration
 **Storage**: Configuration stored in WordPress options table
-**Logging**: All operations logged via `dm_log` action
+**Logging**: All operations logged via `datamachine_log` action
 **AJAX**: Configuration handled through WordPress admin AJAX

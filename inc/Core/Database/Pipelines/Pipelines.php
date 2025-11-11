@@ -32,7 +32,7 @@ class Pipelines {
 		$pipeline_config = $pipeline_data['pipeline_config'] ?? [];
 
 		if ( empty( $pipeline_name ) ) {
-			do_action( 'dm_log', 'error', 'Cannot create pipeline - missing pipeline name', [
+			do_action( 'datamachine_log', 'error', 'Cannot create pipeline - missing pipeline name', [
 				'pipeline_data' => $pipeline_data
 			] );
 			return false;
@@ -57,7 +57,7 @@ class Pipelines {
 		$inserted = $this->wpdb->insert( $this->table_name, $data, $format );
 
 		if ( false === $inserted ) {
-			do_action( 'dm_log', 'error', 'Failed to insert pipeline', [
+			do_action( 'datamachine_log', 'error', 'Failed to insert pipeline', [
 				'pipeline_name' => $pipeline_name,
 				'db_error' => $this->wpdb->last_error
 			] );
@@ -65,12 +65,12 @@ class Pipelines {
 		}
 
 		$pipeline_id = $this->wpdb->insert_id;
-		do_action( 'dm_log', 'debug', 'Successfully created pipeline', [
+		do_action( 'datamachine_log', 'debug', 'Successfully created pipeline', [
 			'pipeline_id' => $pipeline_id,
 			'pipeline_name' => $pipeline_name
 		] );
 
-		do_action('dm_clear_pipelines_list_cache');
+		do_action('datamachine_clear_pipelines_list_cache');
 
 		return $pipeline_id;
 	}
@@ -93,7 +93,7 @@ class Pipelines {
 				$pipeline['pipeline_config'] = json_decode($pipeline['pipeline_config'], true) ?: [];
 			}
 
-			do_action('dm_cache_set', $cache_key, $pipeline, 0, 'pipelines');
+			do_action('datamachine_cache_set', $cache_key, $pipeline, 0, 'pipelines');
 			return $pipeline;
 		}
 
@@ -119,7 +119,7 @@ class Pipelines {
 				}
 			}
 
-			do_action('dm_cache_set', $cache_key, $results, 0, 'pipelines');
+			do_action('datamachine_cache_set', $cache_key, $results, 0, 'pipelines');
 			return $results ?: [];
 		}
 
@@ -137,7 +137,7 @@ class Pipelines {
 		if ( false === $cached_result ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT pipeline_id, pipeline_name FROM %i ORDER BY pipeline_name ASC", $this->table_name ), ARRAY_A );
-			do_action('dm_cache_set', $cache_key, $results, 0, 'pipelines');
+			do_action('datamachine_cache_set', $cache_key, $results, 0, 'pipelines');
 			$cached_result = $results;
 		} else {
 			$results = $cached_result;
@@ -152,7 +152,7 @@ class Pipelines {
 	public function update_pipeline( int $pipeline_id, array $pipeline_data ): bool {
 
 		if ( empty( $pipeline_id ) ) {
-			do_action( 'dm_log', 'error', 'Cannot update pipeline - missing pipeline ID' );
+			do_action( 'datamachine_log', 'error', 'Cannot update pipeline - missing pipeline ID' );
 			return false;
 		}
 
@@ -182,7 +182,7 @@ class Pipelines {
 		$format[] = '%s';
 
 		if ( empty( $update_data ) ) {
-			do_action( 'dm_log', 'warning', 'No valid data provided for pipeline update', [
+			do_action( 'datamachine_log', 'warning', 'No valid data provided for pipeline update', [
 				'pipeline_id' => $pipeline_id
 			] );
 			return false;
@@ -198,20 +198,20 @@ class Pipelines {
 		);
 
 		if ( false === $updated ) {
-			do_action( 'dm_log', 'error', 'Failed to update pipeline', [
+			do_action( 'datamachine_log', 'error', 'Failed to update pipeline', [
 				'pipeline_id' => $pipeline_id,
 				'db_error' => $this->wpdb->last_error
 			] );
 			return false;
 		}
 
-		do_action( 'dm_log', 'debug', 'Successfully updated pipeline', [
+		do_action( 'datamachine_log', 'debug', 'Successfully updated pipeline', [
 			'pipeline_id' => $pipeline_id,
 			'updated_fields' => array_keys( $update_data )
 		] );
 
 		// Clear pipeline cache after successful update to prevent stale data
-		do_action('dm_clear_pipeline_cache', $pipeline_id);
+		do_action('datamachine_clear_pipeline_cache', $pipeline_id);
 
 		return true;
 	}
@@ -222,7 +222,7 @@ class Pipelines {
 	public function delete_pipeline( int $pipeline_id ): bool {
 
 		if ( empty( $pipeline_id ) ) {
-			do_action( 'dm_log', 'error', 'Cannot delete pipeline - missing pipeline ID' );
+			do_action( 'datamachine_log', 'error', 'Cannot delete pipeline - missing pipeline ID' );
 			return false;
 		}
 
@@ -238,7 +238,7 @@ class Pipelines {
 		);
 
 		if ( false === $deleted ) {
-			do_action( 'dm_log', 'error', 'Failed to delete pipeline', [
+			do_action( 'datamachine_log', 'error', 'Failed to delete pipeline', [
 				'pipeline_id' => $pipeline_id,
 				'pipeline_name' => $pipeline_name,
 				'db_error' => $this->wpdb->last_error
@@ -247,19 +247,40 @@ class Pipelines {
 		}
 
 		if ( 0 === $deleted ) {
-			do_action( 'dm_log', 'warning', 'Pipeline not found for deletion', [
+			do_action( 'datamachine_log', 'warning', 'Pipeline not found for deletion', [
 				'pipeline_id' => $pipeline_id
 			] );
 			return false;
 		}
 
-		do_action( 'dm_log', 'debug', 'Successfully deleted pipeline', [
+		do_action( 'datamachine_log', 'debug', 'Successfully deleted pipeline', [
 			'pipeline_id' => $pipeline_id,
 			'pipeline_name' => $pipeline_name
 		] );
 
+		// Delete pipeline filesystem directory (cascade deletion)
+		$repository = apply_filters('datamachine_files_repository', [])['files'] ?? null;
+		if ($repository && method_exists($repository, 'get_pipeline_directory')) {
+			$pipeline_dir = $repository->get_pipeline_directory($pipeline_id, $pipeline_name);
+
+			if (is_dir($pipeline_dir)) {
+				if (!function_exists('WP_Filesystem')) {
+					require_once(ABSPATH . 'wp-admin/includes/file.php');
+				}
+				if (WP_Filesystem()) {
+					global $wp_filesystem;
+					$wp_filesystem->rmdir($pipeline_dir, true);
+
+					do_action('datamachine_log', 'debug', 'Deleted pipeline directory', [
+						'pipeline_id' => $pipeline_id,
+						'directory' => $pipeline_dir
+					]);
+				}
+			}
+		}
+
 		// Clear pipeline cache after successful deletion
-		do_action('dm_clear_pipeline_cache', $pipeline_id);
+		do_action('datamachine_clear_pipeline_cache', $pipeline_id);
 
 		return true;
 	}
@@ -288,7 +309,7 @@ class Pipelines {
 			// Decode JSON immediately after database retrieval
 			$pipeline_config = json_decode( $pipeline_config_json, true ) ?: [];
 
-			do_action('dm_cache_set', $cache_key, $pipeline_config, 0, 'pipelines');
+			do_action('datamachine_cache_set', $cache_key, $pipeline_config, 0, 'pipelines');
 			return $pipeline_config;
 		}
 
@@ -308,7 +329,7 @@ class Pipelines {
 			$count = $this->wpdb->get_var(
 				"SELECT COUNT(pipeline_id) FROM %i", $this->table_name
 			);
-			do_action('dm_cache_set', $cache_key, $count, 300, 'pipelines'); // 5 min cache for counts
+			do_action('datamachine_cache_set', $cache_key, $count, 300, 'pipelines'); // 5 min cache for counts
 			$cached_result = $count;
 		} else {
 			$count = $cached_result;
@@ -352,7 +373,7 @@ class Pipelines {
 				}
 			}
 
-			do_action('dm_cache_set', $cache_key, $results, 300, 'pipelines'); // Cache decoded arrays
+			do_action('datamachine_cache_set', $cache_key, $results, 300, 'pipelines'); // Cache decoded arrays
 			return $results;
 		}
 
@@ -362,6 +383,47 @@ class Pipelines {
 	/**
 	 * Create pipelines database table.
 	 */
+	/**
+	 * Get pipeline context files from pipeline config
+	 *
+	 * @param int $pipeline_id Pipeline ID
+	 * @return array Context files array
+	 */
+	public function get_pipeline_context_files(int $pipeline_id): array {
+		$pipeline_config = $this->get_pipeline_config($pipeline_id);
+		return $pipeline_config['context_files'] ?? ['uploaded_files' => []];
+	}
+
+	/**
+	 * Update pipeline context files in pipeline config
+	 *
+	 * @param int $pipeline_id Pipeline ID
+	 * @param array $files_data Context files data
+	 * @return bool True on success, false on failure
+	 */
+	public function update_pipeline_context_files(int $pipeline_id, array $files_data): bool {
+		if (empty($pipeline_id)) {
+			return false;
+		}
+
+		$pipeline_config = $this->get_pipeline_config($pipeline_id);
+		$pipeline_config['context_files'] = $files_data;
+
+		$result = $this->wpdb->update(
+			$this->table_name,
+			['pipeline_config' => wp_json_encode($pipeline_config)],
+			['pipeline_id' => $pipeline_id],
+			['%s'],
+			['%d']
+		);
+
+		if ($result !== false) {
+			do_action('datamachine_clear_pipeline_cache', $pipeline_id);
+		}
+
+		return $result !== false;
+	}
+
 	public static function create_table() {
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'dm_pipelines';
@@ -385,7 +447,7 @@ class Pipelines {
 		dbDelta( $sql );
 
 		// Log table creation
-		do_action( 'dm_log', 'debug', 'Created pipelines database table', [
+		do_action( 'datamachine_log', 'debug', 'Created pipelines database table', [
 			'table_name' => $table_name,
 			'action' => 'create_table'
 		] );

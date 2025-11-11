@@ -30,7 +30,7 @@ class GoogleSheets {
      */
     public function __construct() {
         // Use filter-based auth access following pure discovery architectural standards
-        $all_auth = apply_filters('dm_auth_providers', []);
+        $all_auth = apply_filters('datamachine_auth_providers', []);
         $this->auth = $all_auth['googlesheets_output'] ?? null;
     }
 
@@ -51,7 +51,7 @@ class GoogleSheets {
      * @return array Tool execution result.
      */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        do_action('dm_log', 'debug', 'Google Sheets Tool: Handling tool call', [
+        do_action('datamachine_log', 'debug', 'Google Sheets Tool: Handling tool call', [
             'parameters' => $parameters,
             'parameter_keys' => array_keys($parameters),
             'has_handler_config' => !empty($tool_def['handler_config']),
@@ -60,7 +60,7 @@ class GoogleSheets {
 
         if (empty($parameters['content'])) {
             $error_msg = 'Google Sheets tool call missing required content parameter';
-            do_action('dm_log', 'error', $error_msg, [
+            do_action('datamachine_log', 'error', $error_msg, [
                 'provided_parameters' => array_keys($parameters),
                 'required_parameters' => ['content']
             ]);
@@ -74,13 +74,13 @@ class GoogleSheets {
 
         $handler_config = $tool_def['handler_config'] ?? [];
         
-        do_action('dm_log', 'debug', 'Google Sheets Tool: Using handler configuration', [
+        do_action('datamachine_log', 'debug', 'Google Sheets Tool: Using handler configuration', [
             'spreadsheet_id' => !empty($handler_config['googlesheets_spreadsheet_id']) ? 'present' : 'missing',
             'worksheet_name' => $handler_config['googlesheets_worksheet_name'] ?? 'Sheet1'
         ]);
 
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
@@ -105,7 +105,7 @@ class GoogleSheets {
         $sheets_service = $this->auth->get_service();
         if (is_wp_error($sheets_service)) {
             $error_msg = 'Google Sheets authentication failed: ' . $sheets_service->get_error_message();
-            do_action('dm_log', 'error', $error_msg, [
+            do_action('datamachine_log', 'error', $error_msg, [
                 'error_code' => $sheets_service->get_error_code()
             ]);
             
@@ -141,7 +141,7 @@ class GoogleSheets {
 
             if (is_wp_error($result)) {
                 $error_msg = 'Google Sheets API error: ' . $result->get_error_message();
-                do_action('dm_log', 'error', $error_msg, [
+                do_action('datamachine_log', 'error', $error_msg, [
                     'error_code' => $result->get_error_code(),
                     'spreadsheet_id' => $spreadsheet_id
                 ]);
@@ -155,7 +155,7 @@ class GoogleSheets {
 
             $sheet_url = "https://docs.google.com/spreadsheets/d/{$spreadsheet_id}";
             
-            do_action('dm_log', 'debug', 'Google Sheets Tool: Data appended successfully', [
+            do_action('datamachine_log', 'debug', 'Google Sheets Tool: Data appended successfully', [
                 'spreadsheet_id' => $spreadsheet_id,
                 'worksheet_name' => $worksheet_name,
                 'sheet_url' => $sheet_url
@@ -172,7 +172,7 @@ class GoogleSheets {
                 'tool_name' => 'googlesheets_append'
             ];
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Google Sheets Tool: Exception during append operation', [
+            do_action('datamachine_log', 'error', 'Google Sheets Tool: Exception during append operation', [
                 'exception' => $e->getMessage()
             ]);
             
@@ -295,7 +295,7 @@ class GoogleSheets {
             
             $api_url = "https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheet_id}/values/{$range}:append";
             
-            $result = apply_filters('dm_request', null, 'POST', $api_url, [
+            $result = apply_filters('datamachine_request', null, 'POST', $api_url, [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $access_token,
                     'Content-Type' => 'application/json'
@@ -304,7 +304,7 @@ class GoogleSheets {
             ], 'Google Sheets API');
 
             if (!$result['success']) {
-                do_action('dm_log', 'error', 'Google Sheets API request failed.', [
+                do_action('datamachine_log', 'error', 'Google Sheets API request failed.', [
                     'error' => $result['error'],
                     'spreadsheet_id' => $spreadsheet_id
                 ]);
@@ -318,7 +318,7 @@ class GoogleSheets {
                 $error_data = json_decode($response_body, true);
                 $error_message = $error_data['error']['message'] ?? 'Unknown Google Sheets API error';
                 
-                do_action('dm_log', 'error', 'Google Sheets API error.', [
+                do_action('datamachine_log', 'error', 'Google Sheets API error.', [
                     'response_code' => $response_code,
                     'error_message' => $error_message,
                     'spreadsheet_id' => $spreadsheet_id
@@ -332,14 +332,14 @@ class GoogleSheets {
             $result = json_decode($response_body, true);
             
             if (json_last_error() !== JSON_ERROR_NONE) {
-                do_action('dm_log', 'error', 'Failed to decode Google Sheets API response.');
+                do_action('datamachine_log', 'error', 'Failed to decode Google Sheets API response.');
                 return new \WP_Error('googlesheets_decode_error', __('Invalid response from Google Sheets API.', 'data-machine'));
             }
 
             return $result;
 
         } catch (\Exception $e) {
-            do_action('dm_log', 'error', 'Exception during Google Sheets append operation: ' . $e->getMessage());
+            do_action('datamachine_log', 'error', 'Exception during Google Sheets append operation: ' . $e->getMessage());
             return new \WP_Error('googlesheets_exception', $e->getMessage());
         }
     }

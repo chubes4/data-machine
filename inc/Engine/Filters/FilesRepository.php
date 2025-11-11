@@ -2,9 +2,8 @@
 /**
  * Universal Files Repository Management
  *
- * Central file repository system for handling file storage, retrieval, and cleanup operations.
- * Supports both regular file storage and data packet storage for Action Scheduler integration.
- * Focuses solely on file management - does not care where files come from.
+ * Hierarchical file storage system: pipeline → flow → job structure.
+ * Supports flow-level files, pipeline-level context, and job data packets.
  *
  * @package DataMachine
  * @subpackage Engine\Filters
@@ -14,105 +13,61 @@
 namespace DataMachine\Engine;
 
 if (!defined('ABSPATH')) {
-    exit; // Exit if accessed directly
+    exit;
 }
 
-// Self-register repository implementation and cleanup integration
-add_filter('dm_files_repository', function($repositories) {
+// Self-register repository implementation
+add_filter('datamachine_files_repository', function($repositories) {
     $repositories['files'] = new FilesRepository();
     return $repositories;
 }, 5);
 
 // Universal files repository cleanup integration
-add_action('dm_cleanup_old_files', function() {
-    $repositories = apply_filters('dm_files_repository', []);
+add_action('datamachine_cleanup_old_files', function() {
+    $repositories = apply_filters('datamachine_files_repository', []);
     $repository = $repositories['files'] ?? null;
+
     if ($repository) {
-        // Get retention days from settings
-        $settings = dm_get_data_machine_settings();
+        $settings = datamachine_get_data_machine_settings();
         $retention_days = $settings['file_retention_days'] ?? 7;
 
-        // Clean up regular files older than specified retention days
         $deleted_count = $repository->cleanup_old_files($retention_days);
 
-        // Clean up old job data packets using same retention period
-        $job_data_deleted = 0;
-        $cutoff_time = time() - ($retention_days * DAY_IN_SECONDS);
-        
-        // Get all job_* directories
-        $upload_dir = wp_upload_dir();
-        $base_path = trailingslashit($upload_dir['basedir']) . 'dm-files';
-        
-        if (is_dir($base_path)) {
-            $job_directories = glob($base_path . '/job_*', GLOB_ONLYDIR);
-            
-            foreach ($job_directories as $job_dir) {
-                $job_namespace = basename($job_dir);
-                $files = $repository->get_all_files($job_namespace);
-                
-                foreach ($files as $file) {
-                    if (str_starts_with($file['filename'], 'data_packet_') && $file['modified'] < $cutoff_time) {
-                        if ($repository->delete_file($file['filename'], $job_namespace)) {
-                            $job_data_deleted++;
-                        }
-                    }
-                }
-                
-                // Remove empty job directories
-                if (empty($repository->get_all_files($job_namespace))) {
-                    $job_dir_path = $repository->get_repository_path($job_namespace);
-                    if (is_dir($job_dir_path)) {
-                        // Initialize WP_Filesystem for directory removal
-                        if (!function_exists('WP_Filesystem')) {
-                            require_once(ABSPATH . 'wp-admin/includes/file.php');
-                        }
-                        if (WP_Filesystem()) {
-                            global $wp_filesystem;
-                            $wp_filesystem->rmdir($job_dir_path);
-                        }
-                    }
-                }
-            }
-        }
-
+        do_action('datamachine_log', 'debug', 'FilesRepository: Cleanup completed', [
+            'files_deleted' => $deleted_count,
+            'retention_days' => $retention_days
+        ]);
     }
 });
 
 // Schedule cleanup on WordPress init
 add_action('init', function() {
-    if (dm_files_should_schedule_cleanup() && !as_next_scheduled_action('dm_cleanup_old_files')) {
+    if (datamachine_files_should_schedule_cleanup() && !as_next_scheduled_action('datamachine_cleanup_old_files')) {
         as_schedule_recurring_action(
             time() + WEEK_IN_SECONDS,
             WEEK_IN_SECONDS,
-            'dm_cleanup_old_files',
+            'datamachine_cleanup_old_files',
             [],
             'data-machine-files'
         );
-
     }
 });
 
 /**
- * Check if cleanup should be scheduled based on settings
+ * Check if cleanup should be scheduled
  *
  * @return bool True if cleanup should be scheduled
  */
-function dm_files_should_schedule_cleanup(): bool {
-    // Get settings via filter discovery pattern
-    $all_settings = apply_filters('dm_handler_settings', [], 'files');
-    $files_settings = $all_settings['files'] ?? null;
-
-    // Default to auto cleanup enabled. In the future, this could check actual handler
-    // configurations across all flows to see if any have auto_cleanup_enabled set to true
+function datamachine_files_should_schedule_cleanup(): bool {
     return true;
 }
 
 class FilesRepository {
 
     /**
-     * Repository directory path
+     * Repository directory name
      */
-    private const REPOSITORY_DIR = 'dm-files';
+    private const REPOSITORY_DIR = 'data-machine-files';
 
     /**
      * Constructor - parameter-less for filter-based architecture
@@ -122,443 +77,215 @@ class FilesRepository {
     }
 
     /**
-     * Get the repository directory path
+     * Get pipeline directory path
      *
-     * @param string|null $flow_step_id Flow step ID for isolation (step_id_flow_id format)
-     * @return string Full path to repository directory
+     * @param int $pipeline_id Pipeline ID
+     * @param string $pipeline_name Pipeline name
+     * @return string Full path to pipeline directory
      */
-    public function get_repository_path(?string $flow_step_id = null): string {
+    public function get_pipeline_directory(int $pipeline_id, string $pipeline_name): string {
         $upload_dir = wp_upload_dir();
-        $base_path = trailingslashit($upload_dir['basedir']) . self::REPOSITORY_DIR;
-        
-        // If flow_step_id provided, create isolated subdirectory
-        if ($flow_step_id) {
-            $safe_flow_step_id = sanitize_file_name($flow_step_id);
-            return trailingslashit($base_path) . $safe_flow_step_id;
-        }
-        
-        return $base_path;
+        $base = trailingslashit($upload_dir['basedir']) . self::REPOSITORY_DIR;
+        $safe_name = $this->sanitize_directory_name($pipeline_name);
+        return "{$base}/pipeline-{$pipeline_id}-{$safe_name}";
     }
 
     /**
-     * Get the repository URL
+     * Get flow directory path
      *
-     * @param string|null $flow_step_id Flow step ID for isolation (step_id_flow_id format)
-     * @return string URL to repository directory
+     * @param int $pipeline_id Pipeline ID
+     * @param string $pipeline_name Pipeline name
+     * @param int $flow_id Flow ID
+     * @param string $flow_name Flow name
+     * @return string Full path to flow directory
      */
-    public function get_repository_url(?string $flow_step_id = null): string {
-        $upload_dir = wp_upload_dir();
-        $base_url = trailingslashit($upload_dir['baseurl']) . self::REPOSITORY_DIR;
-        
-        // If flow_step_id provided, create isolated subdirectory URL
-        if ($flow_step_id) {
-            $safe_flow_step_id = sanitize_file_name($flow_step_id);
-            return trailingslashit($base_url) . $safe_flow_step_id;
-        }
-        
-        return $base_url;
+    public function get_flow_directory(int $pipeline_id, string $pipeline_name, int $flow_id, string $flow_name): string {
+        $pipeline_dir = $this->get_pipeline_directory($pipeline_id, $pipeline_name);
+        $safe_name = $this->sanitize_directory_name($flow_name);
+        return "{$pipeline_dir}/flow-{$flow_id}-{$safe_name}";
     }
 
     /**
-     * Ensure repository directory exists
+     * Get job directory path
      *
-     * @param string|null $flow_step_id Flow step ID for isolation
-     * @return bool True if directory exists or was created
+     * @param int $pipeline_id Pipeline ID
+     * @param string $pipeline_name Pipeline name
+     * @param int $flow_id Flow ID
+     * @param string $flow_name Flow name
+     * @param int $job_id Job ID
+     * @return string Full path to job directory
      */
-    public function ensure_repository_exists(?string $flow_step_id = null): bool {
-        $repo_path = $this->get_repository_path($flow_step_id);
-        
-        if (!file_exists($repo_path)) {
-            $created = wp_mkdir_p($repo_path);
+    public function get_job_directory(int $pipeline_id, string $pipeline_name, int $flow_id, string $flow_name, int $job_id): string {
+        $flow_dir = $this->get_flow_directory($pipeline_id, $pipeline_name, $flow_id, $flow_name);
+        return "{$flow_dir}/jobs/job-{$job_id}";
+    }
+
+    /**
+     * Get pipeline context directory path
+     *
+     * @param int $pipeline_id Pipeline ID
+     * @param string $pipeline_name Pipeline name
+     * @return string Full path to pipeline context directory
+     */
+    public function get_pipeline_context_directory(int $pipeline_id, string $pipeline_name): string {
+        $pipeline_dir = $this->get_pipeline_directory($pipeline_id, $pipeline_name);
+        return "{$pipeline_dir}/context";
+    }
+
+    /**
+     * Get flow files directory path
+     *
+     * @param int $pipeline_id Pipeline ID
+     * @param string $pipeline_name Pipeline name
+     * @param int $flow_id Flow ID
+     * @param string $flow_name Flow name
+     * @return string Full path to flow files directory
+     */
+    public function get_flow_files_directory(int $pipeline_id, string $pipeline_name, int $flow_id, string $flow_name): string {
+        $flow_dir = $this->get_flow_directory($pipeline_id, $pipeline_name, $flow_id, $flow_name);
+        return "{$flow_dir}/files";
+    }
+
+    /**
+     * Sanitize directory name for filesystem
+     *
+     * @param string $name Original name
+     * @return string Sanitized name
+     */
+    private function sanitize_directory_name(string $name): string {
+        $name = strtolower($name);
+        $name = preg_replace('/[^a-z0-9-_]/', '-', $name);
+        $name = preg_replace('/-+/', '-', $name);
+        $name = trim($name, '-');
+        return substr($name, 0, 50);
+    }
+
+    /**
+     * Ensure directory exists
+     *
+     * @param string $directory Directory path
+     * @return bool True if exists or was created
+     */
+    public function ensure_directory_exists(string $directory): bool {
+        if (!file_exists($directory)) {
+            $created = wp_mkdir_p($directory);
             if (!$created) {
-                do_action('dm_log', 'error', 'FilesRepository: Failed to create repository directory.', [
-                    'path' => $repo_path
+                do_action('datamachine_log', 'error', 'FilesRepository: Failed to create directory.', [
+                    'path' => $directory
                 ]);
                 return false;
             }
         }
-
-        
         return true;
     }
 
     /**
-     * Store a file in the repository
+     * Store file in flow files directory
      *
-     * @param string $source_path Path to source file
-     * @param string $filename Original filename to use
-     * @param string|null $flow_step_id Flow step ID for isolation
+     * @param string $source_path Source file path
+     * @param string $filename Original filename
+     * @param array $context Context array with pipeline/flow metadata
      * @return string|false Repository file path on success, false on failure
      */
-    public function store_file(string $source_path, string $filename, ?string $flow_step_id = null) {
-        if (!$this->ensure_repository_exists($flow_step_id)) {
+    public function store_file(string $source_path, string $filename, array $context) {
+        $directory = $this->get_flow_files_directory(
+            $context['pipeline_id'],
+            $context['pipeline_name'],
+            $context['flow_id'],
+            $context['flow_name']
+        );
+
+        if (!$this->ensure_directory_exists($directory)) {
             return false;
         }
 
         if (!file_exists($source_path)) {
-            do_action('dm_log', 'error', 'FilesRepository: Source file not found.', [
+            do_action('datamachine_log', 'error', 'FilesRepository: Source file not found.', [
                 'source_path' => $source_path
             ]);
             return false;
         }
 
-        // Sanitize filename for security
-        $safe_filename = $this->sanitize_filename($filename);
-        $destination_path = $this->get_repository_path($flow_step_id) . '/' . $safe_filename;
+        $safe_filename = sanitize_file_name($filename);
+        $destination = "{$directory}/{$safe_filename}";
 
-        // Copy file to repository
-        $copied = copy($source_path, $destination_path);
-        if (!$copied) {
-            do_action('dm_log', 'error', 'FilesRepository: Failed to copy file to repository.', [
+        if (!copy($source_path, $destination)) {
+            do_action('datamachine_log', 'error', 'FilesRepository: Failed to copy file.', [
                 'source' => $source_path,
-                'destination' => $destination_path
+                'destination' => $destination
             ]);
             return false;
         }
 
-
-        return $destination_path;
+        return $destination;
     }
 
     /**
-     * Store data packet as JSON file and return reference
+     * Store pipeline context file
      *
-     * @param array $data Data packet array to store
-     * @param int $job_id Job ID for namespace isolation
-     * @param string $flow_step_id Flow step ID for additional context
-     * @return array Reference object containing storage keys
+     * @param int $pipeline_id Pipeline ID
+     * @param string $pipeline_name Pipeline name
+     * @param array $file_data File data array (source_path, original_name)
+     * @return array|false File information on success, false on failure
      */
-    public function store_data_packet(array $data, int $job_id, string $flow_step_id): array {
-        // Create job-specific storage namespace
-        $storage_namespace = "job_{$job_id}";
-        
-        // Single accumulating filename per job (like claude.json pattern)
-        $filename = "job_{$job_id}_data.json";
-        
-        // Get existing file path to check if data packet already exists
-        $existing_file_path = $this->get_repository_path($storage_namespace) . '/' . $filename;
-        $accumulated_data = [];
-        $file_existed_before = file_exists($existing_file_path);
-        
-        // Load existing data if file exists (accumulating pattern)
-        if ($file_existed_before) {
-            $existing_json = file_get_contents($existing_file_path);
-            if ($existing_json !== false) {
-                $accumulated_data = json_decode($existing_json, true);
-                if (!is_array($accumulated_data)) {
-                    $accumulated_data = []; // Reset if corrupted
-                }
-                
-            }
+    public function store_pipeline_file(int $pipeline_id, string $pipeline_name, array $file_data) {
+        $directory = $this->get_pipeline_context_directory($pipeline_id, $pipeline_name);
+
+        if (!$this->ensure_directory_exists($directory)) {
+            return false;
         }
-        
-        // Merge new data with existing accumulated data (newest first with array_unshift pattern)
-        if (!empty($data)) {
-            // Step produced data entries - merge with existing accumulated data  
-            $accumulated_data = array_merge($data, $accumulated_data);
-        }
-        
-        // Serialize accumulated data to JSON
-        $json_data = wp_json_encode($accumulated_data, JSON_UNESCAPED_UNICODE);
-        if ($json_data === false) {
-            do_action('dm_log', 'error', 'FilesRepository: Failed to encode accumulated data as JSON', [
-                'job_id' => $job_id,
-                'flow_step_id' => $flow_step_id,
-                'data_entries' => count($accumulated_data)
+
+        $source_path = $file_data['source_path'] ?? '';
+        $filename = $file_data['original_name'] ?? '';
+
+        if (empty($source_path) || empty($filename)) {
+            do_action('datamachine_log', 'error', 'FilesRepository: Missing required parameters for pipeline context.', [
+                'pipeline_id' => $pipeline_id
             ]);
             return false;
         }
 
-        // Create temporary file and store in repository
-        $temp_file = wp_tempnam($filename);
-        if (file_put_contents($temp_file, $json_data) === false) {
-            do_action('dm_log', 'error', 'FilesRepository: Failed to write temporary file', [
-                'job_id' => $job_id,
-                'temp_file' => $temp_file
+        if (!file_exists($source_path)) {
+            do_action('datamachine_log', 'error', 'FilesRepository: Source file not found.', [
+                'source_path' => $source_path
             ]);
             return false;
         }
 
-        // Store in repository with job namespace (will overwrite existing file)
-        $stored_path = $this->store_file($temp_file, $filename, $storage_namespace);
-        
-        // Clean up temporary file
-        if (file_exists($temp_file)) {
-            wp_delete_file($temp_file);
-        }
+        $safe_filename = sanitize_file_name($filename);
+        $destination = "{$directory}/{$safe_filename}";
 
-        if (!$stored_path) {
-            do_action('dm_log', 'error', 'FilesRepository: Failed to store accumulated data packet in repository', [
-                'job_id' => $job_id,
-                'filename' => $filename
+        if (!copy($source_path, $destination)) {
+            do_action('datamachine_log', 'error', 'FilesRepository: Failed to store pipeline context file.', [
+                'source' => $source_path,
+                'destination' => $destination
             ]);
             return false;
         }
 
-
-        // Return lightweight reference object (always points to same file per job)
         return [
-            'is_data_reference' => true,
-            'job_id' => $job_id,
-            'storage_namespace' => $storage_namespace,
-            'filename' => $filename,
-            'flow_step_id' => $flow_step_id,
-            'stored_at' => time()
+            'original_name' => $filename,
+            'persistent_path' => $destination,
+            'size' => filesize($destination),
+            'mime_type' => mime_content_type($destination),
+            'uploaded_at' => current_time('mysql')
         ];
     }
 
     /**
-     * Retrieve data packet from JSON file using reference
-     *
-     * @param array $reference Reference object from store_data_packet()
-     * @return array|null Retrieved data packet or null on failure
-     */
-    public function retrieve_data_packet(array $reference): ?array {
-        // Check if this is actually a reference object
-        if (!isset($reference['is_data_reference']) || !$reference['is_data_reference']) {
-            // This is direct data, return as-is
-            return $reference['data'] ?? $reference;
-        }
-
-        // Extract reference information
-        $job_id = $reference['job_id'] ?? 0;
-        $storage_namespace = $reference['storage_namespace'] ?? '';
-        $filename = $reference['filename'] ?? '';
-
-        if (empty($storage_namespace) || empty($filename)) {
-            do_action('dm_log', 'error', 'FilesRepository: Invalid data packet reference', [
-                'reference' => $reference
-            ]);
-            return null;
-        }
-
-        // Get file path
-        $file_path = $this->get_repository_path($storage_namespace) . '/' . $filename;
-        
-        if (!file_exists($file_path)) {
-            do_action('dm_log', 'error', 'FilesRepository: Data packet file not found', [
-                'job_id' => $job_id,
-                'file_path' => $file_path
-            ]);
-            return null;
-        }
-
-        // Read and decode JSON data
-        $json_data = file_get_contents($file_path);
-        if ($json_data === false) {
-            do_action('dm_log', 'error', 'FilesRepository: Failed to read data packet file', [
-                'job_id' => $job_id,
-                'file_path' => $file_path
-            ]);
-            return null;
-        }
-
-        $data = json_decode($json_data, true);
-        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
-            do_action('dm_log', 'error', 'FilesRepository: Failed to decode JSON data packet', [
-                'job_id' => $job_id,
-                'json_error' => json_last_error_msg()
-            ]);
-            return null;
-        }
-
-
-        return $data;
-    }
-
-    /**
-     * Clean up stored data packets for a specific job
-     *
-     * @param int $job_id Job ID to clean up
-     * @return int Number of files deleted
-     */
-    public function cleanup_job_data_packets(int $job_id): int {
-        $storage_namespace = "job_{$job_id}";
-        $deleted_count = 0;
-
-        // Single file per job pattern - delete the specific job data file
-        $filename = "job_{$job_id}_data.json";
-        
-        // Check if the job data file exists and delete it
-        $file_path = $this->get_repository_path($storage_namespace) . '/' . $filename;
-        if (file_exists($file_path)) {
-            if ($this->delete_file($filename, $storage_namespace)) {
-                $deleted_count++;
-            }
-        }
-
-
-        return $deleted_count;
-    }
-
-    /**
-     * Check if argument is a data reference or actual data
-     *
-     * @param mixed $argument Argument to check
-     * @return bool True if it's a data reference, false if it's actual data
-     */
-    public function is_data_reference($argument): bool {
-        return is_array($argument) && 
-               isset($argument['is_data_reference']) && 
-               $argument['is_data_reference'] === true;
-    }
-
-    /**
-     * Get all files in the repository
-     *
-     * @param string|null $flow_step_id Flow step ID for isolation
-     * @return array Array of file information
-     */
-    public function get_all_files(?string $flow_step_id = null): array {
-        if (!$this->ensure_repository_exists($flow_step_id)) {
-            return [];
-        }
-
-        $repo_path = $this->get_repository_path($flow_step_id);
-        $files = glob($repo_path . '/*');
-        $file_list = [];
-
-        foreach ($files as $file_path) {
-            if (is_file($file_path)) {
-                $filename = basename($file_path);
-                
-                // Skip system files
-                if ($filename === 'index.php') {
-                    continue;
-                }
-
-                $file_list[] = [
-                    'filename' => $filename,
-                    'path' => $file_path,
-                    'size' => filesize($file_path),
-                    'modified' => filemtime($file_path),
-                    'url' => $this->get_repository_url($flow_step_id) . '/' . $filename
-                ];
-            }
-        }
-
-        return $file_list;
-    }
-
-    /**
-     * Get file information by filename
-     *
-     * @param string $filename Filename to look for
-     * @return array|null File information or null if not found
-     */
-    public function get_file_info(string $filename): ?array {
-        $safe_filename = $this->sanitize_filename($filename);
-        $file_path = $this->get_repository_path() . '/' . $safe_filename;
-
-        if (!file_exists($file_path)) {
-            return null;
-        }
-
-        return [
-            'filename' => $safe_filename,
-            'path' => $file_path,
-            'size' => filesize($file_path),
-            'modified' => filemtime($file_path),
-            'url' => $this->get_repository_url() . '/' . $safe_filename
-        ];
-    }
-
-    /**
-     * Delete a file from the repository
-     *
-     * @param string $filename Filename to delete
-     * @param string|null $flow_step_id Flow step ID for isolation
-     * @return bool True on success, false on failure
-     */
-    public function delete_file(string $filename, ?string $flow_step_id = null): bool {
-        $safe_filename = $this->sanitize_filename($filename);
-        $file_path = $this->get_repository_path($flow_step_id) . '/' . $safe_filename;
-
-        if (!file_exists($file_path)) {
-            return false;
-        }
-
-        $deleted = wp_delete_file($file_path);
-
-        return $deleted;
-    }
-
-    /**
-     * Clean up old files (older than specified days)
-     *
-     * @param int $days Files older than this many days will be deleted
-     * @param string|null $flow_step_id Flow step ID for isolation
-     * @return int Number of files deleted
-     */
-    public function cleanup_old_files(int $days = 7, ?string $flow_step_id = null): int {
-        if (!$this->ensure_repository_exists($flow_step_id)) {
-            return 0;
-        }
-
-        $cutoff_time = time() - ($days * DAY_IN_SECONDS);
-        $files = $this->get_all_files($flow_step_id);
-        $deleted_count = 0;
-
-        foreach ($files as $file) {
-            if ($file['modified'] < $cutoff_time) {
-                if ($this->delete_file($file['filename'], $flow_step_id)) {
-                    $deleted_count++;
-                }
-            }
-        }
-
-
-        return $deleted_count;
-    }
-
-    /**
-     * Get repository statistics
-     *
-     * @param string|null $flow_step_id Flow step ID for isolation
-     * @return array Repository statistics
-     */
-    public function get_repository_stats(?string $flow_step_id = null): array {
-        $files = $this->get_all_files($flow_step_id);
-        $total_size = 0;
-        $oldest_file = null;
-        $newest_file = null;
-
-        foreach ($files as $file) {
-            $total_size += $file['size'];
-            
-            if ($oldest_file === null || $file['modified'] < $oldest_file) {
-                $oldest_file = $file['modified'];
-            }
-            
-            if ($newest_file === null || $file['modified'] > $newest_file) {
-                $newest_file = $file['modified'];
-            }
-        }
-
-        return [
-            'file_count' => count($files),
-            'total_size' => $total_size,
-            'total_size_formatted' => size_format($total_size),
-            'oldest_file' => $oldest_file,
-            'newest_file' => $newest_file
-        ];
-    }
-
-    /**
-     * Download remote file and store in repository
+     * Store remote file in flow files directory
      *
      * @param string $url Remote file URL
      * @param string $filename Desired filename
-     * @param string $flow_step_id Flow step ID for isolation
-     * @param array $options Additional options (timeout, user_agent, etc.)
+     * @param array $context Context array with pipeline/flow metadata
+     * @param array $options Additional options (timeout, user_agent)
      * @return array|null File information on success, null on failure
      */
-    public function store_remote_file(string $url, string $filename, string $flow_step_id, array $options = []): ?array {
-        if (empty($url) || empty($filename) || empty($flow_step_id)) {
-            do_action('dm_log', 'error', 'FilesRepository: Missing required parameters for remote file storage', [
-                'url' => !empty($url),
-                'filename' => !empty($filename),
-                'flow_step_id' => !empty($flow_step_id)
+    public function store_remote_file(string $url, string $filename, array $context, array $options = []): ?array {
+        if (empty($url) || empty($filename)) {
+            do_action('datamachine_log', 'error', 'FilesRepository: Missing required parameters for remote file.', [
+                'has_url' => !empty($url),
+                'has_filename' => !empty($filename)
             ]);
             return null;
         }
@@ -573,9 +300,8 @@ class FilesRepository {
             ]);
 
             if (is_wp_error($response)) {
-                do_action('dm_log', 'error', 'FilesRepository: Failed to download remote file - WordPress error', [
+                do_action('datamachine_log', 'error', 'FilesRepository: Failed to download remote file.', [
                     'url' => $url,
-                    'filename' => $filename,
                     'error' => $response->get_error_message()
                 ]);
                 return null;
@@ -583,9 +309,8 @@ class FilesRepository {
 
             $response_code = wp_remote_retrieve_response_code($response);
             if ($response_code !== 200) {
-                do_action('dm_log', 'error', 'FilesRepository: Failed to download remote file - HTTP error', [
+                do_action('datamachine_log', 'error', 'FilesRepository: HTTP error downloading remote file.', [
                     'url' => $url,
-                    'filename' => $filename,
                     'response_code' => $response_code
                 ]);
                 return null;
@@ -593,47 +318,55 @@ class FilesRepository {
 
             $file_data = wp_remote_retrieve_body($response);
             if (empty($file_data)) {
-                do_action('dm_log', 'error', 'FilesRepository: Downloaded file is empty', [
-                    'url' => $url,
-                    'filename' => $filename
+                do_action('datamachine_log', 'error', 'FilesRepository: Downloaded file is empty.', [
+                    'url' => $url
                 ]);
                 return null;
             }
 
-            // Store the downloaded data directly to repository
-            if (!$this->ensure_repository_exists($flow_step_id)) {
+            $directory = $this->get_flow_files_directory(
+                $context['pipeline_id'],
+                $context['pipeline_name'],
+                $context['flow_id'],
+                $context['flow_name']
+            );
+
+            if (!$this->ensure_directory_exists($directory)) {
                 return null;
             }
 
-            $safe_filename = $this->sanitize_filename($filename);
-            $destination_path = $this->get_repository_path($flow_step_id) . '/' . $safe_filename;
+            $safe_filename = sanitize_file_name($filename);
+            $destination = "{$directory}/{$safe_filename}";
 
-            // Write file data directly to repository
-            $written = file_put_contents($destination_path, $file_data);
+            $written = file_put_contents($destination, $file_data);
             if ($written === false) {
-                do_action('dm_log', 'error', 'FilesRepository: Failed to write remote file to repository', [
+                do_action('datamachine_log', 'error', 'FilesRepository: Failed to write remote file.', [
                     'url' => $url,
-                    'destination' => $destination_path
+                    'destination' => $destination
                 ]);
                 return null;
             }
 
-            $file_size = filesize($destination_path);
-            $file_url = trailingslashit($this->get_repository_url($flow_step_id)) . $safe_filename;
-
+            $upload_dir = wp_upload_dir();
+            $base_url = trailingslashit($upload_dir['baseurl']) . self::REPOSITORY_DIR;
+            $relative_path = str_replace(
+                trailingslashit($upload_dir['basedir']) . self::REPOSITORY_DIR,
+                '',
+                $destination
+            );
+            $file_url = $base_url . $relative_path;
 
             return [
-                'path' => $destination_path,
+                'path' => $destination,
                 'filename' => $safe_filename,
-                'size' => $file_size,
+                'size' => filesize($destination),
                 'url' => $file_url,
                 'source_url' => $url
             ];
 
-        } catch (Exception $e) {
-            do_action('dm_log', 'error', 'FilesRepository: Exception while downloading remote file', [
+        } catch (\Exception $e) {
+            do_action('datamachine_log', 'error', 'FilesRepository: Exception downloading remote file.', [
                 'url' => $url,
-                'filename' => $filename,
                 'error' => $e->getMessage()
             ]);
         }
@@ -642,14 +375,301 @@ class FilesRepository {
     }
 
     /**
-     * Sanitize filename for security
+     * Store data packet as JSON file
      *
-     * @param string $filename Original filename
-     * @return string Sanitized filename
+     * @param array $data Data packet array
+     * @param int $job_id Job ID
+     * @param array $context Context array with pipeline/flow metadata
+     * @return array Reference object on success, false on failure
      */
-    private function sanitize_filename(string $filename): string {
-        // Use WordPress sanitize_file_name function
-        return sanitize_file_name($filename);
+    public function store_data_packet(array $data, int $job_id, array $context) {
+        $directory = $this->get_job_directory(
+            $context['pipeline_id'],
+            $context['pipeline_name'],
+            $context['flow_id'],
+            $context['flow_name'],
+            $job_id
+        );
+
+        if (!$this->ensure_directory_exists($directory)) {
+            do_action('datamachine_log', 'error', 'FilesRepository: Failed to create job directory.', [
+                'job_id' => $job_id
+            ]);
+            return false;
+        }
+
+        $file_path = "{$directory}/data.json";
+
+        // Load existing data for accumulation
+        $accumulated_data = [];
+        if (file_exists($file_path)) {
+            $existing_json = file_get_contents($file_path);
+            if ($existing_json !== false) {
+                $accumulated_data = json_decode($existing_json, true);
+                if (!is_array($accumulated_data)) {
+                    $accumulated_data = [];
+                }
+            }
+        }
+
+        // Merge new data (newest first)
+        if (!empty($data)) {
+            $accumulated_data = array_merge($data, $accumulated_data);
+        }
+
+        // Serialize and write
+        $json_data = wp_json_encode($accumulated_data, JSON_UNESCAPED_UNICODE);
+        if ($json_data === false) {
+            do_action('datamachine_log', 'error', 'FilesRepository: Failed to encode data packet.', [
+                'job_id' => $job_id
+            ]);
+            return false;
+        }
+
+        if (file_put_contents($file_path, $json_data) === false) {
+            do_action('datamachine_log', 'error', 'FilesRepository: Failed to write data packet.', [
+                'job_id' => $job_id,
+                'file_path' => $file_path
+            ]);
+            return false;
+        }
+
+        return [
+            'is_data_reference' => true,
+            'job_id' => $job_id,
+            'file_path' => $file_path,
+            'stored_at' => time()
+        ];
     }
 
+    /**
+     * Retrieve data packet from JSON file
+     *
+     * @param array $reference Reference object from store_data_packet()
+     * @return array|null Retrieved data or null on failure
+     */
+    public function retrieve_data_packet(array $reference): ?array {
+        if (!isset($reference['is_data_reference']) || !$reference['is_data_reference']) {
+            return $reference['data'] ?? $reference;
+        }
+
+        $file_path = $reference['file_path'] ?? '';
+
+        if (empty($file_path) || !file_exists($file_path)) {
+            do_action('datamachine_log', 'error', 'FilesRepository: Data packet file not found.', [
+                'file_path' => $file_path
+            ]);
+            return null;
+        }
+
+        $json_data = file_get_contents($file_path);
+        if ($json_data === false) {
+            do_action('datamachine_log', 'error', 'FilesRepository: Failed to read data packet.', [
+                'file_path' => $file_path
+            ]);
+            return null;
+        }
+
+        $data = json_decode($json_data, true);
+        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+            do_action('datamachine_log', 'error', 'FilesRepository: Failed to decode data packet.', [
+                'json_error' => json_last_error_msg()
+            ]);
+            return null;
+        }
+
+        return $data;
+    }
+
+    /**
+     * Get all files in flow files directory
+     *
+     * @param array $context Context array with pipeline/flow metadata
+     * @return array Array of file information
+     */
+    public function get_all_files(array $context): array {
+        $directory = $this->get_flow_files_directory(
+            $context['pipeline_id'],
+            $context['pipeline_name'],
+            $context['flow_id'],
+            $context['flow_name']
+        );
+
+        if (!is_dir($directory)) {
+            return [];
+        }
+
+        $files = glob("{$directory}/*");
+        $file_list = [];
+
+        foreach ($files as $file_path) {
+            if (is_file($file_path)) {
+                $filename = basename($file_path);
+
+                if ($filename === 'index.php') {
+                    continue;
+                }
+
+                $file_list[] = [
+                    'filename' => $filename,
+                    'path' => $file_path,
+                    'size' => filesize($file_path),
+                    'modified' => filemtime($file_path)
+                ];
+            }
+        }
+
+        return $file_list;
+    }
+
+    /**
+     * Delete file from flow files directory
+     *
+     * @param string $filename Filename to delete
+     * @param array $context Context array with pipeline/flow metadata
+     * @return bool True on success, false on failure
+     */
+    public function delete_file(string $filename, array $context): bool {
+        $directory = $this->get_flow_files_directory(
+            $context['pipeline_id'],
+            $context['pipeline_name'],
+            $context['flow_id'],
+            $context['flow_name']
+        );
+
+        $safe_filename = sanitize_file_name($filename);
+        $file_path = "{$directory}/{$safe_filename}";
+
+        if (!file_exists($file_path)) {
+            return false;
+        }
+
+        return wp_delete_file($file_path);
+    }
+
+    /**
+     * Clean up job data packets for a specific job
+     *
+     * @param int $job_id Job ID
+     * @param array $context Context array with pipeline/flow metadata
+     * @return int Number of directories deleted (0 or 1)
+     */
+    public function cleanup_job_data_packets(int $job_id, array $context): int {
+        $job_dir = $this->get_job_directory(
+            $context['pipeline_id'],
+            $context['pipeline_name'],
+            $context['flow_id'],
+            $context['flow_name'],
+            $job_id
+        );
+
+        if (!is_dir($job_dir)) {
+            return 0;
+        }
+
+        if (!function_exists('WP_Filesystem')) {
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
+        }
+
+        if (WP_Filesystem()) {
+            global $wp_filesystem;
+            if ($wp_filesystem->rmdir($job_dir, true)) {
+                return 1;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Clean up old files (hierarchical traversal)
+     *
+     * @param int $retention_days Files older than this many days will be deleted
+     * @return int Number of files deleted
+     */
+    public function cleanup_old_files(int $retention_days = 7): int {
+        $upload_dir = wp_upload_dir();
+        $base = trailingslashit($upload_dir['basedir']) . self::REPOSITORY_DIR;
+        $cutoff_time = time() - ($retention_days * DAY_IN_SECONDS);
+        $deleted_count = 0;
+
+        if (!is_dir($base)) {
+            return 0;
+        }
+
+        // Traverse: pipeline → flow → files
+        $pipeline_dirs = glob("{$base}/pipeline-*", GLOB_ONLYDIR);
+
+        foreach ($pipeline_dirs as $pipeline_dir) {
+            $flow_dirs = glob("{$pipeline_dir}/flow-*", GLOB_ONLYDIR);
+
+            foreach ($flow_dirs as $flow_dir) {
+                // Clean up flow files (not context!)
+                $files_dir = "{$flow_dir}/files";
+
+                if (is_dir($files_dir)) {
+                    $files = glob("{$files_dir}/*");
+                    foreach ($files as $file) {
+                        if (is_file($file) && filemtime($file) < $cutoff_time) {
+                            if (wp_delete_file($file)) {
+                                $deleted_count++;
+                            }
+                        }
+                    }
+
+                    // Remove empty files directory
+                    if (empty(glob("{$files_dir}/*"))) {
+                        rmdir($files_dir);
+                    }
+                }
+
+                // Clean up old job directories
+                $jobs_dir = "{$flow_dir}/jobs";
+
+                if (is_dir($jobs_dir)) {
+                    $job_dirs = glob("{$jobs_dir}/job-*", GLOB_ONLYDIR);
+                    foreach ($job_dirs as $job_dir) {
+                        $files = glob("{$job_dir}/*");
+                        $all_old = true;
+
+                        foreach ($files as $file) {
+                            if (is_file($file) && filemtime($file) >= $cutoff_time) {
+                                $all_old = false;
+                                break;
+                            }
+                        }
+
+                        if ($all_old && !empty($files)) {
+                            if (!function_exists('WP_Filesystem')) {
+                                require_once(ABSPATH . 'wp-admin/includes/file.php');
+                            }
+                            if (WP_Filesystem()) {
+                                global $wp_filesystem;
+                                $wp_filesystem->rmdir($job_dir, true);
+                            }
+                        }
+                    }
+
+                    // Remove empty jobs directory
+                    if (empty(glob("{$jobs_dir}/*"))) {
+                        rmdir($jobs_dir);
+                    }
+                }
+            }
+        }
+
+        return $deleted_count;
+    }
+
+    /**
+     * Check if argument is a data reference
+     *
+     * @param mixed $argument Argument to check
+     * @return bool True if data reference
+     */
+    public function is_data_reference($argument): bool {
+        return is_array($argument) &&
+               isset($argument['is_data_reference']) &&
+               $argument['is_data_reference'] === true;
+    }
 }

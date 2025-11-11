@@ -19,10 +19,10 @@ class WordPress {
 
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('dm_engine_data', [], $job_id);
+        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $source_url = $engine_data['source_url'] ?? null;
 
-        do_action('dm_log', 'debug', 'WordPress Update Tool: Handling tool call', [
+        do_action('datamachine_log', 'debug', 'WordPress Update Tool: Handling tool call', [
             'parameters' => $parameters,
             'parameter_keys' => array_keys($parameters),
             'has_handler_config' => !empty($tool_def['handler_config']),
@@ -32,7 +32,7 @@ class WordPress {
 
         if (empty($source_url)) {
             $error_msg = "source_url parameter is required for WordPress Update handler";
-            do_action('dm_log', 'error', $error_msg, [
+            do_action('datamachine_log', 'error', $error_msg, [
                 'available_parameters' => array_keys($parameters)
             ]);
 
@@ -46,7 +46,7 @@ class WordPress {
         $post_id = url_to_postid($source_url);
         if (!$post_id) {
             $error_msg = "Could not extract valid WordPress post ID from URL: {$source_url}";
-            do_action('dm_log', 'error', $error_msg, [
+            do_action('datamachine_log', 'error', $error_msg, [
                 'source_url' => $source_url,
                 'extracted_post_id' => $post_id
             ]);
@@ -61,7 +61,7 @@ class WordPress {
         $existing_post = get_post($post_id);
         if (!$existing_post) {
             $error_msg = "WordPress post with ID {$post_id} does not exist";
-            do_action('dm_log', 'error', $error_msg, [
+            do_action('datamachine_log', 'error', $error_msg, [
                 'post_id' => $post_id
             ]);
             
@@ -74,7 +74,7 @@ class WordPress {
 
         $handler_config = $tool_def['handler_config'] ?? [];
         
-        do_action('dm_log', 'debug', 'WordPress Update Tool: Using handler configuration', [
+        do_action('datamachine_log', 'debug', 'WordPress Update Tool: Using handler configuration', [
             'post_id' => $post_id,
             'existing_post_title' => $existing_post->post_title,
             'existing_post_status' => $existing_post->post_status,
@@ -116,7 +116,7 @@ class WordPress {
         $has_updates = count($post_data) > 1;
         
         if (!$has_updates) {
-            do_action('dm_log', 'info', 'WordPress Update Tool: No updates to apply', [
+            do_action('datamachine_log', 'info', 'WordPress Update Tool: No updates to apply', [
                 'post_id' => $post_id,
                 'reason' => 'No allowed parameters provided or all updates disabled'
             ]);
@@ -133,7 +133,7 @@ class WordPress {
             ];
         }
 
-        do_action('dm_log', 'debug', 'WordPress Update Tool: Final post data for wp_update_post', [
+        do_action('datamachine_log', 'debug', 'WordPress Update Tool: Final post data for wp_update_post', [
             'post_id' => $post_id,
             'updating_title' => isset($post_data['post_title']),
             'updating_content' => isset($post_data['post_content']),
@@ -145,7 +145,7 @@ class WordPress {
 
         if (is_wp_error($result)) {
             $error_msg = 'WordPress post update failed: ' . $result->get_error_message();
-            do_action('dm_log', 'error', $error_msg, [
+            do_action('datamachine_log', 'error', $error_msg, [
                 'post_data' => $post_data,
                 'wp_error' => $result->get_error_data()
             ]);
@@ -159,7 +159,7 @@ class WordPress {
 
         if ($result === 0) {
             $error_msg = 'WordPress post update failed: wp_update_post returned 0';
-            do_action('dm_log', 'error', $error_msg, [
+            do_action('datamachine_log', 'error', $error_msg, [
                 'post_data' => $post_data
             ]);
 
@@ -172,7 +172,7 @@ class WordPress {
 
         $taxonomy_results = $this->process_taxonomies_from_settings($post_id, $parameters, $handler_config);
 
-        do_action('dm_log', 'debug', 'WordPress Update Tool: Post updated successfully', [
+        do_action('datamachine_log', 'debug', 'WordPress Update Tool: Post updated successfully', [
             'post_id' => $post_id,
             'post_url' => get_permalink($post_id),
             'taxonomy_results' => $taxonomy_results,
@@ -205,14 +205,15 @@ class WordPress {
         $taxonomies = get_taxonomies(['public' => true], 'objects');
 
         foreach ($taxonomies as $taxonomy) {
-            if (in_array($taxonomy->name, ['post_format', 'nav_menu', 'link_category'])) {
+            $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
+            if (in_array($taxonomy->name, $excluded)) {
                 continue;
             }
 
             $field_key = "taxonomy_{$taxonomy->name}_selection";
             $selection = $handler_config[$field_key] ?? 'skip';
 
-            do_action('dm_log', 'debug', 'WordPress Update Tool: Processing taxonomy from settings', [
+            do_action('datamachine_log', 'debug', 'WordPress Update Tool: Processing taxonomy from settings', [
                 'taxonomy_name' => $taxonomy->name,
                 'field_key' => $field_key,
                 'selection_value' => $selection,
@@ -230,7 +231,7 @@ class WordPress {
                     $taxonomy_result = $this->assign_taxonomy($post_id, $taxonomy->name, $parameters[$param_name]);
                     $taxonomy_results[$taxonomy->name] = $taxonomy_result;
 
-                    do_action('dm_log', 'debug', 'WordPress Update Tool: Applied AI-decided taxonomy', [
+                    do_action('datamachine_log', 'debug', 'WordPress Update Tool: Applied AI-decided taxonomy', [
                         'taxonomy_name' => $taxonomy->name,
                         'parameter_name' => $param_name,
                         'parameter_value' => $parameters[$param_name],
@@ -240,9 +241,9 @@ class WordPress {
 
             } elseif (is_numeric($selection)) {
                 $term_id = absint($selection);
-                $term = get_term($term_id, $taxonomy->name);
+                $term_name = apply_filters('datamachine_wordpress_term_name', null, $term_id, $taxonomy->name);
 
-                if (!is_wp_error($term) && $term) {
+                if ($term_name !== null) {
                     $result = wp_set_object_terms($post_id, [$term_id], $taxonomy->name);
 
                     if (is_wp_error($result)) {
@@ -258,7 +259,7 @@ class WordPress {
                             'terms' => [$term->name]
                         ];
 
-                        do_action('dm_log', 'debug', 'WordPress Update Tool: Applied pre-selected taxonomy', [
+                        do_action('datamachine_log', 'debug', 'WordPress Update Tool: Applied pre-selected taxonomy', [
                             'taxonomy_name' => $taxonomy->name,
                             'term_id' => $term_id,
                             'term_name' => $term->name
@@ -294,7 +295,7 @@ class WordPress {
             if (!$term) {
                 $term_result = wp_insert_term($term_name, $taxonomy_name);
                 if (is_wp_error($term_result)) {
-                    do_action('dm_log', 'warning', 'Failed to create taxonomy term', [
+                    do_action('datamachine_log', 'warning', 'Failed to create taxonomy term', [
                         'taxonomy' => $taxonomy_name,
                         'term_name' => $term_name,
                         'error' => $term_result->get_error_message()
@@ -354,7 +355,7 @@ class WordPress {
                     'success' => true
                 ];
 
-                do_action('dm_log', 'debug', 'WordPress Update: Surgical update applied', [
+                do_action('datamachine_log', 'debug', 'WordPress Update: Surgical update applied', [
                     'find_length' => strlen($find),
                     'replace_length' => strlen($replace),
                     'change_successful' => true
@@ -367,7 +368,7 @@ class WordPress {
                     'error' => 'Target text not found in content'
                 ];
 
-                do_action('dm_log', 'warning', 'WordPress Update: Surgical update target not found', [
+                do_action('datamachine_log', 'warning', 'WordPress Update: Surgical update target not found', [
                     'find_text' => substr($find, 0, 100) . (strlen($find) > 100 ? '...' : ''),
                     'content_length' => strlen($working_content)
                 ]);
@@ -415,7 +416,7 @@ class WordPress {
                         'success' => true
                     ];
 
-                    do_action('dm_log', 'debug', 'WordPress Update: Block update applied', [
+                    do_action('datamachine_log', 'debug', 'WordPress Update: Block update applied', [
                         'block_index' => $target_index,
                         'block_type' => $blocks[$target_index]['blockName'] ?? 'unknown',
                         'find_length' => strlen($find),
@@ -430,7 +431,7 @@ class WordPress {
                         'error' => 'Target text not found in block'
                     ];
 
-                    do_action('dm_log', 'warning', 'WordPress Update: Block update target not found', [
+                    do_action('datamachine_log', 'warning', 'WordPress Update: Block update target not found', [
                         'block_index' => $target_index,
                         'block_type' => $blocks[$target_index]['blockName'] ?? 'unknown',
                         'find_text' => substr($find, 0, 100) . (strlen($find) > 100 ? '...' : '')
@@ -445,7 +446,7 @@ class WordPress {
                     'error' => 'Block index does not exist'
                 ];
 
-                do_action('dm_log', 'warning', 'WordPress Update: Block index out of range', [
+                do_action('datamachine_log', 'warning', 'WordPress Update: Block index out of range', [
                     'requested_index' => $target_index,
                     'total_blocks' => count($blocks)
                 ]);

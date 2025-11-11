@@ -1,0 +1,199 @@
+<?php
+/**
+ * Jobs REST API Endpoint
+ *
+ * Provides REST API access to job execution history.
+ * Requires WordPress manage_options capability for all operations.
+ *
+ * Endpoints:
+ * - GET /datamachine/v1/jobs - Retrieve jobs list with pagination and filtering
+ * - DELETE /datamachine/v1/jobs - Clear jobs (all or failed)
+ *
+ * @package DataMachine\Api
+ */
+
+namespace DataMachine\Api;
+
+if (!defined('WPINC')) {
+	die;
+}
+
+class Jobs {
+
+	/**
+	 * Register REST API routes
+	 */
+	public static function register() {
+		add_action('rest_api_init', [self::class, 'register_routes']);
+	}
+
+	/**
+	 * Register all jobs related REST endpoints
+	 */
+	public static function register_routes() {
+
+		// GET /datamachine/v1/jobs - Retrieve jobs
+		register_rest_route('datamachine/v1', '/jobs', [
+			'methods' => 'GET',
+			'callback' => [self::class, 'handle_get_jobs'],
+			'permission_callback' => [self::class, 'check_permission'],
+			'args' => [
+				'orderby' => [
+					'required' => false,
+					'type' => 'string',
+					'default' => 'job_id',
+					'description' => __('Order jobs by field', 'data-machine')
+				],
+				'order' => [
+					'required' => false,
+					'type' => 'string',
+					'default' => 'DESC',
+					'enum' => ['ASC', 'DESC'],
+					'description' => __('Sort order', 'data-machine')
+				],
+				'per_page' => [
+					'required' => false,
+					'type' => 'integer',
+					'default' => 50,
+					'minimum' => 1,
+					'maximum' => 100,
+					'description' => __('Number of jobs per page', 'data-machine')
+				],
+				'offset' => [
+					'required' => false,
+					'type' => 'integer',
+					'default' => 0,
+					'minimum' => 0,
+					'description' => __('Offset for pagination', 'data-machine')
+				],
+				'pipeline_id' => [
+					'required' => false,
+					'type' => 'integer',
+					'description' => __('Filter by pipeline ID', 'data-machine')
+				],
+				'flow_id' => [
+					'required' => false,
+					'type' => 'integer',
+					'description' => __('Filter by flow ID', 'data-machine')
+				],
+				'status' => [
+					'required' => false,
+					'type' => 'string',
+					'description' => __('Filter by job status', 'data-machine')
+				]
+			]
+		]);
+
+		// DELETE /datamachine/v1/jobs - Clear jobs
+		register_rest_route('datamachine/v1', '/jobs', [
+			'methods' => 'DELETE',
+			'callback' => [self::class, 'handle_clear'],
+			'permission_callback' => [self::class, 'check_permission'],
+			'args' => [
+				'type' => [
+					'required' => true,
+					'type' => 'string',
+					'enum' => ['all', 'failed'],
+					'description' => __('Which jobs to clear: all or failed', 'data-machine')
+				],
+				'cleanup_processed' => [
+					'required' => false,
+					'type' => 'boolean',
+					'default' => false,
+					'description' => __('Also clear processed items tracking', 'data-machine')
+				]
+			]
+		]);
+	}
+
+	/**
+	 * Check if user has permission to manage jobs
+	 */
+	public static function check_permission($request) {
+		if (!current_user_can('manage_options')) {
+			return new \WP_Error(
+				'rest_forbidden',
+				__('You do not have permission to manage jobs.', 'data-machine'),
+				['status' => 403]
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Handle get jobs request
+	 *
+	 * GET /datamachine/v1/jobs
+	 */
+	public static function handle_get_jobs($request) {
+		// Get database service
+		$all_databases = apply_filters('datamachine_db', []);
+		$db_jobs = $all_databases['jobs'] ?? null;
+
+		if (!$db_jobs) {
+			return new \WP_Error(
+				'database_unavailable',
+				__('Database service unavailable.', 'data-machine'),
+				['status' => 500]
+			);
+		}
+
+		// Build query args
+		$args = [
+			'orderby' => $request->get_param('orderby'),
+			'order' => $request->get_param('order'),
+			'per_page' => $request->get_param('per_page'),
+			'offset' => $request->get_param('offset')
+		];
+
+		// Add optional filters
+		if ($request->get_param('pipeline_id')) {
+			$args['pipeline_id'] = (int) $request->get_param('pipeline_id');
+		}
+		if ($request->get_param('flow_id')) {
+			$args['flow_id'] = (int) $request->get_param('flow_id');
+		}
+		if ($request->get_param('status')) {
+			$args['status'] = sanitize_text_field($request->get_param('status'));
+		}
+
+		// Retrieve jobs
+		$jobs = $db_jobs->get_jobs_for_list_table($args);
+		$total_jobs = $db_jobs->get_jobs_count();
+
+		return [
+			'success' => true,
+			'jobs' => $jobs,
+			'total' => $total_jobs,
+			'per_page' => $args['per_page'],
+			'offset' => $args['offset']
+		];
+	}
+
+	/**
+	 * Handle clear jobs request
+	 *
+	 * DELETE /datamachine/v1/jobs
+	 */
+	public static function handle_clear($request) {
+		$type = $request->get_param('type');
+		$cleanup_processed = $request->get_param('cleanup_processed');
+
+		// Delegate to centralized delete action
+		do_action('datamachine_delete_jobs', $type, $cleanup_processed);
+
+		// Log operation
+		do_action('datamachine_log', 'info', 'Jobs cleared via REST API', [
+			'type' => $type,
+			'cleanup_processed' => $cleanup_processed,
+			'user_id' => get_current_user_id(),
+			'user_login' => wp_get_current_user()->user_login
+		]);
+
+		return [
+			'success' => true,
+			'message' => __('Jobs cleared successfully.', 'data-machine')
+		];
+	}
+}

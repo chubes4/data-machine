@@ -28,10 +28,10 @@ if (!defined('ABSPATH')) {
  * 
  * @since 0.1.0
  */
-function dm_register_publish_step_filters() {
+function datamachine_register_publish_step_filters() {
     
     // Step registration - Publish declares itself as 'publish' step type (pure discovery mode)
-    add_filter('dm_steps', function($steps) {
+    add_filter('datamachine_step_types', function($steps) {
         $steps['publish'] = [
             'label' => __('Publish', 'data-machine'),
             'description' => __('Publish to target destinations', 'data-machine'),
@@ -44,4 +44,4 @@ function dm_register_publish_step_filters() {
 }
 
 // Auto-register when file loads - achieving complete self-containment
-dm_register_publish_step_filters();
+datamachine_register_publish_step_filters();

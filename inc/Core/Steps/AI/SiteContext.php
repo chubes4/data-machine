@@ -9,7 +9,7 @@ defined('ABSPATH') || exit;
 
 class SiteContext {
 
-    const CACHE_KEY = 'dm_site_context_data';
+    const CACHE_KEY = 'datamachine_site_context_data';
 
     /**
      * Get site context data with automatic caching.
@@ -84,7 +84,7 @@ class SiteContext {
     private static function get_taxonomies_data(): array {
         $taxonomies_data = [];
         $taxonomies = get_taxonomies(['public' => true], 'objects');
-        $excluded_taxonomies = ['post_format', 'nav_menu', 'link_category'];
+        $excluded_taxonomies = apply_filters('datamachine_wordpress_system_taxonomies', []);
 
         foreach ($taxonomies as $taxonomy) {
             if (in_array($taxonomy->name, $excluded_taxonomies)) {

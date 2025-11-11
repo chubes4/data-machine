@@ -1,11 +1,6 @@
 <?php
 /**
- * Cross-cutting filters for handler capabilities.
- *
- * Provides shared functionality used across multiple handlers:
- * - Timeframe parsing (discovery and conversion modes)
- * - Keyword matching with OR logic
- * - Handler registration discovery
+ * Shared handler utilities for timeframe parsing and keyword matching.
  *
  * @package DataMachine\Engine\Filters
  */
@@ -14,27 +9,23 @@ if (!defined('WPINC')) {
     die;
 }
 
-function dm_register_handler_filters() {
-    add_filter('dm_handlers', function($handlers, $step_type = null) {
+function datamachine_register_handler_filters() {
+    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
         return $handlers;
     }, 5, 2);
 
-    add_filter('dm_handler_settings', function($all_settings, $handler_slug = null) {
+    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
         return $all_settings;
     }, 5, 2);
 
-    add_filter('dm_auth_providers', function($providers, $step_type = null) {
+    add_filter('datamachine_auth_providers', function($providers, $step_type = null) {
         return $providers;
     }, 5, 2);
 
     /**
-     * Dual-mode timeframe parsing: options discovery or timestamp conversion.
-     *
-     * @param mixed $default Default value
-     * @param string|null $timeframe_limit Timeframe identifier (null for discovery mode)
-     * @return array|int|null Options array, timestamp, or null
+     * Dual-mode: null = discover options, string = convert to timestamp.
      */
-    add_filter('dm_timeframe_limit', function($default, $timeframe_limit) {
+    add_filter('datamachine_timeframe_limit', function($default, $timeframe_limit) {
         if ($timeframe_limit === null) {
             return [
                 'all_time' => __('All Time', 'data-machine'),
@@ -64,14 +55,9 @@ function dm_register_handler_filters() {
     }, 10, 2);
 
     /**
-     * Keyword matching with OR logic across comma-separated terms.
-     *
-     * @param bool $default Default match result
-     * @param string $content Content to search
-     * @param string $search_term Comma-separated keywords (empty matches all)
-     * @return bool Match result
+     * OR logic for comma-separated keywords. Empty matches all content.
      */
-    add_filter('dm_keyword_search_match', function($default, $content, $search_term) {
+    add_filter('datamachine_keyword_search_match', function($default, $content, $search_term) {
         if (empty($search_term)) {
             return true;
         }
@@ -93,6 +79,95 @@ function dm_register_handler_filters() {
         return false;
     }, 10, 3);
 
+    /**
+     * Base implementation for handler settings display with smart label defaults.
+     * Priority 5 allows handlers to override at higher priorities.
+     */
+    add_filter('datamachine_get_handler_settings_display', function($default, $flow_step_id, $step_type) {
+        // Get flow step configuration
+        $flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
+        if (empty($flow_step_config)) {
+            return [];
+        }
+
+        $handler_slug = $flow_step_config['handler_slug'] ?? '';
+        $current_settings = $flow_step_config['handler_config'] ?? [];
+
+        if (empty($handler_slug) || empty($current_settings)) {
+            return [];
+        }
+
+        // Get handler Settings class
+        $all_handler_settings = apply_filters('datamachine_handler_settings', [], $handler_slug);
+        $handler_settings = $all_handler_settings[$handler_slug] ?? null;
+
+        if (!$handler_settings || !method_exists($handler_settings, 'get_fields')) {
+            return [];
+        }
+
+        // Get field definitions
+        $fields = $handler_settings::get_fields($current_settings);
+
+        // Common acronyms that should be uppercase
+        $acronyms = [
+            'ai' => 'AI',
+            'api' => 'API',
+            'url' => 'URL',
+            'id' => 'ID',
+            'seo' => 'SEO',
+            'rss' => 'RSS',
+            'html' => 'HTML',
+            'css' => 'CSS',
+            'json' => 'JSON',
+            'xml' => 'XML',
+        ];
+
+        // Build display array with smart defaults
+        // Iterate through fields to respect Settings class order
+        $settings_display = [];
+        foreach ($fields as $key => $field_config) {
+            // Check if this field has a value in current settings
+            if (!isset($current_settings[$key])) {
+                continue;
+            }
+
+            $value = $current_settings[$key];
+
+            // Skip if no value
+            if ($value === '' || $value === null) {
+                continue;
+            }
+
+            // Generate smart label from key
+            $label_words = explode('_', $key);
+            $label_words = array_map(function($word) use ($acronyms) {
+                $word_lower = strtolower($word);
+                return $acronyms[$word_lower] ?? ucfirst($word);
+            }, $label_words);
+            $label = implode(' ', $label_words);
+
+            // Use field label if available
+            if (!empty($field_config['label'])) {
+                $label = $field_config['label'];
+            }
+
+            // Format display value
+            $display_value = $value;
+            if (isset($field_config['options'][$value])) {
+                $display_value = $field_config['options'][$value];
+            }
+
+            $settings_display[] = [
+                'key' => $key,
+                'label' => $label,
+                'value' => $value,
+                'display_value' => $display_value
+            ];
+        }
+
+        return $settings_display;
+    }, 5, 3);
+
 }
 
-dm_register_handler_filters();
+datamachine_register_handler_filters();
