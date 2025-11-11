@@ -11,7 +11,8 @@
     "lint:style": "wp-scripts lint-style"
   },
   "devDependencies": {
-    "@wordpress/scripts": "^30.27.0"
+    "@wordpress/scripts": "^30.27.0",
+    "npm-force-resolutions": "^0.0.10"
   },
   "dependencies": {
     "@wordpress/api-fetch": "^7.0.0",
