@@ -1,5 +1,5 @@
 ## Data Machine Copilot Guide
-- **Start here** Skim `docs/overview.md`, `docs/architecture.md`, and `CLAUDE.md`; `data-machine.php` bootstraps core services once `datamachine_check_requirements()` succeeds.
+- **Start here** Skim `docs/overview.md`, `docs/architecture.md`, and `CLAUDE.md`; `datamachine.php` bootstraps core services once `datamachine_check_requirements()` succeeds.
 - **Autoload pattern** `composer.json` maps `DataMachine\Core\` and `DataMachine\Engine\` to `inc/`; any `*Filters.php` file registers hooks on load, so new services belong in that pattern and require no manual includes.
 - **Pipeline lifecycle** Pipelines (templates) → flows (configured instances) → jobs (executions via Action Scheduler under `inc/Engine/Actions`); the execution loop is `datamachine_run_flow_now` → `datamachine_execute_step` → `datamachine_schedule_next_step`.
 - **Identifier helpers** Step IDs stay in UUID form at pipeline level; use `datamachine_generate_flow_step_id` / `datamachine_split_*` helpers for `{pipeline_step_id}_{flow_id}` values instead of string manipulation.

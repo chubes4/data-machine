@@ -79,7 +79,7 @@ export const VALIDATION = {
 /**
  * CSS Class Prefixes
  */
-export const CLASS_PREFIX = 'dm-pipelines';
+export const CLASS_PREFIX = 'datamachine-pipelines';
 
 /**
  * Status Colors

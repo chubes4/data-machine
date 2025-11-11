@@ -1,5 +1,5 @@
 {
-    "name": "chubes/data-machine",
+    "name": "chubes/datamachine",
     "description": "WordPress plugin for automated data collection, AI processing, and multi-platform publishing",
     "license": "proprietary",
     "require": {

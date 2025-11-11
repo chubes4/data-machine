@@ -16,10 +16,10 @@ Three-action execution cycle:
 3. `datamachine_schedule_next_step` - Continues to next step or completes
 
 ### Database Schema
-- `wp_dm_pipelines` - Pipeline templates (reusable)
-- `wp_dm_flows` - Flow instances (scheduled + configured)
-- `wp_dm_jobs` - Job executions with status tracking and engine_data storage (source_url, image_url)
-- `wp_dm_processed_items` - Deduplication tracking per execution
+- `wp_datamachine_pipelines` - Pipeline templates (reusable)
+- `wp_datamachine_flows` - Flow instances (scheduled + configured)
+- `wp_datamachine_jobs` - Job executions with status tracking and engine_data storage (source_url, image_url)
+- `wp_datamachine_processed_items` - Deduplication tracking per execution
 
 ### Engine Data Architecture
 

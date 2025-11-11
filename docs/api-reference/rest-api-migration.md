@@ -43,7 +43,7 @@ These 3 AJAX endpoints serve specialized admin interface needs and are NOT block
 
 ## Complete REST API Implementation
 
-### Current Endpoint Coverage (11 Files)
+### Current Endpoint Coverage (10 Files)
 
 **Data Operations**:
 - `Execute.php` - Flow trigger and execution (immediate, recurring, delayed)
@@ -62,7 +62,6 @@ These 3 AJAX endpoints serve specialized admin interface needs and are NOT block
 
 **Monitoring & Logging**:
 - `Logs.php` - Log content, metadata, level updates, clearing
-- `Status.php` - Flow and pipeline status inspection
 
 ## Reference Implementation: DM Events Calendar
 

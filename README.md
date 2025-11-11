@@ -44,13 +44,13 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 ### Installation
 
 **Development**:
-1. Clone to `/wp-content/plugins/data-machine/`
+1. Clone to `/wp-content/plugins/datamachine/`
 2. Run `composer install`
 3. Activate plugin
 4. Configure AI provider at Settings → Data Machine
 
 **Production**:
-1. Run `./build.sh` to create `/dist/data-machine.zip`
+1. Run `./build.sh` to create `/dist/datamachine.zip`
 2. Install via WordPress admin
 3. Configure AI provider and tools
 
@@ -270,8 +270,8 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
   - Cache keys/options/transients: ✅ Complete (`datamachine_` prefix)
   - OAuth URLs: ✅ Complete (`datamachine_` prefix)
   - CSS classes: ✅ Complete (`datamachine-` prefix)
-  - Database tables: ⏳ Pending (`wp_dm_*` tables, Phase 3 blocked)
-  - Migration complete for all code except database table names
+  - Database tables: ✅ Complete (`wp_datamachine_*` tables)
+  - Migration complete for all code and database table names
 
 *All handlers are fully functional with OAuth authentication where required and comprehensive error handling*
 
@@ -311,7 +311,7 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 ```bash
 composer install    # Development setup
 composer test       # Run tests (PHPUnit configured, test files not yet implemented)
-./build.sh          # Production build to /dist/data-machine.zip
+./build.sh          # Production build to /dist/datamachine.zip
 ```
 
 **Architecture**:

@@ -17,7 +17,7 @@ foreach ($auth_providers as $provider) {
 }
 
 // Delete AI HTTP Client library options for this plugin context
-delete_option( 'ai_http_client_providers_data-machine' );
+delete_option( 'ai_http_client_providers_datamachine' );
 delete_option( 'ai_http_client_selected_provider_data-machine' );
 // Note: Shared API keys preserved for other plugins using AI HTTP Client library
 

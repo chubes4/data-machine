@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Configuration
-PLUGIN_FILE="data-machine.php"
+PLUGIN_FILE="datamachine.php"
 BUILD_DIR="dist"
 TEMP_DIR="$BUILD_DIR/temp"
 BUILDIGNORE_FILE=".buildignore"
@@ -55,7 +55,7 @@ fi
 # Clean dist directory
 echo -e "${YELLOW}🧹 Cleaning dist directory...${NC}"
 rm -rf "$BUILD_DIR"
-mkdir -p "$TEMP_DIR/data-machine"
+mkdir -p "$TEMP_DIR/datamachine"
 
 # Install production dependencies
 echo -e "${YELLOW}📥 Installing production dependencies...${NC}"
@@ -71,17 +71,17 @@ npm run build
 
 # Copy plugin files using rsync with .buildignore exclusions
 echo -e "${YELLOW}📋 Copying plugin files (excluding development files)...${NC}"
-rsync -av --exclude-from="$BUILDIGNORE_FILE" . "$TEMP_DIR/data-machine/"
+rsync -av --exclude-from="$BUILDIGNORE_FILE" . "$TEMP_DIR/datamachine/"
 
 # Validate essential files exist
 echo -e "${YELLOW}✅ Validating build...${NC}"
 REQUIRED_FILES=(
-    "$TEMP_DIR/data-machine/data-machine.php"
-    "$TEMP_DIR/data-machine/uninstall.php"
-    "$TEMP_DIR/data-machine/vendor/autoload.php"
-    "$TEMP_DIR/data-machine/vendor/chubes4/ai-http-client"
-    "$TEMP_DIR/data-machine/inc/Core"
-    "$TEMP_DIR/data-machine/inc/Engine"
+    "$TEMP_DIR/datamachine/datamachine.php"
+    "$TEMP_DIR/datamachine/uninstall.php"
+    "$TEMP_DIR/datamachine/vendor/autoload.php"
+    "$TEMP_DIR/datamachine/vendor/chubes4/ai-http-client"
+    "$TEMP_DIR/datamachine/inc/Core"
+    "$TEMP_DIR/datamachine/inc/Engine"
 )
 
 for file in "${REQUIRED_FILES[@]}"; do
@@ -93,10 +93,10 @@ done
 
 # Validate that development files are excluded
 EXCLUDED_FILES=(
-    "$TEMP_DIR/data-machine/.git"
-    "$TEMP_DIR/data-machine/build.sh"
-    "$TEMP_DIR/data-machine/phpunit.xml"
-    "$TEMP_DIR/data-machine/composer.lock"
+    "$TEMP_DIR/datamachine/.git"
+    "$TEMP_DIR/datamachine/build.sh"
+    "$TEMP_DIR/datamachine/phpunit.xml"
+    "$TEMP_DIR/datamachine/composer.lock"
 )
 
 for file in "${EXCLUDED_FILES[@]}"; do
@@ -107,11 +107,11 @@ for file in "${EXCLUDED_FILES[@]}"; do
 done
 
 # Create zip file
-ZIP_NAME="data-machine.zip"
+ZIP_NAME="datamachine.zip"
 echo -e "${YELLOW}📦 Creating zip file: $ZIP_NAME${NC}"
 
 cd "$TEMP_DIR"
-zip -r "../$ZIP_NAME" "data-machine/" -q
+zip -r "../$ZIP_NAME" "datamachine/" -q
 
 cd ../../
 

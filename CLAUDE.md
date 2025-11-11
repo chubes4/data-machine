@@ -11,7 +11,7 @@ Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and mult
 **Prefix Convention:**
 - Current: `datamachine_` prefix used throughout codebase (filters, actions, functions)
 - Migration: Completed transition from `dm_` to `datamachine_` prefix
-- Status: Migration complete for all code components, database table names pending Phase 3
+- Status: Migration complete for all code components and database table names
 
 **API Architecture:**
 - REST API: 10 endpoint files implemented (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users)
@@ -33,10 +33,10 @@ Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and mult
 - ✅ CSS Classes - all converted to `datamachine-*`
 - ✅ OAuth URL Routes - all converted to `/datamachine-auth/{provider}/`
 
-**Phase 3 Database Migration (Pending):**
-- `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`
-- Migration plugin ready to execute table rename operations
-- Blocked until Phase 2 code stabilization completes
+**Phase 3 Database Migration (Complete):**
+- `wp_datamachine_pipelines`, `wp_datamachine_flows`, `wp_datamachine_jobs`, `wp_datamachine_processed_items`
+- Database table names updated to use `datamachine_` prefix
+- Migration plugin available for existing installations
 
 ## Core Filters & Actions
 
@@ -241,16 +241,16 @@ datamachine_register_twitter_filters(); // Auto-execute at file load
 
 ```sql
 -- Pipeline templates (reusable)
-wp_dm_pipelines: pipeline_id, pipeline_name, pipeline_config, created_at, updated_at
+wp_datamachine_pipelines: pipeline_id, pipeline_name, pipeline_config, created_at, updated_at
 
 -- Flow instances (scheduled + configured)
-wp_dm_flows: flow_id, pipeline_id, flow_name, flow_config, scheduling_config
+wp_datamachine_flows: flow_id, pipeline_id, flow_name, flow_config, scheduling_config
 
 -- Job executions
-wp_dm_jobs: job_id, flow_id, pipeline_id, status, job_data_json, engine_data, started_at, completed_at, error_message
+wp_datamachine_jobs: job_id, flow_id, pipeline_id, status, job_data_json, engine_data, started_at, completed_at, error_message
 
 -- Deduplication tracking
-wp_dm_processed_items: item_id, flow_step_id, source_type, item_id, job_id, processed_at
+wp_datamachine_processed_items: item_id, flow_step_id, source_type, item_id, job_id, processed_at
 ```
 
 **Relationships**:
@@ -917,7 +917,7 @@ do_action('datamachine_cache_set', $key, $data, $timeout, $group);
 ```bash
 composer install    # Install dependencies
 composer test       # Run tests (PHPUnit configured, test files pending implementation)
-./build.sh          # Production build to /dist/data-machine.zip
+./build.sh          # Production build to /dist/datamachine.zip
 ```
 
 **Required Dependencies**:

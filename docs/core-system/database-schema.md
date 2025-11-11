@@ -4,12 +4,12 @@ Data Machine uses four core tables for managing pipelines, flows, jobs, and dedu
 
 ## Core Tables
 
-### `wp_dm_pipelines`
+### `wp_datamachine_pipelines`
 
 **Purpose**: Reusable workflow templates
 
 ```sql
-CREATE TABLE wp_dm_pipelines (
+CREATE TABLE wp_datamachine_pipelines (
     pipeline_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
     pipeline_name varchar(255) NOT NULL,
     pipeline_config longtext NULL,
@@ -29,12 +29,12 @@ CREATE TABLE wp_dm_pipelines (
 - `created_at` - Creation timestamp
 - `updated_at` - Last modification timestamp
 
-### `wp_dm_flows`
+### `wp_datamachine_flows`
 
 **Purpose**: Scheduled instances of pipelines with specific configurations
 
 ```sql
-CREATE TABLE wp_dm_flows (
+CREATE TABLE wp_datamachine_flows (
     flow_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
     pipeline_id bigint(20) unsigned NOT NULL,
     flow_name varchar(255) NOT NULL,
@@ -45,7 +45,7 @@ CREATE TABLE wp_dm_flows (
     PRIMARY KEY (flow_id),
     KEY pipeline_id (pipeline_id),
     KEY flow_name (flow_name),
-    FOREIGN KEY (pipeline_id) REFERENCES wp_dm_pipelines(pipeline_id) ON DELETE CASCADE
+    FOREIGN KEY (pipeline_id) REFERENCES wp_datamachine_pipelines(pipeline_id) ON DELETE CASCADE
 );
 ```
 
@@ -56,12 +56,12 @@ CREATE TABLE wp_dm_flows (
 - `flow_config` - JSON configuration with flow-specific settings
 - `scheduling_config` - Scheduling rules and automation settings
 
-### `wp_dm_jobs`
+### `wp_datamachine_jobs`
 
 **Purpose**: Individual execution records
 
 ```sql
-CREATE TABLE wp_dm_jobs (
+CREATE TABLE wp_datamachine_jobs (
     job_id varchar(36) NOT NULL,
     flow_id bigint(20) unsigned NOT NULL,
     pipeline_id bigint(20) unsigned NOT NULL,
@@ -78,7 +78,7 @@ CREATE TABLE wp_dm_jobs (
     KEY status (status),
     KEY started_at (started_at),
     KEY completed_at (completed_at),
-    FOREIGN KEY (flow_id) REFERENCES wp_dm_flows(flow_id) ON DELETE CASCADE
+    FOREIGN KEY (flow_id) REFERENCES wp_datamachine_flows(flow_id) ON DELETE CASCADE
 );
 ```
 
@@ -93,12 +93,12 @@ CREATE TABLE wp_dm_jobs (
 - `completed_at` - Completion timestamp
 - `error_message` - Error details if failed
 
-### `wp_dm_processed_items`
+### `wp_datamachine_processed_items`
 
 **Purpose**: Deduplication tracking to prevent duplicate processing
 
 ```sql
-CREATE TABLE wp_dm_processed_items (
+CREATE TABLE wp_datamachine_processed_items (
     item_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
     flow_step_id varchar(255) NOT NULL,
     source_type varchar(50) NOT NULL,
@@ -110,7 +110,7 @@ CREATE TABLE wp_dm_processed_items (
     KEY flow_step_id (flow_step_id),
     KEY source_type (source_type),
     KEY processed_at (processed_at),
-    FOREIGN KEY (job_id) REFERENCES wp_dm_jobs(job_id) ON DELETE SET NULL
+    FOREIGN KEY (job_id) REFERENCES wp_datamachine_jobs(job_id) ON DELETE SET NULL
 );
 ```
 

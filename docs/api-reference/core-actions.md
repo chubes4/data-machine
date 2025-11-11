@@ -80,7 +80,7 @@ do_action('datamachine_mark_item_processed', $flow_step_id, 'wordpress_local', $
 ```
 
 **Database Operation**:
-- Inserts record into `wp_dm_processed_items` table
+- Inserts record into `wp_datamachine_processed_items` table
 - Creates unique constraint on flow_step_id + source_type + item_identifier
 
 ## Job Management Actions

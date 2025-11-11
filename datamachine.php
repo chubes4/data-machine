@@ -1,12 +1,12 @@
 <?php
 /**
  * Plugin Name:     Data Machine
- * Plugin URI:      https://wordpress.org/plugins/data-machine/
+ * Plugin URI:      https://wordpress.org/plugins/datamachine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
  * Version:         0.1.2
  * Author:          Chris Huber
  * Author URI:      https://chubes.net
- * Text Domain:     data-machine
+ * Text Domain:     datamachine
  * License:         GPL v2 or later
  * License URI:     https://www.gnu.org/licenses/gpl-2.0.html
  */
@@ -97,7 +97,7 @@ function activate_data_machine() {
 
 	// Create log directory during activation
 	$upload_dir = wp_upload_dir();
-	$log_dir = $upload_dir['basedir'] . '/data-machine-logs';
+	$log_dir = $upload_dir['basedir'] . '/datamachine-logs';
 	if (!file_exists($log_dir)) {
 		$created = wp_mkdir_p($log_dir);
 		if (!$created) {
@@ -114,7 +114,7 @@ function datamachine_check_requirements() {
 			echo '<div class="notice notice-error"><p>';
 			printf( 
 				/* translators: %1$s: current PHP version, %2$s: required PHP version */
-				esc_html__( 'Data Machine requires PHP %2$s or higher. You are running PHP %1$s.', 'data-machine' ),
+				esc_html__( 'Data Machine requires PHP %2$s or higher. You are running PHP %1$s.', 'datamachine' ),
 				esc_html( PHP_VERSION ),
 				'8.0'
 			);
@@ -129,7 +129,7 @@ function datamachine_check_requirements() {
 			echo '<div class="notice notice-error"><p>';
 			printf( 
 				/* translators: %1$s: current WordPress version, %2$s: required WordPress version */
-				esc_html__( 'Data Machine requires WordPress %2$s or higher. You are running WordPress %1$s.', 'data-machine' ),
+				esc_html__( 'Data Machine requires WordPress %2$s or higher. You are running WordPress %1$s.', 'datamachine' ),
 				esc_html( $wp_version ),
 				'6.0'
 			);
@@ -141,7 +141,7 @@ function datamachine_check_requirements() {
 	if ( ! file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 		add_action( 'admin_notices', function() {
 			echo '<div class="notice notice-error"><p>';
-			esc_html_e( 'Data Machine: Composer dependencies are missing. Please run "composer install" or contact Chubes to report a bug.', 'data-machine' );
+			esc_html_e( 'Data Machine: Composer dependencies are missing. Please run "composer install" or contact Chubes to report a bug.', 'datamachine' );
 			echo '</p></div>';
 		});
 		return false;

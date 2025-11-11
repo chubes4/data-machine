@@ -87,7 +87,7 @@ Real-time job monitoring and administration interface providing visibility into 
 
 ## Database Integration
 
-**Jobs Table Access**: Direct integration with `wp_dm_jobs` table:
+**Jobs Table Access**: Direct integration with `wp_datamachine_jobs` table:
 - Efficient querying with pagination support
 - Sorting by multiple columns and criteria
 - Index utilization for performance optimization

@@ -41,7 +41,7 @@
 /* ===== STATUS CONTEXTS ===== */
 
 /*
- * Status detection contexts handled by dm_detect_status filter:
+ * Status detection contexts (datamachine_detect_status filter removed):
  * 
  * - ai_step: AI step configuration and tool availability
  * - handler_auth: Handler authentication status

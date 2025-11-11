@@ -122,7 +122,7 @@ if (!$is_processed) {
 ```
 
 **Scope**: Per-flow-step deduplication (same item can be processed by different flows)
-**Persistence**: Stored in `wp_dm_processed_items` table
+**Persistence**: Stored in `wp_datamachine_processed_items` table
 **Cleanup**: Automatic cleanup with job completion
 
 ### Source Type Identifiers

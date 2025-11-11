@@ -78,7 +78,7 @@ $data = $flow_step->execute($parameters);
 
 **Directory Structure**:
 ```
-wp-content/uploads/data-machine/files/
+wp-content/uploads/datamachine/files/
 └── {flow_id}/
     └── {job_id}/
         └── {uuid}.json
