@@ -48,7 +48,7 @@ add_action('init', function() {
             WEEK_IN_SECONDS,
             'datamachine_cleanup_old_files',
             [],
-            'data-machine-files'
+            'datamachine-files'
         );
     }
 });
@@ -67,7 +67,7 @@ class FilesRepository {
     /**
      * Repository directory name
      */
-    private const REPOSITORY_DIR = 'data-machine-files';
+    private const REPOSITORY_DIR = 'datamachine-files';
 
     /**
      * Constructor - parameter-less for filter-based architecture

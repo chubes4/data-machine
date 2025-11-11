@@ -64,7 +64,7 @@ function datamachine_register_settings_page() {
         __('Data Machine Settings', 'data-machine'),
         __('Data Machine', 'data-machine'),
         'manage_options',
-        'data-machine-settings',
+        'datamachine-settings',
         'datamachine_render_settings_page_template'
     );
     
