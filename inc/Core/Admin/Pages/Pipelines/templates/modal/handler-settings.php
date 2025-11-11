@@ -79,8 +79,7 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
     <?php endif; ?>
     
     <div class="datamachine-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
-        
-        <input type="hidden" name="nonce" value="<?php echo esc_attr(wp_create_nonce('dm_ajax_actions')); ?>" />
+
         <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
         <input type="hidden" name="step_type" value="<?php echo esc_attr($step_type); ?>" />
         <input type="hidden" name="flow_step_id" value="<?php echo esc_attr($flow_step_id); ?>" />
@@ -101,7 +100,7 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
                     $current_value = $current_settings[$field_name] ?? null;
                     
                     echo wp_kses(
-                        \DataMachine\Core\Admin\Modal\ModalAjax::render_settings_field(
+                        \DataMachine\Core\Admin\Modal\ModalUtils::render_settings_field(
                             $field_name,
                             $field_config,
                             $current_value

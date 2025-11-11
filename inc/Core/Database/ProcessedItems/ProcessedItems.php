@@ -26,7 +26,7 @@ class ProcessedItems {
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
-        $this->table_name = $this->wpdb->prefix . 'dm_processed_items';
+        $this->table_name = $this->wpdb->prefix . 'datamachine_processed_items';
     }
 
 

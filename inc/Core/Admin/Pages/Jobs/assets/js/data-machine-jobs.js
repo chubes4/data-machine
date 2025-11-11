@@ -1,5 +1,5 @@
 /**
- * Data Machine Admin Jobs Page JavaScript
+ * Data Machine Admin Jobs Page JavaScript (Vanilla JS - No jQuery)
  *
  * Handles jobs list retrieval and rendering via REST API.
  * Used by: inc/Core/Admin/Pages/Jobs/Jobs.php
@@ -7,8 +7,10 @@
  * @since NEXT_VERSION
  */
 
-jQuery(document).ready(function($) {
-    var jobsManager = {
+(function() {
+    'use strict';
+
+    const jobsManager = {
         /**
          * Initialize jobs page
          */
@@ -21,39 +23,123 @@ jQuery(document).ready(function($) {
          * Bind event listeners
          */
         bindEvents: function() {
-            var self = this;
-
             // Listen for jobs cleared event from modal
-            $(document).on('datamachine-jobs-cleared', function() {
-                self.loadJobs();
+            document.addEventListener('datamachine-jobs-cleared', () => {
+                this.loadJobs();
             });
+
+            // Modal open handlers
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('datamachine-open-modal') ||
+                    e.target.closest('.datamachine-open-modal')) {
+                    this.handleModalOpen(e);
+                }
+            });
+
+            // Modal close handlers
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('datamachine-modal-close') ||
+                    e.target.closest('.datamachine-modal-close')) {
+                    this.handleModalClose(e);
+                }
+            });
+
+            // Modal overlay click to close
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('datamachine-modal-overlay')) {
+                    this.handleModalClose(e);
+                }
+            });
+
+            // Escape key to close modal
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const activeModal = document.querySelector('.datamachine-modal[aria-hidden="false"]');
+                    if (activeModal) {
+                        this.closeModal(activeModal);
+                    }
+                }
+            });
+        },
+
+        /**
+         * Handle modal open
+         */
+        handleModalOpen: function(e) {
+            e.preventDefault();
+            const button = e.target.classList.contains('datamachine-open-modal') ?
+                e.target : e.target.closest('.datamachine-open-modal');
+            const modalId = button.getAttribute('data-modal-id');
+            if (modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    this.openModal(modal);
+                }
+            }
+        },
+
+        /**
+         * Handle modal close
+         */
+        handleModalClose: function(e) {
+            e.preventDefault();
+            const modal = e.target.closest('.datamachine-modal');
+            if (modal) {
+                this.closeModal(modal);
+            }
+        },
+
+        /**
+         * Open modal
+         */
+        openModal: function(modal) {
+            modal.style.display = 'block';
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('datamachine-modal-active');
+
+            // Focus first input
+            const firstInput = modal.querySelector('input, select, textarea');
+            if (firstInput) {
+                firstInput.focus();
+            }
+        },
+
+        /**
+         * Close modal
+         */
+        closeModal: function(modal) {
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('datamachine-modal-active');
         },
 
         /**
          * Load jobs from REST API
          */
         loadJobs: function() {
-            var self = this;
-
             // Show loading state
-            $('.datamachine-jobs-loading').show();
-            $('.datamachine-jobs-empty-state').hide();
-            $('.datamachine-jobs-table-container').hide();
+            const loadingEl = document.querySelector('.datamachine-jobs-loading');
+            const emptyStateEl = document.querySelector('.datamachine-jobs-empty-state');
+            const tableContainerEl = document.querySelector('.datamachine-jobs-table-container');
+
+            if (loadingEl) loadingEl.style.display = 'block';
+            if (emptyStateEl) emptyStateEl.style.display = 'none';
+            if (tableContainerEl) tableContainerEl.style.display = 'none';
 
             wp.apiFetch({
                 path: '/datamachine/v1/jobs?orderby=job_id&order=DESC&per_page=50&offset=0',
                 method: 'GET'
-            }).then(function(response) {
+            }).then((response) => {
                 if (response.success && response.jobs) {
-                    self.renderJobs(response.jobs);
+                    this.renderJobs(response.jobs);
                 } else {
-                    self.showEmptyState();
+                    this.showEmptyState();
                 }
-            }).catch(function(error) {
+            }).catch((error) => {
                 console.error('Failed to load jobs:', error);
-                self.showEmptyState();
-            }).finally(function() {
-                $('.datamachine-jobs-loading').hide();
+                this.showEmptyState();
+            }).finally(() => {
+                if (loadingEl) loadingEl.style.display = 'none';
             });
         },
 
@@ -66,36 +152,64 @@ jQuery(document).ready(function($) {
                 return;
             }
 
-            var $tbody = $('#datamachine-jobs-tbody');
-            $tbody.empty();
+            const tbody = document.getElementById('datamachine-jobs-tbody');
+            if (!tbody) return;
 
-            jobs.forEach(function(job) {
-                var row = this.renderJobRow(job);
-                $tbody.append(row);
-            }, this);
+            tbody.innerHTML = '';
 
-            $('.datamachine-jobs-table-container').show();
-            $('.datamachine-jobs-empty-state').hide();
+            jobs.forEach((job) => {
+                const row = this.renderJobRow(job);
+                tbody.appendChild(row);
+            });
+
+            const tableContainerEl = document.querySelector('.datamachine-jobs-table-container');
+            const emptyStateEl = document.querySelector('.datamachine-jobs-empty-state');
+
+            if (tableContainerEl) tableContainerEl.style.display = 'block';
+            if (emptyStateEl) emptyStateEl.style.display = 'none';
         },
 
         /**
          * Render individual job row
          */
         renderJobRow: function(job) {
-            var pipelineName = job.pipeline_name || 'Unknown Pipeline';
-            var flowName = job.flow_name || 'Unknown Flow';
-            var status = job.status || 'unknown';
-            var statusDisplay = this.formatStatus(status);
-            var statusClass = this.getStatusClass(status);
-            var createdAt = this.formatDate(job.created_at);
-            var completedAt = this.formatDate(job.completed_at);
+            const pipelineName = job.pipeline_name || 'Unknown Pipeline';
+            const flowName = job.flow_name || 'Unknown Flow';
+            const status = job.status || 'unknown';
+            const statusDisplay = this.formatStatus(status);
+            const statusClass = this.getStatusClass(status);
+            const createdAt = this.formatDate(job.created_at);
+            const completedAt = this.formatDate(job.completed_at);
 
-            return $('<tr>')
-                .append($('<td>').html('<strong>' + this.escapeHtml(job.job_id) + '</strong>'))
-                .append($('<td>').text(pipelineName + ' → ' + flowName))
-                .append($('<td>').html('<span class="datamachine-job-status--' + statusClass + '">' + this.escapeHtml(statusDisplay) + '</span>'))
-                .append($('<td>').text(createdAt))
-                .append($('<td>').text(completedAt));
+            const tr = document.createElement('tr');
+
+            // Job ID column
+            const td1 = document.createElement('td');
+            td1.innerHTML = '<strong>' + this.escapeHtml(job.job_id) + '</strong>';
+            tr.appendChild(td1);
+
+            // Pipeline → Flow column
+            const td2 = document.createElement('td');
+            td2.textContent = pipelineName + ' → ' + flowName;
+            tr.appendChild(td2);
+
+            // Status column
+            const td3 = document.createElement('td');
+            td3.innerHTML = '<span class="datamachine-job-status--' + statusClass + '">' +
+                this.escapeHtml(statusDisplay) + '</span>';
+            tr.appendChild(td3);
+
+            // Created At column
+            const td4 = document.createElement('td');
+            td4.textContent = createdAt;
+            tr.appendChild(td4);
+
+            // Completed At column
+            const td5 = document.createElement('td');
+            td5.textContent = completedAt;
+            tr.appendChild(td5);
+
+            return tr;
         },
 
         /**
@@ -121,8 +235,8 @@ jQuery(document).ready(function($) {
             if (!dateString) return '';
 
             try {
-                var date = new Date(dateString.replace(' ', 'T') + 'Z');
-                var options = {
+                const date = new Date(dateString.replace(' ', 'T') + 'Z');
+                const options = {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',
@@ -140,18 +254,29 @@ jQuery(document).ready(function($) {
          * Show empty state
          */
         showEmptyState: function() {
-            $('.datamachine-jobs-empty-state').show();
-            $('.datamachine-jobs-table-container').hide();
+            const emptyStateEl = document.querySelector('.datamachine-jobs-empty-state');
+            const tableContainerEl = document.querySelector('.datamachine-jobs-table-container');
+
+            if (emptyStateEl) emptyStateEl.style.display = 'block';
+            if (tableContainerEl) tableContainerEl.style.display = 'none';
         },
 
         /**
          * Escape HTML for safe rendering
          */
         escapeHtml: function(text) {
-            return $('<div>').text(text).html();
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     };
 
-    // Initialize
-    jobsManager.init();
-});
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            jobsManager.init();
+        });
+    } else {
+        jobsManager.init();
+    }
+})();

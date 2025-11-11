@@ -34,9 +34,14 @@ function datamachine_register_pipelines_admin_page_filters() {
             'templates' => __DIR__ . '/templates/',
             'assets' => [
                 'css' => [
+                    'wp-components' => [
+                        'file' => null, // Use WordPress core version
+                        'deps' => [],
+                        'media' => 'all'
+                    ],
                     'datamachine-core-modal' => [
                         'file' => 'inc/Core/Admin/Modal/assets/css/core-modal.css',
-                        'deps' => [],
+                        'deps' => ['wp-components'],
                         'media' => 'all'
                     ],
                     'datamachine-pipelines-page' => [
@@ -62,14 +67,14 @@ function datamachine_register_pipelines_admin_page_filters() {
                 ],
                 'js' => [
                     // React bundle (only script needed)
-                    'dm-pipelines-react' => [
+                    'datamachine-pipelines-react' => [
                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/build/pipelines-react.js',
                         'deps' => ['wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'wp-dom-ready', 'wp-notices'],
                         'in_footer' => true,
                         'localize' => [
                             'object' => 'dataMachineConfig',
                             'data' => [
-                                'restUrl' => rest_url('datamachine/v1'),
+                                'restNamespace' => 'datamachine/v1',
                                 'restNonce' => wp_create_nonce('wp_rest'),
                                 'stepTypes' => apply_filters('datamachine_step_types', []),
                                 'handlers' => apply_filters('datamachine_handlers', []),
@@ -87,13 +92,13 @@ function datamachine_register_pipelines_admin_page_filters() {
     });
 
     // Pipeline auto-save hook moved to DataMachineActions.php for architectural consistency
-    
-    // Universal modal AJAX integration - no component-specific handlers needed
-    // All modal content routed through unified ModalAjax.php endpoint
-    
+
+    // Pipelines page uses React modals - no AJAX modal loading needed
+    // These modal registrations are for the legacy template-based system (not actively used)
+
     // Modal registration - Two-layer architecture: metadata only, content via datamachine_render_template
     add_filter('datamachine_modals', function($modals) {
-        // Static pipeline modals - metadata only, content generated during AJAX via datamachine_render_template
+        // Legacy pipeline modals - metadata only (Pipelines page uses React instead)
         $modals['step-selection'] = [
             'template' => 'modal/step-selection-cards',
             'title' => __('Select Step Type', 'data-machine')

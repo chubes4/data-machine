@@ -80,7 +80,6 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
         <h4><?php esc_html_e('API Configuration', 'data-machine'); ?></h4>
         
         <form class="datamachine-auth-config-form" data-handler="<?php echo esc_attr($handler_slug); ?>">
-            <?php wp_nonce_field('dm_ajax_actions', 'nonce'); ?>
             <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
             
             <?php foreach ($config_fields as $field_name => $field_config): ?>

@@ -39,7 +39,7 @@ export default function OAuthAuthenticationModal({
 
 	// Determine auth type from handler info
 	const authType = handlerInfo.auth_type || 'oauth2'; // oauth2 or simple
-	const oauthUrl = handlerInfo.oauth_url || `/dm-oauth/${handlerSlug}/`;
+	const oauthUrl = handlerInfo.oauth_url || `/datamachine-auth/${handlerSlug}/`;
 
 	/**
 	 * Load existing connection on mount
@@ -141,10 +141,10 @@ export default function OAuthAuthenticationModal({
 		<Modal
 			title={__('OAuth Authentication', 'data-machine')}
 			onRequestClose={onClose}
-			className="dm-modal dm-oauth-modal"
+			className="datamachine-modal datamachine-oauth-modal"
 			style={{ maxWidth: '600px' }}
 		>
-			<div className="dm-modal-content">
+			<div className="datamachine-modal-content">
 				{error && (
 					<Notice status="error" isDismissible onRemove={() => setError(null)}>
 						<p>{error}</p>

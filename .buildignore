@@ -8,7 +8,7 @@
 # Build system (exclude build files but not the final product)
 build.sh
 .buildignore
-build/
+node_modules/**/build/
 dist/
 
 # Testing

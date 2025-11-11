@@ -100,14 +100,14 @@ export default function PipelineHeader({ pipelineId, pipelineName, onNameChange,
 	}, []);
 
 	return (
-		<div className="dm-pipeline-header">
+		<div className="datamachine-pipeline-header">
 			<div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
 				<div style={{ flex: 1 }}>
 					<TextControl
 						value={localName}
 						onChange={handleNameChange}
 						placeholder={__('Pipeline name', 'data-machine')}
-						className="dm-pipeline-name-input"
+						className="datamachine-pipeline-name-input"
 						style={{ fontSize: '20px', fontWeight: '600' }}
 					/>
 				</div>

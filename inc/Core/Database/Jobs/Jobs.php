@@ -20,8 +20,8 @@ class Jobs {
 
     public function __construct() {
         global $wpdb;
-        $this->table_name = $wpdb->prefix . 'dm_jobs';
-        
+        $this->table_name = $wpdb->prefix . 'datamachine_jobs';
+
         $this->operations = new JobsOperations();
         $this->status = new JobsStatus();
     }
@@ -79,7 +79,7 @@ class Jobs {
 
     public static function create_table() {
         global $wpdb;
-        $table_name = $wpdb->prefix . 'dm_jobs';
+        $table_name = $wpdb->prefix . 'datamachine_jobs';
         $charset_collate = $wpdb->get_charset_collate();
 
         require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );

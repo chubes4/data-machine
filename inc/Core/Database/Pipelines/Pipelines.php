@@ -24,7 +24,7 @@ class Pipelines {
 	public function __construct() {
 		global $wpdb;
 		$this->wpdb = $wpdb;
-		$this->table_name = $wpdb->prefix . 'dm_pipelines';
+		$this->table_name = $wpdb->prefix . 'datamachine_pipelines';
 	}
 
 	public function create_pipeline( array $pipeline_data ): int|false {
@@ -426,7 +426,7 @@ class Pipelines {
 
 	public static function create_table() {
 		global $wpdb;
-		$table_name = $wpdb->prefix . 'dm_pipelines';
+		$table_name = $wpdb->prefix . 'datamachine_pipelines';
 		$charset_collate = $wpdb->get_charset_collate();
 
 		// We need dbDelta()

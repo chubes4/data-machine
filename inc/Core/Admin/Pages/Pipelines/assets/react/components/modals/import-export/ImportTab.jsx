@@ -91,7 +91,7 @@ export default function ImportTab({ onSuccess, onClose }) {
 	};
 
 	return (
-		<div className="dm-import-tab">
+		<div className="datamachine-import-tab">
 			{error && (
 				<Notice status="error" isDismissible onRemove={() => setError(null)}>
 					<p>{error}</p>

@@ -164,10 +164,10 @@ export default function ConfigureStepModal({
 		<Modal
 			title={__('Configure AI Step', 'data-machine')}
 			onRequestClose={onClose}
-			className="dm-modal dm-configure-step-modal"
+			className="datamachine-modal datamachine-configure-step-modal"
 			style={{ maxWidth: '600px' }}
 		>
-			<div className="dm-modal-content">
+			<div className="datamachine-modal-content">
 				{error && (
 					<div className="notice notice-error" style={{ marginBottom: '16px' }}>
 						<p>{error}</p>

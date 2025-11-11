@@ -22,7 +22,7 @@ export default function FlowStepHandler({ handlerSlug, handlerConfig, stepType, 
 	if (!handlerSlug) {
 		return (
 			<div
-				className="dm-flow-step-handler dm-flow-step-handler--empty"
+				className="datamachine-flow-step-handler datamachine-flow-step-handler--empty"
 				style={{
 					padding: '12px',
 					backgroundColor: '#fff3cd',
@@ -44,9 +44,9 @@ export default function FlowStepHandler({ handlerSlug, handlerConfig, stepType, 
 	const hasSettings = handlerConfig && Object.keys(handlerConfig).length > 0;
 
 	return (
-		<div className="dm-flow-step-handler" style={{ marginTop: '12px' }}>
+		<div className="datamachine-flow-step-handler" style={{ marginTop: '12px' }}>
 			<div
-				className="dm-handler-tag"
+				className="datamachine-handler-tag"
 				style={{
 					display: 'inline-block',
 					padding: '4px 12px',
@@ -63,7 +63,7 @@ export default function FlowStepHandler({ handlerSlug, handlerConfig, stepType, 
 
 			{hasSettings && (
 				<div
-					className="dm-handler-settings-display"
+					className="datamachine-handler-settings-display"
 					style={{
 						padding: '8px 12px',
 						backgroundColor: '#f6f7f7',

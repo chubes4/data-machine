@@ -17,21 +17,17 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
 **Features**:
-- Modern React Admin Interface (Pipelines page) with 6,591 lines of React code using @wordpress/element and @wordpress/components
-- Tool-First AI with enhanced multi-turn conversation management and duplicate detection
-- Visual Pipeline Builder with real-time updates and zero page reloads
-- Multi-Provider AI (OpenAI, Anthropic, Google, Grok, OpenRouter) with 5-tier directive system
-- REST API Architecture: 10 comprehensive endpoints for flow execution, pipeline management, and system monitoring
-- Centralized Engine Data Architecture with unified filter access pattern
-- Enhanced Unified Handler Filter System with shared functionality patterns
-- AIStepConversationManager with Turn Tracking, temporal context, and validation
-- AIStepToolParameters with buildForHandlerTool() and centralized parameter building
-- Clean Content Processing with structured data packet architecture
-- Modular WordPress Publish Handler with specialized processing components
-- Universal Handler Settings Template with metadata-based auth detection
-- Complete AutoSave System with cache invalidation
-- Performance Optimizations: 50% query reduction in handler settings operations
-- Advanced Centralized Cache Management with granular controls and action-based architecture
+- **Modern React Admin Interface**: Complete Pipelines page rebuild with 6,591 lines of React code using @wordpress/element and @wordpress/components
+- **Zero jQuery/AJAX Architecture**: 2,223 lines of jQuery removed, 6 PHP templates eliminated, 2 AJAX endpoints removed
+- **Tool-First AI**: Enhanced multi-turn conversation management with duplicate detection and temporal context
+- **Visual Pipeline Builder**: Real-time updates with 50+ React components, custom hooks, and Context API state management
+- **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter with 5-tier directive system
+- **Complete REST API**: 10 comprehensive endpoints (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users)
+- **Ephemeral Workflows**: Execute workflows without database persistence via REST API
+- **Centralized Engine Data**: Unified filter access pattern with clean AI data packets and structured engine parameters
+- **Enhanced Handler System**: Universal filter patterns with shared functionality across all handlers
+- **Performance Optimizations**: 50% query reduction in handler settings operations with metadata-based auth detection
+- **Advanced Cache Management**: Granular WordPress action-based clearing with pattern-based invalidation
 
 **Requirements**: WordPress 6.2+, PHP 8.0+, Action Scheduler (woocommerce/action-scheduler), Composer (for development)
 
@@ -215,7 +211,7 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 
 **Requirements**: WordPress application password or cookie authentication with `manage_options` capability (except `/users/me` which requires authentication only). Action Scheduler required for scheduled flow execution (woocommerce/action-scheduler via Composer).
 
-**Frontend Integration**: Pipelines admin page uses complete React architecture (6,591 lines) with zero jQuery/AJAX dependencies. Settings and Jobs pages still use AJAX (migration pending).
+**Frontend Integration**: Complete React architecture migration with zero jQuery/AJAX dependencies across all admin pages.
 
 *For complete REST API documentation, see `docs/api-reference/rest-api.md` | For technical specifications, see `CLAUDE.md`*
 
@@ -271,9 +267,11 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
   - All components self-register via WordPress filters maintaining consistent architectural patterns
 - **Migration Status** (dm_ → datamachine_):
   - Filters/actions: ✅ Complete (`datamachine_` prefix)
+  - Cache keys/options/transients: ✅ Complete (`datamachine_` prefix)
+  - OAuth URLs: ✅ Complete (`datamachine_` prefix)
+  - CSS classes: ✅ Complete (`datamachine-` prefix)
   - Database tables: ⏳ Pending (`wp_dm_*` tables, Phase 3 blocked)
-  - OAuth URLs, cache, options: ⏳ Pending (`dm_` prefix, Phase 2 work)
-  - See `MIGRATION-PLAN.md` for detailed Phase 2 task checklist
+  - Migration complete for all code except database table names
 
 *All handlers are fully functional with OAuth authentication where required and comprehensive error handling*
 
@@ -346,9 +344,11 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
   - Legacy status detection contexts removed pending new health indicators
   - Composer-managed ai-http-client dependency
 - **REST API Integration**:
-  - 10 comprehensive endpoints (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users)
-  - Complete authentication and error handling
-  - React frontend consumes all data via REST API
+  - **10 Complete Endpoints**: Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users
+  - **Ephemeral Workflow Support**: Execute workflows without database persistence
+  - **Unified Execute Endpoint**: Supports database flows, ephemeral workflows, immediate/delayed/recurring execution
+  - **Complete Authentication**: WordPress application password or cookie authentication
+  - **React Frontend Integration**: Pipelines page fully migrated to REST API consumption
 
 See `CLAUDE.md` for complete technical specifications.
 

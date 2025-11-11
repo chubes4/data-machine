@@ -10,7 +10,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
-// Delete authentication data (unified dm_oauth system)
+// Delete authentication data (unified datamachine_oauth system)
 $auth_providers = ['twitter', 'facebook', 'threads', 'googlesheets', 'reddit', 'bluesky', 'wordpress_publish', 'wordpress_posts'];
 foreach ($auth_providers as $provider) {
     delete_option("{$provider}_auth_data");
@@ -45,10 +45,10 @@ if ( current_user_can( 'delete_plugins' ) || defined( 'WP_UNINSTALL_PLUGIN' ) ) 
 
     // Drop tables in reverse dependency order
     $tables_to_drop = [
-        $wpdb->prefix . 'dm_processed_items',
-        $wpdb->prefix . 'dm_jobs',
-        $wpdb->prefix . 'dm_flows',
-        $wpdb->prefix . 'dm_pipelines'
+        $wpdb->prefix . 'datamachine_processed_items',
+        $wpdb->prefix . 'datamachine_jobs',
+        $wpdb->prefix . 'datamachine_flows',
+        $wpdb->prefix . 'datamachine_pipelines'
     ];
 
     foreach ( $tables_to_drop as $table_name ) {

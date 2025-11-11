@@ -467,7 +467,7 @@ class Delete {
         $job_ids_to_delete = [];
         if ($cleanup_processed) {
             global $wpdb;
-            $jobs_table = $wpdb->prefix . 'dm_jobs';
+            $jobs_table = $wpdb->prefix . 'datamachine_jobs';
 
             if ($clear_type === 'failed') {
                 $job_ids_to_delete = $wpdb->get_col($wpdb->prepare("SELECT job_id FROM %i WHERE status = %s", $jobs_table, 'failed')); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching

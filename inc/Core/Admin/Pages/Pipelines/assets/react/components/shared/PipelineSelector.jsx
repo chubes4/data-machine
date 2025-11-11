@@ -40,13 +40,13 @@ export default function PipelineSelector() {
 	};
 
 	return (
-		<div className="dm-pipeline-selector-wrapper" style={{ marginBottom: '20px' }}>
+		<div className="datamachine-pipeline-selector-wrapper" style={{ marginBottom: '20px' }}>
 			<SelectControl
 				label={__('Select Pipeline', 'data-machine')}
 				value={selectedPipelineId || options[0]?.value || ''}
 				options={options}
 				onChange={handleChange}
-				className="dm-pipeline-selector"
+				className="datamachine-pipeline-selector"
 			/>
 		</div>
 	);

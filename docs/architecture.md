@@ -50,14 +50,14 @@ $image_url = $engine_data['image_url'] ?? null;
 **Enhanced Centralized Architecture**: Actions/Cache.php provides comprehensive WordPress action-based cache clearing system with database component integration and extensible architecture.
 
 **Granular Cache Operations**:
-- `dm_clear_pipeline_cache($pipeline_id)` - Clear pipeline + flows + jobs with comprehensive invalidation
-- `dm_clear_flow_cache($flow_id)` - Clear flow-specific caches with step integration
-- `dm_clear_flow_config_cache($flow_id)` - Clear flow configuration cache for targeted updates
-- `dm_clear_flow_scheduling_cache($flow_id)` - Clear flow scheduling cache for targeted updates
-- `dm_clear_flow_steps_cache($flow_id)` - Clear flow steps cache for targeted updates
-- `dm_clear_jobs_cache()` - Clear all job-related caches with pattern matching
-- `dm_clear_all_cache()` - Complete cache reset with database component integration
-- `dm_cache_set($key, $data, $timeout, $group)` - Standardized cache storage with validation
+- `datamachine_clear_pipeline_cache($pipeline_id)` - Clear pipeline + flows + jobs with comprehensive invalidation
+- `datamachine_clear_flow_cache($flow_id)` - Clear flow-specific caches with step integration
+- `datamachine_clear_flow_config_cache($flow_id)` - Clear flow configuration cache for targeted updates
+- `datamachine_clear_flow_scheduling_cache($flow_id)` - Clear flow scheduling cache for targeted updates
+- `datamachine_clear_flow_steps_cache($flow_id)` - Clear flow steps cache for targeted updates
+- `datamachine_clear_jobs_cache()` - Clear all job-related caches with pattern matching
+- `datamachine_clear_all_cache()` - Complete cache reset with database component integration
+- `datamachine_cache_set($key, $data, $timeout, $group)` - Standardized cache storage with validation
 
 **Advanced Features**:
 - Enhanced pattern-based clearing with wildcard support and extensible action-based architecture
@@ -94,7 +94,7 @@ AI agents use tools to interact with handlers:
 All components self-register via WordPress filters:
 - `datamachine_handlers` - Register fetch/publish/update handlers
 - `ai_tools` - Register AI tools and capabilities
-- `dm_auth_providers` - Register authentication providers
+- `datamachine_auth_providers` - Register authentication providers
 - `datamachine_step_types` - Register custom step types
 
 ### Centralized Handler Filter System
@@ -102,15 +102,15 @@ All components self-register via WordPress filters:
 **Unified Cross-Cutting Functionality**: The engine provides centralized filters for shared functionality across multiple handlers, eliminating code duplication and ensuring consistency.
 
 **Core Centralized Filters**:
-- **`dm_timeframe_limit`**: Shared timeframe parsing with discovery/conversion modes
+- **`datamachine_timeframe_limit`**: Shared timeframe parsing with discovery/conversion modes
   - Discovery mode: Returns available timeframe options for UI dropdowns
   - Conversion mode: Returns Unix timestamp for specified timeframe
   - Used by: RSS, Reddit, WordPress Local, WordPress Media, WordPress API
-- **`dm_keyword_search_match`**: Universal keyword matching with OR logic
+- **`datamachine_keyword_search_match`**: Universal keyword matching with OR logic
   - Case-insensitive Unicode-safe matching
   - Comma-separated keyword support
   - Used by: RSS, Reddit, WordPress Local, WordPress Media, WordPress API
-- **`dm_data_packet`**: Standardized data packet creation and structure
+- **`datamachine_data_packet`**: Standardized data packet creation and structure
   - Ensures type and timestamp fields are present
   - Maintains chronological ordering via array_unshift()
   - Used by: All step types for consistent data flow
@@ -161,7 +161,7 @@ Flow-isolated UUID storage with automatic cleanup:
 **Complete Pipeline Persistence**: Centralized auto-save operations handle all pipeline-related data in a single action.
 
 **Features**:
-- **Single Action Interface**: `dm_auto_save` action handles everything
+- **Single Action Interface**: `datamachine_auto_save` action handles everything
 - **Complete Data Management**: Saves pipeline data, all flows, flow configurations, and scheduling
 - **Execution Order Synchronization**: Updates flow step execution_order to match pipeline steps
 - **Cache Integration**: Automatic cache clearing after successful auto-save operations
@@ -176,14 +176,32 @@ Centralized WordPress transient-based cache system:
 - Integration with auto-save functionality
 
 ### Admin Interface
-WordPress admin integration with `manage_options` security:
-- Drag & drop pipeline builder
-- Legacy status indicators removed pending replacement health checks
-- Modal-based configuration
-- Auto-save functionality
-- Import/export capabilities
 
-**Status System**: Retired. Future iterations will reintroduce health indicators once the new telemetry pipeline lands.
+**Modern React Architecture**: The Pipelines admin page uses complete React implementation with zero jQuery/AJAX dependencies, providing a modern, maintainable frontend.
+
+**React Implementation**:
+- 6,591 lines of React code built with @wordpress/element and @wordpress/components
+- 50+ specialized components organized by responsibility
+- Modern state management using Context API and custom hooks
+- Complete REST API integration for all data operations
+- Real-time updates without page reloads
+- Optimistic UI updates for instant feedback
+
+**Component Architecture**:
+- **Core**: PipelinesApp (root), PipelineContext (global state)
+- **Cards**: PipelineCard, FlowCard, PipelineStepCard, FlowStepCard
+- **Modals**: ConfigureStepModal, HandlerSettingsModal, OAuthAuthenticationModal, StepSelectionModal, HandlerSelectionModal, FlowScheduleModal, ImportExportModal
+- **Hooks**: usePipelines, useFlows, useStepTypes, useHandlers, useStepSettings, useModal
+
+**Migration Impact**:
+- Eliminated 2,223 lines of jQuery code from 12 JavaScript files
+- Removed 6 PHP template files (pipeline-card.php, flow-instance-card.php, pipeline-step-card.php, flow-step-card.php, flow-instance-footer.php, pipeline-templates.php)
+- Deleted 2 AJAX endpoint classes (PipelinePageAjax, PipelineStatusAjax)
+
+**Complete REST API Integration**:
+All admin pages now use REST API architecture with zero jQuery/AJAX dependencies.
+
+**Security Model**: All admin operations require `manage_options` capability with WordPress nonce validation.
 
 ### Extension Framework
 Complete extension system for custom handlers and tools:

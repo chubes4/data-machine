@@ -52,7 +52,7 @@ export default function FilesHandlerSettings({
 	};
 
 	return (
-		<div className="dm-files-handler-settings">
+		<div className="datamachine-files-handler-settings">
 			<div style={{ marginBottom: '16px' }}>
 				<h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>
 					{__('Upload Files', 'data-machine')}

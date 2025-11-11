@@ -85,10 +85,10 @@ export default function StepSelectionModal({
 		<Modal
 			title={__('Add Pipeline Step', 'data-machine')}
 			onRequestClose={onClose}
-			className="dm-modal dm-step-selection-modal"
+			className="datamachine-modal datamachine-step-selection-modal"
 			style={{ maxWidth: '600px' }}
 		>
-			<div className="dm-modal-content">
+			<div className="datamachine-modal-content">
 				{error && (
 					<div className="notice notice-error" style={{ marginBottom: '16px' }}>
 						<p>{error}</p>
@@ -100,7 +100,7 @@ export default function StepSelectionModal({
 				</p>
 
 				<div
-					className="dm-step-type-grid"
+					className="datamachine-step-type-grid"
 					style={{
 						display: 'grid',
 						gridTemplateColumns: 'repeat(2, 1fr)',
@@ -115,7 +115,7 @@ export default function StepSelectionModal({
 							<button
 								key={stepType}
 								type="button"
-								className="dm-step-type-card"
+								className="datamachine-step-type-card"
 								onClick={() => handleSelectStep(stepType)}
 								disabled={isAdding}
 								style={{

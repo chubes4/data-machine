@@ -7,34 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- **Pipelines Page React Migration**: Complete rebuild of Pipelines admin interface using modern React architecture
-  - 6,591 lines of React code using @wordpress/element and @wordpress/components
-  - Removed 2,223 lines of jQuery code and 6 PHP template files
-  - Eliminated 2 AJAX endpoint classes (PipelinePageAjax, PipelineStatusAjax)
-  - Component architecture: 50+ React components with hooks, context, and modals
-  - Complete REST API integration for all pipeline/flow operations
-  - Modern state management with custom hooks (usePipelines, useFlows, useStepTypes, useHandlers)
-  - Real-time UI updates without page reloads
-- **Import/Export Migration**: Migrated import/export system from AJAX to REST API
-  - Export: `GET /datamachine/v1/pipelines?format=csv&ids=1,2,3`
-  - Import: `POST /datamachine/v1/pipelines` with `batch_import=true, format=csv, data=<csv_content>`
-  - Frontend updated to use REST endpoints with proper authentication
-- **Settings Operations Migration**: Migrated settings operations from AJAX to REST API
-  - Tool configuration: `POST /datamachine/v1/settings/tools/{tool_id}` with `config_data`
-  - Cache clearing: `DELETE /datamachine/v1/cache`
-  - Frontend updated to use REST endpoints with proper authentication
-
-### Removed
-- **AJAX import/export endpoints** (replaced by REST API):
-  - `wp_ajax_dm_export_pipelines` → Use REST API: `GET /datamachine/v1/pipelines?format=csv`
-  - `wp_ajax_dm_import_pipelines` → Use REST API: `POST /datamachine/v1/pipelines` with `batch_import=true`
-  - `PipelineImportExportAjax` class and file deleted
-- **AJAX settings endpoints** (replaced by REST API):
-  - `wp_ajax_dm_save_tool_config` → Use REST API: `POST /datamachine/v1/settings/tools/{tool_id}`
-  - `wp_ajax_dm_clear_cache` → Use REST API: `DELETE /datamachine/v1/cache`
-  - `SettingsPageAjax` class and file deleted
-
 ### Added
 - React component library for Pipelines page:
   - Card components (PipelineCard, FlowCard, PipelineStepCard, FlowStepCard)

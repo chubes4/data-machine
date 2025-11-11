@@ -39,7 +39,7 @@ class JobsStatus {
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
-        $this->table_name = $this->wpdb->prefix . 'dm_jobs';
+        $this->table_name = $this->wpdb->prefix . 'datamachine_jobs';
     }
 
     /**

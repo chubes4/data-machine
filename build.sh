@@ -61,6 +61,14 @@ mkdir -p "$TEMP_DIR/data-machine"
 echo -e "${YELLOW}📥 Installing production dependencies...${NC}"
 composer install --no-dev --optimize-autoloader --no-interaction
 
+# Build React application
+echo -e "${YELLOW}⚛️  Building React application...${NC}"
+if ! command -v npm &> /dev/null; then
+    echo -e "${RED}❌ Error: npm is not installed or not in PATH${NC}"
+    exit 1
+fi
+npm run build
+
 # Copy plugin files using rsync with .buildignore exclusions
 echo -e "${YELLOW}📋 Copying plugin files (excluding development files)...${NC}"
 rsync -av --exclude-from="$BUILDIGNORE_FILE" . "$TEMP_DIR/data-machine/"

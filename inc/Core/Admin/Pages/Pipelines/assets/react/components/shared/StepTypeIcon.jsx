@@ -19,7 +19,7 @@ export default function StepTypeIcon({ stepType, size = 24 }) {
 
 	return (
 		<span
-			className={`dm-step-icon dm-step-icon--${stepType}`}
+			className={`datamachine-step-icon datamachine-step-icon--${stepType}`}
 			style={{
 				fontSize: `${size}px`,
 				color: display.color,

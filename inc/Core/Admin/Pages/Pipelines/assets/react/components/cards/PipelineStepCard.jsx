@@ -114,7 +114,7 @@ export default function PipelineStepCard({ step, pipelineId, pipelineConfig, onD
 	}, []);
 
 	return (
-		<Card className={`dm-pipeline-step-card dm-step-type--${step.step_type}`} size="small">
+		<Card className={`datamachine-pipeline-step-card datamachine-step-type--${step.step_type}`} size="small">
 			<CardBody>
 				{error && (
 					<Notice status="error" isDismissible onRemove={() => setError(null)}>
@@ -133,7 +133,7 @@ export default function PipelineStepCard({ step, pipelineId, pipelineConfig, onD
 
 					{/* AI Configuration Display */}
 					{aiConfig && (
-						<div className="dm-ai-config-display" style={{ marginTop: '12px' }}>
+						<div className="datamachine-ai-config-display" style={{ marginTop: '12px' }}>
 							<div style={{ fontSize: '12px', color: '#757575', marginBottom: '8px' }}>
 								<strong>{__('AI Provider:', 'data-machine')}</strong> {aiConfig.ai_provider || 'Not configured'}
 								{' | '}

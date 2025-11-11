@@ -101,7 +101,7 @@ export default function FlowHeader({
 	}, []);
 
 	return (
-		<div className="dm-flow-header">
+		<div className="datamachine-flow-header">
 			<div
 				style={{
 					display: 'flex',
@@ -120,7 +120,7 @@ export default function FlowHeader({
 				</div>
 
 				<div
-					className="dm-flow-actions"
+					className="datamachine-flow-actions"
 					style={{ display: 'flex', gap: '8px' }}
 				>
 					<Button

@@ -270,7 +270,7 @@ try {
 
 ### Centralized Auto-Save Operations
 
-**Action**: `dm_auto_save`
+**Action**: `datamachine_auto_save`
 **Purpose**: Complete pipeline persistence with synchronization and cache management
 
 **Features**:

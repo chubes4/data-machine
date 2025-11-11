@@ -59,7 +59,7 @@ export default function PipelinesApp() {
 	 */
 	if (pipelinesLoading || flowsLoading) {
 		return (
-			<div className="dm-pipelines-loading">
+			<div className="datamachine-pipelines-loading">
 				<Spinner />
 				<p>{__('Loading pipelines...', 'data-machine')}</p>
 			</div>
@@ -97,7 +97,7 @@ export default function PipelinesApp() {
 	 * Main render
 	 */
 	return (
-		<div className="dm-pipelines-react-app">
+		<div className="datamachine-pipelines-react-app">
 			{/* Header with Add Pipeline and Import/Export buttons */}
 			<div
 				style={{

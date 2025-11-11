@@ -92,7 +92,7 @@ export default function PipelineCard({ pipeline, flows }) {
 
 	return (
 		<>
-			<Card className="dm-pipeline-card" size="large">
+			<Card className="datamachine-pipeline-card" size="large">
 				<CardBody>
 					<PipelineHeader
 						pipelineId={pipeline.pipeline_id}

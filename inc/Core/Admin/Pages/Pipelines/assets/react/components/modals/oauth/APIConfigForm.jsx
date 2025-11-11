@@ -48,7 +48,7 @@ export default function APIConfigForm({ config = {}, onChange, fields = [] }) {
 	const fieldsToRender = fields.length > 0 ? fields : defaultFields;
 
 	return (
-		<div className="dm-api-config-form">
+		<div className="datamachine-api-config-form">
 			<p style={{ marginBottom: '16px', fontSize: '13px', color: '#757575' }}>
 				{__('Enter your API credentials:', 'data-machine')}
 			</p>

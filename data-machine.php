@@ -43,8 +43,6 @@ function run_data_machine() {
     
     \DataMachine\Engine\Filters\Create::register();
 
-	\DataMachine\Core\Admin\Pages\Pipelines\Ajax\PipelineModalAjax::register();
-
     \DataMachine\Api\Execute::register();
     \DataMachine\Api\Pipelines::register();
     \DataMachine\Api\Flows::register();

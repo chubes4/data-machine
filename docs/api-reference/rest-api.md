@@ -16,15 +16,15 @@ Data Machine provides a comprehensive REST API for programmatic access to pipeli
 
 **Implementation Location**: `inc/Api/` directory
 
-## Flow Trigger Endpoint
+## Execute Endpoint
 
-**Endpoint**: `POST /datamachine/v1/trigger`
+**Endpoint**: `POST /datamachine/v1/execute`
 
-**Implementation**: `inc/Api/Trigger.php`
+**Implementation**: `inc/Api/Execute.php`
 
 **Registration**: Automatic via `rest_api_init` WordPress action
 
-**Three Trigger Types**: Immediate execution, recurring schedules, one-time delayed execution
+**Capabilities**: Database flow execution (immediate, recurring, delayed) and ephemeral workflow execution
 
 ### Authentication
 
@@ -39,42 +39,77 @@ The endpoint requires WordPress authentication with `manage_options` capability.
 
 **Content-Type**: `application/json`
 
-**Parameters**:
+**Parameters** (Database Flows)**:
 - `flow_id` (integer, required): The ID of the flow to trigger
 - `interval` (string, optional): Schedule interval for recurring execution (`manual`, `hourly`, `daily`, `weekly`, etc.)
 - `timestamp` (integer, optional): Unix timestamp for one-time delayed execution (must be in future)
 
+**Parameters** (Ephemeral Workflows)**:
+- `workflow` (object, required): Workflow definition with steps array
+- `timestamp` (integer, optional): Unix timestamp for delayed execution (one-time only, no recurring)
+
 **Trigger Type Logic**:
-- If `interval` is provided → **Recurring schedule** (updates database)
-- If `timestamp` is provided → **Delayed execution** (one-time, no database update)
-- If neither is provided → **Immediate execution**
+- If `flow_id` is provided → **Database flow execution**
+- If `workflow` is provided → **Ephemeral workflow execution**
+- If `interval` is provided → **Recurring schedule** (database flows only)
+- If `timestamp` is provided → **Delayed execution** (one-time)
+- If neither interval nor timestamp → **Immediate execution**
 
 **Example Requests**:
 
 ```bash
 # Immediate execution
-curl -X POST https://example.com/wp-json/datamachine/v1/trigger \
+curl -X POST https://example.com/wp-json/datamachine/v1/execute \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{"flow_id": 123}'
 
 # Recurring schedule (hourly)
-curl -X POST https://example.com/wp-json/datamachine/v1/trigger \
+curl -X POST https://example.com/wp-json/datamachine/v1/execute \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{"flow_id": 123, "interval": "hourly"}'
 
 # Delayed execution (one-time at specific time)
-curl -X POST https://example.com/wp-json/datamachine/v1/trigger \
+curl -X POST https://example.com/wp-json/datamachine/v1/execute \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{"flow_id": 123, "timestamp": 1704153600}'
 
 # Clear schedule (set to manual)
-curl -X POST https://example.com/wp-json/datamachine/v1/trigger \
+curl -X POST https://example.com/wp-json/datamachine/v1/execute \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{"flow_id": 123, "interval": "manual"}'
+
+# Ephemeral workflow - immediate execution
+curl -X POST https://example.com/wp-json/datamachine/v1/execute \
+  -H "Content-Type: application/json" \
+  -u username:application_password \
+  -d '{
+    "workflow": {
+      "steps": [
+        {"type": "fetch", "handler": "rss", "config": {"feed_url": "https://example.com/feed/"}},
+        {"type": "ai", "provider": "anthropic", "model": "claude-sonnet-4", "system_prompt": "Summarize this content"},
+        {"type": "publish", "handler": "twitter", "config": {"max_length": 280}}
+      ]
+    }
+  }'
+
+# Ephemeral workflow - delayed execution
+curl -X POST https://example.com/wp-json/datamachine/v1/execute \
+  -H "Content-Type: application/json" \
+  -u username:application_password \
+  -d '{
+    "workflow": {
+      "steps": [
+        {"type": "fetch", "handler": "wordpress-local", "config": {"post_id": 123}},
+        {"type": "ai", "provider": "openai", "model": "gpt-4", "system_prompt": "Enhance this content"},
+        {"type": "update", "handler": "wordpress-update", "config": {}}
+      ]
+    },
+    "timestamp": 1704153600
+  }'
 ```
 
 ### Response Format
@@ -131,12 +166,42 @@ curl -X POST https://example.com/wp-json/datamachine/v1/trigger \
 }
 ```
 
+**Ephemeral Workflow - Immediate**:
+```json
+{
+  "success": true,
+  "trigger_type": "ephemeral_immediate",
+  "workflow_id": "temp_1234567890",
+  "steps_count": 3,
+  "message": "Ephemeral workflow executed successfully."
+}
+```
+
+**Ephemeral Workflow - Delayed**:
+```json
+{
+  "success": true,
+  "trigger_type": "ephemeral_delayed",
+  "workflow_id": "temp_1234567890",
+  "steps_count": 3,
+  "timestamp": 1704153600,
+  "scheduled_time": "2024-01-02T00:00:00+00:00",
+  "message": "Ephemeral workflow scheduled to run at Jan 2, 2024 12:00 AM."
+}
+```
+
 **Common Response Fields**:
 - `success` (boolean): Always `true` for successful requests
-- `trigger_type` (string): `immediate`, `recurring`, or `delayed`
+- `trigger_type` (string): `immediate`, `recurring`, `delayed`, `ephemeral_immediate`, or `ephemeral_delayed`
+- `message` (string): Success confirmation message
+
+**Database Flow Fields**:
 - `flow_id` (integer): The triggered flow ID
 - `flow_name` (string): The name of the triggered flow
-- `message` (string): Success confirmation message
+
+**Ephemeral Workflow Fields**:
+- `workflow_id` (string): Temporary identifier for the ephemeral workflow
+- `steps_count` (integer): Number of steps in the workflow
 
 **Type-Specific Fields**:
 - Recurring: `interval` (string), `scheduled` (boolean)
@@ -226,7 +291,7 @@ do_action('datamachine_log', 'info', 'Flow triggered via REST API', [
 import requests
 from requests.auth import HTTPBasicAuth
 
-url = "https://example.com/wp-json/dm/v1/trigger"
+url = "https://example.com/wp-json/datamachine/v1/execute"
 auth = HTTPBasicAuth("username", "application_password")
 payload = {"flow_id": 123}
 
@@ -245,7 +310,7 @@ else:
 # Create application password in WordPress user profile
 # Format: username:application_password
 
-curl -X POST https://example.com/wp-json/dm/v1/trigger \
+curl -X POST https://example.com/wp-json/datamachine/v1/execute \
   -H "Content-Type: application/json" \
   -u admin:xxxx-xxxx-xxxx-xxxx \
   -d '{"flow_id": 123}'
@@ -259,7 +324,7 @@ const axios = require('axios');
 const triggerFlow = async (flowId) => {
   try {
     const response = await axios.post(
-      'https://example.com/wp-json/dm/v1/trigger',
+      'https://example.com/wp-json/datamachine/v1/execute',
       { flow_id: flowId },
       {
         auth: {
@@ -283,7 +348,7 @@ triggerFlow(123);
 ### PHP Integration (External Site)
 
 ```php
-$url = 'https://example.com/wp-json/dm/v1/trigger';
+$url = 'https://example.com/wp-json/datamachine/v1/execute';
 $data = ['flow_id' => 123];
 
 $response = wp_remote_post($url, [
@@ -1100,7 +1165,7 @@ curl -X POST https://example.com/wp-json/datamachine/v1/settings/tools/google_se
 - All pipeline caches
 - All flow caches
 - All job caches
-- WordPress transients with `dm_*` pattern
+- WordPress transients with `datamachine_*` pattern
 - Object cache (if enabled)
 - AI HTTP client cache
 

@@ -38,10 +38,9 @@ foreach ($all_tools as $tool_name => $tool_config) {
                                 <?php echo $is_configured ? esc_html__('Configured', 'data-machine') : esc_html__('Not Configured', 'data-machine'); ?>
                             </span>
                             <?php if (!$engine_mode): ?>
-                                <button type="button" 
-                                        class="button datamachine-modal-open" 
-                                        data-template="tool-config"
-                                        data-context='<?php echo esc_attr(wp_json_encode(['tool_id' => $tool_name])); ?>'>
+                                <button type="button"
+                                        class="button datamachine-open-modal"
+                                        data-modal-id="datamachine-modal-tool-config-<?php echo esc_attr($tool_name); ?>">
                                     <?php esc_html_e('Configure', 'data-machine'); ?>
                                 </button>
                             <?php endif; ?>

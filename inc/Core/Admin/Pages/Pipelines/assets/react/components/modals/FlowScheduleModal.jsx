@@ -75,10 +75,10 @@ export default function FlowScheduleModal({
 		<Modal
 			title={__('Schedule Flow', 'data-machine')}
 			onRequestClose={onClose}
-			className="dm-modal dm-flow-schedule-modal"
+			className="datamachine-modal datamachine-flow-schedule-modal"
 			style={{ maxWidth: '500px' }}
 		>
-			<div className="dm-modal-content">
+			<div className="datamachine-modal-content">
 				{error && (
 					<div className="notice notice-error" style={{ marginBottom: '16px' }}>
 						<p>{error}</p>

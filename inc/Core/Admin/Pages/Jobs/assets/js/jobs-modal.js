@@ -1,16 +1,16 @@
 /**
- * Jobs Modal Content JavaScript
+ * Jobs Modal Content JavaScript (Vanilla JS - No jQuery)
  *
  * Handles interactions WITHIN jobs modal content only.
  * Form submissions, validations, visual feedback.
  * Emits limited events for page communication.
- * Modal lifecycle managed by core-modal.js, page actions by data-machine-jobs.js.
+ * Modal lifecycle managed by vanilla JS, page actions by data-machine-jobs.js.
  *
  * @package DataMachine\Core\Admin\Pages\Jobs
  * @since NEXT_VERSION
  */
 
-(function($) {
+(function() {
     'use strict';
 
     /**
@@ -19,10 +19,7 @@
      * Handles business logic for jobs-specific modal interactions.
      * Works with buttons and content created by PHP modal templates.
      */
-
-    // Preserve WordPress-localized data and extend with methods
-    window.dmJobsModal = window.dmJobsModal || {};
-    Object.assign(window.dmJobsModal, {
+    window.dmJobsModal = {
 
         /**
          * Initialize jobs modal content handlers
@@ -36,36 +33,55 @@
          */
         bindEvents: function() {
             // Clear processed items form handling
-            $(document).on('submit', '#datamachine-clear-processed-items-form', this.handleClearProcessedItems.bind(this));
+            document.addEventListener('submit', (e) => {
+                if (e.target && e.target.id === 'datamachine-clear-processed-items-form') {
+                    this.handleClearProcessedItems(e);
+                }
+            });
 
             // Clear jobs form handling
-            $(document).on('submit', '#datamachine-clear-jobs-form', this.handleClearJobs.bind(this));
+            document.addEventListener('submit', (e) => {
+                if (e.target && e.target.id === 'datamachine-clear-jobs-form') {
+                    this.handleClearJobs(e);
+                }
+            });
 
             // Clear type selection for processed items
-            $(document).on('change', '#datamachine-clear-type-select', this.handleClearTypeChange.bind(this));
+            document.addEventListener('change', (e) => {
+                if (e.target && e.target.id === 'datamachine-clear-type-select') {
+                    this.handleClearTypeChange(e);
+                }
+            });
 
             // Pipeline selection for flow filtering
-            $(document).on('change', '#datamachine-clear-pipeline-select', this.handlePipelineSelection.bind(this));
+            document.addEventListener('change', (e) => {
+                if (e.target && e.target.id === 'datamachine-clear-pipeline-select') {
+                    this.handlePipelineSelection(e);
+                }
+            });
         },
 
         /**
          * Handle clear type selection change
          */
         handleClearTypeChange: function(e) {
-            const clearType = $(e.target).val();
-            const $pipelineWrapper = $('#datamachine-pipeline-select-wrapper');
-            const $flowWrapper = $('#datamachine-flow-select-wrapper');
+            const clearType = e.target.value;
+            const pipelineWrapper = document.getElementById('datamachine-pipeline-select-wrapper');
+            const flowWrapper = document.getElementById('datamachine-flow-select-wrapper');
+            const flowSelect = document.getElementById('datamachine-clear-flow-select');
 
             if (clearType === 'pipeline') {
-                $pipelineWrapper.removeClass('datamachine-hidden');
-                $flowWrapper.addClass('datamachine-hidden');
-                $('#datamachine-clear-flow-select').html('<option value="">— Select a Pipeline First —</option>').val('');
+                if (pipelineWrapper) pipelineWrapper.classList.remove('datamachine-hidden');
+                if (flowWrapper) flowWrapper.classList.add('datamachine-hidden');
+                if (flowSelect) {
+                    flowSelect.innerHTML = '<option value="">— Select a Pipeline First —</option>';
+                }
             } else if (clearType === 'flow') {
-                $pipelineWrapper.removeClass('datamachine-hidden');
-                $flowWrapper.removeClass('datamachine-hidden');
+                if (pipelineWrapper) pipelineWrapper.classList.remove('datamachine-hidden');
+                if (flowWrapper) flowWrapper.classList.remove('datamachine-hidden');
             } else {
-                $pipelineWrapper.addClass('datamachine-hidden');
-                $flowWrapper.addClass('datamachine-hidden');
+                if (pipelineWrapper) pipelineWrapper.classList.add('datamachine-hidden');
+                if (flowWrapper) flowWrapper.classList.add('datamachine-hidden');
             }
         },
 
@@ -73,41 +89,42 @@
          * Handle pipeline selection for flow filtering
          */
         handlePipelineSelection: function(e) {
-            const pipelineId = $(e.target).val();
-            const $flowSelect = $('#datamachine-clear-flow-select');
-            const clearType = $('#datamachine-clear-type-select').val();
+            const pipelineId = e.target.value;
+            const flowSelect = document.getElementById('datamachine-clear-flow-select');
+            const clearType = document.getElementById('datamachine-clear-type-select').value;
 
-            $flowSelect.html('<option value="">— Loading... —</option>');
+            if (!flowSelect) return;
+
+            flowSelect.innerHTML = '<option value="">— Loading... —</option>';
 
             if (pipelineId && clearType === 'flow') {
                 // Fetch flows for the selected pipeline via REST API
                 wp.apiFetch({
                     path: `/datamachine/v1/pipelines/${pipelineId}/flows`,
                     method: 'GET'
-                }).then(function(response) {
+                }).then((response) => {
                     if (response.success && response.flows) {
                         // Filter to minimal data needed for select dropdown
-                        const flows = response.flows.map(function(flow) {
-                            return {
-                                flow_id: flow.flow_id,
-                                flow_name: flow.flow_name
-                            };
-                        });
+                        const flows = response.flows.map((flow) => ({
+                            flow_id: flow.flow_id,
+                            flow_name: flow.flow_name
+                        }));
 
-                        $flowSelect.html('<option value="">— Select a Flow —</option>');
-                        flows.forEach(function(flow) {
-                            $flowSelect.append(
-                                $('<option></option>').val(flow.flow_id).text(flow.flow_name)
-                            );
+                        flowSelect.innerHTML = '<option value="">— Select a Flow —</option>';
+                        flows.forEach((flow) => {
+                            const option = document.createElement('option');
+                            option.value = flow.flow_id;
+                            option.textContent = flow.flow_name;
+                            flowSelect.appendChild(option);
                         });
                     } else {
-                        $flowSelect.html('<option value="">— No flows found —</option>');
+                        flowSelect.innerHTML = '<option value="">— No flows found —</option>';
                     }
-                }).catch(function() {
-                    $flowSelect.html('<option value="">— Error loading flows —</option>');
+                }).catch(() => {
+                    flowSelect.innerHTML = '<option value="">— Error loading flows —</option>';
                 });
             } else {
-                $flowSelect.html('<option value="">— Select a Flow —</option>');
+                flowSelect.innerHTML = '<option value="">— Select a Flow —</option>';
             }
         },
 
@@ -117,15 +134,15 @@
         handleClearProcessedItems: function(e) {
             e.preventDefault();
 
-            const $form = $(e.target);
-            const $button = $('#datamachine-clear-processed-btn');
-            const $spinner = $form.find('.spinner');
-            const $result = $('#datamachine-clear-result');
-            const clearType = $('#datamachine-clear-type-select').val();
+            const form = e.target;
+            const button = document.getElementById('datamachine-clear-processed-btn');
+            const spinner = form.querySelector('.spinner');
+            const result = document.getElementById('datamachine-clear-result');
+            const clearType = document.getElementById('datamachine-clear-type-select').value;
 
             // Validate form
             if (!clearType) {
-                this.showResult($result, 'warning', 'Please select a clear type');
+                this.showResult(result, 'warning', 'Please select a clear type');
                 return;
             }
 
@@ -133,16 +150,16 @@
             let confirmMessage = '';
 
             if (clearType === 'pipeline') {
-                targetId = $('#datamachine-clear-pipeline-select').val();
+                targetId = document.getElementById('datamachine-clear-pipeline-select').value;
                 if (!targetId) {
-                    this.showResult($result, 'warning', 'Please select a pipeline');
+                    this.showResult(result, 'warning', 'Please select a pipeline');
                     return;
                 }
                 confirmMessage = 'Are you sure you want to clear all processed items for ALL flows in this pipeline? This will allow all items to be reprocessed.';
             } else if (clearType === 'flow') {
-                targetId = $('#datamachine-clear-flow-select').val();
+                targetId = document.getElementById('datamachine-clear-flow-select').value;
                 if (!targetId) {
-                    this.showResult($result, 'warning', 'Please select a flow');
+                    this.showResult(result, 'warning', 'Please select a flow');
                     return;
                 }
                 confirmMessage = 'Are you sure you want to clear all processed items for this flow? This will allow all items to be reprocessed.';
@@ -154,26 +171,31 @@
             }
 
             // Show loading state
-            this.setLoadingState($button, $spinner, true);
-            $result.addClass('datamachine-hidden');
+            this.setLoadingState(button, spinner, true);
+            if (result) result.classList.add('datamachine-hidden');
 
             // Make REST API request
             wp.apiFetch({
                 path: `/datamachine/v1/processed-items?clear_type=${clearType}&target_id=${targetId}`,
                 method: 'DELETE'
             }).then((response) => {
-                this.showResult($result, 'success', response.message);
+                this.showResult(result, 'success', response.message);
 
                 // Reset form
-                $form[0].reset();
-                $('#datamachine-pipeline-select-wrapper, #datamachine-flow-select-wrapper').addClass('datamachine-hidden');
+                form.reset();
+                const pipelineWrapper = document.getElementById('datamachine-pipeline-select-wrapper');
+                const flowWrapper = document.getElementById('datamachine-flow-select-wrapper');
+                if (pipelineWrapper) pipelineWrapper.classList.add('datamachine-hidden');
+                if (flowWrapper) flowWrapper.classList.add('datamachine-hidden');
 
                 // Emit event for page to update if needed
-                $(document).trigger('datamachine-jobs-processed-items-cleared', [response]);
+                document.dispatchEvent(new CustomEvent('datamachine-jobs-processed-items-cleared', {
+                    detail: response
+                }));
             }).catch((error) => {
-                this.showResult($result, 'error', error.message || 'An unexpected error occurred');
+                this.showResult(result, 'error', error.message || 'An unexpected error occurred');
             }).finally(() => {
-                this.setLoadingState($button, $spinner, false);
+                this.setLoadingState(button, spinner, false);
             });
         },
 
@@ -183,16 +205,18 @@
         handleClearJobs: function(e) {
             e.preventDefault();
 
-            const $form = $(e.target);
-            const $button = $('#datamachine-clear-jobs-btn');
-            const $spinner = $form.find('.spinner');
-            const $result = $('#datamachine-clear-jobs-result');
-            const clearType = $('input[name="clear_jobs_type"]:checked').val();
-            const cleanupProcessed = $('input[name="cleanup_processed"]').is(':checked');
+            const form = e.target;
+            const button = document.getElementById('datamachine-clear-jobs-btn');
+            const spinner = form.querySelector('.spinner');
+            const result = document.getElementById('datamachine-clear-jobs-result');
+            const clearTypeRadio = form.querySelector('input[name="clear_jobs_type"]:checked');
+            const clearType = clearTypeRadio ? clearTypeRadio.value : '';
+            const cleanupProcessedCheckbox = form.querySelector('input[name="cleanup_processed"]');
+            const cleanupProcessed = cleanupProcessedCheckbox ? cleanupProcessedCheckbox.checked : false;
 
             // Validate form
             if (!clearType) {
-                this.showResult($result, 'warning', 'Please select which jobs to clear');
+                this.showResult(result, 'warning', 'Please select which jobs to clear');
                 return;
             }
 
@@ -216,60 +240,65 @@
             }
 
             // Show loading state
-            this.setLoadingState($button, $spinner, true);
-            $result.addClass('datamachine-hidden');
+            this.setLoadingState(button, spinner, true);
+            if (result) result.classList.add('datamachine-hidden');
 
             // Make REST API request
             wp.apiFetch({
                 path: `/datamachine/v1/jobs?type=${clearType}&cleanup_processed=${cleanupProcessed ? '1' : '0'}`,
                 method: 'DELETE'
             }).then((response) => {
-                this.showResult($result, 'success', response.message);
+                this.showResult(result, 'success', response.message);
 
                 // Reset form
-                $form[0].reset();
+                form.reset();
 
                 // Emit event for page to update if needed
-                $(document).trigger('datamachine-jobs-cleared', [response]);
+                document.dispatchEvent(new CustomEvent('datamachine-jobs-cleared', {
+                    detail: response
+                }));
             }).catch((error) => {
-                this.showResult($result, 'error', error.message || 'An unexpected error occurred');
+                this.showResult(result, 'error', error.message || 'An unexpected error occurred');
             }).finally(() => {
-                this.setLoadingState($button, $spinner, false);
+                this.setLoadingState(button, spinner, false);
             });
         },
 
         /**
          * Show result message with appropriate styling
          */
-        showResult: function($result, type, message) {
-            $result.removeClass('success error warning datamachine-hidden')
-                .addClass(type)
-                .html(message);
+        showResult: function(resultEl, type, message) {
+            if (!resultEl) return;
+
+            resultEl.classList.remove('success', 'error', 'warning', 'datamachine-hidden');
+            resultEl.classList.add(type);
+            resultEl.innerHTML = message;
         },
 
         /**
          * Set loading state for button and spinner
          */
-        setLoadingState: function($button, $spinner, loading) {
-            $button.prop('disabled', loading);
-            if (loading) {
-                $spinner.addClass('is-active');
-            } else {
-                $spinner.removeClass('is-active');
+        setLoadingState: function(button, spinner, loading) {
+            if (button) button.disabled = loading;
+            if (spinner) {
+                if (loading) {
+                    spinner.classList.add('is-active');
+                } else {
+                    spinner.classList.remove('is-active');
+                }
             }
         }
-    });
+    };
 
     /**
-     * Initialize when modal content is loaded
+     * Initialize when document is ready
      */
-    $(document).ready(function() {
-        // Initialize when modal opens with jobs content
-        $(document).on('datamachine-core-modal-content-loaded', function(e, title, content) {
-            if (content.includes('datamachine-clear-processed-items-form') || content.includes('datamachine-clear-jobs-form')) {
-                dmJobsModal.init();
-            }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            dmJobsModal.init();
         });
-    });
+    } else {
+        dmJobsModal.init();
+    }
 
-})(jQuery);
+})();

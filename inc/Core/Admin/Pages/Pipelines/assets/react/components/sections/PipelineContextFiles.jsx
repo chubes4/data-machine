@@ -111,7 +111,7 @@ export default function PipelineContextFiles({ pipelineId }) {
 	};
 
 	return (
-		<div className="dm-pipeline-context-files">
+		<div className="datamachine-pipeline-context-files">
 			<div style={{ marginBottom: '16px' }}>
 				<h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600' }}>
 					{__('Context Files', 'data-machine')}

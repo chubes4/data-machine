@@ -106,7 +106,7 @@ export default function FlowStepCard({
 
 	return (
 		<Card
-			className={`dm-flow-step-card dm-step-type--${pipelineStep.step_type}`}
+			className={`datamachine-flow-step-card datamachine-step-type--${pipelineStep.step_type}`}
 			size="small"
 		>
 			<CardBody>
@@ -127,7 +127,7 @@ export default function FlowStepCard({
 
 					{/* AI Configuration Display */}
 					{isAiStep && aiConfig && (
-						<div className="dm-ai-config-display" style={{ marginTop: '12px' }}>
+						<div className="datamachine-ai-config-display" style={{ marginTop: '12px' }}>
 							<div style={{ fontSize: '12px', color: '#757575', marginBottom: '8px' }}>
 								<strong>{__('AI Provider:', 'data-machine')}</strong> {aiConfig.ai_provider || 'Not configured'}
 								{' | '}

@@ -72,7 +72,7 @@ export default function FlowSteps({
 	if (sortedFlowSteps.length === 0) {
 		return (
 			<div
-				className="dm-flow-steps-empty"
+				className="datamachine-flow-steps-empty"
 				style={{
 					padding: '20px',
 					textAlign: 'center',
@@ -93,7 +93,7 @@ export default function FlowSteps({
 	 */
 	return (
 		<div
-			className="dm-flow-steps"
+			className="datamachine-flow-steps"
 			style={{
 				display: 'flex',
 				alignItems: 'stretch',

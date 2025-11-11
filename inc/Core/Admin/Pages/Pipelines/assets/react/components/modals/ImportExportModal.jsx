@@ -39,12 +39,12 @@ export default function ImportExportModal({
 		{
 			name: 'export',
 			title: __('Export', 'data-machine'),
-			className: 'dm-import-export-tab'
+			className: 'datamachine-import-export-tab'
 		},
 		{
 			name: 'import',
 			title: __('Import', 'data-machine'),
-			className: 'dm-import-export-tab'
+			className: 'datamachine-import-export-tab'
 		}
 	];
 
@@ -62,18 +62,18 @@ export default function ImportExportModal({
 		<Modal
 			title={__('Import / Export Pipelines', 'data-machine')}
 			onRequestClose={onClose}
-			className="dm-modal dm-import-export-modal"
+			className="datamachine-modal datamachine-import-export-modal"
 			style={{ maxWidth: '700px' }}
 		>
-			<div className="dm-modal-content">
+			<div className="datamachine-modal-content">
 				<TabPanel
-					className="dm-import-export-tabs"
+					className="datamachine-import-export-tabs"
 					activeClass="is-active"
 					tabs={tabs}
 					onSelect={(tabName) => setActiveTab(tabName)}
 				>
 					{(tab) => (
-						<div className="dm-tab-content">
+						<div className="datamachine-tab-content">
 							{tab.name === 'export' && (
 								<ExportTab
 									pipelines={pipelines}

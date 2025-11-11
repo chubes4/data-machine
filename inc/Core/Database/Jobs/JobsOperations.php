@@ -20,7 +20,7 @@ class JobsOperations {
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
-        $this->table_name = $wpdb->prefix . 'dm_jobs';
+        $this->table_name = $wpdb->prefix . 'datamachine_jobs';
     }
 
     public function create_job(array $job_data): int|false {
@@ -116,8 +116,8 @@ class JobsOperations {
             $orderby = 'j.job_id';
         }
         
-        $pipelines_table = $this->wpdb->prefix . 'dm_pipelines';
-        $flows_table = $this->wpdb->prefix . 'dm_flows';
+        $pipelines_table = $this->wpdb->prefix . 'datamachine_pipelines';
+        $flows_table = $this->wpdb->prefix . 'datamachine_flows';
         
         $cache_key = Cache::RECENT_JOBS_CACHE_KEY . md5($orderby . $order . $per_page . $offset);
         $cached_result = get_transient( $cache_key );

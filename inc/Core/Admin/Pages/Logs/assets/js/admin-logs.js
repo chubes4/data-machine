@@ -1,12 +1,12 @@
 /**
- * Data Machine Logs Page JavaScript
- * 
+ * Data Machine Logs Page JavaScript (Vanilla JS - No jQuery)
+ *
  * Handles interactive functionality for the logs administration page.
  *
  * @since 1.0.0
  */
 
-(function($) {
+(function() {
     'use strict';
 
     /**
@@ -14,70 +14,80 @@
      */
     function initLogsPage() {
         // Handle clear logs confirmation
-        $('.datamachine-clear-logs-form').on('submit', function(e) {
-            e.preventDefault(); // Prevent default form submission
-            
-            const confirmed = confirm($(this).data('confirm-message') || 'Are you sure you want to clear all logs? This action cannot be undone.');
-            if (!confirmed) {
-                return false;
-            }
-            
-            // Use AJAX to clear logs
-            clearLogsViaAjax();
-        });
+        const clearLogsForm = document.querySelector('.datamachine-clear-logs-form');
+        if (clearLogsForm) {
+            clearLogsForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const confirmMessage = clearLogsForm.getAttribute('data-confirm-message') ||
+                    'Are you sure you want to clear all logs? This action cannot be undone.';
+                const confirmed = confirm(confirmMessage);
+
+                if (!confirmed) {
+                    return false;
+                }
+
+                clearLogsViaRest();
+            });
+        }
 
         // Handle refresh logs button
-        $('.datamachine-refresh-logs').on('click', function(e) {
-            e.preventDefault();
-            location.reload();
-        });
+        const refreshBtn = document.querySelector('.datamachine-refresh-logs');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                location.reload();
+            });
+        }
 
         // Handle copy logs button
-        $('.datamachine-copy-logs').on('click', function(e) {
-            e.preventDefault();
+        const copyBtn = document.querySelector('.datamachine-copy-logs');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', function(e) {
+                e.preventDefault();
 
-            const $button = $(this);
-            const targetSelector = $button.data('copy-target');
-            const $logViewer = $(targetSelector);
+                const targetSelector = copyBtn.getAttribute('data-copy-target');
+                const logViewer = document.querySelector(targetSelector);
 
-            if (!$logViewer.length) {
-                alert('No log content found to copy.');
-                return;
-            }
-
-            const logContent = $logViewer.text();
-            const originalText = $button.text();
-
-            // Copy text to clipboard with fallback for local development
-            // Modern clipboard API requires HTTPS, so we provide legacy fallback for local HTTP testing
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                // Use modern clipboard API (production HTTPS environments)
-                navigator.clipboard.writeText(logContent).then(function() {
-                    showCopySuccess($button, originalText);
-                }).catch(function(err) {
-                    showCopyError($button, originalText);
-                });
-            } else {
-                // Fallback for local development environments without HTTPS
-                try {
-                    copyTextFallback(logContent);
-                    showCopySuccess($button, originalText);
-                } catch (err) {
-                    showCopyError($button, originalText);
+                if (!logViewer) {
+                    alert('No log content found to copy.');
+                    return;
                 }
-            }
-        });
+
+                const logContent = logViewer.textContent;
+                const originalText = copyBtn.textContent;
+
+                // Copy text to clipboard with fallback for local development
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(logContent).then(function() {
+                        showCopySuccess(copyBtn, originalText);
+                    }).catch(function(err) {
+                        showCopyError(copyBtn, originalText);
+                    });
+                } else {
+                    // Fallback for local development
+                    try {
+                        copyTextFallback(logContent);
+                        showCopySuccess(copyBtn, originalText);
+                    } catch (err) {
+                        showCopyError(copyBtn, originalText);
+                    }
+                }
+            });
+        }
 
         // Handle load full logs button
-        $('.datamachine-load-full-logs').on('click', function(e) {
-            e.preventDefault();
-            handleFullLogLoad();
-        });
+        const loadFullBtn = document.querySelector('.datamachine-load-full-logs');
+        if (loadFullBtn) {
+            loadFullBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                handleFullLogLoad();
+            });
+        }
     }
 
     /**
      * Fallback copy method for local development environments without HTTPS
-     * Uses legacy document.execCommand approach for local HTTP testing
      */
     function copyTextFallback(text) {
         const textarea = document.createElement('textarea');
@@ -99,20 +109,24 @@
     /**
      * Show success feedback for copy operation
      */
-    function showCopySuccess($button, originalText) {
-        $button.text('Copied!').addClass('datamachine-copy-success');
+    function showCopySuccess(button, originalText) {
+        button.textContent = 'Copied!';
+        button.classList.add('datamachine-copy-success');
         setTimeout(function() {
-            $button.text(originalText).removeClass('datamachine-copy-success');
+            button.textContent = originalText;
+            button.classList.remove('datamachine-copy-success');
         }, 2000);
     }
 
     /**
      * Show error feedback for copy operation
      */
-    function showCopyError($button, originalText) {
-        $button.text('Copy Failed').addClass('datamachine-copy-error');
+    function showCopyError(button, originalText) {
+        button.textContent = 'Copy Failed';
+        button.classList.add('datamachine-copy-error');
         setTimeout(function() {
-            $button.text(originalText).removeClass('datamachine-copy-error');
+            button.textContent = originalText;
+            button.classList.remove('datamachine-copy-error');
         }, 2000);
     }
 
@@ -120,23 +134,25 @@
      * Handle loading full log content via REST API
      */
     function handleFullLogLoad() {
-        const $button = $('#datamachine-load-full-logs-btn');
-        const $logViewer = $('.datamachine-log-viewer');
-        const $sectionTitle = $('.datamachine-log-section-title');
-        const currentMode = $logViewer.data('current-mode');
+        const button = document.getElementById('datamachine-load-full-logs-btn');
+        const logViewer = document.querySelector('.datamachine-log-viewer');
+        const sectionTitle = document.querySelector('.datamachine-log-section-title');
+        const currentMode = logViewer ? logViewer.getAttribute('data-current-mode') : null;
+
+        if (!button || !logViewer) return;
 
         // Toggle between full and recent modes
         if (currentMode === 'full') {
-            // Switch back to recent logs
             location.reload();
             return;
         }
 
         // Proceed with loading full logs
-        const originalButtonText = $button.text();
+        const originalButtonText = button.textContent;
 
         // Set loading state
-        $button.prop('disabled', true).text('Loading...');
+        button.disabled = true;
+        button.textContent = 'Loading...';
         showStatusMessage('Loading full log file...', 'info');
 
         // REST API request to load full logs
@@ -145,19 +161,22 @@
             method: 'GET'
         }).then(function(response) {
             // Update log viewer with full content
-            $logViewer.text(response.content).data('current-mode', 'full');
+            logViewer.textContent = response.content;
+            logViewer.setAttribute('data-current-mode', 'full');
 
             // Update section title
-            $sectionTitle.text('Full Log File (' + response.total_lines + ' entries)');
+            if (sectionTitle) {
+                sectionTitle.textContent = 'Full Log File (' + response.total_lines + ' entries)';
+            }
 
             // Update button text
-            $button.text('Show Recent Only');
+            button.textContent = 'Show Recent Only';
 
             // Show success message
             showStatusMessage(response.message, 'success');
 
             // Reset button state
-            $button.prop('disabled', false);
+            button.disabled = false;
         }).catch(function(error) {
             let errorMessage = 'Failed to load full logs.';
             if (error.message) {
@@ -166,20 +185,24 @@
             showStatusMessage(errorMessage, 'error');
 
             // Reset button state
-            $button.prop('disabled', false).text(originalButtonText);
+            button.disabled = false;
+            button.textContent = originalButtonText;
         });
     }
 
     /**
      * Clear logs via REST API and refresh the page
      */
-    function clearLogsViaAjax() {
-        const $form = $('.datamachine-clear-logs-form');
-        const $button = $form.find('button[type="submit"]');
+    function clearLogsViaRest() {
+        const form = document.querySelector('.datamachine-clear-logs-form');
+        const button = form ? form.querySelector('button[type="submit"]') : null;
+
+        if (!button) return;
 
         // Set loading state
-        const originalButtonText = $button.text();
-        $button.prop('disabled', true).text('Clearing...');
+        const originalButtonText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Clearing...';
         showStatusMessage('Clearing logs...', 'info');
 
         // REST API request to clear logs
@@ -198,7 +221,8 @@
                 errorMessage = error.message;
             }
             showStatusMessage(errorMessage, 'error');
-            $button.prop('disabled', false).text(originalButtonText);
+            button.disabled = false;
+            button.textContent = originalButtonText;
         });
     }
 
@@ -206,24 +230,38 @@
      * Show status message to user
      */
     function showStatusMessage(message, type) {
-        const $statusMessage = $('.datamachine-log-status-message');
+        const statusMessage = document.querySelector('.datamachine-log-status-message');
+        if (!statusMessage) return;
+
         const typeClass = 'datamachine-status-' + type;
 
         // Remove any existing type classes
-        $statusMessage.removeClass('datamachine-status-success datamachine-status-error datamachine-status-info');
+        statusMessage.classList.remove('datamachine-status-success', 'datamachine-status-error', 'datamachine-status-info');
 
         // Add new type class and show message
-        $statusMessage.addClass(typeClass).text(message).show();
+        statusMessage.classList.add(typeClass);
+        statusMessage.textContent = message;
+        statusMessage.style.display = 'block';
 
         // Auto-hide after 5 seconds for success/info messages
         if (type === 'success' || type === 'info') {
             setTimeout(function() {
-                $statusMessage.fadeOut();
+                statusMessage.style.opacity = '0';
+                statusMessage.style.transition = 'opacity 0.3s';
+                setTimeout(function() {
+                    statusMessage.style.display = 'none';
+                    statusMessage.style.opacity = '';
+                    statusMessage.style.transition = '';
+                }, 300);
             }, 5000);
         }
     }
 
     // Initialize when DOM is ready
-    $(document).ready(initLogsPage);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLogsPage);
+    } else {
+        initLogsPage();
+    }
 
-})(jQuery);
+})();

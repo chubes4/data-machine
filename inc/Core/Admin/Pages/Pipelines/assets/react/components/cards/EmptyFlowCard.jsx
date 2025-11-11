@@ -18,7 +18,7 @@ import { __ } from '@wordpress/i18n';
 export default function EmptyFlowCard({ pipelineId, onAddFlow }) {
 	return (
 		<div
-			className="dm-empty-flow-card"
+			className="datamachine-empty-flow-card"
 			style={{
 				border: '2px dashed #dcdcde',
 				borderRadius: '4px',

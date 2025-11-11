@@ -26,7 +26,7 @@ export default function FlowFooter({ schedulingConfig }) {
 
 	return (
 		<div
-			className="dm-flow-footer"
+			className="datamachine-flow-footer"
 			style={{
 				display: 'flex',
 				gap: '20px',
@@ -37,20 +37,20 @@ export default function FlowFooter({ schedulingConfig }) {
 				color: '#757575'
 			}}
 		>
-			<div className="dm-flow-meta-item">
+			<div className="datamachine-flow-meta-item">
 				<strong>{__('Schedule:', 'data-machine')}</strong>
 				{' '}
 				{scheduleDisplay}
 			</div>
 
-			<div className="dm-flow-meta-item">
+			<div className="datamachine-flow-meta-item">
 				<strong>{__('Last Run:', 'data-machine')}</strong>
 				{' '}
 				{formatDateTime(last_run_at)}
 			</div>
 
 			{interval && interval !== 'manual' && (
-				<div className="dm-flow-meta-item">
+				<div className="datamachine-flow-meta-item">
 					<strong>{__('Next Run:', 'data-machine')}</strong>
 					{' '}
 					{formatDateTime(next_run_time)}

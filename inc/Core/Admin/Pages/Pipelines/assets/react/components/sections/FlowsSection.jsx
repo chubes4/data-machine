@@ -48,7 +48,7 @@ export default function FlowsSection({ pipelineId, flows, pipelineSteps, pipelin
 	 */
 	if (!flows || flows.length === 0) {
 		return (
-			<div className="dm-flows-section dm-flows-section--empty">
+			<div className="datamachine-flows-section datamachine-flows-section--empty">
 				<h3 style={{ marginTop: 0, marginBottom: '16px' }}>
 					{__('Flows', 'data-machine')}
 				</h3>
@@ -64,7 +64,7 @@ export default function FlowsSection({ pipelineId, flows, pipelineSteps, pipelin
 	 * Render flows list
 	 */
 	return (
-		<div className="dm-flows-section">
+		<div className="datamachine-flows-section">
 			<div
 				style={{
 					display: 'flex',
@@ -82,7 +82,7 @@ export default function FlowsSection({ pipelineId, flows, pipelineSteps, pipelin
 				</h3>
 			</div>
 
-			<div className="dm-flows-list" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+			<div className="datamachine-flows-list" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 				{flows.map(flow => (
 					<FlowCard
 						key={flow.flow_id}

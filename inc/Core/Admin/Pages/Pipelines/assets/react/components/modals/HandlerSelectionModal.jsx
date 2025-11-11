@@ -54,10 +54,10 @@ export default function HandlerSelectionModal({
 		<Modal
 			title={__('Select Handler', 'data-machine')}
 			onRequestClose={onClose}
-			className="dm-modal dm-handler-selection-modal"
+			className="datamachine-modal datamachine-handler-selection-modal"
 			style={{ maxWidth: '600px' }}
 		>
-			<div className="dm-modal-content">
+			<div className="datamachine-modal-content">
 				<p style={{ marginBottom: '20px', color: '#757575' }}>
 					{__('Choose the handler for this step:', 'data-machine')}
 				</p>
@@ -80,7 +80,7 @@ export default function HandlerSelectionModal({
 
 				{handlers.length > 0 && (
 					<div
-						className="dm-handler-grid"
+						className="datamachine-handler-grid"
 						style={{
 							display: 'grid',
 							gridTemplateColumns: 'repeat(2, 1fr)',
@@ -91,7 +91,7 @@ export default function HandlerSelectionModal({
 							<button
 								key={slug}
 								type="button"
-								className="dm-handler-card"
+								className="datamachine-handler-card"
 								onClick={() => handleSelect(slug)}
 								style={{
 									padding: '20px',

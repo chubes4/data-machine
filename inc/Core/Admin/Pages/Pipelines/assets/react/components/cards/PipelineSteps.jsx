@@ -80,7 +80,7 @@ export default function PipelineSteps({
 	 */
 	if (sortedSteps.length === 0) {
 		return (
-			<div className="dm-pipeline-steps-empty" style={{ padding: '20px', textAlign: 'center' }}>
+			<div className="datamachine-pipeline-steps-empty" style={{ padding: '20px', textAlign: 'center' }}>
 				<p style={{ color: '#757575', marginBottom: '16px' }}>
 					{__('No steps configured. Add your first step to get started.', 'data-machine')}
 				</p>
@@ -94,7 +94,7 @@ export default function PipelineSteps({
 	 */
 	return (
 		<div
-			className="dm-pipeline-steps"
+			className="datamachine-pipeline-steps"
 			style={{
 				display: 'flex',
 				alignItems: 'stretch',
@@ -111,7 +111,7 @@ export default function PipelineSteps({
 					onDragStart={() => setDraggedIndex(index)}
 					onDragOver={(e) => e.preventDefault()}
 					onDrop={() => handleDrop(index)}
-					className={draggedIndex === index ? 'dm-step-dragging' : ''}
+					className={draggedIndex === index ? 'datamachine-step-dragging' : ''}
 				>
 					<div style={{ flex: '0 0 auto', minWidth: '300px' }}>
 						<PipelineStepCard

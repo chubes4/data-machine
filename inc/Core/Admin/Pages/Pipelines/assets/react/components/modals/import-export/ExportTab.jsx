@@ -66,7 +66,7 @@ export default function ExportTab({ pipelines, onClose }) {
 	};
 
 	return (
-		<div className="dm-export-tab">
+		<div className="datamachine-export-tab">
 			{error && (
 				<Notice status="error" isDismissible onRemove={() => setError(null)}>
 					<p>{error}</p>

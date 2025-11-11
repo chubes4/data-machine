@@ -157,7 +157,7 @@ $parameters = [
 
 ## Success Messaging
 
-**Custom Success Messages**: Implements `dm_tool_success_message` filter for enhanced AI conversation formatting.
+**Custom Success Messages**: Implements `datamachine_tool_success_message` filter for enhanced AI conversation formatting.
 
 **Content Length Reporting**: Clear indication of content size and truncation status.
 

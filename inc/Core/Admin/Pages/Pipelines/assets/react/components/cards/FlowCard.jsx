@@ -175,7 +175,7 @@ export default function FlowCard({ flow, pipelineSteps, pipelineConfig }) {
 
 	return (
 		<>
-			<Card className="dm-flow-card datamachine-flow-instance-card" size="large">
+			<Card className="datamachine-flow-card datamachine-flow-instance-card" size="large">
 				<CardBody>
 					<FlowHeader
 						flowId={flow.flow_id}

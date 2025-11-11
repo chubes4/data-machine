@@ -126,13 +126,13 @@ docs/
 
 ### Cache Management
 - **Centralized Cache System** - Actions/Cache.php provides WordPress action-based cache clearing
-- **Granular Invalidation** - Separate actions for pipeline, flow, and job cache clearing (dm_clear_pipeline_cache, dm_clear_flow_cache, dm_clear_jobs_cache, dm_clear_all_cache)
-- **Pattern-Based Clearing** - Supports wildcard patterns for efficient bulk operations (dm_pipeline_*, dm_flow_*, dm_job_*)
+- **Granular Invalidation** - Separate actions for pipeline, flow, and job cache clearing (datamachine_clear_pipeline_cache, datamachine_clear_flow_cache, datamachine_clear_jobs_cache, datamachine_clear_all_cache)
+- **Pattern-Based Clearing** - Supports wildcard patterns for efficient bulk operations (datamachine_pipeline_*, datamachine_flow_*, datamachine_job_*)
 - **WordPress Transients** - Native WordPress caching integration with comprehensive logging
-- **Standardized Storage** - dm_cache_set action for consistent cache management
+- **Standardized Storage** - datamachine_cache_set action for consistent cache management
 
 ### AutoSave System
-- **Complete Pipeline Persistence** - AutoSave system handles all pipeline-related data via single `dm_auto_save` action
+- **Complete Pipeline Persistence** - AutoSave system handles all pipeline-related data via single `datamachine_auto_save` action
 - **Flow Synchronization** - Synchronizes execution_order between pipeline and flow steps automatically
 - **Comprehensive Data Management** - Saves pipeline data, all flows, flow configurations, scheduling, and handler settings
 - **Cache Integration** - Automatic cache clearing after successful auto-save for data consistency

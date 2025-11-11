@@ -52,53 +52,15 @@ function datamachine_register_jobs_admin_page_filters() {
                     ]
                 ],
                 'js' => [
-                    'datamachine-core-modal' => [
-                        'file' => 'inc/Core/Admin/Modal/assets/js/core-modal.js',
-                        'deps' => ['jquery'],
-                        'in_footer' => true,
-                        'localize' => [
-                            'object' => 'dmCoreModal',
-                            'data' => [
-                                'ajax_url' => admin_url('admin-ajax.php'),
-                                'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
-                                'strings' => [
-                                    'loading' => __('Loading...', 'data-machine'),
-                                    'error' => __('Error', 'data-machine'),
-                                    'close' => __('Close', 'data-machine')
-                                ]
-                            ]
-                        ]
-                    ],
                     'datamachine-jobs-admin' => [
                         'file' => 'inc/Core/Admin/Pages/Jobs/assets/js/data-machine-jobs.js',
-                        'deps' => ['jquery'],
-                        'in_footer' => true,
-                        'localize' => [
-                            'object' => 'dmJobsAdmin',
-                            'data' => [
-                                'ajax_url' => admin_url('admin-ajax.php'),
-                                'strings' => [
-                                    'loading' => __('Loading...', 'data-machine'),
-                                    'error' => __('An error occurred', 'data-machine')
-                                ]
-                            ]
-                        ]
+                        'deps' => ['wp-api-fetch'],
+                        'in_footer' => true
                     ],
                     'datamachine-jobs-modal' => [
                         'file' => 'inc/Core/Admin/Pages/Jobs/assets/js/jobs-modal.js',
-                        'deps' => ['jquery', 'datamachine-core-modal'],
-                        'in_footer' => true,
-                        'localize' => [
-                            'object' => 'dmJobsModal',
-                            'data' => [
-                                'ajax_url' => admin_url('admin-ajax.php'),
-                                'dm_ajax_nonce' => wp_create_nonce('dm_ajax_actions'),
-                                'strings' => [
-                                    'loading' => __('Loading...', 'data-machine'),
-                                    'error' => __('An error occurred', 'data-machine')
-                                ]
-                            ]
-                        ]
+                        'deps' => ['wp-api-fetch'],
+                        'in_footer' => true
                     ]
                 ]
             ]
@@ -110,15 +72,3 @@ function datamachine_register_jobs_admin_page_filters() {
 // Auto-register when file loads - achieving complete self-containment
 datamachine_register_jobs_admin_page_filters();
 
-/**
- * Register Jobs Admin modal
- * 
- * @since NEXT_VERSION
- */
-add_filter('datamachine_modals', function($modals) {
-    $modals['jobs-admin'] = [
-        'title' => __('Jobs Administration', 'data-machine'),
-        'template' => 'modal/jobs-admin'
-    ];
-    return $modals;
-});

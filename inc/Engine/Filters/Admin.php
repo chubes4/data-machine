@@ -17,7 +17,7 @@ function datamachine_register_admin_filters() {
     
     add_filter('datamachine_modals', function($modals) {
         // Components self-register via this same filter with higher priority
-        // Bootstrap provides discovery infrastructure for ModalAjax
+        // Bootstrap provides discovery infrastructure for modal system
         return $modals;
     }, 5, 1);
 
@@ -121,7 +121,7 @@ function datamachine_register_admin_menu() {
         __('Data Machine', 'data-machine'),
         __('Data Machine', 'data-machine'),
         $first_page['capability'] ?? 'manage_options',
-        'dm-' . $first_slug,
+        'datamachine-' . $first_slug,
         '', // No callback - main menu is just container
         'dashicons-database-view',
         30
@@ -133,11 +133,11 @@ function datamachine_register_admin_menu() {
     
     // Add first page as submenu with its proper title
     $first_submenu_hook = add_submenu_page(
-        'dm-' . $first_slug,
+        'datamachine-' . $first_slug,
         $first_page['page_title'] ?? $first_page['menu_title'] ?? ucfirst($first_slug),
         $first_page['menu_title'] ?? ucfirst($first_slug),
         $first_page['capability'] ?? 'manage_options',
-        'dm-' . $first_slug,
+        'datamachine-' . $first_slug,
         function() use ($first_page, $first_slug) {
             datamachine_render_admin_page_content($first_page, $first_slug);
         }
@@ -147,11 +147,11 @@ function datamachine_register_admin_menu() {
     $remaining_pages = array_slice($registered_pages, 1, null, true);
     foreach ($remaining_pages as $slug => $page_config) {
         $hook_suffix = add_submenu_page(
-            'dm-' . $first_slug,
+            'datamachine-' . $first_slug,
             $page_config['page_title'] ?? $page_config['menu_title'] ?? ucfirst($slug),
             $page_config['menu_title'] ?? ucfirst($slug),
             $page_config['capability'] ?? 'manage_options',
-            'dm-' . $slug,
+            'datamachine-' . $slug,
             function() use ($page_config, $slug) {
                 datamachine_render_admin_page_content($page_config, $slug);
             }

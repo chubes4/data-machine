@@ -17,7 +17,7 @@ import { __ } from '@wordpress/i18n';
 export default function LoadingSpinner({ message }) {
 	return (
 		<div
-			className="dm-loading-spinner"
+			className="datamachine-loading-spinner"
 			style={{
 				display: 'flex',
 				flexDirection: 'column',

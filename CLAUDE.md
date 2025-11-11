@@ -10,69 +10,33 @@ Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and mult
 
 **Prefix Convention:**
 - Current: `datamachine_` prefix used throughout codebase (filters, actions, functions)
-- Migration: Transitioning from `dm_` to `datamachine_` prefix (early stages)
-- Status: Migration plugin ready, code refactoring in progress
+- Migration: Completed transition from `dm_` to `datamachine_` prefix
+- Status: Migration complete for all code components, database table names pending Phase 3
 
 **API Architecture:**
 - REST API: 10 endpoint files implemented (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users)
 - **Pipelines Page**: React-only architecture, zero jQuery/AJAX (complete migration, 2,223 lines jQuery removed, 6 PHP templates removed, 2 AJAX endpoints removed)
-- **Settings/Jobs Pages**: Still use AJAX for admin operations (migration pending)
-- Migration Status: REST API complete for all data operations. DM Events calendar serves as reference implementation (831 lines removed)
+- **Jobs/Logs Pages**: REST API integration complete
+- **Settings Page**: REST API migration complete
+- Migration Status: Full REST API migration complete for all admin pages with React frontend modernization
 
-## Phase 2 Migration Scope (Detailed Status)
+## Migration Status (Complete)
 
-**Completed in Phase 2 (~40% complete):**
+**Phase 2 Migration Complete (100% complete):**
 - ✅ Filter hooks (161 occurrences across 50 files) - all converted to `datamachine_*`
 - ✅ Action hooks (100+ occurrences) - all converted to `datamachine_*`
 - ✅ Core function names - all converted to `datamachine_*`
+- ✅ Cache Keys (30+ constants) - all converted to `datamachine_*`
+- ✅ WordPress Options (7+ option names) - all converted to `datamachine_*`
+- ✅ Transients (10+ transient names) - all converted to `datamachine_*`
+- ✅ Query Variables (OAuth routing) - all converted to `datamachine_*`
+- ✅ CSS Classes - all converted to `datamachine-*`
+- ✅ OAuth URL Routes - all converted to `/datamachine-auth/{provider}/`
 
-**Pending in Phase 2 (~150+ occurrences):**
-
-### 1. OAuth URL Routes (Code change required)
-- **Current**: `/datamachine-auth/{provider}/` (WordPress rewrite rules)
-- **Target**: `/datamachine-auth/{provider}/`
-- **Location**: `inc/Engine/Filters/OAuth.php`
-- **Implementation**: WordPress `add_rewrite_rule()` + `template_redirect` hook (NOT REST API, NOT AJAX)
-- **Files affected**: OAuth.php + 6 OAuth handler files (Twitter, Facebook, Reddit, Google Sheets, Threads, Bluesky)
-
-### 2. Cache Keys (30+ constants)
-- **Current**: `dm_pipeline_*`, `dm_flow_*`, `dm_job_*`, `dm_all_pipelines`, etc.
-- **Target**: `datamachine_pipeline_*`, `datamachine_flow_*`, `datamachine_job_*`, etc.
-- **Location**: `inc/Engine/Actions/Cache.php` (lines 16-39)
-- **Type**: WordPress transients (runtime-only, cleared on update)
-
-### 3. WordPress Options (7+ option names)
-- **Current**: `dm_auth_data`, `dm_data_machine_settings`, `dm_search_config`, `dm_selected_pipeline_id`, `dm_page_hook_suffixes`, `dm_page_configs`, `dm_settings_hook_suffix`
-- **Target**: `datamachine_auth_data`, `datamachine_data_machine_settings`, etc.
-- **Locations**: OAuth.php, Settings, GoogleSearch.php, Admin filters, User preferences
-- **Migration**: Phase 3 migration plugin handles data conversion automatically
-
-### 4. Transients (10+ transient names)
-- **Current**: `dm_oauth_error_*`, `dm_oauth_success_*`, `dm_*_oauth_state`, `dm_twitter_req_secret_*`, `dm_site_context_data`, `dm_activation_notice`
-- **Target**: `datamachine_oauth_error_*`, `datamachine_oauth_success_*`, etc.
-- **Type**: Runtime state (temporary, auto-expiring)
-
-### 5. AJAX Nonce (security token)
-- **Current**: `dm_ajax_actions`
-- **Target**: `datamachine_ajax_actions`
-- **Locations**: 20+ admin files (created via `wp_create_nonce()`, verified via `wp_verify_nonce()`)
-- **Type**: Security token for AJAX requests
-
-### 6. Query Variables (OAuth routing)
-- **Current**: `dm_oauth_provider`
-- **Target**: `datamachine_oauth_provider`
-- **Location**: OAuth.php rewrite rules
-- **Type**: WordPress query var for OAuth callback routing
-
-### 7. CSS Classes (cosmetic, low priority)
-- **Current**: `dm-*` prefix in templates and stylesheets
-- **Target**: `datamachine-*` prefix
-- **Type**: Visual styling (no functional impact)
-
-**Database Tables (Phase 3 pending):**
+**Phase 3 Database Migration (Pending):**
 - `wp_dm_pipelines`, `wp_dm_flows`, `wp_dm_jobs`, `wp_dm_processed_items`
-- Migration blocked until Phase 2 code refactoring completes
-- Migration plugin ready to execute table rename operations in Phase 3
+- Migration plugin ready to execute table rename operations
+- Blocked until Phase 2 code stabilization completes
 
 ## Core Filters & Actions
 
@@ -854,8 +818,7 @@ POST /datamachine/v1/execute
 
 All REST endpoints require `manage_options` capability except `/users/me` (requires authentication only).
 
-**AJAX**: WordPress hooks with `datamachine_ajax_actions` nonce + `manage_options`
-**Templates**: Filter-based rendering
+**Templates**: Filter-based rendering with REST API integration
 **Jobs**: Clear processed items/jobs via modal
 
 ## Logging & Debugging
@@ -1177,4 +1140,3 @@ $providers = apply_filters('datamachine_auth_providers', []);
 - CSS namespace: `dm-` prefix
 - Auth: `manage_options` only
 - Field naming: `pipeline_step_id` (UUID4)
-- AJAX: `datamachine_ajax_actions` nonce validation

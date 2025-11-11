@@ -18,7 +18,7 @@ import { __ } from '@wordpress/i18n';
 export default function EmptyStepCard({ pipelineId, onAddStep }) {
 	return (
 		<div
-			className="dm-empty-step-card"
+			className="datamachine-empty-step-card"
 			style={{
 				border: '2px dashed #dcdcde',
 				borderRadius: '4px',

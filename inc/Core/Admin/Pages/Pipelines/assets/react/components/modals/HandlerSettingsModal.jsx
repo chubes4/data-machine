@@ -185,10 +185,10 @@ export default function HandlerSettingsModal({
 		<Modal
 			title={__('Configure Handler', 'data-machine')}
 			onRequestClose={onClose}
-			className="dm-modal dm-handler-settings-modal"
+			className="datamachine-modal datamachine-handler-settings-modal"
 			style={{ maxWidth: '600px' }}
 		>
-			<div className="dm-modal-content">
+			<div className="datamachine-modal-content">
 				{error && (
 					<div className="notice notice-error" style={{ marginBottom: '16px' }}>
 						<p>{error}</p>
@@ -242,7 +242,7 @@ export default function HandlerSettingsModal({
 						)}
 
 						{Object.keys(settingsFields).length > 0 && (
-							<div className="dm-handler-settings-fields">
+							<div className="datamachine-handler-settings-fields">
 								{Object.entries(settingsFields).map(([key, config]) => renderField(key, config))}
 							</div>
 						)}

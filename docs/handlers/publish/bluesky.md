@@ -28,7 +28,7 @@ Posts content to Bluesky using app passwords and AT Protocol integration with me
 ]
 ```
 
-**Simple Auth Pattern**: Bluesky uses simple authentication (app password) rather than OAuth flow, with credentials stored directly via `dm_store_oauth_account` filter.
+**Simple Auth Pattern**: Bluesky uses simple authentication (app password) rather than OAuth flow, with credentials stored directly via `datamachine_store_oauth_account` filter.
 
 ## Configuration Parameters
 

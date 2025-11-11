@@ -15,15 +15,7 @@ function datamachine_register_settings_admin_page_filters() {
     add_action('admin_menu', 'datamachine_register_settings_page');
     add_action('admin_init', 'datamachine_register_settings');
     add_action('admin_enqueue_scripts', 'datamachine_enqueue_settings_assets');
-    
-    add_filter('datamachine_modals', function($modals) {
-        $modals['tool-config'] = [
-            'template' => 'modal/tool-config',
-            'title' => __('Configure Tool', 'data-machine')
-        ];
-        return $modals;
-    });
-    
+
     add_filter('datamachine_render_template', function($content, $template_name, $data = []) {
         $settings_template_path = DATA_MACHINE_PATH . 'inc/Core/Admin/Settings/templates/' . $template_name . '.php';
         if (file_exists($settings_template_path)) {
@@ -48,30 +40,12 @@ function datamachine_register_settings_admin_page_filters() {
                 ]
             ];
             $assets['js'] = [
-                'datamachine-core-modal' => [
-                    'src' => '../Modal/assets/js/core-modal.js',
-                    'deps' => ['jquery'],
-                    'localize' => [
-                        'object' => 'datamachineCoreModal',
-                        'data' => [
-                            'ajax_url' => admin_url('admin-ajax.php'),
-                            'datamachine_ajax_nonce' => wp_create_nonce('datamachine_ajax_actions'),
-                            'strings' => [
-                                'loading' => __('Loading...', 'data-machine'),
-                                'error' => __('Error', 'data-machine'),
-                                'close' => __('Close', 'data-machine')
-                            ]
-                        ]
-                    ]
-                ],
                 'datamachine-settings-page' => [
                     'src' => 'assets/js/settings-page.js',
-                    'deps' => ['jquery', 'datamachine-core-modal'],
+                    'deps' => ['wp-api-fetch'],
                     'localize' => [
                         'object' => 'datamachineSettings',
                         'data' => [
-                            'ajax_url' => admin_url('admin-ajax.php'),
-                            'datamachine_ajax_nonce' => wp_create_nonce('datamachine_ajax_actions'),
                             'strings' => [
                                 'saving' => __('Saving...', 'data-machine'),
                                 'clearing' => __('Clearing...', 'data-machine')

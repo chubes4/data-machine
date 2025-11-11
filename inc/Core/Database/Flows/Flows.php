@@ -20,13 +20,13 @@ class Flows {
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
-        $this->table_name = $this->wpdb->prefix . 'dm_flows';
+        $this->table_name = $this->wpdb->prefix . 'datamachine_flows';
     }
 
     public static function create_table(): void {
         global $wpdb;
-        
-        $table_name = $wpdb->prefix . 'dm_flows';
+
+        $table_name = $wpdb->prefix . 'datamachine_flows';
 
         $charset_collate = $wpdb->get_charset_collate();
         

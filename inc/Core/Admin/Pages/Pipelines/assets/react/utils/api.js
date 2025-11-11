@@ -13,7 +13,7 @@ import apiFetch from '@wordpress/api-fetch';
 const getConfig = () => {
 	const config = window.dataMachineConfig || {};
 	return {
-		restUrl: config.restUrl || '/wp-json/datamachine/v1',
+		restNamespace: config.restNamespace || 'datamachine/v1',
 		restNonce: config.restNonce || ''
 	};
 };
@@ -30,7 +30,7 @@ const apiRequest = async (path, options = {}) => {
 
 	try {
 		const response = await apiFetch({
-			path: `${config.restUrl}${path}`,
+			path: `/${config.restNamespace}${path}`,
 			method: options.method || 'GET',
 			data: options.data || undefined,
 			headers: {
@@ -393,7 +393,7 @@ export const uploadContextFile = async (pipelineId, file) => {
 	formData.append('file', file);
 
 	try {
-		const response = await fetch(`${config.restUrl}/pipelines/${pipelineId}/context-files`, {
+		const response = await fetch(`/wp-json/${config.restNamespace}/pipelines/${pipelineId}/context-files`, {
 			method: 'POST',
 			headers: {
 				'X-WP-Nonce': config.restNonce
