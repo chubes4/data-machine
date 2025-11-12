@@ -3,10 +3,6 @@
   "version": "0.1.2",
   "description": "AI-first WordPress plugin with Pipeline+Flow architecture",
   "private": true,
-  "overrides": {
-    "webpack-dev-server": "5.2.2",
-    "@babel/runtime": "7.28.4"
-  },
   "scripts": {
     "build": "wp-scripts build",
     "start": "wp-scripts start",
@@ -15,15 +11,15 @@
     "lint:style": "wp-scripts lint-style"
   },
   "devDependencies": {
-    "@wordpress/scripts": "^30.27.0"
+    "@wordpress/scripts": "^27.0.0"
   },
   "dependencies": {
     "@wordpress/api-fetch": "^7.0.0",
     "@wordpress/components": "^28.0.0",
-    "@wordpress/data": "^10.0.0",
-    "@wordpress/dom-ready": "^4.0.0",
     "@wordpress/element": "^6.0.0",
     "@wordpress/i18n": "^5.0.0",
-    "@wordpress/notices": "^5.0.0"
+    "@wordpress/notices": "^5.0.0",
+    "@wordpress/data": "^10.0.0",
+    "@wordpress/dom-ready": "^4.0.0"
   }
 }

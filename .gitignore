@@ -55,6 +55,9 @@ wp-content/plugins/hello.php
 *.zip
 *.tar.gz
 
+# Admin React build assets
+inc/Core/Admin/Pages/*/assets/build/
+
 # Development planning
 plan.md
 
