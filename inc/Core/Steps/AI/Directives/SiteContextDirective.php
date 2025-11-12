@@ -93,7 +93,7 @@ class SiteContextDirective {
 
 /**
  * Allow plugins to override the site context directive class.
- * dm-multisite uses this to replace single-site context with multisite context.
+ * datamachine-multisite uses this to replace single-site context with multisite context.
  *
  * @param string $directive_class The directive class to use for site context
  * @return string The filtered directive class
