@@ -13,13 +13,13 @@
      * Initialize logs page functionality
      */
     function initLogsPage() {
-        // Handle clear logs confirmation
-        const clearLogsForm = document.querySelector('.datamachine-clear-logs-form');
-        if (clearLogsForm) {
-            clearLogsForm.addEventListener('submit', function(e) {
+        // Handle clear logs button
+        const clearLogsBtn = document.querySelector('.datamachine-clear-logs-btn');
+        if (clearLogsBtn) {
+            clearLogsBtn.addEventListener('click', function(e) {
                 e.preventDefault();
 
-                const confirmMessage = clearLogsForm.getAttribute('data-confirm-message') ||
+                const confirmMessage = clearLogsBtn.getAttribute('data-confirm-message') ||
                     'Are you sure you want to clear all logs? This action cannot be undone.';
                 const confirmed = confirm(confirmMessage);
 
@@ -194,8 +194,7 @@
      * Clear logs via REST API and refresh the page
      */
     function clearLogsViaRest() {
-        const form = document.querySelector('.datamachine-clear-logs-form');
-        const button = form ? form.querySelector('button[type="submit"]') : null;
+        const button = document.querySelector('.datamachine-clear-logs-btn');
 
         if (!button) return;
 

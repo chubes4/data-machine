@@ -74,7 +74,7 @@ function datamachine_register_execution_engine() {
         $pipeline_config = $pipeline['pipeline_config'] ?? [];
 
         // Store both in engine_data for execution
-        $db_jobs->update_job_engine_data($job_id, [
+        $db_jobs->store_engine_data($job_id, [
             'flow_config' => $flow_config,
             'pipeline_config' => $pipeline_config
         ]);

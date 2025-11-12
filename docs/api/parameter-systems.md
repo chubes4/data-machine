@@ -31,9 +31,12 @@ $core_parameters = [
 Engine data is stored in database by fetch handlers and retrieved via centralized datamachine_engine_data filter:
 
 ```php
-// 1. Fetch handlers store in database via centralized filter
+// 1. Fetch handlers store in database via centralized filter (array storage)
 if ($job_id) {
-    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, [
+        'source_url' => $source_url,
+        'image_url' => $image_url
+    ]);
 }
 
 // 2. Steps retrieve engine data via centralized filter
@@ -89,7 +92,10 @@ class MyFetchHandler {
 
         // Store engine parameters in database via centralized datamachine_engine_data filter
         if ($job_id) {
-            apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
+            apply_filters('datamachine_engine_data', null, $job_id, [
+                'source_url' => $source_url,
+                'image_url' => $image_url
+            ]);
         }
 
         return ['processed_items' => [$clean_data]];
@@ -205,28 +211,31 @@ $parameters = AIStepToolParameters::buildForHandlerTool(
 ## Handler-Specific Engine Parameters
 
 ### Database Storage by Fetch Handlers
-Each fetch handler stores specific engine parameters in the database:
+Each fetch handler stores specific engine parameters in the database using array storage:
 
 ```php
-// Reddit Handler - stores via centralized filter
+// Reddit Handler - stores via centralized filter (array storage)
 if ($job_id) {
-    apply_filters('datamachine_engine_data', null, $job_id,
-        'https://reddit.com' . $item_data['permalink'],
-        $stored_image['url'] ?? ''
-    );
+    apply_filters('datamachine_engine_data', null, $job_id, [
+        'source_url' => 'https://reddit.com' . $item_data['permalink'],
+        'image_url' => $stored_image['url'] ?? ''
+    ]);
 }
 
-// WordPress Local Handler - stores via centralized filter
+// WordPress Local Handler - stores via centralized filter (array storage)
 if ($job_id) {
-    apply_filters('datamachine_engine_data', null, $job_id,
-        get_permalink($post_id),
-        $this->extract_image_url($post_id)
-    );
+    apply_filters('datamachine_engine_data', null, $job_id, [
+        'source_url' => get_permalink($post_id),
+        'image_url' => $this->extract_image_url($post_id)
+    ]);
 }
 
-// RSS Handler - stores via centralized filter
+// RSS Handler - stores via centralized filter (array storage)
 if ($job_id) {
-    apply_filters('datamachine_engine_data', null, $job_id, $item_link, $enclosure_url);
+    apply_filters('datamachine_engine_data', null, $job_id, [
+        'source_url' => $item_link,
+        'image_url' => $enclosure_url
+    ]);
 }
 ```
 

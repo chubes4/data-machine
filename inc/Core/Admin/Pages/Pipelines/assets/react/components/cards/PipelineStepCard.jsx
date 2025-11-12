@@ -7,10 +7,9 @@
 import { useState, useEffect, useCallback, useRef } from '@wordpress/element';
 import { Card, CardBody, Button, TextareaControl, Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import StepTypeIcon from '../shared/StepTypeIcon';
 import { updateSystemPrompt } from '../../utils/api';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
-import { slugToLabel } from '../../utils/formatters';
+import { getStepTypeLabel } from '../../utils/formatters';
 
 /**
  * Pipeline Step Card Component
@@ -123,11 +122,7 @@ export default function PipelineStepCard({ step, pipelineId, pipelineConfig, onD
 
 				<div style={{ marginBottom: '12px' }}>
 					<div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-						<StepTypeIcon stepType={step.step_type} size={20} />
-						<strong>{step.label || slugToLabel(step.step_type)}</strong>
-						<span style={{ color: '#757575', fontSize: '12px' }}>
-							(Order: {step.execution_order})
-						</span>
+						<strong>{getStepTypeLabel(step.step_type)}</strong>
 					</div>
 
 					{/* AI Configuration Display */}

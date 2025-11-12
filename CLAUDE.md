@@ -185,8 +185,13 @@ do_action('datamachine_clear_pipelines_list_cache');
 do_action('datamachine_cache_set', $key, $data, $timeout, $group);
 
 // Engine Data Storage & Retrieval
-apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url); // Store source_url, image_url
-$engine_data = apply_filters('datamachine_engine_data', [], $job_id); // Retrieve for handlers
+apply_filters('datamachine_engine_data', null, $job_id, [
+    'source_url' => $source_url,
+    'image_url' => $image_url
+]); // Store engine data
+$engine_data = apply_filters('datamachine_engine_data', [], $job_id); // Retrieve all engine data
+$source_url = $engine_data['source_url'] ?? null;
+$image_url = $engine_data['image_url'] ?? null;
 ```
 
 ## Architecture
@@ -476,7 +481,10 @@ class Twitter {
 
 // Engine parameters stored in database by fetch handlers via centralized filter
 if ($job_id) {
-    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, [
+        'source_url' => $source_url,
+        'image_url' => $image_url
+    ]);
 }
 
 // Return structure from fetch handlers (engine parameters stored separately in database)
@@ -698,7 +706,10 @@ class MyFetchHandler {
 
         // Store engine parameters in database via centralized datamachine_engine_data filter
         if ($job_id) {
-            apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
+            apply_filters('datamachine_engine_data', null, $job_id, [
+                'source_url' => $source_url,
+                'image_url' => $image_url
+            ]);
         }
 
         return ['processed_items' => [$clean_data]];

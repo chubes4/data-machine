@@ -335,9 +335,12 @@ $image_url = $engine_data['image_url'] ?? null;
 
 **Engine Data Storage (by Fetch Handlers)**:
 ```php
-// Fetch handlers store engine parameters in database via centralized filter
+// Fetch handlers store engine parameters in database via centralized filter (array storage)
 if ($job_id) {
-    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, [
+        'source_url' => $source_url,
+        'image_url' => $image_url
+    ]);
 }
 ```
 

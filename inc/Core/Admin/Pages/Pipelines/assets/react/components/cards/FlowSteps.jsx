@@ -15,15 +15,13 @@ import DataFlowArrow from '../shared/DataFlowArrow';
  * @param {Object} props - Component props
  * @param {number} props.flowId - Flow ID
  * @param {Object} props.flowConfig - Flow configuration (keyed by flow_step_id)
- * @param {Array} props.pipelineSteps - Pipeline steps array
- * @param {Object} props.pipelineConfig - Pipeline AI configuration
+ * @param {Object} props.pipelineConfig - Pipeline configuration (keyed by pipeline_step_id)
  * @param {Function} props.onStepConfigured - Configure step handler
  * @returns {React.ReactElement} Flow steps container
  */
 export default function FlowSteps({
 	flowId,
 	flowConfig,
-	pipelineSteps,
 	pipelineConfig,
 	onStepConfigured
 }) {
@@ -31,7 +29,7 @@ export default function FlowSteps({
 	 * Sort flow steps by execution order and match with pipeline steps
 	 */
 	const sortedFlowSteps = useMemo(() => {
-		if (!flowConfig || !pipelineSteps || !Array.isArray(pipelineSteps)) {
+		if (!flowConfig || !pipelineConfig || typeof pipelineConfig !== 'object') {
 			return [];
 		}
 
@@ -48,9 +46,12 @@ export default function FlowSteps({
 			return orderA - orderB;
 		});
 
+		// Convert pipeline config to array for matching
+		const pipelineStepsArray = Object.values(pipelineConfig);
+
 		// Match with pipeline steps
 		return sorted.map(flowStep => {
-			const pipelineStep = pipelineSteps.find(
+			const pipelineStep = pipelineStepsArray.find(
 				ps => ps.pipeline_step_id === flowStep.pipeline_step_id
 			);
 
@@ -64,7 +65,7 @@ export default function FlowSteps({
 				}
 			};
 		});
-	}, [flowConfig, pipelineSteps]);
+	}, [flowConfig, pipelineConfig]);
 
 	/**
 	 * Empty state
@@ -90,35 +91,49 @@ export default function FlowSteps({
 
 	/**
 	 * Render steps with arrows
+	 * Structure: card, arrow, card, arrow, card
 	 */
+	const renderItems = () => {
+		const items = [];
+
+		sortedFlowSteps.forEach((step, index) => {
+			// Add card
+			items.push(
+				<div key={step.flowStepId} style={{ flex: '0 0 auto', minWidth: '300px', maxWidth: '300px' }}>
+					<FlowStepCard
+						flowId={flowId}
+						flowStepId={step.flowStepId}
+						flowStepConfig={step.flowStepConfig}
+						pipelineStep={step.pipelineStep}
+						pipelineConfig={pipelineConfig}
+						onConfigure={onStepConfigured}
+					/>
+				</div>
+			);
+
+			// Add arrow after card (except after last card)
+			if (index < sortedFlowSteps.length - 1) {
+				items.push(
+					<DataFlowArrow key={`arrow-${index}`} />
+				);
+			}
+		});
+
+		return items;
+	};
+
 	return (
 		<div
 			className="datamachine-flow-steps"
 			style={{
 				display: 'flex',
-				alignItems: 'stretch',
+				alignItems: 'center',
 				gap: '20px',
 				overflowX: 'auto',
 				padding: '20px 0'
 			}}
 		>
-			{sortedFlowSteps.map((step, index) => (
-				<div key={step.flowStepId} style={{ display: 'flex', alignItems: 'stretch' }}>
-					<div style={{ flex: '0 0 auto', minWidth: '300px', maxWidth: '300px' }}>
-						<FlowStepCard
-							flowId={flowId}
-							flowStepId={step.flowStepId}
-							flowStepConfig={step.flowStepConfig}
-							pipelineStep={step.pipelineStep}
-							pipelineConfig={pipelineConfig}
-							onConfigure={onStepConfigured}
-						/>
-					</div>
-
-					{/* Show arrow if not the last step */}
-					{index < sortedFlowSteps.length - 1 && <DataFlowArrow />}
-				</div>
-			))}
+			{renderItems()}
 		</div>
 	);
 }

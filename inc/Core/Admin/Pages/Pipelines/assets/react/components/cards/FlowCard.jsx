@@ -20,11 +20,10 @@ import { MODAL_TYPES } from '../../utils/constants';
  *
  * @param {Object} props - Component props
  * @param {Object} props.flow - Flow data
- * @param {Array} props.pipelineSteps - Pipeline steps array
- * @param {Object} props.pipelineConfig - Pipeline AI configuration
+ * @param {Object} props.pipelineConfig - Pipeline configuration
  * @returns {React.ReactElement} Flow card
  */
-export default function FlowCard({ flow, pipelineSteps, pipelineConfig }) {
+export default function FlowCard({ flow, pipelineConfig }) {
 	const { refreshData, openModal, closeModal, activeModal, modalData } = usePipelineContext();
 	const [handlerModalData, setHandlerModalData] = useState(null);
 	const [oauthModalData, setOauthModalData] = useState(null);
@@ -114,7 +113,7 @@ export default function FlowCard({ flow, pipelineSteps, pipelineConfig }) {
 	const handleStepConfigured = useCallback((flowStepId) => {
 		const flowStepConfig = flow.flow_config?.[flowStepId] || {};
 		const pipelineStepId = flowStepConfig.pipeline_step_id;
-		const pipelineStep = pipelineSteps.find(s => s.pipeline_step_id === pipelineStepId);
+		const pipelineStep = Object.values(pipelineConfig).find(s => s.pipeline_step_id === pipelineStepId);
 
 		// Store data for handler settings modal
 		const data = {
@@ -137,7 +136,7 @@ export default function FlowCard({ flow, pipelineSteps, pipelineConfig }) {
 			// If handler already selected, open settings modal directly
 			openModal(MODAL_TYPES.HANDLER_SETTINGS, data);
 		}
-	}, [flow.flow_config, flow.pipeline_id, flow.flow_id, pipelineSteps, openModal]);
+	}, [flow.flow_config, flow.pipeline_id, flow.flow_id, pipelineConfig, openModal]);
 
 	/**
 	 * Handle handler selection from handler selection modal
@@ -192,7 +191,6 @@ export default function FlowCard({ flow, pipelineSteps, pipelineConfig }) {
 					<FlowSteps
 						flowId={flow.flow_id}
 						flowConfig={flow.flow_config || {}}
-						pipelineSteps={pipelineSteps}
 						pipelineConfig={pipelineConfig}
 						onStepConfigured={handleStepConfigured}
 					/>

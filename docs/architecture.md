@@ -29,9 +29,12 @@ Three-action execution cycle:
 
 **Core Pattern**:
 ```php
-// Fetch handlers store via centralized filter
+// Fetch handlers store via centralized filter (array storage)
 if ($job_id) {
-    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, [
+        'source_url' => $source_url,
+        'image_url' => $image_url
+    ]);
 }
 
 // Steps retrieve via centralized filter (EngineData.php)

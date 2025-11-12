@@ -388,17 +388,15 @@ class Pipelines {
 				$pipeline = array_intersect_key($pipeline, array_flip($requested_fields));
 			}
 
-			// Get flows and steps for this pipeline
+			// Get flows for this pipeline
 			$all_databases = apply_filters('datamachine_db', []);
 			$db_flows = $all_databases['flows'] ?? null;
 			$flows = $db_flows ? $db_flows->get_flows_for_pipeline($pipeline_id) : [];
-			$pipeline_steps = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
 
 			return [
 				'success' => true,
 				'pipeline' => $pipeline,
-				'flows' => $flows,
-				'pipeline_steps' => $pipeline_steps
+				'flows' => $flows
 			];
 		} else {
 			// All pipelines retrieval

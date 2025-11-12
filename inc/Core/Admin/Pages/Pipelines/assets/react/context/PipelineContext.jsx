@@ -23,10 +23,31 @@ export function PipelineProvider({ children }) {
 	const [pipelines, setPipelines] = useState([]);
 	const [flows, setFlows] = useState([]);
 	const [refreshTrigger, setRefreshTrigger] = useState(0);
+	const [stepTypes, setStepTypes] = useState({});
 
 	// Modal state
 	const [activeModal, setActiveModal] = useState(null);
 	const [modalData, setModalData] = useState(null);
+
+	/**
+	 * Fetch step types on mount (one-time system configuration load)
+	 */
+	useEffect(() => {
+		const loadStepTypes = async () => {
+			try {
+				const response = await fetch('/wp-json/datamachine/v1/step-types');
+				const data = await response.json();
+
+				if (data.success && data.step_types) {
+					setStepTypes(data.step_types);
+				}
+			} catch (error) {
+				console.error('Failed to load step types:', error);
+			}
+		};
+
+		loadStepTypes();
+	}, []);
 
 	/**
 	 * Save selected pipeline to localStorage
@@ -105,6 +126,7 @@ export function PipelineProvider({ children }) {
 		setPipelines,
 		flows,
 		setFlows,
+		stepTypes,
 
 		// Refresh mechanism
 		refreshData,

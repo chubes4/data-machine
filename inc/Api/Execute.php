@@ -216,7 +216,7 @@ class Execute {
         }
 
         // Store configs in engine_data
-        $db_jobs->update_job_engine_data($job_id, [
+        $db_jobs->store_engine_data($job_id, [
             'flow_config' => $configs['flow_config'],
             'pipeline_config' => $configs['pipeline_config']
         ]);

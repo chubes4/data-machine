@@ -7,11 +7,11 @@
 import { useState, useEffect, useCallback, useRef } from '@wordpress/element';
 import { Card, CardBody, TextareaControl, Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import StepTypeIcon from '../shared/StepTypeIcon';
 import FlowStepHandler from './FlowStepHandler';
 import { updateUserMessage } from '../../utils/api';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
-import { slugToLabel } from '../../utils/formatters';
+import { getStepTypeLabel } from '../../utils/formatters';
+import { usePipelineContext } from '../../context/PipelineContext';
 
 /**
  * Flow Step Card Component
@@ -33,6 +33,7 @@ export default function FlowStepCard({
 	pipelineConfig,
 	onConfigure
 }) {
+	const { stepTypes } = usePipelineContext();
 	const isAiStep = pipelineStep.step_type === 'ai';
 	const aiConfig = isAiStep ? pipelineConfig[pipelineStep.pipeline_step_id] : null;
 
@@ -118,11 +119,7 @@ export default function FlowStepCard({
 
 				<div style={{ marginBottom: '12px' }}>
 					<div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-						<StepTypeIcon stepType={pipelineStep.step_type} size={20} />
-						<strong>{pipelineStep.label || slugToLabel(pipelineStep.step_type)}</strong>
-						<span style={{ color: '#757575', fontSize: '12px' }}>
-							(Order: {flowStepConfig.execution_order})
-						</span>
+						<strong>{getStepTypeLabel(pipelineStep.step_type)}</strong>
 					</div>
 
 					{/* AI Configuration Display */}
@@ -145,13 +142,20 @@ export default function FlowStepCard({
 						</div>
 					)}
 
-					{/* Handler Configuration */}
-					<FlowStepHandler
-						handlerSlug={flowStepConfig.handler_slug}
-						handlerConfig={flowStepConfig.handler_config || {}}
-						stepType={pipelineStep.step_type}
-						onConfigure={() => onConfigure && onConfigure(flowStepId)}
-					/>
+					{/* Handler Configuration - only for steps that use handlers */}
+					{(() => {
+						const stepTypeInfo = stepTypes[pipelineStep.step_type] || {};
+						const usesHandler = stepTypeInfo.uses_handler !== false; // Default true for safety
+
+						return usesHandler ? (
+							<FlowStepHandler
+								handlerSlug={flowStepConfig.handler_slug}
+								handlerConfig={flowStepConfig.handler_config || {}}
+								stepType={pipelineStep.step_type}
+								onConfigure={() => onConfigure && onConfigure(flowStepId)}
+							/>
+						) : null;
+					})()}
 				</div>
 			</CardBody>
 		</Card>

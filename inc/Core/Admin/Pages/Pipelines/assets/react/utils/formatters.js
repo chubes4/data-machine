@@ -148,38 +148,18 @@ const formatSettingValue = (value) => {
 };
 
 /**
- * Get step type display data
+ * Get step type label from backend configuration
  *
- * @param {string} stepType - Step type (fetch, ai, publish, update)
- * @returns {Object} Display data with icon, color, label
+ * @param {string} stepType - Step type (fetch, ai, publish, update, etc.)
+ * @returns {string} Human-readable label
  */
-export const getStepTypeDisplay = (stepType) => {
-	const stepTypeMap = {
-		'fetch': {
-			icon: '\u2B73',
-			color: '#0073aa',
-			label: __('Fetch', 'datamachine')
-		},
-		'ai': {
-			icon: '\u2728',
-			color: '#826eb4',
-			label: __('AI Process', 'datamachine')
-		},
-		'publish': {
-			icon: '\u2714',
-			color: '#46b450',
-			label: __('Publish', 'datamachine')
-		},
-		'update': {
-			icon: '\u267B',
-			color: '#f0b849',
-			label: __('Update', 'datamachine')
-		}
-	};
+export const getStepTypeLabel = (stepType) => {
+	if (!stepType) return '';
 
-	return stepTypeMap[stepType] || {
-		icon: '\u2022',
-		color: '#999',
-		label: slugToLabel(stepType)
-	};
+	// Get step types from backend configuration
+	const stepTypes = window.dataMachineConfig?.stepTypes || {};
+	const stepTypeConfig = stepTypes[stepType];
+
+	// Return label from backend or fallback to slug-to-label conversion
+	return stepTypeConfig?.label || slugToLabel(stepType);
 };

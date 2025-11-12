@@ -91,9 +91,12 @@ public function get_fetch_data(int $pipeline_id, array $handler_config, ?string 
 Fetch handlers store engine parameters in database for centralized access via `datamachine_engine_data` filter:
 
 ```php
-// Stored by fetch handlers via centralized filter
+// Stored by fetch handlers via centralized filter (array storage)
 if ($job_id) {
-    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, [
+        'source_url' => $source_url,
+        'image_url' => $image_url
+    ]);
 }
 
 // Retrieved by handlers via centralized filter
@@ -232,9 +235,12 @@ Fetch handlers provide essential metadata that AI steps use for content processi
 Fetch handlers seamlessly integrate with the tool-first AI architecture using centralized engine data storage:
 
 ```php
-// Fetch stores engine data via centralized filter (separate from AI data)
+// Fetch stores engine data via centralized filter (separate from AI data, array storage)
 if ($job_id) {
-    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, [
+        'source_url' => $source_url,
+        'image_url' => $image_url
+    ]);
 }
 
 // AI step processes clean content without URL pollution
@@ -299,9 +305,12 @@ class CustomFetchHandler {
                     'custom_source', $item['id'], $job_id);
             }
 
-            // Store engine data via centralized filter
+            // Store engine data via centralized filter (array storage)
             if ($job_id) {
-                apply_filters('datamachine_engine_data', null, $job_id, $item['url'], $item['image'] ?? '');
+                apply_filters('datamachine_engine_data', null, $job_id, [
+                    'source_url' => $item['url'],
+                    'image_url' => $item['image'] ?? ''
+                ]);
             }
 
             return ['processed_items' => [$this->create_data_packet($item)]];

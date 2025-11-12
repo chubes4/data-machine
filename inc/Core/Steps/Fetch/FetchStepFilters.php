@@ -20,7 +20,8 @@ function datamachine_register_fetch_step_filters() {
             'label' => __('Fetch', 'datamachine'),
             'description' => __('Collect data from external sources', 'datamachine'),
             'class' => FetchStep::class,
-            'position' => 10
+            'position' => 10,
+            'uses_handler' => true
         ];
         return $steps;
     });

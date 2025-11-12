@@ -36,7 +36,8 @@ function datamachine_register_publish_step_filters() {
             'label' => __('Publish', 'datamachine'),
             'description' => __('Publish to target destinations', 'datamachine'),
             'class' => PublishStep::class,
-            'position' => 30
+            'position' => 30,
+            'uses_handler' => true
         ];
         return $steps;
     });

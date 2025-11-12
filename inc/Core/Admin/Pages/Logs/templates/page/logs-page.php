@@ -13,30 +13,7 @@ if (!defined('WPINC')) {
     die;
 }
 
-// Handle form submissions directly in template (admin_init timing issues)
-if (!empty($_POST) && isset($_POST['datamachine_logs_action'])) {
-    // Verify nonce for security
-    $nonce = sanitize_text_field(wp_unslash($_POST['datamachine_logs_nonce'] ?? ''));
-    if (!wp_verify_nonce($nonce, 'datamachine_logs_action')) {
-        wp_die(esc_html__('Security check failed.', 'datamachine'));
-    }
-
-    $action = sanitize_text_field(wp_unslash($_POST['datamachine_logs_action']));
-
-    switch ($action) {
-        case 'clear_all':
-            do_action('datamachine_log', 'clear_all');
-            break;
-
-        case 'update_log_level':
-            $new_level = sanitize_text_field(wp_unslash($_POST['log_level'] ?? ''));
-            $available_levels = apply_filters('datamachine_log_file', [], 'get_available_levels');
-            if (array_key_exists($new_level, $available_levels)) {
-                do_action('datamachine_log', 'set_level', $new_level);
-            }
-            break;
-    }
-}
+// REST API only - no form submissions
 
 // Use data provided by Logs class render_content method
 // Variables available: $current_log_level, $log_file_info, $recent_logs, $log_file_path
@@ -91,13 +68,9 @@ if (!empty($_POST) && isset($_POST['datamachine_logs_action'])) {
         </p>
         
         <div class="datamachine-log-actions">
-            <form method="post" action="" class="datamachine-clear-logs-form" data-confirm-message="<?php esc_attr_e('Are you sure you want to clear all logs? This action cannot be undone.', 'datamachine'); ?>">
-                <?php wp_nonce_field('datamachine_logs_action', 'datamachine_logs_nonce'); ?>
-                <input type="hidden" name="datamachine_logs_action" value="clear_all">
-                <button type="submit" class="button">
-                    <?php esc_html_e('Clear All Logs', 'datamachine'); ?>
-                </button>
-            </form>
+            <button type="button" class="button datamachine-clear-logs-btn" data-confirm-message="<?php esc_attr_e('Are you sure you want to clear all logs? This action cannot be undone.', 'datamachine'); ?>">
+                <?php esc_html_e('Clear All Logs', 'datamachine'); ?>
+            </button>
             
             <button type="button" class="button datamachine-refresh-logs">
                 <?php esc_html_e('Refresh Logs', 'datamachine'); ?>

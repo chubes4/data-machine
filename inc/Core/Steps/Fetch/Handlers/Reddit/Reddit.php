@@ -466,7 +466,10 @@ class Reddit {
 						}
 					}
 
-					apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
+					apply_filters('datamachine_engine_data', null, $job_id, [
+						'source_url' => $source_url,
+						'image_url' => $image_url
+					]);
 				}
 
 				do_action('datamachine_log', 'debug', 'Reddit: Fetched data successfully', [

@@ -19,7 +19,8 @@ function datamachine_register_ai_step_filters() {
             'description' => __('Configure an intelligent agent with custom prompts and tools to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'datamachine'),
             'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
             'consume_all_packets' => true,
-            'position' => 20
+            'position' => 20,
+            'uses_handler' => false
         ];
         return $steps;
     });

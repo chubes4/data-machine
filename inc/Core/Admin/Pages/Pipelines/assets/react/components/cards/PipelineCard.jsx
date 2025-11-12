@@ -114,7 +114,6 @@ export default function PipelineCard({ pipeline, flows }) {
 
 					<PipelineSteps
 						pipelineId={pipeline.pipeline_id}
-						steps={pipeline.pipeline_steps || []}
 						pipelineConfig={pipeline.pipeline_config || {}}
 						onStepAdded={handleStepAdded}
 						onStepRemoved={handleStepRemoved}
@@ -126,7 +125,6 @@ export default function PipelineCard({ pipeline, flows }) {
 					<FlowsSection
 						pipelineId={pipeline.pipeline_id}
 						flows={flows}
-						pipelineSteps={pipeline.pipeline_steps || []}
 						pipelineConfig={pipeline.pipeline_config || {}}
 					/>
 				</CardBody>

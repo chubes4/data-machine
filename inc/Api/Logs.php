@@ -112,21 +112,18 @@ class Logs {
 	 *
 	 * DELETE /datamachine/v1/logs
 	 */
-	public static function handle_clear_logs($request) {
-		// Delegate to centralized delete action
-		do_action('datamachine_delete_logs');
+ 	public static function handle_clear_logs($request) {
+ 		// Log operation before clearing (don't log to the file we're clearing)
+ 		error_log('Data Machine: Logs cleared via REST API by user ' . wp_get_current_user()->user_login);
 
-		// Log operation
-		do_action('datamachine_log', 'info', 'Logs cleared via REST API', [
-			'user_id' => get_current_user_id(),
-			'user_login' => wp_get_current_user()->user_login
-		]);
+ 		// Delegate to centralized delete action
+ 		do_action('datamachine_delete_logs');
 
-		return [
-			'success' => true,
-			'message' => __('Logs cleared successfully.', 'datamachine')
-		];
-	}
+ 		return [
+ 			'success' => true,
+ 			'message' => __('Logs cleared successfully.', 'datamachine')
+ 		];
+ 	}
 
 	/**
 	 * Handle get log content request

@@ -43,7 +43,10 @@ Data Machine uses a Pipeline+Flow architecture where:
 
 // Engine parameters stored in database by fetch handlers via centralized filter
 if ($job_id) {
-    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, [
+        'source_url' => $source_url,
+        'image_url' => $image_url
+    ]);
 }
 
 // Engine parameters retrieved by handlers via centralized filter

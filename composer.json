@@ -70,7 +70,9 @@
             "inc/Core/Steps/AI/Directives/SiteContextDirective.php",
             "inc/Core/Steps/Update/UpdateStepFilters.php",
             "inc/Core/Steps/Update/Handlers/WordPress/WordPressFilters.php",
-            "inc/Engine/Filters/FilesRepository.php"
+            "inc/Engine/Filters/FilesRepository.php",
+            "inc/Api/StepTypes.php",
+            "inc/Api/Handlers.php"
         ]
     },
     "autoload-dev": {

@@ -225,7 +225,10 @@ class WordPressMedia {
                 if ($include_parent_content && $post->post_parent > 0) {
                     $source_url = get_permalink($post->post_parent) ?: '';
                 }
-                apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url ?: '');
+                apply_filters('datamachine_engine_data', null, $job_id, [
+                    'source_url' => $source_url,
+                    'image_url' => $image_url ?: ''
+                ]);
             }
 
             return ['processed_items' => [$input_data]];

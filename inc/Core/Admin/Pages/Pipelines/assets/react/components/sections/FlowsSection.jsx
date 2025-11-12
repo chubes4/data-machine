@@ -17,11 +17,10 @@ import { createFlow } from '../../utils/api';
  * @param {Object} props - Component props
  * @param {number} props.pipelineId - Pipeline ID
  * @param {Array} props.flows - Flows array
- * @param {Array} props.pipelineSteps - Pipeline steps array
- * @param {Object} props.pipelineConfig - Pipeline AI configuration
+ * @param {Object} props.pipelineConfig - Pipeline configuration
  * @returns {React.ReactElement} Flows section
  */
-export default function FlowsSection({ pipelineId, flows, pipelineSteps, pipelineConfig }) {
+export default function FlowsSection({ pipelineId, flows, pipelineConfig }) {
 	const { refreshData } = usePipelineContext();
 
 	/**
@@ -87,8 +86,7 @@ export default function FlowsSection({ pipelineId, flows, pipelineSteps, pipelin
 					<FlowCard
 						key={flow.flow_id}
 						flow={flow}
-						pipelineSteps={pipelineSteps}
-						pipelineConfig={pipelineConfig}
+							pipelineConfig={pipelineConfig}
 					/>
 				))}
 

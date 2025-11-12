@@ -159,70 +159,7 @@ class Logs
         return apply_filters('datamachine_log_file', 'error', 'get_level');
     }
 
-    /**
-     * Handle form submissions on admin_init.
-     */
-    public function handle_form_submissions()
-    {
-        // Delegate all form processing to handle_form_actions which has proper nonce verification
-        $this->handle_form_actions();
-    }
 
-    /**
-     * Handle form actions.
-     */
-    public function handle_form_actions()
-    {
-        $nonce = sanitize_text_field(wp_unslash($_POST['datamachine_logs_nonce'] ?? ''));
-        if (!wp_verify_nonce($nonce, 'datamachine_logs_action')) {
-            return;
-        }
-
-        if (!isset($_POST['datamachine_logs_action'])) {
-            return;
-        }
-
-        $action = sanitize_text_field(wp_unslash($_POST['datamachine_logs_action']));
-
-        switch ($action) {
-            case 'clear_all':
-                do_action('datamachine_log', 'clear_all');
-                $this->add_admin_notice(
-                    __('Logs cleared successfully.', 'datamachine'),
-                    'success'
-                );
-                break;
-
-            case 'update_log_level':
-                $new_level = sanitize_text_field(wp_unslash($_POST['log_level'] ?? ''));
-                $available_levels = apply_filters('datamachine_log_file', [], 'get_available_levels');
-                if (array_key_exists($new_level, $available_levels)) {
-                    do_action('datamachine_log', 'set_level', $new_level);
-                    $this->add_admin_notice(
-                        /* translators: %s: Log level name (e.g., debug, info, error) */
-                        sprintf(esc_html__('Log level updated to %s.', 'datamachine'), ucfirst($new_level)),
-                        'success'
-                    );
-                }
-                break;
-        }
-    }
-
-    /**
-     * Add admin notice.
-     *
-     * @param string $message Notice message
-     * @param string $type Notice type (success, error, warning, info)
-     */
-    private function add_admin_notice($message, $type = 'info')
-    {
-        add_action('admin_notices', function() use ($message, $type) {
-            $class = 'notice-' . $type;
-            echo '<div class="notice ' . esc_attr($class) . ' is-dismissible">';
-            echo '<p>' . esc_html($message) . '</p>';
-            echo '</div>';
-        });
-    }
 }
 
 // Instance creation handled by LogsFilters.php as needed

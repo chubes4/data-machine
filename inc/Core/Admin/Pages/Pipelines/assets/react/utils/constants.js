@@ -1,18 +1,8 @@
 /**
  * Constants for Data Machine React Application
  *
- * Centralized constant definitions for step types, intervals, and other shared values.
+ * Centralized constant definitions for intervals and other shared values.
  */
-
-/**
- * Step Types
- */
-export const STEP_TYPES = {
-	FETCH: 'fetch',
-	AI: 'ai',
-	PUBLISH: 'publish',
-	UPDATE: 'update'
-};
 
 /**
  * Scheduling Intervals

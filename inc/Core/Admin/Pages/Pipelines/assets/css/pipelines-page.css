@@ -142,13 +142,13 @@
     font-size: 13px;
 }
 
-/* Pipeline steps - responsive wrapping grid layout */
+/* Pipeline steps - responsive wrapping flex layout */
 .datamachine-pipeline-steps {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 20px;
     padding: 20px 0;
-    position: relative;
 }
 
 /* Universal step containers - removed, grid items are direct children */
@@ -373,7 +373,7 @@
 
 /* Flow steps section */
 .datamachine-flow-steps-section {
-    padding: 36px 18px;
+    padding: 20px;
 }
 
 .datamachine-flow-steps-header {
@@ -569,18 +569,14 @@
     text-decoration: underline;
 }
 
-/* Universal data flow arrows - positioned for wrapping grid */
+/* Universal data flow arrows - inline flex items */
 .datamachine-data-flow-arrow {
     color: #666;
     font-size: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    position: absolute;
-    right: -30px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 1;
+    flex: 0 0 auto;
     pointer-events: none;
 }
 
@@ -590,23 +586,10 @@
     font-size: 16px;
 }
 
-/* Responsive grid arrows - hide when items wrap */
-@media (max-width: 900px) {
-    .datamachine-pipeline-steps {
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    }
-}
-
+/* Responsive arrows - rotate on mobile */
 @media (max-width: 600px) {
-    .datamachine-pipeline-steps {
-        grid-template-columns: 1fr;
-    }
-
-    .datamachine-data-flow-arrow {
-        right: 50%;
-        top: auto;
-        bottom: -30px;
-        transform: translateX(50%) rotate(90deg);
+    .datamachine-data-flow-arrow svg {
+        transform: rotate(90deg);
     }
 }
 

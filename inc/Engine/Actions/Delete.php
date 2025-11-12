@@ -537,21 +537,16 @@ class Delete {
      *
      * @since 1.0.0
      */
-    public function handle_logs_deletion() {
-        $log_file = apply_filters('datamachine_log_file', null, 'get', null);
+     public function handle_logs_deletion() {
+         $log_file = apply_filters('datamachine_log_file', null, 'get', null);
 
-        if (!$log_file || !file_exists($log_file)) {
-            wp_send_json_success(['message' => __('No log file to clear.', 'datamachine')]);
-            return;
-        }
+         if (!$log_file || !file_exists($log_file)) {
+             return true; // No file to clear is not an error
+         }
 
-        $result = file_put_contents($log_file, '');
+         $result = file_put_contents($log_file, '');
 
-        if ($result !== false) {
-            wp_send_json_success(['message' => __('Logs cleared successfully.', 'datamachine')]);
-        } else {
-            wp_send_json_error(['message' => __('Failed to clear logs.', 'datamachine')]);
-        }
-    }
+         return $result !== false;
+     }
 
 }

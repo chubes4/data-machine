@@ -246,7 +246,10 @@ class WordPressAPI {
 
             // Store URLs in engine_data via centralized filter
             if ($job_id) {
-                apply_filters('datamachine_engine_data', null, $job_id, $source_link, $image_url ?: '');
+                apply_filters('datamachine_engine_data', null, $job_id, [
+                    'source_url' => $source_link,
+                    'image_url' => $image_url ?: ''
+                ]);
             }
 
             // Return clean data packet (no URLs in metadata for AI)

@@ -7,9 +7,8 @@
 import { useState } from '@wordpress/element';
 import { Modal, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import StepTypeIcon from '../shared/StepTypeIcon';
 import { addPipelineStep } from '../../utils/api';
-import { slugToLabel, getStepTypeDisplay } from '../../utils/formatters';
+import { getStepTypeLabel } from '../../utils/formatters';
 
 /**
  * Step Selection Modal Component
@@ -108,7 +107,6 @@ export default function StepSelectionModal({
 					}}
 				>
 					{Object.entries(stepTypes).map(([stepType, config]) => {
-						const display = getStepTypeDisplay(stepType);
 						const handlerCount = getHandlerCount(stepType);
 
 						return (
@@ -131,18 +129,15 @@ export default function StepSelectionModal({
 									gap: '8px'
 								}}
 								onMouseEnter={(e) => {
-									e.currentTarget.style.borderColor = display.color;
 									e.currentTarget.style.background = '#f9f9f9';
 								}}
 								onMouseLeave={(e) => {
-									e.currentTarget.style.borderColor = '#dcdcde';
 									e.currentTarget.style.background = '#ffffff';
 								}}
 							>
 								<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-									<StepTypeIcon stepType={stepType} size={24} />
 									<strong style={{ fontSize: '16px' }}>
-										{config.label || slugToLabel(stepType)}
+										{getStepTypeLabel(stepType)}
 									</strong>
 								</div>
 

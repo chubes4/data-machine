@@ -77,9 +77,12 @@ The WordPress Local handler generates clean data packets for AI processing while
 ### Engine Parameters Storage
 
 ```php
-// Stored in database via centralized datamachine_engine_data filter
+// Stored in database via centralized datamachine_engine_data filter (array storage)
 if ($job_id) {
-    apply_filters('datamachine_engine_data', null, $job_id, $source_url, $image_url);
+    apply_filters('datamachine_engine_data', null, $job_id, [
+        'source_url' => $source_url,
+        'image_url' => $image_url
+    ]);
 }
 ```
 

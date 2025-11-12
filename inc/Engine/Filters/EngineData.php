@@ -12,12 +12,12 @@ if (!defined('ABSPATH')) {
 function datamachine_register_engine_data_filter() {
 
     /**
-     * Flexible key/value storage for engine data.
+     * Array-based storage for engine data.
      *
-     * Storage mode: apply_filters('datamachine_engine_data', null, $job_id, $key, $value)
+     * Storage mode: apply_filters('datamachine_engine_data', null, $job_id, ['source_url' => $url, 'image_url' => $img])
      * Retrieval mode: apply_filters('datamachine_engine_data', [], $job_id)
      */
-    add_filter('datamachine_engine_data', function($default, $job_id, $key = null, $value = null) {
+    add_filter('datamachine_engine_data', function($default, $job_id, $data = null) {
         if (empty($job_id)) {
             return $default;
         }
@@ -32,16 +32,16 @@ function datamachine_register_engine_data_filter() {
             return $default;
         }
 
-        // Storage mode: when key and value are provided
-        if ($key !== null && $value !== null) {
+        // Storage mode: when data array is provided
+        if ($data !== null && is_array($data)) {
             $current_data = $db_jobs->retrieve_engine_data($job_id);
-            $current_data[$key] = $value;
-            $db_jobs->update_job_engine_data($job_id, $current_data);
+            $merged_data = array_merge($current_data ?: [], $data);
+            $db_jobs->store_engine_data($job_id, $merged_data);
 
-            do_action('datamachine_log', 'debug', 'Engine Data: Stored key/value', [
+            do_action('datamachine_log', 'debug', 'Engine Data: Stored data array', [
                 'job_id' => $job_id,
-                'key' => $key,
-                'value_type' => gettype($value)
+                'keys' => array_keys($data),
+                'total_keys' => count($merged_data)
             ]);
 
             return null;
@@ -64,7 +64,7 @@ function datamachine_register_engine_data_filter() {
 
         return $retrieved_data;
 
-    }, 10, 4);
+    }, 10, 3);
 
 }
 

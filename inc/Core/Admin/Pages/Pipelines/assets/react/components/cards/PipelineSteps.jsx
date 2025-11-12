@@ -16,8 +16,7 @@ import { reorderPipelineSteps } from '../../utils/api';
  *
  * @param {Object} props - Component props
  * @param {number} props.pipelineId - Pipeline ID
- * @param {Array} props.steps - Pipeline steps array
- * @param {Object} props.pipelineConfig - AI configuration keyed by pipeline_step_id
+ * @param {Object} props.pipelineConfig - Pipeline configuration keyed by pipeline_step_id
  * @param {Function} props.onStepAdded - Add step handler
  * @param {Function} props.onStepRemoved - Remove step handler
  * @param {Function} props.onStepConfigured - Configure step handler
@@ -25,7 +24,6 @@ import { reorderPipelineSteps } from '../../utils/api';
  */
 export default function PipelineSteps({
 	pipelineId,
-	steps,
 	pipelineConfig,
 	onStepAdded,
 	onStepRemoved,
@@ -35,16 +33,16 @@ export default function PipelineSteps({
 	 * Sort steps by execution order
 	 */
 	const sortedSteps = useMemo(() => {
-		if (!steps || !Array.isArray(steps)) {
+		if (!pipelineConfig || typeof pipelineConfig !== 'object') {
 			return [];
 		}
 
-		return [...steps].sort((a, b) => {
+		return Object.values(pipelineConfig).sort((a, b) => {
 			const orderA = a.execution_order || 0;
 			const orderB = b.execution_order || 0;
 			return orderA - orderB;
 		});
-	}, [steps]);
+	}, [pipelineConfig]);
 
 	/**
 	 * Drag & drop state
@@ -91,19 +89,14 @@ export default function PipelineSteps({
 
 	/**
 	 * Render steps with arrows in wrapping grid
+	 * Structure: card, arrow, card, arrow, card, arrow, empty
 	 */
-	return (
-		<div
-			className="datamachine-pipeline-steps"
-			style={{
-				display: 'grid',
-				gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 300px))',
-				gap: '20px',
-				padding: '20px 0',
-				position: 'relative'
-			}}
-		>
-			{sortedSteps.map((step, index) => (
+	const renderItems = () => {
+		const items = [];
+
+		sortedSteps.forEach((step, index) => {
+			// Add card
+			items.push(
 				<div
 					key={step.pipeline_step_id}
 					draggable={true}
@@ -111,7 +104,7 @@ export default function PipelineSteps({
 					onDragOver={(e) => e.preventDefault()}
 					onDrop={() => handleDrop(index)}
 					className={draggedIndex === index ? 'datamachine-step-dragging' : ''}
-					style={{ position: 'relative' }}
+					style={{ flex: '0 0 auto', minWidth: '300px', maxWidth: '300px' }}
 				>
 					<PipelineStepCard
 						step={step}
@@ -120,26 +113,46 @@ export default function PipelineSteps({
 						onDelete={onStepRemoved}
 						onConfigure={onStepConfigured}
 					/>
-
-					{/* Show arrow if not the last step */}
-					{index < sortedSteps.length - 1 && (
-						<DataFlowArrow
-							stepIndex={index}
-							totalSteps={sortedSteps.length}
-						/>
-					)}
 				</div>
-			))}
+			);
 
-			{/* Add step button with arrow */}
-			<div style={{ position: 'relative' }}>
-				<DataFlowArrow
-					stepIndex={sortedSteps.length - 1}
-					totalSteps={sortedSteps.length + 1}
-					beforeEmpty={true}
-				/>
+			// Add arrow after card (except after last card)
+			if (index < sortedSteps.length - 1) {
+				items.push(
+					<DataFlowArrow key={`arrow-${index}`} />
+				);
+			}
+		});
+
+		// Add arrow before empty card
+		if (sortedSteps.length > 0) {
+			items.push(
+				<DataFlowArrow key="arrow-empty" />
+			);
+		}
+
+		// Add empty card
+		items.push(
+			<div key="empty-card" style={{ flex: '0 0 auto', minWidth: '300px', maxWidth: '300px' }}>
 				<EmptyStepCard pipelineId={pipelineId} onAddStep={onStepAdded} />
 			</div>
+		);
+
+		return items;
+	};
+
+	return (
+		<div
+			className="datamachine-pipeline-steps"
+			style={{
+				display: 'flex',
+				flexWrap: 'wrap',
+				alignItems: 'center',
+				gap: '20px',
+				padding: '20px 0'
+			}}
+		>
+			{renderItems()}
 		</div>
 	);
 }

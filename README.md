@@ -1,7 +1,7 @@
 === Data Machine ===
 Contributors: chubes4
 Tags: ai, automation, content, workflow, pipeline
-Requires at least: 6.0
+Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.0
 Stable tag: 0.1.2

@@ -112,7 +112,10 @@ class Files {
 
         // Store URLs in engine_data via centralized filter
         if ($job_id) {
-            apply_filters('datamachine_engine_data', null, $job_id, '', $file_url); // No source URL for local files, image URL for images
+            apply_filters('datamachine_engine_data', null, $job_id, [
+                'source_url' => '',
+                'image_url' => $file_url // Image URL for images only
+            ]);
         }
 
         do_action('datamachine_log', 'debug', 'Files Input: Found unprocessed file for processing.', [

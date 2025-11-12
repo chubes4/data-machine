@@ -209,7 +209,10 @@ class GoogleSheetsFetch {
 
         // Store empty engine data for downstream handlers
         if ($job_id) {
-            apply_filters('datamachine_engine_data', null, $job_id, '', '');
+            apply_filters('datamachine_engine_data', null, $job_id, [
+                'source_url' => '',
+                'image_url' => ''
+            ]);
         }
 
         do_action('datamachine_log', 'debug', 'Google Sheets Fetch: Processed full spreadsheet.', [
@@ -278,10 +281,13 @@ class GoogleSheetsFetch {
                 'data' => $content_data,
                 'metadata' => $metadata
             ];
-            
+
             // Store empty engine data via centralized filter
             if ($job_id) {
-                apply_filters('datamachine_engine_data', null, $job_id, '', '');
+                apply_filters('datamachine_engine_data', null, $job_id, [
+                    'source_url' => '',
+                    'image_url' => ''
+                ]);
             }
 
             do_action('datamachine_log', 'debug', 'Google Sheets Fetch: Processed row.', [
@@ -364,7 +370,10 @@ class GoogleSheetsFetch {
 
             // Store empty engine data via centralized filter
             if ($job_id) {
-                apply_filters('datamachine_engine_data', null, $job_id, '', '');
+                apply_filters('datamachine_engine_data', null, $job_id, [
+                    'source_url' => '',
+                    'image_url' => ''
+                ]);
             }
 
             do_action('datamachine_log', 'debug', 'Google Sheets Fetch: Processed column.', [

@@ -129,7 +129,7 @@ export default function PipelineCheckboxTable({
 					)}
 
 					{pipelines.map((pipeline) => {
-						const stepCount = pipeline.pipeline_steps?.length || 0;
+						const stepCount = Object.keys(pipeline.pipeline_config || {}).length;
 						const flowCount = pipeline.flows?.length || 0;
 						const isSelected = selectedIds.includes(pipeline.pipeline_id);
 

@@ -209,7 +209,10 @@ class Rss {
             ];
 
             if ($job_id) {
-                apply_filters('datamachine_engine_data', null, $job_id, $link ?: '', $enclosure_url ?: '');
+                apply_filters('datamachine_engine_data', null, $job_id, [
+                    'source_url' => $link ?: '',
+                    'image_url' => $enclosure_url ?: ''
+                ]);
             }
 
             return ['processed_items' => [$input_data]];

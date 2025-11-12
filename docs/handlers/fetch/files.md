@@ -127,9 +127,12 @@ $handler_config = [
 
 **Engine Data Architecture**: Uses centralized filter pattern for engine data access:
 ```php
-// Storage by Files handler via centralized filter
+// Storage by Files handler via centralized filter (array storage)
 if ($job_id) {
-    apply_filters('datamachine_engine_data', null, $job_id, '', $file_url);
+    apply_filters('datamachine_engine_data', null, $job_id, [
+        'source_url' => '',  // Empty for local files
+        'image_url' => $file_url  // Public URL for images
+    ]);
 }
 
 // Retrieval by downstream handlers (via filter)
