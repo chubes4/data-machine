@@ -9,7 +9,7 @@ import { Card, CardBody, Button, TextareaControl, Notice } from '@wordpress/comp
 import { __ } from '@wordpress/i18n';
 import { updateSystemPrompt } from '../../utils/api';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
-import { getStepTypeLabel } from '../../utils/formatters';
+import { slugToLabel } from '../../utils/formatters';
 
 /**
  * Pipeline Step Card Component
@@ -122,7 +122,7 @@ export default function PipelineStepCard({ step, pipelineId, pipelineConfig, onD
 
 				<div style={{ marginBottom: '12px' }}>
 					<div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-						<strong>{getStepTypeLabel(step.step_type)}</strong>
+						<strong>{slugToLabel(step.step_type)}</strong>
 					</div>
 
 					{/* AI Configuration Display */}

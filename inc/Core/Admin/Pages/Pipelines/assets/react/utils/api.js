@@ -424,3 +424,15 @@ export const deleteContextFile = async (filename) => {
 		method: 'DELETE'
 	});
 };
+
+/**
+ * Fetch complete handler details
+ *
+ * @param {string} handlerSlug - Handler slug (e.g., 'twitter', 'wordpress_publish')
+ * @returns {Promise<Object>} Handler details including basic info, settings schema, and AI tool definition
+ */
+export const fetchHandlerDetails = async (handlerSlug) => {
+	return await apiRequest(`/handlers/${handlerSlug}`, {
+		method: 'GET'
+	});
+};

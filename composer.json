@@ -72,7 +72,9 @@
             "inc/Core/Steps/Update/Handlers/WordPress/WordPressFilters.php",
             "inc/Engine/Filters/FilesRepository.php",
             "inc/Api/StepTypes.php",
-            "inc/Api/Handlers.php"
+            "inc/Api/Handlers.php",
+            "inc/Api/Providers.php",
+            "inc/Api/Tools.php"
         ]
     },
     "autoload-dev": {

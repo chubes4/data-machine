@@ -82,6 +82,9 @@ export const formatInterval = (interval) => {
 export const slugToLabel = (slug) => {
 	if (!slug) return '';
 
+	// Special case for AI
+	if (slug === 'ai') return 'AI';
+
 	return slug
 		.split('_')
 		.map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -145,21 +148,4 @@ const formatSettingValue = (value) => {
 	}
 
 	return String(value);
-};
-
-/**
- * Get step type label from backend configuration
- *
- * @param {string} stepType - Step type (fetch, ai, publish, update, etc.)
- * @returns {string} Human-readable label
- */
-export const getStepTypeLabel = (stepType) => {
-	if (!stepType) return '';
-
-	// Get step types from backend configuration
-	const stepTypes = window.dataMachineConfig?.stepTypes || {};
-	const stepTypeConfig = stepTypes[stepType];
-
-	// Return label from backend or fallback to slug-to-label conversion
-	return stepTypeConfig?.label || slugToLabel(stepType);
 };

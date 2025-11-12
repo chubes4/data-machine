@@ -76,12 +76,12 @@ function datamachine_register_pipelines_admin_page_filters() {
                             'data' => [
                                 'restNamespace' => 'datamachine/v1',
                                 'restNonce' => wp_create_nonce('wp_rest'),
-                                'stepTypes' => apply_filters('datamachine_step_types', []),
-                                'handlers' => apply_filters('datamachine_handlers', []),
-                                'stepSettings' => apply_filters('datamachine_step_settings', []),
-                                'aiProviders' => datamachine_get_ai_providers_for_react(),
-                                'aiTools' => datamachine_get_ai_tools_for_react(),
-                                'handlerSettings' => apply_filters('datamachine_handler_settings', []),
+                                // stepTypes: Loaded via REST API in PipelineContext
+                                // handlers: Loaded via REST API in PipelineContext
+                                // stepSettings: Dead code - removed
+                                // aiProviders: Loaded via REST API in ConfigureStepModal
+                                // aiTools: Loaded via REST API in AIToolsSelector
+                                // handlerSettings: Lazy-loaded via REST API in HandlerSettingsModal
                             ]
                         ]
                     ]

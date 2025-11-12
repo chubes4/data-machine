@@ -8,7 +8,8 @@ import { useState } from '@wordpress/element';
 import { Modal, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { addPipelineStep } from '../../utils/api';
-import { getStepTypeLabel } from '../../utils/formatters';
+import { slugToLabel } from '../../utils/formatters';
+import { usePipelineContext } from '../../context/PipelineContext';
 
 /**
  * Step Selection Modal Component
@@ -28,18 +29,13 @@ export default function StepSelectionModal({
 	nextExecutionOrder,
 	onSuccess
 }) {
+	const { stepTypes, handlers } = usePipelineContext();
 	const [isAdding, setIsAdding] = useState(false);
 	const [error, setError] = useState(null);
 
 	if (!isOpen) {
 		return null;
 	}
-
-	/**
-	 * Get step types from WordPress globals
-	 */
-	const stepTypes = window.dataMachineConfig?.stepTypes || {};
-	const handlers = window.dataMachineConfig?.handlers || {};
 
 	/**
 	 * Count handlers for each step type
@@ -137,7 +133,7 @@ export default function StepSelectionModal({
 							>
 								<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
 									<strong style={{ fontSize: '16px' }}>
-										{getStepTypeLabel(stepType)}
+										{slugToLabel(stepType)}
 									</strong>
 								</div>
 

@@ -24,6 +24,7 @@ export function PipelineProvider({ children }) {
 	const [flows, setFlows] = useState([]);
 	const [refreshTrigger, setRefreshTrigger] = useState(0);
 	const [stepTypes, setStepTypes] = useState({});
+	const [handlers, setHandlers] = useState({});
 
 	// Modal state
 	const [activeModal, setActiveModal] = useState(null);
@@ -47,6 +48,26 @@ export function PipelineProvider({ children }) {
 		};
 
 		loadStepTypes();
+	}, []);
+
+	/**
+	 * Fetch handlers on mount (one-time system configuration load)
+	 */
+	useEffect(() => {
+		const loadHandlers = async () => {
+			try {
+				const response = await fetch('/wp-json/datamachine/v1/handlers');
+				const data = await response.json();
+
+				if (data.success && data.handlers) {
+					setHandlers(data.handlers);
+				}
+			} catch (error) {
+				console.error('Failed to load handlers:', error);
+			}
+		};
+
+		loadHandlers();
 	}, []);
 
 	/**
@@ -127,6 +148,7 @@ export function PipelineProvider({ children }) {
 		flows,
 		setFlows,
 		stepTypes,
+		handlers,
 
 		// Refresh mechanism
 		refreshData,

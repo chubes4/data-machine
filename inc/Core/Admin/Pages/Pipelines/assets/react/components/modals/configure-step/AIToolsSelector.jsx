@@ -22,21 +22,35 @@ export default function AIToolsSelector({
 	onSelectionChange
 }) {
 	const [tools, setTools] = useState([]);
+	const [isLoadingTools, setIsLoadingTools] = useState(true);
 	const [unconfiguredTools, setUnconfiguredTools] = useState([]);
 
 	/**
-	 * Load tools from WordPress globals
+	 * Fetch tools from REST API
 	 */
 	useEffect(() => {
-		const aiTools = window.dataMachineConfig?.aiTools || {};
-		const toolsArray = Object.entries(aiTools).map(([toolId, toolData]) => ({
-			toolId,
-			label: toolData.label || toolId,
-			description: toolData.description || '',
-			configured: toolData.configured || false
-		}));
+		const loadTools = async () => {
+			try {
+				const response = await fetch('/wp-json/datamachine/v1/tools');
+				const data = await response.json();
 
-		setTools(toolsArray);
+				if (data.success) {
+					const toolsArray = Object.entries(data.tools).map(([toolId, toolData]) => ({
+						toolId,
+						label: toolData.label || toolId,
+						description: toolData.description || '',
+						configured: toolData.configured || false
+					}));
+					setTools(toolsArray);
+				}
+			} catch (error) {
+				console.error('Failed to load tools:', error);
+			} finally {
+				setIsLoadingTools(false);
+			}
+		};
+
+		loadTools();
 	}, []);
 
 	/**
@@ -62,6 +76,14 @@ export default function AIToolsSelector({
 			onSelectionChange(newSelection);
 		}
 	};
+
+	if (isLoadingTools) {
+		return (
+			<div style={{ marginTop: '16px', padding: '20px', textAlign: 'center', color: '#757575' }}>
+				{__('Loading AI tools...', 'datamachine')}
+			</div>
+		);
+	}
 
 	if (tools.length === 0) {
 		return null;

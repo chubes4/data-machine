@@ -36,8 +36,28 @@ export default function ConfigureStepModal({
 	const [model, setModel] = useState(currentConfig?.ai_model || '');
 	const [systemPrompt, setSystemPrompt] = useState(currentConfig?.system_prompt || '');
 	const [selectedTools, setSelectedTools] = useState(currentConfig?.enabled_tools || []);
+	const [aiProviders, setAiProviders] = useState({});
+	const [isLoadingProviders, setIsLoadingProviders] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [error, setError] = useState(null);
+
+	/**
+	 * Fetch AI providers when modal opens
+	 */
+	useEffect(() => {
+		if (isOpen) {
+			setIsLoadingProviders(true);
+			fetch('/wp-json/datamachine/v1/providers')
+				.then(res => res.json())
+				.then(data => {
+					if (data.success) {
+						setAiProviders(data.providers);
+					}
+				})
+				.catch(err => console.error('Failed to load providers:', err))
+				.finally(() => setIsLoadingProviders(false));
+		}
+	}, [isOpen]);
 
 	/**
 	 * Reset form when modal opens with new config
@@ -55,11 +75,6 @@ export default function ConfigureStepModal({
 	if (!isOpen) {
 		return null;
 	}
-
-	/**
-	 * Get AI providers from WordPress globals
-	 */
-	const aiProviders = window.dataMachineConfig?.aiProviders || {};
 
 	/**
 	 * Get provider options

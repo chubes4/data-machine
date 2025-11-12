@@ -10,7 +10,7 @@ import { __ } from '@wordpress/i18n';
 import FlowStepHandler from './FlowStepHandler';
 import { updateUserMessage } from '../../utils/api';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
-import { getStepTypeLabel } from '../../utils/formatters';
+import { slugToLabel } from '../../utils/formatters';
 import { usePipelineContext } from '../../context/PipelineContext';
 
 /**
@@ -119,7 +119,7 @@ export default function FlowStepCard({
 
 				<div style={{ marginBottom: '12px' }}>
 					<div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-						<strong>{getStepTypeLabel(pipelineStep.step_type)}</strong>
+						<strong>{slugToLabel(pipelineStep.step_type)}</strong>
 					</div>
 
 					{/* AI Configuration Display */}

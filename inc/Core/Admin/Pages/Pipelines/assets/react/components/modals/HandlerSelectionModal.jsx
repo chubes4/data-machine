@@ -7,6 +7,7 @@
 import { Modal, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { slugToLabel } from '../../utils/formatters';
+import { usePipelineContext } from '../../context/PipelineContext';
 
 /**
  * Handler Selection Modal Component
@@ -24,14 +25,11 @@ export default function HandlerSelectionModal({
 	stepType,
 	onSelectHandler
 }) {
+	const { handlers: allHandlers } = usePipelineContext();
+
 	if (!isOpen) {
 		return null;
 	}
-
-	/**
-	 * Get handlers from WordPress globals
-	 */
-	const allHandlers = window.dataMachineConfig?.handlers || {};
 
 	/**
 	 * Filter handlers by step type

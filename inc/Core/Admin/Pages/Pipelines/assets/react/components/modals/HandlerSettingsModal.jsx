@@ -7,9 +7,10 @@
 import { useState, useEffect } from '@wordpress/element';
 import { Modal, Button, TextControl, SelectControl, TextareaControl, CheckboxControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { updateFlowHandler } from '../../utils/api';
+import { updateFlowHandler, fetchHandlerDetails } from '../../utils/api';
 import { slugToLabel } from '../../utils/formatters';
 import { MODAL_TYPES } from '../../utils/constants';
+import { usePipelineContext } from '../../context/PipelineContext';
 import FilesHandlerSettings from './handler-settings/files/FilesHandlerSettings';
 
 /**
@@ -42,9 +43,35 @@ export default function HandlerSettingsModal({
 	onChangeHandler,
 	onOAuthConnect
 }) {
+	const { handlers: allHandlers } = usePipelineContext();
 	const [settings, setSettings] = useState(currentSettings || {});
+	const [settingsFields, setSettingsFields] = useState({});
+	const [isLoadingSettings, setIsLoadingSettings] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [error, setError] = useState(null);
+
+	/**
+	 * Fetch handler settings schema when modal opens
+	 */
+	useEffect(() => {
+		if (isOpen && handlerSlug) {
+			setIsLoadingSettings(true);
+			setError(null);
+
+			fetchHandlerDetails(handlerSlug).then(response => {
+				if (response.success && response.data.handler) {
+					setSettingsFields(response.data.handler.settings || {});
+				} else {
+					setError(response.message || __('Failed to load handler settings', 'datamachine'));
+				}
+			}).catch(err => {
+				console.error('Handler details fetch error:', err);
+				setError(__('An error occurred while loading settings', 'datamachine'));
+			}).finally(() => {
+				setIsLoadingSettings(false);
+			});
+		}
+	}, [isOpen, handlerSlug]);
 
 	/**
 	 * Reset form when modal opens with new settings
@@ -52,18 +79,16 @@ export default function HandlerSettingsModal({
 	useEffect(() => {
 		if (isOpen) {
 			setSettings(currentSettings || {});
-			setError(null);
 		}
-	}, [isOpen, currentSettings, handlerSlug]);
+	}, [isOpen, currentSettings]);
 
 	if (!isOpen) {
 		return null;
 	}
 
 	/**
-	 * Get handler info from WordPress globals
+	 * Get handler info from context
 	 */
-	const allHandlers = window.dataMachineConfig?.handlers || {};
 	const handlerInfo = allHandlers[handlerSlug] || {};
 
 	/**
@@ -173,13 +198,6 @@ export default function HandlerSettingsModal({
 		}
 	};
 
-	/**
-	 * Get handler settings fields from WordPress globals
-	 * Note: In production, these should be fetched from REST API
-	 */
-	const handlerSettings = window.dataMachineConfig?.handlerSettings?.[handlerSlug] || {};
-	const settingsFields = handlerSettings.fields || {};
-
 	return (
 		<Modal
 			title={__('Configure Handler', 'datamachine')}
@@ -224,13 +242,22 @@ export default function HandlerSettingsModal({
 					)}
 				</div>
 
+				{/* Loading state while fetching settings schema */}
+				{isLoadingSettings && (
+					<div style={{ padding: '40px', textAlign: 'center' }}>
+						<p style={{ margin: 0, color: '#757575' }}>
+							{__('Loading handler settings...', 'datamachine')}
+						</p>
+					</div>
+				)}
+
 				{/* Files handler gets specialized UI */}
-				{handlerSlug === 'files' ? (
+				{!isLoadingSettings && handlerSlug === 'files' ? (
 					<FilesHandlerSettings
 						currentSettings={settings}
 						onSettingsChange={(newSettings) => setSettings(prev => ({ ...prev, ...newSettings }))}
 					/>
-				) : (
+				) : !isLoadingSettings && (
 					<>
 						{Object.keys(settingsFields).length === 0 && (
 							<div style={{ padding: '20px', background: '#f9f9f9', border: '1px solid #dcdcde', borderRadius: '4px', textAlign: 'center' }}>
