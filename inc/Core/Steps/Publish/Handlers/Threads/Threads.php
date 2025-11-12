@@ -283,6 +283,6 @@ class Threads {
     }
 
     public static function get_label(): string {
-        return __('Threads', 'data-machine');
+        return __('Threads', 'datamachine');
     }
 }

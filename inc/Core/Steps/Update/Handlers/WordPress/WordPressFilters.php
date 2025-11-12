@@ -15,8 +15,8 @@ function datamachine_register_wordpress_update_filters() {
             $handlers['wordpress_update'] = [
                 'type' => 'update',
                 'class' => WordPress::class,
-                'label' => __('WordPress Update', 'data-machine'),
-                'description' => __('Update existing WordPress posts and pages', 'data-machine')
+                'label' => __('WordPress Update', 'datamachine'),
+                'description' => __('Update existing WordPress posts and pages', 'datamachine')
             ];
         }
         return $handlers;

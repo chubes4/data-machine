@@ -22,7 +22,7 @@ export default function FlowFooter({ schedulingConfig }) {
 
 	const scheduleDisplay = interval && interval !== 'manual'
 		? interval
-		: __('Manual', 'data-machine');
+		: __('Manual', 'datamachine');
 
 	return (
 		<div
@@ -38,20 +38,20 @@ export default function FlowFooter({ schedulingConfig }) {
 			}}
 		>
 			<div className="datamachine-flow-meta-item">
-				<strong>{__('Schedule:', 'data-machine')}</strong>
+				<strong>{__('Schedule:', 'datamachine')}</strong>
 				{' '}
 				{scheduleDisplay}
 			</div>
 
 			<div className="datamachine-flow-meta-item">
-				<strong>{__('Last Run:', 'data-machine')}</strong>
+				<strong>{__('Last Run:', 'datamachine')}</strong>
 				{' '}
 				{formatDateTime(last_run_at)}
 			</div>
 
 			{interval && interval !== 'manual' && (
 				<div className="datamachine-flow-meta-item">
-					<strong>{__('Next Run:', 'data-machine')}</strong>
+					<strong>{__('Next Run:', 'datamachine')}</strong>
 					{' '}
 					{formatDateTime(next_run_time)}
 				</div>

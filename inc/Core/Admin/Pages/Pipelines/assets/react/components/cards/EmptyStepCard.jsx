@@ -35,7 +35,7 @@ export default function EmptyStepCard({ pipelineId, onAddStep }) {
 				variant="secondary"
 				onClick={() => onAddStep && onAddStep(pipelineId)}
 			>
-				{__('Add Step', 'data-machine')}
+				{__('Add Step', 'datamachine')}
 			</Button>
 		</div>
 	);

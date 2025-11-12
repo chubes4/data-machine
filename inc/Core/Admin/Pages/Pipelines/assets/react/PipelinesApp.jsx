@@ -61,7 +61,7 @@ export default function PipelinesApp() {
 		return (
 			<div className="datamachine-pipelines-loading">
 				<Spinner />
-				<p>{__('Loading pipelines...', 'data-machine')}</p>
+				<p>{__('Loading pipelines...', 'datamachine')}</p>
 			</div>
 		);
 	}
@@ -83,7 +83,7 @@ export default function PipelinesApp() {
 	if (pipelines.length === 0) {
 		return (
 			<Notice status="info" isDismissible={false}>
-				<p>{__('No pipelines found. Create a pipeline to get started.', 'data-machine')}</p>
+				<p>{__('No pipelines found. Create a pipeline to get started.', 'datamachine')}</p>
 			</Notice>
 		);
 	}
@@ -112,13 +112,13 @@ export default function PipelinesApp() {
 					disabled={isCreatingPipeline}
 					isBusy={isCreatingPipeline}
 				>
-					{__('Add New Pipeline', 'data-machine')}
+					{__('Add New Pipeline', 'datamachine')}
 				</Button>
 				<Button
 					variant="secondary"
 					onClick={() => openModal(MODAL_TYPES.IMPORT_EXPORT)}
 				>
-					{__('Import / Export', 'data-machine')}
+					{__('Import / Export', 'datamachine')}
 				</Button>
 			</div>
 

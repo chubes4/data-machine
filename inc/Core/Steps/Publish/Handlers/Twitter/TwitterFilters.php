@@ -15,8 +15,8 @@ function datamachine_register_twitter_filters() {
             $handlers['twitter'] = [
                 'type' => 'publish',
                 'class' => Twitter::class,
-                'label' => __('Twitter', 'data-machine'),
-                'description' => __('Post content to Twitter with media support', 'data-machine'),
+                'label' => __('Twitter', 'datamachine'),
+                'description' => __('Post content to Twitter with media support', 'datamachine'),
                 'requires_auth' => true
             ];
         }

@@ -15,8 +15,8 @@ function datamachine_register_threads_filters() {
             $handlers['threads'] = [
                 'type' => 'publish',
                 'class' => Threads::class,
-                'label' => __('Threads', 'data-machine'),
-                'description' => __('Publish content to Threads (Meta\'s Twitter alternative)', 'data-machine'),
+                'label' => __('Threads', 'datamachine'),
+                'description' => __('Publish content to Threads (Meta\'s Twitter alternative)', 'datamachine'),
                 'requires_auth' => true
             ];
         }

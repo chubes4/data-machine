@@ -61,10 +61,10 @@ function datamachine_register_wordpress_filters() {
                 }
             } elseif (in_array($setting_key, ['post_status', 'post_type']) && $current_value === 'any') {
                 // Special 'any' value
-                $display_value = __('Any', 'data-machine');
+                $display_value = __('Any', 'datamachine');
             } elseif (in_array($setting_key, ['source_url', 'search']) && empty($current_value)) {
                 // Empty source_url or search
-                $display_value = __('N/A', 'data-machine');
+                $display_value = __('N/A', 'datamachine');
             }
 
             $customized_display[] = [

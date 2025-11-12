@@ -40,7 +40,7 @@ class Files {
                 'flow_step_id' => [
                     'required' => false,
                     'type' => 'string',
-                    'description' => __('Flow step ID for flow-level files', 'data-machine'),
+                    'description' => __('Flow step ID for flow-level files', 'datamachine'),
                     'sanitize_callback' => function($param) {
                         return sanitize_text_field($param);
                     }
@@ -48,7 +48,7 @@ class Files {
                 'pipeline_id' => [
                     'required' => false,
                     'type' => 'integer',
-                    'description' => __('Pipeline ID for pipeline context files', 'data-machine'),
+                    'description' => __('Pipeline ID for pipeline context files', 'datamachine'),
                     'sanitize_callback' => function($param) {
                         return absint($param);
                     }
@@ -117,7 +117,7 @@ class Files {
         if (!current_user_can('manage_options')) {
             return new WP_Error(
                 'rest_forbidden',
-                __('You do not have permission to manage files.', 'data-machine'),
+                __('You do not have permission to manage files.', 'datamachine'),
                 ['status' => 403]
             );
         }
@@ -136,7 +136,7 @@ class Files {
         if (!$flow_step_id && !$pipeline_id) {
             return new WP_Error(
                 'missing_scope',
-                __('Must provide either flow_step_id or pipeline_id.', 'data-machine'),
+                __('Must provide either flow_step_id or pipeline_id.', 'datamachine'),
                 ['status' => 400]
             );
         }
@@ -144,7 +144,7 @@ class Files {
         if ($flow_step_id && $pipeline_id) {
             return new WP_Error(
                 'conflicting_scope',
-                __('Cannot provide both flow_step_id and pipeline_id.', 'data-machine'),
+                __('Cannot provide both flow_step_id and pipeline_id.', 'datamachine'),
                 ['status' => 400]
             );
         }
@@ -153,7 +153,7 @@ class Files {
         if (empty($files['file'])) {
             return new WP_Error(
                 'missing_file',
-                __('File upload is required.', 'data-machine'),
+                __('File upload is required.', 'datamachine'),
                 ['status' => 400]
             );
         }
@@ -162,7 +162,7 @@ class Files {
         if (!is_array($uploaded)) {
             return new WP_Error(
                 'invalid_file_structure',
-                __('Invalid file upload payload.', 'data-machine'),
+                __('Invalid file upload payload.', 'datamachine'),
                 ['status' => 400]
             );
         }
@@ -171,7 +171,7 @@ class Files {
         if ($upload_error !== UPLOAD_ERR_OK) {
             return new WP_Error(
                 'upload_failed',
-                __('File upload failed.', 'data-machine'),
+                __('File upload failed.', 'datamachine'),
                 ['status' => 400]
             );
         }
@@ -181,7 +181,7 @@ class Files {
         if (empty($tmp_name) || !is_uploaded_file($tmp_name)) {
             return new WP_Error(
                 'invalid_tmp_name',
-                __('Invalid temporary file.', 'data-machine'),
+                __('Invalid temporary file.', 'datamachine'),
                 ['status' => 400]
             );
         }
@@ -214,7 +214,7 @@ class Files {
         if (!$repository) {
             return new WP_Error(
                 'files_repository_unavailable',
-                __('File repository service not available.', 'data-machine'),
+                __('File repository service not available.', 'datamachine'),
                 ['status' => 500]
             );
         }
@@ -225,7 +225,7 @@ class Files {
             if (empty($pipeline)) {
                 return new WP_Error(
                     'pipeline_not_found',
-                    __('Pipeline not found.', 'data-machine'),
+                    __('Pipeline not found.', 'datamachine'),
                     ['status' => 404]
                 );
             }
@@ -240,7 +240,7 @@ class Files {
             if (!$file_info) {
                 return new WP_Error(
                     'pipeline_file_store_failed',
-                    __('Failed to store pipeline context file.', 'data-machine'),
+                    __('Failed to store pipeline context file.', 'datamachine'),
                     ['status' => 500]
                 );
             }
@@ -260,7 +260,7 @@ class Files {
                 'file' => $file_info,
                 'scope' => 'pipeline',
                 /* translators: %s: Uploaded file name */
-                'message' => sprintf(__('Pipeline context file "%s" uploaded successfully.', 'data-machine'), $file['name']),
+                'message' => sprintf(__('Pipeline context file "%s" uploaded successfully.', 'datamachine'), $file['name']),
             ]);
             $response->set_status(201);
             return $response;
@@ -272,7 +272,7 @@ class Files {
             if (!$parts || empty($parts['flow_id'])) {
                 return new WP_Error(
                     'invalid_flow_step_id',
-                    __('Invalid flow step ID format.', 'data-machine'),
+                    __('Invalid flow step ID format.', 'datamachine'),
                     ['status' => 400]
                 );
             }
@@ -283,7 +283,7 @@ class Files {
             if (!$stored_path) {
                 return new WP_Error(
                     'files_repository_store_failed',
-                    __('Failed to store file.', 'data-machine'),
+                    __('Failed to store file.', 'datamachine'),
                     ['status' => 500]
                 );
             }
@@ -305,7 +305,7 @@ class Files {
                 'file_info' => $file_info,
                 'scope' => 'flow',
                 /* translators: %s: Uploaded file name */
-                'message' => sprintf(__('File "%s" uploaded successfully.', 'data-machine'), $file['name']),
+                'message' => sprintf(__('File "%s" uploaded successfully.', 'datamachine'), $file['name']),
             ]);
             $response->set_status(201);
             return $response;
@@ -322,7 +322,7 @@ class Files {
         if (!$flow_step_id && !$pipeline_id) {
             return new WP_Error(
                 'missing_scope',
-                __('Must provide either flow_step_id or pipeline_id.', 'data-machine'),
+                __('Must provide either flow_step_id or pipeline_id.', 'datamachine'),
                 ['status' => 400]
             );
         }
@@ -347,7 +347,7 @@ class Files {
             if (!$parts || empty($parts['flow_id'])) {
                 return new WP_Error(
                     'invalid_flow_step_id',
-                    __('Invalid flow step ID format.', 'data-machine'),
+                    __('Invalid flow step ID format.', 'datamachine'),
                     ['status' => 400]
                 );
             }
@@ -374,7 +374,7 @@ class Files {
         if (!$flow_step_id && !$pipeline_id) {
             return new WP_Error(
                 'missing_scope',
-                __('Must provide either flow_step_id or pipeline_id.', 'data-machine'),
+                __('Must provide either flow_step_id or pipeline_id.', 'datamachine'),
                 ['status' => 400]
             );
         }
@@ -417,7 +417,7 @@ class Files {
             if (!$parts || empty($parts['flow_id'])) {
                 return new WP_Error(
                     'invalid_flow_step_id',
-                    __('Invalid flow step ID format.', 'data-machine'),
+                    __('Invalid flow step ID format.', 'datamachine'),
                     ['status' => 400]
                 );
             }
@@ -462,14 +462,14 @@ class Files {
     private static function validate_file(array $file): void {
         $file_size = filesize($file['tmp_name']);
         if ($file_size === false) {
-            throw new \Exception(__('Cannot determine file size.', 'data-machine'));
+            throw new \Exception(__('Cannot determine file size.', 'datamachine'));
         }
 
         $max_file_size = 32 * 1024 * 1024; // 32MB
         if ($file_size > $max_file_size) {
             throw new \Exception(sprintf(
                 /* translators: %1$s: Current file size, %2$s: Maximum allowed file size */
-                __('File too large: %1$s. Maximum allowed size: %2$s', 'data-machine'),
+                __('File too large: %1$s. Maximum allowed size: %2$s', 'datamachine'),
                 size_format($file_size),
                 size_format($max_file_size)
             ));
@@ -478,11 +478,11 @@ class Files {
         $dangerous_extensions = ['php', 'phtml', 'php3', 'php4', 'php5', 'php7', 'phps', 'pht', 'phar', 'exe', 'bat', 'cmd', 'scr', 'com', 'pif', 'vbs', 'js', 'jar', 'msi', 'dll', 'sh', 'pl', 'py', 'rb', 'asp', 'aspx', 'jsp', 'htaccess'];
         $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         if (in_array($file_extension, $dangerous_extensions, true)) {
-            throw new \Exception(__('File type not allowed for security reasons.', 'data-machine'));
+            throw new \Exception(__('File type not allowed for security reasons.', 'datamachine'));
         }
 
         if (strpos($file['name'], '..') !== false || strpos($file['name'], '/') !== false || strpos($file['name'], '\\') !== false) {
-            throw new \Exception(__('Invalid file name detected.', 'data-machine'));
+            throw new \Exception(__('Invalid file name detected.', 'datamachine'));
         }
 
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -500,7 +500,7 @@ class Files {
             ];
 
             if ($detected_mime && in_array($detected_mime, $dangerous_mimes, true)) {
-                throw new \Exception(__('File content type not allowed for security reasons.', 'data-machine'));
+                throw new \Exception(__('File content type not allowed for security reasons.', 'datamachine'));
             }
         }
     }

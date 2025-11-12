@@ -44,7 +44,7 @@ class Reddit {
 
 		$options = [
 			'timeout' => 30,
-			'user_agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION
+			'user_agent' => 'php:DataMachineWPPlugin:v' . DATAMACHINE_VERSION
 		];
 
 		return $repository->store_remote_file($image_url, $filename, $flow_step_id, $options);
@@ -163,7 +163,7 @@ class Reddit {
 				$time_param
 			);
 			$args = [
-				'user-agent' => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION,
+				'user-agent' => 'php:DataMachineWPPlugin:v' . DATAMACHINE_VERSION,
 				'headers' => [
 					'Authorization' => 'Bearer ' . $access_token
 				]
@@ -196,7 +196,7 @@ class Reddit {
 			$response_data = json_decode($body, true);
 			if (json_last_error() !== JSON_ERROR_NONE) {
 				/* translators: %s: JSON error message */
-				$error_message = sprintf(__('Invalid JSON from Reddit API: %s', 'data-machine'), json_last_error_msg());
+				$error_message = sprintf(__('Invalid JSON from Reddit API: %s', 'datamachine'), json_last_error_msg());
 				if ($pages_fetched === 1) {
 					do_action('datamachine_log', 'error', 'Reddit Input: Invalid JSON response.', ['pipeline_id' => $pipeline_id, 'error' => $error_message]);
 					return ['processed_items' => []];

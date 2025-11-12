@@ -29,12 +29,12 @@ if (!$has_auth) {
     <div class="datamachine-handler-auth-container">
         <div class="datamachine-handler-auth-header">
             <?php /* translators: %s: Handler name/label */ ?>
-            <h3><?php echo esc_html(sprintf(__('%s Authentication', 'data-machine'), $handler_label)); ?></h3>
+            <h3><?php echo esc_html(sprintf(__('%s Authentication', 'datamachine'), $handler_label)); ?></h3>
         </div>
         <div class="datamachine-auth-not-available">
-            <h4><?php esc_html_e('Authentication Not Required', 'data-machine'); ?></h4>
+            <h4><?php esc_html_e('Authentication Not Required', 'datamachine'); ?></h4>
             <?php /* translators: %s: Handler name/label */ ?>
-            <p><?php echo esc_html(sprintf(__('The %s handler does not require authentication to function.', 'data-machine'), $handler_label)); ?></p>
+            <p><?php echo esc_html(sprintf(__('The %s handler does not require authentication to function.', 'datamachine'), $handler_label)); ?></p>
         </div>
         <div class="datamachine-auth-actions">
             <?php 
@@ -43,7 +43,7 @@ if (!$has_auth) {
             <button type="button" class="button button-secondary datamachine-modal-open" 
                     data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
                     data-context='<?php echo esc_attr(wp_json_encode(['flow_step_id' => $flow_step_id, 'step_type' => $step_type, 'handler_slug' => $handler_slug, 'pipeline_id' => $pipeline_id, 'flow_id' => $flow_id])); ?>'>
-                <?php esc_html_e('Back to Settings', 'data-machine'); ?>
+                <?php esc_html_e('Back to Settings', 'datamachine'); ?>
             </button>
         </div>
     </div>
@@ -70,14 +70,14 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
 <div class="datamachine-handler-auth-container">
     <div class="datamachine-handler-auth-header">
         <?php /* translators: %s: Handler name/label */ ?>
-        <h3><?php echo esc_html(sprintf(__('%s Authentication', 'data-machine'), $handler_label)); ?></h3>
-        <p><?php echo esc_html(sprintf(__('Configure API credentials and manage account connection.', 'data-machine'), $handler_label)); ?></p>
+        <h3><?php echo esc_html(sprintf(__('%s Authentication', 'datamachine'), $handler_label)); ?></h3>
+        <p><?php echo esc_html(sprintf(__('Configure API credentials and manage account connection.', 'datamachine'), $handler_label)); ?></p>
     </div>
     
     <?php if (!empty($config_fields)): ?>
     <!-- Configuration Form (always visible) -->
     <div class="datamachine-auth-config-section">
-        <h4><?php esc_html_e('API Configuration', 'data-machine'); ?></h4>
+        <h4><?php esc_html_e('API Configuration', 'datamachine'); ?></h4>
         
         <form class="datamachine-auth-config-form" data-handler="<?php echo esc_attr($handler_slug); ?>">
             <input type="hidden" name="handler_slug" value="<?php echo esc_attr($handler_slug); ?>" />
@@ -112,9 +112,9 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
             <div class="datamachine-config-actions">
                 <button type="submit" class="button button-secondary">
                     <?php if ($uses_oauth): ?>
-                        <?php esc_html_e('Save Configuration', 'data-machine'); ?>
+                        <?php esc_html_e('Save Configuration', 'datamachine'); ?>
                     <?php else: ?>
-                        <?php esc_html_e('Save Credentials', 'data-machine'); ?>
+                        <?php esc_html_e('Save Credentials', 'datamachine'); ?>
                     <?php endif; ?>
                 </button>
             </div>
@@ -124,8 +124,8 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
         <!-- Redirect URI Display for OAuth providers -->
         <div class="datamachine-redirect-uri-section">
             <?php /* translators: %s: Handler name (capitalized) */ ?>
-            <h5><?php echo esc_html(sprintf(__('Redirect URI for %s App', 'data-machine'), ucfirst($handler_slug))); ?></h5>
-            <p><?php esc_html_e('Copy this URL and paste it in your app settings under "redirect uri" or "callback URL":', 'data-machine'); ?></p>
+            <h5><?php echo esc_html(sprintf(__('Redirect URI for %s App', 'datamachine'), ucfirst($handler_slug))); ?></h5>
+            <p><?php esc_html_e('Copy this URL and paste it in your app settings under "redirect uri" or "callback URL":', 'datamachine'); ?></p>
             <code class="datamachine-redirect-uri-code">
                 <?php echo esc_html(apply_filters('datamachine_oauth_callback', '', $handler_slug)); ?>
             </code>
@@ -136,25 +136,25 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
 
     <!-- Connection Status & Actions -->
     <div class="datamachine-auth-connection-section">
-        <h4><?php esc_html_e('Account Connection', 'data-machine'); ?></h4>
+        <h4><?php esc_html_e('Account Connection', 'datamachine'); ?></h4>
         
         <div class="datamachine-auth-status <?php echo $is_authenticated ? 'datamachine-auth-status--connected' : 'datamachine-auth-status--disconnected'; ?>">
             <?php if ($is_authenticated): ?>
                 <div class="datamachine-auth-connected">
                     <span class="datamachine-auth-indicator datamachine-auth-indicator--connected">
                         <span class="dashicons dashicons-yes-alt"></span>
-                        <strong><?php esc_html_e('Connected', 'data-machine'); ?></strong>
+                        <strong><?php esc_html_e('Connected', 'datamachine'); ?></strong>
                     </span>
                     <?php if ($account_details): ?>
                         <div class="datamachine-auth-account-details">
                             <?php if (!empty($account_details['username'])): ?>
-                                <p><strong><?php esc_html_e('Account:', 'data-machine'); ?></strong> <?php echo esc_html($account_details['username']); ?></p>
+                                <p><strong><?php esc_html_e('Account:', 'datamachine'); ?></strong> <?php echo esc_html($account_details['username']); ?></p>
                             <?php endif; ?>
                             <?php if (!empty($account_details['name'])): ?>
-                                <p><strong><?php esc_html_e('Name:', 'data-machine'); ?></strong> <?php echo esc_html($account_details['name']); ?></p>
+                                <p><strong><?php esc_html_e('Name:', 'datamachine'); ?></strong> <?php echo esc_html($account_details['name']); ?></p>
                             <?php endif; ?>
                             <?php if (!empty($account_details['email'])): ?>
-                                <p><strong><?php esc_html_e('Email:', 'data-machine'); ?></strong> <?php echo esc_html($account_details['email']); ?></p>
+                                <p><strong><?php esc_html_e('Email:', 'datamachine'); ?></strong> <?php echo esc_html($account_details['email']); ?></p>
                             <?php endif; ?>
                         </div>
                     <?php endif; ?>
@@ -163,14 +163,14 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
                 <div class="datamachine-auth-disconnected">
                     <span class="datamachine-auth-indicator datamachine-auth-indicator--disconnected">
                         <span class="dashicons dashicons-warning"></span>
-                        <strong><?php esc_html_e('Not Connected', 'data-machine'); ?></strong>
+                        <strong><?php esc_html_e('Not Connected', 'datamachine'); ?></strong>
                     </span>
                     <?php if ($uses_oauth): ?>
                         <?php /* translators: %s: Handler name/label */ ?>
-                        <p><?php echo esc_html(sprintf(__('Connect your %s account to enable this handler.', 'data-machine'), $handler_label)); ?></p>
+                        <p><?php echo esc_html(sprintf(__('Connect your %s account to enable this handler.', 'datamachine'), $handler_label)); ?></p>
                     <?php else: ?>
                         <?php /* translators: %s: Handler name/label */ ?>
-                        <p><?php echo esc_html(sprintf(__('Configure your %s credentials to enable this handler.', 'data-machine'), $handler_label)); ?></p>
+                        <p><?php echo esc_html(sprintf(__('Configure your %s credentials to enable this handler.', 'datamachine'), $handler_label)); ?></p>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
@@ -180,7 +180,7 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
                 <?php if ($is_authenticated): ?>
                     <button type="button" class="button button-secondary datamachine-disconnect-account" 
                             data-handler="<?php echo esc_attr($handler_slug); ?>">
-                        <?php esc_html_e('Disconnect', 'data-machine'); ?>
+                        <?php esc_html_e('Disconnect', 'datamachine'); ?>
                     </button>
                 <?php else: ?>
                     <?php if ($uses_oauth): ?>
@@ -197,13 +197,13 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
                                 data-handler="<?php echo esc_attr($handler_slug); ?>"
                                 data-oauth-url="<?php echo esc_attr($oauth_url); ?>">
                             <?php /* translators: %s: Handler name/label */ ?>
-                            <?php echo esc_html(sprintf(__('Connect %s', 'data-machine'), $handler_label)); ?>
+                            <?php echo esc_html(sprintf(__('Connect %s', 'datamachine'), $handler_label)); ?>
                         </button>
                     <?php else: ?>
                         <!-- Simple credential providers just need config saved -->
                         <p class="datamachine-simple-auth-message">
                             <?php /* translators: %s: Handler name/label */ ?>
-                            <?php echo esc_html(sprintf(__('Save your %s credentials above to enable this handler.', 'data-machine'), $handler_label)); ?>
+                            <?php echo esc_html(sprintf(__('Save your %s credentials above to enable this handler.', 'datamachine'), $handler_label)); ?>
                         </p>
                     <?php endif; ?>
                 <?php endif; ?>
@@ -219,7 +219,7 @@ if ($is_authenticated && method_exists($auth_instance, 'get_account_details')) {
         <button type="button" class="button button-secondary datamachine-modal-content" 
                 data-template="handler-settings/<?php echo esc_attr($template_slug); ?>"
                 data-context='<?php echo esc_attr(wp_json_encode(['flow_step_id' => $flow_step_id, 'step_type' => $step_type, 'handler_slug' => $handler_slug, 'pipeline_id' => $pipeline_id, 'flow_id' => $flow_id])); ?>'>
-            <?php esc_html_e('Back to Settings', 'data-machine'); ?>
+            <?php esc_html_e('Back to Settings', 'datamachine'); ?>
         </button>
     </div>
 </div>

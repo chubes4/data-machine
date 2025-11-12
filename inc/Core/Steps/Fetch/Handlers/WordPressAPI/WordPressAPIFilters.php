@@ -36,8 +36,8 @@ function datamachine_register_wordpress_api_fetch_filters() {
             $handlers['wordpress_api'] = [
                 'type' => 'fetch',
                 'class' => WordPressAPI::class,
-                'label' => __('WordPress REST API', 'data-machine'),
-                'description' => __('Fetch content from public WordPress sites via REST API', 'data-machine')
+                'label' => __('WordPress REST API', 'datamachine'),
+                'description' => __('Fetch content from public WordPress sites via REST API', 'datamachine')
             ];
         }
         return $handlers;

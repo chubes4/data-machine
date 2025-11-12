@@ -14,7 +14,7 @@ import { __ } from '@wordpress/i18n';
  */
 export const formatDateTime = (timestamp) => {
 	if (!timestamp || timestamp === '0000-00-00 00:00:00') {
-		return __('Never', 'data-machine');
+		return __('Never', 'datamachine');
 	}
 
 	try {
@@ -27,16 +27,16 @@ export const formatDateTime = (timestamp) => {
 
 		// Relative time for recent timestamps
 		if (diffMins < 1) {
-			return __('Just now', 'data-machine');
+			return __('Just now', 'datamachine');
 		}
 		if (diffMins < 60) {
-			return `${diffMins} ${__('minutes ago', 'data-machine')}`;
+			return `${diffMins} ${__('minutes ago', 'datamachine')}`;
 		}
 		if (diffHours < 24) {
-			return `${diffHours} ${__('hours ago', 'data-machine')}`;
+			return `${diffHours} ${__('hours ago', 'datamachine')}`;
 		}
 		if (diffDays < 7) {
-			return `${diffDays} ${__('days ago', 'data-machine')}`;
+			return `${diffDays} ${__('days ago', 'datamachine')}`;
 		}
 
 		// Absolute date for older timestamps
@@ -61,12 +61,12 @@ export const formatDateTime = (timestamp) => {
  */
 export const formatInterval = (interval) => {
 	const intervalMap = {
-		'hourly': __('Every hour', 'data-machine'),
-		'twicedaily': __('Twice daily', 'data-machine'),
-		'daily': __('Daily', 'data-machine'),
-		'weekly': __('Weekly', 'data-machine'),
-		'monthly': __('Monthly', 'data-machine'),
-		'manual': __('Manual only', 'data-machine')
+		'hourly': __('Every hour', 'datamachine'),
+		'twicedaily': __('Twice daily', 'datamachine'),
+		'daily': __('Daily', 'datamachine'),
+		'weekly': __('Weekly', 'datamachine'),
+		'monthly': __('Monthly', 'datamachine'),
+		'manual': __('Manual only', 'datamachine')
 	};
 
 	return intervalMap[interval] || interval;
@@ -133,7 +133,7 @@ const formatSettingValue = (value) => {
 	}
 
 	if (typeof value === 'boolean') {
-		return value ? __('Yes', 'data-machine') : __('No', 'data-machine');
+		return value ? __('Yes', 'datamachine') : __('No', 'datamachine');
 	}
 
 	if (Array.isArray(value)) {
@@ -158,22 +158,22 @@ export const getStepTypeDisplay = (stepType) => {
 		'fetch': {
 			icon: '\u2B73',
 			color: '#0073aa',
-			label: __('Fetch', 'data-machine')
+			label: __('Fetch', 'datamachine')
 		},
 		'ai': {
 			icon: '\u2728',
 			color: '#826eb4',
-			label: __('AI Process', 'data-machine')
+			label: __('AI Process', 'datamachine')
 		},
 		'publish': {
 			icon: '\u2714',
 			color: '#46b450',
-			label: __('Publish', 'data-machine')
+			label: __('Publish', 'datamachine')
 		},
 		'update': {
 			icon: '\u267B',
 			color: '#f0b849',
-			label: __('Update', 'data-machine')
+			label: __('Update', 'datamachine')
 		}
 	};
 

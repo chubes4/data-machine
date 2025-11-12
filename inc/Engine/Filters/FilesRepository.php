@@ -28,7 +28,7 @@ add_action('datamachine_cleanup_old_files', function() {
     $repository = $repositories['files'] ?? null;
 
     if ($repository) {
-        $settings = datamachine_get_data_machine_settings();
+        $settings = datamachine_get_datamachine_settings();
         $retention_days = $settings['file_retention_days'] ?? 7;
 
         $deleted_count = $repository->cleanup_old_files($retention_days);
@@ -291,7 +291,7 @@ class FilesRepository {
         }
 
         $timeout = $options['timeout'] ?? 30;
-        $user_agent = $options['user_agent'] ?? 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (WordPress File Repository)';
+        $user_agent = $options['user_agent'] ?? 'php:DataMachineWPPlugin:v' . DATAMACHINE_VERSION . ' (WordPress File Repository)';
 
         try {
             $response = wp_remote_get($url, [

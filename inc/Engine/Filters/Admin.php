@@ -42,9 +42,9 @@ function datamachine_register_admin_filters() {
         // Handle core modal templates
         if (strpos($template_name, 'modal/') === 0) {
             $modal_template_name = substr($template_name, 6);
-            $core_modal_template_path = DATA_MACHINE_PATH . 'inc/Core/Admin/Modal/templates/' . $modal_template_name . '.php';
+            $core_modal_template_path = DATAMACHINE_PATH . 'inc/Core/Admin/Modal/templates/' . $modal_template_name . '.php';
         } else {
-            $core_modal_template_path = DATA_MACHINE_PATH . 'inc/Core/Admin/Modal/templates/' . $template_name . '.php';
+            $core_modal_template_path = DATAMACHINE_PATH . 'inc/Core/Admin/Modal/templates/' . $template_name . '.php';
         }
         
         if (file_exists($core_modal_template_path)) {
@@ -118,8 +118,8 @@ function datamachine_register_admin_menu() {
     $first_slug = key($registered_pages);
     
     $main_menu_hook = add_menu_page(
-        __('Data Machine', 'data-machine'),
-        __('Data Machine', 'data-machine'),
+        __('Data Machine', 'datamachine'),
+        __('Data Machine', 'datamachine'),
         $first_page['capability'] ?? 'manage_options',
         'datamachine-' . $first_slug,
         '', // No callback - main menu is just container
@@ -166,14 +166,14 @@ function datamachine_register_admin_menu() {
 // Settings component registration
 add_action('init', function() {
     // Load Settings component
-    require_once DATA_MACHINE_PATH . 'inc/Core/Admin/Settings/SettingsFilters.php';
+    require_once DATAMACHINE_PATH . 'inc/Core/Admin/Settings/SettingsFilters.php';
 }, 1);
 
 /**
  * Get Data Machine settings with defaults.
  */
-function datamachine_get_data_machine_settings() {
-    return get_option('data_machine_settings', [
+function datamachine_get_datamachine_settings() {
+    return get_option('datamachine_settings', [
         'engine_mode' => false,
         'enabled_pages' => [],
         'enabled_tools' => [],
@@ -189,7 +189,7 @@ function datamachine_get_data_machine_settings() {
  * Get enabled admin pages based on settings.
  */
 function datamachine_get_enabled_admin_pages() {
-    $settings = datamachine_get_data_machine_settings();
+    $settings = datamachine_get_datamachine_settings();
 
     if ($settings['engine_mode']) {
         return [];
@@ -209,7 +209,7 @@ function datamachine_get_enabled_admin_pages() {
  * Get enabled general AI tools (non-handler-specific).
  */
 function datamachine_get_enabled_general_tools() {
-    $settings = datamachine_get_data_machine_settings();
+    $settings = datamachine_get_datamachine_settings();
     $all_tools = apply_filters('ai_tools', []);
 
     $general_tools = array_filter($all_tools, function($tool_config) {
@@ -267,7 +267,7 @@ function datamachine_render_admin_page_content($page_config, $page_slug) {
     } else {
         // Default empty state
         echo '<div class="wrap"><h1>' . esc_html($page_config['page_title'] ?? ucfirst($page_slug)) . '</h1>';
-        echo '<p>' . esc_html__('Page content not configured.', 'data-machine') . '</p></div>';
+        echo '<p>' . esc_html__('Page content not configured.', 'datamachine') . '</p></div>';
     }
 }
 
@@ -399,9 +399,9 @@ function datamachine_enqueue_admin_assets( $hook_suffix ) {
 }
 
 function datamachine_enqueue_page_assets($assets, $page_slug) {
-    $plugin_base_path = DATA_MACHINE_PATH;
-    $plugin_base_url = DATA_MACHINE_URL;
-    $version = DATA_MACHINE_VERSION;
+    $plugin_base_path = DATAMACHINE_PATH;
+    $plugin_base_url = DATAMACHINE_URL;
+    $version = DATAMACHINE_VERSION;
     
     // Enqueue CSS files
     if (!empty($assets['css'])) {

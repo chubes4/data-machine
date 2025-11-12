@@ -40,7 +40,7 @@ class Auth {
 						'required' => true,
 						'type' => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
-						'description' => __('Handler identifier (e.g., twitter, facebook)', 'data-machine'),
+						'description' => __('Handler identifier (e.g., twitter, facebook)', 'datamachine'),
 					],
 				]
 			],
@@ -53,7 +53,7 @@ class Auth {
 						'required' => true,
 						'type' => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
-						'description' => __('Handler identifier', 'data-machine'),
+						'description' => __('Handler identifier', 'datamachine'),
 					],
 				]
 			]
@@ -68,7 +68,7 @@ class Auth {
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Handler identifier', 'data-machine'),
+					'description' => __('Handler identifier', 'datamachine'),
 				],
 			]
 		]);
@@ -81,7 +81,7 @@ class Auth {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to manage authentication.', 'data-machine'),
+				__('You do not have permission to manage authentication.', 'datamachine'),
 				['status' => 403]
 			);
 		}
@@ -100,7 +100,7 @@ class Auth {
 		if (empty($handler_slug)) {
 			return new \WP_Error(
 				'missing_handler',
-				__('Handler slug is required', 'data-machine'),
+				__('Handler slug is required', 'datamachine'),
 				['status' => 400]
 			);
 		}
@@ -112,7 +112,7 @@ class Auth {
 		if (!$auth_instance) {
 			return new \WP_Error(
 				'auth_provider_not_found',
-				__('Authentication provider not found', 'data-machine'),
+				__('Authentication provider not found', 'datamachine'),
 				['status' => 404]
 			);
 		}
@@ -128,7 +128,7 @@ class Auth {
 			return [
 				'success' => true,
 				/* translators: %s: Service name (e.g., Twitter, Facebook) */
-				'message' => sprintf(__('%s account disconnected successfully', 'data-machine'), ucfirst($handler_slug))
+				'message' => sprintf(__('%s account disconnected successfully', 'datamachine'), ucfirst($handler_slug))
 			];
 		} else {
 			do_action('datamachine_log', 'error', 'Failed to disconnect account', [
@@ -137,7 +137,7 @@ class Auth {
 
 			return new \WP_Error(
 				'disconnect_failed',
-				__('Failed to disconnect account', 'data-machine'),
+				__('Failed to disconnect account', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -154,7 +154,7 @@ class Auth {
 		if (empty($handler_slug)) {
 			return new \WP_Error(
 				'missing_handler',
-				__('Handler slug is required', 'data-machine'),
+				__('Handler slug is required', 'datamachine'),
 				['status' => 400]
 			);
 		}
@@ -166,7 +166,7 @@ class Auth {
 		if (!$auth_instance) {
 			return new \WP_Error(
 				'auth_provider_not_found',
-				__('Authentication provider not found', 'data-machine'),
+				__('Authentication provider not found', 'datamachine'),
 				['status' => 404]
 			);
 		}
@@ -247,7 +247,7 @@ class Auth {
 		if (empty($handler_slug)) {
 			return new \WP_Error(
 				'missing_handler',
-				__('Handler slug is required', 'data-machine'),
+				__('Handler slug is required', 'datamachine'),
 				['status' => 400]
 			);
 		}
@@ -259,7 +259,7 @@ class Auth {
 		if (!$auth_instance || !method_exists($auth_instance, 'get_config_fields')) {
 			return new \WP_Error(
 				'invalid_auth_provider',
-				__('Auth provider not found or invalid', 'data-machine'),
+				__('Auth provider not found or invalid', 'datamachine'),
 				['status' => 404]
 			);
 		}
@@ -287,7 +287,7 @@ class Auth {
 				return new \WP_Error(
 					'required_field_missing',
 					/* translators: %s: Field label (e.g., API Key, Client ID) */
-					sprintf(__('%s is required', 'data-machine'), $field_config['label']),
+					sprintf(__('%s is required', 'datamachine'), $field_config['label']),
 					['status' => 400]
 				);
 			}
@@ -315,7 +315,7 @@ class Auth {
 			if (!$data_changed) {
 				return [
 					'success' => true,
-					'message' => __('Configuration is already up to date - no changes detected', 'data-machine')
+					'message' => __('Configuration is already up to date - no changes detected', 'datamachine')
 				];
 			}
 		}
@@ -330,12 +330,12 @@ class Auth {
 		if ($saved) {
 			return [
 				'success' => true,
-				'message' => __('Configuration saved successfully', 'data-machine')
+				'message' => __('Configuration saved successfully', 'datamachine')
 			];
 		} else {
 			return new \WP_Error(
 				'save_failed',
-				__('Failed to save configuration', 'data-machine'),
+				__('Failed to save configuration', 'datamachine'),
 				['status' => 500]
 			);
 		}

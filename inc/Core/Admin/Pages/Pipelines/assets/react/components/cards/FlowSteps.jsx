@@ -82,7 +82,7 @@ export default function FlowSteps({
 				}}
 			>
 				<p style={{ color: '#757575', margin: 0 }}>
-					{__('No steps configured for this flow.', 'data-machine')}
+					{__('No steps configured for this flow.', 'datamachine')}
 				</p>
 			</div>
 		);

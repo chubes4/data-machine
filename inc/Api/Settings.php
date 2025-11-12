@@ -39,12 +39,12 @@ class Settings {
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Tool identifier', 'data-machine'),
+					'description' => __('Tool identifier', 'datamachine'),
 				],
 				'config_data' => [
 					'required' => true,
 					'type' => 'object',
-					'description' => __('Tool configuration data', 'data-machine'),
+					'description' => __('Tool configuration data', 'datamachine'),
 				],
 			],
 		]);
@@ -64,7 +64,7 @@ class Settings {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to manage settings.', 'data-machine'),
+				__('You do not have permission to manage settings.', 'datamachine'),
 				['status' => 403]
 			);
 		}
@@ -82,7 +82,7 @@ class Settings {
 		if (empty($tool_id)) {
 			return new \WP_Error(
 				'missing_tool_id',
-				__('Tool ID is required.', 'data-machine'),
+				__('Tool ID is required.', 'datamachine'),
 				['status' => 400]
 			);
 		}
@@ -90,7 +90,7 @@ class Settings {
 		if (empty($config_data) || !is_array($config_data)) {
 			return new \WP_Error(
 				'invalid_config_data',
-				__('Valid configuration data is required.', 'data-machine'),
+				__('Valid configuration data is required.', 'datamachine'),
 				['status' => 400]
 			);
 		}
@@ -118,7 +118,7 @@ class Settings {
 		return new \WP_Error(
 			'no_tool_handler',
 			sprintf(
-				__('No configuration handler found for tool: %s', 'data-machine'),
+				__('No configuration handler found for tool: %s', 'datamachine'),
 				$tool_id
 			),
 			['status' => 500]
@@ -139,7 +139,7 @@ class Settings {
 
 		return [
 			'success' => true,
-			'message' => __('All cache has been cleared successfully.', 'data-machine')
+			'message' => __('All cache has been cleared successfully.', 'datamachine')
 		];
 	}
 }

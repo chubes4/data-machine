@@ -62,12 +62,12 @@ export default function PipelineStepCard({ step, pipelineId, pipelineConfig, onD
 			);
 
 			if (!response.success) {
-				setError(response.message || __('Failed to update prompt', 'data-machine'));
+				setError(response.message || __('Failed to update prompt', 'datamachine'));
 				setLocalPrompt(currentPrompt); // Revert on error
 			}
 		} catch (err) {
 			console.error('Prompt update error:', err);
-			setError(err.message || __('An error occurred', 'data-machine'));
+			setError(err.message || __('An error occurred', 'datamachine'));
 			setLocalPrompt(currentPrompt); // Revert on error
 		} finally {
 			setIsSaving(false);
@@ -95,7 +95,7 @@ export default function PipelineStepCard({ step, pipelineId, pipelineConfig, onD
 	 * Handle step deletion
 	 */
 	const handleDelete = useCallback(() => {
-		const confirmed = window.confirm(__('Are you sure you want to remove this step?', 'data-machine'));
+		const confirmed = window.confirm(__('Are you sure you want to remove this step?', 'datamachine'));
 
 		if (confirmed && onDelete) {
 			onDelete(step.pipeline_step_id);
@@ -135,18 +135,18 @@ export default function PipelineStepCard({ step, pipelineId, pipelineConfig, onD
 					{aiConfig && (
 						<div className="datamachine-ai-config-display" style={{ marginTop: '12px' }}>
 							<div style={{ fontSize: '12px', color: '#757575', marginBottom: '8px' }}>
-								<strong>{__('AI Provider:', 'data-machine')}</strong> {aiConfig.ai_provider || 'Not configured'}
+								<strong>{__('AI Provider:', 'datamachine')}</strong> {aiConfig.ai_provider || 'Not configured'}
 								{' | '}
-								<strong>{__('Model:', 'data-machine')}</strong> {aiConfig.ai_model || 'Not configured'}
+								<strong>{__('Model:', 'datamachine')}</strong> {aiConfig.ai_model || 'Not configured'}
 							</div>
 
 							<TextareaControl
-								label={__('System Prompt', 'data-machine')}
+								label={__('System Prompt', 'datamachine')}
 								value={localPrompt}
 								onChange={handlePromptChange}
-								placeholder={__('Enter system prompt for AI processing...', 'data-machine')}
+								placeholder={__('Enter system prompt for AI processing...', 'datamachine')}
 								rows={6}
-								help={isSaving ? __('Saving...', 'data-machine') : null}
+								help={isSaving ? __('Saving...', 'datamachine') : null}
 							/>
 						</div>
 					)}
@@ -159,7 +159,7 @@ export default function PipelineStepCard({ step, pipelineId, pipelineConfig, onD
 						size="small"
 						onClick={() => onConfigure && onConfigure(step)}
 					>
-						{__('Configure', 'data-machine')}
+						{__('Configure', 'datamachine')}
 					</Button>
 
 					<Button
@@ -168,7 +168,7 @@ export default function PipelineStepCard({ step, pipelineId, pipelineConfig, onD
 						isDestructive
 						onClick={handleDelete}
 					>
-						{__('Delete', 'data-machine')}
+						{__('Delete', 'datamachine')}
 					</Button>
 				</div>
 			</CardBody>

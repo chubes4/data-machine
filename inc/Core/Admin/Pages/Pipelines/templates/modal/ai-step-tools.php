@@ -26,11 +26,11 @@ if (empty($global_enabled_tools)) {
 ?>
 <tr class="form-field">
     <th scope="row">
-        <label><?php echo esc_html__('Available Tools', 'data-machine'); ?></label>
+        <label><?php echo esc_html__('Available Tools', 'datamachine'); ?></label>
     </th>
     <td>
         <fieldset>
-            <legend class="screen-reader-text"><?php echo esc_html__('Select available tools for this AI step', 'data-machine'); ?></legend>
+            <legend class="screen-reader-text"><?php echo esc_html__('Select available tools for this AI step', 'datamachine'); ?></legend>
             
             <?php foreach ($global_enabled_tools as $tool_id => $tool_config): ?>
                 <?php
@@ -68,8 +68,8 @@ if (empty($global_enabled_tools)) {
                     
                     <?php if ($config_needed): ?>
                         <span class="datamachine-tool-config-warning">
-                            ⚠ <a href="<?php echo esc_url(admin_url('options-general.php?page=data-machine-settings')); ?>" target="_blank">
-                                <?php echo esc_html__('Configure in settings', 'data-machine'); ?>
+                            ⚠ <a href="<?php echo esc_url(admin_url('options-general.php?page=datamachine-settings')); ?>" target="_blank">
+                                <?php echo esc_html__('Configure in settings', 'datamachine'); ?>
                             </a>
                         </span>
                     <?php endif; ?>

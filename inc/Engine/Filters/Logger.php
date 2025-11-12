@@ -179,8 +179,8 @@ function datamachine_log_critical(string|\Stringable $message, array $context = 
 
 function datamachine_get_log_file_path(): string {
     $upload_dir = wp_upload_dir();
-    $log_dir = $upload_dir['basedir'] . '/data-machine-logs';
-    return $log_dir . '/data-machine.log';
+    $log_dir = $upload_dir['basedir'] . '/datamachine-logs';
+    return $log_dir . '/datamachine.log';
 }
 
 function datamachine_get_log_file_size(): float {
@@ -221,7 +221,7 @@ function datamachine_get_recent_logs(int $lines = 100): array {
  */
 function datamachine_cleanup_log_files($max_size_mb = 10, $max_age_days = 30): bool {
     $upload_dir = wp_upload_dir();
-    $log_dir = $upload_dir['basedir'] . '/data-machine-logs';
+    $log_dir = $upload_dir['basedir'] . '/datamachine-logs';
 
     if (!file_exists($log_dir)) {
         return false;
@@ -254,7 +254,7 @@ function datamachine_cleanup_log_files($max_size_mb = 10, $max_age_days = 30): b
  */
 function datamachine_clear_log_files(): bool {
     $upload_dir = wp_upload_dir();
-    $log_dir = $upload_dir['basedir'] . '/data-machine-logs';
+    $log_dir = $upload_dir['basedir'] . '/datamachine-logs';
 
     if (!file_exists($log_dir)) {
         return false;

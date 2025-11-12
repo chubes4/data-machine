@@ -191,7 +191,7 @@ class GoogleSheets {
      * @return string The label.
      */
     public static function get_label(): string {
-        return __('Append to Google Sheets', 'data-machine');
+        return __('Append to Google Sheets', 'datamachine');
     }
 
     /**
@@ -326,14 +326,14 @@ class GoogleSheets {
                 
                 return new \WP_Error('googlesheets_api_error',
                     /* translators: %1$s: Error message, %2$d: HTTP response code */
-                    sprintf(__('Google Sheets API error: %1$s (Code: %2$d)', 'data-machine'), $error_message, $response_code));
+                    sprintf(__('Google Sheets API error: %1$s (Code: %2$d)', 'datamachine'), $error_message, $response_code));
             }
 
             $result = json_decode($response_body, true);
             
             if (json_last_error() !== JSON_ERROR_NONE) {
                 do_action('datamachine_log', 'error', 'Failed to decode Google Sheets API response.');
-                return new \WP_Error('googlesheets_decode_error', __('Invalid response from Google Sheets API.', 'data-machine'));
+                return new \WP_Error('googlesheets_decode_error', __('Invalid response from Google Sheets API.', 'datamachine'));
             }
 
             return $result;

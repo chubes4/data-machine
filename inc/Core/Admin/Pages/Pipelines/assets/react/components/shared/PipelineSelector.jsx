@@ -26,7 +26,7 @@ export default function PipelineSelector() {
 
 	// Map pipelines to SelectControl options format
 	const options = pipelines.map(pipeline => ({
-		label: pipeline.pipeline_name || __('Untitled Pipeline', 'data-machine'),
+		label: pipeline.pipeline_name || __('Untitled Pipeline', 'datamachine'),
 		value: pipeline.pipeline_id
 	}));
 
@@ -42,7 +42,7 @@ export default function PipelineSelector() {
 	return (
 		<div className="datamachine-pipeline-selector-wrapper" style={{ marginBottom: '20px' }}>
 			<SelectControl
-				label={__('Select Pipeline', 'data-machine')}
+				label={__('Select Pipeline', 'datamachine')}
 				value={selectedPipelineId || options[0]?.value || ''}
 				options={options}
 				onChange={handleChange}

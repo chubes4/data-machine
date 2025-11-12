@@ -65,7 +65,7 @@ export default function ConfigureStepModal({
 	 * Get provider options
 	 */
 	const providerOptions = useMemo(() => {
-		const options = [{ value: '', label: __('Select Provider...', 'data-machine') }];
+		const options = [{ value: '', label: __('Select Provider...', 'datamachine') }];
 
 		Object.entries(aiProviders).forEach(([key, providerData]) => {
 			options.push({
@@ -82,10 +82,10 @@ export default function ConfigureStepModal({
 	 */
 	const modelOptions = useMemo(() => {
 		if (!provider || !aiProviders[provider]) {
-			return [{ value: '', label: __('Select provider first...', 'data-machine') }];
+			return [{ value: '', label: __('Select provider first...', 'datamachine') }];
 		}
 
-		const options = [{ value: '', label: __('Select Model...', 'data-machine') }];
+		const options = [{ value: '', label: __('Select Model...', 'datamachine') }];
 		const providerData = aiProviders[provider];
 
 		if (providerData.models && Array.isArray(providerData.models)) {
@@ -113,12 +113,12 @@ export default function ConfigureStepModal({
 	 */
 	const handleSave = async () => {
 		if (!provider) {
-			setError(__('Please select an AI provider', 'data-machine'));
+			setError(__('Please select an AI provider', 'datamachine'));
 			return;
 		}
 
 		if (!model) {
-			setError(__('Please select an AI model', 'data-machine'));
+			setError(__('Please select an AI model', 'datamachine'));
 			return;
 		}
 
@@ -141,11 +141,11 @@ export default function ConfigureStepModal({
 				}
 				onClose();
 			} else {
-				setError(response.message || __('Failed to update configuration', 'data-machine'));
+				setError(response.message || __('Failed to update configuration', 'datamachine'));
 			}
 		} catch (err) {
 			console.error('Configuration update error:', err);
-			setError(err.message || __('An error occurred', 'data-machine'));
+			setError(err.message || __('An error occurred', 'datamachine'));
 		} finally {
 			setIsSaving(false);
 		}
@@ -162,7 +162,7 @@ export default function ConfigureStepModal({
 
 	return (
 		<Modal
-			title={__('Configure AI Step', 'data-machine')}
+			title={__('Configure AI Step', 'datamachine')}
 			onRequestClose={onClose}
 			className="datamachine-modal datamachine-configure-step-modal"
 			style={{ maxWidth: '600px' }}
@@ -175,20 +175,20 @@ export default function ConfigureStepModal({
 				)}
 
 				<SelectControl
-					label={__('AI Provider', 'data-machine')}
+					label={__('AI Provider', 'datamachine')}
 					value={provider}
 					options={providerOptions}
 					onChange={handleProviderChange}
-					help={__('Choose the AI provider for this step.', 'data-machine')}
+					help={__('Choose the AI provider for this step.', 'datamachine')}
 				/>
 
 				<SelectControl
-					label={__('AI Model', 'data-machine')}
+					label={__('AI Model', 'datamachine')}
 					value={model}
 					options={modelOptions}
 					onChange={setModel}
 					disabled={!provider}
-					help={__('Choose the AI model to use.', 'data-machine')}
+					help={__('Choose the AI model to use.', 'datamachine')}
 				/>
 
 				<AIToolsSelector
@@ -197,12 +197,12 @@ export default function ConfigureStepModal({
 				/>
 
 				<TextareaControl
-					label={__('System Prompt', 'data-machine')}
+					label={__('System Prompt', 'datamachine')}
 					value={systemPrompt}
 					onChange={setSystemPrompt}
-					placeholder={__('Enter system prompt for AI processing...', 'data-machine')}
+					placeholder={__('Enter system prompt for AI processing...', 'datamachine')}
 					rows={8}
-					help={__('Optional: Provide instructions for the AI to follow during processing.', 'data-machine')}
+					help={__('Optional: Provide instructions for the AI to follow during processing.', 'datamachine')}
 				/>
 
 				<div
@@ -215,7 +215,7 @@ export default function ConfigureStepModal({
 					}}
 				>
 					<p style={{ margin: 0, fontSize: '12px', color: '#757575' }}>
-						<strong>{__('Note:', 'data-machine')}</strong> {__('The system prompt is shared across all flows using this pipeline. To add flow-specific instructions, use the user message field in the flow step card.', 'data-machine')}
+						<strong>{__('Note:', 'datamachine')}</strong> {__('The system prompt is shared across all flows using this pipeline. To add flow-specific instructions, use the user message field in the flow step card.', 'datamachine')}
 					</p>
 				</div>
 
@@ -233,7 +233,7 @@ export default function ConfigureStepModal({
 						onClick={onClose}
 						disabled={isSaving}
 					>
-						{__('Cancel', 'data-machine')}
+						{__('Cancel', 'datamachine')}
 					</Button>
 
 					<Button
@@ -242,7 +242,7 @@ export default function ConfigureStepModal({
 						disabled={isSaving || !hasChanged || !provider || !model}
 						isBusy={isSaving}
 					>
-						{isSaving ? __('Saving...', 'data-machine') : __('Save Configuration', 'data-machine')}
+						{isSaving ? __('Saving...', 'datamachine') : __('Save Configuration', 'datamachine')}
 					</Button>
 				</div>
 			</div>

@@ -193,7 +193,7 @@ class WordPress {
     }
 
     public static function get_label(): string {
-        return __('WordPress Update', 'data-machine');
+        return __('WordPress Update', 'datamachine');
     }
 
     /**

@@ -15,8 +15,8 @@ function datamachine_register_ai_step_filters() {
     
     add_filter('datamachine_step_types', function($steps) {
         $steps['ai'] = [
-            'label' => __('AI Agent', 'data-machine'),
-            'description' => __('Configure an intelligent agent with custom prompts and tools to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'data-machine'),
+            'label' => __('AI Agent', 'datamachine'),
+            'description' => __('Configure an intelligent agent with custom prompts and tools to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'datamachine'),
             'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
             'consume_all_packets' => true,
             'position' => 20
@@ -28,8 +28,8 @@ function datamachine_register_ai_step_filters() {
         $configs['ai'] = [
             'config_type' => 'ai_configuration',
             'modal_type' => 'configure-step',
-            'button_text' => __('Configure', 'data-machine'),
-            'label' => __('AI Agent Configuration', 'data-machine')
+            'button_text' => __('Configure', 'datamachine'),
+            'label' => __('AI Agent Configuration', 'datamachine')
         ];
         return $configs;
     });
@@ -57,7 +57,7 @@ add_filter('ai_render_component', function($output, $config) {
             $tools_html = ob_get_clean();
 
             if (!empty($tools_html)) {
-                $tools_html = str_replace('</fieldset>', '            <p class="description">' . esc_html__('Tools provide additional capabilities like web search for fact-checking. Configure required tools before enabling them.', 'data-machine') . '</p>' . "\n" . '        </fieldset>', $tools_html);
+                $tools_html = str_replace('</fieldset>', '            <p class="description">' . esc_html__('Tools provide additional capabilities like web search for fact-checking. Configure required tools before enabling them.', 'datamachine') . '</p>' . "\n" . '        </fieldset>', $tools_html);
             }
 
             $extensions .= $tools_html;

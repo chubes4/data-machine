@@ -88,7 +88,7 @@ export default function PipelineCheckboxTable({
 								fontWeight: '600'
 							}}
 						>
-							{__('Pipeline Name', 'data-machine')}
+							{__('Pipeline Name', 'datamachine')}
 						</th>
 						<th
 							style={{
@@ -98,7 +98,7 @@ export default function PipelineCheckboxTable({
 								width: '100px'
 							}}
 						>
-							{__('Steps', 'data-machine')}
+							{__('Steps', 'datamachine')}
 						</th>
 						<th
 							style={{
@@ -108,7 +108,7 @@ export default function PipelineCheckboxTable({
 								width: '100px'
 							}}
 						>
-							{__('Flows', 'data-machine')}
+							{__('Flows', 'datamachine')}
 						</th>
 					</tr>
 				</thead>
@@ -123,7 +123,7 @@ export default function PipelineCheckboxTable({
 									color: '#757575'
 								}}
 							>
-								{__('No pipelines available', 'data-machine')}
+								{__('No pipelines available', 'datamachine')}
 							</td>
 						</tr>
 					)}

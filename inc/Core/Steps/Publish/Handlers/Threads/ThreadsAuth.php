@@ -41,16 +41,16 @@ class ThreadsAuth {
     public function get_config_fields(): array {
         return [
             'app_id' => [
-                'label' => __('App ID', 'data-machine'),
+                'label' => __('App ID', 'datamachine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Threads application App ID from developers.facebook.com', 'data-machine')
+                'description' => __('Your Threads application App ID from developers.facebook.com', 'datamachine')
             ],
             'app_secret' => [
-                'label' => __('App Secret', 'data-machine'),
+                'label' => __('App Secret', 'datamachine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Threads application App Secret from developers.facebook.com', 'data-machine')
+                'description' => __('Your Threads application App Secret from developers.facebook.com', 'datamachine')
             ]
         ];
     }
@@ -197,7 +197,7 @@ class ThreadsAuth {
         
         if (empty($stored_state) || !wp_verify_nonce($state, 'datamachine_threads_oauth_state')) {
             do_action('datamachine_log', 'error', 'Threads OAuth Error: State mismatch or expired.');
-            return new \WP_Error('threads_oauth_state_mismatch', __('Invalid or expired state parameter during Threads authentication.', 'data-machine'));
+            return new \WP_Error('threads_oauth_state_mismatch', __('Invalid or expired state parameter during Threads authentication.', 'datamachine'));
         }
 
         // 2. Exchange code for access token
@@ -217,7 +217,7 @@ class ThreadsAuth {
         
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Threads OAuth Error: Token request failed.', ['error' => $result['error']]);
-            return new \WP_Error('threads_oauth_token_request_failed', __('HTTP error during token exchange with Threads.', 'data-machine'), $result['error']);
+            return new \WP_Error('threads_oauth_token_request_failed', __('HTTP error during token exchange with Threads.', 'datamachine'), $result['error']);
         }
         
         $body = $result['data'];
@@ -247,7 +247,7 @@ class ThreadsAuth {
 
         if (!$exchange_result['success']) {
             do_action('datamachine_log', 'error', 'Threads OAuth Error: Long-lived token exchange request failed (HTTP).', ['error' => $exchange_result['error']]);
-            return new \WP_Error('threads_oauth_exchange_request_failed', __('HTTP error during long-lived token exchange with Threads.', 'data-machine'), $exchange_result['error']);
+            return new \WP_Error('threads_oauth_exchange_request_failed', __('HTTP error during long-lived token exchange with Threads.', 'datamachine'), $exchange_result['error']);
         }
 
         $exchange_body = $exchange_result['data'];
@@ -295,7 +295,7 @@ class ThreadsAuth {
             do_action('datamachine_log', 'error', 'Threads OAuth Error: Failed to fetch posting entity info from /me endpoint.', [
                 'error' => is_wp_error($posting_entity_info) ? $posting_entity_info->get_error_message() : '/me did not return an ID',
             ]);
-            $error_message = is_wp_error($posting_entity_info) ? $posting_entity_info->get_error_message() : __('Could not retrieve the necessary profile ID using the access token.', 'data-machine');
+            $error_message = is_wp_error($posting_entity_info) ? $posting_entity_info->get_error_message() : __('Could not retrieve the necessary profile ID using the access token.', 'datamachine');
             return new \WP_Error('threads_oauth_me_id_missing', $error_message);
         }
 
@@ -340,7 +340,7 @@ class ThreadsAuth {
 
          if (empty($data['id'])) {
              do_action('datamachine_log', 'error', 'Facebook Graph API Error: Profile fetch response missing ID.', ['http_code' => $http_code, 'response' => $body]);
-             return new \WP_Error('fb_profile_id_missing', __('Profile ID missing in response from Facebook Graph API.', 'data-machine'), $data);
+             return new \WP_Error('fb_profile_id_missing', __('Profile ID missing in response from Facebook Graph API.', 'datamachine'), $data);
          }
 
         do_action('datamachine_log', 'debug', 'Facebook Graph API: Profile fetched successfully.', ['profile_id' => $data['id']]);

@@ -71,7 +71,7 @@ export default function PipelineHeader({ pipelineId, pipelineName, onNameChange,
 	 * Handle pipeline deletion
 	 */
 	const handleDelete = useCallback(async () => {
-		const confirmed = window.confirm(__('Are you sure you want to delete this pipeline? This action cannot be undone.', 'data-machine'));
+		const confirmed = window.confirm(__('Are you sure you want to delete this pipeline? This action cannot be undone.', 'datamachine'));
 
 		if (!confirmed) {
 			return;
@@ -100,24 +100,23 @@ export default function PipelineHeader({ pipelineId, pipelineName, onNameChange,
 	}, []);
 
 	return (
-		<div className="datamachine-pipeline-header">
-			<div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-				<div style={{ flex: 1 }}>
-					<TextControl
-						value={localName}
-						onChange={handleNameChange}
-						placeholder={__('Pipeline name', 'data-machine')}
-						className="datamachine-pipeline-name-input"
-						style={{ fontSize: '20px', fontWeight: '600' }}
-					/>
-				</div>
+		<div className="datamachine-pipeline-header" style={{ position: 'relative' }}>
+			<Button
+				isDestructive
+				variant="secondary"
+				onClick={handleDelete}
+				icon="trash"
+				label={__('Delete Pipeline', 'datamachine')}
+				style={{ position: 'absolute', top: '0', right: '0' }}
+			/>
 
-				<Button
-					isDestructive
-					variant="secondary"
-					onClick={handleDelete}
-					icon="trash"
-					label={__('Delete Pipeline', 'data-machine')}
+			<div style={{ paddingRight: '50px' }}>
+				<TextControl
+					value={localName}
+					onChange={handleNameChange}
+					placeholder={__('Pipeline name', 'datamachine')}
+					className="datamachine-pipeline-name-input"
+					style={{ fontSize: '20px', fontWeight: '600' }}
 				/>
 			</div>
 		</div>

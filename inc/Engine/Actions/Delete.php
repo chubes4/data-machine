@@ -120,7 +120,7 @@ class Delete {
         if (!current_user_can('manage_options')) {
             return new WP_Error(
                 'rest_forbidden',
-                __('Insufficient permissions', 'data-machine'),
+                __('Insufficient permissions', 'datamachine'),
                 ['status' => 403]
             );
         }
@@ -129,7 +129,7 @@ class Delete {
         if ($pipeline_id <= 0) {
             return new WP_Error(
                 'invalid_pipeline_id',
-                __('Valid pipeline ID is required.', 'data-machine'),
+                __('Valid pipeline ID is required.', 'datamachine'),
                 ['status' => 400]
             );
         }
@@ -141,7 +141,7 @@ class Delete {
         if (!$db_pipelines || !$db_flows) {
             return new WP_Error(
                 'database_unavailable',
-                __('Database services unavailable.', 'data-machine'),
+                __('Database services unavailable.', 'datamachine'),
                 ['status' => 500]
             );
         }
@@ -150,7 +150,7 @@ class Delete {
         if (!$pipeline) {
             return new WP_Error(
                 'pipeline_not_found',
-                __('Pipeline not found.', 'data-machine'),
+                __('Pipeline not found.', 'datamachine'),
                 ['status' => 404]
             );
         }
@@ -166,7 +166,7 @@ class Delete {
                 if (!$success) {
                     return new WP_Error(
                         'flow_deletion_failed',
-                        __('Failed to delete associated flows.', 'data-machine'),
+                        __('Failed to delete associated flows.', 'datamachine'),
                         ['status' => 500]
                     );
                 }
@@ -177,7 +177,7 @@ class Delete {
         if (!$success) {
             return new WP_Error(
                 'pipeline_deletion_failed',
-                __('Failed to delete pipeline.', 'data-machine'),
+                __('Failed to delete pipeline.', 'datamachine'),
                 ['status' => 500]
             );
         }
@@ -187,7 +187,7 @@ class Delete {
         return [
             'message' => sprintf(
                 /* translators: %1$s: Pipeline name, %2$d: Number of flows deleted */
-                __('Pipeline "%1$s" deleted successfully. %2$d flows were also deleted. Associated job records are preserved as historical data.', 'data-machine'),
+                __('Pipeline "%1$s" deleted successfully. %2$d flows were also deleted. Associated job records are preserved as historical data.', 'datamachine'),
                 $pipeline_name,
                 $flow_count
             ),
@@ -205,7 +205,7 @@ class Delete {
         if (!current_user_can('manage_options')) {
             return new WP_Error(
                 'rest_forbidden',
-                __('Insufficient permissions', 'data-machine'),
+                __('Insufficient permissions', 'datamachine'),
                 ['status' => 403]
             );
         }
@@ -214,7 +214,7 @@ class Delete {
         if ($flow_id <= 0) {
             return new WP_Error(
                 'invalid_flow_id',
-                __('Valid flow ID is required.', 'data-machine'),
+                __('Valid flow ID is required.', 'datamachine'),
                 ['status' => 400]
             );
         }
@@ -225,7 +225,7 @@ class Delete {
         if (!$db_flows) {
             return new WP_Error(
                 'database_unavailable',
-                __('Database services unavailable.', 'data-machine'),
+                __('Database services unavailable.', 'datamachine'),
                 ['status' => 500]
             );
         }
@@ -234,7 +234,7 @@ class Delete {
         if (!$flow) {
             return new WP_Error(
                 'flow_not_found',
-                __('Flow not found.', 'data-machine'),
+                __('Flow not found.', 'datamachine'),
                 ['status' => 404]
             );
         }
@@ -246,7 +246,7 @@ class Delete {
         if (!$success) {
             return new WP_Error(
                 'flow_deletion_failed',
-                __('Failed to delete flow.', 'data-machine'),
+                __('Failed to delete flow.', 'datamachine'),
                 ['status' => 500]
             );
         }
@@ -258,7 +258,7 @@ class Delete {
         return [
             'message' => sprintf(
                 /* translators: %s: Flow name */
-                __('Flow "%s" deleted successfully. Associated job records are preserved as historical data.', 'data-machine'),
+                __('Flow "%s" deleted successfully. Associated job records are preserved as historical data.', 'datamachine'),
                 $flow_name
             ),
             'flow_id' => $flow_id,
@@ -275,7 +275,7 @@ class Delete {
         if (!current_user_can('manage_options')) {
             return new WP_Error(
                 'rest_forbidden',
-                __('Insufficient permissions', 'data-machine'),
+                __('Insufficient permissions', 'datamachine'),
                 ['status' => 403]
             );
         }
@@ -286,7 +286,7 @@ class Delete {
         if ($pipeline_id <= 0 || $pipeline_step_id === '') {
             return new WP_Error(
                 'invalid_step_parameters',
-                __('Valid pipeline ID and step ID are required.', 'data-machine'),
+                __('Valid pipeline ID and step ID are required.', 'datamachine'),
                 ['status' => 400]
             );
         }
@@ -298,7 +298,7 @@ class Delete {
         if (!$db_pipelines || !$db_flows) {
             return new WP_Error(
                 'database_unavailable',
-                __('Database services unavailable.', 'data-machine'),
+                __('Database services unavailable.', 'datamachine'),
                 ['status' => 500]
             );
         }
@@ -307,7 +307,7 @@ class Delete {
         if (!$pipeline) {
             return new WP_Error(
                 'pipeline_not_found',
-                __('Pipeline not found.', 'data-machine'),
+                __('Pipeline not found.', 'datamachine'),
                 ['status' => 404]
             );
         }
@@ -331,7 +331,7 @@ class Delete {
         if (!$step_found) {
             return new WP_Error(
                 'step_not_found',
-                __('Step not found in pipeline.', 'data-machine'),
+                __('Step not found in pipeline.', 'datamachine'),
                 ['status' => 404]
             );
         }
@@ -349,7 +349,7 @@ class Delete {
         if (!$success) {
             return new WP_Error(
                 'step_deletion_failed',
-                __('Failed to delete step from pipeline.', 'data-machine'),
+                __('Failed to delete step from pipeline.', 'datamachine'),
                 ['status' => 500]
             );
         }
@@ -381,7 +381,7 @@ class Delete {
         return [
             'message' => sprintf(
                 /* translators: %1$s: Pipeline name, %2$d: Number of affected flows */
-                __('Step deleted successfully from pipeline "%1$s". %2$d flows were affected.', 'data-machine'),
+                __('Step deleted successfully from pipeline "%1$s". %2$d flows were affected.', 'datamachine'),
                 $pipeline_name,
                 $flow_count
             ),
@@ -408,7 +408,7 @@ class Delete {
         if (!$processed_items) {
             do_action('datamachine_log', 'error', 'ProcessedItems service unavailable for cleanup');
             if (wp_doing_ajax()) {
-                wp_send_json_error(['message' => __('ProcessedItems service unavailable.', 'data-machine')]);
+                wp_send_json_error(['message' => __('ProcessedItems service unavailable.', 'datamachine')]);
             }
             return;
         }
@@ -416,7 +416,7 @@ class Delete {
         if (empty($criteria) || !is_array($criteria)) {
             do_action('datamachine_log', 'error', 'Invalid criteria for processed items deletion', ['criteria' => $criteria]);
             if (wp_doing_ajax()) {
-                wp_send_json_error(['message' => __('Invalid deletion criteria.', 'data-machine')]);
+                wp_send_json_error(['message' => __('Invalid deletion criteria.', 'datamachine')]);
             }
             return;
         }
@@ -434,11 +434,11 @@ class Delete {
             if ($result !== false) {
                 wp_send_json_success([
                     /* translators: %d: Number of processed items deleted */
-                    'message' => sprintf(__('Deleted %d processed items.', 'data-machine'), $result),
+                    'message' => sprintf(__('Deleted %d processed items.', 'datamachine'), $result),
                     'items_deleted' => $result
                 ]);
             } else {
-                wp_send_json_error(['message' => __('Failed to delete processed items.', 'data-machine')]);
+                wp_send_json_error(['message' => __('Failed to delete processed items.', 'datamachine')]);
             }
         }
 
@@ -460,7 +460,7 @@ class Delete {
         $db_jobs = $all_databases['jobs'] ?? null;
 
         if (!$db_jobs) {
-            wp_send_json_error(['message' => __('Jobs database service unavailable.', 'data-machine')]);
+            wp_send_json_error(['message' => __('Jobs database service unavailable.', 'datamachine')]);
             return;
         }
 
@@ -486,7 +486,7 @@ class Delete {
         $deleted_count = $db_jobs->delete_jobs($criteria);
 
         if ($deleted_count === false) {
-            wp_send_json_error(['message' => __('Failed to delete jobs.', 'data-machine')]);
+            wp_send_json_error(['message' => __('Failed to delete jobs.', 'datamachine')]);
             return;
         }
 
@@ -498,10 +498,10 @@ class Delete {
 
         $message_parts = [];
         /* translators: %d: Number of jobs deleted */
-        $message_parts[] = sprintf(__('Deleted %d jobs', 'data-machine'), $deleted_count);
+        $message_parts[] = sprintf(__('Deleted %d jobs', 'datamachine'), $deleted_count);
 
         if ($cleanup_processed && !empty($job_ids_to_delete)) {
-            $message_parts[] = __('and their associated processed items', 'data-machine');
+            $message_parts[] = __('and their associated processed items', 'datamachine');
         }
 
         $message = implode(' ', $message_parts) . '.';
@@ -528,16 +528,16 @@ class Delete {
         $log_file = apply_filters('datamachine_log_file', null, 'get', null);
 
         if (!$log_file || !file_exists($log_file)) {
-            wp_send_json_success(['message' => __('No log file to clear.', 'data-machine')]);
+            wp_send_json_success(['message' => __('No log file to clear.', 'datamachine')]);
             return;
         }
 
         $result = file_put_contents($log_file, '');
 
         if ($result !== false) {
-            wp_send_json_success(['message' => __('Logs cleared successfully.', 'data-machine')]);
+            wp_send_json_success(['message' => __('Logs cleared successfully.', 'datamachine')]);
         } else {
-            wp_send_json_error(['message' => __('Failed to clear logs.', 'data-machine')]);
+            wp_send_json_error(['message' => __('Failed to clear logs.', 'datamachine')]);
         }
     }
 

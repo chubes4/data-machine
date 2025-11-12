@@ -52,14 +52,14 @@ export default function HandlerSelectionModal({
 
 	return (
 		<Modal
-			title={__('Select Handler', 'data-machine')}
+			title={__('Select Handler', 'datamachine')}
 			onRequestClose={onClose}
 			className="datamachine-modal datamachine-handler-selection-modal"
 			style={{ maxWidth: '600px' }}
 		>
 			<div className="datamachine-modal-content">
 				<p style={{ marginBottom: '20px', color: '#757575' }}>
-					{__('Choose the handler for this step:', 'data-machine')}
+					{__('Choose the handler for this step:', 'datamachine')}
 				</p>
 
 				{handlers.length === 0 && (
@@ -73,7 +73,7 @@ export default function HandlerSelectionModal({
 						}}
 					>
 						<p style={{ margin: 0, color: '#757575' }}>
-							{__('No handlers available for this step type.', 'data-machine')}
+							{__('No handlers available for this step type.', 'datamachine')}
 						</p>
 					</div>
 				)}
@@ -134,7 +134,7 @@ export default function HandlerSelectionModal({
 											fontWeight: '500'
 										}}
 									>
-										{__('Requires Auth', 'data-machine')}
+										{__('Requires Auth', 'datamachine')}
 									</span>
 								)}
 							</button>
@@ -152,7 +152,7 @@ export default function HandlerSelectionModal({
 					}}
 				>
 					<Button variant="secondary" onClick={onClose}>
-						{__('Cancel', 'data-machine')}
+						{__('Cancel', 'datamachine')}
 					</Button>
 				</div>
 			</div>

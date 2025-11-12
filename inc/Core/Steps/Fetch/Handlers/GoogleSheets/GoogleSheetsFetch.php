@@ -77,7 +77,7 @@ class GoogleSheetsFetch {
                 'Authorization' => 'Bearer ' . $access_token,
                 'Accept' => 'application/json',
             ],
-            'user-agent' => 'DataMachine WordPress Plugin/' . DATA_MACHINE_VERSION
+            'user-agent' => 'DataMachine WordPress Plugin/' . DATAMACHINE_VERSION
         ], 'Google Sheets API');
 
         if (!$result['success']) {
@@ -393,7 +393,7 @@ class GoogleSheetsFetch {
         // Spreadsheet ID is required
         $spreadsheet_id = sanitize_text_field($raw_settings['spreadsheet_id'] ?? '');
         if (empty($spreadsheet_id)) {
-            throw new \InvalidArgumentException(esc_html__('Google Sheets Spreadsheet ID is required.', 'data-machine'));
+            throw new \InvalidArgumentException(esc_html__('Google Sheets Spreadsheet ID is required.', 'datamachine'));
         }
         $sanitized['spreadsheet_id'] = $spreadsheet_id;
         
@@ -417,6 +417,6 @@ class GoogleSheetsFetch {
      * @return string Handler label
      */
     public static function get_label(): string {
-        return __('Google Sheets Fetch', 'data-machine');
+        return __('Google Sheets Fetch', 'datamachine');
     }
 }

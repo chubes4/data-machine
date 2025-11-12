@@ -29,19 +29,19 @@ foreach ($all_pipelines as $pipeline) {
 }
 ?>
 <div class="datamachine-modal-tabs">
-    <button class="datamachine-modal-tab active" data-tab="export"><?php esc_html_e('Export', 'data-machine'); ?></button>
-    <button class="datamachine-modal-tab" data-tab="import"><?php esc_html_e('Import', 'data-machine'); ?></button>
+    <button class="datamachine-modal-tab active" data-tab="export"><?php esc_html_e('Export', 'datamachine'); ?></button>
+    <button class="datamachine-modal-tab" data-tab="import"><?php esc_html_e('Import', 'datamachine'); ?></button>
 </div>
 
 <div class="datamachine-modal-tab-content" id="export-tab">
-    <p><?php esc_html_e('Select pipelines to export:', 'data-machine'); ?></p>
+    <p><?php esc_html_e('Select pipelines to export:', 'datamachine'); ?></p>
     <table class="datamachine-export-table widefat">
         <thead>
             <tr>
                 <th><input type="checkbox" class="datamachine-select-all"></th>
-                <th><?php esc_html_e('Pipeline Name', 'data-machine'); ?></th>
-                <th><?php esc_html_e('Steps', 'data-machine'); ?></th>
-                <th><?php esc_html_e('Flows', 'data-machine'); ?></th>
+                <th><?php esc_html_e('Pipeline Name', 'datamachine'); ?></th>
+                <th><?php esc_html_e('Steps', 'datamachine'); ?></th>
+                <th><?php esc_html_e('Flows', 'datamachine'); ?></th>
             </tr>
         </thead>
         <tbody>
@@ -60,17 +60,17 @@ foreach ($all_pipelines as $pipeline) {
         </tbody>
     </table>
     <button class="button button-primary datamachine-export-selected" disabled>
-        <?php esc_html_e('Export Selected', 'data-machine'); ?>
+        <?php esc_html_e('Export Selected', 'datamachine'); ?>
     </button>
 </div>
 
 <div class="datamachine-modal-tab-content" id="import-tab">
     <div class="datamachine-import-dropzone">
-        <p><?php esc_html_e('Drag CSV file here or click to browse', 'data-machine'); ?></p>
+        <p><?php esc_html_e('Drag CSV file here or click to browse', 'datamachine'); ?></p>
         <input type="file" class="datamachine-import-file" accept=".csv">
     </div>
     <div class="datamachine-import-preview"></div>
     <button class="button button-primary datamachine-import-pipelines" disabled>
-        <?php esc_html_e('Import Pipelines', 'data-machine'); ?>
+        <?php esc_html_e('Import Pipelines', 'datamachine'); ?>
     </button>
 </div>

@@ -51,14 +51,14 @@ class Logs {
 					'required' => false,
 					'type' => 'string',
 					'default' => 'full',
-					'description' => __('Content mode: full or recent', 'data-machine'),
+					'description' => __('Content mode: full or recent', 'datamachine'),
 					'enum' => ['full', 'recent']
 				],
 				'limit' => [
 					'required' => false,
 					'type' => 'integer',
 					'default' => 200,
-					'description' => __('Number of recent entries (when mode=recent)', 'data-machine'),
+					'description' => __('Number of recent entries (when mode=recent)', 'datamachine'),
 					'validate_callback' => function($param) {
 						return is_numeric($param) && $param > 0 && $param <= 10000;
 					}
@@ -82,7 +82,7 @@ class Logs {
 				'level' => [
 					'required' => true,
 					'type' => 'string',
-					'description' => __('Log level to set', 'data-machine'),
+					'description' => __('Log level to set', 'datamachine'),
 					'validate_callback' => function($param) {
 						$available_levels = apply_filters('datamachine_log_file', [], 'get_available_levels');
 						return array_key_exists($param, $available_levels);
@@ -99,7 +99,7 @@ class Logs {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to manage logs.', 'data-machine'),
+				__('You do not have permission to manage logs.', 'datamachine'),
 				['status' => 403]
 			);
 		}
@@ -124,7 +124,7 @@ class Logs {
 
 		return [
 			'success' => true,
-			'message' => __('Logs cleared successfully.', 'data-machine')
+			'message' => __('Logs cleared successfully.', 'datamachine')
 		];
 	}
 
@@ -143,7 +143,7 @@ class Logs {
 		if (!file_exists($log_file)) {
 			return new \WP_Error(
 				'log_file_not_found',
-				__('Log file does not exist.', 'data-machine'),
+				__('Log file does not exist.', 'datamachine'),
 				['status' => 404]
 			);
 		}
@@ -154,7 +154,7 @@ class Logs {
 		if ($file_content === false) {
 			return new \WP_Error(
 				'log_file_read_error',
-				__('Unable to read log file.', 'data-machine'),
+				__('Unable to read log file.', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -185,7 +185,7 @@ class Logs {
 			'total_lines' => $total_lines,
 			'mode' => $mode,
 			'message' => sprintf(
-				__('Loaded %d %s log entries.', 'data-machine'),
+				__('Loaded %d %s log entries.', 'datamachine'),
 				count($file_content),
 				$mode === 'recent' ? 'recent' : 'total'
 			)
@@ -254,7 +254,7 @@ class Logs {
 			'success' => true,
 			'level' => $new_level,
 			'message' => sprintf(
-				__('Log level updated to %s.', 'data-machine'),
+				__('Log level updated to %s.', 'datamachine'),
 				$level_display
 			)
 		];

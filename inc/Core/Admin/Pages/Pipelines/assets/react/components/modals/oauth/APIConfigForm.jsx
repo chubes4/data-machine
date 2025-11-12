@@ -33,13 +33,13 @@ export default function APIConfigForm({ config = {}, onChange, fields = [] }) {
 	const defaultFields = [
 		{
 			key: 'api_key',
-			label: __('API Key', 'data-machine'),
+			label: __('API Key', 'datamachine'),
 			type: 'text',
 			required: true
 		},
 		{
 			key: 'api_secret',
-			label: __('API Secret', 'data-machine'),
+			label: __('API Secret', 'datamachine'),
 			type: 'password',
 			required: true
 		}
@@ -50,7 +50,7 @@ export default function APIConfigForm({ config = {}, onChange, fields = [] }) {
 	return (
 		<div className="datamachine-api-config-form">
 			<p style={{ marginBottom: '16px', fontSize: '13px', color: '#757575' }}>
-				{__('Enter your API credentials:', 'data-machine')}
+				{__('Enter your API credentials:', 'datamachine')}
 			</p>
 
 			{fieldsToRender.map((field) => (

@@ -32,10 +32,10 @@ export default function FlowStepHandler({ handlerSlug, handlerConfig, stepType, 
 				}}
 			>
 				<p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#856404' }}>
-					{__('No handler configured', 'data-machine')}
+					{__('No handler configured', 'datamachine')}
 				</p>
 				<Button variant="secondary" size="small" onClick={onConfigure}>
-					{__('Configure Handler', 'data-machine')}
+					{__('Configure Handler', 'datamachine')}
 				</Button>
 			</div>
 		);
@@ -83,7 +83,7 @@ export default function FlowStepHandler({ handlerSlug, handlerConfig, stepType, 
 			)}
 
 			<Button variant="secondary" size="small" onClick={onConfigure}>
-				{__('Configure', 'data-machine')}
+				{__('Configure', 'datamachine')}
 			</Button>
 		</div>
 	);

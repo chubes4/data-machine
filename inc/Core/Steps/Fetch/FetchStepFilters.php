@@ -17,8 +17,8 @@ function datamachine_register_fetch_step_filters() {
     // Step registration - Fetch declares itself as 'fetch' step type (pure discovery mode)
     add_filter('datamachine_step_types', function($steps) {
         $steps['fetch'] = [
-            'label' => __('Fetch', 'data-machine'),
-            'description' => __('Collect data from external sources', 'data-machine'),
+            'label' => __('Fetch', 'datamachine'),
+            'description' => __('Collect data from external sources', 'datamachine'),
             'class' => FetchStep::class,
             'position' => 10
         ];

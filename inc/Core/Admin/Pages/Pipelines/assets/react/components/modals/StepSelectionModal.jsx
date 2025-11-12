@@ -71,11 +71,11 @@ export default function StepSelectionModal({
 				}
 				onClose();
 			} else {
-				setError(response.message || __('Failed to add step', 'data-machine'));
+				setError(response.message || __('Failed to add step', 'datamachine'));
 			}
 		} catch (err) {
 			console.error('Step addition error:', err);
-			setError(err.message || __('An error occurred', 'data-machine'));
+			setError(err.message || __('An error occurred', 'datamachine'));
 		} finally {
 			setIsAdding(false);
 		}
@@ -83,7 +83,7 @@ export default function StepSelectionModal({
 
 	return (
 		<Modal
-			title={__('Add Pipeline Step', 'data-machine')}
+			title={__('Add Pipeline Step', 'datamachine')}
 			onRequestClose={onClose}
 			className="datamachine-modal datamachine-step-selection-modal"
 			style={{ maxWidth: '600px' }}
@@ -96,7 +96,7 @@ export default function StepSelectionModal({
 				)}
 
 				<p style={{ marginBottom: '20px', color: '#757575' }}>
-					{__('Select the type of step you want to add to your pipeline:', 'data-machine')}
+					{__('Select the type of step you want to add to your pipeline:', 'datamachine')}
 				</p>
 
 				<div
@@ -152,7 +152,7 @@ export default function StepSelectionModal({
 
 								{stepType !== 'ai' && handlerCount > 0 && (
 									<span style={{ fontSize: '12px', color: '#757575' }}>
-										{handlerCount} {handlerCount === 1 ? __('handler', 'data-machine') : __('handlers', 'data-machine')} {__('available', 'data-machine')}
+										{handlerCount} {handlerCount === 1 ? __('handler', 'datamachine') : __('handlers', 'datamachine')} {__('available', 'datamachine')}
 									</span>
 								)}
 							</button>
@@ -169,7 +169,7 @@ export default function StepSelectionModal({
 					}}
 				>
 					<p style={{ margin: 0, fontSize: '12px', color: '#757575' }}>
-						<strong>{__('Tip:', 'data-machine')}</strong> {__('Steps execute in order. You can configure each step after adding it.', 'data-machine')}
+						<strong>{__('Tip:', 'datamachine')}</strong> {__('Steps execute in order. You can configure each step after adding it.', 'datamachine')}
 					</p>
 				</div>
 
@@ -183,7 +183,7 @@ export default function StepSelectionModal({
 					}}
 				>
 					<Button variant="secondary" onClick={onClose} disabled={isAdding}>
-						{__('Cancel', 'data-machine')}
+						{__('Cancel', 'datamachine')}
 					</Button>
 				</div>
 			</div>

@@ -48,7 +48,7 @@ class SourceUrlHandler {
      * @return bool True if source inclusion enabled
      */
     public function isSourceInclusionEnabled(array $handler_config): bool {
-        $all_settings = get_option('data_machine_settings', []);
+        $all_settings = get_option('datamachine_settings', []);
         $wp_settings = $all_settings['wordpress_settings'] ?? [];
 
         if (isset($wp_settings['default_include_source'])) {

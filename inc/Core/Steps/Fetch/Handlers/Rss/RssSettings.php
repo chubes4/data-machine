@@ -30,21 +30,21 @@ class RssSettings {
         return [
             'feed_url' => [
                 'type' => 'url',
-                'label' => __('RSS Feed URL', 'data-machine'),
-                'description' => __('Enter the full URL of the RSS or Atom feed (e.g., https://example.com/feed).', 'data-machine'),
+                'label' => __('RSS Feed URL', 'datamachine'),
+                'description' => __('Enter the full URL of the RSS or Atom feed (e.g., https://example.com/feed).', 'datamachine'),
                 'required' => true,
             ],
             'timeframe_limit' => [
                 'type' => 'select',
-                'label' => __('Process Items Within', 'data-machine'),
-                'description' => __('Only consider RSS items published within this timeframe.', 'data-machine'),
+                'label' => __('Process Items Within', 'datamachine'),
+                'description' => __('Only consider RSS items published within this timeframe.', 'datamachine'),
                 'options' => apply_filters('datamachine_timeframe_limit', [], null),
             ],
             'search' => [
                 'type' => 'text',
-                'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Filter items by keywords (comma-separated). Items containing any keyword in their title or content will be included.', 'data-machine'),
-                'placeholder' => __('Optional search term', 'data-machine'),
+                'label' => __('Search Term Filter', 'datamachine'),
+                'description' => __('Filter items by keywords (comma-separated). Items containing any keyword in their title or content will be included.', 'datamachine'),
+                'placeholder' => __('Optional search term', 'datamachine'),
             ],
         ];
     }
@@ -61,7 +61,7 @@ class RssSettings {
         // Feed URL is required
         $feed_url = esc_url_raw($raw_settings['feed_url'] ?? '');
         if (empty($feed_url)) {
-            throw new \InvalidArgumentException(esc_html__('RSS Feed URL is required.', 'data-machine'));
+            throw new \InvalidArgumentException(esc_html__('RSS Feed URL is required.', 'datamachine'));
         }
         $sanitized['feed_url'] = $feed_url;
         

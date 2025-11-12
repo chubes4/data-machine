@@ -169,34 +169,34 @@ class Files {
     }
 
     public static function get_label(): string {
-        return __('File Upload', 'data-machine');
+        return __('File Upload', 'datamachine');
     }
 
     private function get_upload_error_message(int $error_code): string {
         switch ($error_code) {
             case UPLOAD_ERR_INI_SIZE:
-                $message = __( "The uploaded file exceeds the upload_max_filesize directive in php.ini.", 'data-machine' );
+                $message = __( "The uploaded file exceeds the upload_max_filesize directive in php.ini.", 'datamachine' );
                 break;
             case UPLOAD_ERR_FORM_SIZE:
-                $message = __( "The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form.", 'data-machine' );
+                $message = __( "The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form.", 'datamachine' );
                 break;
             case UPLOAD_ERR_PARTIAL:
-                $message = __( "The uploaded file was only partially uploaded.", 'data-machine' );
+                $message = __( "The uploaded file was only partially uploaded.", 'datamachine' );
                 break;
             case UPLOAD_ERR_NO_FILE:
-                $message = __( "No file was uploaded.", 'data-machine' );
+                $message = __( "No file was uploaded.", 'datamachine' );
                 break;
             case UPLOAD_ERR_NO_TMP_DIR:
-                $message = __( "Missing a temporary folder.", 'data-machine' );
+                $message = __( "Missing a temporary folder.", 'datamachine' );
                 break;
             case UPLOAD_ERR_CANT_WRITE:
-                $message = __( "Failed to write file to disk.", 'data-machine' );
+                $message = __( "Failed to write file to disk.", 'datamachine' );
                 break;
             case UPLOAD_ERR_EXTENSION:
-                $message = __( "A PHP extension stopped the file upload.", 'data-machine' );
+                $message = __( "A PHP extension stopped the file upload.", 'datamachine' );
                 break;
             default:
-                $message = __( "Unknown upload error.", 'data-machine' );
+                $message = __( "Unknown upload error.", 'datamachine' );
                 break;
         }
         return $message;

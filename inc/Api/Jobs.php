@@ -42,14 +42,14 @@ class Jobs {
 					'required' => false,
 					'type' => 'string',
 					'default' => 'job_id',
-					'description' => __('Order jobs by field', 'data-machine')
+					'description' => __('Order jobs by field', 'datamachine')
 				],
 				'order' => [
 					'required' => false,
 					'type' => 'string',
 					'default' => 'DESC',
 					'enum' => ['ASC', 'DESC'],
-					'description' => __('Sort order', 'data-machine')
+					'description' => __('Sort order', 'datamachine')
 				],
 				'per_page' => [
 					'required' => false,
@@ -57,29 +57,29 @@ class Jobs {
 					'default' => 50,
 					'minimum' => 1,
 					'maximum' => 100,
-					'description' => __('Number of jobs per page', 'data-machine')
+					'description' => __('Number of jobs per page', 'datamachine')
 				],
 				'offset' => [
 					'required' => false,
 					'type' => 'integer',
 					'default' => 0,
 					'minimum' => 0,
-					'description' => __('Offset for pagination', 'data-machine')
+					'description' => __('Offset for pagination', 'datamachine')
 				],
 				'pipeline_id' => [
 					'required' => false,
 					'type' => 'integer',
-					'description' => __('Filter by pipeline ID', 'data-machine')
+					'description' => __('Filter by pipeline ID', 'datamachine')
 				],
 				'flow_id' => [
 					'required' => false,
 					'type' => 'integer',
-					'description' => __('Filter by flow ID', 'data-machine')
+					'description' => __('Filter by flow ID', 'datamachine')
 				],
 				'status' => [
 					'required' => false,
 					'type' => 'string',
-					'description' => __('Filter by job status', 'data-machine')
+					'description' => __('Filter by job status', 'datamachine')
 				]
 			]
 		]);
@@ -94,13 +94,13 @@ class Jobs {
 					'required' => true,
 					'type' => 'string',
 					'enum' => ['all', 'failed'],
-					'description' => __('Which jobs to clear: all or failed', 'data-machine')
+					'description' => __('Which jobs to clear: all or failed', 'datamachine')
 				],
 				'cleanup_processed' => [
 					'required' => false,
 					'type' => 'boolean',
 					'default' => false,
-					'description' => __('Also clear processed items tracking', 'data-machine')
+					'description' => __('Also clear processed items tracking', 'datamachine')
 				]
 			]
 		]);
@@ -113,7 +113,7 @@ class Jobs {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to manage jobs.', 'data-machine'),
+				__('You do not have permission to manage jobs.', 'datamachine'),
 				['status' => 403]
 			);
 		}
@@ -134,7 +134,7 @@ class Jobs {
 		if (!$db_jobs) {
 			return new \WP_Error(
 				'database_unavailable',
-				__('Database service unavailable.', 'data-machine'),
+				__('Database service unavailable.', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -193,7 +193,7 @@ class Jobs {
 
 		return [
 			'success' => true,
-			'message' => __('Jobs cleared successfully.', 'data-machine')
+			'message' => __('Jobs cleared successfully.', 'datamachine')
 		];
 	}
 }

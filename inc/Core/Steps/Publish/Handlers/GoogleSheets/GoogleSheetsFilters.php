@@ -15,8 +15,8 @@ function datamachine_register_googlesheets_filters() {
             $handlers['googlesheets_output'] = [
                 'type' => 'publish',
                 'class' => GoogleSheets::class,
-                'label' => __('Google Sheets', 'data-machine'),
-                'description' => __('Append structured data to Google Sheets for analytics, reporting, and team collaboration', 'data-machine'),
+                'label' => __('Google Sheets', 'datamachine'),
+                'description' => __('Append structured data to Google Sheets for analytics, reporting, and team collaboration', 'datamachine'),
                 'requires_auth' => true
             ];
         }

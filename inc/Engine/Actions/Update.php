@@ -492,7 +492,7 @@ class Update {
         do_action('datamachine_delete_processed_items', ['job_id' => (int)$job_id]);
         
         // Conditional file cleanup based on settings
-        $settings = datamachine_get_data_machine_settings();
+        $settings = datamachine_get_datamachine_settings();
         $cleanup_files = $settings['cleanup_job_data_on_failure'] ?? true;
         $files_cleaned = false;
 

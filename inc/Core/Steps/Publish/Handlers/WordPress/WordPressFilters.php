@@ -19,8 +19,8 @@ function datamachine_register_wordpress_publish_filters() {
             $handlers['wordpress_publish'] = [
                 'type' => 'publish',
                 'class' => WordPress::class,
-                'label' => __('WordPress', 'data-machine'),
-                'description' => __('Create WordPress posts and pages', 'data-machine')
+                'label' => __('WordPress', 'datamachine'),
+                'description' => __('Create WordPress posts and pages', 'datamachine')
             ];
         }
         return $handlers;

@@ -83,7 +83,7 @@ class WordPressAPI {
 
         // Make HTTP request using datamachine_request filter
         $args = [
-            'user-agent' => 'DataMachine WordPress Plugin/' . DATA_MACHINE_VERSION
+            'user-agent' => 'DataMachine WordPress Plugin/' . DATAMACHINE_VERSION
         ];
 
         $result = apply_filters('datamachine_request', null, 'GET', $endpoint_url, $args, 'REST API');
@@ -462,6 +462,6 @@ class WordPressAPI {
      * @return string Handler label.
      */
     public static function get_label(): string {
-        return __('REST API Endpoint', 'data-machine');
+        return __('REST API Endpoint', 'datamachine');
     }
 }

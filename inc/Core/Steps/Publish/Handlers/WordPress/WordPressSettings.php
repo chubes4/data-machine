@@ -73,20 +73,20 @@ class WordPressSettings {
         $fields = [
             'post_type' => [
                 'type' => 'select',
-                'label' => __('Post Type', 'data-machine'),
-                'description' => __('Select the post type for published content.', 'data-machine'),
+                'label' => __('Post Type', 'datamachine'),
+                'description' => __('Select the post type for published content.', 'datamachine'),
                 'options' => $post_type_options,
             ],
             'post_status' => [
                 'type' => 'select',
-                'label' => __('Post Status', 'data-machine'),
-                'description' => __('Select the status for the newly created post.', 'data-machine'),
+                'label' => __('Post Status', 'datamachine'),
+                'description' => __('Select the status for the newly created post.', 'datamachine'),
                 'options' => get_post_statuses(),
             ],
             'post_author' => [
                 'type' => 'select',
-                'label' => __('Post Author', 'data-machine'),
-                'description' => __('Select which WordPress user to publish posts under.', 'data-machine'),
+                'label' => __('Post Author', 'datamachine'),
+                'description' => __('Select which WordPress user to publish posts under.', 'datamachine'),
                 'options' => $user_options,
             ],
         ];
@@ -118,8 +118,8 @@ class WordPressSettings {
             
             // Build options with skip as default
             $options = [
-                'skip' => __('Skip', 'data-machine'),
-                'ai_decides' => __('AI Decides', 'data-machine')
+                'skip' => __('Skip', 'datamachine'),
+                'ai_decides' => __('AI Decides', 'datamachine')
             ];
             
             // Get terms for this taxonomy
@@ -137,9 +137,9 @@ class WordPressSettings {
                 'label' => $taxonomy_label,
                 'description' => sprintf(
                     /* translators: %1$s: Taxonomy name (lowercase), %2$s: Category or term type */
-                    __('Configure %1$s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'data-machine'),
+                    __('Configure %1$s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'datamachine'),
                     strtolower($taxonomy_label),
-                    $taxonomy->hierarchical ? __('category', 'data-machine') : __('term', 'data-machine')
+                    $taxonomy->hierarchical ? __('category', 'datamachine') : __('term', 'datamachine')
                 ),
                 'options' => $options,
             ];
@@ -158,21 +158,21 @@ class WordPressSettings {
         return [
             'include_source' => [
                 'type' => 'checkbox',
-                'label' => __('Include Source Link', 'data-machine'),
-                'description' => __('Append the original source URL to the post content when available.', 'data-machine'),
+                'label' => __('Include Source Link', 'datamachine'),
+                'description' => __('Append the original source URL to the post content when available.', 'datamachine'),
             ],
             'enable_images' => [
                 'type' => 'checkbox',
-                'label' => __('Enable Featured Images', 'data-machine'),
-                'description' => __('Set the image from source data as the featured image for the post when available.', 'data-machine'),
+                'label' => __('Enable Featured Images', 'datamachine'),
+                'description' => __('Set the image from source data as the featured image for the post when available.', 'datamachine'),
             ],
             'post_date_source' => [
                 'type' => 'select',
-                'label' => __('Post Date Setting', 'data-machine'),
-                'description' => __('Choose whether to use the original date from the source (if available) or the current date when publishing.', 'data-machine'),
+                'label' => __('Post Date Setting', 'datamachine'),
+                'description' => __('Choose whether to use the original date from the source (if available) or the current date when publishing.', 'datamachine'),
                 'options' => [
-                    'current_date' => __('Use Current Date', 'data-machine'),
-                    'source_date' => __('Use Source Date (if available)', 'data-machine'),
+                    'current_date' => __('Use Current Date', 'datamachine'),
+                    'source_date' => __('Use Source Date (if available)', 'datamachine'),
                 ],
             ],
         ];

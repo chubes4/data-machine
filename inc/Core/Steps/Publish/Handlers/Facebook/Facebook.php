@@ -403,7 +403,7 @@ class Facebook {
     }
 
     public static function get_label(): string {
-        return __('Facebook', 'data-machine');
+        return __('Facebook', 'datamachine');
     }
 
     public function sanitize_settings(array $raw_settings): array {
@@ -435,7 +435,7 @@ class Facebook {
 
         // Test accessibility with HEAD request
         $response = wp_remote_head($image_url, [
-            'user-agent' => 'Mozilla/5.0 (compatible; DataMachine/1.0; +https://github.com/chubes/data-machine)'
+            'user-agent' => 'Mozilla/5.0 (compatible; DataMachine/1.0; +https://github.com/chubes/datamachine)'
         ]);
 
         if (is_wp_error($response)) {

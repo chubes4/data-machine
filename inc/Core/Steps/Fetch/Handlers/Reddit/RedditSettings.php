@@ -30,14 +30,14 @@ class RedditSettings {
         return [
             'subreddit' => [
                 'type' => 'text',
-                'label' => __('Subreddit Name', 'data-machine'),
-                'description' => __('Enter the name of the subreddit (e.g., news, programming) without "r/".', 'data-machine'),
+                'label' => __('Subreddit Name', 'datamachine'),
+                'description' => __('Enter the name of the subreddit (e.g., news, programming) without "r/".', 'datamachine'),
                 'placeholder' => 'news',
             ],
             'sort_by' => [
                 'type' => 'select',
-                'label' => __('Sort By', 'data-machine'),
-                'description' => __('Select how to sort the subreddit posts.', 'data-machine'),
+                'label' => __('Sort By', 'datamachine'),
+                'description' => __('Select how to sort the subreddit posts.', 'datamachine'),
                 'options' => [
                     'hot' => 'Hot',
                     'new' => 'New',
@@ -48,35 +48,35 @@ class RedditSettings {
             ],
             'timeframe_limit' => [
                 'type' => 'select',
-                'label' => __('Process Posts Within', 'data-machine'),
-                'description' => __('Only consider posts created within this timeframe.', 'data-machine'),
+                'label' => __('Process Posts Within', 'datamachine'),
+                'description' => __('Only consider posts created within this timeframe.', 'datamachine'),
                 'options' => apply_filters('datamachine_timeframe_limit', [], null),
             ],
             'min_upvotes' => [
                 'type' => 'number',
-                'label' => __('Minimum Upvotes', 'data-machine'),
-                'description' => __('Only process posts with at least this many upvotes (score). Set to 0 to disable filtering.', 'data-machine'),
+                'label' => __('Minimum Upvotes', 'datamachine'),
+                'description' => __('Only process posts with at least this many upvotes (score). Set to 0 to disable filtering.', 'datamachine'),
                 'min' => 0,
                 'max' => 100000,
             ],
             'min_comment_count' => [
                 'type' => 'number',
-                'label' => __('Minimum Comment Count', 'data-machine'),
-                'description' => __('Only process posts with at least this many comments. Set to 0 to disable filtering.', 'data-machine'),
+                'label' => __('Minimum Comment Count', 'datamachine'),
+                'description' => __('Only process posts with at least this many comments. Set to 0 to disable filtering.', 'datamachine'),
                 'min' => 0,
                 'max' => 100000,
             ],
             'comment_count' => [
                 'type' => 'number',
-                'label' => __('Top Comments to Fetch', 'data-machine'),
-                'description' => __('Number of top comments to fetch for each post. Set to 0 to disable fetching comments.', 'data-machine'),
+                'label' => __('Top Comments to Fetch', 'datamachine'),
+                'description' => __('Number of top comments to fetch for each post. Set to 0 to disable fetching comments.', 'datamachine'),
                 'min' => 0,
                 'max' => 100,
             ],
             'search' => [
                 'type' => 'text',
-                'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Filter posts locally by keywords (comma-separated). Only posts containing at least one keyword in their title or content (selftext) will be considered.', 'data-machine'),
+                'label' => __('Search Term Filter', 'datamachine'),
+                'description' => __('Filter posts locally by keywords (comma-separated). Only posts containing at least one keyword in their title or content (selftext) will be considered.', 'datamachine'),
             ],
         ];
     }

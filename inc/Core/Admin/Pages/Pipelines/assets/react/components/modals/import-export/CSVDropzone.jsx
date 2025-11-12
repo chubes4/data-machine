@@ -32,13 +32,13 @@ export default function CSVDropzone({
 	const processFile = (file) => {
 		// Validate file type
 		if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
-			setError(__('Please select a valid CSV file.', 'data-machine'));
+			setError(__('Please select a valid CSV file.', 'datamachine'));
 			return;
 		}
 
 		// Validate file size (10MB limit)
 		if (file.size > 10485760) {
-			setError(__('File size exceeds 10MB limit.', 'data-machine'));
+			setError(__('File size exceeds 10MB limit.', 'datamachine'));
 			return;
 		}
 
@@ -52,7 +52,7 @@ export default function CSVDropzone({
 			}
 		};
 		reader.onerror = () => {
-			setError(__('Failed to read file.', 'data-machine'));
+			setError(__('Failed to read file.', 'datamachine'));
 		};
 		reader.readAsText(file);
 	};
@@ -136,12 +136,12 @@ export default function CSVDropzone({
 
 				<p style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '500' }}>
 					{fileName
-						? __('File selected', 'data-machine')
-						: __('Drag and drop CSV file here', 'data-machine')}
+						? __('File selected', 'datamachine')
+						: __('Drag and drop CSV file here', 'datamachine')}
 				</p>
 
 				<p style={{ margin: '0 0 16px 0', color: '#757575', fontSize: '14px' }}>
-					{__('or', 'data-machine')}
+					{__('or', 'datamachine')}
 				</p>
 
 				<Button
@@ -149,7 +149,7 @@ export default function CSVDropzone({
 					onClick={handleBrowseClick}
 					disabled={disabled}
 				>
-					{__('Browse Files', 'data-machine')}
+					{__('Browse Files', 'datamachine')}
 				</Button>
 
 				<input

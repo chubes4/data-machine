@@ -53,14 +53,14 @@ export default function FileUploadDropzone({
 
 		// Validate file type
 		if (!allowedTypes.includes(extension)) {
-			setError(__(`Please select a valid file. Allowed types: ${formatAllowedTypes()}`, 'data-machine'));
+			setError(__(`Please select a valid file. Allowed types: ${formatAllowedTypes()}`, 'datamachine'));
 			return;
 		}
 
 		// Validate file size
 		const maxSizeBytes = maxSizeMB * 1024 * 1024;
 		if (file.size > maxSizeBytes) {
-			setError(__(`File size exceeds ${maxSizeMB}MB limit.`, 'data-machine'));
+			setError(__(`File size exceeds ${maxSizeMB}MB limit.`, 'datamachine'));
 			return;
 		}
 
@@ -125,7 +125,7 @@ export default function FileUploadDropzone({
 		}
 	};
 
-	const defaultUploadText = __('Drag and drop file here', 'data-machine');
+	const defaultUploadText = __('Drag and drop file here', 'datamachine');
 
 	return (
 		<div>
@@ -155,11 +155,11 @@ export default function FileUploadDropzone({
 				</p>
 
 				<p style={{ margin: '0 0 12px 0', color: '#757575', fontSize: '13px' }}>
-					{__(`Allowed: ${formatAllowedTypes()} (max ${maxSizeMB}MB)`, 'data-machine')}
+					{__(`Allowed: ${formatAllowedTypes()} (max ${maxSizeMB}MB)`, 'datamachine')}
 				</p>
 
 				<p style={{ margin: '0 0 16px 0', color: '#757575', fontSize: '14px' }}>
-					{__('or', 'data-machine')}
+					{__('or', 'datamachine')}
 				</p>
 
 				<Button
@@ -167,7 +167,7 @@ export default function FileUploadDropzone({
 					onClick={handleBrowseClick}
 					disabled={disabled}
 				>
-					{__('Browse Files', 'data-machine')}
+					{__('Browse Files', 'datamachine')}
 				</Button>
 
 				<input

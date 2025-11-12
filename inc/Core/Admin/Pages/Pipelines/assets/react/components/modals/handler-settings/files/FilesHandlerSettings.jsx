@@ -55,10 +55,10 @@ export default function FilesHandlerSettings({
 		<div className="datamachine-files-handler-settings">
 			<div style={{ marginBottom: '16px' }}>
 				<h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>
-					{__('Upload Files', 'data-machine')}
+					{__('Upload Files', 'datamachine')}
 				</h4>
 				<p style={{ margin: '0 0 12px 0', fontSize: '12px', color: '#757575' }}>
-					{__('Upload files to be processed by this flow. Each file will be processed individually.', 'data-machine')}
+					{__('Upload files to be processed by this flow. Each file will be processed individually.', 'datamachine')}
 				</p>
 			</div>
 
@@ -66,10 +66,10 @@ export default function FilesHandlerSettings({
 
 			<div style={{ marginTop: '24px', marginBottom: '16px' }}>
 				<h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>
-					{__('Uploaded Files', 'data-machine')}
+					{__('Uploaded Files', 'datamachine')}
 				</h4>
 				<p style={{ margin: '0 0 12px 0', fontSize: '12px', color: '#757575' }}>
-					{__('Files will be processed in order when the flow runs.', 'data-machine')}
+					{__('Files will be processed in order when the flow runs.', 'datamachine')}
 				</p>
 			</div>
 
@@ -90,7 +90,7 @@ export default function FilesHandlerSettings({
 				}}
 			>
 				<p style={{ margin: 0, fontSize: '12px', color: '#0073aa' }}>
-					<strong>{__('Note:', 'data-machine')}</strong> {__('Files are stored specifically for this flow. Each uploaded file will create a separate processing job when the flow runs.', 'data-machine')}
+					<strong>{__('Note:', 'datamachine')}</strong> {__('Files are stored specifically for this flow. Each uploaded file will create a separate processing job when the flow runs.', 'datamachine')}
 				</p>
 			</div>
 		</div>

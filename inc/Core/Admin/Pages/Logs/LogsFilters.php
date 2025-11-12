@@ -33,8 +33,8 @@ function datamachine_register_logs_admin_page_filters() {
     // Pure discovery mode - matches actual system usage
     add_filter('datamachine_admin_pages', function($pages) {
         $pages['logs'] = [
-            'page_title' => __('Logs', 'data-machine'),
-            'menu_title' => __('Logs', 'data-machine'),
+            'page_title' => __('Logs', 'datamachine'),
+            'menu_title' => __('Logs', 'datamachine'),
             'capability' => 'manage_options',
             'position' => 30,
             'templates' => __DIR__ . '/templates/',

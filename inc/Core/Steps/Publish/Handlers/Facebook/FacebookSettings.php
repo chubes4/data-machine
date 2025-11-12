@@ -30,19 +30,19 @@ class FacebookSettings {
         return [
             'link_handling' => [
                 'type' => 'select',
-                'label' => __('Source URL Handling', 'data-machine'),
-                'description' => __('Choose how to handle source URLs when posting to Facebook.', 'data-machine'),
+                'label' => __('Source URL Handling', 'datamachine'),
+                'description' => __('Choose how to handle source URLs when posting to Facebook.', 'datamachine'),
                 'options' => [
-                    'none' => __('No URL - exclude source link entirely', 'data-machine'),
-                    'append' => __('Append to post - add URL to post content', 'data-machine'),
-                    'comment' => __('Post as comment - add URL as separate comment', 'data-machine')
+                    'none' => __('No URL - exclude source link entirely', 'datamachine'),
+                    'append' => __('Append to post - add URL to post content', 'datamachine'),
+                    'comment' => __('Post as comment - add URL as separate comment', 'datamachine')
                 ],
                 'default' => 'append'
             ],
             'include_images' => [
                 'type' => 'checkbox',
-                'label' => __('Enable Image Posting', 'data-machine'),
-                'description' => __('Upload and attach images to posts when available in the data.', 'data-machine'),
+                'label' => __('Enable Image Posting', 'datamachine'),
+                'description' => __('Upload and attach images to posts when available in the data.', 'datamachine'),
             ]
         ];
     }

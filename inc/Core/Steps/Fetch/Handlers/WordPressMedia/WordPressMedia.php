@@ -277,6 +277,6 @@ class WordPressMedia {
      * @return string Handler label.
      */
     public static function get_label(): string {
-        return __('WordPress Media', 'data-machine');
+        return __('WordPress Media', 'datamachine');
     }
 }

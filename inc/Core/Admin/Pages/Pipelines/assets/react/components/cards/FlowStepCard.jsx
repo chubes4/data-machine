@@ -64,12 +64,12 @@ export default function FlowStepCard({
 			const response = await updateUserMessage(flowId, flowStepId, message);
 
 			if (!response.success) {
-				setError(response.message || __('Failed to update user message', 'data-machine'));
+				setError(response.message || __('Failed to update user message', 'datamachine'));
 				setLocalUserMessage(currentMessage); // Revert on error
 			}
 		} catch (err) {
 			console.error('User message update error:', err);
-			setError(err.message || __('An error occurred', 'data-machine'));
+			setError(err.message || __('An error occurred', 'datamachine'));
 			setLocalUserMessage(currentMessage); // Revert on error
 		} finally {
 			setIsSaving(false);
@@ -129,18 +129,18 @@ export default function FlowStepCard({
 					{isAiStep && aiConfig && (
 						<div className="datamachine-ai-config-display" style={{ marginTop: '12px' }}>
 							<div style={{ fontSize: '12px', color: '#757575', marginBottom: '8px' }}>
-								<strong>{__('AI Provider:', 'data-machine')}</strong> {aiConfig.ai_provider || 'Not configured'}
+								<strong>{__('AI Provider:', 'datamachine')}</strong> {aiConfig.ai_provider || 'Not configured'}
 								{' | '}
-								<strong>{__('Model:', 'data-machine')}</strong> {aiConfig.ai_model || 'Not configured'}
+								<strong>{__('Model:', 'datamachine')}</strong> {aiConfig.ai_model || 'Not configured'}
 							</div>
 
 							<TextareaControl
-								label={__('User Message', 'data-machine')}
+								label={__('User Message', 'datamachine')}
 								value={localUserMessage}
 								onChange={handleUserMessageChange}
-								placeholder={__('Enter user message for AI processing...', 'data-machine')}
+								placeholder={__('Enter user message for AI processing...', 'datamachine')}
 								rows={4}
-								help={isSaving ? __('Saving...', 'data-machine') : null}
+								help={isSaving ? __('Saving...', 'datamachine') : null}
 							/>
 						</div>
 					)}

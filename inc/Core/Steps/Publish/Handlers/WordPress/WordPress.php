@@ -142,11 +142,11 @@ class WordPress {
 
 
     public static function get_label(): string {
-        return __('WordPress', 'data-machine');
+        return __('WordPress', 'datamachine');
     }
 
     private function get_effective_post_status(array $handler_config): string {
-        $all_settings = get_option('data_machine_settings', []);
+        $all_settings = get_option('datamachine_settings', []);
         $wp_settings = $all_settings['wordpress_settings'] ?? [];
         $default_post_status = $wp_settings['default_post_status'] ?? '';
 
@@ -157,7 +157,7 @@ class WordPress {
     }
 
     private function get_effective_post_author(array $handler_config): int {
-        $all_settings = get_option('data_machine_settings', []);
+        $all_settings = get_option('datamachine_settings', []);
         $wp_settings = $all_settings['wordpress_settings'] ?? [];
         $default_author_id = $wp_settings['default_author_id'] ?? 0;
 

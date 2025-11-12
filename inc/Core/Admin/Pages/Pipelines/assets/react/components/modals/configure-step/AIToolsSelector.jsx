@@ -77,11 +77,11 @@ export default function AIToolsSelector({
 					fontSize: '14px'
 				}}
 			>
-				{__('AI Tools', 'data-machine')}
+				{__('AI Tools', 'datamachine')}
 			</label>
 
 			<p style={{ margin: '0 0 12px 0', fontSize: '12px', color: '#757575' }}>
-				{__('Select the tools you want to enable for this AI step:', 'data-machine')}
+				{__('Select the tools you want to enable for this AI step:', 'datamachine')}
 			</p>
 
 			<div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

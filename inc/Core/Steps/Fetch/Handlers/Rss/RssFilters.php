@@ -15,8 +15,8 @@ function datamachine_register_rss_fetch_filters() {
             $handlers['rss'] = [
                 'type' => 'fetch',
                 'class' => Rss::class,
-                'label' => __('RSS', 'data-machine'),
-                'description' => __('Monitor and process RSS feeds', 'data-machine')
+                'label' => __('RSS', 'datamachine'),
+                'description' => __('Monitor and process RSS feeds', 'datamachine')
             ];
         }
         return $handlers;

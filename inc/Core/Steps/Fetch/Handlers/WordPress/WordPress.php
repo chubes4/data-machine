@@ -243,6 +243,6 @@ class WordPress {
 
 
     public static function get_label(): string {
-        return __('Local WordPress Posts', 'data-machine');
+        return __('Local WordPress Posts', 'datamachine');
     }
 }

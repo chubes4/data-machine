@@ -35,7 +35,7 @@ class GlobalSystemPromptDirective {
             return $request;
         }
 
-        $settings = get_option('datamachine_data_machine_settings', []);
+        $settings = get_option('datamachine_datamachine_settings', []);
         $global_prompt = $settings['global_system_prompt'] ?? '';
         
         if (empty($global_prompt)) {

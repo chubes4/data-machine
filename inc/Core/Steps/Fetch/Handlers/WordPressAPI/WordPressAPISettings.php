@@ -30,22 +30,22 @@ class WordPressAPISettings {
         $fields = [
             'endpoint_url' => [
                 'type' => 'text',
-                'label' => __('API Endpoint URL', 'data-machine'),
-                'description' => __('Enter the complete REST API endpoint URL (e.g., https://sxsw.com/wp-json/wp/v2/posts)', 'data-machine'),
-                'placeholder' => __('https://example.com/wp-json/wp/v2/posts', 'data-machine'),
+                'label' => __('API Endpoint URL', 'datamachine'),
+                'description' => __('Enter the complete REST API endpoint URL (e.g., https://sxsw.com/wp-json/wp/v2/posts)', 'datamachine'),
+                'placeholder' => __('https://example.com/wp-json/wp/v2/posts', 'datamachine'),
                 'required' => true,
             ],
             'timeframe_limit' => [
                 'type' => 'select',
-                'label' => __('Process Items Within', 'data-machine'),
-                'description' => __('Only consider items published within this timeframe.', 'data-machine'),
+                'label' => __('Process Items Within', 'datamachine'),
+                'description' => __('Only consider items published within this timeframe.', 'datamachine'),
                 'options' => apply_filters('datamachine_timeframe_limit', [], null),
             ],
             'search' => [
                 'type' => 'text',
-                'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Filter items by keywords (comma-separated). Items containing any keyword in their title or content will be included.', 'data-machine'),
-                'placeholder' => __('Optional search term', 'data-machine'),
+                'label' => __('Search Term Filter', 'datamachine'),
+                'description' => __('Filter items by keywords (comma-separated). Items containing any keyword in their title or content will be included.', 'datamachine'),
+                'placeholder' => __('Optional search term', 'datamachine'),
             ],
         ];
 

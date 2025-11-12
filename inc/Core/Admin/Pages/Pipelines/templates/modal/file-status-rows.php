@@ -35,7 +35,7 @@ foreach ($files as $file):
         </td>
         <td class="datamachine-file-date-col"><?php echo esc_html($file['modified_formatted']); ?></td>
         <td class="datamachine-file-actions-col">
-            <button type="button" class="button button-small datamachine-delete-file" data-filename="<?php echo esc_attr($file['filename']); ?>" title="<?php echo esc_attr(__('Delete file', 'data-machine')); ?>">
+            <button type="button" class="button button-small datamachine-delete-file" data-filename="<?php echo esc_attr($file['filename']); ?>" title="<?php echo esc_attr(__('Delete file', 'datamachine')); ?>">
                 <span class="dashicons dashicons-trash"></span>
             </button>
         </td>

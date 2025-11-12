@@ -29,17 +29,17 @@ export default function FlowsSection({ pipelineId, flows, pipelineSteps, pipelin
 	 */
 	const handleAddFlow = useCallback(async (pipelineIdParam) => {
 		try {
-			const defaultName = __('New Flow', 'data-machine');
+			const defaultName = __('New Flow', 'datamachine');
 			const response = await createFlow(pipelineIdParam, defaultName);
 
 			if (response.success) {
 				refreshData();
 			} else {
-				alert(response.message || __('Failed to create flow', 'data-machine'));
+				alert(response.message || __('Failed to create flow', 'datamachine'));
 			}
 		} catch (error) {
 			console.error('Flow creation error:', error);
-			alert(__('An error occurred while creating the flow', 'data-machine'));
+			alert(__('An error occurred while creating the flow', 'datamachine'));
 		}
 	}, [refreshData]);
 
@@ -50,10 +50,10 @@ export default function FlowsSection({ pipelineId, flows, pipelineSteps, pipelin
 		return (
 			<div className="datamachine-flows-section datamachine-flows-section--empty">
 				<h3 style={{ marginTop: 0, marginBottom: '16px' }}>
-					{__('Flows', 'data-machine')}
+					{__('Flows', 'datamachine')}
 				</h3>
 				<p style={{ color: '#757575', marginBottom: '16px' }}>
-					{__('No flows configured. Add your first flow to get started.', 'data-machine')}
+					{__('No flows configured. Add your first flow to get started.', 'datamachine')}
 				</p>
 				<EmptyFlowCard pipelineId={pipelineId} onAddFlow={handleAddFlow} />
 			</div>
@@ -74,7 +74,7 @@ export default function FlowsSection({ pipelineId, flows, pipelineSteps, pipelin
 				}}
 			>
 				<h3 style={{ margin: 0 }}>
-					{__('Flows', 'data-machine')}
+					{__('Flows', 'datamachine')}
 					{' '}
 					<span style={{ color: '#757575', fontSize: '14px', fontWeight: 'normal' }}>
 						({flows.length})

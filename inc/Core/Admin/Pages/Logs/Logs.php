@@ -47,7 +47,7 @@ class Logs
     {
         // Set log file path
         $upload_dir = wp_upload_dir();
-        $this->log_file_path = $upload_dir['basedir'] . '/data-machine-logs/data-machine.log';
+        $this->log_file_path = $upload_dir['basedir'] . '/datamachine-logs/datamachine.log';
 
         // Admin page registration now handled by LogsFilters.php
 
@@ -188,7 +188,7 @@ class Logs
             case 'clear_all':
                 do_action('datamachine_log', 'clear_all');
                 $this->add_admin_notice(
-                    __('Logs cleared successfully.', 'data-machine'),
+                    __('Logs cleared successfully.', 'datamachine'),
                     'success'
                 );
                 break;
@@ -200,7 +200,7 @@ class Logs
                     do_action('datamachine_log', 'set_level', $new_level);
                     $this->add_admin_notice(
                         /* translators: %s: Log level name (e.g., debug, info, error) */
-                        sprintf(esc_html__('Log level updated to %s.', 'data-machine'), ucfirst($new_level)),
+                        sprintf(esc_html__('Log level updated to %s.', 'datamachine'), ucfirst($new_level)),
                         'success'
                     );
                 }

@@ -27,7 +27,7 @@ class FeaturedImageHandler {
     }
 
     public function isImageHandlingEnabled(array $handler_config): bool {
-        $all_settings = get_option('data_machine_settings', []);
+        $all_settings = get_option('datamachine_settings', []);
         $wp_settings = $all_settings['wordpress_settings'] ?? [];
 
         if (isset($wp_settings['default_enable_images'])) {

@@ -38,7 +38,7 @@ class Flows {
 				'pipeline_id' => [
 					'required' => true,
 					'type' => 'integer',
-					'description' => __('Parent pipeline ID', 'data-machine'),
+					'description' => __('Parent pipeline ID', 'datamachine'),
 					'validate_callback' => function($param) {
 						return is_numeric($param) && $param > 0;
 					},
@@ -50,7 +50,7 @@ class Flows {
 					'required' => false,
 					'type' => 'string',
 					'default' => 'Flow',
-					'description' => __('Flow name', 'data-machine'),
+					'description' => __('Flow name', 'datamachine'),
 					'sanitize_callback' => function($param) {
 						return sanitize_text_field($param);
 					}
@@ -58,12 +58,12 @@ class Flows {
 				'flow_config' => [
 					'required' => false,
 					'type' => 'array',
-					'description' => __('Flow configuration (handler settings per step)', 'data-machine'),
+					'description' => __('Flow configuration (handler settings per step)', 'datamachine'),
 				],
 				'scheduling_config' => [
 					'required' => false,
 					'type' => 'array',
-					'description' => __('Scheduling configuration', 'data-machine'),
+					'description' => __('Scheduling configuration', 'datamachine'),
 				]
 			]
 		]);
@@ -77,7 +77,7 @@ class Flows {
 					'required' => false,
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
-					'description' => __('Optional pipeline ID to filter flows', 'data-machine'),
+					'description' => __('Optional pipeline ID to filter flows', 'datamachine'),
 				],
 			]
 		]);
@@ -92,7 +92,7 @@ class Flows {
 						'required' => true,
 						'type' => 'integer',
 						'sanitize_callback' => 'absint',
-						'description' => __('Flow ID to retrieve', 'data-machine'),
+						'description' => __('Flow ID to retrieve', 'datamachine'),
 					],
 				]
 			],
@@ -105,7 +105,7 @@ class Flows {
 						'required' => true,
 						'type' => 'integer',
 						'sanitize_callback' => 'absint',
-						'description' => __('Flow ID to delete', 'data-machine'),
+						'description' => __('Flow ID to delete', 'datamachine'),
 					],
 				]
 			],
@@ -118,13 +118,13 @@ class Flows {
 						'required' => true,
 						'type' => 'integer',
 						'sanitize_callback' => 'absint',
-						'description' => __('Flow ID to update', 'data-machine'),
+						'description' => __('Flow ID to update', 'datamachine'),
 					],
 					'flow_name' => [
 						'required' => true,
 						'type' => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
-						'description' => __('New flow title', 'data-machine'),
+						'description' => __('New flow title', 'datamachine'),
 					],
 				]
 			]
@@ -139,7 +139,7 @@ class Flows {
 					'required' => true,
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
-					'description' => __('Source flow ID to duplicate', 'data-machine'),
+					'description' => __('Source flow ID to duplicate', 'datamachine'),
 				],
 			]
 		]);
@@ -153,7 +153,7 @@ class Flows {
 					'required' => true,
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
-					'description' => __('Flow ID to retrieve configuration for', 'data-machine'),
+					'description' => __('Flow ID to retrieve configuration for', 'datamachine'),
 				],
 			]
 		]);
@@ -167,7 +167,7 @@ class Flows {
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Flow step ID (composite key: pipeline_step_id_flow_id)', 'data-machine'),
+					'description' => __('Flow step ID (composite key: pipeline_step_id_flow_id)', 'datamachine'),
 				],
 			]
 		]);
@@ -181,25 +181,25 @@ class Flows {
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Flow step ID (composite key: pipeline_step_id_flow_id)', 'data-machine'),
+					'description' => __('Flow step ID (composite key: pipeline_step_id_flow_id)', 'datamachine'),
 				],
 				'handler_slug' => [
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Handler identifier', 'data-machine'),
+					'description' => __('Handler identifier', 'datamachine'),
 				],
 				'pipeline_id' => [
 					'required' => true,
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
-					'description' => __('Pipeline ID for context', 'data-machine'),
+					'description' => __('Pipeline ID for context', 'datamachine'),
 				],
 				'step_type' => [
 					'required' => true,
 					'type' => 'string',
 					'enum' => ['fetch', 'publish', 'update'],
-					'description' => __('Step type', 'data-machine'),
+					'description' => __('Step type', 'datamachine'),
 				],
 			]
 		]);
@@ -213,13 +213,13 @@ class Flows {
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Flow step ID (composite key: pipeline_step_id_flow_id)', 'data-machine'),
+					'description' => __('Flow step ID (composite key: pipeline_step_id_flow_id)', 'datamachine'),
 				],
 				'user_message' => [
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_textarea_field',
-					'description' => __('User message for AI step', 'data-machine'),
+					'description' => __('User message for AI step', 'datamachine'),
 				],
 			]
 		]);
@@ -232,7 +232,7 @@ class Flows {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to create flows.', 'data-machine'),
+				__('You do not have permission to create flows.', 'datamachine'),
 				['status' => 403]
 			);
 		}
@@ -257,7 +257,7 @@ class Flows {
 
 			return new \WP_Error(
 				'flow_creation_failed',
-				__('Failed to create flow.', 'data-machine'),
+				__('Failed to create flow.', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -317,7 +317,7 @@ class Flows {
 
 			return new \WP_Error(
 				'flow_duplication_failed',
-				__('Failed to duplicate flow.', 'data-machine'),
+				__('Failed to duplicate flow.', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -359,7 +359,7 @@ class Flows {
 		if (!$flow) {
 			return new \WP_Error(
 				'flow_not_found',
-				__('Flow not found.', 'data-machine'),
+				__('Flow not found.', 'datamachine'),
 				['status' => 404]
 			);
 		}
@@ -382,7 +382,7 @@ class Flows {
 		if (empty($flow_step_id)) {
 			return new \WP_Error(
 				'invalid_flow_step_id',
-				__('Flow step ID is required.', 'data-machine'),
+				__('Flow step ID is required.', 'datamachine'),
 				['status' => 400]
 			);
 		}
@@ -393,7 +393,7 @@ class Flows {
 		if (empty($step_config)) {
 			return new \WP_Error(
 				'flow_step_not_found',
-				__('Flow step configuration not found.', 'data-machine'),
+				__('Flow step configuration not found.', 'datamachine'),
 				['status' => 404]
 			);
 		}
@@ -449,7 +449,7 @@ class Flows {
 		if (!$flow) {
 			return new \WP_Error(
 				'flow_not_found',
-				__('Flow not found.', 'data-machine'),
+				__('Flow not found.', 'datamachine'),
 				['status' => 404]
 			);
 		}
@@ -532,7 +532,7 @@ class Flows {
 		if (empty($handler_slug) || empty($flow_step_id)) {
 			return new \WP_Error(
 				'missing_required_fields',
-				__('Handler slug and flow step ID are required.', 'data-machine'),
+				__('Handler slug and flow step ID are required.', 'datamachine'),
 				['status' => 400]
 			);
 		}
@@ -551,7 +551,7 @@ class Flows {
 		if (!$handler_info) {
 			return new \WP_Error(
 				'handler_not_found',
-				__('Handler not found.', 'data-machine'),
+				__('Handler not found.', 'datamachine'),
 				['status' => 404]
 			);
 		}
@@ -601,7 +601,7 @@ class Flows {
 			$handler_settings_display = apply_filters('datamachine_get_handler_settings_display', [], $flow_step_id, $step_type);
 
 			/* translators: %s: Handler name or label */
-			$message = sprintf(__('Handler "%s" settings saved successfully.', 'data-machine'), $handler_info['label'] ?? $handler_slug);
+			$message = sprintf(__('Handler "%s" settings saved successfully.', 'datamachine'), $handler_info['label'] ?? $handler_slug);
 
 			return [
 				'success' => true,
@@ -623,7 +623,7 @@ class Flows {
 
 			return new \WP_Error(
 				'save_failed',
-				__('Failed to save handler settings.', 'data-machine'),
+				__('Failed to save handler settings.', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -641,7 +641,7 @@ class Flows {
 		if (empty($flow_name)) {
 			return new \WP_Error(
 				'empty_title',
-				__('Flow title cannot be empty', 'data-machine'),
+				__('Flow title cannot be empty', 'datamachine'),
 				['status' => 400]
 			);
 		}
@@ -654,7 +654,7 @@ class Flows {
 		if (!$success) {
 			return new \WP_Error(
 				'update_failed',
-				__('Failed to save flow title', 'data-machine'),
+				__('Failed to save flow title', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -665,7 +665,7 @@ class Flows {
 
 		return [
 			'success' => true,
-			'message' => __('Flow title saved successfully', 'data-machine')
+			'message' => __('Flow title saved successfully', 'datamachine')
 		];
 	}
 
@@ -684,7 +684,7 @@ class Flows {
 		if (!$success) {
 			return new \WP_Error(
 				'update_failed',
-				__('Failed to save user message', 'data-machine'),
+				__('Failed to save user message', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -704,7 +704,7 @@ class Flows {
 
 		return [
 			'success' => true,
-			'message' => __('User message saved successfully', 'data-machine')
+			'message' => __('User message saved successfully', 'datamachine')
 		];
 	}
 

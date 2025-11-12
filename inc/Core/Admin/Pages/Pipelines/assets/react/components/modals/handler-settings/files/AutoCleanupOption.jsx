@@ -27,10 +27,10 @@ export default function AutoCleanupOption({ checked, onChange }) {
 			}}
 		>
 			<CheckboxControl
-				label={__('Automatically delete files after processing', 'data-machine')}
+				label={__('Automatically delete files after processing', 'datamachine')}
 				checked={checked}
 				onChange={onChange}
-				help={__('Files will be removed from the handler after successful processing. Disable to keep files for multiple uses.', 'data-machine')}
+				help={__('Files will be removed from the handler after successful processing. Disable to keep files for multiple uses.', 'datamachine')}
 			/>
 		</div>
 	);

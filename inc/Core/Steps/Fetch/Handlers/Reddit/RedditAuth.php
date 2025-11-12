@@ -34,22 +34,22 @@ class RedditAuth {
     public function get_config_fields(): array {
         return [
             'client_id' => [
-                'label' => __('Client ID', 'data-machine'),
+                'label' => __('Client ID', 'datamachine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Reddit application Client ID from reddit.com/prefs/apps', 'data-machine')
+                'description' => __('Your Reddit application Client ID from reddit.com/prefs/apps', 'datamachine')
             ],
             'client_secret' => [
-                'label' => __('Client Secret', 'data-machine'),
+                'label' => __('Client Secret', 'datamachine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Reddit application Client Secret from reddit.com/prefs/apps', 'data-machine')
+                'description' => __('Your Reddit application Client Secret from reddit.com/prefs/apps', 'datamachine')
             ],
             'developer_username' => [
-                'label' => __('Developer Username', 'data-machine'),
+                'label' => __('Developer Username', 'datamachine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Reddit username that is registered in the Reddit app configuration', 'data-machine')
+                'description' => __('Your Reddit username that is registered in the Reddit app configuration', 'datamachine')
             ]
         ];
     }
@@ -168,7 +168,7 @@ class RedditAuth {
                 // HTTP Basic Auth: base64(client_id:client_secret)
                 'Authorization' => 'Basic ' . base64_encode($client_id . ':' . $client_secret),
                 // Unique User-Agent is important!
-                'User-Agent'    => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/' . $developer_username . ')',
+                'User-Agent'    => 'php:DataMachineWPPlugin:v' . DATAMACHINE_VERSION . ' (by /u/' . $developer_username . ')',
                 // Content-Type required for Reddit OAuth
                 'Content-Type'  => 'application/x-www-form-urlencoded'
             ],
@@ -217,7 +217,7 @@ class RedditAuth {
             'method'  => 'GET',
             'headers' => [
                 'Authorization' => 'Bearer ' . $access_token,
-                 'User-Agent'    => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/' . $developer_username . ')'
+                 'User-Agent'    => 'php:DataMachineWPPlugin:v' . DATAMACHINE_VERSION . ' (by /u/' . $developer_username . ')'
             ],
         ];
         $identity_result = apply_filters('datamachine_request', null, 'GET', $identity_url, $identity_args, 'Reddit Authentication');
@@ -294,7 +294,7 @@ class RedditAuth {
             'method'    => 'POST',
             'headers'   => [
                 'Authorization' => 'Basic ' . base64_encode($client_id . ':' . $client_secret),
-                'User-Agent'    => 'php:DataMachineWPPlugin:v' . DATA_MACHINE_VERSION . ' (by /u/' . $developer_username . ')'
+                'User-Agent'    => 'php:DataMachineWPPlugin:v' . DATAMACHINE_VERSION . ' (by /u/' . $developer_username . ')'
             ],
             'body'      => [
                 'grant_type'    => 'refresh_token',

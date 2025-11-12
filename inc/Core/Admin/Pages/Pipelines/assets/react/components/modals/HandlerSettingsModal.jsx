@@ -97,11 +97,11 @@ export default function HandlerSettingsModal({
 				}
 				onClose();
 			} else {
-				setError(response.message || __('Failed to update handler settings', 'data-machine'));
+				setError(response.message || __('Failed to update handler settings', 'datamachine'));
 			}
 		} catch (err) {
 			console.error('Handler settings update error:', err);
-			setError(err.message || __('An error occurred', 'data-machine'));
+			setError(err.message || __('An error occurred', 'datamachine'));
 		} finally {
 			setIsSaving(false);
 		}
@@ -183,7 +183,7 @@ export default function HandlerSettingsModal({
 
 	return (
 		<Modal
-			title={__('Configure Handler', 'data-machine')}
+			title={__('Configure Handler', 'datamachine')}
 			onRequestClose={onClose}
 			className="datamachine-modal datamachine-handler-settings-modal"
 			style={{ maxWidth: '600px' }}
@@ -198,14 +198,14 @@ export default function HandlerSettingsModal({
 				<div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid #dcdcde' }}>
 					<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 						<div>
-							<strong>{__('Handler:', 'data-machine')}</strong> {handlerInfo.label || slugToLabel(handlerSlug)}
+							<strong>{__('Handler:', 'datamachine')}</strong> {handlerInfo.label || slugToLabel(handlerSlug)}
 						</div>
 						<Button
 							variant="secondary"
 							size="small"
 							onClick={onChangeHandler}
 						>
-							{__('Change Handler', 'data-machine')}
+							{__('Change Handler', 'datamachine')}
 						</Button>
 					</div>
 
@@ -219,7 +219,7 @@ export default function HandlerSettingsModal({
 									}
 								}}
 							>
-								{__('Connect Account', 'data-machine')}
+								{__('Connect Account', 'datamachine')}
 							</Button>
 						</div>
 					)}
@@ -236,7 +236,7 @@ export default function HandlerSettingsModal({
 						{Object.keys(settingsFields).length === 0 && (
 							<div style={{ padding: '20px', background: '#f9f9f9', border: '1px solid #dcdcde', borderRadius: '4px', textAlign: 'center' }}>
 								<p style={{ margin: 0, color: '#757575' }}>
-									{__('No configuration options available for this handler.', 'data-machine')}
+									{__('No configuration options available for this handler.', 'datamachine')}
 								</p>
 							</div>
 						)}
@@ -263,7 +263,7 @@ export default function HandlerSettingsModal({
 						onClick={onClose}
 						disabled={isSaving}
 					>
-						{__('Cancel', 'data-machine')}
+						{__('Cancel', 'datamachine')}
 					</Button>
 
 					<Button
@@ -272,7 +272,7 @@ export default function HandlerSettingsModal({
 						disabled={isSaving}
 						isBusy={isSaving}
 					>
-						{isSaving ? __('Saving...', 'data-machine') : __('Save Settings', 'data-machine')}
+						{isSaving ? __('Saving...', 'datamachine') : __('Save Settings', 'datamachine')}
 					</Button>
 				</div>
 			</div>

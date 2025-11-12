@@ -30,22 +30,22 @@ class GoogleSheetsSettings {
         return [
             'googlesheets_spreadsheet_id' => [
                 'type' => 'text',
-                'label' => __('Spreadsheet ID', 'data-machine'),
-                'description' => __('Google Sheets ID from the URL (e.g., 1abc...xyz from docs.google.com/spreadsheets/d/1abc...xyz/edit). The spreadsheet must be accessible by your authenticated Google account.', 'data-machine'),
+                'label' => __('Spreadsheet ID', 'datamachine'),
+                'description' => __('Google Sheets ID from the URL (e.g., 1abc...xyz from docs.google.com/spreadsheets/d/1abc...xyz/edit). The spreadsheet must be accessible by your authenticated Google account.', 'datamachine'),
                 'placeholder' => '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
                 'required' => true
             ],
             'googlesheets_worksheet_name' => [
                 'type' => 'text',
-                'label' => __('Worksheet Name', 'data-machine'),
-                'description' => __('Name of the specific worksheet/tab within the spreadsheet where data will be appended.', 'data-machine'),
+                'label' => __('Worksheet Name', 'datamachine'),
+                'description' => __('Name of the specific worksheet/tab within the spreadsheet where data will be appended.', 'datamachine'),
                 'placeholder' => 'Data Machine Output',
                 'default' => 'Data Machine Output'
             ],
             'googlesheets_column_mapping' => [
                 'type' => 'textarea',
-                'label' => __('Column Mapping (JSON)', 'data-machine'),
-                'description' => __('JSON configuration mapping data fields to spreadsheet columns. Default maps: A=timestamp, B=title, C=content, D=source_url, E=source_type, F=job_id', 'data-machine'),
+                'label' => __('Column Mapping (JSON)', 'datamachine'),
+                'description' => __('JSON configuration mapping data fields to spreadsheet columns. Default maps: A=timestamp, B=title, C=content, D=source_url, E=source_type, F=job_id', 'datamachine'),
                 'placeholder' => '{"A": "timestamp", "B": "title", "C": "content", "D": "source_url", "E": "source_type", "F": "job_id"}',
                 'rows' => 4
             ]
@@ -124,13 +124,13 @@ class GoogleSheetsSettings {
      */
     public static function get_available_fields(): array {
         return [
-            'timestamp' => __('Current timestamp when data is processed', 'data-machine'),
-            'title' => __('Parsed title/headline from AI output', 'data-machine'),
-            'content' => __('Parsed content/body from AI output', 'data-machine'),
-            'source_url' => __('Original source URL of the fetch data', 'data-machine'),
-            'source_type' => __('Type of fetch source (rss, reddit, files, etc.)', 'data-machine'),
-            'job_id' => __('Unique job ID for tracking and debugging', 'data-machine'),
-            'created_at' => __('Original creation timestamp from source data', 'data-machine')
+            'timestamp' => __('Current timestamp when data is processed', 'datamachine'),
+            'title' => __('Parsed title/headline from AI output', 'datamachine'),
+            'content' => __('Parsed content/body from AI output', 'datamachine'),
+            'source_url' => __('Original source URL of the fetch data', 'datamachine'),
+            'source_type' => __('Type of fetch source (rss, reddit, files, etc.)', 'datamachine'),
+            'job_id' => __('Unique job ID for tracking and debugging', 'datamachine'),
+            'created_at' => __('Original creation timestamp from source data', 'datamachine')
         ];
     }
 }

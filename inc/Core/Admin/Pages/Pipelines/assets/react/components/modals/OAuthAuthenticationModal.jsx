@@ -66,7 +66,7 @@ export default function OAuthAuthenticationModal({
 	const handleOAuthSuccess = (account) => {
 		setConnected(true);
 		setAccountData(account);
-		setSuccess(__('Account connected successfully!', 'data-machine'));
+		setSuccess(__('Account connected successfully!', 'datamachine'));
 		setError(null);
 
 		if (onSuccess) {
@@ -96,14 +96,14 @@ export default function OAuthAuthenticationModal({
 
 			setConnected(true);
 			setAccountData({ api_key: apiConfig.api_key });
-			setSuccess(__('Credentials saved successfully!', 'data-machine'));
+			setSuccess(__('Credentials saved successfully!', 'datamachine'));
 
 			if (onSuccess) {
 				onSuccess();
 			}
 		} catch (err) {
 			console.error('Save error:', err);
-			setError(err.message || __('Failed to save credentials', 'data-machine'));
+			setError(err.message || __('Failed to save credentials', 'datamachine'));
 		} finally {
 			setIsSaving(false);
 		}
@@ -113,7 +113,7 @@ export default function OAuthAuthenticationModal({
 	 * Handle disconnect
 	 */
 	const handleDisconnect = async () => {
-		if (!confirm(__('Are you sure you want to disconnect this account?', 'data-machine'))) {
+		if (!confirm(__('Are you sure you want to disconnect this account?', 'datamachine'))) {
 			return;
 		}
 
@@ -128,10 +128,10 @@ export default function OAuthAuthenticationModal({
 			setConnected(false);
 			setAccountData(null);
 			setApiConfig({});
-			setSuccess(__('Account disconnected successfully!', 'data-machine'));
+			setSuccess(__('Account disconnected successfully!', 'datamachine'));
 		} catch (err) {
 			console.error('Disconnect error:', err);
-			setError(err.message || __('Failed to disconnect account', 'data-machine'));
+			setError(err.message || __('Failed to disconnect account', 'datamachine'));
 		} finally {
 			setIsSaving(false);
 		}
@@ -139,7 +139,7 @@ export default function OAuthAuthenticationModal({
 
 	return (
 		<Modal
-			title={__('OAuth Authentication', 'data-machine')}
+			title={__('OAuth Authentication', 'datamachine')}
 			onRequestClose={onClose}
 			className="datamachine-modal datamachine-oauth-modal"
 			style={{ maxWidth: '600px' }}
@@ -160,15 +160,15 @@ export default function OAuthAuthenticationModal({
 				<div style={{ marginBottom: '20px' }}>
 					<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
 						<div>
-							<strong>{__('Handler:', 'data-machine')}</strong> {handlerInfo.label || handlerSlug}
+							<strong>{__('Handler:', 'datamachine')}</strong> {handlerInfo.label || handlerSlug}
 						</div>
 						<ConnectionStatus connected={connected} />
 					</div>
 
 					<p style={{ margin: 0, fontSize: '13px', color: '#757575' }}>
 						{authType === 'oauth2'
-							? __('Click "Connect Account" to authorize access via OAuth.', 'data-machine')
-							: __('Enter your API credentials to connect.', 'data-machine')}
+							? __('Click "Connect Account" to authorize access via OAuth.', 'datamachine')
+							: __('Enter your API credentials to connect.', 'datamachine')}
 					</p>
 				</div>
 
@@ -197,7 +197,7 @@ export default function OAuthAuthenticationModal({
 										disabled={isSaving}
 										isBusy={isSaving}
 									>
-										{isSaving ? __('Saving...', 'data-machine') : __('Save Credentials', 'data-machine')}
+										{isSaving ? __('Saving...', 'datamachine') : __('Save Credentials', 'datamachine')}
 									</Button>
 								</div>
 							</>
@@ -217,7 +217,7 @@ export default function OAuthAuthenticationModal({
 								isBusy={isSaving}
 								style={{ color: '#dc3232' }}
 							>
-								{isSaving ? __('Disconnecting...', 'data-machine') : __('Disconnect Account', 'data-machine')}
+								{isSaving ? __('Disconnecting...', 'datamachine') : __('Disconnect Account', 'datamachine')}
 							</Button>
 						</div>
 					</>
@@ -237,7 +237,7 @@ export default function OAuthAuthenticationModal({
 						onClick={onClose}
 						disabled={isSaving}
 					>
-						{__('Close', 'data-machine')}
+						{__('Close', 'datamachine')}
 					</Button>
 				</div>
 			</div>

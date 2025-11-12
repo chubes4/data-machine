@@ -34,25 +34,25 @@ export default function AccountDetails({ account }) {
 			}}
 		>
 			<h4 style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: '600' }}>
-				{__('Connected Account', 'data-machine')}
+				{__('Connected Account', 'datamachine')}
 			</h4>
 
 			<div style={{ fontSize: '12px', color: '#555' }}>
 				{username && (
 					<div style={{ marginBottom: '4px' }}>
-						<strong>{__('Username:', 'data-machine')}</strong> {username}
+						<strong>{__('Username:', 'datamachine')}</strong> {username}
 					</div>
 				)}
 
 				{email && (
 					<div style={{ marginBottom: '4px' }}>
-						<strong>{__('Email:', 'data-machine')}</strong> {email}
+						<strong>{__('Email:', 'datamachine')}</strong> {email}
 					</div>
 				)}
 
 				{accountId && (
 					<div style={{ marginBottom: '4px' }}>
-						<strong>{__('Account ID:', 'data-machine')}</strong> {accountId}
+						<strong>{__('Account ID:', 'datamachine')}</strong> {accountId}
 					</div>
 				)}
 

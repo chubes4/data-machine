@@ -56,11 +56,11 @@ export default function FlowScheduleModal({
 				}
 				onClose();
 			} else {
-				setError(response.message || __('Failed to update schedule', 'data-machine'));
+				setError(response.message || __('Failed to update schedule', 'datamachine'));
 			}
 		} catch (err) {
 			console.error('Schedule update error:', err);
-			setError(err.message || __('An error occurred', 'data-machine'));
+			setError(err.message || __('An error occurred', 'datamachine'));
 		} finally {
 			setIsSaving(false);
 		}
@@ -73,7 +73,7 @@ export default function FlowScheduleModal({
 
 	return (
 		<Modal
-			title={__('Schedule Flow', 'data-machine')}
+			title={__('Schedule Flow', 'datamachine')}
 			onRequestClose={onClose}
 			className="datamachine-modal datamachine-flow-schedule-modal"
 			style={{ maxWidth: '500px' }}
@@ -86,15 +86,15 @@ export default function FlowScheduleModal({
 				)}
 
 				<div style={{ marginBottom: '20px' }}>
-					<strong>{__('Flow:', 'data-machine')}</strong> {flowName}
+					<strong>{__('Flow:', 'datamachine')}</strong> {flowName}
 				</div>
 
 				<SelectControl
-					label={__('Schedule Interval', 'data-machine')}
+					label={__('Schedule Interval', 'datamachine')}
 					value={selectedInterval}
 					options={SCHEDULING_INTERVALS}
 					onChange={(value) => setSelectedInterval(value)}
-					help={__('Choose how often this flow should run automatically.', 'data-machine')}
+					help={__('Choose how often this flow should run automatically.', 'datamachine')}
 				/>
 
 				{selectedInterval === 'manual' && (
@@ -108,7 +108,7 @@ export default function FlowScheduleModal({
 						}}
 					>
 						<p style={{ margin: 0, fontSize: '13px', color: '#0073aa' }}>
-							<strong>{__('Manual Mode:', 'data-machine')}</strong> {__('Flow will only run when triggered manually via the "Run Now" button.', 'data-machine')}
+							<strong>{__('Manual Mode:', 'datamachine')}</strong> {__('Flow will only run when triggered manually via the "Run Now" button.', 'datamachine')}
 						</p>
 					</div>
 				)}
@@ -124,7 +124,7 @@ export default function FlowScheduleModal({
 						}}
 					>
 						<p style={{ margin: 0, fontSize: '13px', color: '#757575' }}>
-							<strong>{__('Automatic Scheduling:', 'data-machine')}</strong> {__('Flow will run automatically based on the selected interval. You can still trigger it manually anytime.', 'data-machine')}
+							<strong>{__('Automatic Scheduling:', 'datamachine')}</strong> {__('Flow will run automatically based on the selected interval. You can still trigger it manually anytime.', 'datamachine')}
 						</p>
 					</div>
 				)}
@@ -143,7 +143,7 @@ export default function FlowScheduleModal({
 						onClick={onClose}
 						disabled={isSaving}
 					>
-						{__('Cancel', 'data-machine')}
+						{__('Cancel', 'datamachine')}
 					</Button>
 
 					<Button
@@ -152,7 +152,7 @@ export default function FlowScheduleModal({
 						disabled={isSaving || !hasChanged}
 						isBusy={isSaving}
 					>
-						{isSaving ? __('Saving...', 'data-machine') : __('Save Schedule', 'data-machine')}
+						{isSaving ? __('Saving...', 'datamachine') : __('Save Schedule', 'datamachine')}
 					</Button>
 				</div>
 			</div>

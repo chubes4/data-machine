@@ -251,7 +251,7 @@ function datamachine_register_execution_engine() {
                 'flow_step_id' => $flow_step_id,
                 'data' => $data_reference
             ],
-            'data-machine'
+            'datamachine'
         );
         if (!empty($data)) {
             do_action('datamachine_log', 'debug', 'Next step scheduled via Action Scheduler', [
@@ -269,7 +269,7 @@ function datamachine_register_execution_engine() {
     add_action('datamachine_run_flow_later', function($flow_id, $interval_or_timestamp) {
         // 1. Always unschedule existing to prevent duplicates
         if (function_exists('as_unschedule_action')) {
-            as_unschedule_action('datamachine_run_flow_now', [$flow_id], 'data-machine');
+            as_unschedule_action('datamachine_run_flow_now', [$flow_id], 'datamachine');
         }
 
         // 2. Handle 'manual' case (just unscheduled, done)
@@ -288,7 +288,7 @@ function datamachine_register_execution_engine() {
                     $interval_or_timestamp,
                     'datamachine_run_flow_now',
                     [$flow_id],
-                    'data-machine'
+                    'datamachine'
                 );
 
                 do_action('datamachine_log', 'info', 'Flow scheduled for one-time execution', [
@@ -318,7 +318,7 @@ function datamachine_register_execution_engine() {
                     $interval_seconds,
                     'datamachine_run_flow_now',
                     [$flow_id],
-                    'data-machine'
+                    'datamachine'
                 );
 
                 do_action('datamachine_log', 'info', 'Flow scheduled for recurring execution', [

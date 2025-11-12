@@ -209,7 +209,7 @@ class Bluesky {
      * @return string The label.
      */
     public static function get_label(): string {
-        return __('Post to Bluesky', 'data-machine');
+        return __('Post to Bluesky', 'datamachine');
     }
 
     /**
@@ -286,19 +286,19 @@ class Bluesky {
         $file_size = @filesize($temp_file_path);
         if ($file_size === false || $file_size > 1000000) {
             wp_delete_file($temp_file_path);
-            return new \WP_Error('bluesky_image_too_large', __('Image exceeds Bluesky size limit.', 'data-machine'));
+            return new \WP_Error('bluesky_image_too_large', __('Image exceeds Bluesky size limit.', 'datamachine'));
         }
 
         $mime_type = mime_content_type($temp_file_path);
         if (!$mime_type || strpos($mime_type, 'image/') !== 0) {
             wp_delete_file($temp_file_path);
-            return new \WP_Error('bluesky_invalid_image_type', __('Invalid image type.', 'data-machine'));
+            return new \WP_Error('bluesky_invalid_image_type', __('Invalid image type.', 'datamachine'));
         }
 
         $image_content = file_get_contents($temp_file_path);
         if ($image_content === false) {
             wp_delete_file($temp_file_path);
-            return new \WP_Error('bluesky_image_read_failed', __('Could not read image file.', 'data-machine'));
+            return new \WP_Error('bluesky_image_read_failed', __('Could not read image file.', 'datamachine'));
         }
 
         $upload_url = rtrim($pds_url, '/') . '/xrpc/com.atproto.repo.uploadBlob';
@@ -321,12 +321,12 @@ class Bluesky {
         $response_body = $result['data'];
 
         if ($response_code !== 200) {
-            return new \WP_Error('bluesky_upload_failed', __('Image upload failed.', 'data-machine'));
+            return new \WP_Error('bluesky_upload_failed', __('Image upload failed.', 'datamachine'));
         }
 
         $upload_result = json_decode($response_body, true);
         if (empty($upload_result['blob'])) {
-            return new \WP_Error('bluesky_upload_decode_error', __('Missing blob data in response.', 'data-machine'));
+            return new \WP_Error('bluesky_upload_decode_error', __('Missing blob data in response.', 'datamachine'));
         }
 
         return $upload_result;
@@ -366,11 +366,11 @@ class Bluesky {
         $response_body = $result['data'];
 
         if ($response_code !== 200) {
-            return new \WP_Error('bluesky_post_failed', __('Failed to create Bluesky post.', 'data-machine'));
+            return new \WP_Error('bluesky_post_failed', __('Failed to create Bluesky post.', 'datamachine'));
         }
 
         $result = json_decode($response_body, true);
-        return $result ?: new \WP_Error('bluesky_post_decode_error', __('Could not decode post response.', 'data-machine'));
+        return $result ?: new \WP_Error('bluesky_post_decode_error', __('Could not decode post response.', 'datamachine'));
     }
 
     /**
@@ -391,6 +391,6 @@ class Bluesky {
             'uri' => $uri,
             'handle' => $handle
         ]);
-        return new \WP_Error('bluesky_url_construction_failed', __('Failed to construct post URL from AT Protocol URI.', 'data-machine'));
+        return new \WP_Error('bluesky_url_construction_failed', __('Failed to construct post URL from AT Protocol URI.', 'datamachine'));
     }
 }

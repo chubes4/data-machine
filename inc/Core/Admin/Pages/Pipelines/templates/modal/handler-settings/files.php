@@ -67,7 +67,7 @@ if ($flow_step_id) {
                     'modified' => $file['modified'],
                     'modified_formatted' => date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $file['modified']),
                     'is_processed' => $is_processed,
-                    'status' => $is_processed ? __('Processed', 'data-machine') : __('Pending', 'data-machine'),
+                    'status' => $is_processed ? __('Processed', 'datamachine') : __('Pending', 'datamachine'),
                     'path' => $file['path']
                 ];
             }
@@ -86,9 +86,9 @@ if ($flow_step_id) {
      data-step-type="<?php echo esc_attr($step_type); ?>">
     <div class="datamachine-handler-settings-header">
         <?php /* translators: %s: Handler name/label */ ?>
-        <h3><?php echo esc_html(sprintf(__('Configure %s Handler', 'data-machine'), $handler_label)); ?></h3>
+        <h3><?php echo esc_html(sprintf(__('Configure %s Handler', 'datamachine'), $handler_label)); ?></h3>
         <?php /* translators: %s: Handler name/label */ ?>
-        <p><?php echo esc_html(sprintf(__('Set up your %s integration settings below.', 'data-machine'), $handler_label)); ?></p>
+        <p><?php echo esc_html(sprintf(__('Set up your %s integration settings below.', 'datamachine'), $handler_label)); ?></p>
     </div>
     
     <div class="datamachine-handler-settings-form" data-handler-slug="<?php echo esc_attr($handler_slug); ?>" data-step-type="<?php echo esc_attr($step_type); ?>">
@@ -102,8 +102,8 @@ if ($flow_step_id) {
             
             <!-- Enhanced File Upload Section -->
             <div class="datamachine-settings-section">
-                <h4><?php esc_html_e('File Upload', 'data-machine'); ?></h4>
-                <p class="description"><?php esc_html_e('Upload any file type - the pipeline will handle compatibility and processing.', 'data-machine'); ?></p>
+                <h4><?php esc_html_e('File Upload', 'datamachine'); ?></h4>
+                <p class="description"><?php esc_html_e('Upload any file type - the pipeline will handle compatibility and processing.', 'datamachine'); ?></p>
                 
                 <div class="datamachine-file-upload-container" 
                      data-handler-context="<?php echo esc_attr(json_encode(['flow_step_id' => $flow_step_id, 'handler_slug' => $handler_slug])); ?>">
@@ -113,11 +113,11 @@ if ($flow_step_id) {
                             <label for="datamachine-file-upload" class="datamachine-file-upload-label">
                                 <span class="dashicons dashicons-cloud-upload datamachine-file-upload-icon"></span>
                                 <span class="datamachine-file-upload-text">
-                                    <?php esc_html_e('Click to select files or drag & drop here', 'data-machine'); ?>
+                                    <?php esc_html_e('Click to select files or drag & drop here', 'datamachine'); ?>
                                 </span>
-                                <small class="datamachine-file-upload-hint"><?php esc_html_e('Files will upload automatically when selected', 'data-machine'); ?></small>
+                                <small class="datamachine-file-upload-hint"><?php esc_html_e('Files will upload automatically when selected', 'datamachine'); ?></small>
                                 <span class="datamachine-file-upload-formats">
-                                    <?php esc_html_e('All file types supported - let the pipeline handle compatibility', 'data-machine'); ?>
+                                    <?php esc_html_e('All file types supported - let the pipeline handle compatibility', 'datamachine'); ?>
                                 </span>
                             </label>
                             <input type="file" id="datamachine-file-upload" multiple class="datamachine-file-input" />
@@ -128,14 +128,14 @@ if ($flow_step_id) {
                             <div class="datamachine-upload-progress-bar">
                                 <div class="datamachine-upload-progress-fill"></div>
                             </div>
-                            <span class="datamachine-upload-progress-text"><?php esc_html_e('Uploading...', 'data-machine'); ?></span>
+                            <span class="datamachine-upload-progress-text"><?php esc_html_e('Uploading...', 'datamachine'); ?></span>
                         </div>
                     </div>
                     
                     <!-- File Status Section -->
                     <div class="datamachine-uploaded-files-section">
                         <div class="datamachine-files-section-header">
-                            <h5><?php esc_html_e('Uploaded Files', 'data-machine'); ?></h5>
+                            <h5><?php esc_html_e('Uploaded Files', 'datamachine'); ?></h5>
                         </div>
                         
                         <div id="datamachine-uploaded-files-list" class="datamachine-uploaded-files-list">
@@ -143,8 +143,8 @@ if ($flow_step_id) {
                             <?php if ($show_empty_state): ?>
                             <div class="datamachine-empty-files datamachine-files-state" id="datamachine-files-empty">
                                 <span class="dashicons dashicons-media-default datamachine-empty-icon"></span>
-                                <p class="datamachine-empty-message"><?php esc_html_e('No files uploaded yet', 'data-machine'); ?></p>
-                                <p class="datamachine-empty-hint"><?php esc_html_e('Files you upload will appear here with their processing status', 'data-machine'); ?></p>
+                                <p class="datamachine-empty-message"><?php esc_html_e('No files uploaded yet', 'datamachine'); ?></p>
+                                <p class="datamachine-empty-hint"><?php esc_html_e('Files you upload will appear here with their processing status', 'datamachine'); ?></p>
                             </div>
                             <?php endif; ?>
                             
@@ -154,11 +154,11 @@ if ($flow_step_id) {
                                 <table class="datamachine-files-table widefat striped">
                                     <thead>
                                         <tr>
-                                            <th class="datamachine-file-name-col"><?php esc_html_e('File Name', 'data-machine'); ?></th>
-                                            <th class="datamachine-file-size-col"><?php esc_html_e('Size', 'data-machine'); ?></th>
-                                            <th class="datamachine-file-status-col"><?php esc_html_e('Status', 'data-machine'); ?></th>
-                                            <th class="datamachine-file-date-col"><?php esc_html_e('Uploaded', 'data-machine'); ?></th>
-                                            <th class="datamachine-file-actions-col"><?php esc_html_e('Actions', 'data-machine'); ?></th>
+                                            <th class="datamachine-file-name-col"><?php esc_html_e('File Name', 'datamachine'); ?></th>
+                                            <th class="datamachine-file-size-col"><?php esc_html_e('Size', 'datamachine'); ?></th>
+                                            <th class="datamachine-file-status-col"><?php esc_html_e('Status', 'datamachine'); ?></th>
+                                            <th class="datamachine-file-date-col"><?php esc_html_e('Uploaded', 'datamachine'); ?></th>
+                                            <th class="datamachine-file-actions-col"><?php esc_html_e('Actions', 'datamachine'); ?></th>
                                         </tr>
                                     </thead>
                                     <tbody class="datamachine-file-list-body" id="datamachine-file-list-body">
@@ -179,7 +179,7 @@ if ($flow_step_id) {
                                             </td>
                                             <td class="datamachine-file-date-col"><?php echo esc_html($file['modified_formatted']); ?></td>
                                             <td class="datamachine-file-actions-col">
-                                                <button type="button" class="button button-small datamachine-delete-file" data-filename="<?php echo esc_attr($file['filename']); ?>" title="<?php echo esc_attr(__('Delete file', 'data-machine')); ?>">
+                                                <button type="button" class="button button-small datamachine-delete-file" data-filename="<?php echo esc_attr($file['filename']); ?>" title="<?php echo esc_attr(__('Delete file', 'datamachine')); ?>">
                                                     <span class="dashicons dashicons-trash"></span>
                                                 </button>
                                             </td>
@@ -196,7 +196,7 @@ if ($flow_step_id) {
             
             <!-- Simple Options -->
             <div class="datamachine-settings-section">
-                <h4><?php esc_html_e('Options', 'data-machine'); ?></h4>
+                <h4><?php esc_html_e('Options', 'datamachine'); ?></h4>
                 
                 <div class="datamachine-form-field">
                     <label for="auto_cleanup_enabled">
@@ -204,9 +204,9 @@ if ($flow_step_id) {
                                id="auto_cleanup_enabled" 
                                name="auto_cleanup_enabled" 
                                value="1" />
-                        <?php esc_html_e('Auto-cleanup processed files', 'data-machine'); ?>
+                        <?php esc_html_e('Auto-cleanup processed files', 'datamachine'); ?>
                     </label>
-                    <p class="description"><?php esc_html_e('Automatically delete processed files older than 7 days to save disk space.', 'data-machine'); ?></p>
+                    <p class="description"><?php esc_html_e('Automatically delete processed files older than 7 days to save disk space.', 'datamachine'); ?></p>
                 </div>
             </div>
             
@@ -214,17 +214,17 @@ if ($flow_step_id) {
         
         <div class="datamachine-settings-actions">
             <button type="button" class="button button-secondary datamachine-cancel-settings">
-                <?php esc_html_e('Cancel', 'data-machine'); ?>
+                <?php esc_html_e('Cancel', 'datamachine'); ?>
             </button>
             <button type="button" class="button button-secondary datamachine-modal-content" 
                     data-template="handler-selection"
                     data-context='<?php echo esc_attr(wp_json_encode(['flow_step_id' => $flow_step_id, 'step_type' => $step_type, 'pipeline_id' => $pipeline_id])); ?>'>
-                <?php esc_html_e('Change Handler Type', 'data-machine'); ?>
+                <?php esc_html_e('Change Handler Type', 'datamachine'); ?>
             </button>
             <button type="button" class="button button-primary datamachine-modal-close" 
                     data-template="add-handler-action"
                     data-context='<?php echo esc_attr(wp_json_encode(['handler_slug' => $handler_slug, 'step_type' => $step_type ?? '', 'flow_step_id' => $flow_step_id ?? '', 'pipeline_id' => $pipeline_id ?? ''])); ?>'>
-                <?php esc_html_e('Save Handler Settings', 'data-machine'); ?>
+                <?php esc_html_e('Save Handler Settings', 'datamachine'); ?>
             </button>
         </div>
     </div>

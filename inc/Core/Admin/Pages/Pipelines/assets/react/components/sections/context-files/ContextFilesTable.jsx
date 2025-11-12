@@ -68,7 +68,7 @@ export default function ContextFilesTable({
 				}}
 			>
 				<p style={{ margin: 0, color: '#757575' }}>
-					{__('No context files uploaded yet.', 'data-machine')}
+					{__('No context files uploaded yet.', 'datamachine')}
 				</p>
 			</div>
 		);
@@ -101,7 +101,7 @@ export default function ContextFilesTable({
 								fontWeight: '600'
 							}}
 						>
-							{__('File Name', 'data-machine')}
+							{__('File Name', 'datamachine')}
 						</th>
 						<th
 							style={{
@@ -111,7 +111,7 @@ export default function ContextFilesTable({
 								width: '100px'
 							}}
 						>
-							{__('Size', 'data-machine')}
+							{__('Size', 'datamachine')}
 						</th>
 						<th
 							style={{
@@ -121,7 +121,7 @@ export default function ContextFilesTable({
 								width: '180px'
 							}}
 						>
-							{__('Uploaded', 'data-machine')}
+							{__('Uploaded', 'datamachine')}
 						</th>
 						<th
 							style={{
@@ -131,7 +131,7 @@ export default function ContextFilesTable({
 								width: '100px'
 							}}
 						>
-							{__('Actions', 'data-machine')}
+							{__('Actions', 'datamachine')}
 						</th>
 					</tr>
 				</thead>
@@ -164,8 +164,8 @@ export default function ContextFilesTable({
 										style={{ color: '#dc3232' }}
 									>
 										{isCurrentlyDeleting
-											? __('Deleting...', 'data-machine')
-											: __('Delete', 'data-machine')}
+											? __('Deleting...', 'datamachine')
+											: __('Delete', 'datamachine')}
 									</Button>
 								</td>
 							</tr>

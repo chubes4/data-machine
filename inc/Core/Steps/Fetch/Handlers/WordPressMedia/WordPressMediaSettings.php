@@ -30,24 +30,24 @@ class WordPressMediaSettings {
         $fields = [
             'include_parent_content' => [
                 'type' => 'checkbox',
-                'label' => __('Include parent post content', 'data-machine'),
-                'description' => __('Include the content of the post/page this media is attached to.', 'data-machine'),
+                'label' => __('Include parent post content', 'datamachine'),
+                'description' => __('Include the content of the post/page this media is attached to.', 'datamachine'),
             ],
             'timeframe_limit' => [
                 'type' => 'select',
-                'label' => __('Process Items Within', 'data-machine'),
-                'description' => __('Only consider items uploaded within this timeframe.', 'data-machine'),
+                'label' => __('Process Items Within', 'datamachine'),
+                'description' => __('Only consider items uploaded within this timeframe.', 'datamachine'),
                 'options' => apply_filters('datamachine_timeframe_limit', [], null),
             ],
             'search' => [
                 'type' => 'text',
-                'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Filter media by keywords (comma-separated). Media containing any keyword in their title or description will be included.', 'data-machine'),
+                'label' => __('Search Term Filter', 'datamachine'),
+                'description' => __('Filter media by keywords (comma-separated). Media containing any keyword in their title or description will be included.', 'datamachine'),
             ],
             'randomize_selection' => [
                 'type' => 'checkbox',
-                'label' => __('Randomize selection', 'data-machine'),
-                'description' => __('Select a random media file instead of most recently uploaded.', 'data-machine'),
+                'label' => __('Randomize selection', 'datamachine'),
+                'description' => __('Select a random media file instead of most recently uploaded.', 'datamachine'),
             ],
         ];
 

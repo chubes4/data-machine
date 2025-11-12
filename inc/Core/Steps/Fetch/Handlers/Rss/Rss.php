@@ -34,7 +34,7 @@ class Rss {
         $cutoff_timestamp = apply_filters('datamachine_timeframe_limit', null, $timeframe_limit);
 
         $args = [
-            'user-agent' => 'DataMachine WordPress Plugin/' . DATA_MACHINE_VERSION
+            'user-agent' => 'DataMachine WordPress Plugin/' . DATAMACHINE_VERSION
         ];
 
         $result = apply_filters('datamachine_request', null, 'GET', $feed_url, $args, 'RSS Feed');
@@ -342,6 +342,6 @@ class Rss {
     }
 
     public static function get_label(): string {
-        return __('RSS/Atom Feed', 'data-machine');
+        return __('RSS/Atom Feed', 'datamachine');
     }
 }

@@ -18,7 +18,7 @@ if (!defined('WPINC')) {
     <input type="hidden" name="pipeline_id" value="<?php echo esc_attr($pipeline_id ?? ''); ?>" />
     
     <div class="datamachine-step-selection-header">
-        <p><?php esc_html_e('Select a step type to add to your pipeline', 'data-machine'); ?></p>
+        <p><?php esc_html_e('Select a step type to add to your pipeline', 'datamachine'); ?></p>
     </div>
     
     <div class="datamachine-step-cards">
@@ -60,7 +60,7 @@ if (!defined('WPINC')) {
                         <p class="datamachine-step-card-description"><?php echo esc_html($description); ?></p>
                         <?php if (!empty($handlers_list)): ?>
                             <div class="datamachine-step-handlers">
-                                <span class="datamachine-handlers-label"><?php esc_html_e('Available handlers:', 'data-machine'); ?></span>
+                                <span class="datamachine-handlers-label"><?php esc_html_e('Available handlers:', 'datamachine'); ?></span>
                                 <span class="datamachine-handlers-list"><?php echo esc_html($handlers_list); ?></span>
                             </div>
                         <?php endif; ?>

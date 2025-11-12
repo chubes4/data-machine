@@ -257,7 +257,7 @@ class Execute {
                 $timestamp,
                 'datamachine_schedule_next_step',
                 [$job_id, $first_step_id, []],
-                'data-machine'
+                'datamachine'
             );
 
             if ($action_id === false) {

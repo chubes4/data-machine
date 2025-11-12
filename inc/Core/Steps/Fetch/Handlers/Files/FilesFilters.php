@@ -23,8 +23,8 @@ function datamachine_register_files_fetch_filters() {
             $handlers['files'] = [
                 'type' => 'fetch',
                 'class' => Files::class,
-                'label' => __('Files', 'data-machine'),
-                'description' => __('Process local files and uploads', 'data-machine')
+                'label' => __('Files', 'datamachine'),
+                'description' => __('Process local files and uploads', 'datamachine')
             ];
         }
         return $handlers;

@@ -39,13 +39,13 @@ class Pipelines {
 					'pipeline_id' => [
 						'required' => false,
 						'type' => 'integer',
-						'description' => __('Pipeline ID to retrieve (omit for all pipelines)', 'data-machine'),
+						'description' => __('Pipeline ID to retrieve (omit for all pipelines)', 'datamachine'),
 						'sanitize_callback' => 'absint',
 					],
 					'fields' => [
 						'required' => false,
 						'type' => 'string',
-						'description' => __('Comma-separated list of fields to return', 'data-machine'),
+						'description' => __('Comma-separated list of fields to return', 'datamachine'),
 						'sanitize_callback' => function($param) {
 							return sanitize_text_field($param);
 						}
@@ -55,13 +55,13 @@ class Pipelines {
 						'type' => 'string',
 						'default' => 'json',
 						'enum' => ['json', 'csv'],
-						'description' => __('Response format (json or csv)', 'data-machine'),
+						'description' => __('Response format (json or csv)', 'datamachine'),
 						'sanitize_callback' => 'sanitize_text_field',
 					],
 					'ids' => [
 						'required' => false,
 						'type' => 'string',
-						'description' => __('Comma-separated pipeline IDs for export', 'data-machine'),
+						'description' => __('Comma-separated pipeline IDs for export', 'datamachine'),
 						'sanitize_callback' => 'sanitize_text_field',
 					]
 				]
@@ -75,7 +75,7 @@ class Pipelines {
 						'required' => false,
 						'type' => 'string',
 						'default' => 'Pipeline',
-						'description' => __('Pipeline name', 'data-machine'),
+						'description' => __('Pipeline name', 'datamachine'),
 						'sanitize_callback' => function($param) {
 							return sanitize_text_field($param);
 						}
@@ -83,18 +83,18 @@ class Pipelines {
 					'steps' => [
 						'required' => false,
 						'type' => 'array',
-						'description' => __('Pipeline steps configuration (for complete mode)', 'data-machine'),
+						'description' => __('Pipeline steps configuration (for complete mode)', 'datamachine'),
 					],
 					'flow_config' => [
 						'required' => false,
 						'type' => 'array',
-						'description' => __('Flow configuration', 'data-machine'),
+						'description' => __('Flow configuration', 'datamachine'),
 					],
 					'batch_import' => [
 						'required' => false,
 						'type' => 'boolean',
 						'default' => false,
-						'description' => __('Enable batch import mode', 'data-machine'),
+						'description' => __('Enable batch import mode', 'datamachine'),
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					],
 					'format' => [
@@ -102,13 +102,13 @@ class Pipelines {
 						'type' => 'string',
 						'default' => 'json',
 						'enum' => ['json', 'csv'],
-						'description' => __('Import format (json or csv)', 'data-machine'),
+						'description' => __('Import format (json or csv)', 'datamachine'),
 						'sanitize_callback' => 'sanitize_text_field',
 					],
 					'data' => [
 						'required' => false,
 						'type' => 'string',
-						'description' => __('CSV data for batch import', 'data-machine'),
+						'description' => __('CSV data for batch import', 'datamachine'),
 						'sanitize_callback' => function($param) {
 							return wp_unslash($param);
 						}
@@ -127,7 +127,7 @@ class Pipelines {
 						'required' => true,
 						'type' => 'integer',
 						'sanitize_callback' => 'absint',
-						'description' => __('Pipeline ID to delete', 'data-machine'),
+						'description' => __('Pipeline ID to delete', 'datamachine'),
 					],
 				]
 			],
@@ -140,13 +140,13 @@ class Pipelines {
 						'required' => true,
 						'type' => 'integer',
 						'sanitize_callback' => 'absint',
-						'description' => __('Pipeline ID to update', 'data-machine'),
+						'description' => __('Pipeline ID to update', 'datamachine'),
 					],
 					'pipeline_name' => [
 						'required' => true,
 						'type' => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
-						'description' => __('New pipeline title', 'data-machine'),
+						'description' => __('New pipeline title', 'datamachine'),
 					],
 				]
 			]
@@ -161,13 +161,13 @@ class Pipelines {
 					'required' => true,
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
-					'description' => __('Pipeline ID to add step to', 'data-machine'),
+					'description' => __('Pipeline ID to add step to', 'datamachine'),
 				],
 				'step_type' => [
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Step type (fetch, ai, publish, update)', 'data-machine'),
+					'description' => __('Step type (fetch, ai, publish, update)', 'datamachine'),
 				]
 			]
 		]);
@@ -182,13 +182,13 @@ class Pipelines {
 						'required' => true,
 						'type' => 'integer',
 						'sanitize_callback' => 'absint',
-						'description' => __('Pipeline ID containing the step', 'data-machine'),
+						'description' => __('Pipeline ID containing the step', 'datamachine'),
 					],
 					'step_id' => [
 						'required' => true,
 						'type' => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
-						'description' => __('Pipeline step ID to delete', 'data-machine'),
+						'description' => __('Pipeline step ID to delete', 'datamachine'),
 					],
 				]
 			]
@@ -203,12 +203,12 @@ class Pipelines {
 					'required' => true,
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
-					'description' => __('Pipeline ID to reorder steps for', 'data-machine'),
+					'description' => __('Pipeline ID to reorder steps for', 'datamachine'),
 				],
 				'step_order' => [
 					'required' => true,
 					'type' => 'array',
-					'description' => __('Array of step IDs in new execution order', 'data-machine'),
+					'description' => __('Array of step IDs in new execution order', 'datamachine'),
 					'validate_callback' => [self::class, 'validate_step_order'],
 				]
 			]
@@ -223,13 +223,13 @@ class Pipelines {
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Pipeline step ID (UUID4)', 'data-machine'),
+					'description' => __('Pipeline step ID (UUID4)', 'datamachine'),
 				],
 				'system_prompt' => [
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_textarea_field',
-					'description' => __('System prompt for AI step', 'data-machine'),
+					'description' => __('System prompt for AI step', 'datamachine'),
 				],
 			]
 		]);
@@ -243,42 +243,42 @@ class Pipelines {
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Pipeline step ID (UUID4)', 'data-machine'),
+					'description' => __('Pipeline step ID (UUID4)', 'datamachine'),
 				],
 				'step_type' => [
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Step type (must be "ai")', 'data-machine'),
+					'description' => __('Step type (must be "ai")', 'datamachine'),
 				],
 				'pipeline_id' => [
 					'required' => true,
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
-					'description' => __('Pipeline ID for context', 'data-machine'),
+					'description' => __('Pipeline ID for context', 'datamachine'),
 				],
 				'ai_provider' => [
 					'required' => false,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('AI provider slug', 'data-machine'),
+					'description' => __('AI provider slug', 'datamachine'),
 				],
 				'ai_model' => [
 					'required' => false,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('AI model identifier', 'data-machine'),
+					'description' => __('AI model identifier', 'datamachine'),
 				],
 				'ai_api_key' => [
 					'required' => false,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('AI API key', 'data-machine'),
+					'description' => __('AI API key', 'datamachine'),
 				],
 				'enabled_tools' => [
 					'required' => false,
 					'type' => 'array',
-					'description' => __('Array of enabled tool IDs', 'data-machine'),
+					'description' => __('Array of enabled tool IDs', 'datamachine'),
 				]
 			]
 		]);
@@ -292,7 +292,7 @@ class Pipelines {
 					'required' => true,
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
-					'description' => __('Pipeline ID to retrieve flows for', 'data-machine'),
+					'description' => __('Pipeline ID to retrieve flows for', 'datamachine'),
 				],
 			]
 		]);
@@ -305,7 +305,7 @@ class Pipelines {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to access pipelines.', 'data-machine'),
+				__('You do not have permission to access pipelines.', 'datamachine'),
 				['status' => 403]
 			);
 		}
@@ -343,7 +343,7 @@ class Pipelines {
 			if (!$csv_content) {
 				return new \WP_Error(
 					'export_failed',
-					__('Failed to generate CSV export.', 'data-machine'),
+					__('Failed to generate CSV export.', 'datamachine'),
 					['status' => 500]
 				);
 			}
@@ -378,7 +378,7 @@ class Pipelines {
 			if (!$pipeline) {
 				return new \WP_Error(
 					'pipeline_not_found',
-					__('Pipeline not found.', 'data-machine'),
+					__('Pipeline not found.', 'datamachine'),
 					['status' => 404]
 				);
 			}
@@ -437,7 +437,7 @@ class Pipelines {
 			if (!$result) {
 				return new \WP_Error(
 					'import_failed',
-					__('Failed to import pipelines from CSV.', 'data-machine'),
+					__('Failed to import pipelines from CSV.', 'datamachine'),
 					['status' => 500]
 				);
 			}
@@ -453,7 +453,7 @@ class Pipelines {
 				'imported_pipeline_ids' => $result['imported'] ?? [],
 				'count' => count($result['imported'] ?? []),
 				'message' => sprintf(
-					__('Successfully imported %d pipeline(s)', 'data-machine'),
+					__('Successfully imported %d pipeline(s)', 'datamachine'),
 					count($result['imported'] ?? [])
 				)
 			];
@@ -470,7 +470,7 @@ class Pipelines {
 
 			return new \WP_Error(
 				'pipeline_creation_failed',
-				__('Failed to create pipeline.', 'data-machine'),
+				__('Failed to create pipeline.', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -540,7 +540,7 @@ class Pipelines {
 
 			return new \WP_Error(
 				'step_creation_failed',
-				__('Failed to create step.', 'data-machine'),
+				__('Failed to create step.', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -569,7 +569,7 @@ class Pipelines {
 
 		return [
 			'success' => true,
-			'message' => sprintf(__('Step "%s" added successfully', 'data-machine'), $step_config['label'] ?? $step_type),
+			'message' => sprintf(__('Step "%s" added successfully', 'datamachine'), $step_config['label'] ?? $step_type),
 			'step_type' => $step_type,
 			'step_config' => $step_config,
 			'pipeline_id' => $pipeline_id,
@@ -602,7 +602,7 @@ class Pipelines {
 		if (!is_array($param) || empty($param)) {
 			return new \WP_Error(
 				'invalid_step_order',
-				__('Step order must be a non-empty array', 'data-machine'),
+				__('Step order must be a non-empty array', 'datamachine'),
 				['status' => 400]
 			);
 		}
@@ -611,7 +611,7 @@ class Pipelines {
 			if (!is_array($item)) {
 				return new \WP_Error(
 					'invalid_step_order_item',
-					__('Each step order item must be an object', 'data-machine'),
+					__('Each step order item must be an object', 'datamachine'),
 					['status' => 400]
 				);
 			}
@@ -619,7 +619,7 @@ class Pipelines {
 			if (!isset($item['pipeline_step_id']) || !isset($item['execution_order'])) {
 				return new \WP_Error(
 					'invalid_step_order_structure',
-					__('Each step order item must have pipeline_step_id and execution_order', 'data-machine'),
+					__('Each step order item must have pipeline_step_id and execution_order', 'datamachine'),
 					['status' => 400]
 				);
 			}
@@ -627,7 +627,7 @@ class Pipelines {
 			if (!is_string($item['pipeline_step_id']) || !is_numeric($item['execution_order'])) {
 				return new \WP_Error(
 					'invalid_step_order_types',
-					__('pipeline_step_id must be string and execution_order must be numeric', 'data-machine'),
+					__('pipeline_step_id must be string and execution_order must be numeric', 'datamachine'),
 					['status' => 400]
 				);
 			}
@@ -650,7 +650,7 @@ class Pipelines {
 		if (!$db_pipelines) {
 			return new \WP_Error(
 				'database_unavailable',
-				__('Database service unavailable', 'data-machine'),
+				__('Database service unavailable', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -660,7 +660,7 @@ class Pipelines {
 		if (empty($pipeline_steps)) {
 			return new \WP_Error(
 				'pipeline_not_found',
-				__('Pipeline not found', 'data-machine'),
+				__('Pipeline not found', 'datamachine'),
 				['status' => 404]
 			);
 		}
@@ -686,7 +686,7 @@ class Pipelines {
 				return new \WP_Error(
 					'step_not_found',
 					sprintf(
-						__('Step %s not found in pipeline', 'data-machine'),
+						__('Step %s not found in pipeline', 'datamachine'),
 						$pipeline_step_id
 					),
 					['status' => 400]
@@ -698,7 +698,7 @@ class Pipelines {
 		if (count($updated_steps) !== count($pipeline_steps)) {
 			return new \WP_Error(
 				'step_count_mismatch',
-				__('Step count mismatch during reorder', 'data-machine'),
+				__('Step count mismatch during reorder', 'datamachine'),
 				['status' => 400]
 			);
 		}
@@ -717,7 +717,7 @@ class Pipelines {
 
 			return new \WP_Error(
 				'save_failed',
-				__('Failed to save step order', 'data-machine'),
+				__('Failed to save step order', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -765,7 +765,7 @@ class Pipelines {
 
 		return [
 			'success' => true,
-			'message' => __('Step order saved successfully', 'data-machine'),
+			'message' => __('Step order saved successfully', 'datamachine'),
 			'pipeline_id' => $pipeline_id,
 			'step_count' => count($updated_steps)
 		];
@@ -785,7 +785,7 @@ class Pipelines {
 		if (!$pipeline) {
 			return new \WP_Error(
 				'pipeline_not_found',
-				__('Pipeline not found.', 'data-machine'),
+				__('Pipeline not found.', 'datamachine'),
 				['status' => 404]
 			);
 		}
@@ -816,7 +816,7 @@ class Pipelines {
 		if (empty($pipeline_name)) {
 			return new \WP_Error(
 				'empty_title',
-				__('Pipeline title cannot be empty', 'data-machine'),
+				__('Pipeline title cannot be empty', 'datamachine'),
 				['status' => 400]
 			);
 		}
@@ -828,7 +828,7 @@ class Pipelines {
 		if (!$db_pipelines) {
 			return new \WP_Error(
 				'database_unavailable',
-				__('Database service unavailable', 'data-machine'),
+				__('Database service unavailable', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -841,7 +841,7 @@ class Pipelines {
 		if (!$success) {
 			return new \WP_Error(
 				'update_failed',
-				__('Failed to save pipeline title', 'data-machine'),
+				__('Failed to save pipeline title', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -852,7 +852,7 @@ class Pipelines {
 
 		return [
 			'success' => true,
-			'message' => __('Pipeline title saved successfully', 'data-machine'),
+			'message' => __('Pipeline title saved successfully', 'datamachine'),
 			'pipeline_id' => $pipeline_id,
 			'pipeline_name' => $pipeline_name
 		];
@@ -873,7 +873,7 @@ class Pipelines {
 		if (!$success) {
 			return new \WP_Error(
 				'update_failed',
-				__('Failed to save system prompt', 'data-machine'),
+				__('Failed to save system prompt', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -888,7 +888,7 @@ class Pipelines {
 
 		return [
 			'success' => true,
-			'message' => __('System prompt saved successfully', 'data-machine')
+			'message' => __('System prompt saved successfully', 'datamachine')
 		];
 	}
 
@@ -907,7 +907,7 @@ class Pipelines {
 			return new \WP_Error(
 				'invalid_step_type',
 				/* translators: %s: Step type name */
-				sprintf(__('Configuration for %s steps is not yet implemented', 'data-machine'), $step_type),
+				sprintf(__('Configuration for %s steps is not yet implemented', 'datamachine'), $step_type),
 				['status' => 400]
 			);
 		}
@@ -917,7 +917,7 @@ class Pipelines {
 		if ($parsed_step_id === null) {
 			return new \WP_Error(
 				'invalid_pipeline_step_id',
-				__('Pipeline step ID format invalid - expected {pipeline_id}_{uuid4}', 'data-machine'),
+				__('Pipeline step ID format invalid - expected {pipeline_id}_{uuid4}', 'datamachine'),
 				['status' => 400]
 			);
 		}
@@ -994,7 +994,7 @@ class Pipelines {
 		if (!$db_pipelines) {
 			return new \WP_Error(
 				'database_unavailable',
-				__('Pipeline database service not available', 'data-machine'),
+				__('Pipeline database service not available', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -1003,7 +1003,7 @@ class Pipelines {
 		if (!$pipeline) {
 			return new \WP_Error(
 				'pipeline_not_found',
-				__('Pipeline not found', 'data-machine'),
+				__('Pipeline not found', 'datamachine'),
 				['status' => 404]
 			);
 		}
@@ -1054,7 +1054,7 @@ class Pipelines {
 
 			return new \WP_Error(
 				'save_failed',
-				__('Error saving AI configuration', 'data-machine'),
+				__('Error saving AI configuration', 'datamachine'),
 				['status' => 500]
 			);
 		}
@@ -1071,7 +1071,7 @@ class Pipelines {
 
 		return [
 			'success' => true,
-			'message' => __('AI step configuration saved successfully', 'data-machine'),
+			'message' => __('AI step configuration saved successfully', 'datamachine'),
 			'pipeline_step_id' => $pipeline_step_id,
 			'debug_info' => [
 				'api_key_saved' => !empty($ai_api_key),

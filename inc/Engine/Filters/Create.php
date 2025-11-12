@@ -401,7 +401,7 @@ class Create {
 
             wp_send_json_success([
                 /* translators: %s: Flow name */
-                'message' => sprintf(__('Flow "%s" created successfully', 'data-machine'), $flow_name),
+                'message' => sprintf(__('Flow "%s" created successfully', 'datamachine'), $flow_name),
                 'flow_id' => $flow_id,
                 'flow_name' => $flow_name,
                 'pipeline_id' => $pipeline_id,
@@ -443,7 +443,7 @@ class Create {
 
         // Create duplicated flow name
         /* translators: %s: Original flow name */
-        $duplicate_flow_name = sprintf(__('Copy of %s', 'data-machine'), $source_flow['flow_name']);
+        $duplicate_flow_name = sprintf(__('Copy of %s', 'datamachine'), $source_flow['flow_name']);
 
         $flow_data = [
             'pipeline_id' => $source_flow['pipeline_id'],

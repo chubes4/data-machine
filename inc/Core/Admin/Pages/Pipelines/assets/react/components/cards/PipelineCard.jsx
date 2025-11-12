@@ -69,11 +69,11 @@ export default function PipelineCard({ pipeline, flows }) {
 			if (response.success) {
 				refreshData();
 			} else {
-				alert(response.message || __('Failed to delete step', 'data-machine'));
+				alert(response.message || __('Failed to delete step', 'datamachine'));
 			}
 		} catch (error) {
 			console.error('Step deletion error:', error);
-			alert(__('An error occurred while deleting the step', 'data-machine'));
+			alert(__('An error occurred while deleting the step', 'datamachine'));
 		}
 	}, [pipeline.pipeline_id, refreshData]);
 

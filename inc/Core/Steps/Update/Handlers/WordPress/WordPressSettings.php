@@ -40,13 +40,13 @@ class WordPressSettings {
         return [
             'allow_title_updates' => [
                 'type' => 'checkbox',
-                'label' => __('Allow Title Updates', 'data-machine'),
-                'description' => __('Enable AI to modify post titles. When disabled, titles will remain unchanged.', 'data-machine'),
+                'label' => __('Allow Title Updates', 'datamachine'),
+                'description' => __('Enable AI to modify post titles. When disabled, titles will remain unchanged.', 'datamachine'),
             ],
             'allow_content_updates' => [
                 'type' => 'checkbox',
-                'label' => __('Allow Content Updates', 'data-machine'),
-                'description' => __('Enable AI to modify post content. When disabled, content will remain unchanged.', 'data-machine'),
+                'label' => __('Allow Content Updates', 'datamachine'),
+                'description' => __('Enable AI to modify post content. When disabled, content will remain unchanged.', 'datamachine'),
             ],
         ];
     }
@@ -73,8 +73,8 @@ class WordPressSettings {
             
             // Build options with skip as default
             $options = [
-                'skip' => __('Skip', 'data-machine'),
-                'ai_decides' => __('AI Decides', 'data-machine')
+                'skip' => __('Skip', 'datamachine'),
+                'ai_decides' => __('AI Decides', 'datamachine')
             ];
             
             $terms = get_terms(['taxonomy' => $taxonomy_slug, 'hide_empty' => false]);
@@ -91,9 +91,9 @@ class WordPressSettings {
                 'label' => $taxonomy_label,
                 'description' => sprintf(
                     /* translators: %1$s: Taxonomy name (lowercase), %2$s: Category or term type */
-                    __('Configure %1$s assignment for updates: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'data-machine'),
+                    __('Configure %1$s assignment for updates: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'datamachine'),
                     strtolower($taxonomy_label),
-                    $taxonomy->hierarchical ? __('category', 'data-machine') : __('term', 'data-machine')
+                    $taxonomy->hierarchical ? __('category', 'datamachine') : __('term', 'datamachine')
                 ),
                 'options' => $options,
             ];

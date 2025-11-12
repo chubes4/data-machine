@@ -32,8 +32,8 @@ export default function FileStatusTable({ files = [] }) {
 	 */
 	const getStatusBadge = (status) => {
 		const statusConfig = {
-			'processed': { label: __('Processed', 'data-machine'), color: '#46b450', icon: '✓' },
-			'pending': { label: __('Pending', 'data-machine'), color: '#f0b849', icon: '●' }
+			'processed': { label: __('Processed', 'datamachine'), color: '#46b450', icon: '✓' },
+			'pending': { label: __('Pending', 'datamachine'), color: '#f0b849', icon: '●' }
 		};
 
 		const config = statusConfig[status] || statusConfig['pending'];
@@ -70,7 +70,7 @@ export default function FileStatusTable({ files = [] }) {
 				}}
 			>
 				<p style={{ margin: 0, color: '#757575' }}>
-					{__('No files uploaded yet.', 'data-machine')}
+					{__('No files uploaded yet.', 'datamachine')}
 				</p>
 			</div>
 		);
@@ -103,7 +103,7 @@ export default function FileStatusTable({ files = [] }) {
 								fontWeight: '600'
 							}}
 						>
-							{__('File Name', 'data-machine')}
+							{__('File Name', 'datamachine')}
 						</th>
 						<th
 							style={{
@@ -113,7 +113,7 @@ export default function FileStatusTable({ files = [] }) {
 								width: '100px'
 							}}
 						>
-							{__('Size', 'data-machine')}
+							{__('Size', 'datamachine')}
 						</th>
 						<th
 							style={{
@@ -123,7 +123,7 @@ export default function FileStatusTable({ files = [] }) {
 								width: '120px'
 							}}
 						>
-							{__('Status', 'data-machine')}
+							{__('Status', 'datamachine')}
 						</th>
 					</tr>
 				</thead>

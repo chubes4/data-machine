@@ -15,8 +15,8 @@ function datamachine_register_facebook_filters() {
             $handlers['facebook'] = [
                 'type' => 'publish',
                 'class' => Facebook::class,
-                'label' => __('Facebook', 'data-machine'),
-                'description' => __('Post content to Facebook pages and profiles', 'data-machine'),
+                'label' => __('Facebook', 'datamachine'),
+                'description' => __('Post content to Facebook pages and profiles', 'datamachine'),
                 'requires_auth' => true
             ];
         }

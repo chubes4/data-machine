@@ -17,7 +17,7 @@ function datamachine_register_settings_admin_page_filters() {
     add_action('admin_enqueue_scripts', 'datamachine_enqueue_settings_assets');
 
     add_filter('datamachine_render_template', function($content, $template_name, $data = []) {
-        $settings_template_path = DATA_MACHINE_PATH . 'inc/Core/Admin/Settings/templates/' . $template_name . '.php';
+        $settings_template_path = DATAMACHINE_PATH . 'inc/Core/Admin/Settings/templates/' . $template_name . '.php';
         if (file_exists($settings_template_path)) {
             ob_start();
             extract($data);
@@ -47,8 +47,8 @@ function datamachine_register_settings_admin_page_filters() {
                         'object' => 'datamachineSettings',
                         'data' => [
                             'strings' => [
-                                'saving' => __('Saving...', 'data-machine'),
-                                'clearing' => __('Clearing...', 'data-machine')
+                                'saving' => __('Saving...', 'datamachine'),
+                                'clearing' => __('Clearing...', 'datamachine')
                             ]
                         ]
                     ]
@@ -61,8 +61,8 @@ function datamachine_register_settings_admin_page_filters() {
 
 function datamachine_register_settings_page() {
     $hook = add_options_page(
-        __('Data Machine Settings', 'data-machine'),
-        __('Data Machine', 'data-machine'),
+        __('Data Machine Settings', 'datamachine'),
+        __('Data Machine', 'datamachine'),
         'manage_options',
         'datamachine-settings',
         'datamachine_render_settings_page_template'
@@ -72,14 +72,14 @@ function datamachine_register_settings_page() {
 }
 
 function datamachine_register_settings() {
-    register_setting('data_machine_settings', 'data_machine_settings', [
+    register_setting('datamachine_settings', 'datamachine_settings', [
         'sanitize_callback' => 'datamachine_sanitize_settings'
     ]);
 }
 
 function datamachine_render_settings_page_template() {
     $content = apply_filters('datamachine_render_template', '', 'page/settings-page', [
-        'page_title' => __('Data Machine Settings', 'data-machine')
+        'page_title' => __('Data Machine Settings', 'datamachine')
     ]);
 
     echo wp_kses($content, datamachine_allowed_html());
@@ -94,11 +94,11 @@ function datamachine_enqueue_settings_assets($hook) {
     $assets = apply_filters('datamachine_admin_assets', [], 'settings');
     
     foreach ($assets['css'] ?? [] as $handle => $css_config) {
-        $css_url = DATA_MACHINE_URL . 'inc/Core/Admin/Settings/' . $css_config['src'];
+        $css_url = DATAMACHINE_URL . 'inc/Core/Admin/Settings/' . $css_config['src'];
 
         // Use file modification time for cache busting in development
-        $css_file_path = DATA_MACHINE_PATH . 'inc/Core/Admin/Settings/' . $css_config['src'];
-        $css_version = file_exists($css_file_path) ? filemtime($css_file_path) : DATA_MACHINE_VERSION;
+        $css_file_path = DATAMACHINE_PATH . 'inc/Core/Admin/Settings/' . $css_config['src'];
+        $css_version = file_exists($css_file_path) ? filemtime($css_file_path) : DATAMACHINE_VERSION;
         
         wp_enqueue_style(
             $handle,
@@ -110,11 +110,11 @@ function datamachine_enqueue_settings_assets($hook) {
     }
     
     foreach ($assets['js'] ?? [] as $handle => $js_config) {
-        $js_url = DATA_MACHINE_URL . 'inc/Core/Admin/Settings/' . $js_config['src'];
+        $js_url = DATAMACHINE_URL . 'inc/Core/Admin/Settings/' . $js_config['src'];
 
         // Use file modification time for cache busting in development
-        $js_file_path = DATA_MACHINE_PATH . 'inc/Core/Admin/Settings/' . $js_config['src'];
-        $js_version = file_exists($js_file_path) ? filemtime($js_file_path) : DATA_MACHINE_VERSION;
+        $js_file_path = DATAMACHINE_PATH . 'inc/Core/Admin/Settings/' . $js_config['src'];
+        $js_version = file_exists($js_file_path) ? filemtime($js_file_path) : DATAMACHINE_VERSION;
         
         wp_enqueue_script(
             $handle,
@@ -235,7 +235,7 @@ add_filter('datamachine_enabled_settings', function($fields, $handler_slug, $ste
         return $fields;
     }
     
-    $all_settings = get_option('data_machine_settings', []);
+    $all_settings = get_option('datamachine_settings', []);
     $wp_settings = $all_settings['wordpress_settings'] ?? [];
     $enabled_post_types = $wp_settings['enabled_post_types'] ?? [];
     $enabled_taxonomies = $wp_settings['enabled_taxonomies'] ?? [];
@@ -294,7 +294,7 @@ add_filter('datamachine_apply_global_defaults', function($current_settings, $han
         return $current_settings;
     }
     
-    $all_settings = get_option('data_machine_settings', []);
+    $all_settings = get_option('datamachine_settings', []);
     $wp_settings = $all_settings['wordpress_settings'] ?? [];
     
     // System defaults ALWAYS override flow step configurations when set

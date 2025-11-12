@@ -18,7 +18,7 @@ if (!defined('WPINC')) {
     
     <div class="datamachine-handler-selection-header">
         <?php /* translators: %s: Step type (fetch, publish, update) */ ?>
-        <p><?php echo esc_html(sprintf(__('Select a %s handler to configure', 'data-machine'), $step_type)); ?></p>
+        <p><?php echo esc_html(sprintf(__('Select a %s handler to configure', 'datamachine'), $step_type)); ?></p>
     </div>
     
     <div class="datamachine-handler-cards">

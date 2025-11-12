@@ -33,8 +33,8 @@ function datamachine_register_update_step_filters() {
     // Step registration - Update Step declares itself (pure discovery mode)
     add_filter('datamachine_step_types', function($steps) {
         $steps['update'] = [
-            'label' => __('Update', 'data-machine'),
-            'description' => __('Update existing content with processed data', 'data-machine'),
+            'label' => __('Update', 'datamachine'),
+            'description' => __('Update existing content with processed data', 'datamachine'),
             'class' => UpdateStep::class,
             'position' => 25  // Between AI (20) and Publish (30)
         ];

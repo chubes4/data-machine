@@ -360,7 +360,7 @@ class Twitter {
 
 
     public static function get_label(): string {
-        return __('Post to Twitter', 'data-machine');
+        return __('Post to Twitter', 'datamachine');
     }
 
 
@@ -378,7 +378,7 @@ class Twitter {
         }
 
         $response = wp_remote_head($image_url, [
-            'user-agent' => 'Mozilla/5.0 (compatible; DataMachine/1.0; +https://github.com/chubes/data-machine)'
+            'user-agent' => 'Mozilla/5.0 (compatible; DataMachine/1.0; +https://github.com/chubes/datamachine)'
         ]);
 
         if (is_wp_error($response)) {

@@ -15,8 +15,8 @@ function datamachine_register_reddit_fetch_filters() {
             $handlers['reddit'] = [
                 'type' => 'fetch',
                 'class' => Reddit::class,
-                'label' => __('Reddit', 'data-machine'),
-                'description' => __('Fetch posts from subreddits via Reddit API', 'data-machine'),
+                'label' => __('Reddit', 'datamachine'),
+                'description' => __('Fetch posts from subreddits via Reddit API', 'datamachine'),
                 'requires_auth' => true
             ];
         }

@@ -36,10 +36,10 @@ export default function ConfigurationWarning({ unconfiguredTools = [] }) {
 			</span>
 			<div style={{ flex: 1 }}>
 				<p style={{ margin: '0 0 4px 0', fontWeight: '500', fontSize: '13px' }}>
-					{__('Configuration Required', 'data-machine')}
+					{__('Configuration Required', 'datamachine')}
 				</p>
 				<p style={{ margin: 0, fontSize: '12px', color: '#757575' }}>
-					{__('The following tools require configuration before use:', 'data-machine')}
+					{__('The following tools require configuration before use:', 'datamachine')}
 				</p>
 				<ul style={{ margin: '8px 0 0 20px', fontSize: '12px', color: '#757575' }}>
 					{unconfiguredTools.map((toolName, index) => (

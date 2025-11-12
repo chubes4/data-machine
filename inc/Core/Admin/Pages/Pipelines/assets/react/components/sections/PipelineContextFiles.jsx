@@ -39,11 +39,11 @@ export default function PipelineContextFiles({ pipelineId }) {
 			if (response.success) {
 				setFiles(response.data || []);
 			} else {
-				setError(response.message || __('Failed to load context files', 'data-machine'));
+				setError(response.message || __('Failed to load context files', 'datamachine'));
 			}
 		} catch (err) {
 			console.error('Load files error:', err);
-			setError(err.message || __('An error occurred while loading files', 'data-machine'));
+			setError(err.message || __('An error occurred while loading files', 'datamachine'));
 		} finally {
 			setLoading(false);
 		}
@@ -70,15 +70,15 @@ export default function PipelineContextFiles({ pipelineId }) {
 			const response = await uploadContextFile(pipelineId, file);
 
 			if (response.success) {
-				setSuccess(__('File uploaded successfully!', 'data-machine'));
+				setSuccess(__('File uploaded successfully!', 'datamachine'));
 				// Reload files list
 				await loadFiles();
 			} else {
-				setError(response.message || __('Failed to upload file', 'data-machine'));
+				setError(response.message || __('Failed to upload file', 'datamachine'));
 			}
 		} catch (err) {
 			console.error('Upload error:', err);
-			setError(err.message || __('An error occurred during upload', 'data-machine'));
+			setError(err.message || __('An error occurred during upload', 'datamachine'));
 		} finally {
 			setUploading(false);
 		}
@@ -96,15 +96,15 @@ export default function PipelineContextFiles({ pipelineId }) {
 			const response = await deleteContextFile(pipelineId, fileId);
 
 			if (response.success) {
-				setSuccess(__('File deleted successfully!', 'data-machine'));
+				setSuccess(__('File deleted successfully!', 'datamachine'));
 				// Reload files list
 				await loadFiles();
 			} else {
-				setError(response.message || __('Failed to delete file', 'data-machine'));
+				setError(response.message || __('Failed to delete file', 'datamachine'));
 			}
 		} catch (err) {
 			console.error('Delete error:', err);
-			setError(err.message || __('An error occurred during deletion', 'data-machine'));
+			setError(err.message || __('An error occurred during deletion', 'datamachine'));
 		} finally {
 			setDeleting(false);
 		}
@@ -114,10 +114,10 @@ export default function PipelineContextFiles({ pipelineId }) {
 		<div className="datamachine-pipeline-context-files">
 			<div style={{ marginBottom: '16px' }}>
 				<h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600' }}>
-					{__('Context Files', 'data-machine')}
+					{__('Context Files', 'datamachine')}
 				</h3>
 				<p style={{ margin: 0, color: '#757575', fontSize: '13px' }}>
-					{__('Upload files for AI context retrieval during pipeline execution.', 'data-machine')}
+					{__('Upload files for AI context retrieval during pipeline execution.', 'datamachine')}
 				</p>
 			</div>
 
@@ -139,13 +139,13 @@ export default function PipelineContextFiles({ pipelineId }) {
 					allowedTypes={['pdf', 'csv', 'txt', 'json']}
 					maxSizeMB={10}
 					disabled={uploading || loading}
-					uploadText={uploading ? __('Uploading...', 'data-machine') : null}
+					uploadText={uploading ? __('Uploading...', 'datamachine') : null}
 				/>
 			</div>
 
 			{loading ? (
 				<div style={{ textAlign: 'center', padding: '20px', color: '#757575' }}>
-					{__('Loading files...', 'data-machine')}
+					{__('Loading files...', 'datamachine')}
 				</div>
 			) : (
 				<ContextFilesTable

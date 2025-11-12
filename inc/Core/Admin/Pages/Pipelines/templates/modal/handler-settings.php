@@ -53,11 +53,11 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
     <div class="datamachine-handler-settings-header">
     <h3><?php
     /* translators: %s: Handler label */
-    echo esc_html( sprintf( __( 'Configure %s Handler', 'data-machine' ), $handler_label ) );
+    echo esc_html( sprintf( __( 'Configure %s Handler', 'datamachine' ), $handler_label ) );
     ?></h3>
     <p><?php
     /* translators: %s: Handler label */
-    echo esc_html( sprintf( __( 'Set up your %s integration settings below.', 'data-machine' ), $handler_label ) );
+    echo esc_html( sprintf( __( 'Set up your %s integration settings below.', 'datamachine' ), $handler_label ) );
     ?></p>
     </div>
     
@@ -67,13 +67,13 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
                 <span class="dashicons dashicons-admin-network"></span>
                 <span><?php
                 /* translators: %s: Handler label */
-                echo esc_html( sprintf( __( '%s requires authentication to function properly.', 'data-machine' ), $handler_label ) );
+                echo esc_html( sprintf( __( '%s requires authentication to function properly.', 'datamachine' ), $handler_label ) );
                 ?></span>
             </div>
             <button type="button" class="button button-secondary datamachine-modal-content" 
                     data-template="modal/handler-auth-form"
                     data-context='<?php echo esc_attr(wp_json_encode(['handler_slug' => $handler_slug, 'step_type' => $step_type ?? '', 'flow_step_id' => $flow_step_id ?? '', 'pipeline_id' => $pipeline_id ?? '', 'flow_id' => $flow_id ?? ''])); ?>'>
-                <?php esc_html_e('Manage Authentication', 'data-machine'); ?>
+                <?php esc_html_e('Manage Authentication', 'datamachine'); ?>
             </button>
         </div>
     <?php endif; ?>
@@ -110,7 +110,7 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
                 }
             } else {
                 echo '<p class="notice notice-warning inline">';
-                esc_html_e('Settings fields could not be loaded. Please check handler configuration.', 'data-machine');
+                esc_html_e('Settings fields could not be loaded. Please check handler configuration.', 'datamachine');
                 echo '</p>';
             }
             ?>
@@ -118,7 +118,7 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
 
         <?php
         if (in_array($handler_slug, ['wordpress_publish', 'wordpress_posts'])) {
-            $all_settings = get_option('data_machine_settings', []);
+            $all_settings = get_option('datamachine_settings', []);
             $wp_settings = $all_settings['wordpress_settings'] ?? [];
             $global_settings = [];
 
@@ -126,40 +126,40 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
                 $author_name = apply_filters('datamachine_wordpress_user_display_name', null, $wp_settings['default_author_id']);
                 $author_name = $author_name ?? 'Unknown';
                 /* translators: %s: Author display name */
-                $global_settings[] = sprintf( __( 'Author: %s', 'data-machine' ), $author_name );
+                $global_settings[] = sprintf( __( 'Author: %s', 'datamachine' ), $author_name );
             }
 
             if (!empty($wp_settings['default_post_status'])) {
                 $status_labels = [
-                    'publish' => __('Published', 'data-machine'),
-                    'draft' => __('Draft', 'data-machine'),
-                    'private' => __('Private', 'data-machine')
+                    'publish' => __('Published', 'datamachine'),
+                    'draft' => __('Draft', 'datamachine'),
+                    'private' => __('Private', 'datamachine')
                 ];
                 $status_label = $status_labels[$wp_settings['default_post_status']] ?? ucfirst($wp_settings['default_post_status']);
                 /* translators: %s: Post status label */
-                $global_settings[] = sprintf( __( 'Post Status: %s', 'data-machine' ), $status_label );
+                $global_settings[] = sprintf( __( 'Post Status: %s', 'datamachine' ), $status_label );
             }
 
             if (isset($wp_settings['default_include_source'])) {
-                $setting_label = $wp_settings['default_include_source'] ? __( 'Enabled', 'data-machine' ) : __( 'Disabled', 'data-machine' );
+                $setting_label = $wp_settings['default_include_source'] ? __( 'Enabled', 'datamachine' ) : __( 'Disabled', 'datamachine' );
                 /* translators: %s: Enabled/Disabled label for including source */
-                $global_settings[] = sprintf( __( 'Include Source: %s', 'data-machine' ), $setting_label );
+                $global_settings[] = sprintf( __( 'Include Source: %s', 'datamachine' ), $setting_label );
             }
 
             if (isset($wp_settings['default_enable_images'])) {
-                $setting_label = $wp_settings['default_enable_images'] ? __( 'Enabled', 'data-machine' ) : __( 'Disabled', 'data-machine' );
+                $setting_label = $wp_settings['default_enable_images'] ? __( 'Enabled', 'datamachine' ) : __( 'Disabled', 'datamachine' );
                 /* translators: %s: Enabled/Disabled label for featured images */
-                $global_settings[] = sprintf( __( 'Featured Images: %s', 'data-machine' ), $setting_label );
+                $global_settings[] = sprintf( __( 'Featured Images: %s', 'datamachine' ), $setting_label );
             }
 
             if (!empty($global_settings)) {
                 ?>
                 <div class="datamachine-global-settings-notice" style="background: #f0f6fc; border: 1px solid #c3d8e8; padding: 12px; margin: 16px 0; border-radius: 4px;">
                     <p style="margin: 0; color: #2c3e50;">
-                        <strong><?php esc_html_e('Global Settings Active:', 'data-machine'); ?></strong>
+                        <strong><?php esc_html_e('Global Settings Active:', 'datamachine'); ?></strong>
                         <?php echo esc_html(implode(', ', $global_settings)); ?>.
-                        <a href="<?php echo esc_url(admin_url('options-general.php?page=data-machine-settings&tab=wordpress')); ?>" target="_blank">
-                            <?php esc_html_e('Change global settings', 'data-machine'); ?>
+                        <a href="<?php echo esc_url(admin_url('options-general.php?page=datamachine-settings&tab=wordpress')); ?>" target="_blank">
+                            <?php esc_html_e('Change global settings', 'datamachine'); ?>
                         </a>
                     </p>
                 </div>
@@ -170,17 +170,17 @@ $has_auth_system = $handler_info['requires_auth'] ?? false;
 
         <div class="datamachine-settings-actions">
             <button type="button" class="button button-secondary datamachine-cancel-settings">
-                <?php esc_html_e('Cancel', 'data-machine'); ?>
+                <?php esc_html_e('Cancel', 'datamachine'); ?>
             </button>
             <button type="button" class="button button-secondary datamachine-modal-content" 
                     data-template="handler-selection"
                     data-context='<?php echo esc_attr(wp_json_encode(['flow_step_id' => $flow_step_id, 'step_type' => $step_type, 'pipeline_id' => $pipeline_id])); ?>'>
-                <?php esc_html_e('Change Handler Type', 'data-machine'); ?>
+                <?php esc_html_e('Change Handler Type', 'datamachine'); ?>
             </button>
             <button type="button" class="button button-primary datamachine-modal-close" 
                     data-template="add-handler-action"
                     data-context='<?php echo esc_attr(wp_json_encode(['handler_slug' => $handler_slug, 'step_type' => $step_type ?? '', 'flow_step_id' => $flow_step_id ?? '', 'pipeline_id' => $pipeline_id ?? ''])); ?>'>
-                <?php esc_html_e('Save Handler Settings', 'data-machine'); ?>
+                <?php esc_html_e('Save Handler Settings', 'datamachine'); ?>
             </button>
         </div>
     </div>

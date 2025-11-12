@@ -82,7 +82,7 @@ export default function PipelineSteps({
 		return (
 			<div className="datamachine-pipeline-steps-empty" style={{ padding: '20px', textAlign: 'center' }}>
 				<p style={{ color: '#757575', marginBottom: '16px' }}>
-					{__('No steps configured. Add your first step to get started.', 'data-machine')}
+					{__('No steps configured. Add your first step to get started.', 'datamachine')}
 				</p>
 				<EmptyStepCard pipelineId={pipelineId} onAddStep={onStepAdded} />
 			</div>

@@ -15,8 +15,8 @@ function datamachine_register_googlesheets_fetch_filters() {
             $handlers['googlesheets_fetch'] = [
                 'type' => 'fetch',
                 'class' => GoogleSheetsFetch::class,
-                'label' => __('Google Sheets', 'data-machine'),
-                'description' => __('Read data from Google Sheets spreadsheets', 'data-machine'),
+                'label' => __('Google Sheets', 'datamachine'),
+                'description' => __('Read data from Google Sheets spreadsheets', 'datamachine'),
                 'requires_auth' => true
             ];
         }

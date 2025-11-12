@@ -25,27 +25,27 @@ if (!in_array($active_tab, $valid_tabs)) {
 
 ?>
 <div class="wrap datamachine-settings-page">
-    <h1><?php echo esc_html($page_title ?? __('Data Machine Settings', 'data-machine')); ?></h1>
+    <h1><?php echo esc_html($page_title ?? __('Data Machine Settings', 'datamachine')); ?></h1>
     
     <!-- Tab Navigation -->
     <h2 class="nav-tab-wrapper datamachine-nav-tab-wrapper">
-        <a href="?page=data-machine-settings&tab=admin" 
+        <a href="?page=datamachine-settings&tab=admin" 
            class="nav-tab <?php echo $active_tab === 'admin' ? 'nav-tab-active' : ''; ?>">
-            <?php esc_html_e('Admin', 'data-machine'); ?>
+            <?php esc_html_e('Admin', 'datamachine'); ?>
         </a>
-        <a href="?page=data-machine-settings&tab=agent" 
+        <a href="?page=datamachine-settings&tab=agent" 
            class="nav-tab <?php echo $active_tab === 'agent' ? 'nav-tab-active' : ''; ?>">
-            <?php esc_html_e('Agent', 'data-machine'); ?>
+            <?php esc_html_e('Agent', 'datamachine'); ?>
         </a>
-        <a href="?page=data-machine-settings&tab=wordpress" 
+        <a href="?page=datamachine-settings&tab=wordpress" 
            class="nav-tab <?php echo $active_tab === 'wordpress' ? 'nav-tab-active' : ''; ?>">
-            <?php esc_html_e('WordPress', 'data-machine'); ?>
+            <?php esc_html_e('WordPress', 'datamachine'); ?>
         </a>
     </h2>
     
     <!-- Tab Content -->
     <form method="post" action="options.php" class="datamachine-settings-form">
-        <?php settings_fields('data_machine_settings'); ?>
+        <?php settings_fields('datamachine_settings'); ?>
         
         <div id="datamachine-tab-admin" class="datamachine-tab-content <?php echo $active_tab === 'admin' ? 'active' : ''; ?>">
             <?php echo wp_kses(apply_filters('datamachine_render_template', '', 'page/admin-tab'), datamachine_allowed_html()); ?>
@@ -89,10 +89,10 @@ if (!in_array($active_tab, $valid_tabs)) {
                     <h2 class="datamachine-modal-title">
                         <?php
                         /* translators: %s: tool name */
-                        echo esc_html(sprintf(__('Configure %s', 'data-machine'), ucwords(str_replace('_', ' ', $tool_id))));
+                        echo esc_html(sprintf(__('Configure %s', 'datamachine'), ucwords(str_replace('_', ' ', $tool_id))));
                         ?>
                     </h2>
-                    <button type="button" class="datamachine-modal-close" aria-label="<?php esc_attr_e('Close', 'data-machine'); ?>">
+                    <button type="button" class="datamachine-modal-close" aria-label="<?php esc_attr_e('Close', 'datamachine'); ?>">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -147,18 +147,18 @@ if (!in_array($active_tab, $valid_tabs)) {
 
                                     <div class="datamachine-tool-config-actions">
                                         <button type="button" class="button button-secondary datamachine-modal-close">
-                                            <?php esc_html_e('Cancel', 'data-machine'); ?>
+                                            <?php esc_html_e('Cancel', 'datamachine'); ?>
                                         </button>
                                         <button type="button"
                                                 class="button button-primary datamachine-tool-config-save"
                                                 data-tool-id="<?php echo esc_attr($tool_id); ?>">
-                                            <?php esc_html_e('Save Configuration', 'data-machine'); ?>
+                                            <?php esc_html_e('Save Configuration', 'datamachine'); ?>
                                         </button>
                                     </div>
 
                                     <div class="datamachine-settings-tool-notice">
                                         <p class="description">
-                                            <?php esc_html_e('Once configured, this tool will be available for use in all AI steps across all pipelines.', 'data-machine'); ?>
+                                            <?php esc_html_e('Once configured, this tool will be available for use in all AI steps across all pipelines.', 'datamachine'); ?>
                                         </p>
                                     </div>
                                 </div>
@@ -166,7 +166,7 @@ if (!in_array($active_tab, $valid_tabs)) {
                             else:
                                 ?>
                                 <div class="datamachine-tool-config-container">
-                                    <p><?php esc_html_e('This tool does not require any configuration.', 'data-machine'); ?></p>
+                                    <p><?php esc_html_e('This tool does not require any configuration.', 'datamachine'); ?></p>
                                 </div>
                                 <?php
                             endif;

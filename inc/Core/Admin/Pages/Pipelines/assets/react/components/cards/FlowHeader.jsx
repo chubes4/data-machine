@@ -81,7 +81,7 @@ export default function FlowHeader({
 	 */
 	const handleDelete = useCallback(() => {
 		const confirmed = window.confirm(
-			__('Are you sure you want to delete this flow?', 'data-machine')
+			__('Are you sure you want to delete this flow?', 'datamachine')
 		);
 
 		if (confirmed && onDelete) {
@@ -114,7 +114,7 @@ export default function FlowHeader({
 					<TextControl
 						value={localName}
 						onChange={handleNameChange}
-						placeholder={__('Flow name...', 'data-machine')}
+						placeholder={__('Flow name...', 'datamachine')}
 						style={{ fontSize: '16px', fontWeight: '500' }}
 					/>
 				</div>
@@ -127,21 +127,21 @@ export default function FlowHeader({
 						variant="primary"
 						onClick={() => onRun && onRun(flowId)}
 					>
-						{__('Run Now', 'data-machine')}
+						{__('Run Now', 'datamachine')}
 					</Button>
 
 					<Button
 						variant="secondary"
 						onClick={() => onSchedule && onSchedule(flowId)}
 					>
-						{__('Schedule', 'data-machine')}
+						{__('Schedule', 'datamachine')}
 					</Button>
 
 					<Button
 						variant="secondary"
 						onClick={() => onDuplicate && onDuplicate(flowId)}
 					>
-						{__('Duplicate', 'data-machine')}
+						{__('Duplicate', 'datamachine')}
 					</Button>
 
 					<Button

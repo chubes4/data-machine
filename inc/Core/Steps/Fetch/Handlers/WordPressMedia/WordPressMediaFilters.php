@@ -36,8 +36,8 @@ function datamachine_register_wordpress_media_fetch_filters() {
             $handlers['wordpress_media'] = [
                 'type' => 'fetch',
                 'class' => WordPressMedia::class,
-                'label' => __('WordPress Media', 'data-machine'),
-                'description' => __('Source attached images and media from WordPress media library', 'data-machine')
+                'label' => __('WordPress Media', 'datamachine'),
+                'description' => __('Source attached images and media from WordPress media library', 'datamachine')
             ];
         }
         return $handlers;

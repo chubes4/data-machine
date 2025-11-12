@@ -36,7 +36,7 @@ export default function EmptyFlowCard({ pipelineId, onAddFlow }) {
 				variant="secondary"
 				onClick={() => onAddFlow && onAddFlow(pipelineId)}
 			>
-				{__('Add Flow', 'data-machine')}
+				{__('Add Flow', 'datamachine')}
 			</Button>
 		</div>
 	);

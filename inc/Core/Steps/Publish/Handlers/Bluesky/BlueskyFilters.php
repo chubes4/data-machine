@@ -15,8 +15,8 @@ function datamachine_register_bluesky_filters() {
             $handlers['bluesky'] = [
                 'type' => 'publish',
                 'class' => Bluesky::class,
-                'label' => __('Bluesky', 'data-machine'),
-                'description' => __('Post content to Bluesky with media support and AT Protocol integration', 'data-machine'),
+                'label' => __('Bluesky', 'datamachine'),
+                'description' => __('Post content to Bluesky with media support and AT Protocol integration', 'datamachine'),
                 'requires_auth' => true
             ];
         }

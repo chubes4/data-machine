@@ -18,7 +18,7 @@ function datamachine_register_importexport_filters() {
     
     add_filter('datamachine_modals', function($modals) {
         $modals['import-export'] = [
-            'title' => __('Import / Export Pipelines', 'data-machine'),
+            'title' => __('Import / Export Pipelines', 'datamachine'),
             'template' => 'modal/import-export',
             'size' => 'large'
         ];
@@ -27,7 +27,7 @@ function datamachine_register_importexport_filters() {
     
     add_filter('datamachine_importer', function($service) {
         if ($service === null) {
-            require_once DATA_MACHINE_PATH . 'inc/Engine/Actions/ImportExport.php';
+            require_once DATAMACHINE_PATH . 'inc/Engine/Actions/ImportExport.php';
             return new \DataMachine\Engine\Actions\ImportExport();
         }
         return $service;
@@ -56,12 +56,12 @@ function datamachine_register_utility_filters() {
         $method = strtoupper($method);
         if (!in_array($method, $valid_methods)) {
             do_action('datamachine_log', 'error', 'HTTP Request: Invalid method', ['method' => $method, 'context' => $context]);
-            return ['success' => false, 'error' => __('Invalid HTTP method', 'data-machine')];
+            return ['success' => false, 'error' => __('Invalid HTTP method', 'datamachine')];
         }
 
         $args = wp_parse_args($args, [
             'user-agent' => sprintf('DataMachine/%s (+%s)', 
-                defined('DATA_MACHINE_VERSION') ? DATA_MACHINE_VERSION : '1.0', 
+                defined('DATAMACHINE_VERSION') ? DATAMACHINE_VERSION : '1.0', 
                 home_url()),
             'timeout' => 120
         ]);
@@ -75,7 +75,7 @@ function datamachine_register_utility_filters() {
         if (is_wp_error($response)) {
             $error_message = sprintf(
                 /* translators: %1$s: Service/context name, %2$s: Error message */
-                __('Failed to connect to %1$s: %2$s', 'data-machine'),
+                __('Failed to connect to %1$s: %2$s', 'datamachine'),
                 $context,
                 $response->get_error_message()
             );
@@ -115,7 +115,7 @@ function datamachine_register_utility_filters() {
         if (!in_array($status_code, $success_codes)) {
             $error_message = sprintf(
                 /* translators: %1$s: Service/context name, %2$s: HTTP method, %3$d: HTTP status code */
-                __('%1$s %2$s returned HTTP %3$d', 'data-machine'),
+                __('%1$s %2$s returned HTTP %3$d', 'datamachine'),
                 $context,
                 $method,
                 $status_code
@@ -165,35 +165,35 @@ function datamachine_register_utility_filters() {
     add_filter('datamachine_scheduler_intervals', function($intervals) {
         return [
             'every_5_minutes' => [
-                'label' => __('Every 5 Minutes', 'data-machine'),
+                'label' => __('Every 5 Minutes', 'datamachine'),
                 'seconds' => 300 // 5 * 60
             ],
             'hourly' => [
-                'label' => __('Hourly', 'data-machine'),
+                'label' => __('Hourly', 'datamachine'),
                 'seconds' => HOUR_IN_SECONDS
             ],
             'every_2_hours' => [
-                'label' => __('Every 2 Hours', 'data-machine'),
+                'label' => __('Every 2 Hours', 'datamachine'),
                 'seconds' => HOUR_IN_SECONDS * 2
             ],
             'every_4_hours' => [
-                'label' => __('Every 4 Hours', 'data-machine'),
+                'label' => __('Every 4 Hours', 'datamachine'),
                 'seconds' => HOUR_IN_SECONDS * 4
             ],
             'qtrdaily' => [
-                'label' => __('Every 6 Hours', 'data-machine'),
+                'label' => __('Every 6 Hours', 'datamachine'),
                 'seconds' => HOUR_IN_SECONDS * 6
             ],
             'twicedaily' => [
-                'label' => __('Twice Daily', 'data-machine'),
+                'label' => __('Twice Daily', 'datamachine'),
                 'seconds' => HOUR_IN_SECONDS * 12
             ],
             'daily' => [
-                'label' => __('Daily', 'data-machine'),
+                'label' => __('Daily', 'datamachine'),
                 'seconds' => DAY_IN_SECONDS
             ],
             'weekly' => [
-                'label' => __('Weekly', 'data-machine'),
+                'label' => __('Weekly', 'datamachine'),
                 'seconds' => WEEK_IN_SECONDS
             ]
         ];

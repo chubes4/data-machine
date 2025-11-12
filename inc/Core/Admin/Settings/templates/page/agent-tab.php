@@ -7,7 +7,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
-$settings = datamachine_get_data_machine_settings();
+$settings = datamachine_get_datamachine_settings();
 $engine_mode = $settings['engine_mode'];
 $global_prompt = $settings['global_system_prompt'];
 $site_context_enabled = $settings['site_context_enabled'];
@@ -25,7 +25,7 @@ foreach ($all_tools as $tool_name => $tool_config) {
 
 <table class="form-table">
     <tr>
-        <th scope="row"><?php esc_html_e('Tool Configuration', 'data-machine'); ?></th>
+        <th scope="row"><?php esc_html_e('Tool Configuration', 'datamachine'); ?></th>
         <td>
             <?php if ($configurable_tools): ?>
                 <div class="datamachine-tool-config-grid">
@@ -35,13 +35,13 @@ foreach ($all_tools as $tool_name => $tool_config) {
                             <p class="description"><?php echo esc_html($tool_config['description'] ?? ''); ?></p>
                             <?php $is_configured = apply_filters('datamachine_tool_configured', false, $tool_name); ?>
                             <span class="datamachine-config-status <?php echo $is_configured ? 'configured' : 'not-configured'; ?>">
-                                <?php echo $is_configured ? esc_html__('Configured', 'data-machine') : esc_html__('Not Configured', 'data-machine'); ?>
+                                <?php echo $is_configured ? esc_html__('Configured', 'datamachine') : esc_html__('Not Configured', 'datamachine'); ?>
                             </span>
                             <?php if (!$engine_mode): ?>
                                 <button type="button"
                                         class="button datamachine-open-modal"
                                         data-modal-id="datamachine-modal-tool-config-<?php echo esc_attr($tool_name); ?>">
-                                    <?php esc_html_e('Configure', 'data-machine'); ?>
+                                    <?php esc_html_e('Configure', 'datamachine'); ?>
                                 </button>
                             <?php endif; ?>
                         </div>
@@ -49,53 +49,53 @@ foreach ($all_tools as $tool_name => $tool_config) {
                 </div>
                 <?php if ($engine_mode): ?>
                     <p class="description">
-                        <?php esc_html_e('Tool configuration is disabled when Engine Mode is active.', 'data-machine'); ?>
+                        <?php esc_html_e('Tool configuration is disabled when Engine Mode is active.', 'datamachine'); ?>
                     </p>
                 <?php endif; ?>
             <?php else: ?>
-                <p><?php esc_html_e('No configurable tools are currently available.', 'data-machine'); ?></p>
+                <p><?php esc_html_e('No configurable tools are currently available.', 'datamachine'); ?></p>
             <?php endif; ?>
         </td>
     </tr>
 
     <tr>
-        <th scope="row"><?php esc_html_e('Global System Prompt', 'data-machine'); ?></th>
+        <th scope="row"><?php esc_html_e('Global System Prompt', 'datamachine'); ?></th>
         <td>
-            <textarea name="data_machine_settings[global_system_prompt]" 
+            <textarea name="datamachine_settings[global_system_prompt]" 
                       rows="8" 
                       cols="70" 
                       class="large-text code"
                       <?php echo esc_attr($disabled_attr); ?>><?php echo esc_textarea($global_prompt); ?></textarea>
             <p class="description">
-                <?php esc_html_e('Primary system message that sets the tone and overall behavior for all AI agents. This is the first and most important instruction that influences every AI response in your workflows.', 'data-machine'); ?>
+                <?php esc_html_e('Primary system message that sets the tone and overall behavior for all AI agents. This is the first and most important instruction that influences every AI response in your workflows.', 'datamachine'); ?>
             </p>
             <?php if ($engine_mode): ?>
                 <p class="description">
-                    <?php esc_html_e('Global system prompt is disabled when Engine Mode is active.', 'data-machine'); ?>
+                    <?php esc_html_e('Global system prompt is disabled when Engine Mode is active.', 'datamachine'); ?>
                 </p>
             <?php endif; ?>
         </td>
     </tr>
     
     <tr>
-        <th scope="row"><?php esc_html_e('Provide site context to agents', 'data-machine'); ?></th>
+        <th scope="row"><?php esc_html_e('Provide site context to agents', 'datamachine'); ?></th>
         <td>
             <fieldset <?php echo esc_attr($disabled_attr); ?>>
                 <label for="site_context_enabled">
                     <input type="checkbox" 
                            id="site_context_enabled"
-                           name="data_machine_settings[site_context_enabled]" 
+                           name="datamachine_settings[site_context_enabled]" 
                            value="1" 
                            <?php checked($site_context_enabled, true); ?>
                            <?php echo esc_attr($disabled_attr); ?>>
-                    <?php esc_html_e('Include WordPress site context in AI requests', 'data-machine'); ?>
+                    <?php esc_html_e('Include WordPress site context in AI requests', 'datamachine'); ?>
                 </label>
                 <p class="description">
-                    <?php esc_html_e('Automatically provides site information (post types, taxonomies, user stats) to AI agents for better context awareness.', 'data-machine'); ?>
+                    <?php esc_html_e('Automatically provides site information (post types, taxonomies, user stats) to AI agents for better context awareness.', 'datamachine'); ?>
                 </p>
                 <?php if ($engine_mode): ?>
                     <p class="description">
-                        <?php esc_html_e('Site context controls are disabled when Engine Mode is active.', 'data-machine'); ?>
+                        <?php esc_html_e('Site context controls are disabled when Engine Mode is active.', 'datamachine'); ?>
                     </p>
                 <?php endif; ?>
             </fieldset>

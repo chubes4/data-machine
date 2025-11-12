@@ -40,7 +40,7 @@ export default function ImportTab({ onSuccess, onClose }) {
 	 */
 	const handleImport = async () => {
 		if (!csvContent) {
-			setError(__('Please select a CSV file to import.', 'data-machine'));
+			setError(__('Please select a CSV file to import.', 'datamachine'));
 			return;
 		}
 
@@ -55,8 +55,8 @@ export default function ImportTab({ onSuccess, onClose }) {
 				const count = response.data?.created_count || 0;
 				setSuccess(
 					count > 0
-						? __(`Successfully imported ${count} pipeline(s)!`, 'data-machine')
-						: __('Import completed!', 'data-machine')
+						? __(`Successfully imported ${count} pipeline(s)!`, 'datamachine')
+						: __('Import completed!', 'datamachine')
 				);
 
 				// Clear file after successful import
@@ -70,11 +70,11 @@ export default function ImportTab({ onSuccess, onClose }) {
 					}
 				}, 1500);
 			} else {
-				setError(response.message || __('Failed to import pipelines', 'data-machine'));
+				setError(response.message || __('Failed to import pipelines', 'datamachine'));
 			}
 		} catch (err) {
 			console.error('Import error:', err);
-			setError(err.message || __('An error occurred during import', 'data-machine'));
+			setError(err.message || __('An error occurred during import', 'datamachine'));
 		} finally {
 			setIsImporting(false);
 		}
@@ -105,7 +105,7 @@ export default function ImportTab({ onSuccess, onClose }) {
 			)}
 
 			<p style={{ marginBottom: '20px', color: '#757575' }}>
-				{__('Upload a CSV file to import pipelines:', 'data-machine')}
+				{__('Upload a CSV file to import pipelines:', 'datamachine')}
 			</p>
 
 			<CSVDropzone
@@ -117,7 +117,7 @@ export default function ImportTab({ onSuccess, onClose }) {
 			{fileName && (
 				<div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
 					<span style={{ color: '#46b450', fontWeight: '500' }}>
-						{__('Selected:', 'data-machine')} {fileName}
+						{__('Selected:', 'datamachine')} {fileName}
 					</span>
 					<Button
 						variant="link"
@@ -125,7 +125,7 @@ export default function ImportTab({ onSuccess, onClose }) {
 						disabled={isImporting}
 						style={{ color: '#dc3232' }}
 					>
-						{__('Clear', 'data-machine')}
+						{__('Clear', 'datamachine')}
 					</Button>
 				</div>
 			)}
@@ -144,7 +144,7 @@ export default function ImportTab({ onSuccess, onClose }) {
 					onClick={onClose}
 					disabled={isImporting}
 				>
-					{__('Cancel', 'data-machine')}
+					{__('Cancel', 'datamachine')}
 				</Button>
 
 				<Button
@@ -154,8 +154,8 @@ export default function ImportTab({ onSuccess, onClose }) {
 					isBusy={isImporting}
 				>
 					{isImporting
-						? __('Importing...', 'data-machine')
-						: __('Import Pipelines', 'data-machine')}
+						? __('Importing...', 'datamachine')
+						: __('Import Pipelines', 'datamachine')}
 				</Button>
 			</div>
 		</div>

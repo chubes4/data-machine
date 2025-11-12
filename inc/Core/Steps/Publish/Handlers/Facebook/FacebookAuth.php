@@ -41,16 +41,16 @@ class FacebookAuth {
     public function get_config_fields(): array {
         return [
             'app_id' => [
-                'label' => __('App ID', 'data-machine'),
+                'label' => __('App ID', 'datamachine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Facebook application App ID from developers.facebook.com', 'data-machine')
+                'description' => __('Your Facebook application App ID from developers.facebook.com', 'datamachine')
             ],
             'app_secret' => [
-                'label' => __('App Secret', 'data-machine'),
+                'label' => __('App Secret', 'datamachine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Facebook application App Secret from developers.facebook.com', 'data-machine')
+                'description' => __('Your Facebook application App Secret from developers.facebook.com', 'datamachine')
             ]
         ];
     }
@@ -176,7 +176,7 @@ class FacebookAuth {
         // Convert result to WP_Error format for compatibility
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Facebook OAuth Error: Token request failed.', ['error' => $result['error']]);
-            return new \WP_Error('facebook_oauth_token_request_failed', __('HTTP error during token exchange with Facebook.', 'data-machine'), $result['error']);
+            return new \WP_Error('facebook_oauth_token_request_failed', __('HTTP error during token exchange with Facebook.', 'datamachine'), $result['error']);
         }
         
         $body = $result['data'];
@@ -345,7 +345,7 @@ class FacebookAuth {
         
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Facebook OAuth Error: Long-lived token request failed.', ['error' => $result['error']]);
-            return new \WP_Error('facebook_oauth_long_token_request_failed', __('HTTP error during long-lived token exchange with Facebook.', 'data-machine'), $result['error']);
+            return new \WP_Error('facebook_oauth_long_token_request_failed', __('HTTP error during long-lived token exchange with Facebook.', 'datamachine'), $result['error']);
         }
         
         $body = $result['data'];
@@ -418,7 +418,7 @@ class FacebookAuth {
             do_action('datamachine_log', 'error', 'Facebook Page Fetch Error: Request failed.', [
                 'error' => $result['error']
             ]);
-            return new \WP_Error('facebook_page_request_failed', __('HTTP error while fetching Facebook pages.', 'data-machine'), $result['error']);
+            return new \WP_Error('facebook_page_request_failed', __('HTTP error while fetching Facebook pages.', 'datamachine'), $result['error']);
         }
         
         $body = $result['data'];
@@ -461,7 +461,7 @@ class FacebookAuth {
             ]);
             
             // Check if we have permission data to provide more helpful error message
-            $error_message = __('No Facebook pages were found for this account using the /me/accounts endpoint.', 'data-machine');
+            $error_message = __('No Facebook pages were found for this account using the /me/accounts endpoint.', 'datamachine');
             
             if ($permissions_result['success']) {
                 $permissions_data = json_decode($permissions_result['data'], true);
@@ -477,9 +477,9 @@ class FacebookAuth {
                 }
                 
                 if ($has_manage_pages) {
-                    $error_message = __('No Facebook pages found despite having "pages_show_list" permission. This may indicate: 1) The account has no pages, 2) The account is not an admin/editor of any pages, or 3) Pages are managed through Business Manager and require different API access patterns.', 'data-machine');
+                    $error_message = __('No Facebook pages found despite having "pages_show_list" permission. This may indicate: 1) The account has no pages, 2) The account is not an admin/editor of any pages, or 3) Pages are managed through Business Manager and require different API access patterns.', 'datamachine');
                 } else {
-                    $error_message = __('The "pages_show_list" permission was not granted or is not active. Please ensure you grant the "pages_show_list" permission during authentication and that your account has admin/editor access to at least one Facebook page.', 'data-machine');
+                    $error_message = __('The "pages_show_list" permission was not granted or is not active. Please ensure you grant the "pages_show_list" permission during authentication and that your account has admin/editor access to at least one Facebook page.', 'datamachine');
                 }
             }
             
@@ -501,7 +501,7 @@ class FacebookAuth {
              do_action('datamachine_log', 'error', 'Facebook Page Fetch Error: Incomplete data for the first page.', [
                  'page_data' => $first_page
              ]);
-            return new \WP_Error('facebook_incomplete_page_data', __('Required information (ID, Access Token, Name) was missing for the Facebook page.', 'data-machine'));
+            return new \WP_Error('facebook_incomplete_page_data', __('Required information (ID, Access Token, Name) was missing for the Facebook page.', 'datamachine'));
         }
 
         do_action('datamachine_log', 'debug', 'Successfully fetched credentials for Facebook page.', [

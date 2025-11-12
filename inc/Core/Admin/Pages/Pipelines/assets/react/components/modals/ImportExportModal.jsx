@@ -38,12 +38,12 @@ export default function ImportExportModal({
 	const tabs = [
 		{
 			name: 'export',
-			title: __('Export', 'data-machine'),
+			title: __('Export', 'datamachine'),
 			className: 'datamachine-import-export-tab'
 		},
 		{
 			name: 'import',
-			title: __('Import', 'data-machine'),
+			title: __('Import', 'datamachine'),
 			className: 'datamachine-import-export-tab'
 		}
 	];
@@ -60,7 +60,7 @@ export default function ImportExportModal({
 
 	return (
 		<Modal
-			title={__('Import / Export Pipelines', 'data-machine')}
+			title={__('Import / Export Pipelines', 'datamachine')}
 			onRequestClose={onClose}
 			className="datamachine-modal datamachine-import-export-modal"
 			style={{ maxWidth: '700px' }}

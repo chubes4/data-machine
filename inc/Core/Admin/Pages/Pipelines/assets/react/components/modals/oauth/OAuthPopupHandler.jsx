@@ -87,7 +87,7 @@ export default function OAuthPopupHandler({
 					}
 				} else {
 					if (onError) {
-						onError(event.data.error || __('OAuth authentication failed', 'data-machine'));
+						onError(event.data.error || __('OAuth authentication failed', 'datamachine'));
 					}
 				}
 
@@ -101,7 +101,7 @@ export default function OAuthPopupHandler({
 		// Check if popup was blocked
 		if (!popupRef.current || popupRef.current.closed) {
 			if (onError) {
-				onError(__('Popup was blocked. Please allow popups for this site.', 'data-machine'));
+				onError(__('Popup was blocked. Please allow popups for this site.', 'datamachine'));
 			}
 		}
 	};
@@ -112,7 +112,7 @@ export default function OAuthPopupHandler({
 			onClick={handleOAuthClick}
 			disabled={disabled}
 		>
-			{__('Connect Account', 'data-machine')}
+			{__('Connect Account', 'datamachine')}
 		</Button>
 	);
 }

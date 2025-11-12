@@ -45,7 +45,7 @@ class WordPressSettings {
         // Get available post types
         $post_types = get_post_types(['public' => true], 'objects');
         $post_type_options = [
-            'any' => __('Any', 'data-machine'),
+            'any' => __('Any', 'datamachine'),
         ];
         foreach ($post_types as $post_type) {
             if (is_object($post_type)) {
@@ -61,26 +61,26 @@ class WordPressSettings {
         $fields = [
             'source_url' => [
                 'type' => 'text',
-                'label' => __('Specific Post URL', 'data-machine'),
-                'description' => __('Target a specific post by URL. When provided, other filters are ignored.', 'data-machine'),
-                'placeholder' => __('Leave empty for general query', 'data-machine'),
+                'label' => __('Specific Post URL', 'datamachine'),
+                'description' => __('Target a specific post by URL. When provided, other filters are ignored.', 'datamachine'),
+                'placeholder' => __('Leave empty for general query', 'datamachine'),
             ],
             'post_type' => [
                 'type' => 'select',
-                'label' => __('Post Type', 'data-machine'),
-                'description' => __('Select the post type to fetch from the local site.', 'data-machine'),
+                'label' => __('Post Type', 'datamachine'),
+                'description' => __('Select the post type to fetch from the local site.', 'datamachine'),
                 'options' => $post_type_options,
             ],
             'post_status' => [
                 'type' => 'select',
-                'label' => __('Post Status', 'data-machine'),
-                'description' => __('Select the post status to fetch.', 'data-machine'),
+                'label' => __('Post Status', 'datamachine'),
+                'description' => __('Select the post status to fetch.', 'datamachine'),
                 'options' => [
-                    'publish' => __('Published', 'data-machine'),
-                    'draft' => __('Draft', 'data-machine'),
-                    'pending' => __('Pending', 'data-machine'),
-                    'private' => __('Private', 'data-machine'),
-                    'any' => __('Any', 'data-machine'),
+                    'publish' => __('Published', 'datamachine'),
+                    'draft' => __('Draft', 'datamachine'),
+                    'pending' => __('Pending', 'datamachine'),
+                    'private' => __('Private', 'datamachine'),
+                    'any' => __('Any', 'datamachine'),
                 ],
             ],
         ];
@@ -119,7 +119,7 @@ class WordPressSettings {
             // Build filter options with "All" as default
             $options = [
                 /* translators: %s: Taxonomy name (e.g., Categories, Tags) */
-                0 => sprintf(__('All %s', 'data-machine'), $taxonomy_label)
+                0 => sprintf(__('All %s', 'datamachine'), $taxonomy_label)
             ];
             
             // Get terms for this taxonomy
@@ -137,7 +137,7 @@ class WordPressSettings {
                 'label' => $taxonomy_label,
                 'description' => sprintf(
                     /* translators: %1$s: Taxonomy name (lowercase), %2$s: Taxonomy name (lowercase) */
-                    __('Filter by specific %1$s or fetch from all %2$s.', 'data-machine'),
+                    __('Filter by specific %1$s or fetch from all %2$s.', 'datamachine'),
                     strtolower($taxonomy_label),
                     strtolower($taxonomy_label)
                 ),
@@ -158,19 +158,19 @@ class WordPressSettings {
         return [
             'timeframe_limit' => [
                 'type' => 'select',
-                'label' => __('Process Items Within', 'data-machine'),
-                'description' => __('Only consider items published within this timeframe.', 'data-machine'),
+                'label' => __('Process Items Within', 'datamachine'),
+                'description' => __('Only consider items published within this timeframe.', 'datamachine'),
                 'options' => apply_filters('datamachine_timeframe_limit', [], null),
             ],
             'search' => [
                 'type' => 'text',
-                'label' => __('Search Term Filter', 'data-machine'),
-                'description' => __('Filter items by keywords (comma-separated). Items containing any keyword in their title or content will be included.', 'data-machine'),
+                'label' => __('Search Term Filter', 'datamachine'),
+                'description' => __('Filter items by keywords (comma-separated). Items containing any keyword in their title or content will be included.', 'datamachine'),
             ],
             'randomize_selection' => [
                 'type' => 'checkbox',
-                'label' => __('Randomize selection', 'data-machine'),
-                'description' => __('Select a random post instead of most recently modified.', 'data-machine'),
+                'label' => __('Randomize selection', 'datamachine'),
+                'description' => __('Select a random post instead of most recently modified.', 'datamachine'),
             ],
         ];
     }

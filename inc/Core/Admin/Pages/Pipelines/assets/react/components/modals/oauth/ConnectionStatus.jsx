@@ -16,13 +16,13 @@ import { __ } from '@wordpress/i18n';
 export default function ConnectionStatus({ connected }) {
 	const statusConfig = connected
 		? {
-			label: __('Connected', 'data-machine'),
+			label: __('Connected', 'datamachine'),
 			color: '#46b450',
 			icon: '✓',
 			background: '#e6f4ea'
 		}
 		: {
-			label: __('Not Connected', 'data-machine'),
+			label: __('Not Connected', 'datamachine'),
 			color: '#dc3232',
 			icon: '✗',
 			background: '#fef7f7'

@@ -52,11 +52,11 @@ export default function FlowCard({ flow, pipelineSteps, pipelineConfig }) {
 			if (response.success) {
 				refreshData();
 			} else {
-				alert(response.message || __('Failed to delete flow', 'data-machine'));
+				alert(response.message || __('Failed to delete flow', 'datamachine'));
 			}
 		} catch (error) {
 			console.error('Flow deletion error:', error);
-			alert(__('An error occurred while deleting the flow', 'data-machine'));
+			alert(__('An error occurred while deleting the flow', 'datamachine'));
 		}
 	}, [refreshData]);
 
@@ -70,11 +70,11 @@ export default function FlowCard({ flow, pipelineSteps, pipelineConfig }) {
 			if (response.success) {
 				refreshData();
 			} else {
-				alert(response.message || __('Failed to duplicate flow', 'data-machine'));
+				alert(response.message || __('Failed to duplicate flow', 'datamachine'));
 			}
 		} catch (error) {
 			console.error('Flow duplication error:', error);
-			alert(__('An error occurred while duplicating the flow', 'data-machine'));
+			alert(__('An error occurred while duplicating the flow', 'datamachine'));
 		}
 	}, [refreshData]);
 
@@ -86,14 +86,14 @@ export default function FlowCard({ flow, pipelineSteps, pipelineConfig }) {
 			const response = await runFlow(flowId);
 
 			if (response.success) {
-				alert(__('Flow started successfully!', 'data-machine'));
+				alert(__('Flow started successfully!', 'datamachine'));
 				refreshData();
 			} else {
-				alert(response.message || __('Failed to run flow', 'data-machine'));
+				alert(response.message || __('Failed to run flow', 'datamachine'));
 			}
 		} catch (error) {
 			console.error('Flow execution error:', error);
-			alert(__('An error occurred while running the flow', 'data-machine'));
+			alert(__('An error occurred while running the flow', 'datamachine'));
 		}
 	}, [refreshData]);
 

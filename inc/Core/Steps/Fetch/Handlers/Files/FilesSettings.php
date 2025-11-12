@@ -27,13 +27,13 @@ class FilesSettings {
         return [
             'file_upload_section' => [
                 'type' => 'section',
-                'label' => __('File Upload', 'data-machine'),
-                'description' => __('Upload any file type - the pipeline will handle compatibility.', 'data-machine'),
+                'label' => __('File Upload', 'datamachine'),
+                'description' => __('Upload any file type - the pipeline will handle compatibility.', 'datamachine'),
             ],
             'auto_cleanup_enabled' => [
                 'type' => 'checkbox',
-                'label' => __('Auto-cleanup old files', 'data-machine'),
-                'description' => __('Automatically delete processed files older than 7 days to save disk space.', 'data-machine'),
+                'label' => __('Auto-cleanup old files', 'datamachine'),
+                'description' => __('Automatically delete processed files older than 7 days to save disk space.', 'datamachine'),
             ],
         ];
     }

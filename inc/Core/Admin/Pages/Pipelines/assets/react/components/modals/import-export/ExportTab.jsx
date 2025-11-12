@@ -29,7 +29,7 @@ export default function ExportTab({ pipelines, onClose }) {
 	 */
 	const handleExport = async () => {
 		if (selectedIds.length === 0) {
-			setError(__('Please select at least one pipeline to export.', 'data-machine'));
+			setError(__('Please select at least one pipeline to export.', 'datamachine'));
 			return;
 		}
 
@@ -46,20 +46,20 @@ export default function ExportTab({ pipelines, onClose }) {
 				const url = URL.createObjectURL(blob);
 				const link = document.createElement('a');
 				link.href = url;
-				link.download = `data-machine-pipelines-${Date.now()}.csv`;
+				link.download = `datamachine-pipelines-${Date.now()}.csv`;
 				document.body.appendChild(link);
 				link.click();
 				document.body.removeChild(link);
 				URL.revokeObjectURL(url);
 
-				setSuccess(__('Pipelines exported successfully!', 'data-machine'));
+				setSuccess(__('Pipelines exported successfully!', 'datamachine'));
 				setSelectedIds([]);
 			} else {
-				setError(response.message || __('Failed to export pipelines', 'data-machine'));
+				setError(response.message || __('Failed to export pipelines', 'datamachine'));
 			}
 		} catch (err) {
 			console.error('Export error:', err);
-			setError(err.message || __('An error occurred during export', 'data-machine'));
+			setError(err.message || __('An error occurred during export', 'datamachine'));
 		} finally {
 			setIsExporting(false);
 		}
@@ -80,7 +80,7 @@ export default function ExportTab({ pipelines, onClose }) {
 			)}
 
 			<p style={{ marginBottom: '20px', color: '#757575' }}>
-				{__('Select the pipelines you want to export to CSV:', 'data-machine')}
+				{__('Select the pipelines you want to export to CSV:', 'datamachine')}
 			</p>
 
 			<PipelineCheckboxTable
@@ -103,7 +103,7 @@ export default function ExportTab({ pipelines, onClose }) {
 					onClick={onClose}
 					disabled={isExporting}
 				>
-					{__('Cancel', 'data-machine')}
+					{__('Cancel', 'datamachine')}
 				</Button>
 
 				<Button
@@ -113,8 +113,8 @@ export default function ExportTab({ pipelines, onClose }) {
 					isBusy={isExporting}
 				>
 					{isExporting
-						? __('Exporting...', 'data-machine')
-						: __('Export Selected', 'data-machine')}
+						? __('Exporting...', 'datamachine')
+						: __('Export Selected', 'datamachine')}
 				</Button>
 			</div>
 		</div>

@@ -30,18 +30,18 @@ class BlueskySettings {
         return [
             'link_handling' => [
                 'type' => 'select',
-                'label' => __('Source URL Handling', 'data-machine'),
-                'description' => __('Choose how to handle source URLs when posting to Bluesky.', 'data-machine'),
+                'label' => __('Source URL Handling', 'datamachine'),
+                'description' => __('Choose how to handle source URLs when posting to Bluesky.', 'datamachine'),
                 'options' => [
-                    'none' => __('No URL - exclude source link entirely', 'data-machine'),
-                    'append' => __('Append to post - add URL to post content', 'data-machine')
+                    'none' => __('No URL - exclude source link entirely', 'datamachine'),
+                    'append' => __('Append to post - add URL to post content', 'datamachine')
                 ],
                 'default' => 'append'
             ],
             'include_images' => [
                 'type' => 'checkbox',
-                'label' => __('Enable Image Posting', 'data-machine'),
-                'description' => __('Attempt to find and upload an image from the source data (if available). Images must be under 1MB.', 'data-machine'),
+                'label' => __('Enable Image Posting', 'datamachine'),
+                'description' => __('Attempt to find and upload an image from the source data (if available). Images must be under 1MB.', 'datamachine'),
                 'default' => false
             ]
         ];

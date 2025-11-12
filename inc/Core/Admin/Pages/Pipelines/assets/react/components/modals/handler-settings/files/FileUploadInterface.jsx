@@ -42,10 +42,10 @@ export default function FileUploadInterface({ onFileUploaded }) {
 				});
 			}
 
-			setSuccess(__('File uploaded successfully!', 'data-machine'));
+			setSuccess(__('File uploaded successfully!', 'datamachine'));
 		} catch (err) {
 			console.error('Upload error:', err);
-			setError(err.message || __('An error occurred during upload', 'data-machine'));
+			setError(err.message || __('An error occurred during upload', 'datamachine'));
 		} finally {
 			setUploading(false);
 		}
@@ -70,7 +70,7 @@ export default function FileUploadInterface({ onFileUploaded }) {
 				allowedTypes={['pdf', 'csv', 'txt', 'json', 'jpg', 'jpeg', 'png', 'gif']}
 				maxSizeMB={10}
 				disabled={uploading}
-				uploadText={uploading ? __('Uploading...', 'data-machine') : null}
+				uploadText={uploading ? __('Uploading...', 'datamachine') : null}
 			/>
 		</div>
 	);

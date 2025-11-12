@@ -15,8 +15,8 @@ function datamachine_register_wordpress_fetch_filters() {
             $handlers['wordpress_posts'] = [
                 'type' => 'fetch',
                 'class' => WordPress::class,
-                'label' => __('Local WordPress Posts', 'data-machine'),
-                'description' => __('Fetch posts and pages from this WordPress installation', 'data-machine')
+                'label' => __('Local WordPress Posts', 'datamachine'),
+                'description' => __('Fetch posts and pages from this WordPress installation', 'datamachine')
             ];
         }
         return $handlers;
