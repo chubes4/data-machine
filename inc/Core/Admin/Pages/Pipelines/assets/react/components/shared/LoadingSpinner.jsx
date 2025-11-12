@@ -14,24 +14,24 @@ import { __ } from '@wordpress/i18n';
  * @param {string} props.message - Optional loading message
  * @returns {React.ReactElement} Loading spinner
  */
-export default function LoadingSpinner({ message }) {
+export default function LoadingSpinner( { message } ) {
 	return (
 		<div
 			className="datamachine-loading-spinner"
-			style={{
+			style={ {
 				display: 'flex',
 				flexDirection: 'column',
 				alignItems: 'center',
 				justifyContent: 'center',
-				padding: '40px 20px'
-			}}
+				padding: '40px 20px',
+			} }
 		>
 			<Spinner />
-			{message && (
-				<p style={{ marginTop: '16px', color: '#757575' }}>
-					{message}
+			{ message && (
+				<p style={ { marginTop: '16px', color: '#757575' } }>
+					{ message }
 				</p>
-			)}
+			) }
 		</div>
 	);
 }

@@ -15,27 +15,33 @@ import { __ } from '@wordpress/i18n';
  * @param {Function} props.onAddStep - Add step handler
  * @returns {React.ReactElement} Empty step card
  */
-export default function EmptyStepCard({ pipelineId, onAddStep }) {
+export default function EmptyStepCard( { pipelineId, onAddStep } ) {
 	return (
 		<div
 			className="datamachine-empty-step-card"
-			style={{
+			style={ {
 				border: '2px dashed #dcdcde',
 				borderRadius: '4px',
 				padding: '40px 20px',
 				textAlign: 'center',
 				backgroundColor: '#f9f9f9',
-				width: '100%'
-			}}
+				width: '100%',
+			} }
 		>
-			<div style={{ fontSize: '48px', color: '#c3c4c7', marginBottom: '16px' }}>
+			<div
+				style={ {
+					fontSize: '48px',
+					color: '#c3c4c7',
+					marginBottom: '16px',
+				} }
+			>
 				+
 			</div>
 			<Button
 				variant="secondary"
-				onClick={() => onAddStep && onAddStep(pipelineId)}
+				onClick={ () => onAddStep && onAddStep( pipelineId ) }
 			>
-				{__('Add Step', 'datamachine')}
+				{ __( 'Add Step', 'datamachine' ) }
 			</Button>
 		</div>
 	);

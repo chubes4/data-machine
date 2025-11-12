@@ -12,17 +12,17 @@ import PipelinesApp from './PipelinesApp';
 /**
  * Initialize React app when DOM is ready
  */
-domReady(() => {
-	const rootElement = document.getElementById('datamachine-react-root');
+domReady( () => {
+	const rootElement = document.getElementById( 'datamachine-react-root' );
 
-	if (!rootElement) {
-		console.error('Data Machine: React root element not found');
+	if ( ! rootElement ) {
+		console.error( 'Data Machine: React root element not found' );
 		return;
 	}
 
 	// Verify WordPress globals are available
-	if (!window.dataMachineConfig) {
-		console.error('Data Machine: Configuration not found');
+	if ( ! window.dataMachineConfig ) {
+		console.error( 'Data Machine: Configuration not found' );
 		return;
 	}
 
@@ -33,4 +33,4 @@ domReady(() => {
 		</PipelineProvider>,
 		rootElement
 	);
-});
+} );

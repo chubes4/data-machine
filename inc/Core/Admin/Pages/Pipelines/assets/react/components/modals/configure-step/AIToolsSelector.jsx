@@ -17,110 +17,137 @@ import ConfigurationWarning from './ConfigurationWarning';
  * @param {Function} props.onSelectionChange - Selection change handler
  * @returns {React.ReactElement} AI tools selector
  */
-export default function AIToolsSelector({
+export default function AIToolsSelector( {
 	selectedTools = [],
-	onSelectionChange
-}) {
-	const [tools, setTools] = useState([]);
-	const [isLoadingTools, setIsLoadingTools] = useState(true);
-	const [unconfiguredTools, setUnconfiguredTools] = useState([]);
+	onSelectionChange,
+} ) {
+	const [ tools, setTools ] = useState( [] );
+	const [ isLoadingTools, setIsLoadingTools ] = useState( true );
+	const [ unconfiguredTools, setUnconfiguredTools ] = useState( [] );
 
 	/**
 	 * Fetch tools from REST API
 	 */
-	useEffect(() => {
+	useEffect( () => {
 		const loadTools = async () => {
 			try {
-				const response = await fetch('/wp-json/datamachine/v1/tools');
+				const response = await fetch( '/wp-json/datamachine/v1/tools' );
 				const data = await response.json();
 
-				if (data.success) {
-					const toolsArray = Object.entries(data.tools).map(([toolId, toolData]) => ({
-						toolId,
-						label: toolData.label || toolId,
-						description: toolData.description || '',
-						configured: toolData.configured || false
-					}));
-					setTools(toolsArray);
+				if ( data.success ) {
+					const toolsArray = Object.entries( data.tools ).map(
+						( [ toolId, toolData ] ) => ( {
+							toolId,
+							label: toolData.label || toolId,
+							description: toolData.description || '',
+							configured: toolData.configured || false,
+						} )
+					);
+					setTools( toolsArray );
 				}
-			} catch (error) {
-				console.error('Failed to load tools:', error);
+			} catch ( error ) {
+				console.error( 'Failed to load tools:', error );
 			} finally {
-				setIsLoadingTools(false);
+				setIsLoadingTools( false );
 			}
 		};
 
 		loadTools();
-	}, []);
+	}, [] );
 
 	/**
 	 * Update unconfigured tools list when selection changes
 	 */
-	useEffect(() => {
+	useEffect( () => {
 		const unconfigured = tools
-			.filter(tool => selectedTools.includes(tool.toolId) && !tool.configured)
-			.map(tool => tool.label);
+			.filter(
+				( tool ) =>
+					selectedTools.includes( tool.toolId ) && ! tool.configured
+			)
+			.map( ( tool ) => tool.label );
 
-		setUnconfiguredTools(unconfigured);
-	}, [selectedTools, tools]);
+		setUnconfiguredTools( unconfigured );
+	}, [ selectedTools, tools ] );
 
 	/**
 	 * Handle tool toggle
 	 */
-	const handleToggle = (toolId) => {
-		const newSelection = selectedTools.includes(toolId)
-			? selectedTools.filter(id => id !== toolId)
-			: [...selectedTools, toolId];
+	const handleToggle = ( toolId ) => {
+		const newSelection = selectedTools.includes( toolId )
+			? selectedTools.filter( ( id ) => id !== toolId )
+			: [ ...selectedTools, toolId ];
 
-		if (onSelectionChange) {
-			onSelectionChange(newSelection);
+		if ( onSelectionChange ) {
+			onSelectionChange( newSelection );
 		}
 	};
 
-	if (isLoadingTools) {
+	if ( isLoadingTools ) {
 		return (
-			<div style={{ marginTop: '16px', padding: '20px', textAlign: 'center', color: '#757575' }}>
-				{__('Loading AI tools...', 'datamachine')}
+			<div
+				style={ {
+					marginTop: '16px',
+					padding: '20px',
+					textAlign: 'center',
+					color: '#757575',
+				} }
+			>
+				{ __( 'Loading AI tools...', 'datamachine' ) }
 			</div>
 		);
 	}
 
-	if (tools.length === 0) {
+	if ( tools.length === 0 ) {
 		return null;
 	}
 
 	return (
-		<div style={{ marginTop: '16px' }}>
+		<div style={ { marginTop: '16px' } }>
 			<label
-				style={{
+				style={ {
 					display: 'block',
 					marginBottom: '8px',
 					fontWeight: '500',
-					fontSize: '14px'
-				}}
+					fontSize: '14px',
+				} }
 			>
-				{__('AI Tools', 'datamachine')}
+				{ __( 'AI Tools', 'datamachine' ) }
 			</label>
 
-			<p style={{ margin: '0 0 12px 0', fontSize: '12px', color: '#757575' }}>
-				{__('Select the tools you want to enable for this AI step:', 'datamachine')}
+			<p
+				style={ {
+					margin: '0 0 12px 0',
+					fontSize: '12px',
+					color: '#757575',
+				} }
+			>
+				{ __(
+					'Select the tools you want to enable for this AI step:',
+					'datamachine'
+				) }
 			</p>
 
-			<div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-				{tools.map(tool => (
+			<div
+				style={ {
+					display: 'flex',
+					flexDirection: 'column',
+					gap: '8px',
+				} }
+			>
+				{ tools.map( ( tool ) => (
 					<ToolCheckbox
-						key={tool.toolId}
-						toolId={tool.toolId}
-						label={tool.label}
-						description={tool.description}
-						checked={selectedTools.includes(tool.toolId)}
-						configured={tool.configured}
-						onChange={() => handleToggle(tool.toolId)}
+						key={ tool.toolId }
+						toolId={ tool.toolId }
+						label={ tool.label }
+						description={ tool.description }
+						checked={ selectedTools.includes( tool.toolId ) }
+						configured={ tool.configured }
+						onChange={ () => handleToggle( tool.toolId ) }
 					/>
-				))}
+				) ) }
 			</div>
 
-			<ConfigurationWarning unconfiguredTools={unconfiguredTools} />
+			<ConfigurationWarning unconfiguredTools={ unconfiguredTools } />
 		</div>
 	);
 }

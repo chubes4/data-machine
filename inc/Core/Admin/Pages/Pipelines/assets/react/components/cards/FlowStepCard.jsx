@@ -25,137 +25,192 @@ import { usePipelineContext } from '../../context/PipelineContext';
  * @param {Function} props.onConfigure - Configure handler callback
  * @returns {React.ReactElement} Flow step card
  */
-export default function FlowStepCard({
+export default function FlowStepCard( {
 	flowId,
 	flowStepId,
 	flowStepConfig,
 	pipelineStep,
 	pipelineConfig,
-	onConfigure
-}) {
+	onConfigure,
+} ) {
 	const { stepTypes } = usePipelineContext();
 	const isAiStep = pipelineStep.step_type === 'ai';
-	const aiConfig = isAiStep ? pipelineConfig[pipelineStep.pipeline_step_id] : null;
+	const aiConfig = isAiStep
+		? pipelineConfig[ pipelineStep.pipeline_step_id ]
+		: null;
 
-	const [localUserMessage, setLocalUserMessage] = useState(flowStepConfig.user_message || '');
-	const [isSaving, setIsSaving] = useState(false);
-	const [error, setError] = useState(null);
-	const saveTimeout = useRef(null);
+	const [ localUserMessage, setLocalUserMessage ] = useState(
+		flowStepConfig.user_message || ''
+	);
+	const [ isSaving, setIsSaving ] = useState( false );
+	const [ error, setError ] = useState( null );
+	const saveTimeout = useRef( null );
 
 	/**
 	 * Sync local user message with config changes
 	 */
-	useEffect(() => {
-		setLocalUserMessage(flowStepConfig.user_message || '');
-	}, [flowStepConfig.user_message]);
+	useEffect( () => {
+		setLocalUserMessage( flowStepConfig.user_message || '' );
+	}, [ flowStepConfig.user_message ] );
 
 	/**
 	 * Save user message to API
 	 */
-	const saveUserMessage = useCallback(async (message) => {
-		if (!isAiStep) return;
+	const saveUserMessage = useCallback(
+		async ( message ) => {
+			if ( ! isAiStep ) return;
 
-		const currentMessage = flowStepConfig.user_message || '';
-		if (message === currentMessage) return;
+			const currentMessage = flowStepConfig.user_message || '';
+			if ( message === currentMessage ) return;
 
-		setIsSaving(true);
-		setError(null);
+			setIsSaving( true );
+			setError( null );
 
-		try {
-			const response = await updateUserMessage(flowStepId, message);
+			try {
+				const response = await updateUserMessage( flowStepId, message );
 
-			if (!response.success) {
-				setError(response.message || __('Failed to update user message', 'datamachine'));
-				setLocalUserMessage(currentMessage); // Revert on error
+				if ( ! response.success ) {
+					setError(
+						response.message ||
+							__( 'Failed to update user message', 'datamachine' )
+					);
+					setLocalUserMessage( currentMessage ); // Revert on error
+				}
+			} catch ( err ) {
+				console.error( 'User message update error:', err );
+				setError(
+					err.message || __( 'An error occurred', 'datamachine' )
+				);
+				setLocalUserMessage( currentMessage ); // Revert on error
+			} finally {
+				setIsSaving( false );
 			}
-		} catch (err) {
-			console.error('User message update error:', err);
-			setError(err.message || __('An error occurred', 'datamachine'));
-			setLocalUserMessage(currentMessage); // Revert on error
-		} finally {
-			setIsSaving(false);
-		}
-	}, [flowId, flowStepId, flowStepConfig.user_message, isAiStep]);
+		},
+		[ flowId, flowStepId, flowStepConfig.user_message, isAiStep ]
+	);
 
 	/**
 	 * Handle user message change with debouncing
 	 */
-	const handleUserMessageChange = useCallback((value) => {
-		setLocalUserMessage(value);
+	const handleUserMessageChange = useCallback(
+		( value ) => {
+			setLocalUserMessage( value );
 
-		// Clear existing timeout
-		if (saveTimeout.current) {
-			clearTimeout(saveTimeout.current);
-		}
+			// Clear existing timeout
+			if ( saveTimeout.current ) {
+				clearTimeout( saveTimeout.current );
+			}
 
-		// Set new timeout for debounced save
-		saveTimeout.current = setTimeout(() => {
-			saveUserMessage(value);
-		}, AUTO_SAVE_DELAY);
-	}, [saveUserMessage]);
+			// Set new timeout for debounced save
+			saveTimeout.current = setTimeout( () => {
+				saveUserMessage( value );
+			}, AUTO_SAVE_DELAY );
+		},
+		[ saveUserMessage ]
+	);
 
 	/**
 	 * Cleanup timeout on unmount
 	 */
-	useEffect(() => {
+	useEffect( () => {
 		return () => {
-			if (saveTimeout.current) {
-				clearTimeout(saveTimeout.current);
+			if ( saveTimeout.current ) {
+				clearTimeout( saveTimeout.current );
 			}
 		};
-	}, []);
+	}, [] );
 
 	return (
 		<Card
-			className={`datamachine-flow-step-card datamachine-step-type--${pipelineStep.step_type}`}
+			className={ `datamachine-flow-step-card datamachine-step-type--${ pipelineStep.step_type }` }
 			size="small"
 		>
 			<CardBody>
-				{error && (
-					<Notice status="error" isDismissible onRemove={() => setError(null)}>
-						{error}
+				{ error && (
+					<Notice
+						status="error"
+						isDismissible
+						onRemove={ () => setError( null ) }
+					>
+						{ error }
 					</Notice>
-				)}
+				) }
 
-				<div style={{ marginBottom: '12px' }}>
-					<div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-						<strong>{slugToLabel(pipelineStep.step_type)}</strong>
+				<div style={ { marginBottom: '12px' } }>
+					<div
+						style={ {
+							display: 'flex',
+							alignItems: 'center',
+							gap: '8px',
+							marginBottom: '8px',
+						} }
+					>
+						<strong>
+							{ slugToLabel( pipelineStep.step_type ) }
+						</strong>
 					</div>
 
-					{/* AI Configuration Display */}
-					{isAiStep && aiConfig && (
-						<div className="datamachine-ai-config-display" style={{ marginTop: '12px' }}>
-							<div style={{ fontSize: '12px', color: '#757575', marginBottom: '8px' }}>
-								<strong>{__('AI Provider:', 'datamachine')}</strong> {aiConfig.ai_provider || 'Not configured'}
-								{' | '}
-								<strong>{__('Model:', 'datamachine')}</strong> {aiConfig.ai_model || 'Not configured'}
+					{ /* AI Configuration Display */ }
+					{ isAiStep && aiConfig && (
+						<div
+							className="datamachine-ai-config-display"
+							style={ { marginTop: '12px' } }
+						>
+							<div
+								style={ {
+									fontSize: '12px',
+									color: '#757575',
+									marginBottom: '8px',
+								} }
+							>
+								<strong>
+									{ __( 'AI Provider:', 'datamachine' ) }
+								</strong>{ ' ' }
+								{ aiConfig.ai_provider || 'Not configured' }
+								{ ' | ' }
+								<strong>
+									{ __( 'Model:', 'datamachine' ) }
+								</strong>{ ' ' }
+								{ aiConfig.ai_model || 'Not configured' }
 							</div>
 
 							<TextareaControl
-								label={__('User Message', 'datamachine')}
-								value={localUserMessage}
-								onChange={handleUserMessageChange}
-								placeholder={__('Enter user message for AI processing...', 'datamachine')}
-								rows={4}
-								help={isSaving ? __('Saving...', 'datamachine') : null}
+								label={ __( 'User Message', 'datamachine' ) }
+								value={ localUserMessage }
+								onChange={ handleUserMessageChange }
+								placeholder={ __(
+									'Enter user message for AI processing...',
+									'datamachine'
+								) }
+								rows={ 4 }
+								help={
+									isSaving
+										? __( 'Saving...', 'datamachine' )
+										: null
+								}
 							/>
 						</div>
-					)}
+					) }
 
-					{/* Handler Configuration - only for steps that use handlers */}
-					{(() => {
-						const stepTypeInfo = stepTypes[pipelineStep.step_type] || {};
+					{ /* Handler Configuration - only for steps that use handlers */ }
+					{ ( () => {
+						const stepTypeInfo =
+							stepTypes[ pipelineStep.step_type ] || {};
 						const usesHandler = stepTypeInfo.uses_handler !== false; // Default true for safety
 
 						return usesHandler ? (
 							<FlowStepHandler
-								handlerSlug={flowStepConfig.handler_slug}
-								handlerConfig={flowStepConfig.handler_config || {}}
-								stepType={pipelineStep.step_type}
-								onConfigure={() => onConfigure && onConfigure(flowStepId)}
+								handlerSlug={ flowStepConfig.handler_slug }
+								handlerConfig={
+									flowStepConfig.handler_config || {}
+								}
+								stepType={ pipelineStep.step_type }
+								onConfigure={ () =>
+									onConfigure && onConfigure( flowStepId )
+								}
 							/>
 						) : null;
-					})()}
+					} )() }
 				</div>
 			</CardBody>
 		</Card>

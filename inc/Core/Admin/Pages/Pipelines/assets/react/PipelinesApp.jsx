@@ -23,47 +23,68 @@ import { createPipeline } from './utils/api';
  * @returns {React.ReactElement} Application component
  */
 export default function PipelinesApp() {
-	const { selectedPipelineId, setSelectedPipelineId, refreshTrigger, openModal, closeModal, activeModal, modalData, refreshData } = usePipelineContext();
-	const { pipelines, loading: pipelinesLoading, error: pipelinesError } = usePipelines();
-	const { pipeline: selectedPipeline, loading: selectedPipelineLoading, error: selectedPipelineError } = useSelectedPipeline(selectedPipelineId);
-	const { flows, loading: flowsLoading, error: flowsError } = useFlows(selectedPipelineId);
-	const [isCreatingPipeline, setIsCreatingPipeline] = useState(false);
+	const {
+		selectedPipelineId,
+		setSelectedPipelineId,
+		refreshTrigger,
+		openModal,
+		closeModal,
+		activeModal,
+		modalData,
+		refreshData,
+	} = usePipelineContext();
+	const {
+		pipelines,
+		loading: pipelinesLoading,
+		error: pipelinesError,
+	} = usePipelines();
+	const {
+		pipeline: selectedPipeline,
+		loading: selectedPipelineLoading,
+		error: selectedPipelineError,
+	} = useSelectedPipeline( selectedPipelineId );
+	const {
+		flows,
+		loading: flowsLoading,
+		error: flowsError,
+	} = useFlows( selectedPipelineId );
+	const [ isCreatingPipeline, setIsCreatingPipeline ] = useState( false );
 
 	/**
 	 * Set selected pipeline when pipelines load
 	 */
-	useEffect(() => {
-		if (pipelines.length > 0 && !selectedPipelineId) {
-			setSelectedPipelineId(pipelines[0].pipeline_id);
+	useEffect( () => {
+		if ( pipelines.length > 0 && ! selectedPipelineId ) {
+			setSelectedPipelineId( pipelines[ 0 ].pipeline_id );
 		}
-	}, [pipelines, selectedPipelineId, setSelectedPipelineId]);
+	}, [ pipelines, selectedPipelineId, setSelectedPipelineId ] );
 
 	/**
 	 * Handle creating a new pipeline
 	 */
-	const handleAddNewPipeline = useCallback(async () => {
-		setIsCreatingPipeline(true);
+	const handleAddNewPipeline = useCallback( async () => {
+		setIsCreatingPipeline( true );
 		try {
-			const result = await createPipeline('New Pipeline');
-			if (result.success && result.data.pipeline_id) {
-				setSelectedPipelineId(result.data.pipeline_id);
+			const result = await createPipeline( 'New Pipeline' );
+			if ( result.success && result.data.pipeline_id ) {
+				setSelectedPipelineId( result.data.pipeline_id );
 				refreshData();
 			}
-		} catch (error) {
-			console.error('Error creating pipeline:', error);
+		} catch ( error ) {
+			console.error( 'Error creating pipeline:', error );
 		} finally {
-			setIsCreatingPipeline(false);
+			setIsCreatingPipeline( false );
 		}
-	}, [setSelectedPipelineId, refreshData]);
+	}, [ setSelectedPipelineId, refreshData ] );
 
 	/**
 	 * Loading state
 	 */
-	if (pipelinesLoading || selectedPipelineLoading || flowsLoading) {
+	if ( pipelinesLoading || selectedPipelineLoading || flowsLoading ) {
 		return (
 			<div className="datamachine-pipelines-loading">
 				<Spinner />
-				<p>{__('Loading pipelines...', 'datamachine')}</p>
+				<p>{ __( 'Loading pipelines...', 'datamachine' ) }</p>
 			</div>
 		);
 	}
@@ -71,10 +92,10 @@ export default function PipelinesApp() {
 	/**
 	 * Error state
 	 */
-	if (pipelinesError || selectedPipelineError || flowsError) {
+	if ( pipelinesError || selectedPipelineError || flowsError ) {
 		return (
-			<Notice status="error" isDismissible={false}>
-				<p>{pipelinesError || selectedPipelineError || flowsError}</p>
+			<Notice status="error" isDismissible={ false }>
+				<p>{ pipelinesError || selectedPipelineError || flowsError }</p>
 			</Notice>
 		);
 	}
@@ -82,10 +103,15 @@ export default function PipelinesApp() {
 	/**
 	 * Empty state
 	 */
-	if (pipelines.length === 0) {
+	if ( pipelines.length === 0 ) {
 		return (
-			<Notice status="info" isDismissible={false}>
-				<p>{__('No pipelines found. Create a pipeline to get started.', 'datamachine')}</p>
+			<Notice status="info" isDismissible={ false }>
+				<p>
+					{ __(
+						'No pipelines found. Create a pipeline to get started.',
+						'datamachine'
+					) }
+				</p>
 			</Notice>
 		);
 	}
@@ -93,11 +119,11 @@ export default function PipelinesApp() {
 	/**
 	 * If no pipeline selected yet, show loading spinner
 	 */
-	if (!selectedPipeline && selectedPipelineId) {
+	if ( ! selectedPipeline && selectedPipelineId ) {
 		return (
 			<div className="datamachine-pipelines-loading">
 				<Spinner />
-				<p>{__('Loading pipeline details...', 'datamachine')}</p>
+				<p>{ __( 'Loading pipeline details...', 'datamachine' ) }</p>
 			</div>
 		);
 	}
@@ -105,57 +131,54 @@ export default function PipelinesApp() {
 	/**
 	 * Fallback: Use first pipeline if selectedPipeline is null
 	 */
-	const displayPipeline = selectedPipeline || pipelines[0];
+	const displayPipeline = selectedPipeline || pipelines[ 0 ];
 
 	/**
 	 * Main render
 	 */
 	return (
 		<div className="datamachine-pipelines-react-app">
-			{/* Header with Add Pipeline and Import/Export buttons */}
+			{ /* Header with Add Pipeline and Import/Export buttons */ }
 			<div
-				style={{
+				style={ {
 					display: 'flex',
 					justifyContent: 'space-between',
-					marginBottom: '20px'
-				}}
+					marginBottom: '20px',
+				} }
 			>
 				<Button
 					variant="primary"
-					onClick={handleAddNewPipeline}
-					disabled={isCreatingPipeline}
-					isBusy={isCreatingPipeline}
+					onClick={ handleAddNewPipeline }
+					disabled={ isCreatingPipeline }
+					isBusy={ isCreatingPipeline }
 				>
-					{__('Add New Pipeline', 'datamachine')}
+					{ __( 'Add New Pipeline', 'datamachine' ) }
 				</Button>
 				<Button
 					variant="secondary"
-					onClick={() => openModal(MODAL_TYPES.IMPORT_EXPORT)}
+					onClick={ () => openModal( MODAL_TYPES.IMPORT_EXPORT ) }
 				>
-					{__('Import / Export', 'datamachine')}
+					{ __( 'Import / Export', 'datamachine' ) }
 				</Button>
 			</div>
 
-			{/* Pipeline dropdown selector */}
+			{ /* Pipeline dropdown selector */ }
 			<PipelineSelector />
 
-			<PipelineCard
-				pipeline={displayPipeline}
-				flows={flows}
-			/>
+			<PipelineCard pipeline={ displayPipeline } flows={ flows } />
 
-			{/* Import/Export Modal */}
-			{activeModal === MODAL_TYPES.IMPORT_EXPORT && (
+			{ /* Import/Export Modal */ }
+			{ activeModal === MODAL_TYPES.IMPORT_EXPORT && (
 				<ImportExportModal
-					isOpen={true}
-					onClose={closeModal}
-					pipelines={pipelines}
-					onSuccess={() => {
+					isOpen={ true }
+					onClose={ closeModal }
+					pipelines={ pipelines }
+					onSuccess={ () => {
 						closeModal();
 						refreshData();
-					}}
+					} }
 				/>
-			)}
+			) }
 		</div>
 	);
 }

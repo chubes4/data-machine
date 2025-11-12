@@ -12,43 +12,43 @@ import { __ } from '@wordpress/i18n';
  * @param {string|null} timestamp - MySQL timestamp or null
  * @returns {string} Formatted date/time or "Never"
  */
-export const formatDateTime = (timestamp) => {
-	if (!timestamp || timestamp === '0000-00-00 00:00:00') {
-		return __('Never', 'datamachine');
+export const formatDateTime = ( timestamp ) => {
+	if ( ! timestamp || timestamp === '0000-00-00 00:00:00' ) {
+		return __( 'Never', 'datamachine' );
 	}
 
 	try {
-		const date = new Date(timestamp);
+		const date = new Date( timestamp );
 		const now = new Date();
 		const diffMs = now - date;
-		const diffMins = Math.floor(diffMs / 60000);
-		const diffHours = Math.floor(diffMs / 3600000);
-		const diffDays = Math.floor(diffMs / 86400000);
+		const diffMins = Math.floor( diffMs / 60000 );
+		const diffHours = Math.floor( diffMs / 3600000 );
+		const diffDays = Math.floor( diffMs / 86400000 );
 
 		// Relative time for recent timestamps
-		if (diffMins < 1) {
-			return __('Just now', 'datamachine');
+		if ( diffMins < 1 ) {
+			return __( 'Just now', 'datamachine' );
 		}
-		if (diffMins < 60) {
-			return `${diffMins} ${__('minutes ago', 'datamachine')}`;
+		if ( diffMins < 60 ) {
+			return `${ diffMins } ${ __( 'minutes ago', 'datamachine' ) }`;
 		}
-		if (diffHours < 24) {
-			return `${diffHours} ${__('hours ago', 'datamachine')}`;
+		if ( diffHours < 24 ) {
+			return `${ diffHours } ${ __( 'hours ago', 'datamachine' ) }`;
 		}
-		if (diffDays < 7) {
-			return `${diffDays} ${__('days ago', 'datamachine')}`;
+		if ( diffDays < 7 ) {
+			return `${ diffDays } ${ __( 'days ago', 'datamachine' ) }`;
 		}
 
 		// Absolute date for older timestamps
-		return date.toLocaleDateString(undefined, {
+		return date.toLocaleDateString( undefined, {
 			year: 'numeric',
 			month: 'short',
 			day: 'numeric',
 			hour: '2-digit',
-			minute: '2-digit'
-		});
-	} catch (error) {
-		console.error('Date formatting error:', error);
+			minute: '2-digit',
+		} );
+	} catch ( error ) {
+		console.error( 'Date formatting error:', error );
 		return timestamp;
 	}
 };
@@ -59,17 +59,17 @@ export const formatDateTime = (timestamp) => {
  * @param {string} interval - Cron interval (hourly, daily, weekly, etc.)
  * @returns {string} Human-readable interval
  */
-export const formatInterval = (interval) => {
+export const formatInterval = ( interval ) => {
 	const intervalMap = {
-		'hourly': __('Every hour', 'datamachine'),
-		'twicedaily': __('Twice daily', 'datamachine'),
-		'daily': __('Daily', 'datamachine'),
-		'weekly': __('Weekly', 'datamachine'),
-		'monthly': __('Monthly', 'datamachine'),
-		'manual': __('Manual only', 'datamachine')
+		hourly: __( 'Every hour', 'datamachine' ),
+		twicedaily: __( 'Twice daily', 'datamachine' ),
+		daily: __( 'Daily', 'datamachine' ),
+		weekly: __( 'Weekly', 'datamachine' ),
+		monthly: __( 'Monthly', 'datamachine' ),
+		manual: __( 'Manual only', 'datamachine' ),
 	};
 
-	return intervalMap[interval] || interval;
+	return intervalMap[ interval ] || interval;
 };
 
 /**
@@ -79,16 +79,16 @@ export const formatInterval = (interval) => {
  * @param {string} slug - Handler or step type slug
  * @returns {string} Human-readable label
  */
-export const slugToLabel = (slug) => {
-	if (!slug) return '';
+export const slugToLabel = ( slug ) => {
+	if ( ! slug ) return '';
 
 	// Special case for AI
-	if (slug === 'ai') return 'AI';
+	if ( slug === 'ai' ) return 'AI';
 
 	return slug
-		.split('_')
-		.map(word => word.charAt(0).toUpperCase() + word.slice(1))
-		.join(' ');
+		.split( '_' )
+		.map( ( word ) => word.charAt( 0 ).toUpperCase() + word.slice( 1 ) )
+		.join( ' ' );
 };
 
 /**
@@ -98,12 +98,12 @@ export const slugToLabel = (slug) => {
  * @param {number} maxLength - Maximum length
  * @returns {string} Truncated text
  */
-export const truncateText = (text, maxLength = 100) => {
-	if (!text || text.length <= maxLength) {
+export const truncateText = ( text, maxLength = 100 ) => {
+	if ( ! text || text.length <= maxLength ) {
 		return text;
 	}
 
-	return text.substring(0, maxLength - 3) + '...';
+	return text.substring( 0, maxLength - 3 ) + '...';
 };
 
 /**
@@ -113,15 +113,15 @@ export const truncateText = (text, maxLength = 100) => {
  * @param {Object} settings - Handler settings object
  * @returns {Array} Array of formatted settings
  */
-export const formatHandlerSettings = (settings) => {
-	if (!settings || typeof settings !== 'object') {
+export const formatHandlerSettings = ( settings ) => {
+	if ( ! settings || typeof settings !== 'object' ) {
 		return [];
 	}
 
-	return Object.entries(settings).map(([key, value]) => ({
-		label: slugToLabel(key),
-		display_value: formatSettingValue(value)
-	}));
+	return Object.entries( settings ).map( ( [ key, value ] ) => ( {
+		label: slugToLabel( key ),
+		display_value: formatSettingValue( value ),
+	} ) );
 };
 
 /**
@@ -130,22 +130,22 @@ export const formatHandlerSettings = (settings) => {
  * @param {*} value - Setting value
  * @returns {string} Formatted value
  */
-const formatSettingValue = (value) => {
-	if (value === null || value === undefined) {
+const formatSettingValue = ( value ) => {
+	if ( value === null || value === undefined ) {
 		return '';
 	}
 
-	if (typeof value === 'boolean') {
-		return value ? __('Yes', 'datamachine') : __('No', 'datamachine');
+	if ( typeof value === 'boolean' ) {
+		return value ? __( 'Yes', 'datamachine' ) : __( 'No', 'datamachine' );
 	}
 
-	if (Array.isArray(value)) {
-		return value.join(', ');
+	if ( Array.isArray( value ) ) {
+		return value.join( ', ' );
 	}
 
-	if (typeof value === 'object') {
-		return JSON.stringify(value);
+	if ( typeof value === 'object' ) {
+		return JSON.stringify( value );
 	}
 
-	return String(value);
+	return String( value );
 };

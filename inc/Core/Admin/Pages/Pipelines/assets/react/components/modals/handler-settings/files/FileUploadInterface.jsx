@@ -16,61 +16,83 @@ import FileUploadDropzone from '../../../sections/context-files/FileUploadDropzo
  * @param {Function} props.onFileUploaded - File upload callback
  * @returns {React.ReactElement} File upload interface
  */
-export default function FileUploadInterface({ onFileUploaded }) {
-	const [uploading, setUploading] = useState(false);
-	const [error, setError] = useState(null);
-	const [success, setSuccess] = useState(null);
+export default function FileUploadInterface( { onFileUploaded } ) {
+	const [ uploading, setUploading ] = useState( false );
+	const [ error, setError ] = useState( null );
+	const [ success, setSuccess ] = useState( null );
 
 	/**
 	 * Handle file selection
 	 */
-	const handleFileSelected = async (file) => {
-		setUploading(true);
-		setError(null);
-		setSuccess(null);
+	const handleFileSelected = async ( file ) => {
+		setUploading( true );
+		setError( null );
+		setSuccess( null );
 
 		try {
 			// In production, this would upload to handler-specific storage
 			// For now, we'll simulate the upload
-			await new Promise(resolve => setTimeout(resolve, 1000));
+			await new Promise( ( resolve ) => setTimeout( resolve, 1000 ) );
 
-			if (onFileUploaded) {
-				onFileUploaded({
+			if ( onFileUploaded ) {
+				onFileUploaded( {
 					file_name: file.name,
 					file_size: file.size,
-					status: 'pending'
-				});
+					status: 'pending',
+				} );
 			}
 
-			setSuccess(__('File uploaded successfully!', 'datamachine'));
-		} catch (err) {
-			console.error('Upload error:', err);
-			setError(err.message || __('An error occurred during upload', 'datamachine'));
+			setSuccess( __( 'File uploaded successfully!', 'datamachine' ) );
+		} catch ( err ) {
+			console.error( 'Upload error:', err );
+			setError(
+				err.message ||
+					__( 'An error occurred during upload', 'datamachine' )
+			);
 		} finally {
-			setUploading(false);
+			setUploading( false );
 		}
 	};
 
 	return (
 		<div>
-			{error && (
-				<Notice status="error" isDismissible onRemove={() => setError(null)}>
-					<p>{error}</p>
+			{ error && (
+				<Notice
+					status="error"
+					isDismissible
+					onRemove={ () => setError( null ) }
+				>
+					<p>{ error }</p>
 				</Notice>
-			)}
+			) }
 
-			{success && (
-				<Notice status="success" isDismissible onRemove={() => setSuccess(null)}>
-					<p>{success}</p>
+			{ success && (
+				<Notice
+					status="success"
+					isDismissible
+					onRemove={ () => setSuccess( null ) }
+				>
+					<p>{ success }</p>
 				</Notice>
-			)}
+			) }
 
 			<FileUploadDropzone
-				onFileSelected={handleFileSelected}
-				allowedTypes={['pdf', 'csv', 'txt', 'json', 'jpg', 'jpeg', 'png', 'gif']}
-				maxSizeMB={10}
-				disabled={uploading}
-				uploadText={uploading ? __('Uploading...', 'datamachine') : null}
+				onFileSelected={ handleFileSelected }
+				allowedTypes={ [
+					'pdf',
+					'csv',
+					'txt',
+					'json',
+					'jpg',
+					'jpeg',
+					'png',
+					'gif',
+				] }
+				maxSizeMB={ 10 }
+				disabled={ uploading }
+				uploadText={
+					uploading ? __( 'Uploading...', 'datamachine' ) : null
+				}
 			/>
 		</div>
 	);

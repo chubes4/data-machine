@@ -20,15 +20,15 @@ import ImportTab from './import-export/ImportTab';
  * @param {Function} props.onSuccess - Success callback
  * @returns {React.ReactElement|null} Import/export modal
  */
-export default function ImportExportModal({
+export default function ImportExportModal( {
 	isOpen,
 	onClose,
 	pipelines = [],
-	onSuccess
-}) {
-	const [activeTab, setActiveTab] = useState('export');
+	onSuccess,
+} ) {
+	const [ activeTab, setActiveTab ] = useState( 'export' );
 
-	if (!isOpen) {
+	if ( ! isOpen ) {
 		return null;
 	}
 
@@ -38,21 +38,21 @@ export default function ImportExportModal({
 	const tabs = [
 		{
 			name: 'export',
-			title: __('Export', 'datamachine'),
-			className: 'datamachine-import-export-tab'
+			title: __( 'Export', 'datamachine' ),
+			className: 'datamachine-import-export-tab',
 		},
 		{
 			name: 'import',
-			title: __('Import', 'datamachine'),
-			className: 'datamachine-import-export-tab'
-		}
+			title: __( 'Import', 'datamachine' ),
+			className: 'datamachine-import-export-tab',
+		},
 	];
 
 	/**
 	 * Handle success from either tab
 	 */
 	const handleSuccess = () => {
-		if (onSuccess) {
+		if ( onSuccess ) {
 			onSuccess();
 		}
 		onClose();
@@ -60,35 +60,35 @@ export default function ImportExportModal({
 
 	return (
 		<Modal
-			title={__('Import / Export Pipelines', 'datamachine')}
-			onRequestClose={onClose}
-			className="datamachine-modal datamachine-import-export-modal"
-			style={{ maxWidth: '700px' }}
+			title={ __( 'Import / Export Pipelines', 'datamachine' ) }
+			onRequestClose={ onClose }
+			className="datamachine-import-export-modal"
+			style={ { maxWidth: '700px' } }
 		>
 			<div className="datamachine-modal-content">
 				<TabPanel
 					className="datamachine-import-export-tabs"
 					activeClass="is-active"
-					tabs={tabs}
-					onSelect={(tabName) => setActiveTab(tabName)}
+					tabs={ tabs }
+					onSelect={ ( tabName ) => setActiveTab( tabName ) }
 				>
-					{(tab) => (
+					{ ( tab ) => (
 						<div className="datamachine-tab-content">
-							{tab.name === 'export' && (
+							{ tab.name === 'export' && (
 								<ExportTab
-									pipelines={pipelines}
-									onClose={onClose}
+									pipelines={ pipelines }
+									onClose={ onClose }
 								/>
-							)}
+							) }
 
-							{tab.name === 'import' && (
+							{ tab.name === 'import' && (
 								<ImportTab
-									onSuccess={handleSuccess}
-									onClose={onClose}
+									onSuccess={ handleSuccess }
+									onClose={ onClose }
 								/>
-							)}
+							) }
 						</div>
-					)}
+					) }
 				</TabPanel>
 			</div>
 		</Modal>

@@ -17,88 +17,88 @@ import { __ } from '@wordpress/i18n';
  * @param {boolean} props.disabled - Disabled state
  * @returns {React.ReactElement} CSV dropzone
  */
-export default function CSVDropzone({
+export default function CSVDropzone( {
 	onFileSelected,
 	fileName,
-	disabled = false
-}) {
-	const [isDragging, setIsDragging] = useState(false);
-	const [error, setError] = useState(null);
-	const fileInputRef = useRef(null);
+	disabled = false,
+} ) {
+	const [ isDragging, setIsDragging ] = useState( false );
+	const [ error, setError ] = useState( null );
+	const fileInputRef = useRef( null );
 
 	/**
 	 * Validate and read CSV file
 	 */
-	const processFile = (file) => {
+	const processFile = ( file ) => {
 		// Validate file type
-		if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
-			setError(__('Please select a valid CSV file.', 'datamachine'));
+		if ( ! file.name.endsWith( '.csv' ) && file.type !== 'text/csv' ) {
+			setError( __( 'Please select a valid CSV file.', 'datamachine' ) );
 			return;
 		}
 
 		// Validate file size (10MB limit)
-		if (file.size > 10485760) {
-			setError(__('File size exceeds 10MB limit.', 'datamachine'));
+		if ( file.size > 10485760 ) {
+			setError( __( 'File size exceeds 10MB limit.', 'datamachine' ) );
 			return;
 		}
 
 		// Read file content
 		const reader = new FileReader();
-		reader.onload = (e) => {
+		reader.onload = ( e ) => {
 			const content = e.target.result;
-			if (onFileSelected) {
-				onFileSelected(content, file.name);
-				setError(null);
+			if ( onFileSelected ) {
+				onFileSelected( content, file.name );
+				setError( null );
 			}
 		};
 		reader.onerror = () => {
-			setError(__('Failed to read file.', 'datamachine'));
+			setError( __( 'Failed to read file.', 'datamachine' ) );
 		};
-		reader.readAsText(file);
+		reader.readAsText( file );
 	};
 
 	/**
 	 * Handle drag events
 	 */
-	const handleDragEnter = (e) => {
+	const handleDragEnter = ( e ) => {
 		e.preventDefault();
 		e.stopPropagation();
-		if (!disabled) {
-			setIsDragging(true);
+		if ( ! disabled ) {
+			setIsDragging( true );
 		}
 	};
 
-	const handleDragLeave = (e) => {
+	const handleDragLeave = ( e ) => {
 		e.preventDefault();
 		e.stopPropagation();
-		setIsDragging(false);
+		setIsDragging( false );
 	};
 
-	const handleDragOver = (e) => {
+	const handleDragOver = ( e ) => {
 		e.preventDefault();
 		e.stopPropagation();
 	};
 
-	const handleDrop = (e) => {
+	const handleDrop = ( e ) => {
 		e.preventDefault();
 		e.stopPropagation();
-		setIsDragging(false);
+		setIsDragging( false );
 
-		if (disabled) return;
+		if ( disabled ) return;
 
 		const files = e.dataTransfer.files;
-		if (files.length > 0) {
-			processFile(files[0]);
+		if ( files.length > 0 ) {
+			processFile( files[ 0 ] );
 		}
 	};
 
 	/**
 	 * Handle file input change
 	 */
-	const handleFileInputChange = (e) => {
+	const handleFileInputChange = ( e ) => {
 		const files = e.target.files;
-		if (files.length > 0) {
-			processFile(files[0]);
+		if ( files.length > 0 ) {
+			processFile( files[ 0 ] );
 		}
 	};
 
@@ -106,7 +106,7 @@ export default function CSVDropzone({
 	 * Trigger file input click
 	 */
 	const handleBrowseClick = () => {
-		if (fileInputRef.current) {
+		if ( fileInputRef.current ) {
 			fileInputRef.current.click();
 		}
 	};
@@ -114,69 +114,89 @@ export default function CSVDropzone({
 	return (
 		<div>
 			<div
-				onDragEnter={handleDragEnter}
-				onDragLeave={handleDragLeave}
-				onDragOver={handleDragOver}
-				onDrop={handleDrop}
-				style={{
-					border: `2px dashed ${isDragging ? '#0073aa' : '#dcdcde'}`,
+				onDragEnter={ handleDragEnter }
+				onDragLeave={ handleDragLeave }
+				onDragOver={ handleDragOver }
+				onDrop={ handleDrop }
+				style={ {
+					border: `2px dashed ${
+						isDragging ? '#0073aa' : '#dcdcde'
+					}`,
 					borderRadius: '4px',
 					padding: '40px 20px',
 					textAlign: 'center',
 					background: isDragging ? '#f0f6fc' : '#f9f9f9',
 					transition: 'all 0.2s',
 					cursor: disabled ? 'not-allowed' : 'pointer',
-					opacity: disabled ? 0.6 : 1
-				}}
-				onClick={!disabled ? handleBrowseClick : undefined}
+					opacity: disabled ? 0.6 : 1,
+				} }
+				onClick={ ! disabled ? handleBrowseClick : undefined }
 			>
-				<div style={{ marginBottom: '16px', fontSize: '48px', color: '#757575' }}>
+				<div
+					style={ {
+						marginBottom: '16px',
+						fontSize: '48px',
+						color: '#757575',
+					} }
+				>
 					📄
 				</div>
 
-				<p style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '500' }}>
-					{fileName
-						? __('File selected', 'datamachine')
-						: __('Drag and drop CSV file here', 'datamachine')}
+				<p
+					style={ {
+						margin: '0 0 12px 0',
+						fontSize: '16px',
+						fontWeight: '500',
+					} }
+				>
+					{ fileName
+						? __( 'File selected', 'datamachine' )
+						: __( 'Drag and drop CSV file here', 'datamachine' ) }
 				</p>
 
-				<p style={{ margin: '0 0 16px 0', color: '#757575', fontSize: '14px' }}>
-					{__('or', 'datamachine')}
+				<p
+					style={ {
+						margin: '0 0 16px 0',
+						color: '#757575',
+						fontSize: '14px',
+					} }
+				>
+					{ __( 'or', 'datamachine' ) }
 				</p>
 
 				<Button
 					variant="secondary"
-					onClick={handleBrowseClick}
-					disabled={disabled}
+					onClick={ handleBrowseClick }
+					disabled={ disabled }
 				>
-					{__('Browse Files', 'datamachine')}
+					{ __( 'Browse Files', 'datamachine' ) }
 				</Button>
 
 				<input
-					ref={fileInputRef}
+					ref={ fileInputRef }
 					type="file"
 					accept=".csv,text/csv"
-					onChange={handleFileInputChange}
-					style={{ display: 'none' }}
-					disabled={disabled}
+					onChange={ handleFileInputChange }
+					style={ { display: 'none' } }
+					disabled={ disabled }
 				/>
 			</div>
 
-			{error && (
+			{ error && (
 				<div
-					style={{
+					style={ {
 						marginTop: '12px',
 						padding: '8px 12px',
 						background: '#fef7f7',
 						border: '1px solid #dc3232',
 						borderRadius: '4px',
 						color: '#dc3232',
-						fontSize: '13px'
-					}}
+						fontSize: '13px',
+					} }
 				>
-					{error}
+					{ error }
 				</div>
-			)}
+			) }
 		</div>
 	);
 }

@@ -13,19 +13,19 @@ import { usePipelineContext } from '../context/PipelineContext';
  * @param {string|null} stepType - Optional step type to filter handlers (fetch, publish, update)
  * @returns {Object} Handlers configuration
  */
-export const useHandlers = (stepType = null) => {
+export const useHandlers = ( stepType = null ) => {
 	const { handlers: allHandlers } = usePipelineContext();
 
-	return useMemo(() => {
-		if (!stepType) {
+	return useMemo( () => {
+		if ( ! stepType ) {
 			return allHandlers;
 		}
 
 		// Filter handlers by step type
 		return Object.fromEntries(
-			Object.entries(allHandlers).filter(
-				([key, handler]) => handler.type === stepType
+			Object.entries( allHandlers ).filter(
+				( [ key, handler ] ) => handler.type === stepType
 			)
 		);
-	}, [allHandlers, stepType]);
+	}, [ allHandlers, stepType ] );
 };

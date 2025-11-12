@@ -12,7 +12,7 @@ export const SCHEDULING_INTERVALS = [
 	{ value: 'hourly', label: 'Every hour' },
 	{ value: 'twicedaily', label: 'Twice daily' },
 	{ value: 'daily', label: 'Daily' },
-	{ value: 'weekly', label: 'Weekly' }
+	{ value: 'weekly', label: 'Weekly' },
 ];
 
 /**
@@ -27,7 +27,7 @@ export const MODAL_TYPES = {
 	IMPORT_EXPORT: 'import-export',
 	OAUTH: 'oauth',
 	CONFIRM_DELETE: 'confirm-delete',
-	CONTEXT_FILES: 'context-files'
+	CONTEXT_FILES: 'context-files',
 };
 
 /**
@@ -36,7 +36,7 @@ export const MODAL_TYPES = {
 export const HANDLER_TYPES = {
 	FETCH: 'fetch',
 	PUBLISH: 'publish',
-	UPDATE: 'update'
+	UPDATE: 'update',
 };
 
 /**
@@ -64,7 +64,7 @@ export const VALIDATION = {
 	MIN_FLOW_NAME_LENGTH: 1,
 	MAX_FLOW_NAME_LENGTH: 255,
 	MAX_PROMPT_LENGTH: 10000,
-	MAX_USER_MESSAGE_LENGTH: 5000
+	MAX_USER_MESSAGE_LENGTH: 5000,
 };
 
 /**
@@ -79,5 +79,5 @@ export const STATUS_COLORS = {
 	SUCCESS: '#46b450',
 	ERROR: '#dc3232',
 	WARNING: '#f0b849',
-	INFO: '#0073aa'
+	INFO: '#0073aa',
 };

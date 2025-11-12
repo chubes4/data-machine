@@ -18,38 +18,41 @@ import { __ } from '@wordpress/i18n';
  * @param {boolean} props.disabled - Disabled state
  * @returns {React.ReactElement} OAuth popup button
  */
-export default function OAuthPopupHandler({
+export default function OAuthPopupHandler( {
 	oauthUrl,
 	onSuccess,
 	onError,
-	disabled = false
-}) {
-	const popupRef = useRef(null);
-	const messageListenerRef = useRef(null);
+	disabled = false,
+} ) {
+	const popupRef = useRef( null );
+	const messageListenerRef = useRef( null );
 
 	/**
 	 * Clean up popup and listener on unmount
 	 */
-	useEffect(() => {
+	useEffect( () => {
 		return () => {
 			// Clean up message listener
-			if (messageListenerRef.current) {
-				window.removeEventListener('message', messageListenerRef.current);
+			if ( messageListenerRef.current ) {
+				window.removeEventListener(
+					'message',
+					messageListenerRef.current
+				);
 			}
 
 			// Close popup if still open
-			if (popupRef.current && !popupRef.current.closed) {
+			if ( popupRef.current && ! popupRef.current.closed ) {
 				popupRef.current.close();
 			}
 		};
-	}, []);
+	}, [] );
 
 	/**
 	 * Handle OAuth popup
 	 */
 	const handleOAuthClick = () => {
 		// Close existing popup if open
-		if (popupRef.current && !popupRef.current.closed) {
+		if ( popupRef.current && ! popupRef.current.closed ) {
 			popupRef.current.close();
 		}
 
@@ -62,46 +65,60 @@ export default function OAuthPopupHandler({
 		popupRef.current = window.open(
 			oauthUrl,
 			'oauth-window',
-			`width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
+			`width=${ width },height=${ height },left=${ left },top=${ top },toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
 		);
 
 		// Set up message listener
-		messageListenerRef.current = (event) => {
+		messageListenerRef.current = ( event ) => {
 			// Verify message origin for security
-			const allowedOrigins = [window.location.origin];
-			if (!allowedOrigins.includes(event.origin)) {
+			const allowedOrigins = [ window.location.origin ];
+			if ( ! allowedOrigins.includes( event.origin ) ) {
 				return;
 			}
 
 			// Check if message is from OAuth callback
-			if (event.data && event.data.type === 'oauth_callback') {
+			if ( event.data && event.data.type === 'oauth_callback' ) {
 				// Close popup
-				if (popupRef.current && !popupRef.current.closed) {
+				if ( popupRef.current && ! popupRef.current.closed ) {
 					popupRef.current.close();
 				}
 
 				// Handle success or error
-				if (event.data.success) {
-					if (onSuccess) {
-						onSuccess(event.data.account);
+				if ( event.data.success ) {
+					if ( onSuccess ) {
+						onSuccess( event.data.account );
 					}
 				} else {
-					if (onError) {
-						onError(event.data.error || __('OAuth authentication failed', 'datamachine'));
+					if ( onError ) {
+						onError(
+							event.data.error ||
+								__(
+									'OAuth authentication failed',
+									'datamachine'
+								)
+						);
 					}
 				}
 
 				// Clean up listener
-				window.removeEventListener('message', messageListenerRef.current);
+				window.removeEventListener(
+					'message',
+					messageListenerRef.current
+				);
 			}
 		};
 
-		window.addEventListener('message', messageListenerRef.current);
+		window.addEventListener( 'message', messageListenerRef.current );
 
 		// Check if popup was blocked
-		if (!popupRef.current || popupRef.current.closed) {
-			if (onError) {
-				onError(__('Popup was blocked. Please allow popups for this site.', 'datamachine'));
+		if ( ! popupRef.current || popupRef.current.closed ) {
+			if ( onError ) {
+				onError(
+					__(
+						'Popup was blocked. Please allow popups for this site.',
+						'datamachine'
+					)
+				);
 			}
 		}
 	};
@@ -109,10 +126,10 @@ export default function OAuthPopupHandler({
 	return (
 		<Button
 			variant="primary"
-			onClick={handleOAuthClick}
-			disabled={disabled}
+			onClick={ handleOAuthClick }
+			disabled={ disabled }
 		>
-			{__('Connect Account', 'datamachine')}
+			{ __( 'Connect Account', 'datamachine' ) }
 		</Button>
 	);
 }

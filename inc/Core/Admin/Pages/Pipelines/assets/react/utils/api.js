@@ -14,7 +14,7 @@ const getConfig = () => {
 	const config = window.dataMachineConfig || {};
 	return {
 		restNamespace: config.restNamespace || 'datamachine/v1',
-		restNonce: config.restNonce || ''
+		restNonce: config.restNonce || '',
 	};
 };
 
@@ -25,31 +25,31 @@ const getConfig = () => {
  * @param {Object} options - Request options (method, data, etc.)
  * @returns {Promise<Object>} Standardized response: {success, data, message}
  */
-const apiRequest = async (path, options = {}) => {
+const apiRequest = async ( path, options = {} ) => {
 	const config = getConfig();
 
 	try {
-		const response = await apiFetch({
-			path: `/${config.restNamespace}${path}`,
+		const response = await apiFetch( {
+			path: `/${ config.restNamespace }${ path }`,
 			method: options.method || 'GET',
 			data: options.data || undefined,
 			headers: {
-				'X-WP-Nonce': config.restNonce
-			}
-		});
+				'X-WP-Nonce': config.restNonce,
+			},
+		} );
 
 		return {
 			success: true,
 			data: response,
-			message: response.message || ''
+			message: response.message || '',
 		};
-	} catch (error) {
-		console.error('API Request Error:', error);
+	} catch ( error ) {
+		console.error( 'API Request Error:', error );
 
 		return {
 			success: false,
 			data: null,
-			message: error.message || 'An error occurred'
+			message: error.message || 'An error occurred',
 		};
 	}
 };
@@ -64,9 +64,11 @@ const apiRequest = async (path, options = {}) => {
  * @param {number|null} pipelineId - Optional pipeline ID
  * @returns {Promise<Object>} Pipeline data
  */
-export const fetchPipelines = async (pipelineId = null) => {
-	const path = pipelineId ? `/pipelines?pipeline_id=${pipelineId}` : '/pipelines';
-	return await apiRequest(path);
+export const fetchPipelines = async ( pipelineId = null ) => {
+	const path = pipelineId
+		? `/pipelines?pipeline_id=${ pipelineId }`
+		: '/pipelines';
+	return await apiRequest( path );
 };
 
 /**
@@ -75,11 +77,11 @@ export const fetchPipelines = async (pipelineId = null) => {
  * @param {string} name - Pipeline name
  * @returns {Promise<Object>} Created pipeline data
  */
-export const createPipeline = async (name) => {
-	return await apiRequest('/pipelines', {
+export const createPipeline = async ( name ) => {
+	return await apiRequest( '/pipelines', {
 		method: 'POST',
-		data: { pipeline_name: name }
-	});
+		data: { pipeline_name: name },
+	} );
 };
 
 /**
@@ -89,11 +91,11 @@ export const createPipeline = async (name) => {
  * @param {string} name - New pipeline name
  * @returns {Promise<Object>} Updated pipeline data
  */
-export const updatePipelineTitle = async (pipelineId, name) => {
-	return await apiRequest(`/pipelines/${pipelineId}`, {
+export const updatePipelineTitle = async ( pipelineId, name ) => {
+	return await apiRequest( `/pipelines/${ pipelineId }`, {
 		method: 'PATCH',
-		data: { pipeline_name: name }
-	});
+		data: { pipeline_name: name },
+	} );
 };
 
 /**
@@ -102,10 +104,10 @@ export const updatePipelineTitle = async (pipelineId, name) => {
  * @param {number} pipelineId - Pipeline ID
  * @returns {Promise<Object>} Deletion confirmation
  */
-export const deletePipeline = async (pipelineId) => {
-	return await apiRequest(`/pipelines/${pipelineId}`, {
-		method: 'DELETE'
-	});
+export const deletePipeline = async ( pipelineId ) => {
+	return await apiRequest( `/pipelines/${ pipelineId }`, {
+		method: 'DELETE',
+	} );
 };
 
 /**
@@ -116,15 +118,21 @@ export const deletePipeline = async (pipelineId) => {
  * @param {number} executionOrder - Step position
  * @returns {Promise<Object>} Created step data
  */
-export const addPipelineStep = async (pipelineId, stepType, executionOrder) => {
-	return await apiRequest(`/pipelines/${pipelineId}/steps`, {
+export const addPipelineStep = async (
+	pipelineId,
+	stepType,
+	executionOrder
+) => {
+	return await apiRequest( `/pipelines/${ pipelineId }/steps`, {
 		method: 'POST',
 		data: {
 			step_type: stepType,
 			execution_order: executionOrder,
-			label: `${stepType.charAt(0).toUpperCase() + stepType.slice(1)} Step`
-		}
-	});
+			label: `${
+				stepType.charAt( 0 ).toUpperCase() + stepType.slice( 1 )
+			} Step`,
+		},
+	} );
 };
 
 /**
@@ -134,10 +142,10 @@ export const addPipelineStep = async (pipelineId, stepType, executionOrder) => {
  * @param {string} stepId - Pipeline step ID
  * @returns {Promise<Object>} Deletion confirmation
  */
-export const deletePipelineStep = async (pipelineId, stepId) => {
-	return await apiRequest(`/pipelines/${pipelineId}/steps/${stepId}`, {
-		method: 'DELETE'
-	});
+export const deletePipelineStep = async ( pipelineId, stepId ) => {
+	return await apiRequest( `/pipelines/${ pipelineId }/steps/${ stepId }`, {
+		method: 'DELETE',
+	} );
 };
 
 /**
@@ -147,16 +155,16 @@ export const deletePipelineStep = async (pipelineId, stepId) => {
  * @param {Array<Object>} steps - Reordered steps array
  * @returns {Promise<Object>} Updated pipeline data
  */
-export const reorderPipelineSteps = async (pipelineId, steps) => {
-	const stepOrder = steps.map((step, index) => ({
+export const reorderPipelineSteps = async ( pipelineId, steps ) => {
+	const stepOrder = steps.map( ( step, index ) => ( {
 		pipeline_step_id: step.pipeline_step_id,
-		execution_order: index
-	}));
+		execution_order: index,
+	} ) );
 
-	return await apiRequest(`/pipelines/${pipelineId}/steps/reorder`, {
+	return await apiRequest( `/pipelines/${ pipelineId }/steps/reorder`, {
 		method: 'PUT',
-		data: { step_order: stepOrder }
-	});
+		data: { step_order: stepOrder },
+	} );
 };
 
 /**
@@ -169,16 +177,22 @@ export const reorderPipelineSteps = async (pipelineId, steps) => {
  * @param {Array<string>} enabledTools - Enabled AI tools (optional)
  * @returns {Promise<Object>} Updated step data
  */
-export const updateSystemPrompt = async (stepId, prompt, provider, model, enabledTools = []) => {
-	return await apiRequest(`/pipelines/steps/${stepId}/config`, {
+export const updateSystemPrompt = async (
+	stepId,
+	prompt,
+	provider,
+	model,
+	enabledTools = []
+) => {
+	return await apiRequest( `/pipelines/steps/${ stepId }/config`, {
 		method: 'PUT',
 		data: {
 			ai_provider: provider,
 			ai_model: model,
 			system_prompt: prompt,
-			enabled_tools: enabledTools
-		}
-	});
+			enabled_tools: enabledTools,
+		},
+	} );
 };
 
 /**
@@ -191,8 +205,8 @@ export const updateSystemPrompt = async (stepId, prompt, provider, model, enable
  * @param {number} pipelineId - Pipeline ID
  * @returns {Promise<Object>} Array of flows
  */
-export const fetchFlows = async (pipelineId) => {
-	return await apiRequest(`/flows?pipeline_id=${pipelineId}`);
+export const fetchFlows = async ( pipelineId ) => {
+	return await apiRequest( `/flows?pipeline_id=${ pipelineId }` );
 };
 
 /**
@@ -201,8 +215,8 @@ export const fetchFlows = async (pipelineId) => {
  * @param {number} flowId - Flow ID
  * @returns {Promise<Object>} Flow data
  */
-export const fetchFlow = async (flowId) => {
-	return await apiRequest(`/flows/${flowId}`);
+export const fetchFlow = async ( flowId ) => {
+	return await apiRequest( `/flows/${ flowId }` );
 };
 
 /**
@@ -212,14 +226,14 @@ export const fetchFlow = async (flowId) => {
  * @param {string} flowName - Flow name
  * @returns {Promise<Object>} Created flow data
  */
-export const createFlow = async (pipelineId, flowName) => {
-	return await apiRequest('/flows', {
+export const createFlow = async ( pipelineId, flowName ) => {
+	return await apiRequest( '/flows', {
 		method: 'POST',
 		data: {
 			pipeline_id: pipelineId,
-			flow_name: flowName
-		}
-	});
+			flow_name: flowName,
+		},
+	} );
 };
 
 /**
@@ -229,11 +243,11 @@ export const createFlow = async (pipelineId, flowName) => {
  * @param {string} name - New flow name
  * @returns {Promise<Object>} Updated flow data
  */
-export const updateFlowTitle = async (flowId, name) => {
-	return await apiRequest(`/flows/${flowId}`, {
+export const updateFlowTitle = async ( flowId, name ) => {
+	return await apiRequest( `/flows/${ flowId }`, {
 		method: 'PATCH',
-		data: { flow_name: name }
-	});
+		data: { flow_name: name },
+	} );
 };
 
 /**
@@ -242,10 +256,10 @@ export const updateFlowTitle = async (flowId, name) => {
  * @param {number} flowId - Flow ID
  * @returns {Promise<Object>} Deletion confirmation
  */
-export const deleteFlow = async (flowId) => {
-	return await apiRequest(`/flows/${flowId}`, {
-		method: 'DELETE'
-	});
+export const deleteFlow = async ( flowId ) => {
+	return await apiRequest( `/flows/${ flowId }`, {
+		method: 'DELETE',
+	} );
 };
 
 /**
@@ -254,10 +268,10 @@ export const deleteFlow = async (flowId) => {
  * @param {number} flowId - Flow ID
  * @returns {Promise<Object>} Duplicated flow data
  */
-export const duplicateFlow = async (flowId) => {
-	return await apiRequest(`/flows/${flowId}/duplicate`, {
-		method: 'POST'
-	});
+export const duplicateFlow = async ( flowId ) => {
+	return await apiRequest( `/flows/${ flowId }/duplicate`, {
+		method: 'POST',
+	} );
 };
 
 /**
@@ -266,11 +280,11 @@ export const duplicateFlow = async (flowId) => {
  * @param {number} flowId - Flow ID
  * @returns {Promise<Object>} Execution confirmation
  */
-export const runFlow = async (flowId) => {
-	return await apiRequest('/execute', {
+export const runFlow = async ( flowId ) => {
+	return await apiRequest( '/execute', {
 		method: 'POST',
-		data: { flow_id: flowId }
-	});
+		data: { flow_id: flowId },
+	} );
 };
 
 /**
@@ -281,14 +295,18 @@ export const runFlow = async (flowId) => {
  * @param {Object} settings - Handler settings
  * @returns {Promise<Object>} Updated flow step data
  */
-export const updateFlowHandler = async (flowStepId, handlerSlug, settings = {}) => {
-	return await apiRequest(`/flows/steps/${flowStepId}/handler`, {
+export const updateFlowHandler = async (
+	flowStepId,
+	handlerSlug,
+	settings = {}
+) => {
+	return await apiRequest( `/flows/steps/${ flowStepId }/handler`, {
 		method: 'PUT',
 		data: {
 			handler_slug: handlerSlug,
-			settings: settings
-		}
-	});
+			settings: settings,
+		},
+	} );
 };
 
 /**
@@ -298,11 +316,11 @@ export const updateFlowHandler = async (flowStepId, handlerSlug, settings = {}) 
  * @param {string} message - User message content
  * @returns {Promise<Object>} Updated flow step data
  */
-export const updateUserMessage = async (flowStepId, message) => {
-	return await apiRequest(`/flows/steps/${flowStepId}/user-message`, {
+export const updateUserMessage = async ( flowStepId, message ) => {
+	return await apiRequest( `/flows/steps/${ flowStepId }/user-message`, {
 		method: 'PATCH',
-		data: { user_message: message }
-	});
+		data: { user_message: message },
+	} );
 };
 
 /**
@@ -314,14 +332,14 @@ export const updateUserMessage = async (flowStepId, message) => {
  * @param {string} schedulingConfig.start_date - Start date (optional)
  * @returns {Promise<Object>} Updated flow data
  */
-export const updateFlowSchedule = async (flowId, schedulingConfig) => {
-	return await apiRequest('/execute', {
+export const updateFlowSchedule = async ( flowId, schedulingConfig ) => {
+	return await apiRequest( '/execute', {
 		method: 'POST',
 		data: {
 			flow_id: flowId,
-			interval: schedulingConfig.interval
-		}
-	});
+			interval: schedulingConfig.interval,
+		},
+	} );
 };
 
 /**
@@ -334,9 +352,9 @@ export const updateFlowSchedule = async (flowId, schedulingConfig) => {
  * @param {Array<number>} pipelineIds - Array of pipeline IDs to export
  * @returns {Promise<Object>} Export data with CSV content
  */
-export const exportPipelines = async (pipelineIds) => {
-	const ids = pipelineIds.join(',');
-	return await apiRequest(`/pipelines?format=csv&ids=${ids}`);
+export const exportPipelines = async ( pipelineIds ) => {
+	const ids = pipelineIds.join( ',' );
+	return await apiRequest( `/pipelines?format=csv&ids=${ ids }` );
 };
 
 /**
@@ -345,15 +363,15 @@ export const exportPipelines = async (pipelineIds) => {
  * @param {string} csvContent - CSV file content
  * @returns {Promise<Object>} Import result with created pipeline IDs
  */
-export const importPipelines = async (csvContent) => {
-	return await apiRequest('/pipelines', {
+export const importPipelines = async ( csvContent ) => {
+	return await apiRequest( '/pipelines', {
 		method: 'POST',
 		data: {
 			batch_import: true,
 			format: 'csv',
-			data: csvContent
-		}
-	});
+			data: csvContent,
+		},
+	} );
 };
 
 /**
@@ -366,8 +384,8 @@ export const importPipelines = async (csvContent) => {
  * @param {number} pipelineId - Pipeline ID
  * @returns {Promise<Object>} Array of context files
  */
-export const fetchContextFiles = async (pipelineId) => {
-	return await apiRequest(`/files?pipeline_id=${pipelineId}`);
+export const fetchContextFiles = async ( pipelineId ) => {
+	return await apiRequest( `/files?pipeline_id=${ pipelineId }` );
 };
 
 /**
@@ -377,38 +395,41 @@ export const fetchContextFiles = async (pipelineId) => {
  * @param {File} file - File object to upload
  * @returns {Promise<Object>} Upload confirmation
  */
-export const uploadContextFile = async (pipelineId, file) => {
+export const uploadContextFile = async ( pipelineId, file ) => {
 	const config = getConfig();
 	const formData = new FormData();
-	formData.append('file', file);
-	formData.append('pipeline_id', pipelineId);
+	formData.append( 'file', file );
+	formData.append( 'pipeline_id', pipelineId );
 
 	try {
-		const response = await fetch(`/wp-json/${config.restNamespace}/files`, {
-			method: 'POST',
-			headers: {
-				'X-WP-Nonce': config.restNonce
-			},
-			body: formData
-		});
+		const response = await fetch(
+			`/wp-json/${ config.restNamespace }/files`,
+			{
+				method: 'POST',
+				headers: {
+					'X-WP-Nonce': config.restNonce,
+				},
+				body: formData,
+			}
+		);
 
 		const data = await response.json();
 
-		if (!response.ok) {
-			throw new Error(data.message || 'Upload failed');
+		if ( ! response.ok ) {
+			throw new Error( data.message || 'Upload failed' );
 		}
 
 		return {
 			success: true,
 			data: data,
-			message: data.message || ''
+			message: data.message || '',
 		};
-	} catch (error) {
-		console.error('Upload error:', error);
+	} catch ( error ) {
+		console.error( 'Upload error:', error );
 		return {
 			success: false,
 			data: null,
-			message: error.message || 'An error occurred during upload'
+			message: error.message || 'An error occurred during upload',
 		};
 	}
 };
@@ -419,10 +440,10 @@ export const uploadContextFile = async (pipelineId, file) => {
  * @param {string} filename - Filename to delete
  * @returns {Promise<Object>} Deletion confirmation
  */
-export const deleteContextFile = async (filename) => {
-	return await apiRequest(`/files/${filename}`, {
-		method: 'DELETE'
-	});
+export const deleteContextFile = async ( filename ) => {
+	return await apiRequest( `/files/${ filename }`, {
+		method: 'DELETE',
+	} );
 };
 
 /**
@@ -431,8 +452,8 @@ export const deleteContextFile = async (filename) => {
  * @param {string} handlerSlug - Handler slug (e.g., 'twitter', 'wordpress_publish')
  * @returns {Promise<Object>} Handler details including basic info, settings schema, and AI tool definition
  */
-export const fetchHandlerDetails = async (handlerSlug) => {
-	return await apiRequest(`/handlers/${handlerSlug}`, {
-		method: 'GET'
-	});
+export const fetchHandlerDetails = async ( handlerSlug ) => {
+	return await apiRequest( `/handlers/${ handlerSlug }`, {
+		method: 'GET',
+	} );
 };

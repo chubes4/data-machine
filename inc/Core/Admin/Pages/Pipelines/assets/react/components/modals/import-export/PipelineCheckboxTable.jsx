@@ -16,161 +16,192 @@ import { __ } from '@wordpress/i18n';
  * @param {Function} props.onSelectionChange - Selection change handler
  * @returns {React.ReactElement} Pipeline checkbox table
  */
-export default function PipelineCheckboxTable({
+export default function PipelineCheckboxTable( {
 	pipelines,
 	selectedIds,
-	onSelectionChange
-}) {
+	onSelectionChange,
+} ) {
 	/**
 	 * Toggle individual pipeline selection
 	 */
-	const togglePipeline = (pipelineId) => {
-		const newSelection = selectedIds.includes(pipelineId)
-			? selectedIds.filter(id => id !== pipelineId)
-			: [...selectedIds, pipelineId];
+	const togglePipeline = ( pipelineId ) => {
+		const newSelection = selectedIds.includes( pipelineId )
+			? selectedIds.filter( ( id ) => id !== pipelineId )
+			: [ ...selectedIds, pipelineId ];
 
-		onSelectionChange(newSelection);
+		onSelectionChange( newSelection );
 	};
 
 	/**
 	 * Toggle all pipelines
 	 */
 	const toggleAll = () => {
-		if (selectedIds.length === pipelines.length) {
-			onSelectionChange([]);
+		if ( selectedIds.length === pipelines.length ) {
+			onSelectionChange( [] );
 		} else {
-			onSelectionChange(pipelines.map(p => p.pipeline_id));
+			onSelectionChange( pipelines.map( ( p ) => p.pipeline_id ) );
 		}
 	};
 
 	/**
 	 * Check if all pipelines are selected
 	 */
-	const allSelected = pipelines.length > 0 && selectedIds.length === pipelines.length;
+	const allSelected =
+		pipelines.length > 0 && selectedIds.length === pipelines.length;
 
 	return (
 		<div
-			style={{
+			style={ {
 				border: '1px solid #dcdcde',
 				borderRadius: '4px',
 				maxHeight: '400px',
-				overflowY: 'auto'
-			}}
+				overflowY: 'auto',
+			} }
 		>
-			<table style={{ width: '100%', borderCollapse: 'collapse' }}>
+			<table style={ { width: '100%', borderCollapse: 'collapse' } }>
 				<thead>
 					<tr
-						style={{
+						style={ {
 							background: '#f9f9f9',
 							borderBottom: '1px solid #dcdcde',
 							position: 'sticky',
 							top: 0,
-							zIndex: 1
-						}}
+							zIndex: 1,
+						} }
 					>
 						<th
-							style={{
+							style={ {
 								padding: '12px 16px',
 								textAlign: 'left',
-								width: '40px'
-							}}
+								width: '40px',
+							} }
 						>
 							<CheckboxControl
-								checked={allSelected}
-								onChange={toggleAll}
+								checked={ allSelected }
+								onChange={ toggleAll }
 								__nextHasNoMarginBottom
 							/>
 						</th>
 						<th
-							style={{
-								padding: '12px 16px',
-								textAlign: 'left',
-								fontWeight: '600'
-							}}
-						>
-							{__('Pipeline Name', 'datamachine')}
-						</th>
-						<th
-							style={{
+							style={ {
 								padding: '12px 16px',
 								textAlign: 'left',
 								fontWeight: '600',
-								width: '100px'
-							}}
+							} }
 						>
-							{__('Steps', 'datamachine')}
+							{ __( 'Pipeline Name', 'datamachine' ) }
 						</th>
 						<th
-							style={{
+							style={ {
 								padding: '12px 16px',
 								textAlign: 'left',
 								fontWeight: '600',
-								width: '100px'
-							}}
+								width: '100px',
+							} }
 						>
-							{__('Flows', 'datamachine')}
+							{ __( 'Steps', 'datamachine' ) }
+						</th>
+						<th
+							style={ {
+								padding: '12px 16px',
+								textAlign: 'left',
+								fontWeight: '600',
+								width: '100px',
+							} }
+						>
+							{ __( 'Flows', 'datamachine' ) }
 						</th>
 					</tr>
 				</thead>
 				<tbody>
-					{pipelines.length === 0 && (
+					{ pipelines.length === 0 && (
 						<tr>
 							<td
 								colSpan="4"
-								style={{
+								style={ {
 									padding: '40px 20px',
 									textAlign: 'center',
-									color: '#757575'
-								}}
+									color: '#757575',
+								} }
 							>
-								{__('No pipelines available', 'datamachine')}
+								{ __(
+									'No pipelines available',
+									'datamachine'
+								) }
 							</td>
 						</tr>
-					)}
+					) }
 
-					{pipelines.map((pipeline) => {
-						const stepCount = Object.keys(pipeline.pipeline_config || {}).length;
+					{ pipelines.map( ( pipeline ) => {
+						const stepCount = Object.keys(
+							pipeline.pipeline_config || {}
+						).length;
 						const flowCount = pipeline.flows?.length || 0;
-						const isSelected = selectedIds.includes(pipeline.pipeline_id);
+						const isSelected = selectedIds.includes(
+							pipeline.pipeline_id
+						);
 
 						return (
 							<tr
-								key={pipeline.pipeline_id}
-								style={{
+								key={ pipeline.pipeline_id }
+								style={ {
 									borderBottom: '1px solid #dcdcde',
-									background: isSelected ? '#f0f6fc' : 'transparent',
-									transition: 'background 0.2s'
-								}}
-								onMouseEnter={(e) => {
-									if (!isSelected) {
-										e.currentTarget.style.background = '#f9f9f9';
+									background: isSelected
+										? '#f0f6fc'
+										: 'transparent',
+									transition: 'background 0.2s',
+								} }
+								onMouseEnter={ ( e ) => {
+									if ( ! isSelected ) {
+										e.currentTarget.style.background =
+											'#f9f9f9';
 									}
-								}}
-								onMouseLeave={(e) => {
-									if (!isSelected) {
-										e.currentTarget.style.background = 'transparent';
+								} }
+								onMouseLeave={ ( e ) => {
+									if ( ! isSelected ) {
+										e.currentTarget.style.background =
+											'transparent';
 									}
-								}}
+								} }
 							>
-								<td style={{ padding: '12px 16px' }}>
+								<td style={ { padding: '12px 16px' } }>
 									<CheckboxControl
-										checked={isSelected}
-										onChange={() => togglePipeline(pipeline.pipeline_id)}
+										checked={ isSelected }
+										onChange={ () =>
+											togglePipeline(
+												pipeline.pipeline_id
+											)
+										}
 										__nextHasNoMarginBottom
 									/>
 								</td>
-								<td style={{ padding: '12px 16px', fontWeight: '500' }}>
-									{pipeline.pipeline_name}
+								<td
+									style={ {
+										padding: '12px 16px',
+										fontWeight: '500',
+									} }
+								>
+									{ pipeline.pipeline_name }
 								</td>
-								<td style={{ padding: '12px 16px', color: '#757575' }}>
-									{stepCount}
+								<td
+									style={ {
+										padding: '12px 16px',
+										color: '#757575',
+									} }
+								>
+									{ stepCount }
 								</td>
-								<td style={{ padding: '12px 16px', color: '#757575' }}>
-									{flowCount}
+								<td
+									style={ {
+										padding: '12px 16px',
+										color: '#757575',
+									} }
+								>
+									{ flowCount }
 								</td>
 							</tr>
 						);
-					})}
+					} ) }
 				</tbody>
 			</table>
 		</div>

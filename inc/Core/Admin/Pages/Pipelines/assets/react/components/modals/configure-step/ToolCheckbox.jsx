@@ -19,58 +19,81 @@ import { CheckboxControl } from '@wordpress/components';
  * @param {boolean} props.disabled - Disabled state
  * @returns {React.ReactElement} Tool checkbox
  */
-export default function ToolCheckbox({
+export default function ToolCheckbox( {
 	toolId,
 	label,
 	description,
 	checked,
 	configured,
 	onChange,
-	disabled = false
-}) {
+	disabled = false,
+} ) {
 	return (
 		<div
-			style={{
+			style={ {
 				padding: '12px',
-				border: `1px solid ${checked ? '#0073aa' : '#dcdcde'}`,
+				border: `1px solid ${ checked ? '#0073aa' : '#dcdcde' }`,
 				borderRadius: '4px',
 				background: checked ? '#f0f6fc' : '#ffffff',
-				transition: 'all 0.2s'
-			}}
+				transition: 'all 0.2s',
+			} }
 		>
-			<div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+			<div
+				style={ {
+					display: 'flex',
+					alignItems: 'flex-start',
+					gap: '8px',
+				} }
+			>
 				<CheckboxControl
-					checked={checked}
-					onChange={onChange}
-					disabled={disabled}
+					checked={ checked }
+					onChange={ onChange }
+					disabled={ disabled }
 					__nextHasNoMarginBottom
 				/>
 
-				<div style={{ flex: 1 }}>
-					<div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-						<span style={{ fontWeight: '500', fontSize: '14px' }}>
-							{label}
+				<div style={ { flex: 1 } }>
+					<div
+						style={ {
+							display: 'flex',
+							alignItems: 'center',
+							gap: '8px',
+							marginBottom: '4px',
+						} }
+					>
+						<span style={ { fontWeight: '500', fontSize: '14px' } }>
+							{ label }
 						</span>
 
-						{/* Configuration status indicator */}
-						{checked && (
+						{ /* Configuration status indicator */ }
+						{ checked && (
 							<span
-								style={{
+								style={ {
 									fontSize: '16px',
-									lineHeight: '1'
-								}}
-								title={configured ? 'Configured' : 'Configuration required'}
+									lineHeight: '1',
+								} }
+								title={
+									configured
+										? 'Configured'
+										: 'Configuration required'
+								}
 							>
-								{configured ? '✅' : '⚠️'}
+								{ configured ? '✅' : '⚠️' }
 							</span>
-						)}
+						) }
 					</div>
 
-					{description && (
-						<p style={{ margin: 0, fontSize: '12px', color: '#757575' }}>
-							{description}
+					{ description && (
+						<p
+							style={ {
+								margin: 0,
+								fontSize: '12px',
+								color: '#757575',
+							} }
+						>
+							{ description }
 						</p>
-					)}
+					) }
 				</div>
 			</div>
 		</div>

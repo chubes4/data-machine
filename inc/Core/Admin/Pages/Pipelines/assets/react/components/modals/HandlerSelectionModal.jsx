@@ -19,79 +19,82 @@ import { usePipelineContext } from '../../context/PipelineContext';
  * @param {Function} props.onSelectHandler - Handler selection callback
  * @returns {React.ReactElement|null} Handler selection modal
  */
-export default function HandlerSelectionModal({
+export default function HandlerSelectionModal( {
 	isOpen,
 	onClose,
 	stepType,
-	onSelectHandler
-}) {
+	onSelectHandler,
+} ) {
 	const { handlers: allHandlers } = usePipelineContext();
 
-	if (!isOpen) {
+	if ( ! isOpen ) {
 		return null;
 	}
 
 	/**
 	 * Filter handlers by step type
 	 */
-	const handlers = Object.entries(allHandlers).filter(
-		([slug, handler]) => handler.type === stepType
+	const handlers = Object.entries( allHandlers ).filter(
+		( [ slug, handler ] ) => handler.type === stepType
 	);
 
 	/**
 	 * Handle handler selection
 	 */
-	const handleSelect = (handlerSlug) => {
-		if (onSelectHandler) {
-			onSelectHandler(handlerSlug);
+	const handleSelect = ( handlerSlug ) => {
+		if ( onSelectHandler ) {
+			onSelectHandler( handlerSlug );
 		}
 		onClose();
 	};
 
 	return (
 		<Modal
-			title={__('Select Handler', 'datamachine')}
-			onRequestClose={onClose}
-			className="datamachine-modal datamachine-handler-selection-modal"
-			style={{ maxWidth: '600px' }}
+			title={ __( 'Select Handler', 'datamachine' ) }
+			onRequestClose={ onClose }
+			className="datamachine-handler-selection-modal"
+			style={ { maxWidth: '600px' } }
 		>
 			<div className="datamachine-modal-content">
-				<p style={{ marginBottom: '20px', color: '#757575' }}>
-					{__('Choose the handler for this step:', 'datamachine')}
+				<p style={ { marginBottom: '20px', color: '#757575' } }>
+					{ __( 'Choose the handler for this step:', 'datamachine' ) }
 				</p>
 
-				{handlers.length === 0 && (
+				{ handlers.length === 0 && (
 					<div
-						style={{
+						style={ {
 							padding: '40px 20px',
 							textAlign: 'center',
 							background: '#f9f9f9',
 							border: '1px solid #dcdcde',
-							borderRadius: '4px'
-						}}
+							borderRadius: '4px',
+						} }
 					>
-						<p style={{ margin: 0, color: '#757575' }}>
-							{__('No handlers available for this step type.', 'datamachine')}
+						<p style={ { margin: 0, color: '#757575' } }>
+							{ __(
+								'No handlers available for this step type.',
+								'datamachine'
+							) }
 						</p>
 					</div>
-				)}
+				) }
 
-				{handlers.length > 0 && (
+				{ handlers.length > 0 && (
 					<div
 						className="datamachine-handler-grid"
-						style={{
+						style={ {
 							display: 'grid',
 							gridTemplateColumns: 'repeat(2, 1fr)',
-							gap: '16px'
-						}}
+							gap: '16px',
+						} }
 					>
-						{handlers.map(([slug, handler]) => (
+						{ handlers.map( ( [ slug, handler ] ) => (
 							<button
-								key={slug}
+								key={ slug }
 								type="button"
 								className="datamachine-handler-card"
-								onClick={() => handleSelect(slug)}
-								style={{
+								onClick={ () => handleSelect( slug ) }
+								style={ {
 									padding: '20px',
 									border: '2px solid #dcdcde',
 									borderRadius: '4px',
@@ -101,56 +104,66 @@ export default function HandlerSelectionModal({
 									transition: 'all 0.2s',
 									display: 'flex',
 									flexDirection: 'column',
-									gap: '8px'
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.borderColor = '#0073aa';
-									e.currentTarget.style.background = '#f9f9f9';
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.borderColor = '#dcdcde';
-									e.currentTarget.style.background = '#ffffff';
-								}}
+									gap: '8px',
+								} }
+								onMouseEnter={ ( e ) => {
+									e.currentTarget.style.borderColor =
+										'#0073aa';
+									e.currentTarget.style.background =
+										'#f9f9f9';
+								} }
+								onMouseLeave={ ( e ) => {
+									e.currentTarget.style.borderColor =
+										'#dcdcde';
+									e.currentTarget.style.background =
+										'#ffffff';
+								} }
 							>
-								<strong style={{ fontSize: '16px' }}>
-									{handler.label || slugToLabel(slug)}
+								<strong style={ { fontSize: '16px' } }>
+									{ handler.label || slugToLabel( slug ) }
 								</strong>
 
-								<p style={{ margin: 0, fontSize: '13px', color: '#757575' }}>
-									{handler.description || ''}
+								<p
+									style={ {
+										margin: 0,
+										fontSize: '13px',
+										color: '#757575',
+									} }
+								>
+									{ handler.description || '' }
 								</p>
 
-								{handler.requires_auth && (
+								{ handler.requires_auth && (
 									<span
-										style={{
+										style={ {
 											display: 'inline-block',
 											padding: '2px 8px',
 											background: '#f0b849',
 											color: '#000',
 											borderRadius: '3px',
 											fontSize: '11px',
-											fontWeight: '500'
-										}}
+											fontWeight: '500',
+										} }
 									>
-										{__('Requires Auth', 'datamachine')}
+										{ __( 'Requires Auth', 'datamachine' ) }
 									</span>
-								)}
+								) }
 							</button>
-						))}
+						) ) }
 					</div>
-				)}
+				) }
 
 				<div
-					style={{
+					style={ {
 						display: 'flex',
 						justifyContent: 'flex-end',
 						marginTop: '24px',
 						paddingTop: '20px',
-						borderTop: '1px solid #dcdcde'
-					}}
+						borderTop: '1px solid #dcdcde',
+					} }
 				>
-					<Button variant="secondary" onClick={onClose}>
-						{__('Cancel', 'datamachine')}
+					<Button variant="secondary" onClick={ onClose }>
+						{ __( 'Cancel', 'datamachine' ) }
 					</Button>
 				</div>
 			</div>

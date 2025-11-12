@@ -15,28 +15,34 @@ import { __ } from '@wordpress/i18n';
  * @param {Function} props.onAddFlow - Add flow handler
  * @returns {React.ReactElement} Empty flow card
  */
-export default function EmptyFlowCard({ pipelineId, onAddFlow }) {
+export default function EmptyFlowCard( { pipelineId, onAddFlow } ) {
 	return (
 		<div
 			className="datamachine-empty-flow-card"
-			style={{
+			style={ {
 				border: '2px dashed #dcdcde',
 				borderRadius: '4px',
 				padding: '40px 20px',
 				textAlign: 'center',
 				backgroundColor: '#f9f9f9',
 				minWidth: '300px',
-				marginBottom: '20px'
-			}}
+				marginBottom: '20px',
+			} }
 		>
-			<div style={{ fontSize: '48px', color: '#c3c4c7', marginBottom: '16px' }}>
+			<div
+				style={ {
+					fontSize: '48px',
+					color: '#c3c4c7',
+					marginBottom: '16px',
+				} }
+			>
 				+
 			</div>
 			<Button
 				variant="secondary"
-				onClick={() => onAddFlow && onAddFlow(pipelineId)}
+				onClick={ () => onAddFlow && onAddFlow( pipelineId ) }
 			>
-				{__('Add Flow', 'datamachine')}
+				{ __( 'Add Flow', 'datamachine' ) }
 			</Button>
 		</div>
 	);

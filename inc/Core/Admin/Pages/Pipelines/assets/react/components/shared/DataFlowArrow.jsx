@@ -11,7 +11,10 @@
  */
 export default function DataFlowArrow() {
 	return (
-		<div className="datamachine-data-flow-arrow" style={{ display: 'flex', alignItems: 'center' }}>
+		<div
+			className="datamachine-data-flow-arrow"
+			style={ { display: 'flex', alignItems: 'center' } }
+		>
 			<svg
 				width="40"
 				height="20"

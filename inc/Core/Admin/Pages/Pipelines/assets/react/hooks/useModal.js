@@ -13,8 +13,8 @@ import { MODAL_TYPES } from '../utils/constants';
  * @returns {Object} Modal state and control functions
  */
 export const useModal = () => {
-	const [activeModal, setActiveModal] = useState(null);
-	const [modalData, setModalData] = useState(null);
+	const [ activeModal, setActiveModal ] = useState( null );
+	const [ modalData, setModalData ] = useState( null );
 
 	/**
 	 * Open a modal with optional context data
@@ -22,18 +22,18 @@ export const useModal = () => {
 	 * @param {string} modalType - Modal type from MODAL_TYPES
 	 * @param {Object} data - Context data for the modal
 	 */
-	const openModal = useCallback((modalType, data = null) => {
-		setActiveModal(modalType);
-		setModalData(data);
-	}, []);
+	const openModal = useCallback( ( modalType, data = null ) => {
+		setActiveModal( modalType );
+		setModalData( data );
+	}, [] );
 
 	/**
 	 * Close the active modal
 	 */
-	const closeModal = useCallback(() => {
-		setActiveModal(null);
-		setModalData(null);
-	}, []);
+	const closeModal = useCallback( () => {
+		setActiveModal( null );
+		setModalData( null );
+	}, [] );
 
 	/**
 	 * Check if a specific modal is open
@@ -41,9 +41,12 @@ export const useModal = () => {
 	 * @param {string} modalType - Modal type to check
 	 * @returns {boolean} True if modal is open
 	 */
-	const isModalOpen = useCallback((modalType) => {
-		return activeModal === modalType;
-	}, [activeModal]);
+	const isModalOpen = useCallback(
+		( modalType ) => {
+			return activeModal === modalType;
+		},
+		[ activeModal ]
+	);
 
 	return {
 		activeModal,
@@ -51,6 +54,6 @@ export const useModal = () => {
 		openModal,
 		closeModal,
 		isModalOpen,
-		MODAL_TYPES
+		MODAL_TYPES,
 	};
 };

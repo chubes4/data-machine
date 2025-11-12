@@ -22,36 +22,36 @@ import { usePipelineContext } from '../../context/PipelineContext';
  * @param {Function} props.onSuccess - Success callback
  * @returns {React.ReactElement|null} Step selection modal
  */
-export default function StepSelectionModal({
+export default function StepSelectionModal( {
 	isOpen,
 	onClose,
 	pipelineId,
 	nextExecutionOrder,
-	onSuccess
-}) {
+	onSuccess,
+} ) {
 	const { stepTypes, handlers } = usePipelineContext();
-	const [isAdding, setIsAdding] = useState(false);
-	const [error, setError] = useState(null);
+	const [ isAdding, setIsAdding ] = useState( false );
+	const [ error, setError ] = useState( null );
 
-	if (!isOpen) {
+	if ( ! isOpen ) {
 		return null;
 	}
 
 	/**
 	 * Count handlers for each step type
 	 */
-	const getHandlerCount = (stepType) => {
-		return Object.values(handlers).filter(
-			handler => handler.type === stepType
+	const getHandlerCount = ( stepType ) => {
+		return Object.values( handlers ).filter(
+			( handler ) => handler.type === stepType
 		).length;
 	};
 
 	/**
 	 * Handle step type selection
 	 */
-	const handleSelectStep = async (stepType) => {
-		setIsAdding(true);
-		setError(null);
+	const handleSelectStep = async ( stepType ) => {
+		setIsAdding( true );
+		setError( null );
 
 		try {
 			const response = await addPipelineStep(
@@ -60,121 +60,174 @@ export default function StepSelectionModal({
 				nextExecutionOrder
 			);
 
-			if (response.success) {
-				if (onSuccess) {
+			if ( response.success ) {
+				if ( onSuccess ) {
 					onSuccess();
 				}
 				onClose();
 			} else {
-				setError(response.message || __('Failed to add step', 'datamachine'));
+				setError(
+					response.message ||
+						__( 'Failed to add step', 'datamachine' )
+				);
 			}
-		} catch (err) {
-			console.error('Step addition error:', err);
-			setError(err.message || __('An error occurred', 'datamachine'));
+		} catch ( err ) {
+			console.error( 'Step addition error:', err );
+			setError( err.message || __( 'An error occurred', 'datamachine' ) );
 		} finally {
-			setIsAdding(false);
+			setIsAdding( false );
 		}
 	};
 
 	return (
 		<Modal
-			title={__('Add Pipeline Step', 'datamachine')}
-			onRequestClose={onClose}
-			className="datamachine-modal datamachine-step-selection-modal"
-			style={{ maxWidth: '600px' }}
+			title={ __( 'Add Pipeline Step', 'datamachine' ) }
+			onRequestClose={ onClose }
+			className="datamachine-step-selection-modal"
+			style={ { maxWidth: '600px' } }
 		>
 			<div className="datamachine-modal-content">
-				{error && (
-					<div className="notice notice-error" style={{ marginBottom: '16px' }}>
-						<p>{error}</p>
+				{ error && (
+					<div
+						className="notice notice-error"
+						style={ { marginBottom: '16px' } }
+					>
+						<p>{ error }</p>
 					</div>
-				)}
+				) }
 
-				<p style={{ marginBottom: '20px', color: '#757575' }}>
-					{__('Select the type of step you want to add to your pipeline:', 'datamachine')}
+				<p style={ { marginBottom: '20px', color: '#757575' } }>
+					{ __(
+						'Select the type of step you want to add to your pipeline:',
+						'datamachine'
+					) }
 				</p>
 
 				<div
 					className="datamachine-step-type-grid"
-					style={{
+					style={ {
 						display: 'grid',
 						gridTemplateColumns: 'repeat(2, 1fr)',
-						gap: '16px'
-					}}
+						gap: '16px',
+					} }
 				>
-					{Object.entries(stepTypes).map(([stepType, config]) => {
-						const handlerCount = getHandlerCount(stepType);
+					{ Object.entries( stepTypes ).map(
+						( [ stepType, config ] ) => {
+							const handlerCount = getHandlerCount( stepType );
 
-						return (
-							<button
-								key={stepType}
-								type="button"
-								className="datamachine-step-type-card"
-								onClick={() => handleSelectStep(stepType)}
-								disabled={isAdding}
-								style={{
-									padding: '20px',
-									border: '2px solid #dcdcde',
-									borderRadius: '4px',
-									background: '#ffffff',
-									cursor: 'pointer',
-									textAlign: 'left',
-									transition: 'all 0.2s',
-									display: 'flex',
-									flexDirection: 'column',
-									gap: '8px'
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.background = '#f9f9f9';
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.background = '#ffffff';
-								}}
-							>
-								<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-									<strong style={{ fontSize: '16px' }}>
-										{slugToLabel(stepType)}
-									</strong>
-								</div>
+							return (
+								<button
+									key={ stepType }
+									type="button"
+									className="datamachine-step-type-card"
+									onClick={ () =>
+										handleSelectStep( stepType )
+									}
+									disabled={ isAdding }
+									style={ {
+										padding: '20px',
+										border: '2px solid #dcdcde',
+										borderRadius: '4px',
+										background: '#ffffff',
+										cursor: 'pointer',
+										textAlign: 'left',
+										transition: 'all 0.2s',
+										display: 'flex',
+										flexDirection: 'column',
+										gap: '8px',
+									} }
+									onMouseEnter={ ( e ) => {
+										e.currentTarget.style.background =
+											'#f9f9f9';
+									} }
+									onMouseLeave={ ( e ) => {
+										e.currentTarget.style.background =
+											'#ffffff';
+									} }
+								>
+									<div
+										style={ {
+											display: 'flex',
+											alignItems: 'center',
+											gap: '8px',
+										} }
+									>
+										<strong style={ { fontSize: '16px' } }>
+											{ slugToLabel( stepType ) }
+										</strong>
+									</div>
 
-								<p style={{ margin: 0, fontSize: '13px', color: '#757575' }}>
-									{config.description || ''}
-								</p>
+									<p
+										style={ {
+											margin: 0,
+											fontSize: '13px',
+											color: '#757575',
+										} }
+									>
+										{ config.description || '' }
+									</p>
 
-								{stepType !== 'ai' && handlerCount > 0 && (
-									<span style={{ fontSize: '12px', color: '#757575' }}>
-										{handlerCount} {handlerCount === 1 ? __('handler', 'datamachine') : __('handlers', 'datamachine')} {__('available', 'datamachine')}
-									</span>
-								)}
-							</button>
-						);
-					})}
+									{ stepType !== 'ai' && handlerCount > 0 && (
+										<span
+											style={ {
+												fontSize: '12px',
+												color: '#757575',
+											} }
+										>
+											{ handlerCount }{ ' ' }
+											{ handlerCount === 1
+												? __( 'handler', 'datamachine' )
+												: __(
+														'handlers',
+														'datamachine'
+												  ) }{ ' ' }
+											{ __( 'available', 'datamachine' ) }
+										</span>
+									) }
+								</button>
+							);
+						}
+					) }
 				</div>
 
 				<div
-					style={{
+					style={ {
 						marginTop: '24px',
 						padding: '16px',
 						background: '#f9f9f9',
-						borderRadius: '4px'
-					}}
+						borderRadius: '4px',
+					} }
 				>
-					<p style={{ margin: 0, fontSize: '12px', color: '#757575' }}>
-						<strong>{__('Tip:', 'datamachine')}</strong> {__('Steps execute in order. You can configure each step after adding it.', 'datamachine')}
+					<p
+						style={ {
+							margin: 0,
+							fontSize: '12px',
+							color: '#757575',
+						} }
+					>
+						<strong>{ __( 'Tip:', 'datamachine' ) }</strong>{ ' ' }
+						{ __(
+							'Steps execute in order. You can configure each step after adding it.',
+							'datamachine'
+						) }
 					</p>
 				</div>
 
 				<div
-					style={{
+					style={ {
 						display: 'flex',
 						justifyContent: 'flex-end',
 						marginTop: '20px',
 						paddingTop: '20px',
-						borderTop: '1px solid #dcdcde'
-					}}
+						borderTop: '1px solid #dcdcde',
+					} }
 				>
-					<Button variant="secondary" onClick={onClose} disabled={isAdding}>
-						{__('Cancel', 'datamachine')}
+					<Button
+						variant="secondary"
+						onClick={ onClose }
+						disabled={ isAdding }
+					>
+						{ __( 'Cancel', 'datamachine' ) }
 					</Button>
 				</div>
 			</div>

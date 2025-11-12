@@ -19,40 +19,46 @@ import DataFlowArrow from '../shared/DataFlowArrow';
  * @param {Function} props.onStepConfigured - Configure step handler
  * @returns {React.ReactElement} Flow steps container
  */
-export default function FlowSteps({
+export default function FlowSteps( {
 	flowId,
 	flowConfig,
 	pipelineConfig,
-	onStepConfigured
-}) {
+	onStepConfigured,
+} ) {
 	/**
 	 * Sort flow steps by execution order and match with pipeline steps
 	 */
-	const sortedFlowSteps = useMemo(() => {
-		if (!flowConfig || !pipelineConfig || typeof pipelineConfig !== 'object') {
+	const sortedFlowSteps = useMemo( () => {
+		if (
+			! flowConfig ||
+			! pipelineConfig ||
+			typeof pipelineConfig !== 'object'
+		) {
 			return [];
 		}
 
 		// Convert flow config object to array
-		const flowStepsArray = Object.entries(flowConfig).map(([flowStepId, config]) => ({
-			flowStepId,
-			...config
-		}));
+		const flowStepsArray = Object.entries( flowConfig ).map(
+			( [ flowStepId, config ] ) => ( {
+				flowStepId,
+				...config,
+			} )
+		);
 
 		// Sort by execution order
-		const sorted = flowStepsArray.sort((a, b) => {
+		const sorted = flowStepsArray.sort( ( a, b ) => {
 			const orderA = a.execution_order || 0;
 			const orderB = b.execution_order || 0;
 			return orderA - orderB;
-		});
+		} );
 
 		// Convert pipeline config to array for matching
-		const pipelineStepsArray = Object.values(pipelineConfig);
+		const pipelineStepsArray = Object.values( pipelineConfig );
 
 		// Match with pipeline steps
-		return sorted.map(flowStep => {
+		return sorted.map( ( flowStep ) => {
 			const pipelineStep = pipelineStepsArray.find(
-				ps => ps.pipeline_step_id === flowStep.pipeline_step_id
+				( ps ) => ps.pipeline_step_id === flowStep.pipeline_step_id
 			);
 
 			return {
@@ -61,29 +67,32 @@ export default function FlowSteps({
 				pipelineStep: pipelineStep || {
 					pipeline_step_id: flowStep.pipeline_step_id,
 					step_type: flowStep.step_type,
-					label: 'Unknown Step'
-				}
+					label: 'Unknown Step',
+				},
 			};
-		});
-	}, [flowConfig, pipelineConfig]);
+		} );
+	}, [ flowConfig, pipelineConfig ] );
 
 	/**
 	 * Empty state
 	 */
-	if (sortedFlowSteps.length === 0) {
+	if ( sortedFlowSteps.length === 0 ) {
 		return (
 			<div
 				className="datamachine-flow-steps-empty"
-				style={{
+				style={ {
 					padding: '20px',
 					textAlign: 'center',
 					backgroundColor: '#f9f9f9',
 					border: '1px solid #dcdcde',
-					borderRadius: '4px'
-				}}
+					borderRadius: '4px',
+				} }
 			>
-				<p style={{ color: '#757575', margin: 0 }}>
-					{__('No steps configured for this flow.', 'datamachine')}
+				<p style={ { color: '#757575', margin: 0 } }>
+					{ __(
+						'No steps configured for this flow.',
+						'datamachine'
+					) }
 				</p>
 			</div>
 		);
@@ -96,28 +105,33 @@ export default function FlowSteps({
 	const renderItems = () => {
 		const items = [];
 
-		sortedFlowSteps.forEach((step, index) => {
+		sortedFlowSteps.forEach( ( step, index ) => {
 			// Add card
 			items.push(
-				<div key={step.flowStepId} style={{ flex: '0 0 auto', minWidth: '300px', maxWidth: '300px' }}>
+				<div
+					key={ step.flowStepId }
+					style={ {
+						flex: '0 0 auto',
+						minWidth: '300px',
+						maxWidth: '300px',
+					} }
+				>
 					<FlowStepCard
-						flowId={flowId}
-						flowStepId={step.flowStepId}
-						flowStepConfig={step.flowStepConfig}
-						pipelineStep={step.pipelineStep}
-						pipelineConfig={pipelineConfig}
-						onConfigure={onStepConfigured}
+						flowId={ flowId }
+						flowStepId={ step.flowStepId }
+						flowStepConfig={ step.flowStepConfig }
+						pipelineStep={ step.pipelineStep }
+						pipelineConfig={ pipelineConfig }
+						onConfigure={ onStepConfigured }
 					/>
 				</div>
 			);
 
 			// Add arrow after card (except after last card)
-			if (index < sortedFlowSteps.length - 1) {
-				items.push(
-					<DataFlowArrow key={`arrow-${index}`} />
-				);
+			if ( index < sortedFlowSteps.length - 1 ) {
+				items.push( <DataFlowArrow key={ `arrow-${ index }` } /> );
 			}
-		});
+		} );
 
 		return items;
 	};
@@ -125,15 +139,15 @@ export default function FlowSteps({
 	return (
 		<div
 			className="datamachine-flow-steps"
-			style={{
+			style={ {
 				display: 'flex',
 				alignItems: 'center',
 				gap: '20px',
 				overflowX: 'auto',
-				padding: '20px 0'
-			}}
+				padding: '20px 0',
+			} }
 		>
-			{renderItems()}
+			{ renderItems() }
 		</div>
 	);
 }

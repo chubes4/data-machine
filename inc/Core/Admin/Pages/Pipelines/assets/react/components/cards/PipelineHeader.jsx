@@ -21,110 +21,138 @@ import { AUTO_SAVE_DELAY } from '../../utils/constants';
  * @param {Function} props.onOpenContextFiles - Called when context files button clicked
  * @returns {React.ReactElement} Pipeline header
  */
-export default function PipelineHeader({ pipelineId, pipelineName, onNameChange, onDelete, onOpenContextFiles }) {
-	const [localName, setLocalName] = useState(pipelineName);
-	const saveTimeout = useRef(null);
+export default function PipelineHeader( {
+	pipelineId,
+	pipelineName,
+	onNameChange,
+	onDelete,
+	onOpenContextFiles,
+} ) {
+	const [ localName, setLocalName ] = useState( pipelineName );
+	const saveTimeout = useRef( null );
 
 	/**
 	 * Sync local name with prop changes
 	 */
-	useEffect(() => {
-		setLocalName(pipelineName);
-	}, [pipelineName]);
+	useEffect( () => {
+		setLocalName( pipelineName );
+	}, [ pipelineName ] );
 
 	/**
 	 * Save pipeline name to API (silent auto-save)
 	 */
-	const saveName = useCallback(async (name) => {
-		if (!name || name === pipelineName) {
-			return;
-		}
-
-		try {
-			const response = await updatePipelineTitle(pipelineId, name);
-
-			if (response.success && onNameChange) {
-				onNameChange(name);
+	const saveName = useCallback(
+		async ( name ) => {
+			if ( ! name || name === pipelineName ) {
+				return;
 			}
-		} catch (err) {
-			console.error('Pipeline title save failed:', err);
-		}
-	}, [pipelineId, pipelineName, onNameChange]);
+
+			try {
+				const response = await updatePipelineTitle( pipelineId, name );
+
+				if ( response.success && onNameChange ) {
+					onNameChange( name );
+				}
+			} catch ( err ) {
+				console.error( 'Pipeline title save failed:', err );
+			}
+		},
+		[ pipelineId, pipelineName, onNameChange ]
+	);
 
 	/**
 	 * Handle name input change with debouncing
 	 */
-	const handleNameChange = useCallback((value) => {
-		setLocalName(value);
+	const handleNameChange = useCallback(
+		( value ) => {
+			setLocalName( value );
 
-		// Clear existing timeout
-		if (saveTimeout.current) {
-			clearTimeout(saveTimeout.current);
-		}
+			// Clear existing timeout
+			if ( saveTimeout.current ) {
+				clearTimeout( saveTimeout.current );
+			}
 
-		// Set new timeout for debounced save
-		saveTimeout.current = setTimeout(() => {
-			saveName(value);
-		}, AUTO_SAVE_DELAY);
-	}, [saveName]);
+			// Set new timeout for debounced save
+			saveTimeout.current = setTimeout( () => {
+				saveName( value );
+			}, AUTO_SAVE_DELAY );
+		},
+		[ saveName ]
+	);
 
 	/**
 	 * Handle pipeline deletion
 	 */
-	const handleDelete = useCallback(async () => {
-		const confirmed = window.confirm(__('Are you sure you want to delete this pipeline? This action cannot be undone.', 'datamachine'));
+	const handleDelete = useCallback( async () => {
+		const confirmed = window.confirm(
+			__(
+				'Are you sure you want to delete this pipeline? This action cannot be undone.',
+				'datamachine'
+			)
+		);
 
-		if (!confirmed) {
+		if ( ! confirmed ) {
 			return;
 		}
 
 		try {
-			const response = await deletePipeline(pipelineId);
+			const response = await deletePipeline( pipelineId );
 
-			if (response.success && onDelete) {
-				onDelete(pipelineId);
+			if ( response.success && onDelete ) {
+				onDelete( pipelineId );
 			}
-		} catch (err) {
-			console.error('Pipeline deletion error:', err);
+		} catch ( err ) {
+			console.error( 'Pipeline deletion error:', err );
 		}
-	}, [pipelineId, onDelete]);
+	}, [ pipelineId, onDelete ] );
 
 	/**
 	 * Cleanup timeout on unmount
 	 */
-	useEffect(() => {
+	useEffect( () => {
 		return () => {
-			if (saveTimeout.current) {
-				clearTimeout(saveTimeout.current);
+			if ( saveTimeout.current ) {
+				clearTimeout( saveTimeout.current );
 			}
 		};
-	}, []);
+	}, [] );
 
 	return (
-		<div className="datamachine-pipeline-header" style={{ position: 'relative' }}>
-			<div style={{ position: 'absolute', top: '0', right: '0', display: 'flex', gap: '8px' }}>
+		<div
+			className="datamachine-pipeline-header"
+			style={ { position: 'relative' } }
+		>
+			<div
+				style={ {
+					position: 'absolute',
+					top: '0',
+					right: '0',
+					display: 'flex',
+					gap: '8px',
+				} }
+			>
 				<Button
 					variant="secondary"
-					onClick={onOpenContextFiles}
+					onClick={ onOpenContextFiles }
 					icon="media-document"
-					label={__('Context Files', 'datamachine')}
+					label={ __( 'Context Files', 'datamachine' ) }
 				/>
 				<Button
 					isDestructive
 					variant="secondary"
-					onClick={handleDelete}
+					onClick={ handleDelete }
 					icon="trash"
-					label={__('Delete Pipeline', 'datamachine')}
+					label={ __( 'Delete Pipeline', 'datamachine' ) }
 				/>
 			</div>
 
-			<div style={{ paddingRight: '120px' }}>
+			<div style={ { paddingRight: '120px' } }>
 				<TextControl
-					value={localName}
-					onChange={handleNameChange}
-					placeholder={__('Pipeline name', 'datamachine')}
+					value={ localName }
+					onChange={ handleNameChange }
+					placeholder={ __( 'Pipeline name', 'datamachine' ) }
 					className="datamachine-pipeline-name-input"
-					style={{ fontSize: '20px', fontWeight: '600' }}
+					style={ { fontSize: '20px', fontWeight: '600' } }
 				/>
 			</div>
 		</div>

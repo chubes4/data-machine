@@ -10,7 +10,11 @@ import { __ } from '@wordpress/i18n';
 import PipelineHeader from './PipelineHeader';
 import PipelineSteps from './PipelineSteps';
 import FlowsSection from '../sections/FlowsSection';
-import { StepSelectionModal, ConfigureStepModal, ContextFilesModal } from '../modals';
+import {
+	StepSelectionModal,
+	ConfigureStepModal,
+	ContextFilesModal,
+} from '../modals';
 import { usePipelineContext } from '../../context/PipelineContext';
 import { deletePipelineStep } from '../../utils/api';
 import { MODAL_TYPES } from '../../utils/constants';
@@ -23,145 +27,190 @@ import { MODAL_TYPES } from '../../utils/constants';
  * @param {Array} props.flows - Associated flows
  * @returns {React.ReactElement} Pipeline card
  */
-export default function PipelineCard({ pipeline, flows }) {
-	const { refreshData, openModal, closeModal, activeModal, modalData } = usePipelineContext();
+export default function PipelineCard( { pipeline, flows } ) {
+	const {
+		refreshData,
+		openModal,
+		closeModal,
+		activeModal,
+		modalData,
+		stepTypeSettings,
+	} = usePipelineContext();
 
-	if (!pipeline) {
+	if ( ! pipeline ) {
 		return null;
 	}
 
 	/**
 	 * Handle pipeline name change
 	 */
-	const handleNameChange = useCallback((newName) => {
-		// Name change already saved by PipelineHeader
-		// Just trigger refresh to update local state
-		refreshData();
-	}, [refreshData]);
+	const handleNameChange = useCallback(
+		( newName ) => {
+			// Name change already saved by PipelineHeader
+			// Just trigger refresh to update local state
+			refreshData();
+		},
+		[ refreshData ]
+	);
 
 	/**
 	 * Handle pipeline deletion
 	 */
-	const handleDelete = useCallback((pipelineId) => {
-		// Deletion already complete - just trigger refresh
-		refreshData();
-	}, [refreshData]);
+	const handleDelete = useCallback(
+		( pipelineId ) => {
+			// Deletion already complete - just trigger refresh
+			refreshData();
+		},
+		[ refreshData ]
+	);
 
 	/**
 	 * Handle step addition
 	 */
-	const handleStepAdded = useCallback((pipelineId) => {
-		const nextOrder = (pipeline.pipeline_steps || []).length + 1;
-		openModal(MODAL_TYPES.STEP_SELECTION, {
-			pipelineId,
-			nextExecutionOrder: nextOrder
-		});
-	}, [pipeline.pipeline_steps, openModal]);
+	const handleStepAdded = useCallback(
+		( pipelineId ) => {
+			const nextOrder = ( pipeline.pipeline_steps || [] ).length + 1;
+			openModal( MODAL_TYPES.STEP_SELECTION, {
+				pipelineId,
+				nextExecutionOrder: nextOrder,
+			} );
+		},
+		[ pipeline.pipeline_steps, openModal ]
+	);
 
 	/**
 	 * Handle step removal
 	 */
-	const handleStepRemoved = useCallback(async (stepId) => {
-		try {
-			const response = await deletePipelineStep(pipeline.pipeline_id, stepId);
+	const handleStepRemoved = useCallback(
+		async ( stepId ) => {
+			try {
+				const response = await deletePipelineStep(
+					pipeline.pipeline_id,
+					stepId
+				);
 
-			if (response.success) {
-				refreshData();
-			} else {
-				alert(response.message || __('Failed to delete step', 'datamachine'));
+				if ( response.success ) {
+					refreshData();
+				} else {
+					alert(
+						response.message ||
+							__( 'Failed to delete step', 'datamachine' )
+					);
+				}
+			} catch ( error ) {
+				console.error( 'Step deletion error:', error );
+				alert(
+					__(
+						'An error occurred while deleting the step',
+						'datamachine'
+					)
+				);
 			}
-		} catch (error) {
-			console.error('Step deletion error:', error);
-			alert(__('An error occurred while deleting the step', 'datamachine'));
-		}
-	}, [pipeline.pipeline_id, refreshData]);
+		},
+		[ pipeline.pipeline_id, refreshData ]
+	);
 
 	/**
 	 * Handle step configuration
 	 */
-	const handleStepConfigured = useCallback((step) => {
-		const currentConfig = pipeline.pipeline_config?.[step.pipeline_step_id] || {};
-		openModal(MODAL_TYPES.CONFIGURE_STEP, {
-			pipelineId: pipeline.pipeline_id,
-			pipelineStepId: step.pipeline_step_id,
-			stepType: step.step_type,
-			currentConfig
-		});
-	}, [pipeline.pipeline_id, pipeline.pipeline_config, openModal]);
+	const handleStepConfigured = useCallback(
+		( step ) => {
+			const stepConfigMeta = stepTypeSettings?.[ step.step_type ];
+
+			if ( ! stepConfigMeta ) {
+				return;
+			}
+
+			const currentConfig =
+				pipeline.pipeline_config?.[ step.pipeline_step_id ] || {};
+			openModal( MODAL_TYPES.CONFIGURE_STEP, {
+				pipelineId: pipeline.pipeline_id,
+				pipelineStepId: step.pipeline_step_id,
+				stepType: step.step_type,
+				currentConfig,
+			} );
+		},
+		[
+			pipeline.pipeline_id,
+			pipeline.pipeline_config,
+			openModal,
+			stepTypeSettings,
+		]
+	);
 
 	/**
 	 * Handle context files modal open
 	 */
-	const handleOpenContextFiles = useCallback(() => {
-		openModal(MODAL_TYPES.CONTEXT_FILES, {
-			pipelineId: pipeline.pipeline_id
-		});
-	}, [pipeline.pipeline_id, openModal]);
+	const handleOpenContextFiles = useCallback( () => {
+		openModal( MODAL_TYPES.CONTEXT_FILES, {
+			pipelineId: pipeline.pipeline_id,
+		} );
+	}, [ pipeline.pipeline_id, openModal ] );
 
 	return (
 		<>
 			<Card className="datamachine-pipeline-card" size="large">
 				<CardBody>
 					<PipelineHeader
-						pipelineId={pipeline.pipeline_id}
-						pipelineName={pipeline.pipeline_name}
-						onNameChange={handleNameChange}
-						onDelete={handleDelete}
-						onOpenContextFiles={handleOpenContextFiles}
+						pipelineId={ pipeline.pipeline_id }
+						pipelineName={ pipeline.pipeline_name }
+						onNameChange={ handleNameChange }
+						onDelete={ handleDelete }
+						onOpenContextFiles={ handleOpenContextFiles }
 					/>
 
 					<CardDivider />
 
 					<PipelineSteps
-						pipelineId={pipeline.pipeline_id}
-						pipelineConfig={pipeline.pipeline_config || {}}
-						onStepAdded={handleStepAdded}
-						onStepRemoved={handleStepRemoved}
-						onStepConfigured={handleStepConfigured}
+						pipelineId={ pipeline.pipeline_id }
+						pipelineConfig={ pipeline.pipeline_config || {} }
+						onStepAdded={ handleStepAdded }
+						onStepRemoved={ handleStepRemoved }
+						onStepConfigured={ handleStepConfigured }
 					/>
 
 					<CardDivider />
 
 					<FlowsSection
-						pipelineId={pipeline.pipeline_id}
-						flows={flows}
-						pipelineConfig={pipeline.pipeline_config || {}}
+						pipelineId={ pipeline.pipeline_id }
+						flows={ flows }
+						pipelineConfig={ pipeline.pipeline_config || {} }
 					/>
 				</CardBody>
 			</Card>
 
-			{/* Modals */}
-			{activeModal === MODAL_TYPES.STEP_SELECTION && (
+			{ /* Modals */ }
+			{ activeModal === MODAL_TYPES.STEP_SELECTION && (
 				<StepSelectionModal
-					isOpen={true}
-					onClose={closeModal}
-					{...modalData}
-					onSuccess={() => {
+					isOpen={ true }
+					onClose={ closeModal }
+					{ ...modalData }
+					onSuccess={ () => {
 						closeModal();
 						refreshData();
-					}}
+					} }
 				/>
-			)}
+			) }
 
-			{activeModal === MODAL_TYPES.CONFIGURE_STEP && (
+			{ activeModal === MODAL_TYPES.CONFIGURE_STEP && (
 				<ConfigureStepModal
-					isOpen={true}
-					onClose={closeModal}
-					{...modalData}
-					onSuccess={() => {
+					isOpen={ true }
+					onClose={ closeModal }
+					{ ...modalData }
+					onSuccess={ () => {
 						closeModal();
 						refreshData();
-					}}
+					} }
 				/>
-			)}
+			) }
 
-			{activeModal === MODAL_TYPES.CONTEXT_FILES && (
+			{ activeModal === MODAL_TYPES.CONTEXT_FILES && (
 				<ContextFilesModal
-					isOpen={true}
-					onClose={closeModal}
-					{...modalData}
+					isOpen={ true }
+					onClose={ closeModal }
+					{ ...modalData }
 				/>
-			)}
+			) }
 		</>
 	);
 }

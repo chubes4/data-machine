@@ -13,14 +13,14 @@ import { __ } from '@wordpress/i18n';
  * @param {Array<string>} props.unconfiguredTools - List of unconfigured tool names
  * @returns {React.ReactElement|null} Configuration warning
  */
-export default function ConfigurationWarning({ unconfiguredTools = [] }) {
-	if (unconfiguredTools.length === 0) {
+export default function ConfigurationWarning( { unconfiguredTools = [] } ) {
+	if ( unconfiguredTools.length === 0 ) {
 		return null;
 	}
 
 	return (
 		<div
-			style={{
+			style={ {
 				marginTop: '12px',
 				padding: '12px',
 				background: '#fff8e5',
@@ -28,23 +28,44 @@ export default function ConfigurationWarning({ unconfiguredTools = [] }) {
 				borderRadius: '4px',
 				display: 'flex',
 				alignItems: 'flex-start',
-				gap: '8px'
-			}}
+				gap: '8px',
+			} }
 		>
-			<span style={{ color: '#f0b849', fontSize: '18px', lineHeight: '1' }}>
+			<span
+				style={ {
+					color: '#f0b849',
+					fontSize: '18px',
+					lineHeight: '1',
+				} }
+			>
 				⚠️
 			</span>
-			<div style={{ flex: 1 }}>
-				<p style={{ margin: '0 0 4px 0', fontWeight: '500', fontSize: '13px' }}>
-					{__('Configuration Required', 'datamachine')}
+			<div style={ { flex: 1 } }>
+				<p
+					style={ {
+						margin: '0 0 4px 0',
+						fontWeight: '500',
+						fontSize: '13px',
+					} }
+				>
+					{ __( 'Configuration Required', 'datamachine' ) }
 				</p>
-				<p style={{ margin: 0, fontSize: '12px', color: '#757575' }}>
-					{__('The following tools require configuration before use:', 'datamachine')}
+				<p style={ { margin: 0, fontSize: '12px', color: '#757575' } }>
+					{ __(
+						'The following tools require configuration before use:',
+						'datamachine'
+					) }
 				</p>
-				<ul style={{ margin: '8px 0 0 20px', fontSize: '12px', color: '#757575' }}>
-					{unconfiguredTools.map((toolName, index) => (
-						<li key={index}>{toolName}</li>
-					))}
+				<ul
+					style={ {
+						margin: '8px 0 0 20px',
+						fontSize: '12px',
+						color: '#757575',
+					} }
+				>
+					{ unconfiguredTools.map( ( toolName, index ) => (
+						<li key={ index }>{ toolName }</li>
+					) ) }
 				</ul>
 			</div>
 		</div>

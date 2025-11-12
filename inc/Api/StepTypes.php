@@ -36,6 +36,20 @@ class StepTypes {
 			'permission_callback' => '__return_true', // Public endpoint - step type info is not sensitive
 			'args' => []
 		]);
+
+		register_rest_route('datamachine/v1', '/step-types/(?P<step_type>[a-zA-Z0-9_-]+)', [
+			'methods' => WP_REST_Server::READABLE,
+			'callback' => [self::class, 'handle_get_step_type_detail'],
+			'permission_callback' => '__return_true',
+			'args' => [
+				'step_type' => [
+					'required' => true,
+					'type' => 'string',
+					'description' => __('Step type slug', 'datamachine'),
+					'sanitize_callback' => 'sanitize_key'
+				]
+			]
+		]);
 	}
 
 	/**
@@ -53,6 +67,40 @@ class StepTypes {
 		return rest_ensure_response([
 			'success' => true,
 			'step_types' => $step_types
+		]);
+	}
+
+	/**
+	 * Get full metadata for a specific step type
+	 *
+	 * Exposes the registered step definition along with pipeline-level
+	 * configuration metadata (if provided by the step).
+	 *
+	 * @since 0.1.2
+	 * @param \WP_REST_Request $request Request instance
+	 * @return \WP_REST_Response|\WP_Error Step type detail response
+	 */
+	public static function handle_get_step_type_detail($request) {
+		$step_type = $request->get_param('step_type');
+
+		$step_types = apply_filters('datamachine_step_types', []);
+
+		if (!isset($step_types[$step_type])) {
+			return new \WP_Error(
+				'step_type_not_found',
+				__('Step type not found', 'datamachine'),
+				['status' => 404]
+			);
+		}
+
+		$step_settings = apply_filters('datamachine_step_settings', []);
+		$config = $step_settings[$step_type] ?? null;
+
+		return rest_ensure_response([
+			'success' => true,
+			'step_type' => $step_type,
+			'definition' => $step_types[$step_type],
+			'config' => $config
 		]);
 	}
 }

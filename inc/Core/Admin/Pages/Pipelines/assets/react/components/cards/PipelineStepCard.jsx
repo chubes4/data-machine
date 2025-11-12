@@ -5,11 +5,18 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from '@wordpress/element';
-import { Card, CardBody, Button, TextareaControl, Notice } from '@wordpress/components';
+import {
+	Card,
+	CardBody,
+	Button,
+	TextareaControl,
+	Notice,
+} from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { updateSystemPrompt } from '../../utils/api';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
 import { slugToLabel } from '../../utils/formatters';
+import { usePipelineContext } from '../../context/PipelineContext';
 
 /**
  * Pipeline Step Card Component
@@ -22,147 +29,218 @@ import { slugToLabel } from '../../utils/formatters';
  * @param {Function} props.onConfigure - Configure handler
  * @returns {React.ReactElement} Pipeline step card
  */
-export default function PipelineStepCard({ step, pipelineId, pipelineConfig, onDelete, onConfigure }) {
-	const aiConfig = step.step_type === 'ai' ? pipelineConfig[step.pipeline_step_id] : null;
+export default function PipelineStepCard( {
+	step,
+	pipelineId,
+	pipelineConfig,
+	onDelete,
+	onConfigure,
+} ) {
+	const { stepTypeSettings } = usePipelineContext();
+	const stepConfigMeta = stepTypeSettings?.[ step.step_type ];
+	const canConfigure = !! stepConfigMeta;
+	const aiConfig =
+		step.step_type === 'ai'
+			? pipelineConfig[ step.pipeline_step_id ]
+			: null;
 
-	const [localPrompt, setLocalPrompt] = useState(aiConfig?.system_prompt || '');
-	const [isSaving, setIsSaving] = useState(false);
-	const [error, setError] = useState(null);
-	const saveTimeout = useRef(null);
+	const [ localPrompt, setLocalPrompt ] = useState(
+		aiConfig?.system_prompt || ''
+	);
+	const [ isSaving, setIsSaving ] = useState( false );
+	const [ error, setError ] = useState( null );
+	const saveTimeout = useRef( null );
 
 	/**
 	 * Sync local prompt with config changes
 	 */
-	useEffect(() => {
-		if (aiConfig) {
-			setLocalPrompt(aiConfig.system_prompt || '');
+	useEffect( () => {
+		if ( aiConfig ) {
+			setLocalPrompt( aiConfig.system_prompt || '' );
 		}
-	}, [aiConfig]);
+	}, [ aiConfig ] );
 
 	/**
 	 * Save system prompt to API
 	 */
-	const savePrompt = useCallback(async (prompt) => {
-		if (!aiConfig) return;
+	const savePrompt = useCallback(
+		async ( prompt ) => {
+			if ( ! aiConfig ) return;
 
-		const currentPrompt = aiConfig.system_prompt || '';
-		if (prompt === currentPrompt) return;
+			const currentPrompt = aiConfig.system_prompt || '';
+			if ( prompt === currentPrompt ) return;
 
-		setIsSaving(true);
-		setError(null);
+			setIsSaving( true );
+			setError( null );
 
-		try {
-			const response = await updateSystemPrompt(
-				step.pipeline_step_id,
-				prompt,
-				aiConfig.ai_provider,
-				aiConfig.ai_model
-			);
+			try {
+				const response = await updateSystemPrompt(
+					step.pipeline_step_id,
+					prompt,
+					aiConfig.ai_provider,
+					aiConfig.ai_model
+				);
 
-			if (!response.success) {
-				setError(response.message || __('Failed to update prompt', 'datamachine'));
-				setLocalPrompt(currentPrompt); // Revert on error
+				if ( ! response.success ) {
+					setError(
+						response.message ||
+							__( 'Failed to update prompt', 'datamachine' )
+					);
+					setLocalPrompt( currentPrompt ); // Revert on error
+				}
+			} catch ( err ) {
+				console.error( 'Prompt update error:', err );
+				setError(
+					err.message || __( 'An error occurred', 'datamachine' )
+				);
+				setLocalPrompt( currentPrompt ); // Revert on error
+			} finally {
+				setIsSaving( false );
 			}
-		} catch (err) {
-			console.error('Prompt update error:', err);
-			setError(err.message || __('An error occurred', 'datamachine'));
-			setLocalPrompt(currentPrompt); // Revert on error
-		} finally {
-			setIsSaving(false);
-		}
-	}, [pipelineId, step.pipeline_step_id, aiConfig]);
+		},
+		[ pipelineId, step.pipeline_step_id, aiConfig ]
+	);
 
 	/**
 	 * Handle prompt change with debouncing
 	 */
-	const handlePromptChange = useCallback((value) => {
-		setLocalPrompt(value);
+	const handlePromptChange = useCallback(
+		( value ) => {
+			setLocalPrompt( value );
 
-		// Clear existing timeout
-		if (saveTimeout.current) {
-			clearTimeout(saveTimeout.current);
-		}
+			// Clear existing timeout
+			if ( saveTimeout.current ) {
+				clearTimeout( saveTimeout.current );
+			}
 
-		// Set new timeout for debounced save
-		saveTimeout.current = setTimeout(() => {
-			savePrompt(value);
-		}, AUTO_SAVE_DELAY);
-	}, [savePrompt]);
+			// Set new timeout for debounced save
+			saveTimeout.current = setTimeout( () => {
+				savePrompt( value );
+			}, AUTO_SAVE_DELAY );
+		},
+		[ savePrompt ]
+	);
 
 	/**
 	 * Handle step deletion
 	 */
-	const handleDelete = useCallback(() => {
-		const confirmed = window.confirm(__('Are you sure you want to remove this step?', 'datamachine'));
+	const handleDelete = useCallback( () => {
+		const confirmed = window.confirm(
+			__( 'Are you sure you want to remove this step?', 'datamachine' )
+		);
 
-		if (confirmed && onDelete) {
-			onDelete(step.pipeline_step_id);
+		if ( confirmed && onDelete ) {
+			onDelete( step.pipeline_step_id );
 		}
-	}, [step.pipeline_step_id, onDelete]);
+	}, [ step.pipeline_step_id, onDelete ] );
 
 	/**
 	 * Cleanup timeout on unmount
 	 */
-	useEffect(() => {
+	useEffect( () => {
 		return () => {
-			if (saveTimeout.current) {
-				clearTimeout(saveTimeout.current);
+			if ( saveTimeout.current ) {
+				clearTimeout( saveTimeout.current );
 			}
 		};
-	}, []);
+	}, [] );
 
 	return (
-		<Card className={`datamachine-pipeline-step-card datamachine-step-type--${step.step_type}`} size="small">
+		<Card
+			className={ `datamachine-pipeline-step-card datamachine-step-type--${ step.step_type }` }
+			size="small"
+		>
 			<CardBody>
-				{error && (
-					<Notice status="error" isDismissible onRemove={() => setError(null)}>
-						{error}
+				{ error && (
+					<Notice
+						status="error"
+						isDismissible
+						onRemove={ () => setError( null ) }
+					>
+						{ error }
 					</Notice>
-				)}
+				) }
 
-				<div style={{ marginBottom: '12px' }}>
-					<div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-						<strong>{slugToLabel(step.step_type)}</strong>
+				<div style={ { marginBottom: '12px' } }>
+					<div
+						style={ {
+							display: 'flex',
+							alignItems: 'center',
+							gap: '8px',
+							marginBottom: '8px',
+						} }
+					>
+						<strong>{ slugToLabel( step.step_type ) }</strong>
 					</div>
 
-					{/* AI Configuration Display */}
-					{aiConfig && (
-						<div className="datamachine-ai-config-display" style={{ marginTop: '12px' }}>
-							<div style={{ fontSize: '12px', color: '#757575', marginBottom: '8px' }}>
-								<strong>{__('AI Provider:', 'datamachine')}</strong> {aiConfig.ai_provider || 'Not configured'}
-								{' | '}
-								<strong>{__('Model:', 'datamachine')}</strong> {aiConfig.ai_model || 'Not configured'}
+					{ /* AI Configuration Display */ }
+					{ aiConfig && (
+						<div
+							className="datamachine-ai-config-display"
+							style={ { marginTop: '12px' } }
+						>
+							<div
+								style={ {
+									fontSize: '12px',
+									color: '#757575',
+									marginBottom: '8px',
+								} }
+							>
+								<strong>
+									{ __( 'AI Provider:', 'datamachine' ) }
+								</strong>{ ' ' }
+								{ aiConfig.ai_provider || 'Not configured' }
+								{ ' | ' }
+								<strong>
+									{ __( 'Model:', 'datamachine' ) }
+								</strong>{ ' ' }
+								{ aiConfig.ai_model || 'Not configured' }
 							</div>
 
 							<TextareaControl
-								label={__('System Prompt', 'datamachine')}
-								value={localPrompt}
-								onChange={handlePromptChange}
-								placeholder={__('Enter system prompt for AI processing...', 'datamachine')}
-								rows={6}
-								help={isSaving ? __('Saving...', 'datamachine') : null}
+								label={ __( 'System Prompt', 'datamachine' ) }
+								value={ localPrompt }
+								onChange={ handlePromptChange }
+								placeholder={ __(
+									'Enter system prompt for AI processing...',
+									'datamachine'
+								) }
+								rows={ 6 }
+								help={
+									isSaving
+										? __( 'Saving...', 'datamachine' )
+										: null
+								}
 							/>
 						</div>
-					)}
+					) }
 				</div>
 
-				{/* Action Buttons */}
-				<div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-					<Button
-						variant="secondary"
-						size="small"
-						onClick={() => onConfigure && onConfigure(step)}
-					>
-						{__('Configure', 'datamachine')}
-					</Button>
+				{ /* Action Buttons */ }
+				<div
+					style={ {
+						display: 'flex',
+						gap: '8px',
+						justifyContent: 'flex-end',
+					} }
+				>
+					{ canConfigure && (
+						<Button
+							variant="secondary"
+							size="small"
+							onClick={ () => onConfigure && onConfigure( step ) }
+						>
+							{ __( 'Configure', 'datamachine' ) }
+						</Button>
+					) }
 
 					<Button
 						variant="secondary"
 						size="small"
 						isDestructive
-						onClick={handleDelete}
+						onClick={ handleDelete }
 					>
-						{__('Delete', 'datamachine')}
+						{ __( 'Delete', 'datamachine' ) }
 					</Button>
 				</div>
 			</CardBody>
