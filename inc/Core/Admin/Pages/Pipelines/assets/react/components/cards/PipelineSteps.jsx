@@ -90,49 +90,54 @@ export default function PipelineSteps({
 	}
 
 	/**
-	 * Render steps with arrows
+	 * Render steps with arrows in wrapping grid
 	 */
 	return (
 		<div
 			className="datamachine-pipeline-steps"
 			style={{
-				display: 'flex',
-				alignItems: 'stretch',
-				gap: '0',
-				overflowX: 'auto',
-				padding: '20px 0'
+				display: 'grid',
+				gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 300px))',
+				gap: '20px',
+				padding: '20px 0',
+				position: 'relative'
 			}}
 		>
 			{sortedSteps.map((step, index) => (
 				<div
 					key={step.pipeline_step_id}
-					style={{ display: 'flex', alignItems: 'stretch' }}
 					draggable={true}
 					onDragStart={() => setDraggedIndex(index)}
 					onDragOver={(e) => e.preventDefault()}
 					onDrop={() => handleDrop(index)}
 					className={draggedIndex === index ? 'datamachine-step-dragging' : ''}
+					style={{ position: 'relative' }}
 				>
-					<div style={{ flex: '0 0 auto', minWidth: '300px' }}>
-						<PipelineStepCard
-							step={step}
-							pipelineId={pipelineId}
-							pipelineConfig={pipelineConfig}
-							onDelete={onStepRemoved}
-							onConfigure={onStepConfigured}
-						/>
-					</div>
+					<PipelineStepCard
+						step={step}
+						pipelineId={pipelineId}
+						pipelineConfig={pipelineConfig}
+						onDelete={onStepRemoved}
+						onConfigure={onStepConfigured}
+					/>
 
 					{/* Show arrow if not the last step */}
-					{index < sortedSteps.length - 1 && <DataFlowArrow />}
+					{index < sortedSteps.length - 1 && (
+						<DataFlowArrow
+							stepIndex={index}
+							totalSteps={sortedSteps.length}
+						/>
+					)}
 				</div>
 			))}
 
-			{/* Arrow before add step button */}
-			<DataFlowArrow />
-
-			{/* Add step button */}
-			<div style={{ flex: '0 0 auto' }}>
+			{/* Add step button with arrow */}
+			<div style={{ position: 'relative' }}>
+				<DataFlowArrow
+					stepIndex={sortedSteps.length - 1}
+					totalSteps={sortedSteps.length + 1}
+					beforeEmpty={true}
+				/>
 				<EmptyStepCard pipelineId={pipelineId} onAddStep={onStepAdded} />
 			</div>
 		</div>

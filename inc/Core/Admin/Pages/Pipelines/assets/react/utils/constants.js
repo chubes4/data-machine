@@ -36,7 +36,8 @@ export const MODAL_TYPES = {
 	FLOW_SCHEDULE: 'flow-schedule',
 	IMPORT_EXPORT: 'import-export',
 	OAUTH: 'oauth',
-	CONFIRM_DELETE: 'confirm-delete'
+	CONFIRM_DELETE: 'confirm-delete',
+	CONTEXT_FILES: 'context-files'
 };
 
 /**

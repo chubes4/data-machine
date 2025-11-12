@@ -30,12 +30,22 @@ export const usePipelines = (pipelineId = null) => {
 			const response = await apiFetchPipelines(pipelineId);
 
 			if (response.success) {
-				// Normalize response - API returns single object or array
-				const pipelineData = Array.isArray(response.data)
-					? response.data
-					: [response.data];
+				// Normalize response - handle both API structures
+				let pipelineData;
 
-				setPipelines(pipelineData);
+				if (response.data.pipelines) {
+					// Multiple pipelines response: {success: true, pipelines: [...], total: N}
+					pipelineData = response.data.pipelines;
+				} else if (response.data.pipeline) {
+					// Single pipeline response: {success: true, pipeline: {...}, flows: [...]}
+					pipelineData = [response.data.pipeline];
+				} else {
+					// Fallback for unexpected structure
+					pipelineData = [];
+				}
+
+				// Ensure we always have an array
+				setPipelines(Array.isArray(pipelineData) ? pipelineData : []);
 			} else {
 				setError(response.message || 'Failed to fetch pipelines');
 			}

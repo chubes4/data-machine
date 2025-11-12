@@ -18,9 +18,10 @@ import { AUTO_SAVE_DELAY } from '../../utils/constants';
  * @param {string} props.pipelineName - Pipeline name
  * @param {Function} props.onNameChange - Called after successful save
  * @param {Function} props.onDelete - Called after successful deletion
+ * @param {Function} props.onOpenContextFiles - Called when context files button clicked
  * @returns {React.ReactElement} Pipeline header
  */
-export default function PipelineHeader({ pipelineId, pipelineName, onNameChange, onDelete }) {
+export default function PipelineHeader({ pipelineId, pipelineName, onNameChange, onDelete, onOpenContextFiles }) {
 	const [localName, setLocalName] = useState(pipelineName);
 	const saveTimeout = useRef(null);
 
@@ -101,16 +102,23 @@ export default function PipelineHeader({ pipelineId, pipelineName, onNameChange,
 
 	return (
 		<div className="datamachine-pipeline-header" style={{ position: 'relative' }}>
-			<Button
-				isDestructive
-				variant="secondary"
-				onClick={handleDelete}
-				icon="trash"
-				label={__('Delete Pipeline', 'datamachine')}
-				style={{ position: 'absolute', top: '0', right: '0' }}
-			/>
+			<div style={{ position: 'absolute', top: '0', right: '0', display: 'flex', gap: '8px' }}>
+				<Button
+					variant="secondary"
+					onClick={onOpenContextFiles}
+					icon="media-document"
+					label={__('Context Files', 'datamachine')}
+				/>
+				<Button
+					isDestructive
+					variant="secondary"
+					onClick={handleDelete}
+					icon="trash"
+					label={__('Delete Pipeline', 'datamachine')}
+				/>
+			</div>
 
-			<div style={{ paddingRight: '50px' }}>
+			<div style={{ paddingRight: '120px' }}>
 				<TextControl
 					value={localName}
 					onChange={handleNameChange}

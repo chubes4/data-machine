@@ -97,14 +97,14 @@ export default function FlowSteps({
 			style={{
 				display: 'flex',
 				alignItems: 'stretch',
-				gap: '0',
+				gap: '20px',
 				overflowX: 'auto',
 				padding: '20px 0'
 			}}
 		>
 			{sortedFlowSteps.map((step, index) => (
 				<div key={step.flowStepId} style={{ display: 'flex', alignItems: 'stretch' }}>
-					<div style={{ flex: '0 0 auto', minWidth: '300px' }}>
+					<div style={{ flex: '0 0 auto', minWidth: '300px', maxWidth: '300px' }}>
 						<FlowStepCard
 							flowId={flowId}
 							flowStepId={step.flowStepId}

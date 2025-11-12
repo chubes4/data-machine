@@ -173,6 +173,19 @@ class Delete {
             }
         }
 
+        $repositories = apply_filters('datamachine_files_repository', []);
+        $repository = $repositories['files'] ?? null;
+
+        if ($repository && method_exists($repository, 'delete_pipeline_directory')) {
+            $filesystem_deleted = $repository->delete_pipeline_directory($pipeline_id, $pipeline_name);
+
+            if (!$filesystem_deleted) {
+                do_action('datamachine_log', 'warning', 'Pipeline filesystem cleanup failed, but continuing with database deletion.', [
+                    'pipeline_id' => $pipeline_id
+                ]);
+            }
+        }
+
         $success = $db_pipelines->delete_pipeline($pipeline_id);
         if (!$success) {
             return new WP_Error(
@@ -187,7 +200,7 @@ class Delete {
         return [
             'message' => sprintf(
                 /* translators: %1$s: Pipeline name, %2$d: Number of flows deleted */
-                __('Pipeline "%1$s" deleted successfully. %2$d flows were also deleted. Associated job records are preserved as historical data.', 'datamachine'),
+                __('Pipeline "%1$s" deleted successfully. %2$d flows were also deleted. All files and directories have been removed. Associated job records are preserved as historical data.', 'datamachine'),
                 $pipeline_name,
                 $flow_count
             ),

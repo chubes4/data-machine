@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Updated all packages to latest stable versions to address security vulnerabilities
+- Added package overrides and force resolutions for remaining moderate vulnerabilities
+
+### Changed
+- Renamed plugin directory from `data-machine` to `datamachine` for consistency with function prefixes
+- Completed migration from `dm_` to `datamachine_` prefix across all remaining code components
+- Updated gitignore patterns for production React assets
+- Continued React migration and jQuery removal across admin interfaces
+- Refined WordPress publishing system with improved component integration
+
+### Removed
+- Removed outdated `next-steps.md` file
+
 ### Added
 - React component library for Pipelines page:
   - Card components (PipelineCard, FlowCard, PipelineStepCard, FlowStepCard)

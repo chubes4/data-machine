@@ -127,7 +127,6 @@ export default function ConfigureStepModal({
 
 		try {
 			const response = await updateSystemPrompt(
-				pipelineId,
 				pipelineStepId,
 				systemPrompt,
 				provider,

@@ -25,7 +25,7 @@ export default function EmptyStepCard({ pipelineId, onAddStep }) {
 				padding: '40px 20px',
 				textAlign: 'center',
 				backgroundColor: '#f9f9f9',
-				minWidth: '200px'
+				width: '100%'
 			}}
 		>
 			<div style={{ fontSize: '48px', color: '#c3c4c7', marginBottom: '16px' }}>

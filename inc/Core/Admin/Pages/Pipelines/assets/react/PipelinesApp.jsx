@@ -8,6 +8,7 @@ import { useEffect, useCallback, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Spinner, Notice, Button } from '@wordpress/components';
 import { usePipelines } from './hooks/usePipelines';
+import useSelectedPipeline from './hooks/useSelectedPipeline';
 import { useFlows } from './hooks/useFlows';
 import { usePipelineContext } from './context/PipelineContext';
 import PipelineCard from './components/cards/PipelineCard';
@@ -23,7 +24,8 @@ import { createPipeline } from './utils/api';
  */
 export default function PipelinesApp() {
 	const { selectedPipelineId, setSelectedPipelineId, refreshTrigger, openModal, closeModal, activeModal, modalData, refreshData } = usePipelineContext();
-	const { pipelines, loading: pipelinesLoading, error: pipelinesError } = usePipelines(selectedPipelineId);
+	const { pipelines, loading: pipelinesLoading, error: pipelinesError } = usePipelines();
+	const { pipeline: selectedPipeline, loading: selectedPipelineLoading, error: selectedPipelineError } = useSelectedPipeline(selectedPipelineId);
 	const { flows, loading: flowsLoading, error: flowsError } = useFlows(selectedPipelineId);
 	const [isCreatingPipeline, setIsCreatingPipeline] = useState(false);
 
@@ -57,7 +59,7 @@ export default function PipelinesApp() {
 	/**
 	 * Loading state
 	 */
-	if (pipelinesLoading || flowsLoading) {
+	if (pipelinesLoading || selectedPipelineLoading || flowsLoading) {
 		return (
 			<div className="datamachine-pipelines-loading">
 				<Spinner />
@@ -69,10 +71,10 @@ export default function PipelinesApp() {
 	/**
 	 * Error state
 	 */
-	if (pipelinesError || flowsError) {
+	if (pipelinesError || selectedPipelineError || flowsError) {
 		return (
 			<Notice status="error" isDismissible={false}>
-				<p>{pipelinesError || flowsError}</p>
+				<p>{pipelinesError || selectedPipelineError || flowsError}</p>
 			</Notice>
 		);
 	}
@@ -89,9 +91,21 @@ export default function PipelinesApp() {
 	}
 
 	/**
-	 * Get selected pipeline
+	 * If no pipeline selected yet, show loading spinner
 	 */
-	const selectedPipeline = pipelines.find(p => p.pipeline_id === selectedPipelineId) || pipelines[0];
+	if (!selectedPipeline && selectedPipelineId) {
+		return (
+			<div className="datamachine-pipelines-loading">
+				<Spinner />
+				<p>{__('Loading pipeline details...', 'datamachine')}</p>
+			</div>
+		);
+	}
+
+	/**
+	 * Fallback: Use first pipeline if selectedPipeline is null
+	 */
+	const displayPipeline = selectedPipeline || pipelines[0];
 
 	/**
 	 * Main render
@@ -126,7 +140,7 @@ export default function PipelinesApp() {
 			<PipelineSelector />
 
 			<PipelineCard
-				pipeline={selectedPipeline}
+				pipeline={displayPipeline}
 				flows={flows}
 			/>
 

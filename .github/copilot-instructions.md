@@ -15,18 +15,18 @@
 - **Ephemeral workflows** Execute workflows without database persistence via `POST /datamachine/v1/execute` with `workflow` parameter; supports immediate/delayed execution but not recurring—use database flows for scheduling.
 - **Caching** Mutations must clear caches through `datamachine_clear_*` actions in `inc/Engine/Actions/Cache.php`; never touch transients directly.
 - **Logging** Emit diagnostics with `do_action('datamachine_log', $level, $message, $context_array)` so Monolog + rotation stay centralized.
-- **OAuth & storage** Route new providers through `datamachine_auth_providers`, persist secrets with `datamachine_store_oauth_account` / `_keys`, and keep matchers compatible with legacy `/dm-oauth/` URLs while Phase 2 migration is in flight.
+- **OAuth & storage** Route new providers through `datamachine_auth_providers`, persist secrets with `datamachine_store_oauth_account` / `_keys`, and use `/datamachine-auth/{provider}/` URLs.
 - **Prefix migration** Code uses `datamachine_` prefix throughout (filters, actions, functions, cache keys, options, transients); database table names pending Phase 3 migration.
 - **Admin UX** Modify admin assets in `inc/Core/Admin/Pages/Pipelines/assets` (not `dist/`), and lean on the universal handler settings template + `datamachine_get_handler_settings_display` filter for customization.
 - **Scheduler assumptions** Vendor Action Scheduler (`vendor/woocommerce/action-scheduler`) must be loaded before scheduling helpers in `inc/Core/Steps/**`; check for queue availability in long-running jobs.
 - **Tests & builds** Run `composer install` for setup, `composer test` / `composer test:unit` for PHPUnit (WordPress polyfills included), and `./build.sh` for release zips—build script reinstalls dev deps automatically.
 - **Ecosystem impact** Extensions in sibling repos consume these filters; coordinate breaking changes and update migration guidance in `MIGRATION-PLAN.md` when altering hook signatures.
-- **Migration awareness** Phase 2 migration (dm_ → datamachine_) complete for all code components; Phase 3 database table migration pending.
+- **Migration awareness** Phase 2 migration (dm_ → datamachine_) complete for all code components; Phase 3 database table migration complete (wp_datamachine_* tables).
 - **React architecture** Pipelines page uses complete React implementation (6,591 lines) with Context API, custom hooks, and zero jQuery—follow this pattern for new admin interfaces.
 - **Engine data pattern** Fetch handlers store source_url/image_url via `datamachine_engine_data(null, $job_id, $source_url, $image_url)`; handlers retrieve via `apply_filters('datamachine_engine_data', [], $job_id)` for clean separation.
 - **Tool-first AI** All publish handlers implement `handle_tool_call()` for agentic execution; use `AIStepToolParameters::buildForHandlerTool()` for unified parameter building with engine data merging.
 - **Centralized filters** Shared functionality lives in `inc/Engine/Filters/Handlers.php`: `datamachine_timeframe_limit`, `datamachine_keyword_search_match`, `datamachine_data_packet`—extend these for consistency.
-- **AutoSave system** Complete pipeline persistence via `dm_auto_save` action handles all data, flow synchronization, and cache invalidation—never manually save partial pipeline state.
+- **AutoSave system** Complete pipeline persistence via `datamachine_auto_save` action handles all data, flow synchronization, and cache invalidation—never manually save partial pipeline state.
 - **Universal handler settings** Use `inc/Core/Admin/Pages/Pipelines/templates/modal/handler-settings.php` template with `datamachine_enabled_settings` filter for consistent UI; handlers with `requires_auth: true` get automatic auth detection.
 - **React patterns** Follow `usePipelines`/`useFlows` hooks pattern with `apiFetch` wrapper in `assets/react/utils/api.js`; use Context API for global state management and `PipelineContext` for app-wide coordination.
 - **Conversation management** Use `AIStepConversationManager` methods: `formatToolCallMessage()` with turn tracking, `updateDataPacketMessages()` for JSON synchronization, `validateToolCall()` for duplicate detection—maintain chronological message ordering.

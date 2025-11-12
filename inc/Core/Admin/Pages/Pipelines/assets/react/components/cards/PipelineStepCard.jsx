@@ -54,7 +54,6 @@ export default function PipelineStepCard({ step, pipelineId, pipelineConfig, onD
 
 		try {
 			const response = await updateSystemPrompt(
-				pipelineId,
 				step.pipeline_step_id,
 				prompt,
 				aiConfig.ai_provider,

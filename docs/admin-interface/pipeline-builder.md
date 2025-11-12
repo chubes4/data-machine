@@ -291,9 +291,9 @@ All requests use WordPress REST API nonce from `wpApiSettings.nonce` with `manag
 - Centralized state management
 - Consistent error handling patterns
 
-**Future Enhancements:**
-React architecture enables future features like:
-- Drag-and-drop step reordering (planned)
+**Implemented Features:**
+React architecture provides modern features including:
+- Drag-and-drop step reordering (implemented)
 - Real-time collaboration (possible)
 - Advanced validation UI (easy to implement)
 - Undo/redo functionality (state-based)

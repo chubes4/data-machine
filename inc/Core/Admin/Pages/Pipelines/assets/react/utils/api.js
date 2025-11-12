@@ -65,7 +65,7 @@ const apiRequest = async (path, options = {}) => {
  * @returns {Promise<Object>} Pipeline data
  */
 export const fetchPipelines = async (pipelineId = null) => {
-	const path = pipelineId ? `/pipelines/${pipelineId}` : '/pipelines';
+	const path = pipelineId ? `/pipelines?pipeline_id=${pipelineId}` : '/pipelines';
 	return await apiRequest(path);
 };
 
@@ -162,7 +162,6 @@ export const reorderPipelineSteps = async (pipelineId, steps) => {
 /**
  * Update system prompt for AI step
  *
- * @param {number} pipelineId - Pipeline ID
  * @param {string} stepId - Pipeline step ID
  * @param {string} prompt - System prompt content
  * @param {string} provider - AI provider
@@ -170,8 +169,8 @@ export const reorderPipelineSteps = async (pipelineId, steps) => {
  * @param {Array<string>} enabledTools - Enabled AI tools (optional)
  * @returns {Promise<Object>} Updated step data
  */
-export const updateSystemPrompt = async (pipelineId, stepId, prompt, provider, model, enabledTools = []) => {
-	return await apiRequest(`/pipelines/${pipelineId}/steps/${stepId}/config`, {
+export const updateSystemPrompt = async (stepId, prompt, provider, model, enabledTools = []) => {
+	return await apiRequest(`/pipelines/steps/${stepId}/config`, {
 		method: 'PUT',
 		data: {
 			ai_provider: provider,
@@ -268,23 +267,22 @@ export const duplicateFlow = async (flowId) => {
  * @returns {Promise<Object>} Execution confirmation
  */
 export const runFlow = async (flowId) => {
-	return await apiRequest(`/flows/${flowId}/execute`, {
+	return await apiRequest('/execute', {
 		method: 'POST',
-		data: { trigger_type: 'manual' }
+		data: { flow_id: flowId }
 	});
 };
 
 /**
  * Update flow handler for a specific step
  *
- * @param {number} flowId - Flow ID
  * @param {string} flowStepId - Flow step ID
  * @param {string} handlerSlug - Handler slug
  * @param {Object} settings - Handler settings
  * @returns {Promise<Object>} Updated flow step data
  */
-export const updateFlowHandler = async (flowId, flowStepId, handlerSlug, settings = {}) => {
-	return await apiRequest(`/flows/${flowId}/steps/${flowStepId}/handler`, {
+export const updateFlowHandler = async (flowStepId, handlerSlug, settings = {}) => {
+	return await apiRequest(`/flows/steps/${flowStepId}/handler`, {
 		method: 'PUT',
 		data: {
 			handler_slug: handlerSlug,
@@ -296,14 +294,13 @@ export const updateFlowHandler = async (flowId, flowStepId, handlerSlug, setting
 /**
  * Update user message for AI step in flow
  *
- * @param {number} flowId - Flow ID
  * @param {string} flowStepId - Flow step ID
  * @param {string} message - User message content
  * @returns {Promise<Object>} Updated flow step data
  */
-export const updateUserMessage = async (flowId, flowStepId, message) => {
-	return await apiRequest(`/flows/${flowId}/steps/${flowStepId}/message`, {
-		method: 'PUT',
+export const updateUserMessage = async (flowStepId, message) => {
+	return await apiRequest(`/flows/steps/${flowStepId}/user-message`, {
+		method: 'PATCH',
 		data: { user_message: message }
 	});
 };
@@ -318,21 +315,12 @@ export const updateUserMessage = async (flowId, flowStepId, message) => {
  * @returns {Promise<Object>} Updated flow data
  */
 export const updateFlowSchedule = async (flowId, schedulingConfig) => {
-	return await apiRequest(`/flows/${flowId}/schedule`, {
-		method: 'PUT',
-		data: schedulingConfig
-	});
-};
-
-/**
- * Cancel flow schedule
- *
- * @param {number} flowId - Flow ID
- * @returns {Promise<Object>} Cancellation confirmation
- */
-export const cancelFlowSchedule = async (flowId) => {
-	return await apiRequest(`/flows/${flowId}/schedule`, {
-		method: 'DELETE'
+	return await apiRequest('/execute', {
+		method: 'POST',
+		data: {
+			flow_id: flowId,
+			interval: schedulingConfig.interval
+		}
 	});
 };
 
@@ -347,10 +335,8 @@ export const cancelFlowSchedule = async (flowId) => {
  * @returns {Promise<Object>} Export data with CSV content
  */
 export const exportPipelines = async (pipelineIds) => {
-	return await apiRequest('/pipelines/export', {
-		method: 'POST',
-		data: { pipeline_ids: pipelineIds }
-	});
+	const ids = pipelineIds.join(',');
+	return await apiRequest(`/pipelines?format=csv&ids=${ids}`);
 };
 
 /**
@@ -360,9 +346,13 @@ export const exportPipelines = async (pipelineIds) => {
  * @returns {Promise<Object>} Import result with created pipeline IDs
  */
 export const importPipelines = async (csvContent) => {
-	return await apiRequest('/pipelines/import', {
+	return await apiRequest('/pipelines', {
 		method: 'POST',
-		data: { csv_content: csvContent }
+		data: {
+			batch_import: true,
+			format: 'csv',
+			data: csvContent
+		}
 	});
 };
 
@@ -377,7 +367,7 @@ export const importPipelines = async (csvContent) => {
  * @returns {Promise<Object>} Array of context files
  */
 export const fetchContextFiles = async (pipelineId) => {
-	return await apiRequest(`/pipelines/${pipelineId}/context-files`);
+	return await apiRequest(`/files?pipeline_id=${pipelineId}`);
 };
 
 /**
@@ -391,9 +381,10 @@ export const uploadContextFile = async (pipelineId, file) => {
 	const config = getConfig();
 	const formData = new FormData();
 	formData.append('file', file);
+	formData.append('pipeline_id', pipelineId);
 
 	try {
-		const response = await fetch(`/wp-json/${config.restNamespace}/pipelines/${pipelineId}/context-files`, {
+		const response = await fetch(`/wp-json/${config.restNamespace}/files`, {
 			method: 'POST',
 			headers: {
 				'X-WP-Nonce': config.restNonce
@@ -423,14 +414,13 @@ export const uploadContextFile = async (pipelineId, file) => {
 };
 
 /**
- * Delete context file from a pipeline
+ * Delete context file
  *
- * @param {number} pipelineId - Pipeline ID
- * @param {string} fileId - File ID
+ * @param {string} filename - Filename to delete
  * @returns {Promise<Object>} Deletion confirmation
  */
-export const deleteContextFile = async (pipelineId, fileId) => {
-	return await apiRequest(`/pipelines/${pipelineId}/context-files/${fileId}`, {
+export const deleteContextFile = async (filename) => {
+	return await apiRequest(`/files/${filename}`, {
 		method: 'DELETE'
 	});
 };

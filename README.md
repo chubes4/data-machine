@@ -1,7 +1,7 @@
 === Data Machine ===
 Contributors: chubes4
 Tags: ai, automation, content, workflow, pipeline
-Requires at least: 6.2
+Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
 Stable tag: 0.1.2
@@ -185,6 +185,7 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 - `POST /datamachine/v1/pipelines` - Create pipelines
 - `DELETE /datamachine/v1/pipelines/{id}` - Delete pipelines
 - `POST /datamachine/v1/pipelines/{id}/steps` - Add steps
+- `PUT /datamachine/v1/pipelines/{id}/steps/reorder` - Reorder steps
 - `DELETE /datamachine/v1/pipelines/{id}/steps/{step_id}` - Remove steps
 
 *Files & Storage:*

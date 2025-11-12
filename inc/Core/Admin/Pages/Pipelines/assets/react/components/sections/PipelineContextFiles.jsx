@@ -93,7 +93,7 @@ export default function PipelineContextFiles({ pipelineId }) {
 		setSuccess(null);
 
 		try {
-			const response = await deleteContextFile(pipelineId, fileId);
+			const response = await deleteContextFile(fileId);
 
 			if (response.success) {
 				setSuccess(__('File deleted successfully!', 'datamachine'));

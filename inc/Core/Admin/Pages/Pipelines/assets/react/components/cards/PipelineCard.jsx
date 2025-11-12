@@ -9,9 +9,8 @@ import { Card, CardBody, CardDivider } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import PipelineHeader from './PipelineHeader';
 import PipelineSteps from './PipelineSteps';
-import PipelineContextFiles from '../sections/PipelineContextFiles';
 import FlowsSection from '../sections/FlowsSection';
-import { StepSelectionModal, ConfigureStepModal } from '../modals';
+import { StepSelectionModal, ConfigureStepModal, ContextFilesModal } from '../modals';
 import { usePipelineContext } from '../../context/PipelineContext';
 import { deletePipelineStep } from '../../utils/api';
 import { MODAL_TYPES } from '../../utils/constants';
@@ -90,6 +89,15 @@ export default function PipelineCard({ pipeline, flows }) {
 		});
 	}, [pipeline.pipeline_id, pipeline.pipeline_config, openModal]);
 
+	/**
+	 * Handle context files modal open
+	 */
+	const handleOpenContextFiles = useCallback(() => {
+		openModal(MODAL_TYPES.CONTEXT_FILES, {
+			pipelineId: pipeline.pipeline_id
+		});
+	}, [pipeline.pipeline_id, openModal]);
+
 	return (
 		<>
 			<Card className="datamachine-pipeline-card" size="large">
@@ -99,6 +107,7 @@ export default function PipelineCard({ pipeline, flows }) {
 						pipelineName={pipeline.pipeline_name}
 						onNameChange={handleNameChange}
 						onDelete={handleDelete}
+						onOpenContextFiles={handleOpenContextFiles}
 					/>
 
 					<CardDivider />
@@ -110,12 +119,6 @@ export default function PipelineCard({ pipeline, flows }) {
 						onStepAdded={handleStepAdded}
 						onStepRemoved={handleStepRemoved}
 						onStepConfigured={handleStepConfigured}
-					/>
-
-					<CardDivider />
-
-					<PipelineContextFiles
-						pipelineId={pipeline.pipeline_id}
 					/>
 
 					<CardDivider />
@@ -151,6 +154,14 @@ export default function PipelineCard({ pipeline, flows }) {
 						closeModal();
 						refreshData();
 					}}
+				/>
+			)}
+
+			{activeModal === MODAL_TYPES.CONTEXT_FILES && (
+				<ContextFilesModal
+					isOpen={true}
+					onClose={closeModal}
+					{...modalData}
 				/>
 			)}
 		</>

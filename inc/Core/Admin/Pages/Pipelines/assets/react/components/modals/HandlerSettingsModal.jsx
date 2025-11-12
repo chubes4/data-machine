@@ -85,7 +85,6 @@ export default function HandlerSettingsModal({
 
 		try {
 			const response = await updateFlowHandler(
-				flowId,
 				flowStepId,
 				handlerSlug,
 				settings

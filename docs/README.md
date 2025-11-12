@@ -12,12 +12,13 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 ### Handler Documentation
 
 #### Fetch Handlers
+- [WordPress Local](handlers/fetch/wordpress-local.md) - Local WordPress post/page content retrieval
+- [WordPress Media](handlers/fetch/wordpress-media.md) - Media library attachments with parent post content
+- [WordPress API](handlers/fetch/wordpress-api.md) - External WordPress sites via REST API
 - [RSS Feed](handlers/fetch/rss.md) - RSS/Atom feed parsing with deduplication
-- [Reddit](handlers/fetch/reddit.md) - OAuth2 subreddit fetching  
+- [Reddit](handlers/fetch/reddit.md) - OAuth2 subreddit fetching
 - [Google Sheets Fetch](handlers/fetch/google-sheets-fetch.md) - Spreadsheet data extraction
 - [Files](handlers/fetch/files.md) - Local/remote file processing
-- [WordPress Media](handlers/fetch/wordpress-media.md) - Media library attachments
-- [WordPress API](handlers/fetch/wordpress-api.md) - External WordPress REST API
 
 #### Publish Handlers  
 - [Twitter](handlers/publish/twitter.md) - Twitter publishing with media support
@@ -57,27 +58,28 @@ docs/
 │   └── database-schema.md              # Database tables and relationships
 ├── handlers/
 │   ├── fetch/
+│   │   ├── wordpress-local.md          # Local WordPress content
+│   │   ├── wordpress-media.md          # Media library attachments
+│   │   ├── wordpress-api.md            # External WordPress sites
 │   │   ├── rss.md                      # RSS feed parsing
 │   │   ├── reddit.md                   # Reddit subreddit fetching
 │   │   ├── google-sheets-fetch.md      # Spreadsheet data extraction
-│   │   ├── files.md                    # File processing
-│   │   ├── wordpress-media.md          # Media library attachments
-│   │   └── wordpress-api.md            # External WordPress sites
+│   │   └── files.md                    # File processing
 │   ├── publish/
+│   │   ├── wordpress-publish.md        # Local post creation
 │   │   ├── twitter.md                  # Twitter publishing
-│   │   ├── bluesky.md                  # Bluesky AT Protocol
 │   │   ├── facebook.md                 # Facebook Graph API
 │   │   ├── threads.md                  # Meta Threads
-│   │   ├── wordpress-publish.md        # Local post creation
+│   │   ├── bluesky.md                  # Bluesky AT Protocol
 │   │   └── google-sheets-output.md     # Spreadsheet output
 │   └── update/
 │       └── wordpress-update.md         # WordPress content updates
 ├── ai-tools/
 │   ├── tools-overview.md                # AI tools system architecture
-│   ├── google-search.md                # Web search tool
+│   ├── wordpress-post-reader.md        # Single WordPress post content retrieval
 │   ├── local-search.md                 # WordPress internal search
-│   ├── web-fetch.md                     # Web content retrieval (50K limit)
-│   └── wordpress-post-reader.md         # Single WordPress post content retrieval
+│   ├── google-search.md                # Web search tool
+│   └── web-fetch.md                    # Web content retrieval (50K limit)
 ├── admin-interface/
 │   ├── pipeline-builder.md             # Visual interface
 │   ├── settings-configuration.md       # Configuration options

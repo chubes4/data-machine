@@ -1126,9 +1126,9 @@ $providers = apply_filters('datamachine_auth_providers', []);
 
 ## Status & Rules
 
-**Status Detection**: Legacy filter removed; pending replacement health APIs
-- Values: `red` (error), `yellow` (warning), `green` (ready)
-- Contexts: `ai_step`, `handler_auth`, `wordpress_draft`, `files_status`, `subsequent_publish_step`, `pipeline_step_status`, `flow_step_status`
+**Status Detection**: Legacy filter removed
+- Previous values: `red` (error), `yellow` (warning), `green` (ready)
+- Previous contexts: `ai_step`, `handler_auth`, `wordpress_draft`, `files_status`, `subsequent_publish_step`, `pipeline_step_status`, `flow_step_status`
 
 **Status System**: Two specialized transports for optimized status refresh operations
 - **Status REST** (`GET /datamachine/v1/status`): Returns flow and pipeline status maps using `flow_id[]` / `pipeline_id[]` query parameters; reuses `flow_step_status` and `pipeline_step_status` contexts for validation

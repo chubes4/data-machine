@@ -61,7 +61,7 @@ export default function FlowStepCard({
 		setError(null);
 
 		try {
-			const response = await updateUserMessage(flowId, flowStepId, message);
+			const response = await updateUserMessage(flowStepId, message);
 
 			if (!response.success) {
 				setError(response.message || __('Failed to update user message', 'datamachine'));

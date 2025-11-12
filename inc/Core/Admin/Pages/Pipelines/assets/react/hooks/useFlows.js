@@ -35,7 +35,9 @@ export const useFlows = (pipelineId) => {
 			const response = await apiFetchFlows(pipelineId);
 
 			if (response.success) {
-				setFlows(response.data || []);
+				// Extract flows data with defensive array validation
+				const flowsData = response.data?.flows || response.data || [];
+				setFlows(Array.isArray(flowsData) ? flowsData : []);
 			} else {
 				setError(response.message || 'Failed to fetch flows');
 			}

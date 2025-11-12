@@ -548,6 +548,53 @@ class FilesRepository {
     }
 
     /**
+     * Delete entire pipeline directory and all contents
+     *
+     * Removes pipeline directory including context files, flow directories,
+     * and all nested job data. Uses WordPress filesystem API for safe deletion.
+     *
+     * @param int $pipeline_id Pipeline ID
+     * @param string $pipeline_name Pipeline name
+     * @return bool True if directory deleted or doesn't exist, false on failure
+     */
+    public function delete_pipeline_directory(int $pipeline_id, string $pipeline_name): bool {
+        $pipeline_dir = $this->get_pipeline_directory($pipeline_id, $pipeline_name);
+
+        if (!is_dir($pipeline_dir)) {
+            return true;
+        }
+
+        if (!function_exists('WP_Filesystem')) {
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
+        }
+
+        if (WP_Filesystem()) {
+            global $wp_filesystem;
+            $deleted = $wp_filesystem->rmdir($pipeline_dir, true);
+
+            if ($deleted) {
+                do_action('datamachine_log', 'info', 'Pipeline directory deleted successfully.', [
+                    'pipeline_id' => $pipeline_id,
+                    'directory_path' => $pipeline_dir
+                ]);
+            } else {
+                do_action('datamachine_log', 'error', 'Failed to delete pipeline directory.', [
+                    'pipeline_id' => $pipeline_id,
+                    'directory_path' => $pipeline_dir
+                ]);
+            }
+
+            return $deleted;
+        }
+
+        do_action('datamachine_log', 'error', 'WP_Filesystem unavailable for pipeline directory deletion.', [
+            'pipeline_id' => $pipeline_id
+        ]);
+
+        return false;
+    }
+
+    /**
      * Clean up job data packets for a specific job
      *
      * @param int $job_id Job ID
