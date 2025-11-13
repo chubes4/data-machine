@@ -39,14 +39,9 @@ function datamachine_register_pipelines_admin_page_filters() {
                         'deps' => [],
                         'media' => 'all'
                     ],
-                    'datamachine-core-modal' => [
-                        'file' => 'inc/Core/Admin/Modal/assets/css/core-modal.css',
-                        'deps' => ['wp-components'],
-                        'media' => 'all'
-                    ],
                     'datamachine-pipelines-page' => [
                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/pipelines-page.css',
-                        'deps' => ['datamachine-core-modal'],
+                        'deps' => [],
                         'media' => 'all'
                     ],
                     'datamachine-pipelines-modal' => [
@@ -93,55 +88,7 @@ function datamachine_register_pipelines_admin_page_filters() {
 
     // Pipeline auto-save hook moved to DataMachineActions.php for architectural consistency
 
-    // Pipelines page uses React modals - no AJAX modal loading needed
-    // These modal registrations are for the legacy template-based system (not actively used)
 
-    // Modal registration - Two-layer architecture: metadata only, content via datamachine_render_template
-    add_filter('datamachine_modals', function($modals) {
-        // Legacy pipeline modals - metadata only (Pipelines page uses React instead)
-        $modals['step-selection'] = [
-            'template' => 'modal/step-selection-cards',
-            'title' => __('Select Step Type', 'datamachine')
-        ];
-
-        $modals['handler-selection'] = [
-            'template' => 'modal/handler-selection-cards',
-            'title' => __('Select Handler', 'datamachine')
-        ];
-        
-        $modals['configure-step'] = [
-            'template' => 'modal/configure-step', // Extensible - steps can register their own templates
-            'title' => __('Configure Step', 'datamachine')
-        ];
-        
-        // Tool configuration modal moved to Settings page for better UX
-        
-        $modals['confirm-delete'] = [
-            'template' => 'modal/confirm-delete',
-            'title' => __('Confirm Delete', 'datamachine')
-        ];
-        
-        // Flow scheduling modal
-        $modals['flow-schedule'] = [
-            'template' => 'modal/flow-schedule',
-            'title' => __('Schedule Flow', 'datamachine')
-        ];
-        
-        // Handler-specific settings modals - direct template access
-        // WordPress handlers require input/output distinction
-        $modals['handler-settings'] = [
-            'dynamic_template' => true, // Flag for dynamic template resolution
-            'title' => __('Handler Settings', 'datamachine')
-        ];
-
-        // Handler authentication modal
-        $modals['modal/handler-auth-form'] = [
-            'template' => 'modal/handler-auth-form',
-            'title' => __('Handler Authentication', 'datamachine')
-        ];
-
-        return $modals;
-    });
 }
 
 /**

@@ -180,7 +180,7 @@ Centralized WordPress transient-based cache system:
 
 ### Admin Interface
 
-**Modern React Architecture**: The Pipelines admin page uses complete React implementation with zero jQuery/AJAX dependencies, providing a modern, maintainable frontend.
+**Modern React Architecture**: The Pipelines admin page uses complete React implementation with zero AJAX dependencies, providing a modern, maintainable frontend.
 
 **React Implementation**:
 - 6,591 lines of React code built with @wordpress/element and @wordpress/components
@@ -202,7 +202,7 @@ Centralized WordPress transient-based cache system:
 - Deleted 2 AJAX endpoint classes (PipelinePageAjax, PipelineStatusAjax)
 
 **Complete REST API Integration**:
-All admin pages now use REST API architecture with zero jQuery/AJAX dependencies.
+All admin pages now use REST API architecture with zero AJAX dependencies.
 
 **Security Model**: All admin operations require `manage_options` capability with WordPress nonce validation.
 

@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from '@wordpress/element';
 import { fetchPipelines as apiFetchPipelines } from '../utils/api';
+import { usePipelineContext } from '../context/PipelineContext';
 
 /**
  * Hook for fetching and managing pipelines
@@ -17,7 +18,7 @@ export const usePipelines = ( pipelineId = null ) => {
 	const [ pipelines, setPipelines ] = useState( [] );
 	const [ loading, setLoading ] = useState( true );
 	const [ error, setError ] = useState( null );
-	const [ refreshTrigger, setRefreshTrigger ] = useState( 0 );
+	const { refreshTrigger } = usePipelineContext();
 
 	/**
 	 * Fetch pipelines from API
@@ -60,13 +61,6 @@ export const usePipelines = ( pipelineId = null ) => {
 	}, [ pipelineId, refreshTrigger ] );
 
 	/**
-	 * Trigger data refetch
-	 */
-	const refetch = useCallback( () => {
-		setRefreshTrigger( ( prev ) => prev + 1 );
-	}, [] );
-
-	/**
 	 * Fetch on mount and when dependencies change
 	 */
 	useEffect( () => {
@@ -77,6 +71,5 @@ export const usePipelines = ( pipelineId = null ) => {
 		pipelines,
 		loading,
 		error,
-		refetch,
 	};
 };

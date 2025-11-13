@@ -15,7 +15,7 @@ Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and mult
 
 **API Architecture:**
 - REST API: 10 endpoint files implemented (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users)
-- **Pipelines Page**: React-only architecture, zero jQuery/AJAX (complete migration, 2,223 lines jQuery removed, 6 PHP templates removed, 2 AJAX endpoints removed)
+- **Pipelines Page**: React-only architecture, zero jQuery/AJAX (complete migration, 2,223 lines jQuery removed, 6 PHP templates removed, all AJAX endpoints eliminated)
 - **Jobs/Logs Pages**: REST API integration complete
 - **Settings Page**: REST API migration complete
 - Migration Status: Full REST API migration complete for all admin pages with React frontend modernization
@@ -949,7 +949,7 @@ composer test       # Run tests (PHPUnit configured, test files pending implemen
 - **Handlers.php**: Cross-cutting handler filters for shared functionality (timeframe parsing, keyword matching, data packet creation)
 - **DataPacket.php**: Centralized data packet creation with standardized structure and timestamp management
 - **Comment Cleanup**: Engine filters maintain clean, focused documentation without redundant comments
-- **Atomic Operations**: Complete creation workflows with proper cache invalidation and AJAX response handling
+- **Atomic Operations**: Complete creation workflows with proper cache invalidation and REST API response handling
 - **Permission Security**: All engine operations require `manage_options` capability with consistent validation
 
 **Centralized Handler System**: The `Handlers.php` filter provides shared functionality across multiple handlers:

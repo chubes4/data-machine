@@ -18,7 +18,7 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 
 **Features**:
 - **Modern React Admin Interface**: Complete Pipelines page rebuild with 6,591 lines of React code using @wordpress/element and @wordpress/components
-- **Zero jQuery/AJAX Architecture**: 2,223 lines of jQuery removed, 6 PHP templates eliminated, 2 AJAX endpoints removed
+- **Zero jQuery/AJAX Architecture**: 2,223 lines of jQuery removed, 6 PHP templates eliminated, all AJAX endpoints eliminated
 - **Tool-First AI**: Enhanced multi-turn conversation management with duplicate detection and temporal context
 - **Visual Pipeline Builder**: Real-time updates with 50+ React components, custom hooks, and Context API state management
 - **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter with 5-tier directive system
@@ -321,7 +321,7 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
   - Modern state management with custom hooks (usePipelines, useFlows, useStepTypes, useHandlers)
   - Context API for global state (PipelineContext)
   - Complete REST API integration for all data operations
-  - Zero jQuery/AJAX dependencies (2,223 lines removed)
+  - Zero jQuery/AJAX dependencies (2,223 lines removed, all AJAX endpoints eliminated)
 - **PSR-4 Autoloading**: Composer-managed dependency structure
 - **Filter-Based Service Discovery**: WordPress hooks for component registration
 - **Unified Handler Filter System**:

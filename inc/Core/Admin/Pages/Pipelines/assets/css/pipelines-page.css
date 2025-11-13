@@ -165,24 +165,7 @@
     position: relative;
 }
 
-/* Expandable card states */
-.datamachine-step-card.datamachine-expanded {
-    height: auto;
-    overflow: visible;
-    transition: all 0.3s ease;
-}
 
-/* AI Step horizontal expansion - pattern-aligned container expansion */
-.datamachine-step-container[data-step-type="ai"] .datamachine-step-card.datamachine-expanded {
-    min-width: auto;        /* Override fixed 150px width */
-    max-width: none;        /* Remove width constraints */  
-    width: 200px;           /* Expand to 200px */
-}
-
-/* Expand container to accommodate wider AI card */
-.datamachine-step-container[data-step-type="ai"]:has(.datamachine-step-card.datamachine-expanded) {
-    flex: 0 0 220px;        /* Expand from 160px to 220px */
-}
 
 /* AI Prompt Display and Editing */
 .datamachine-prompt-display {
@@ -249,34 +232,7 @@
     font-style: italic;
 }
 
-.datamachine-expand-toggle {
-    position: absolute;
-    bottom: 4px;
-    right: 4px;
-    padding: 2px 4px;
-    font-size: 11px;
-    background: rgba(255,255,255,0.9);
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    cursor: pointer;
-    z-index: 1;
-}
 
-.datamachine-expand-toggle:hover {
-    background: #fff;
-    border-color: #999;
-}
-
-.datamachine-expand-toggle .dashicons {
-    width: 12px;
-    height: 12px;
-    font-size: 12px;
-}
-
-/* Initial state - expansion toggle is hidden by default until JavaScript determines if it's needed */
-.datamachine-expand-toggle--hidden {
-    display: none;
-}
 
 
 .datamachine-step-header {
@@ -498,14 +454,7 @@
         width: 100%;
     }
     
-    /* AI step expansion disabled on mobile - follows responsive pattern */
-    .datamachine-step-container[data-step-type="ai"] .datamachine-step-card.datamachine-expanded {
-        width: auto !important; /* Disable expansion on mobile */
-    }
-    
-    .datamachine-step-container[data-step-type="ai"]:has(.datamachine-step-card.datamachine-expanded) {
-        flex: 1 !important;     /* Mobile flex pattern */
-    }
+
 }
 
 /* Empty step styling - minimal visual distinction */

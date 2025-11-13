@@ -125,13 +125,23 @@ export default function ConfigureStepModal( {
 		];
 		const providerData = aiProviders[ provider ];
 
-		if ( providerData.models && Array.isArray( providerData.models ) ) {
-			providerData.models.forEach( ( modelData ) => {
-				options.push( {
-					value: modelData.id,
-					label: modelData.name || modelData.id,
+		if ( providerData.models ) {
+			// Support both array-of-objects and key/value maps to stay compatible with library output
+			if ( Array.isArray( providerData.models ) ) {
+				providerData.models.forEach( ( modelData ) => {
+					options.push( {
+						value: modelData.id,
+						label: modelData.name || modelData.id,
+					} );
 				} );
-			} );
+			} else if ( typeof providerData.models === 'object' ) {
+				Object.entries( providerData.models ).forEach( ( [ modelId, modelLabel ] ) => {
+					options.push( {
+						value: modelId,
+						label: modelLabel || modelId,
+					} );
+				} );
+			}
 		}
 
 		return options;
