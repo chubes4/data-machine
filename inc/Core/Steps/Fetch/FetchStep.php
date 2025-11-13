@@ -6,17 +6,24 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-
 /**
- * Executes fetch handlers to collect data from external sources.
+ * Data fetching step for Data Machine pipelines.
+ *
+ * @package DataMachine
  */
 class FetchStep {
 
-    public function execute(array $parameters): array {
-        $job_id = $parameters['job_id'];
-        $flow_step_id = $parameters['flow_step_id'];
-        $data = $parameters['data'] ?? [];
-        $flow_step_config = $parameters['flow_step_config'] ?? [];
+    /**
+     * Execute data fetching for the current step.
+     *
+     * @param int $job_id Current job ID
+     * @param string $flow_step_id Current flow step ID
+     * @param array $data Current data packet array
+     * @param array $flow_step_config Flow step configuration
+     * @param array $engine_data Engine data array
+     * @return array Updated data packet array
+     */
+    public function execute(int $job_id, string $flow_step_id, array $data, array $flow_step_config, array $engine_data): array {
         try {
             do_action('datamachine_log', 'debug', 'Fetch Step: Starting data collection', [
                 'flow_step_id' => $flow_step_id,

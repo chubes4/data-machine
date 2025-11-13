@@ -47,7 +47,7 @@ class Logs
     {
         // Set log file path
         $upload_dir = wp_upload_dir();
-        $this->log_file_path = $upload_dir['basedir'] . '/datamachine-logs/datamachine.log';
+        $this->log_file_path = $upload_dir['basedir'] . DATAMACHINE_LOG_FILE;
 
         // Admin page registration now handled by LogsFilters.php
 

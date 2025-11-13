@@ -46,22 +46,39 @@ class Providers {
 	 * @since 0.1.3
 	 * @return \WP_REST_Response Providers response
 	 */
-	public static function handle_get_providers() {
-		// Get providers from AI HTTP Client library
-		$http_providers = apply_filters('ai_http_providers', []);
+ 	public static function handle_get_providers() {
+		try {
+			// Use AI HTTP Client library's filters directly
+			$library_providers = apply_filters('ai_providers', []);
 
-		$providers = [];
-		foreach ($http_providers as $key => $provider_data) {
-			$providers[$key] = [
-				'label' => $provider_data['label'] ?? ucfirst($key),
-				'models' => $provider_data['models'] ?? []
-			];
+			$providers = [];
+			foreach ($library_providers as $key => $provider_info) {
+				// Get models for this provider via filter
+				$models = apply_filters('ai_models', $key);
+
+				$providers[$key] = [
+					'label' => $provider_info['name'] ?? ucfirst($key),
+					'models' => $models
+				];
+			}
+
+			return rest_ensure_response([
+				'success' => true,
+				'providers' => $providers
+			]);
+
+		} catch (\Exception $e) {
+			do_action('datamachine_log', 'error', 'Failed to fetch AI providers from library', [
+				'error' => $e->getMessage(),
+				'exception' => $e
+			]);
+
+			return new \WP_Error(
+				'providers_api_error',
+				__('Failed to communicate with AI HTTP Client library.', 'datamachine'),
+				['status' => 500]
+			);
 		}
-
-		return rest_ensure_response([
-			'success' => true,
-			'providers' => $providers
-		]);
 	}
 }
 

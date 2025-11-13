@@ -109,6 +109,11 @@ function datamachine_register_execution_engine() {
 
     add_action( 'datamachine_execute_step', function( $job_id, $flow_step_id, $data = null ) {
 
+        // Set execution context for complete runtime state access
+        \DataMachine\Engine\ExecutionContext::$job_id = $job_id;
+        \DataMachine\Engine\ExecutionContext::$flow_step_id = $flow_step_id;
+        \DataMachine\Engine\ExecutionContext::$data = $data ?: [];
+
         try {
             $repositories = apply_filters('datamachine_files_repository', []);
             $repository = $repositories['files'] ?? null;
@@ -126,7 +131,7 @@ function datamachine_register_execution_engine() {
                     return false;
                 }
             }
-            $flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
+            $flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id, $job_id);
             if (!$flow_step_config) {
                 do_action('datamachine_log', 'error', 'Failed to load flow step configuration', [
                     'job_id' => $job_id,
@@ -158,21 +163,18 @@ function datamachine_register_execution_engine() {
             
             $step_class = $step_definition['class'] ?? '';
             $flow_step = new $step_class();
-            
-            $parameters = [
-                'job_id' => $job_id,
-                'flow_step_id' => $flow_step_id,
-                'flow_step_config' => $flow_step_config,
-                'data' => $data ?: []
-            ];
 
-            add_filter('datamachine_current_flow_step_id', function() use ($flow_step_id) { return $flow_step_id; }, 100);
-            add_filter('datamachine_current_job_id', function() use ($job_id) { return $job_id; }, 100);
+            // Get engine data for step execution
+            $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 
-            $data = $flow_step->execute($parameters);
+            // Execute step with explicit parameters
+            $data = $flow_step->execute($job_id, $flow_step_id, $data, $flow_step_config, $engine_data);
 
-            remove_all_filters('datamachine_current_flow_step_id', 100);
-            remove_all_filters('datamachine_current_job_id', 100);
+            // Update execution context with modified data
+            \DataMachine\Engine\ExecutionContext::$data = $data;
+
+            // Clear execution context
+            \DataMachine\Engine\ExecutionContext::clear();
 
             $step_success = ! empty( $data );
             if ( $step_success ) {

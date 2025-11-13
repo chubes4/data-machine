@@ -38,9 +38,9 @@ export default function ConfigureStepModal( {
 	onSuccess,
 } ) {
 	const [ provider, setProvider ] = useState(
-		currentConfig?.ai_provider || ''
+		currentConfig?.provider || ''
 	);
-	const [ model, setModel ] = useState( currentConfig?.ai_model || '' );
+	const [ model, setModel ] = useState( currentConfig?.model || '' );
 	const [ systemPrompt, setSystemPrompt ] = useState(
 		currentConfig?.system_prompt || ''
 	);
@@ -77,8 +77,8 @@ export default function ConfigureStepModal( {
 	 */
 	useEffect( () => {
 		if ( isOpen ) {
-			setProvider( currentConfig?.ai_provider || '' );
-			setModel( currentConfig?.ai_model || '' );
+			setProvider( currentConfig?.provider || '' );
+			setModel( currentConfig?.model || '' );
 			setSystemPrompt( currentConfig?.system_prompt || '' );
 			setSelectedTools( currentConfig?.enabled_tools || [] );
 			setError( null );
@@ -194,8 +194,8 @@ export default function ConfigureStepModal( {
 	 * Check if config changed
 	 */
 	const hasChanged =
-		provider !== ( currentConfig?.ai_provider || '' ) ||
-		model !== ( currentConfig?.ai_model || '' ) ||
+		provider !== ( currentConfig?.provider || '' ) ||
+		model !== ( currentConfig?.model || '' ) ||
 		systemPrompt !== ( currentConfig?.system_prompt || '' ) ||
 		JSON.stringify( selectedTools ) !==
 			JSON.stringify( currentConfig?.enabled_tools || [] );

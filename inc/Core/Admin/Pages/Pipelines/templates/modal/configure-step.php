@@ -54,20 +54,12 @@ $step_title = $step_config_data['label'] ?? ucfirst(str_replace('_', ' ', $step_
         $selected_provider = $saved_step_config['provider'] ?? '';
         $selected_model = $saved_step_config['model'] ?? '';
         
-        if (empty($selected_model) && !empty($saved_step_config['providers'][$selected_provider]['model'])) {
+        if (empty($selected_model) && !empty($saved_step_config['providers'][$selected_provider]['model'])):
             $selected_model = $saved_step_config['providers'][$selected_provider]['model'];
-        }
-        echo wp_kses(apply_filters('ai_render_component', '', [
-            'selected_provider' => $selected_provider,
-            'selected_model' => $selected_model,
-            'show_save_button' => false, // Hide built-in save button - Data Machine provides custom save
-            // Pass step context for tool configuration navigation
-            'step_context' => [
-                'step_type' => $step_type ?? 'ai',
-                'pipeline_id' => $pipeline_id ?? '',
-                'pipeline_step_id' => $pipeline_step_id ?? ''
-            ]
-        ]), datamachine_allowed_html());
+        endif;
+        // AI provider configuration now handled by React component
+        // The ai_render_component filter has been removed from the library
+        // This should be implemented as a React component in the frontend
     elseif ($step_config):
         ?>
         <div class="datamachine-generic-step-config">

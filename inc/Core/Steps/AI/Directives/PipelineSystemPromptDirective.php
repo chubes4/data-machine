@@ -46,7 +46,7 @@ class PipelineSystemPromptDirective {
         }
 
         // Extract current pipeline step ID for "YOU ARE HERE" context
-        $current_flow_step_id = apply_filters('datamachine_current_flow_step_id', null);
+        $current_flow_step_id = \DataMachine\Engine\ExecutionContext::$flow_step_id;
         $current_pipeline_step_id = null;
         if ($current_flow_step_id) {
             $flow_parts = apply_filters('datamachine_split_flow_step_id', null, $current_flow_step_id);
@@ -94,7 +94,7 @@ class PipelineSystemPromptDirective {
         }
 
         // Get flow_id from current execution context
-        $current_flow_step_id = apply_filters('datamachine_current_flow_step_id', null);
+        $current_flow_step_id = \DataMachine\Engine\ExecutionContext::$flow_step_id;
         if (!$current_flow_step_id) {
             do_action('datamachine_log', 'debug', 'Workflow visualization: No flow context available');
             return '';
@@ -179,7 +179,8 @@ class PipelineSystemPromptDirective {
                 'context' => $context,
                 'pipeline_step_id' => $pipeline_step_id
             ]);
-            $job_id = apply_filters('datamachine_current_job_id', null);
+            // Use execution context for job_id access in error scenarios
+            $job_id = \DataMachine\Engine\ExecutionContext::$job_id ?? null;
             if ($job_id) {
                 do_action('datamachine_fail_job', $job_id, 'missing_pipeline_context', [
                     'context' => $context,

@@ -8,7 +8,7 @@
  *
  * ARCHITECTURE:
  * - datamachine_log action (DataMachineActions.php): Operations that modify state (write, clear, cleanup, set_level)
- * - datamachine_log_file filter: Operations that get information (get_recent, get_size, get_path, get_level, get_available_levels)
+ * - datamachine_log_file filter: Operations that get configuration information (get_level, get_available_levels)
  *
  * @package DataMachine
  * @subpackage Engine\Filters
@@ -28,7 +28,7 @@ use Monolog\Level;
 /**
  * Register logger-related filters.
  * 
- * Registers datamachine_log_file filter for information retrieval operations.
+ * Registers datamachine_log_file filter for configuration retrieval operations.
  * Action operations (write, clear, cleanup, set_level) handled in DataMachineActions.php.
  *
  * @since 0.1.0
@@ -36,12 +36,6 @@ use Monolog\Level;
 function datamachine_register_logger_filters() {
     add_filter('datamachine_log_file', function($result, $operation, $param1 = null) {
         switch ($operation) {
-            case 'get_recent':
-                return datamachine_get_recent_logs($param1 ?? 100);
-            case 'get_size':
-                return datamachine_get_log_file_size();
-            case 'get_path':
-                return datamachine_get_log_file_path();
             case 'get_level':
                 return datamachine_get_log_level();
             case 'get_available_levels':
@@ -179,8 +173,7 @@ function datamachine_log_critical(string|\Stringable $message, array $context = 
 
 function datamachine_get_log_file_path(): string {
     $upload_dir = wp_upload_dir();
-    $log_dir = $upload_dir['basedir'] . '/datamachine-logs';
-    return $log_dir . '/datamachine.log';
+    return $upload_dir['basedir'] . DATAMACHINE_LOG_FILE;
 }
 
 function datamachine_get_log_file_size(): float {
@@ -221,7 +214,7 @@ function datamachine_get_recent_logs(int $lines = 100): array {
  */
 function datamachine_cleanup_log_files($max_size_mb = 10, $max_age_days = 30): bool {
     $upload_dir = wp_upload_dir();
-    $log_dir = $upload_dir['basedir'] . '/datamachine-logs';
+    $log_dir = $upload_dir['basedir'] . DATAMACHINE_LOG_DIR;
 
     if (!file_exists($log_dir)) {
         return false;
@@ -253,16 +246,15 @@ function datamachine_cleanup_log_files($max_size_mb = 10, $max_age_days = 30): b
  * @return bool True on success
  */
 function datamachine_clear_log_files(): bool {
-    $upload_dir = wp_upload_dir();
-    $log_dir = $upload_dir['basedir'] . '/datamachine-logs';
-
-    if (!file_exists($log_dir)) {
-        return false;
-    }
-
     $log_file = datamachine_get_log_file_path();
 
-    // Clear log file contents (don't delete the file)
+    // Ensure directory exists
+    $log_dir = dirname($log_file);
+    if (!file_exists($log_dir)) {
+        wp_mkdir_p($log_dir);
+    }
+
+    // Clear log file contents (creates file if it doesn't exist)
     $clear_result = file_put_contents($log_file, '');
 
     if ($clear_result !== false) {

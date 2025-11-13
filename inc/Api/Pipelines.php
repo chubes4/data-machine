@@ -257,13 +257,13 @@ class Pipelines {
 					'sanitize_callback' => 'absint',
 					'description' => __('Pipeline ID for context', 'datamachine'),
 				],
-				'ai_provider' => [
+				'provider' => [
 					'required' => false,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
 					'description' => __('AI provider slug', 'datamachine'),
 				],
-				'ai_model' => [
+				'model' => [
 					'required' => false,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
@@ -921,8 +921,8 @@ class Pipelines {
 		}
 
 		// Collect AI configuration parameters
-		$ai_provider = sanitize_text_field($request->get_param('ai_provider'));
-		$ai_model = sanitize_text_field($request->get_param('ai_model'));
+		$ai_provider = sanitize_text_field($request->get_param('provider'));
+		$ai_model = sanitize_text_field($request->get_param('model'));
 		$ai_api_key = sanitize_text_field($request->get_param('ai_api_key'));
 		$enabled_tools_raw = $request->get_param('enabled_tools');
 
@@ -971,18 +971,22 @@ class Pipelines {
 
 		// Store API key if provided
 		if (!empty($ai_api_key) && !empty($ai_provider)) {
-			$all_keys = apply_filters('ai_provider_api_keys', null);
-			if (!is_array($all_keys)) {
-				$all_keys = [];
-			}
-			$all_keys[$ai_provider] = $ai_api_key;
-			apply_filters('ai_provider_api_keys', $all_keys);
+			try {
+				// Use AI HTTP Client library's filters directly to save API key
+				$all_keys = apply_filters('ai_provider_api_keys', null);
+				$all_keys[$ai_provider] = $ai_api_key;
+				apply_filters('ai_provider_api_keys', $all_keys);
 
-			do_action('datamachine_log', 'debug', 'API key saved via ai_provider_api_keys filter', [
-				'provider' => $ai_provider,
-				'keys_count' => count($all_keys),
-				'api_key_length' => strlen($ai_api_key)
-			]);
+				do_action('datamachine_log', 'debug', 'API key saved via AI HTTP Client filters', [
+					'provider' => $ai_provider,
+					'api_key_length' => strlen($ai_api_key)
+				]);
+			} catch (Exception $e) {
+				do_action('datamachine_log', 'error', 'Exception when saving API key', [
+					'provider' => $ai_provider,
+					'exception' => $e->getMessage()
+				]);
+			}
 		}
 
 		// Get pipeline and merge configuration

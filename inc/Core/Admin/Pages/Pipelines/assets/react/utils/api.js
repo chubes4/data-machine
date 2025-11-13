@@ -187,8 +187,8 @@ export const updateSystemPrompt = async (
 	return await apiRequest( `/pipelines/steps/${ stepId }/config`, {
 		method: 'PUT',
 		data: {
-			ai_provider: provider,
-			ai_model: model,
+			provider: provider,
+			model: model,
 			system_prompt: prompt,
 			enabled_tools: enabledTools,
 		},

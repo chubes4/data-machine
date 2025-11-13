@@ -29,15 +29,6 @@ export default function EmptyFlowCard( { pipelineId, onAddFlow } ) {
 				marginBottom: '20px',
 			} }
 		>
-			<div
-				style={ {
-					fontSize: '48px',
-					color: '#c3c4c7',
-					marginBottom: '16px',
-				} }
-			>
-				+
-			</div>
 			<Button
 				variant="secondary"
 				onClick={ () => onAddFlow && onAddFlow( pipelineId ) }

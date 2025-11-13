@@ -150,18 +150,30 @@ function datamachine_register_pipelines_admin_page_filters() {
  * @return array AI providers with models
  */
 function datamachine_get_ai_providers_for_react() {
-    // Get AI providers from HTTP client library
-    $http_providers = apply_filters('ai_http_providers', []);
+    try {
+        // Use AI HTTP Client library's filters directly
+        $library_providers = apply_filters('ai_providers', []);
 
-    $providers = [];
-    foreach ($http_providers as $key => $provider_data) {
-        $providers[$key] = [
-            'label' => $provider_data['label'] ?? ucfirst($key),
-            'models' => $provider_data['models'] ?? []
-        ];
+        $providers = [];
+        foreach ($library_providers as $key => $provider_info) {
+            // Get models for this provider via filter
+            $models = apply_filters('ai_models', $key);
+
+            $providers[$key] = [
+                'label' => $provider_info['name'] ?? ucfirst($key),
+                'models' => $models
+            ];
+        }
+
+        return $providers;
+
+    } catch (\Exception $e) {
+        do_action('datamachine_log', 'error', 'Failed to get AI providers for React', [
+            'error' => $e->getMessage(),
+            'exception' => $e
+        ]);
+        return [];
     }
-
-    return $providers;
 }
 
 /**

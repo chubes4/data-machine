@@ -192,17 +192,40 @@ function datamachine_register_database_filters() {
         return $step_config;
     }, 10, 2);
     
-    add_filter('datamachine_get_flow_step_config', function($default, $flow_step_id) {
-        $job_id = apply_filters('datamachine_current_job_id', null);
+    add_filter('datamachine_get_flow_step_config', function($default, $flow_step_id, $job_id = null) {
+        // Try engine_data first (during execution context)
+        if ($job_id) {
+            $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+            $flow_config = $engine_data['flow_config'] ?? [];
+            $step_config = $flow_config[$flow_step_id] ?? [];
+            if (!empty($step_config)) {
+                return $step_config;
+            }
+        }
 
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
-        $flow_config = $engine_data['flow_config'] ?? [];
+        // Fallback: parse flow_step_id and get from flow (admin/REST context)
+        $parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
+        if ($parts && isset($parts['flow_id'])) {
+            $flow = apply_filters('datamachine_get_flow', null, $parts['flow_id']);
+            if ($flow && isset($flow['flow_config'])) {
+                $flow_config = $flow['flow_config'];
+                return $flow_config[$flow_step_id] ?? [];
+            }
+        }
 
-        return $flow_config[$flow_step_id] ?? [];
-    }, 10, 2);
+        return [];
+    }, 10, 3);
     
     add_filter('datamachine_get_next_flow_step_id', function($default, $flow_step_id) {
-        $job_id = apply_filters('datamachine_current_job_id', null);
+        $job_id = \DataMachine\Engine\ExecutionContext::$job_id;
+
+        if (!$job_id) {
+            do_action('datamachine_log', 'error', 'Step navigation called outside execution context', [
+                'filter' => 'datamachine_get_next_flow_step_id',
+                'flow_step_id' => $flow_step_id
+            ]);
+            return null;
+        }
 
         $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $flow_config = $engine_data['flow_config'] ?? [];
@@ -225,7 +248,15 @@ function datamachine_register_database_filters() {
     }, 10, 2);
     
     add_filter('datamachine_get_previous_flow_step_id', function($default, $flow_step_id) {
-        $job_id = apply_filters('datamachine_current_job_id', null);
+        $job_id = \DataMachine\Engine\ExecutionContext::$job_id;
+
+        if (!$job_id) {
+            do_action('datamachine_log', 'error', 'Step navigation called outside execution context', [
+                'filter' => 'datamachine_get_previous_flow_step_id',
+                'flow_step_id' => $flow_step_id
+            ]);
+            return null;
+        }
 
         $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $flow_config = $engine_data['flow_config'] ?? [];

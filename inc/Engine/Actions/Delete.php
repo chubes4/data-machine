@@ -537,16 +537,17 @@ class Delete {
      *
      * @since 1.0.0
      */
-     public function handle_logs_deletion() {
-         $log_file = apply_filters('datamachine_log_file', null, 'get', null);
+      public function handle_logs_deletion() {
+          $log_file = datamachine_get_log_file_path();
 
-         if (!$log_file || !file_exists($log_file)) {
-             return true; // No file to clear is not an error
-         }
+          // Ensure directory exists
+          $log_dir = dirname($log_file);
+          if (!file_exists($log_dir)) {
+              wp_mkdir_p($log_dir);
+          }
 
-         $result = file_put_contents($log_file, '');
-
-         return $result !== false;
-     }
+          $result = file_put_contents($log_file, '');
+          return $result !== false;
+      }
 
 }

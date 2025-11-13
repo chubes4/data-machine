@@ -154,8 +154,9 @@ $enabled_pages = datamachine_get_enabled_admin_pages(); // Direct function acces
 $enabled_tools = datamachine_get_enabled_general_tools(); // Direct function access
 
 // Context Management
-apply_filters('datamachine_current_flow_step_id', null);
-apply_filters('datamachine_current_job_id', null);
+\DataMachine\ExecutionContext::$job_id; // Current job ID during execution
+\DataMachine\ExecutionContext::$flow_step_id; // Current flow step ID during execution
+\DataMachine\ExecutionContext::clear(); // Clear execution context
 $context = SiteContext::get_context(); // Direct class access
 SiteContext::clear_cache(); // Direct class access
 

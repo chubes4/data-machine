@@ -231,19 +231,9 @@ function datamachine_register_utility_filters() {
         ];
     }, 10, 2);
     
-    add_action('ai_api_error', function($error_data) {
-        do_action('datamachine_log', 'error', $error_data['message'], $error_data);
-    });
-    
     // Global execution context for directives
-    add_filter('datamachine_current_flow_step_id', function($default) {
-        return $default;
-    }, 5, 1);
 
-    add_filter('datamachine_current_job_id', function($default) {
-        return $default;
-    }, 5, 1);
 
-    
+
     
 }

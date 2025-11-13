@@ -18,7 +18,7 @@ $active_tab = 'admin';
 if (isset($_GET['tab'])) {
     $active_tab = sanitize_key($_GET['tab']);
 }
-$valid_tabs = ['admin', 'agent', 'wordpress'];
+$valid_tabs = ['admin', 'agent', 'wordpress', 'ai-providers'];
 if (!in_array($active_tab, $valid_tabs)) {
     $active_tab = 'admin';
 }
@@ -37,9 +37,13 @@ if (!in_array($active_tab, $valid_tabs)) {
            class="nav-tab <?php echo $active_tab === 'agent' ? 'nav-tab-active' : ''; ?>">
             <?php esc_html_e('Agent', 'datamachine'); ?>
         </a>
-        <a href="?page=datamachine-settings&tab=wordpress" 
+        <a href="?page=datamachine-settings&tab=wordpress"
            class="nav-tab <?php echo $active_tab === 'wordpress' ? 'nav-tab-active' : ''; ?>">
             <?php esc_html_e('WordPress', 'datamachine'); ?>
+        </a>
+        <a href="?page=datamachine-settings&tab=ai-providers"
+           class="nav-tab <?php echo $active_tab === 'ai-providers' ? 'nav-tab-active' : ''; ?>">
+            <?php esc_html_e('AI Providers', 'datamachine'); ?>
         </a>
     </h2>
     
@@ -57,6 +61,10 @@ if (!in_array($active_tab, $valid_tabs)) {
         
         <div id="datamachine-tab-wordpress" class="datamachine-tab-content <?php echo $active_tab === 'wordpress' ? 'active' : ''; ?>">
             <?php echo wp_kses(apply_filters('datamachine_render_template', '', 'page/wordpress-tab'), datamachine_allowed_html()); ?>
+        </div>
+
+        <div id="datamachine-tab-ai-providers" class="datamachine-tab-content <?php echo $active_tab === 'ai-providers' ? 'active' : ''; ?>">
+            <?php echo wp_kses(apply_filters('datamachine_render_template', '', 'page/ai-providers-tab'), datamachine_allowed_html()); ?>
         </div>
         
         <div class="datamachine-submit-container">

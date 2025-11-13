@@ -28,15 +28,6 @@ export default function EmptyStepCard( { pipelineId, onAddStep } ) {
 				width: '100%',
 			} }
 		>
-			<div
-				style={ {
-					fontSize: '48px',
-					color: '#c3c4c7',
-					marginBottom: '16px',
-				} }
-			>
-				+
-			</div>
 			<Button
 				variant="secondary"
 				onClick={ () => onAddStep && onAddStep( pipelineId ) }

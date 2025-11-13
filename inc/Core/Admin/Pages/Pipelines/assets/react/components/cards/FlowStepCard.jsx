@@ -166,12 +166,12 @@ export default function FlowStepCard( {
 								<strong>
 									{ __( 'AI Provider:', 'datamachine' ) }
 								</strong>{ ' ' }
-								{ aiConfig.ai_provider || 'Not configured' }
+								{ aiConfig.provider || 'Not configured' }
 								{ ' | ' }
 								<strong>
 									{ __( 'Model:', 'datamachine' ) }
 								</strong>{ ' ' }
-								{ aiConfig.ai_model || 'Not configured' }
+								{ aiConfig.model || 'Not configured' }
 							</div>
 
 							<TextareaControl

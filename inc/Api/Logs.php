@@ -134,7 +134,7 @@ class Logs {
 		$mode = $request->get_param('mode');
 		$limit = $request->get_param('limit');
 
-		$log_file = apply_filters('datamachine_log_file', null, 'get_path');
+		$log_file = datamachine_get_log_file_path();
 
 		// Check if log file exists
 		if (!file_exists($log_file)) {
@@ -195,7 +195,7 @@ class Logs {
 	 * GET /datamachine/v1/logs
 	 */
 	public static function handle_get_metadata($request) {
-		$log_file_path = apply_filters('datamachine_log_file', null, 'get_path');
+		$log_file_path = datamachine_get_log_file_path();
 		$log_file_exists = file_exists($log_file_path);
 		$log_file_size = $log_file_exists ? filesize($log_file_path) : 0;
 

@@ -39,7 +39,7 @@ class ToolDefinitionsDirective {
             return $request;
         }
 
-    $flow_step_id = apply_filters('datamachine_current_flow_step_id', null);
+    $flow_step_id = \DataMachine\Engine\ExecutionContext::$flow_step_id;
 
     $directive = self::generate_dynamic_directive($tools, $request, $pipeline_step_id, $flow_step_id);
 

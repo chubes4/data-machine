@@ -4,6 +4,8 @@
  * Plugin URI:      https://wordpress.org/plugins/datamachine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
  * Version:         0.1.2
+ * Requires at least: 6.0
+ * Requires PHP:     8.0
  * Author:          Chris Huber
  * Author URI:      https://chubes.net
  * Text Domain:     datamachine
@@ -23,6 +25,10 @@ define( 'DATAMACHINE_VERSION', '0.1.2' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
+
+// Log file constants
+define( 'DATAMACHINE_LOG_DIR', '/datamachine-logs' );
+define( 'DATAMACHINE_LOG_FILE', '/datamachine-logs/datamachine.log' );
 
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -97,7 +103,7 @@ function activate_datamachine() {
 
 	// Create log directory during activation
 	$upload_dir = wp_upload_dir();
-	$log_dir = $upload_dir['basedir'] . '/datamachine-logs';
+	$log_dir = $upload_dir['basedir'] . DATAMACHINE_LOG_DIR;
 	if (!file_exists($log_dir)) {
 		$created = wp_mkdir_p($log_dir);
 		if (!$created) {

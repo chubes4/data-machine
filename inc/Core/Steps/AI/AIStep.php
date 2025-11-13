@@ -20,14 +20,14 @@ class AIStep {
     /**
      * Execute multi-turn AI conversation with tool calling support.
      *
-     * @param array $parameters Standard step parameters (job_id, flow_step_id, data, flow_step_config)
+     * @param int $job_id Current job ID
+     * @param string $flow_step_id Current flow step ID
+     * @param array $data Current data packet array
+     * @param array $flow_step_config Flow step configuration
+     * @param array $engine_data Engine data array
      * @return array Updated data packet array
      */
-    public function execute(array $parameters): array {
-        $job_id = $parameters['job_id'];
-        $flow_step_id = $parameters['flow_step_id'];
-        $data = $parameters['data'] ?? [];
-        $flow_step_config = $parameters['flow_step_config'] ?? [];
+    public function execute(int $job_id, string $flow_step_id, array $data, array $flow_step_config, array $engine_data): array {
         try {
             $user_message = trim($flow_step_config['user_message'] ?? '');
 
@@ -80,7 +80,7 @@ class AIStep {
                 throw new \RuntimeException("AI Agent requires pipeline_step_id from pipeline configuration for step-aware AI client operation");
             }
             $pipeline_step_id = $flow_step_config['pipeline_step_id'];
-            
+
             $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id);
 
             $previous_flow_step_id = apply_filters('datamachine_get_previous_flow_step_id', null, $flow_step_id);
@@ -238,8 +238,8 @@ class AIStep {
                         $unified_parameters = [
                             'data' => $data,
                             'flow_step_config' => $flow_step_config,
-                            'job_id' => $parameters['job_id'],
-                            'flow_step_id' => $parameters['flow_step_id']
+                            'job_id' => $job_id,
+                            'flow_step_id' => $flow_step_id
                         ];
 
 

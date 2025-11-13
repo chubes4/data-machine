@@ -14,13 +14,25 @@ defined('WPINC') || exit;
  * Register AI integration filters for pipeline-aware AI configuration.
  */
 function datamachine_register_ai_filters() {
-    
+
     add_filter('datamachine_ai_config', function($default, $pipeline_step_id = null) {
         if (!$pipeline_step_id) {
             return [];
         }
 
-        $job_id = apply_filters('datamachine_current_job_id', null);
+        // Get job_id from execution context (available during step execution and AI processing)
+        $job_id = \DataMachine\Engine\ExecutionContext::$job_id;
+
+        if (!$job_id) {
+            do_action('datamachine_log', 'debug', 'AI Config: No execution context available', [
+                'pipeline_step_id' => $pipeline_step_id
+            ]);
+            return [
+                'selected_provider' => '',
+                'system_prompt' => '',
+                'model' => ''
+            ];
+        }
 
         $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $pipeline_config = $engine_data['pipeline_config'] ?? [];
@@ -46,7 +58,7 @@ function datamachine_register_ai_filters() {
             'enabled_tools' => $step_config['enabled_tools'] ?? []
         ];
     }, 20, 2);
-    
+
 }
 
 // Initialize AI filters on WordPress init

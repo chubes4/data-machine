@@ -162,6 +162,21 @@ function datamachine_sanitize_settings($input) {
     
     $sanitized['site_context_enabled'] = !empty($input['site_context_enabled']);
 
+    // Handle AI provider API keys
+    if (isset($input['ai_provider_keys']) && is_array($input['ai_provider_keys'])) {
+        $provider_keys = [];
+        foreach ($input['ai_provider_keys'] as $provider => $key) {
+            $provider_keys[sanitize_key($provider)] = sanitize_text_field($key);
+        }
+
+        // Save to AI HTTP Client library's storage
+        if (!empty($provider_keys)) {
+            $all_keys = apply_filters('ai_provider_api_keys', null);
+            $updated_keys = array_merge($all_keys, $provider_keys);
+            apply_filters('ai_provider_api_keys', $updated_keys);
+        }
+    }
+
     // Sanitize file retention days (1-90 days range)
     $sanitized['file_retention_days'] = 7; // default
     if (isset($input['file_retention_days'])) {

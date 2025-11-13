@@ -14,12 +14,15 @@ class UpdateStep {
 
     /**
      * Execute update handler with AI tool result detection.
+     *
+     * @param int $job_id Current job ID
+     * @param string $flow_step_id Current flow step ID
+     * @param array $data Current data packet array
+     * @param array $flow_step_config Flow step configuration
+     * @param array $engine_data Engine data array
+     * @return array Updated data packet array
      */
-    public function execute(array $parameters): array {
-        $job_id = $parameters['job_id'];
-        $flow_step_id = $parameters['flow_step_id'];
-        $data = $parameters['data'] ?? [];
-        $flow_step_config = $parameters['flow_step_config'] ?? [];
+    public function execute(int $job_id, string $flow_step_id, array $data, array $flow_step_config, array $engine_data): array {
         
         try {
             if (empty($flow_step_config)) {
@@ -58,7 +61,7 @@ class UpdateStep {
                 return $this->create_update_entry_from_tool_result($tool_result_entry, $data, $handler_slug, $flow_step_id);
             }
 
-            $handler_result = $this->execute_handler($handler_slug, $data, $handler_config, $flow_step_config, $parameters);
+            $handler_result = $this->execute_handler($handler_slug, $data, $handler_config, $flow_step_config);
             
             if ($handler_result === null) {
                 do_action('datamachine_log', 'error', 'Update Step: Handler execution failed', [
@@ -119,10 +122,9 @@ class UpdateStep {
      * @param array $data Current data packet
      * @param array $handler_config Handler settings
      * @param array $flow_step_config Complete step configuration
-     * @param array $parameters Engine parameters
      * @return array|null Handler result or null on failure
      */
-    private function execute_handler($handler_slug, $data, $handler_config, $flow_step_config, $parameters) {
+    private function execute_handler($handler_slug, $data, $handler_config, $flow_step_config) {
         try {
             $update_handlers = apply_filters('datamachine_handlers', [], 'update');
 
@@ -150,7 +152,7 @@ class UpdateStep {
                 return isset($tool['handler']) && $tool['handler'] === $handler_slug;
             });
             
-            $job_id = $parameters['job_id'];
+            $job_id = \DataMachine\Engine\ExecutionContext::$job_id;
 
             // Access engine data via centralized filter pattern (source_url, image_url from fetch handlers)
             $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
