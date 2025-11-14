@@ -13,9 +13,9 @@ import {
 	TextareaControl,
 	CheckboxControl,
 } from '@wordpress/components';
-import { __ } from '@wordpress/i18n';
+import { sprintf, __ } from '@wordpress/i18n';
 import { updateFlowHandler, fetchHandlerDetails } from '../../utils/api';
-import { slugToLabel } from '../../utils/formatters';
+import { slugToLabel, formatSelectOptions } from '../../utils/formatters';
 import { MODAL_TYPES } from '../../utils/constants';
 import { usePipelineContext } from '../../context/PipelineContext';
 import FilesHandlerSettings from './handler-settings/files/FilesHandlerSettings';
@@ -192,13 +192,14 @@ export default function HandlerSettingsModal( {
 				);
 
 			case 'select':
-				const options = fieldConfig.options || [];
+				const rawOptions = fieldConfig.options || [];
+				const formattedOptions = formatSelectOptions( rawOptions );
 				return (
 					<SelectControl
 						key={ fieldKey }
 						label={ fieldConfig.label || slugToLabel( fieldKey ) }
 						value={ value }
-						options={ options }
+						options={ formattedOptions }
 						onChange={ ( val ) =>
 							handleSettingChange( fieldKey, val )
 						}
@@ -234,30 +235,25 @@ export default function HandlerSettingsModal( {
 		}
 	};
 
-	return (
-		<Modal
-			title={ __( 'Configure Handler', 'datamachine' ) }
-			onRequestClose={ onClose }
-			className="datamachine-handler-settings-modal"
-			style={ { maxWidth: '600px' } }
-		>
+		return (
+			<Modal
+				title={ handlerInfo.label ?
+					sprintf( __( 'Configure %s Settings', 'datamachine' ), handlerInfo.label ) :
+					__( 'Configure Handler Settings', 'datamachine' )
+				}
+				onRequestClose={ onClose }
+				className="datamachine-handler-settings-modal datamachine-modal--max-width-600"
+			>
 			<div className="datamachine-modal-content">
 				{ error && (
 					<div
-						className="notice notice-error"
-						style={ { marginBottom: '16px' } }
+						className="notice notice-error datamachine-spacing--margin-bottom-16"
 					>
 						<p>{ error }</p>
 					</div>
 				) }
 
-				<div
-					style={ {
-						marginBottom: '20px',
-						paddingBottom: '16px',
-						borderBottom: '1px solid #dcdcde',
-					} }
-				>
+				<div className="datamachine-modal-section">
 					<div
 						style={ {
 							display: 'flex',

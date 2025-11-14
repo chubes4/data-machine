@@ -117,20 +117,9 @@ export default function PipelineHeader( {
 		};
 	}, [] );
 
-	return (
-		<div
-			className="datamachine-pipeline-header"
-			style={ { position: 'relative' } }
-		>
-			<div
-				style={ {
-					position: 'absolute',
-					top: '0',
-					right: '0',
-					display: 'flex',
-					gap: '8px',
-				} }
-			>
+		return (
+			<div className="datamachine-pipeline-header">
+				<div className="datamachine-header--absolute-top-right datamachine-header--flex-start">
 				<Button
 					variant="secondary"
 					onClick={ onOpenContextFiles }
@@ -146,13 +135,12 @@ export default function PipelineHeader( {
 				/>
 			</div>
 
-			<div style={ { paddingRight: '120px' } }>
+			<div className="datamachine-pipeline-header__title-section">
 				<TextControl
 					value={ localName }
 					onChange={ handleNameChange }
 					placeholder={ __( 'Pipeline name', 'datamachine' ) }
-					className="datamachine-pipeline-name-input"
-					style={ { fontSize: '20px', fontWeight: '600' } }
+					className="datamachine-pipeline-header__title-input"
 				/>
 			</div>
 		</div>

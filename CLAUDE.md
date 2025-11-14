@@ -136,7 +136,7 @@ do_action('datamachine_update_flow_handler', $flow_step_id, $handler_slug, $sett
 do_action('datamachine_update_flow_schedule', $flow_id, $interval, $context);
 do_action('datamachine_update_system_prompt', $pipeline_step_id, $system_prompt);
 do_action('datamachine_update_flow_user_message', $flow_step_id, $user_message);
-do_action('datamchine_sync_steps_to_flow', $flow_id, $step_data, $context);
+do_action('datamachine_sync_steps_to_flow', $flow_id, $step_data, $context);
 
 // Template & UI System
 apply_filters('datamachine_render_template', '', $template_name, $data);

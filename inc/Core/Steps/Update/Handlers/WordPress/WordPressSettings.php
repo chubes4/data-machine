@@ -69,7 +69,9 @@ class WordPressSettings {
             }
             
             $taxonomy_slug = $taxonomy->name;
-            $taxonomy_label = $taxonomy->labels->name ?? $taxonomy->label;
+            $taxonomy_label = (is_object($taxonomy->labels) && isset($taxonomy->labels->name))
+                ? $taxonomy->labels->name
+                : (isset($taxonomy->label) ? $taxonomy->label : $taxonomy->name);
             
             // Build options with skip as default
             $options = [

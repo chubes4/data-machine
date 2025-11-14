@@ -78,17 +78,8 @@ export default function FlowSteps( {
 	 */
 	if ( sortedFlowSteps.length === 0 ) {
 		return (
-			<div
-				className="datamachine-flow-steps-empty"
-				style={ {
-					padding: '20px',
-					textAlign: 'center',
-					backgroundColor: '#f9f9f9',
-					border: '1px solid #dcdcde',
-					borderRadius: '4px',
-				} }
-			>
-				<p style={ { color: '#757575', margin: 0 } }>
+			<div className="datamachine-flow-steps--empty">
+				<p>
 					{ __(
 						'No steps configured for this flow.',
 						'datamachine'
@@ -110,11 +101,7 @@ export default function FlowSteps( {
 			items.push(
 				<div
 					key={ step.flowStepId }
-					style={ {
-						flex: '0 0 auto',
-						minWidth: '300px',
-						maxWidth: '300px',
-					} }
+					className="datamachine-flow-step-container"
 				>
 					<FlowStepCard
 						flowId={ flowId }
@@ -137,16 +124,7 @@ export default function FlowSteps( {
 	};
 
 	return (
-		<div
-			className="datamachine-flow-steps"
-			style={ {
-				display: 'flex',
-				alignItems: 'center',
-				gap: '20px',
-				overflowX: 'auto',
-				padding: '20px 0',
-			} }
-		>
+		<div className="datamachine-flow-steps">
 			{ renderItems() }
 		</div>
 	);

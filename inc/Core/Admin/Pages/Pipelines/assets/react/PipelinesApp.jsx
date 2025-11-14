@@ -139,13 +139,7 @@ export default function PipelinesApp() {
 	return (
 		<div className="datamachine-pipelines-react-app">
 			{ /* Header with Add Pipeline and Import/Export buttons */ }
-			<div
-				style={ {
-					display: 'flex',
-					justifyContent: 'space-between',
-					marginBottom: '20px',
-				} }
-			>
+			<div className="datamachine-header--flex-space-between">
 				<Button
 					variant="primary"
 					onClick={ handleAddNewPipeline }

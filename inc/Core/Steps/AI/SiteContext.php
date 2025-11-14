@@ -64,7 +64,9 @@ class SiteContext {
 
             $post_types_data[$post_type->name] = [
                 'label' => $post_type->label,
-                'singular_label' => $post_type->labels->singular_name ?? $post_type->label,
+                'singular_label' => (is_object($post_type->labels) && isset($post_type->labels->singular_name))
+                    ? $post_type->labels->singular_name
+                    : $post_type->label,
                 'count' => (int) $published_count,
                 'hierarchical' => $post_type->hierarchical
             ];
@@ -111,7 +113,9 @@ class SiteContext {
             if (!empty($term_data)) {
                 $taxonomies_data[$taxonomy->name] = [
                     'label' => $taxonomy->label,
-                    'singular_label' => $taxonomy->labels->singular_name ?? $taxonomy->label,
+                    'singular_label' => (is_object($taxonomy->labels) && isset($taxonomy->labels->singular_name))
+                        ? $taxonomy->labels->singular_name
+                        : $taxonomy->label,
                     'terms' => $term_data,
                     'hierarchical' => $taxonomy->hierarchical,
                     'post_types' => $taxonomy->object_type ?? []

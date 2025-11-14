@@ -17,7 +17,7 @@ import {
 	OAuthAuthenticationModal,
 } from '../modals';
 import { usePipelineContext } from '../../context/PipelineContext';
-import { deleteFlow, duplicateFlow, runFlow } from '../../utils/api';
+import { deleteFlow, duplicateFlow, runFlow, updateFlowHandler } from '../../utils/api';
 import { MODAL_TYPES } from '../../utils/constants';
 
 /**
@@ -195,17 +195,43 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 	 * Handle handler selection from handler selection modal
 	 */
 	const handleHandlerSelected = useCallback(
-		( handlerSlug ) => {
-			// Update handler modal data and open settings modal
-			const updatedData = {
-				...handlerModalData,
-				handlerSlug,
-				currentSettings: {}, // Reset settings when changing handler
-			};
-			setHandlerModalData( updatedData );
-			openModal( MODAL_TYPES.HANDLER_SETTINGS, updatedData );
+		async ( handlerSlug ) => {
+			try {
+				// Immediately save handler selection with empty settings
+				const response = await updateFlowHandler(
+					handlerModalData.flowStepId,
+					handlerSlug,
+					{}
+				);
+
+				if ( response.success ) {
+					refreshData(); // Update UI immediately
+
+					// Then open settings modal for configuration
+					const updatedData = {
+						...handlerModalData,
+						handlerSlug,
+						currentSettings: {}, // Reset settings when changing handler
+					};
+					setHandlerModalData( updatedData );
+					openModal( MODAL_TYPES.HANDLER_SETTINGS, updatedData );
+				} else {
+					alert(
+						response.message ||
+							__( 'Failed to select handler', 'datamachine' )
+					);
+				}
+			} catch ( error ) {
+				console.error( 'Handler selection error:', error );
+				alert(
+					__(
+						'An error occurred while selecting the handler',
+						'datamachine'
+					)
+				);
+			}
 		},
-		[ handlerModalData, openModal ]
+		[ handlerModalData, openModal, refreshData ]
 	);
 
 	/**
@@ -213,7 +239,7 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 	 */
 	const handleChangeHandler = useCallback( () => {
 		openModal( MODAL_TYPES.HANDLER_SELECTION, {
-			stepType: handlerModalData?.stepType,
+			...handlerModalData,
 		} );
 	}, [ handlerModalData, openModal ] );
 

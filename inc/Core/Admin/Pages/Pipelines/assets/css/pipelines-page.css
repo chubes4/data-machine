@@ -22,29 +22,174 @@
     --datamachine-border-radius-lg: 8px;
 }
 
+/* ===== LAYOUT & CONTAINER CLASSES ===== */
+
 /* Base page container */
 .datamachine-pipelines-page {
     padding: 20px;
 }
 
-/* Admin header layout */
-.datamachine-admin-header {
+/* Modal containers */
+.datamachine-modal--max-width-600 {
+    max-width: 600px;
+}
+
+.datamachine-modal--max-width-700 {
+    max-width: 700px;
+}
+
+/* Header layouts */
+.datamachine-header--flex-space-between {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
 }
 
-.datamachine-admin-header-left {
-    flex: 1;
+.datamachine-header--flex-start {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
 }
 
-.datamachine-admin-header-right {
-    flex-shrink: 0;
-    margin-left: 20px;
-    align-self: flex-start;
-    margin-top: 10px;
+.datamachine-header--absolute-top-right {
+    position: absolute;
+    top: 0;
+    right: 0;
 }
+
+/* Spacing utilities */
+.datamachine-spacing--margin-bottom-16 {
+    margin-bottom: 16px;
+}
+
+.datamachine-spacing--margin-bottom-20 {
+    margin-bottom: 20px;
+}
+
+.datamachine-spacing--margin-bottom-24 {
+    margin-bottom: 24px;
+}
+
+.datamachine-spacing--margin-top-12 {
+    margin-top: 12px;
+}
+
+.datamachine-spacing--margin-top-16 {
+    margin-top: 16px;
+}
+
+.datamachine-spacing--margin-top-24 {
+    margin-top: 24px;
+}
+
+/* Color utilities */
+.datamachine-color--text-muted {
+    color: #757575;
+}
+
+.datamachine-color--text-secondary {
+    color: #646970;
+}
+
+.datamachine-color--text-error {
+    color: #dc3232;
+}
+
+/* Typography utilities */
+.datamachine-text--h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.datamachine-text--description {
+    margin: 0 0 12px 0;
+    font-size: 12px;
+    color: #757575;
+}
+
+.datamachine-text--note {
+    margin: 0;
+    font-size: 12px;
+    color: #0073aa;
+}
+
+/* Layout utilities */
+.datamachine-layout--flex-center {
+    display: flex;
+    align-items: center;
+}
+
+.datamachine-layout--flex-column {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Empty state styling */
+.datamachine-empty-state {
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.datamachine-empty-state--bordered {
+    background: #f9f9f9;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+}
+
+.datamachine-empty-state p {
+    margin: 0;
+    color: #757575;
+}
+
+/* Table styling */
+.datamachine-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.datamachine-table--bordered {
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Status badges */
+.datamachine-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.datamachine-status-badge--processed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.datamachine-status-badge--pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+/* Info boxes */
+.datamachine-info-box {
+    padding: 12px;
+    background: #f0f6fc;
+    border: 1px solid #0073aa;
+    border-radius: 4px;
+}
+
+.datamachine-info-box p {
+    margin: 0;
+}
+
+
 
 /* Pipeline cards */
 .datamachine-pipeline-card {
@@ -55,73 +200,42 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.datamachine-placeholder-pipeline {
-    border: 2px dashed #ddd;
-    background: #fafafa;
-}
 
-/* Separator between pipeline cards - simple, clean, aligned with card content */
-.datamachine-pipelines-list .datamachine-pipeline-card {
-    position: relative; /* enable pseudo-element positioning */
-}
 
-.datamachine-pipelines-list .datamachine-pipeline-card + .datamachine-pipeline-card::before {
-    content: "";
-    position: absolute;
-    top: -12px; /* sits slightly above the card to visually separate */
-    left: 20px; /* align with card inner padding */
-    right: 20px;
-    height: 1px;
-    background: #efefef; /* subtle neutral separator */
-    border-radius: 1px;
-    pointer-events: none;
-    opacity: 1;
-}
 
-/* Explicit separator element between pipeline cards */
-.datamachine-pipelines-list .datamachine-separator {
-    height: 1px;
-    background: linear-gradient(to right, rgba(0,0,0,0.06), rgba(0,0,0,0.03));
-    margin: 12px 20px; /* aligns with card padding */
-    border-radius: 1px;
-    box-shadow: 0 1px 0 rgba(0,0,0,0.02) inset;
-}
 
-/* Slightly larger gap on small screens for touch targets */
-@media (max-width: 600px) {
-    .datamachine-pipelines-list .datamachine-separator {
-        margin: 18px 12px;
-    }
-}
+/* ===== COMPONENT: PIPELINE HEADER ===== */
 
-/* Pipeline header */
 .datamachine-pipeline-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+	position: relative;
+	padding: 16px 20px;
+	border-bottom: 1px solid #eee;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 }
 
-.datamachine-pipeline-title-section {
-    flex: 1;
+.datamachine-pipeline-header__title-section {
+	flex: 1;
+	padding-right: 120px; /* Space for action buttons */
 }
 
-.datamachine-pipeline-title-input {
-    font-size: 18px;
-    font-weight: 600;
-    border: 1px solid transparent;
-    background: transparent;
-    padding: 4px 8px;
-    border-radius: var(--datamachine-border-radius);
-    width: 100%;
-    max-width: 400px;
+.datamachine-pipeline-header__title-input {
+	font-size: 20px;
+	font-weight: 600;
+	border: 1px solid transparent;
+	background: transparent;
+	padding: 4px 8px;
+	border-radius: var(--datamachine-border-radius);
+	width: 100%;
+	max-width: 400px;
+	transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
 }
 
-.datamachine-pipeline-title-input:focus {
-    border-color: #0073aa;
-    background: #fff;
-    outline: none;
+.datamachine-pipeline-header__title-input:focus {
+	border-color: #0073aa;
+	background: #fff;
+	outline: none;
 }
 
 
@@ -131,16 +245,7 @@
     padding: 20px;
 }
 
-.datamachine-section-header h4 {
-    margin: 0 0 5px 0;
-    color: #333;
-}
 
-.datamachine-section-description {
-    margin: 0 0 15px 0;
-    color: #666;
-    font-size: 13px;
-}
 
 /* Pipeline steps - responsive wrapping flex layout */
 .datamachine-pipeline-steps {
@@ -251,67 +356,64 @@
 
 
 
-/* Flow section */
-.datamachine-flows-header h4 {
-    margin: 0 0 15px 0;
-    color: #333;
-}
 
-.datamachine-placeholder-message {
-    text-align: center;
-    padding: 30px;
-    color: #666;
-    font-style: italic;
-}
 
-.datamachine-placeholder-message p {
-    margin: 0;
-}
 
-/* Flow instance cards */
+
+/* ===== COMPONENT: FLOW CARD ===== */
+
 .datamachine-flow-instance-card {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    margin-bottom: 15px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 6px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 
-/* Flow header */
+/* ===== COMPONENT: FLOW HEADER ===== */
+
 .datamachine-flow-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #fafafa;
+	padding: 12px 16px;
+	border-bottom: 1px solid #eee;
+	background: #fafafa;
 }
 
-.datamachine-flow-title-section {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+.datamachine-flow-header__content {
+	display: flex;
+	align-items: baseline;
+	gap: 12px;
+	margin-bottom: 16px;
 }
 
-.datamachine-flow-title-input {
-    font-size: 16px;
-    font-weight: 500;
-    border: 1px solid transparent;
-    background: transparent;
-    padding: 6px 8px;
-    border-radius: var(--datamachine-border-radius);
-    flex: 1;
-    max-width: 300px;
-    height: 28px;
-    box-sizing: border-box;
+.datamachine-flow-header__title-section {
+	flex: 1;
 }
 
-.datamachine-flow-title-input:focus {
-    border-color: #0073aa;
-    background: #fff;
-    outline: none;
+.datamachine-flow-header__title-input {
+	font-size: 16px;
+	font-weight: 500;
+	border: 1px solid transparent;
+	background: transparent;
+	padding: 6px 8px;
+	border-radius: var(--datamachine-border-radius);
+	width: 100%;
+	max-width: 300px;
+	height: 36px; /* Match WordPress button height */
+	box-sizing: border-box;
+	transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+}
+
+.datamachine-flow-header__title-input:focus {
+	border-color: #0073aa;
+	background: #fff;
+	outline: none;
+}
+
+.datamachine-flow-header__actions {
+	display: flex;
+	gap: 8px;
+	align-items: center;
 }
 
 .datamachine-flow-status {
@@ -327,9 +429,101 @@
 }
 
 
+/* ===== COMPONENT: FLOW STEPS ===== */
+
+.datamachine-flow-steps {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	overflow-x: auto;
+	padding: 20px 0;
+}
+
+.datamachine-flow-steps--empty {
+	padding: 20px;
+	text-align: center;
+	background-color: #f9f9f9;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.datamachine-flow-steps--empty p {
+	color: #757575;
+	margin: 0;
+}
+
+.datamachine-flow-steps__header {
+	margin-bottom: 12px;
+}
+
+.datamachine-flow-steps__header h5 {
+	margin: 0;
+	color: #555;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.datamachine-flow-steps__list {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+/* Individual step containers within flow steps */
+.datamachine-flow-step-container {
+	flex: 0 0 auto;
+	min-width: 300px;
+	max-width: 300px;
+}
+
+/* ===== COMPONENT: FLOW FOOTER ===== */
+
+.datamachine-flow-footer {
+	padding: 12px 16px;
+	border-top: 1px solid #eee;
+	background: #f9f9f9;
+}
+
+/* ===== COMPONENT: FLOWS SECTION ===== */
+
+.datamachine-flows-section {
+	padding: 20px;
+}
+
+.datamachine-flows-section--empty {
+	padding: 20px;
+	text-align: center;
+}
+
+.datamachine-flows-section__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 16px;
+}
+
+.datamachine-flows-section__title {
+	margin: 0;
+	font-size: 16px;
+	font-weight: 600;
+	color: #333;
+}
+
+.datamachine-flows-section__count {
+	color: #757575;
+	font-size: 14px;
+	font-weight: normal;
+}
+
+.datamachine-flows-list {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
 /* Flow steps section */
 .datamachine-flow-steps-section {
-    padding: 20px;
+	padding: 20px;
 }
 
 .datamachine-flow-steps-header {
@@ -386,30 +580,19 @@
     background: #f0f0f0;
 }
 
-/* Flow placeholder when no pipeline steps exist */
-.datamachine-flow-placeholder {
-    text-align: center;
-    padding: 30px 20px;
-    color: #666;
-    font-style: italic;
-}
 
-.datamachine-flow-placeholder-text {
-    margin: 0;
-    font-size: 14px;
-}
-
-.datamachine-no-config {
-    font-size: 12px;
-    color: #888;
-    font-style: italic;
-}
 
 
 .datamachine-flow-meta {
     padding: 8px 16px;
     border-top: 1px solid #eee;
     background: #f9f9f9;
+}
+
+/* Flow footer meta items */
+.datamachine-flow-meta-item {
+    font-size: 12px;
+    color: #757575;
 }
 
 
@@ -424,7 +607,6 @@
         flex-direction: column;
     }
     
-    .datamachine-step-container,
     .datamachine-step-card {
         min-width: auto;
         max-width: none;
@@ -438,7 +620,7 @@
         gap: 10px;
     }
     
-    .datamachine-flow-title-section {
+    .datamachine-flow-header__title-section {
         flex-direction: column;
         align-items: stretch;
         gap: 8px;
@@ -448,8 +630,8 @@
         margin-bottom: 20px;
     }
     
-    .datamachine-pipeline-title-input,
-    .datamachine-flow-title-input {
+    .datamachine-pipeline-header__title-input,
+    .datamachine-flow-header__title-input {
         max-width: none;
         width: 100%;
     }
@@ -617,7 +799,7 @@
 }
 
 /* Dragging state */
-.datamachine-step-container.datamachine-dragging .datamachine-step-card {
+.datamachine-dragging .datamachine-step-card {
     cursor: grabbing;
     transform: rotate(3deg);
     opacity: 0.8;

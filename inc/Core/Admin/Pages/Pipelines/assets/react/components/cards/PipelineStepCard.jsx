@@ -78,7 +78,10 @@ export default function PipelineStepCard( {
 					step.pipeline_step_id,
 					prompt,
 					aiConfig.ai_provider,
-					aiConfig.ai_model
+					aiConfig.ai_model,
+					[], // enabledTools - not available in inline editing
+					step.step_type,
+					pipelineId
 				);
 
 				if ( ! response.success ) {
@@ -98,7 +101,7 @@ export default function PipelineStepCard( {
 				setIsSaving( false );
 			}
 		},
-		[ pipelineId, step.pipeline_step_id, aiConfig ]
+		[ pipelineId, step.pipeline_step_id, step.step_type, aiConfig ]
 	);
 
 	/**

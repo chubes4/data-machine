@@ -108,27 +108,17 @@ export default function FlowHeader( {
 
 	return (
 		<div className="datamachine-flow-header">
-			<div
-				style={ {
-					display: 'flex',
-					alignItems: 'center',
-					gap: '12px',
-					marginBottom: '16px',
-				} }
-			>
-				<div style={ { flex: 1 } }>
+			<div className="datamachine-flow-header__content">
+				<div className="datamachine-flow-header__title-section">
 					<TextControl
 						value={ localName }
 						onChange={ handleNameChange }
 						placeholder={ __( 'Flow name...', 'datamachine' ) }
-						style={ { fontSize: '16px', fontWeight: '500' } }
+						className="datamachine-flow-header__title-input"
 					/>
 				</div>
 
-				<div
-					className="datamachine-flow-actions"
-					style={ { display: 'flex', gap: '8px' } }
-				>
+				<div className="datamachine-flow-header__actions">
 					<Button
 						variant="primary"
 						onClick={ () => onRun && onRun( flowId ) }

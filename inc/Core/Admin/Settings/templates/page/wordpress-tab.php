@@ -53,7 +53,7 @@ $post_statuses = get_post_stati(['public' => true, 'private' => true]);
                                    value="1" 
                                    <?php checked($is_enabled, true); ?>
                                    <?php echo esc_attr($disabled_attr); ?>>
-                            <?php echo esc_html($post_type->labels->name ?? $post_type->label); ?>
+                            <?php echo esc_html((is_object($post_type->labels) && isset($post_type->labels->name)) ? $post_type->labels->name : $post_type->label); ?>
                             <span class="description">(<?php echo esc_html($post_type->name); ?>)</span>
                         </label>
                     <?php endforeach; ?>
@@ -78,8 +78,10 @@ $post_statuses = get_post_stati(['public' => true, 'private' => true]);
             <?php if ($filtered_taxonomies): ?>
                 <fieldset <?php echo esc_attr($disabled_attr); ?>>
                     <?php foreach ($filtered_taxonomies as $taxonomy): ?>
-                        <?php 
-                        $taxonomy_label = $taxonomy->labels->name ?? $taxonomy->label;
+                        <?php
+                        $taxonomy_label = (is_object($taxonomy->labels) && isset($taxonomy->labels->name))
+                            ? $taxonomy->labels->name
+                            : (isset($taxonomy->label) ? $taxonomy->label : $taxonomy->name);
                         $is_enabled = !$enabled_taxonomies || ($enabled_taxonomies[$taxonomy->name] ?? false);
                         ?>
                         <label class="datamachine-settings-page-item">

@@ -125,6 +125,30 @@ export const formatHandlerSettings = ( settings ) => {
 };
 
 /**
+ * Format select options from PHP associative array to SelectControl format
+ * Transforms ['value' => 'Label'] to [{value: 'value', label: 'Label'}]
+ *
+ * @param {Object|Array} options - Options in PHP associative array format
+ * @returns {Array} Options formatted for WordPress SelectControl
+ */
+export const formatSelectOptions = ( options ) => {
+	if ( ! options || typeof options !== 'object' ) {
+		return [];
+	}
+
+	// If already in correct format (array of objects), return as-is
+	if ( Array.isArray( options ) && options.length > 0 && typeof options[0] === 'object' && 'value' in options[0] ) {
+		return options;
+	}
+
+	// Transform associative array to SelectControl format
+	return Object.entries( options ).map( ( [ value, label ] ) => ( {
+		value: String( value ),
+		label: String( label )
+	} ) );
+};
+
+/**
  * Format individual setting value for display
  *
  * @param {*} value - Setting value

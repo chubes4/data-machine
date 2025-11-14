@@ -44,17 +44,12 @@ function datamachine_register_pipelines_admin_page_filters() {
                         'deps' => [],
                         'media' => 'all'
                     ],
-                    'datamachine-pipelines-modal' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/pipelines-modal.css',
-                        'deps' => ['datamachine-core-modal', 'datamachine-pipelines-page'],
-                        'media' => 'all'
-                    ],
-                    'ai-http-components' => [
-                        'file' => 'vendor/chubes4/ai-http-client/assets/css/components.css',
-                        'deps' => [],
-                        'media' => 'all'
-                    ],
-                    'datamachine-import-export' => [
+                     'datamachine-pipelines-modal' => [
+                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/pipelines-modal.css',
+                         'deps' => [],
+                         'media' => 'all'
+                     ],
+                     'datamachine-import-export' => [
                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/import-export.css',
                         'deps' => [],
                         'media' => 'all'
@@ -73,7 +68,6 @@ function datamachine_register_pipelines_admin_page_filters() {
                                 'restNonce' => wp_create_nonce('wp_rest'),
                                 // stepTypes: Loaded via REST API in PipelineContext
                                 // handlers: Loaded via REST API in PipelineContext
-                                // stepSettings: Dead code - removed
                                 // aiProviders: Loaded via REST API in ConfigureStepModal
                                 // aiTools: Loaded via REST API in AIToolsSelector
                                 // handlerSettings: Lazy-loaded via REST API in HandlerSettingsModal

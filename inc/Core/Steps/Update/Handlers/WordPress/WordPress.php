@@ -108,11 +108,6 @@ class WordPress {
             $all_changes['title_update'] = true;
         }
 
-        if (!empty($parameters['content']) && !isset($post_data['post_content'])) {
-            $post_data['post_content'] = $this->sanitize_block_content(wp_unslash($parameters['content']));
-            $all_changes['legacy_content_update'] = true;
-        }
-
         $has_updates = count($post_data) > 1;
         
         if (!$has_updates) {
@@ -256,13 +251,13 @@ class WordPress {
                             'success' => true,
                             'taxonomy' => $taxonomy->name,
                             'term_count' => 1,
-                            'terms' => [$term->name]
+                            'terms' => [$term_name]
                         ];
 
                         do_action('datamachine_log', 'debug', 'WordPress Update Tool: Applied pre-selected taxonomy', [
                             'taxonomy_name' => $taxonomy->name,
                             'term_id' => $term_id,
-                            'term_name' => $term->name
+                            'term_name' => $term_name
                         ]);
                     }
                 }

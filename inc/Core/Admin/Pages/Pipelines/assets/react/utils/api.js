@@ -175,6 +175,8 @@ export const reorderPipelineSteps = async ( pipelineId, steps ) => {
  * @param {string} provider - AI provider
  * @param {string} model - AI model
  * @param {Array<string>} enabledTools - Enabled AI tools (optional)
+ * @param {string} stepType - Step type (must be "ai")
+ * @param {number} pipelineId - Pipeline ID for context
  * @returns {Promise<Object>} Updated step data
  */
 export const updateSystemPrompt = async (
@@ -182,11 +184,15 @@ export const updateSystemPrompt = async (
 	prompt,
 	provider,
 	model,
-	enabledTools = []
+	enabledTools = [],
+	stepType = 'ai',
+	pipelineId = null
 ) => {
 	return await apiRequest( `/pipelines/steps/${ stepId }/config`, {
 		method: 'PUT',
 		data: {
+			step_type: stepType,
+			pipeline_id: pipelineId,
 			provider: provider,
 			model: model,
 			system_prompt: prompt,

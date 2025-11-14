@@ -62,10 +62,10 @@ export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
 	if ( ! flows || flows.length === 0 ) {
 		return (
 			<div className="datamachine-flows-section datamachine-flows-section--empty">
-				<h3 style={ { marginTop: 0, marginBottom: '16px' } }>
+				<h3 className="datamachine-flows-section__title">
 					{ __( 'Flows', 'datamachine' ) }
 				</h3>
-				<p style={ { color: '#757575', marginBottom: '16px' } }>
+				<p className="datamachine-color--text-muted">
 					{ __(
 						'No flows configured. Add your first flow to get started.',
 						'datamachine'
@@ -84,36 +84,16 @@ export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
 	 */
 	return (
 		<div className="datamachine-flows-section">
-			<div
-				style={ {
-					display: 'flex',
-					justifyContent: 'space-between',
-					alignItems: 'center',
-					marginBottom: '16px',
-				} }
-			>
-				<h3 style={ { margin: 0 } }>
+			<div className="datamachine-flows-section__header">
+				<h3 className="datamachine-flows-section__title">
 					{ __( 'Flows', 'datamachine' ) }{ ' ' }
-					<span
-						style={ {
-							color: '#757575',
-							fontSize: '14px',
-							fontWeight: 'normal',
-						} }
-					>
+					<span className="datamachine-flows-section__count">
 						({ flows.length })
 					</span>
 				</h3>
 			</div>
 
-			<div
-				className="datamachine-flows-list"
-				style={ {
-					display: 'flex',
-					flexDirection: 'column',
-					gap: '20px',
-				} }
-			>
+			<div className="datamachine-flows-list">
 				{ flows.map( ( flow ) => (
 					<FlowCard
 						key={ flow.flow_id }

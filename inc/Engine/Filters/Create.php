@@ -306,7 +306,7 @@ class Create {
         $flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
         foreach ($flows as $flow) {
             $flow_id = $flow['flow_id'];
-            do_action('datamchine_sync_steps_to_flow', $flow_id, [$new_step], ['context' => 'add_step']);
+            do_action('datamachine_sync_steps_to_flow', $flow_id, [$new_step], ['context' => 'add_step']);
         }
 
         do_action('datamachine_clear_pipeline_cache', $pipeline_id);
@@ -384,7 +384,7 @@ class Create {
 
         $pipeline_steps = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
         if (!empty($pipeline_steps)) {
-            do_action('datamchine_sync_steps_to_flow', $flow_id, $pipeline_steps, ['context' => 'create_flow']);
+            do_action('datamachine_sync_steps_to_flow', $flow_id, $pipeline_steps, ['context' => 'create_flow']);
         }
         
         do_action('datamachine_log', 'info', 'Flow created successfully', [

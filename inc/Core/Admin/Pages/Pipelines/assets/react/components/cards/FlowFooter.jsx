@@ -26,18 +26,7 @@ export default function FlowFooter( { schedulingConfig } ) {
 			: __( 'Manual', 'datamachine' );
 
 	return (
-		<div
-			className="datamachine-flow-footer"
-			style={ {
-				display: 'flex',
-				gap: '20px',
-				padding: '12px 16px',
-				backgroundColor: '#f9f9f9',
-				borderTop: '1px solid #dcdcde',
-				fontSize: '12px',
-				color: '#757575',
-			} }
-		>
+		<div className="datamachine-flow-footer">
 			<div className="datamachine-flow-meta-item">
 				<strong>{ __( 'Schedule:', 'datamachine' ) }</strong>{ ' ' }
 				{ scheduleDisplay }

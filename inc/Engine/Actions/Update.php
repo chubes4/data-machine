@@ -30,15 +30,12 @@ class Update {
         // Central job status update hook - eliminates confusion about which method to use
         add_action('datamachine_update_job_status', [$instance, 'handle_job_status_update'], 10, 4);
         
-        // Central flow scheduling hook - direct Action Scheduler integration
-        add_action('datamachine_update_flow_schedule', [$instance, 'handle_flow_schedule_update'], 10, 3);
-        
         
         // Flow handler management action hook - eliminates 50+ line handler update patterns
         add_action('datamachine_update_flow_handler', [$instance, 'handle_flow_handler_update'], 10, 3);
         
         // Flow step synchronization action hook - unifies single and bulk step sync operations
-        add_action('datamchine_sync_steps_to_flow', [$instance, 'handle_flow_steps_sync'], 10, 3);
+        add_action('datamachine_sync_steps_to_flow', [$instance, 'handle_flow_steps_sync'], 10, 3);
         
         // Flow user message management action hook - enables AI steps to run standalone
         add_action('datamachine_update_flow_user_message', [$instance, 'handle_flow_user_message_update'], 10, 2);
@@ -104,24 +101,6 @@ class Update {
         
         return $success;
     }
-
-    /**
-     * Handle flow schedule updates with Action Scheduler integration.
-     *
-     * DEPRECATED: Use datamachine_run_flow_later action directly instead.
-     * Kept for backwards compatibility only.
-     *
-     * @deprecated Use do_action('datamachine_run_flow_later', $flow_id, $interval) instead
-     * @param int $flow_id Flow ID to update scheduling for
-     * @param string $schedule_interval Schedule interval key
-     * @param string $old_interval Previous schedule interval (unused)
-     * @since 1.0.0
-     */
-    public function handle_flow_schedule_update($flow_id, $schedule_interval, $old_interval = '') {
-        // DEPRECATED: Delegate to new datamachine_run_flow_later action
-        do_action('datamachine_run_flow_later', $flow_id, $schedule_interval);
-    }
-
 
     /**
      * Handle flow handler updates with centralized database operations.

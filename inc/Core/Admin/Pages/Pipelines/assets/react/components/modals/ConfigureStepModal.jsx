@@ -178,7 +178,9 @@ export default function ConfigureStepModal( {
 				systemPrompt,
 				provider,
 				model,
-				selectedTools
+				selectedTools,
+				stepType,
+				pipelineId
 			);
 
 			if ( response.success ) {
@@ -210,18 +212,16 @@ export default function ConfigureStepModal( {
 		JSON.stringify( selectedTools ) !==
 			JSON.stringify( currentConfig?.enabled_tools || [] );
 
-	return (
-		<Modal
-			title={ __( 'Configure AI Step', 'datamachine' ) }
-			onRequestClose={ onClose }
-			className="datamachine-configure-step-modal"
-			style={ { maxWidth: '600px' } }
-		>
+		return (
+			<Modal
+				title={ __( 'Configure AI Step', 'datamachine' ) }
+				onRequestClose={ onClose }
+				className="datamachine-configure-step-modal datamachine-modal--max-width-600"
+			>
 			<div className="datamachine-modal-content">
 				{ error && (
 					<div
-						className="notice notice-error"
-						style={ { marginBottom: '16px' } }
+						className="notice notice-error datamachine-spacing--margin-bottom-16"
 					>
 						<p>{ error }</p>
 					</div>

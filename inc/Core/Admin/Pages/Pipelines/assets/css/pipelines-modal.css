@@ -8,6 +8,28 @@
  * @since 1.0.0
  */
 
+/* ===== MODAL LAYOUT CLASSES ===== */
+
+/* Modal content containers */
+.datamachine-modal-content {
+    padding: 0;
+}
+
+/* Modal sections */
+.datamachine-modal-section {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #dcdcde;
+}
+
+.datamachine-modal-section--spaced {
+    margin-bottom: 24px;
+}
+
+.datamachine-modal-section--no-border {
+    border-bottom: none;
+}
+
 /* ===== FILES HANDLER MODAL STYLES ===== */
 
 
