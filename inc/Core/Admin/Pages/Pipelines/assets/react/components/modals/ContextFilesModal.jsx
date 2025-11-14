@@ -26,8 +26,7 @@ export default function ContextFilesModal( { isOpen, onClose, pipelineId } ) {
 		<Modal
 			title={ __( 'Pipeline Context Files', 'datamachine' ) }
 			onRequestClose={ onClose }
-			className="datamachine-context-files-modal"
-			style={ { maxWidth: '800px' } }
+			className="datamachine-context-files-modal datamachine-modal--max-width-800"
 		>
 			<PipelineContextFiles pipelineId={ pipelineId } />
 		</Modal>

@@ -34,33 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Removed outdated `next-steps.md` file
 
-### Added
-- Multisite context directive override support for dm-multisite plugin integration
-- React component library for Pipelines page:
-  - Card components (PipelineCard, FlowCard, PipelineStepCard, FlowStepCard)
-  - Modal components (ConfigureStepModal, HandlerSettingsModal, OAuthAuthenticationModal, StepSelectionModal, HandlerSelectionModal, FlowScheduleModal, ImportExportModal)
-  - Context management (PipelineContext) for global state
-  - Custom hooks for data fetching and state management
-  - Shared components (LoadingSpinner, StepTypeIcon, DataFlowArrow, PipelineSelector)
-- REST API import/export documentation with curl and Python examples
-- REST API settings endpoints documentation with curl examples
-- CSV format parameter support on pipelines endpoint for flexible export
-- Batch import mode with CSV validation and error handling
-- Tool configuration REST endpoint for programmatic settings management
-- Cache clearing REST endpoint for external integrations
-- Comprehensive logging for all REST API operations
-
-### Technical Details
-- Updated ai-http-client library from v1.1.3 to v1.1.4 (filter priority fix for proper directive execution order)
-- Actions and filters cleanup for improved code organization
-- Documentation alignment and build system verification
-- AI directive system fine-tuning to reduce duplicate tool call behavior
-- Extended existing `/pipelines` endpoint following REST resource-based design
-- Reused existing ImportExport business logic for consistency
-- Added proper CSV response headers with timestamped filenames
-- Maintained WordPress authentication standards with wpApiSettings.nonce
-
 ## [0.1.1] - 2025-09-24
+
+### Added
+- Admin notice for optional database cleanup of legacy display_order column
+- User-controlled migration path instead of automatic database modifications
+- Proper logging for database cleanup operations
 
 ### Removed
 - Flow reordering system including drag & drop arrows, database display_order column, and complex position management
@@ -74,10 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Eliminated unnecessary cache clearing operations during flow management
 - Streamlined database schema by removing unused display_order column and index
 
-### Added
-- Admin notice for optional database cleanup of legacy display_order column
-- User-controlled migration path instead of automatic database modifications
-- Proper logging for database cleanup operations
+
 
 ### Technical Details
 - Maintained newest-at-top flow display behavior without complex reordering UI

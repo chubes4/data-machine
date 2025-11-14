@@ -15,15 +15,14 @@ defined('WPINC') || exit;
  */
 function datamachine_register_ai_filters() {
 
-    add_filter('datamachine_ai_config', function($default, $pipeline_step_id = null) {
+    add_filter('datamachine_ai_config', function($default, $pipeline_step_id = null, array $context = []) {
         if (!$pipeline_step_id) {
             return [];
         }
 
-        // Get job_id from execution context (available during step execution and AI processing)
-        $job_id = \DataMachine\Engine\ExecutionContext::$job_id;
+        $job_id = $context['job_id'] ?? null;
 
-        if (!$job_id) {
+        if (!$job_id && empty($context['engine_data'])) {
             do_action('datamachine_log', 'debug', 'AI Config: No execution context available', [
                 'pipeline_step_id' => $pipeline_step_id
             ]);
@@ -34,7 +33,7 @@ function datamachine_register_ai_filters() {
             ];
         }
 
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+        $engine_data = $context['engine_data'] ?? apply_filters('datamachine_engine_data', [], $job_id);
         $pipeline_config = $engine_data['pipeline_config'] ?? [];
 
         $step_config = $pipeline_config[$pipeline_step_id] ?? [];
@@ -57,7 +56,7 @@ function datamachine_register_ai_filters() {
             'model' => $step_config['model'] ?? '',
             'enabled_tools' => $step_config['enabled_tools'] ?? []
         ];
-    }, 20, 2);
+    }, 20, 3);
 
 }
 

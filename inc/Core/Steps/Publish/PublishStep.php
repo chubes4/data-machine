@@ -17,14 +17,13 @@ class PublishStep {
     /**
      * Execute data publishing for the current step.
      *
-     * @param int $job_id Current job ID
-     * @param string $flow_step_id Current flow step ID
-     * @param array $data Current data packet array
-     * @param array $flow_step_config Flow step configuration
-     * @param array $engine_data Engine data array
+     * @param array $payload Unified step payload
      * @return array Updated data packet array
      */
-    public function execute(int $job_id, string $flow_step_id, array $data, array $flow_step_config, array $engine_data): array {
+    public function execute(array $payload): array {
+        $flow_step_id = $payload['flow_step_id'] ?? '';
+        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $flow_step_config = $payload['flow_step_config'] ?? [];
         
         try {
             do_action('datamachine_log', 'debug', 'Publish Step: Starting data publishing', ['flow_step_id' => $flow_step_id]);

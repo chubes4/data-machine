@@ -17,17 +17,7 @@ import { __ } from '@wordpress/i18n';
  */
 export default function EmptyStepCard( { pipelineId, onAddStep } ) {
 	return (
-		<div
-			className="datamachine-empty-step-card"
-			style={ {
-				border: '2px dashed #dcdcde',
-				borderRadius: '4px',
-				padding: '40px 20px',
-				textAlign: 'center',
-				backgroundColor: '#f9f9f9',
-				width: '100%',
-			} }
-		>
+		<div className="datamachine-empty-step-card datamachine-empty-card">
 			<Button
 				variant="secondary"
 				onClick={ () => onAddStep && onAddStep( pipelineId ) }

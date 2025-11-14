@@ -88,7 +88,7 @@ The Google Sheets fetch handler generates clean data packets for AI processing w
         },
         'headers' => ['col1', 'col2'], // Column headers if present
         'original_date_gmt' => 'current_timestamp'
-        // URLs removed from AI-visible metadata
+        // Clean data packet for AI processing
     ]
 ]
 ```

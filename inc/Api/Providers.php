@@ -6,7 +6,7 @@
  * Enables dynamic provider/model selection in AI configuration.
  *
  * @package DataMachine\Api
- * @since 0.1.3
+ * @since 0.1.2
  */
 
 namespace DataMachine\Api;
@@ -27,7 +27,7 @@ class Providers {
 	/**
 	 * Register REST API routes
 	 *
-	 * @since 0.1.3
+	 * @since 0.1.2
 	 */
 	public static function register_routes() {
 		register_rest_route('datamachine/v1', '/providers', [
@@ -43,7 +43,7 @@ class Providers {
 	 *
 	 * Returns provider metadata including labels and available models.
 	 *
-	 * @since 0.1.3
+	 * @since 0.1.2
 	 * @return \WP_REST_Response Providers response
 	 */
  	public static function handle_get_providers() {

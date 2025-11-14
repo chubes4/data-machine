@@ -8,30 +8,31 @@ Data Machine uses an engine data filter architecture that provides clean data se
 
 ### Core Design Principles
 
-1. **Engine Data Filter Access** - Fetch handlers store engine data in database; steps retrieve via centralized datamachine_engine_data filter
-2. **Clean Data Separation** - AI receives clean data packets without URLs; handlers receive engine parameters via filter access
+1. **Engine Data Propagation** - Fetch handlers store engine data via centralized filters; engine bundles the data into the payload passed to every step and tool
+2. **Clean Data Separation** - AI receives clean data packets without URLs; handlers receive engine parameters via the payload-supplied engine data
 3. **Unified Interface** - All steps, handlers, and tools use consistent parameter formats
 4. **Tool-Based Parameter Building** - AIStepToolParameters class provides standardized parameter construction
 
-## Core Parameter Structure
+## Core Payload Structure
 
-### Universal Parameters
-These parameters are provided to ALL steps and components:
+### Universal Payload Keys
+These payload keys are provided to ALL steps and components:
 
 ```php
-$core_parameters = [
+$payload = [
     'job_id' => $job_id,                    // Unique job identifier
     'flow_step_id' => $flow_step_id,        // Flow step identifier ({pipeline_step_id}_{flow_id})
     'data' => $data,                        // Data packet array
-    'flow_step_config' => $flow_step_config // Step configuration
+    'flow_step_config' => $flow_step_config,// Step configuration
+    'engine_data' => $engine_data           // Engine metadata stored by fetch handlers
 ];
 ```
 
 ### Engine Data
-Engine data is stored in database by fetch handlers and retrieved via centralized datamachine_engine_data filter:
+Engine data is stored in the database by fetch handlers using the centralized `datamachine_engine_data` filter. During execution the engine collects that data and injects it into the payload, so every step receives the same metadata packet:
 
 ```php
-// 1. Fetch handlers store in database via centralized filter (array storage)
+// 1. Fetch handlers store data for later payload injection
 if ($job_id) {
     apply_filters('datamachine_engine_data', null, $job_id, [
         'source_url' => $source_url,
@@ -39,28 +40,39 @@ if ($job_id) {
     ]);
 }
 
-// 2. Steps retrieve engine data via centralized filter
-$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
-$source_url = $engine_data['source_url'] ?? null;
-$image_url = $engine_data['image_url'] ?? null;
+// 2. Steps read the injected engine data directly from the payload
+public function execute(array $payload): array {
+    $engine_data = $payload['engine_data'] ?? [];
+
+    // Optional: refresh if handler updated engine data mid-flow
+    if (!$engine_data) {
+        $engine_data = apply_filters('datamachine_engine_data', [], $payload['job_id']);
+    }
+
+    $source_url = $engine_data['source_url'] ?? null;
+    $image_url = $engine_data['image_url'] ?? null;
+
+    // ...
+}
 ```
 
 ## Step Implementation Pattern
 
-All steps follow the same parameter extraction pattern:
+All steps follow the same payload extraction pattern:
 
 ```php
 class MyStep {
-    public function execute(array $parameters): array {
+    public function execute(array $payload): array {
         // Extract core parameters
-        $job_id = $parameters['job_id'];
-        $flow_step_id = $parameters['flow_step_id'];
-        $data = $parameters['data'] ?? [];
-        $flow_step_config = $parameters['flow_step_config'] ?? [];
+        $job_id = $payload['job_id'];
+        $flow_step_id = $payload['flow_step_id'];
+        $data = $payload['data'] ?? [];
+        $flow_step_config = $payload['flow_step_config'] ?? [];
+        $engine_data = $payload['engine_data'] ?? [];
 
         // Extract step-specific parameters
-        $custom_setting = $parameters['custom_setting'] ?? null;
-        $source_url = $parameters['source_url'] ?? null;
+        $custom_setting = $payload['custom_setting'] ?? null;
+        $source_url = $engine_data['source_url'] ?? null;
 
         // Step processing logic
         $result = $this->process_data($data, $flow_step_config);
@@ -109,15 +121,13 @@ Use `AIStepToolParameters::buildForHandlerTool()` for parameter building with en
 ```php
 class MyPublishHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        // Parameters built by AIStepToolParameters::buildForHandlerTool()
-        // Contains: content, title, tool_name, handler_config, engine data (source_url, image_url)
+        // Parameters built by AIStepToolParameters::buildParameters()
+        // Already contain: content, title, job_id, flow_step_id, engine_data
 
         $content = $parameters['content'] ?? '';
         $handler_config = $tool_def['handler_config'] ?? [];
 
-        // Access engine data via centralized filter pattern
-        $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+        $engine_data = $parameters['engine_data'] ?? [];
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;
 
@@ -127,14 +137,13 @@ class MyPublishHandler {
 ```
 
 ### Update Handlers (Engine Data)
-Require `source_url` from engine data stored by fetch handlers and retrieved via datamachine_engine_data filter:
+Require `source_url` from engine data stored by fetch handlers and delivered on the payload:
 
 ```php
 class MyUpdateHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        // Access engine data via centralized filter pattern
-        $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+        // Engine data already provided on the payload
+        $engine_data = $parameters['engine_data'] ?? [];
         $source_url = $engine_data['source_url'] ?? null;
 
         if (empty($source_url)) {
@@ -168,17 +177,17 @@ $parameters = AIStepToolParameters::buildForHandlerTool(
     $data,                   // Data packet array
     $tool_definition,        // Tool specification
     $engine_parameters,      // Engine data (source_url, etc.)
-    $handler_config         // Handler configuration
+    $handler_config          // Handler configuration
 );
 ```
 
 ### Parameter Building Process
 
-1. **Start with Engine Parameters** - Core job/flow context as base
+1. **Start with Payload Context** - Core job/flow identifiers and engine data copied directly from the incoming payload
 2. **Extract Content** - Pull content/title from data packets based on tool specs
 3. **Add Tool Metadata** - Include tool_definition, tool_name, handler_config
 4. **Merge AI Parameters** - Add AI-provided parameters (overwrites conflicts)
-5. **Include Engine Data** - For handler tools, merge source_url and context from engine data
+5. **Preserve Engine Data** - Engine metadata stays attached for handler tools and downstream consumers
 
 ### Example Built Parameters
 
@@ -189,6 +198,10 @@ $parameters = AIStepToolParameters::buildForHandlerTool(
     'flow_step_id' => 'uuid-step-1_456',
     'data' => [...], // Data packet array
     'flow_step_config' => [...],
+    'engine_data' => [
+        'source_url' => 'https://example.com/post/123',
+        'image_url' => 'https://example.com/post/123/cover.jpg'
+    ],
 
     // Extracted content (from data packets)
     'content' => 'Article content from data packet',
@@ -201,10 +214,7 @@ $parameters = AIStepToolParameters::buildForHandlerTool(
 
     // AI-provided parameters
     'content' => 'AI-modified tweet content', // Overwrites extracted content
-    'hashtags' => '#ai #automation',
-
-    // Engine data (Update handlers only)
-    'source_url' => 'https://example.com/post/123'
+    'hashtags' => '#ai #automation'
 ]
 ```
 
@@ -243,25 +253,25 @@ if ($job_id) {
 Steps can validate required parameters:
 
 ```php
-public function execute(array $parameters): array {
+public function execute(array $payload): array {
     $required = ['job_id', 'flow_step_id', 'custom_required_param'];
 
     foreach ($required as $param) {
-        if (!isset($parameters[$param])) {
+        if (!isset($payload[$param])) {
             throw new InvalidArgumentException("Missing required parameter: {$param}");
         }
     }
 
-    return $this->process($parameters);
+    return $this->process($payload);
 }
 ```
 
 ## Flow Step Configuration Access
 
-Parameters include complete flow step configuration with pipeline inheritance:
+Payloads include complete flow step configuration with pipeline inheritance:
 
 ```php
-$flow_step_config = $parameters['flow_step_config'];
+$flow_step_config = $payload['flow_step_config'];
 
 // Available configuration keys:
 $step_type = $flow_step_config['step_type'];           // From pipeline
@@ -273,10 +283,10 @@ $handler_config = $flow_step_config['handler_config']; // Handler settings
 
 ## Data Packet Integration
 
-The data parameter contains the complete workflow history:
+The `data` key contains the complete workflow history:
 
 ```php
-$data = $parameters['data']; // Array of data packets
+$data = $payload['data']; // Array of data packets
 
 // Each data packet structure:
 [
@@ -291,7 +301,7 @@ $data = $parameters['data']; // Array of data packets
 ## Benefits of Flat Parameter Architecture
 
 ### Simplicity
-- Single parameter extraction pattern across all components
+- Single payload extraction pattern across all components
 - No complex nested structure navigation
 - Clear parameter availability and access
 
@@ -301,7 +311,7 @@ $data = $parameters['data']; // Array of data packets
 - No signature changes required for new functionality
 
 ### Consistency
-- Unified interface across steps, handlers, and tools
+- Unified payload interface across steps, handlers, and tools
 - Consistent parameter naming and structure
 - Predictable parameter availability
 

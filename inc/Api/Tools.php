@@ -6,7 +6,7 @@
  * Enables dynamic tool selection with configuration status.
  *
  * @package DataMachine\Api
- * @since 0.1.3
+ * @since 0.1.2
  */
 
 namespace DataMachine\Api;
@@ -27,7 +27,7 @@ class Tools {
 	/**
 	 * Register REST API routes
 	 *
-	 * @since 0.1.3
+	 * @since 0.1.2
 	 */
 	public static function register_routes() {
 		register_rest_route('datamachine/v1', '/tools', [
@@ -44,7 +44,7 @@ class Tools {
 	 * Returns tool metadata including labels, descriptions, and configuration status.
 	 * Filters to only general tools (excludes handler-specific tools).
 	 *
-	 * @since 0.1.3
+	 * @since 0.1.2
 	 * @return \WP_REST_Response Tools response
 	 */
 	public static function handle_get_tools() {

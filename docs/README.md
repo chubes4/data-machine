@@ -158,7 +158,7 @@ docs/
 - Publishing tools for each platform (twitter_publish, facebook_publish, etc.)
 - Update tools for content modification
 
-**Note**: Data Machine core plugin implements 10 REST API endpoint files with comprehensive functionality (Auth, Execute, Flows, Pipelines, Files, Users, Logs, Jobs, ProcessedItems). Complete React architecture migration with zero AJAX dependencies.
+**Note**: Data Machine core plugin implements 10 REST API endpoint files with comprehensive functionality (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users). React architecture with REST API integration.
 
 ### ✅ Authentication Systems
 

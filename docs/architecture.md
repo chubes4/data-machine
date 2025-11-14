@@ -196,10 +196,7 @@ Centralized WordPress transient-based cache system:
 - **Modals**: ConfigureStepModal, HandlerSettingsModal, OAuthAuthenticationModal, StepSelectionModal, HandlerSelectionModal, FlowScheduleModal, ImportExportModal
 - **Hooks**: usePipelines, useFlows, useStepTypes, useHandlers, useStepSettings, useModal
 
-**Migration Impact**:
-- Eliminated 2,223 lines of jQuery code from 12 JavaScript files
-- Removed 6 PHP template files (pipeline-card.php, flow-instance-card.php, pipeline-step-card.php, flow-step-card.php, flow-instance-footer.php, pipeline-templates.php)
-- Deleted 2 AJAX endpoint classes (PipelinePageAjax, PipelineStatusAjax)
+
 
 **Complete REST API Integration**:
 All admin pages now use REST API architecture with zero AJAX dependencies.

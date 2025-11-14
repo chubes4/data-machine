@@ -17,15 +17,7 @@ import { __ } from '@wordpress/i18n';
  */
 export default function AutoCleanupOption( { checked, onChange } ) {
 	return (
-		<div
-			style={ {
-				marginTop: '16px',
-				padding: '12px',
-				background: '#f9f9f9',
-				border: '1px solid #dcdcde',
-				borderRadius: '4px',
-			} }
-		>
+		<div className="datamachine-auto-cleanup-option">
 			<CheckboxControl
 				label={ __(
 					'Automatically delete files after processing',

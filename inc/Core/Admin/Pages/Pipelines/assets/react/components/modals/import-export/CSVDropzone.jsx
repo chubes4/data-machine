@@ -111,56 +111,33 @@ export default function CSVDropzone( {
 		}
 	};
 
+	const dropzoneClass = [
+		'datamachine-csv-dropzone',
+		isDragging && 'datamachine-csv-dropzone--dragging',
+		disabled && 'datamachine-csv-dropzone--disabled',
+	]
+		.filter( Boolean )
+		.join( ' ' );
+
 	return (
 		<div>
 			<div
+				className={ dropzoneClass }
 				onDragEnter={ handleDragEnter }
 				onDragLeave={ handleDragLeave }
 				onDragOver={ handleDragOver }
 				onDrop={ handleDrop }
-				style={ {
-					border: `2px dashed ${
-						isDragging ? '#0073aa' : '#dcdcde'
-					}`,
-					borderRadius: '4px',
-					padding: '40px 20px',
-					textAlign: 'center',
-					background: isDragging ? '#f0f6fc' : '#f9f9f9',
-					transition: 'all 0.2s',
-					cursor: disabled ? 'not-allowed' : 'pointer',
-					opacity: disabled ? 0.6 : 1,
-				} }
 				onClick={ ! disabled ? handleBrowseClick : undefined }
 			>
-				<div
-					style={ {
-						marginBottom: '16px',
-						fontSize: '48px',
-						color: '#757575',
-					} }
-				>
-					📄
-				</div>
+				<div className="datamachine-csv-dropzone__icon">📄</div>
 
-				<p
-					style={ {
-						margin: '0 0 12px 0',
-						fontSize: '16px',
-						fontWeight: '500',
-					} }
-				>
+				<p className="datamachine-csv-dropzone__title">
 					{ fileName
 						? __( 'File selected', 'datamachine' )
 						: __( 'Drag and drop CSV file here', 'datamachine' ) }
 				</p>
 
-				<p
-					style={ {
-						margin: '0 0 16px 0',
-						color: '#757575',
-						fontSize: '14px',
-					} }
-				>
+				<p className="datamachine-csv-dropzone__divider">
 					{ __( 'or', 'datamachine' ) }
 				</p>
 
@@ -177,23 +154,13 @@ export default function CSVDropzone( {
 					type="file"
 					accept=".csv,text/csv"
 					onChange={ handleFileInputChange }
-					style={ { display: 'none' } }
+					className="datamachine-hidden"
 					disabled={ disabled }
 				/>
 			</div>
 
 			{ error && (
-				<div
-					style={ {
-						marginTop: '12px',
-						padding: '8px 12px',
-						background: '#fef7f7',
-						border: '1px solid #dc3232',
-						borderRadius: '4px',
-						color: '#dc3232',
-						fontSize: '13px',
-					} }
-				>
+				<div className="datamachine-csv-dropzone__error">
 					{ error }
 				</div>
 			) }

@@ -508,20 +508,19 @@ No custom REST endpoints required - handlers register via WordPress filters.
 **Example Extensions**:
 - DM Events (calendar endpoint)
 
-## Migration from AJAX to REST
+## REST API Integration
 
-If your extension uses AJAX, migrate to REST API following the [REST API Migration Guide](rest-api-migration.md).
+Extensions should use REST API endpoints with proper authentication.
 
-**Quick Migration Path**:
-1. Identify AJAX endpoint
-2. Create REST endpoint with proper authentication
-3. Implement server-side logic
-4. Update frontend to use fetch()
-5. Add progressive enhancement
+**Implementation Path**:
+1. Create REST endpoint with proper authentication
+2. Implement server-side logic
+3. Update frontend to use fetch()
+4. Add progressive enhancement
 6. Remove AJAX files
 7. Update documentation
 
-**DM Events as Reference**: 831 lines removed, comprehensive migration example
+
 
 ## Error Handling
 
@@ -571,7 +570,7 @@ try {
 ## Related Documentation
 
 - [REST API Reference](rest-api.md) - Complete core endpoint documentation
-- [REST API Migration](rest-api-migration.md) - AJAX to REST migration patterns
+
 - [Core Filters](core-filters.md) - WordPress filter hooks for handler registration
 - [Core Actions](core-actions.md) - WordPress action hooks for execution
 

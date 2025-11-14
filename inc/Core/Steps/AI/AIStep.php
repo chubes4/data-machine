@@ -20,14 +20,15 @@ class AIStep {
     /**
      * Execute multi-turn AI conversation with tool calling support.
      *
-     * @param int $job_id Current job ID
-     * @param string $flow_step_id Current flow step ID
-     * @param array $data Current data packet array
-     * @param array $flow_step_config Flow step configuration
-     * @param array $engine_data Engine data array
+     * @param array $payload Unified step payload
      * @return array Updated data packet array
      */
-    public function execute(int $job_id, string $flow_step_id, array $data, array $flow_step_config, array $engine_data): array {
+    public function execute(array $payload): array {
+        $job_id = $payload['job_id'] ?? 0;
+        $flow_step_id = $payload['flow_step_id'] ?? '';
+        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $flow_step_config = $payload['flow_step_config'] ?? [];
+        $engine_data = $payload['engine_data'] ?? [];
         try {
             $user_message = trim($flow_step_config['user_message'] ?? '');
 
@@ -73,20 +74,20 @@ class AIStep {
             }
 
             if (empty($flow_step_config['pipeline_step_id'])) {
-                do_action('datamachine_log', 'error', 'AI Agent: Missing required pipeline_step_id from pipeline configuration', [
+                do_action('datamachine_log', 'warning', 'AI Agent: Missing pipeline_step_id, skipping AI processing', [
                     'flow_step_id' => $flow_step_id,
                     'flow_step_config' => $flow_step_config
                 ]);
-                throw new \RuntimeException("AI Agent requires pipeline_step_id from pipeline configuration for step-aware AI client operation");
+                return $data;
             }
             $pipeline_step_id = $flow_step_config['pipeline_step_id'];
 
-            $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id);
+            $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, $payload);
 
-            $previous_flow_step_id = apply_filters('datamachine_get_previous_flow_step_id', null, $flow_step_id);
+            $previous_flow_step_id = apply_filters('datamachine_get_previous_flow_step_id', null, $flow_step_id, $payload);
             $previous_step_config = $previous_flow_step_id ? apply_filters('datamachine_get_flow_step_config', [], $previous_flow_step_id) : null;
 
-            $next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $flow_step_id);
+            $next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $flow_step_id, $payload);
             $next_step_config = $next_flow_step_id ? apply_filters('datamachine_get_flow_step_config', [], $next_flow_step_id) : null;
             
             $available_tools = AIStepTools::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id);
@@ -99,12 +100,13 @@ class AIStep {
             }
             $provider_name = $step_ai_config['selected_provider'] ?? '';
             if (empty($provider_name)) {
-                $error_message = 'AI step not configured: No provider selected';
-                do_action('datamachine_log', 'error', 'AI Agent: No provider configured', [
+                do_action('datamachine_fail_job', $job_id, 'ai_provider_missing', [
                     'flow_step_id' => $flow_step_id,
-                    'pipeline_step_id' => $pipeline_step_id
+                    'pipeline_step_id' => $pipeline_step_id,
+                    'error_message' => 'AI step requires provider configuration. Please configure an AI provider in step settings.',
+                    'solution' => 'Configure AI provider in pipeline step settings'
                 ]);
-                throw new \Exception($error_message);
+                return $data;
             }
 
             $ai_provider_tools = [];
@@ -143,17 +145,10 @@ class AIStep {
                     'messages' => $current_request['messages']
                 ]);
                 
-                $ai_response = apply_filters('ai_request', $current_request, $provider_name, null, $ai_provider_tools, $pipeline_step_id);
+                $ai_response = apply_filters('ai_request', $current_request, $provider_name, null, $ai_provider_tools, $pipeline_step_id, $payload);
 
                 if (!$ai_response['success']) {
                     $error_message = 'AI processing failed: ' . ($ai_response['error'] ?? 'Unknown error');
-                    do_action('datamachine_log', 'error', 'AI Agent: Processing failed on turn ' . $turn_count, [
-                        'flow_step_id' => $flow_step_id,
-                        'turn_count' => $turn_count,
-                        'error' => $ai_response['error'] ?? 'Unknown error',
-                        'provider' => $ai_response['provider'] ?? 'Unknown'
-                    ]);
-                    
                     do_action('datamachine_fail_job', $job_id, 'ai_processing_failed', [
                         'flow_step_id' => $flow_step_id,
                         'turn_count' => $turn_count,
@@ -239,7 +234,8 @@ class AIStep {
                             'data' => $data,
                             'flow_step_config' => $flow_step_config,
                             'job_id' => $job_id,
-                            'flow_step_id' => $flow_step_id
+                            'flow_step_id' => $flow_step_id,
+                            'engine_data' => $engine_data
                         ];
 
 

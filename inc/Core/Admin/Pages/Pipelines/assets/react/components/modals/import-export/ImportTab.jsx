@@ -123,7 +123,7 @@ export default function ImportTab( { onSuccess, onClose } ) {
 				</Notice>
 			) }
 
-			<p style={ { marginBottom: '20px', color: '#757575' } }>
+			<p className="datamachine-import-export-description">
 				{ __(
 					'Upload a CSV file to import pipelines:',
 					'datamachine'
@@ -137,37 +137,22 @@ export default function ImportTab( { onSuccess, onClose } ) {
 			/>
 
 			{ fileName && (
-				<div
-					style={ {
-						marginTop: '16px',
-						display: 'flex',
-						alignItems: 'center',
-						gap: '12px',
-					} }
-				>
-					<span style={ { color: '#46b450', fontWeight: '500' } }>
+				<div className="datamachine-file-selected-display">
+					<span className="datamachine-file-selected-label">
 						{ __( 'Selected:', 'datamachine' ) } { fileName }
 					</span>
 					<Button
 						variant="link"
 						onClick={ handleClear }
 						disabled={ isImporting }
-						style={ { color: '#dc3232' } }
+						className="datamachine-button--destructive"
 					>
 						{ __( 'Clear', 'datamachine' ) }
 					</Button>
 				</div>
 			) }
 
-			<div
-				style={ {
-					display: 'flex',
-					justifyContent: 'space-between',
-					marginTop: '24px',
-					paddingTop: '20px',
-					borderTop: '1px solid #dcdcde',
-				} }
-			>
+			<div className="datamachine-tab-actions">
 				<Button
 					variant="secondary"
 					onClick={ onClose }

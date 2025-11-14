@@ -33,7 +33,7 @@ class PipelineContextDirective {
 	 * @param string|null $pipeline_step_id Pipeline step ID for context
 	 * @return array Modified request with context files added
 	 */
-	public static function inject( $request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null ): array {
+	public static function inject( $request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null, array $context = [] ): array {
 		if ( ! isset( $request['messages'] ) || ! is_array( $request['messages'] ) ) {
 			return $request;
 		}
@@ -117,4 +117,4 @@ class PipelineContextDirective {
 }
 
 // Self-register at Priority 35 (fourth in directive system)
-add_filter( 'ai_request', [ PipelineContextDirective::class, 'inject' ], 35, 5 );
+add_filter( 'ai_request', [ PipelineContextDirective::class, 'inject' ], 35, 6 );

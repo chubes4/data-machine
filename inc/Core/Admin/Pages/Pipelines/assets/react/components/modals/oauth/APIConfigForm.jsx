@@ -53,13 +53,7 @@ export default function APIConfigForm( {
 
 	return (
 		<div className="datamachine-api-config-form">
-			<p
-				style={ {
-					marginBottom: '16px',
-					fontSize: '13px',
-					color: '#757575',
-				} }
-			>
+			<p className="datamachine-api-config-description">
 				{ __( 'Enter your API credentials:', 'datamachine' ) }
 			</p>
 

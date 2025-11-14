@@ -50,65 +50,24 @@ export default function PipelineCheckboxTable( {
 		pipelines.length > 0 && selectedIds.length === pipelines.length;
 
 	return (
-		<div
-			style={ {
-				border: '1px solid #dcdcde',
-				borderRadius: '4px',
-				maxHeight: '400px',
-				overflowY: 'auto',
-			} }
-		>
-			<table style={ { width: '100%', borderCollapse: 'collapse' } }>
+		<div className="datamachine-pipeline-table-wrapper">
+			<table className="datamachine-pipeline-table">
 				<thead>
-					<tr
-						style={ {
-							background: '#f9f9f9',
-							borderBottom: '1px solid #dcdcde',
-							position: 'sticky',
-							top: 0,
-							zIndex: 1,
-						} }
-					>
-						<th
-							style={ {
-								padding: '12px 16px',
-								textAlign: 'left',
-								width: '40px',
-							} }
-						>
+					<tr className="datamachine-pipeline-table-header">
+						<th className="datamachine-table-col--40">
 							<CheckboxControl
 								checked={ allSelected }
 								onChange={ toggleAll }
 								__nextHasNoMarginBottom
 							/>
 						</th>
-						<th
-							style={ {
-								padding: '12px 16px',
-								textAlign: 'left',
-								fontWeight: '600',
-							} }
-						>
+						<th>
 							{ __( 'Pipeline Name', 'datamachine' ) }
 						</th>
-						<th
-							style={ {
-								padding: '12px 16px',
-								textAlign: 'left',
-								fontWeight: '600',
-								width: '100px',
-							} }
-						>
+						<th className="datamachine-table-col--100">
 							{ __( 'Steps', 'datamachine' ) }
 						</th>
-						<th
-							style={ {
-								padding: '12px 16px',
-								textAlign: 'left',
-								fontWeight: '600',
-								width: '100px',
-							} }
-						>
+						<th className="datamachine-table-col--100">
 							{ __( 'Flows', 'datamachine' ) }
 						</th>
 					</tr>
@@ -118,11 +77,7 @@ export default function PipelineCheckboxTable( {
 						<tr>
 							<td
 								colSpan="4"
-								style={ {
-									padding: '40px 20px',
-									textAlign: 'center',
-									color: '#757575',
-								} }
+								className="datamachine-pipeline-table-empty"
 							>
 								{ __(
 									'No pipelines available',
@@ -141,30 +96,13 @@ export default function PipelineCheckboxTable( {
 							pipeline.pipeline_id
 						);
 
+						const rowClass = isSelected
+							? 'datamachine-pipeline-table-row datamachine-pipeline-table-row--selected'
+							: 'datamachine-pipeline-table-row';
+
 						return (
-							<tr
-								key={ pipeline.pipeline_id }
-								style={ {
-									borderBottom: '1px solid #dcdcde',
-									background: isSelected
-										? '#f0f6fc'
-										: 'transparent',
-									transition: 'background 0.2s',
-								} }
-								onMouseEnter={ ( e ) => {
-									if ( ! isSelected ) {
-										e.currentTarget.style.background =
-											'#f9f9f9';
-									}
-								} }
-								onMouseLeave={ ( e ) => {
-									if ( ! isSelected ) {
-										e.currentTarget.style.background =
-											'transparent';
-									}
-								} }
-							>
-								<td style={ { padding: '12px 16px' } }>
+							<tr key={ pipeline.pipeline_id } className={ rowClass }>
+								<td>
 									<CheckboxControl
 										checked={ isSelected }
 										onChange={ () =>
@@ -175,28 +113,13 @@ export default function PipelineCheckboxTable( {
 										__nextHasNoMarginBottom
 									/>
 								</td>
-								<td
-									style={ {
-										padding: '12px 16px',
-										fontWeight: '500',
-									} }
-								>
+								<td className="datamachine-pipeline-table-name">
 									{ pipeline.pipeline_name }
 								</td>
-								<td
-									style={ {
-										padding: '12px 16px',
-										color: '#757575',
-									} }
-								>
+								<td className="datamachine-pipeline-table-meta">
 									{ stepCount }
 								</td>
-								<td
-									style={ {
-										padding: '12px 16px',
-										color: '#757575',
-									} }
-								>
+								<td className="datamachine-pipeline-table-meta">
 									{ flowCount }
 								</td>
 							</tr>

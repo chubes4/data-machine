@@ -136,15 +136,8 @@ export default function FlowStepCard( {
 					</Notice>
 				) }
 
-				<div style={ { marginBottom: '12px' } }>
-					<div
-						style={ {
-							display: 'flex',
-							alignItems: 'center',
-							gap: '8px',
-							marginBottom: '8px',
-						} }
-					>
+				<div className="datamachine-step-content">
+					<div className="datamachine-step-header-row">
 						<strong>
 							{ slugToLabel( pipelineStep.step_type ) }
 						</strong>
@@ -152,17 +145,8 @@ export default function FlowStepCard( {
 
 					{ /* AI Configuration Display */ }
 					{ isAiStep && aiConfig && (
-						<div
-							className="datamachine-ai-config-display"
-							style={ { marginTop: '12px' } }
-						>
-							<div
-								style={ {
-									fontSize: '12px',
-									color: '#757575',
-									marginBottom: '8px',
-								} }
-							>
+						<div className="datamachine-ai-config-display">
+							<div className="datamachine-ai-provider-info">
 								<strong>
 									{ __( 'AI Provider:', 'datamachine' ) }
 								</strong>{ ' ' }

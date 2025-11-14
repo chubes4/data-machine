@@ -69,7 +69,7 @@ The WordPress Local handler generates clean data packets for AI processing while
         'original_id' => 123,
         'original_title' => 'Post Title',
         'original_date_gmt' => '2023-01-01 12:00:00'
-        // URLs removed from AI-visible metadata
+        // Clean data packet for AI processing
     ]
 ]
 ```

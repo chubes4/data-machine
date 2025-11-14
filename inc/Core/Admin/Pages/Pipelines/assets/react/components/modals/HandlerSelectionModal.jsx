@@ -52,25 +52,16 @@ export default function HandlerSelectionModal( {
 		<Modal
 			title={ __( 'Select Handler', 'datamachine' ) }
 			onRequestClose={ onClose }
-			className="datamachine-handler-selection-modal"
-			style={ { maxWidth: '600px' } }
+			className="datamachine-handler-selection-modal datamachine-modal--max-width-600"
 		>
 			<div className="datamachine-modal-content">
-				<p style={ { marginBottom: '20px', color: '#757575' } }>
+				<p className="datamachine-modal-header-text">
 					{ __( 'Choose the handler for this step:', 'datamachine' ) }
 				</p>
 
 				{ handlers.length === 0 && (
-					<div
-						style={ {
-							padding: '40px 20px',
-							textAlign: 'center',
-							background: '#f9f9f9',
-							border: '1px solid #dcdcde',
-							borderRadius: '4px',
-						} }
-					>
-						<p style={ { margin: 0, color: '#757575' } }>
+					<div className="datamachine-modal-empty-state datamachine-modal-empty-state--bordered">
+						<p className="datamachine-text--margin-reset">
 							{ __(
 								'No handlers available for this step type.',
 								'datamachine'
@@ -80,71 +71,24 @@ export default function HandlerSelectionModal( {
 				) }
 
 				{ handlers.length > 0 && (
-					<div
-						className="datamachine-handler-grid"
-						style={ {
-							display: 'grid',
-							gridTemplateColumns: 'repeat(2, 1fr)',
-							gap: '16px',
-						} }
-					>
+					<div className="datamachine-modal-grid-2col">
 						{ handlers.map( ( [ slug, handler ] ) => (
 							<button
 								key={ slug }
 								type="button"
-								className="datamachine-handler-card"
+								className="datamachine-modal-card"
 								onClick={ () => handleSelect( slug ) }
-								style={ {
-									padding: '20px',
-									border: '2px solid #dcdcde',
-									borderRadius: '4px',
-									background: '#ffffff',
-									cursor: 'pointer',
-									textAlign: 'left',
-									transition: 'all 0.2s',
-									display: 'flex',
-									flexDirection: 'column',
-									gap: '8px',
-								} }
-								onMouseEnter={ ( e ) => {
-									e.currentTarget.style.borderColor =
-										'#0073aa';
-									e.currentTarget.style.background =
-										'#f9f9f9';
-								} }
-								onMouseLeave={ ( e ) => {
-									e.currentTarget.style.borderColor =
-										'#dcdcde';
-									e.currentTarget.style.background =
-										'#ffffff';
-								} }
 							>
-								<strong style={ { fontSize: '16px' } }>
+								<strong>
 									{ handler.label || slugToLabel( slug ) }
 								</strong>
 
-								<p
-									style={ {
-										margin: 0,
-										fontSize: '13px',
-										color: '#757575',
-									} }
-								>
+								<p>
 									{ handler.description || '' }
 								</p>
 
 								{ handler.requires_auth && (
-									<span
-										style={ {
-											display: 'inline-block',
-											padding: '2px 8px',
-											background: '#f0b849',
-											color: '#000',
-											borderRadius: '3px',
-											fontSize: '11px',
-											fontWeight: '500',
-										} }
-									>
+									<span className="datamachine-modal-badge">
 										{ __( 'Requires Auth', 'datamachine' ) }
 									</span>
 								) }
@@ -153,15 +97,7 @@ export default function HandlerSelectionModal( {
 					</div>
 				) }
 
-				<div
-					style={ {
-						display: 'flex',
-						justifyContent: 'flex-end',
-						marginTop: '24px',
-						paddingTop: '20px',
-						borderTop: '1px solid #dcdcde',
-					} }
-				>
+				<div className="datamachine-modal-actions datamachine-modal-actions--end">
 					<Button variant="secondary" onClick={ onClose }>
 						{ __( 'Cancel', 'datamachine' ) }
 					</Button>

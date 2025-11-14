@@ -32,7 +32,7 @@ class SiteContextDirective {
      * @param string|null $pipeline_step_id Pipeline step ID (unused)
      * @return array Modified request with site context added
      */
-    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null): array {
+    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null, array $context = []): array {
         if (!self::is_site_context_enabled()) {
             return $request;
         }
@@ -102,5 +102,5 @@ $site_context_directive = apply_filters('datamachine_site_context_directive', Si
 
 // Register the filtered directive (allows replacement by multisite plugin)
 if ($site_context_directive) {
-    add_filter('ai_request', [$site_context_directive, 'inject'], 50, 5);
+    add_filter('ai_request', [$site_context_directive, 'inject'], 50, 6);
 }

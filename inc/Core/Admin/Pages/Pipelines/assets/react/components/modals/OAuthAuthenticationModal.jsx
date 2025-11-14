@@ -158,8 +158,7 @@ export default function OAuthAuthenticationModal( {
 		<Modal
 			title={ __( 'OAuth Authentication', 'datamachine' ) }
 			onRequestClose={ onClose }
-			className="datamachine-oauth-modal"
-			style={ { maxWidth: '600px' } }
+			className="datamachine-oauth-modal datamachine-modal--max-width-600"
 		>
 			<div className="datamachine-modal-content">
 				{ error && (
@@ -182,15 +181,8 @@ export default function OAuthAuthenticationModal( {
 					</Notice>
 				) }
 
-				<div style={ { marginBottom: '20px' } }>
-					<div
-						style={ {
-							display: 'flex',
-							justifyContent: 'space-between',
-							alignItems: 'center',
-							marginBottom: '12px',
-						} }
-					>
+				<div className="datamachine-modal-spacing--mb-20">
+					<div className="datamachine-modal-header-section">
 						<div>
 							<strong>{ __( 'Handler:', 'datamachine' ) }</strong>{ ' ' }
 							{ handlerInfo.label || handlerSlug }
@@ -198,13 +190,7 @@ export default function OAuthAuthenticationModal( {
 						<ConnectionStatus connected={ connected } />
 					</div>
 
-					<p
-						style={ {
-							margin: 0,
-							fontSize: '13px',
-							color: '#757575',
-						} }
-					>
+					<p className="datamachine-modal-text--info">
 						{ authType === 'oauth2'
 							? __(
 									'Click "Connect Account" to authorize access via OAuth.',
@@ -220,7 +206,7 @@ export default function OAuthAuthenticationModal( {
 				{ ! connected && (
 					<>
 						{ authType === 'oauth2' ? (
-							<div style={ { marginBottom: '16px' } }>
+							<div className="datamachine-modal-spacing--mb-16">
 								<OAuthPopupHandler
 									oauthUrl={ oauthUrl }
 									onSuccess={ handleOAuthSuccess }
@@ -235,7 +221,7 @@ export default function OAuthAuthenticationModal( {
 									onChange={ setApiConfig }
 									fields={ handlerInfo.auth_fields || [] }
 								/>
-								<div style={ { marginTop: '16px' } }>
+								<div className="datamachine-modal-spacing--mt-16">
 									<Button
 										variant="primary"
 										onClick={ handleSimpleAuthSave }
@@ -259,13 +245,13 @@ export default function OAuthAuthenticationModal( {
 					<>
 						<AccountDetails account={ accountData } />
 
-						<div style={ { marginTop: '16px' } }>
+						<div className="datamachine-modal-spacing--mt-16">
 							<Button
 								variant="secondary"
 								onClick={ handleDisconnect }
 								disabled={ isSaving }
 								isBusy={ isSaving }
-								style={ { color: '#dc3232' } }
+								className="datamachine-button--destructive"
 							>
 								{ isSaving
 									? __( 'Disconnecting...', 'datamachine' )
@@ -278,15 +264,7 @@ export default function OAuthAuthenticationModal( {
 					</>
 				) }
 
-				<div
-					style={ {
-						display: 'flex',
-						justifyContent: 'flex-end',
-						marginTop: '24px',
-						paddingTop: '20px',
-						borderTop: '1px solid #dcdcde',
-					} }
-				>
+				<div className="datamachine-modal-actions datamachine-modal-actions--end">
 					<Button
 						variant="secondary"
 						onClick={ onClose }

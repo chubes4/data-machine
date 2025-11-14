@@ -84,14 +84,7 @@ export default function AIToolsSelector( {
 
 	if ( isLoadingTools ) {
 		return (
-			<div
-				style={ {
-					marginTop: '16px',
-					padding: '20px',
-					textAlign: 'center',
-					color: '#757575',
-				} }
-			>
+			<div className="datamachine-modal-loading-state datamachine-tools-spacing--mt-16">
 				{ __( 'Loading AI tools...', 'datamachine' ) }
 			</div>
 		);
@@ -102,38 +95,19 @@ export default function AIToolsSelector( {
 	}
 
 	return (
-		<div style={ { marginTop: '16px' } }>
-			<label
-				style={ {
-					display: 'block',
-					marginBottom: '8px',
-					fontWeight: '500',
-					fontSize: '14px',
-				} }
-			>
+		<div className="datamachine-tools-spacing--mt-16">
+			<label className="datamachine-section-header">
 				{ __( 'AI Tools', 'datamachine' ) }
 			</label>
 
-			<p
-				style={ {
-					margin: '0 0 12px 0',
-					fontSize: '12px',
-					color: '#757575',
-				} }
-			>
+			<p className="datamachine-warning-description datamachine-ai-tools-description">
 				{ __(
 					'Select the tools you want to enable for this AI step:',
 					'datamachine'
 				) }
 			</p>
 
-			<div
-				style={ {
-					display: 'flex',
-					flexDirection: 'column',
-					gap: '8px',
-				} }
-			>
+			<div className="datamachine-ai-tools-grid">
 				{ tools.map( ( tool ) => (
 					<ToolCheckbox
 						key={ tool.toolId }

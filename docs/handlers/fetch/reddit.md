@@ -112,7 +112,7 @@ The Reddit handler generates clean data packets for AI processing while storing 
         'original_id' => 'reddit_post_id',
         'original_title' => 'post_title',
         'original_date_gmt' => 'iso_timestamp'
-        // URLs removed from AI-visible metadata
+        // Clean data packet for AI processing
     ]
 ]
 ```

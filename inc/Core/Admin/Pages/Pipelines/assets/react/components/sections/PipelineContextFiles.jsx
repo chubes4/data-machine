@@ -136,7 +136,7 @@ export default function PipelineContextFiles( { pipelineId } ) {
 
 	return (
 		<div className="datamachine-pipeline-context-files">
-			<div style={ { marginBottom: '16px' } }>
+			<div className="datamachine-context-files-wrapper">
 				<h3
 					style={ {
 						margin: '0 0 8px 0',
@@ -146,7 +146,7 @@ export default function PipelineContextFiles( { pipelineId } ) {
 				>
 					{ __( 'Context Files', 'datamachine' ) }
 				</h3>
-				<p style={ { margin: 0, color: '#757575', fontSize: '13px' } }>
+				<p className="datamachine-context-files-helper">
 					{ __(
 						'Upload files for AI context retrieval during pipeline execution.',
 						'datamachine'
@@ -174,7 +174,7 @@ export default function PipelineContextFiles( { pipelineId } ) {
 				</Notice>
 			) }
 
-			<div style={ { marginBottom: '24px' } }>
+			<div className="datamachine-context-files-section">
 				<FileUploadDropzone
 					onFileSelected={ handleFileSelected }
 					allowedTypes={ [ 'pdf', 'csv', 'txt', 'json' ] }

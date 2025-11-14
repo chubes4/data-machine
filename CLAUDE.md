@@ -9,34 +9,13 @@ Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and mult
 ## Current Implementation Status
 
 **Prefix Convention:**
-- Current: `datamachine_` prefix used throughout codebase (filters, actions, functions)
-- Migration: Completed transition from `dm_` to `datamachine_` prefix
-- Status: Migration complete for all code components and database table names
+- `datamachine_` prefix used throughout codebase (filters, actions, functions)
 
 **API Architecture:**
 - REST API: 10 endpoint files implemented (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users)
-- **Pipelines Page**: React-only architecture, zero jQuery/AJAX (complete migration, 2,223 lines jQuery removed, 6 PHP templates removed, all AJAX endpoints eliminated)
+- **Pipelines Page**: React-only architecture, zero jQuery/AJAX
 - **Jobs/Logs Pages**: REST API integration complete
-- **Settings Page**: REST API migration complete
-- Migration Status: Full REST API migration complete for all admin pages with React frontend modernization
-
-## Migration Status (Complete)
-
-**Phase 2 Migration Complete (100% complete):**
-- ✅ Filter hooks (161 occurrences across 50 files) - all converted to `datamachine_*`
-- ✅ Action hooks (100+ occurrences) - all converted to `datamachine_*`
-- ✅ Core function names - all converted to `datamachine_*`
-- ✅ Cache Keys (30+ constants) - all converted to `datamachine_*`
-- ✅ WordPress Options (7+ option names) - all converted to `datamachine_*`
-- ✅ Transients (10+ transient names) - all converted to `datamachine_*`
-- ✅ Query Variables (OAuth routing) - all converted to `datamachine_*`
-- ✅ CSS Classes - all converted to `datamachine-*`
-- ✅ OAuth URL Routes - all converted to `/datamachine-auth/{provider}/`
-
-**Phase 3 Database Migration (Complete):**
-- `wp_datamachine_pipelines`, `wp_datamachine_flows`, `wp_datamachine_jobs`, `wp_datamachine_processed_items`
-- Database table names updated to use `datamachine_` prefix
-- Migration plugin available for existing installations
+- **Settings Page**: REST API integration complete
 
 ## Core Filters & Actions
 
@@ -59,10 +38,11 @@ apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
 apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
 
 // Step Configuration & Navigation
+// During execution the engine provides $payload with job, flow, data, and engine_data fields
 $flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
 $pipeline_step_config = apply_filters('datamachine_get_pipeline_step_config', [], $pipeline_step_id);
-$next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $flow_step_id);
-$prev_flow_step_id = apply_filters('datamachine_get_previous_flow_step_id', null, $flow_step_id);
+$next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $flow_step_id, $payload);
+$prev_flow_step_id = apply_filters('datamachine_get_previous_flow_step_id', null, $flow_step_id, $payload);
 $next_pipeline_step_id = apply_filters('datamachine_get_next_pipeline_step_id', null, $pipeline_step_id);
 $prev_pipeline_step_id = apply_filters('datamachine_get_previous_pipeline_step_id', null, $pipeline_step_id);
 
@@ -75,9 +55,9 @@ $parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
 $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 
 // AI & Tools
-$result = apply_filters('ai_request', $request, 'anthropic');
+$result = apply_filters('ai_request', $request, 'anthropic', null, $tools, $pipeline_step_id, $payload);
 $tools = apply_filters('ai_tools', []);
-$ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id);
+$ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, $payload);
 apply_filters('datamachine_tool_configured', false, $tool_id);
 apply_filters('datamachine_get_tool_config', [], $tool_id);
 apply_filters('datamachine_tool_success_message', $message, $tool_name, $result, $parameters);
@@ -106,7 +86,7 @@ do_action('datamachine_fail_job', $job_id, $reason, $context_data);
 // Processing & Status
 do_action('datamachine_mark_item_processed', $flow_step_id, $source_type, $item_id, $job_id);
 apply_filters('datamachine_is_item_processed', false, $flow_step_id, $source_type, $item_id);
-apply_filters('datamachine_detect_status', 'green', 'context', $data);
+
 apply_filters('datamachine_get_handler_settings_display', [], $flow_step_id, $step_type); // Handler settings display with smart defaults (priority 5) and handler-specific customization (priority 10+)
 
 // Data Processing
@@ -153,10 +133,14 @@ $settings = datamachine_get_data_machine_settings(); // Direct function access
 $enabled_pages = datamachine_get_enabled_admin_pages(); // Direct function access
 $enabled_tools = datamachine_get_enabled_general_tools(); // Direct function access
 
-// Context Management
-\DataMachine\ExecutionContext::$job_id; // Current job ID during execution
-\DataMachine\ExecutionContext::$flow_step_id; // Current flow step ID during execution
-\DataMachine\ExecutionContext::clear(); // Clear execution context
+// Step Payload (Engine → Step contract)
+$payload = [
+    'job_id' => $job_id,
+    'flow_step_id' => $flow_step_id,
+    'flow_step_config' => $flow_step_config,
+    'data' => $data,
+    'engine_data' => apply_filters('datamachine_engine_data', [], $job_id)
+];
 $context = SiteContext::get_context(); // Direct class access
 SiteContext::clear_cache(); // Direct class access
 
@@ -640,19 +624,20 @@ apply_filters('datamachine_apply_global_defaults', $current_settings, $handler_s
 
 **Hybrid Database + Filter Injection Architecture**:
 
-### 1. Core Parameters (Always Static)
-Core parameters are always the same and passed to ALL steps:
+### 1. Unified Step Payload
+Engine builds a single payload array and hands it to every step:
 ```php
-$core_parameters = [
+$payload = [
     'job_id' => $job_id,
     'flow_step_id' => $flow_step_id,
     'data' => $data,  // Data packet array
-    'flow_step_config' => $flow_step_config  // Step configuration
+    'flow_step_config' => $flow_step_config,
+    'engine_data' => apply_filters('datamachine_engine_data', [], $job_id)
 ];
 ```
 
 ### 2. Engine Data Filter-Based Access
-Fetch handlers store `source_url`, `image_url` in database; steps retrieve engine data via centralized `datamachine_engine_data` filter for unified access
+Fetch handlers still store `source_url`, `image_url`, etc. via `datamachine_engine_data`; the engine includes the merged data in the payload for immediate use.
 
 
 
@@ -663,11 +648,12 @@ Fetch handlers store `source_url`, `image_url` in database; steps retrieve engin
 ```php
 // Step Pattern
 class MyStep {
-    public function execute(array $parameters): array {
-        $job_id = $parameters['job_id'];
-        $flow_step_id = $parameters['flow_step_id'];
-        $data = $parameters['data'] ?? [];
-        $flow_step_config = $parameters['flow_step_config'] ?? [];
+    public function execute(array $payload): array {
+        $job_id = $payload['job_id'];
+        $flow_step_id = $payload['flow_step_id'];
+        $data = $payload['data'] ?? [];
+        $flow_step_config = $payload['flow_step_config'] ?? [];
+        $engine_data = $payload['engine_data'] ?? [];
 
         do_action('datamachine_mark_item_processed', $flow_step_id, 'my_step', $item_id, $job_id);
 
@@ -817,6 +803,14 @@ POST /datamachine/v1/execute
 - `GET /datamachine/v1/users/me` - Current user
 - `POST /datamachine/v1/users/me` - Update current user
 
+*Handler & Tool Discovery:*
+- `GET /datamachine/v1/handlers` - List all registered handlers (filter by step_type)
+- `GET /datamachine/v1/handlers/{slug}` - Complete handler details with settings schema and AI tool definitions
+- `GET /datamachine/v1/step-types` - List all step types
+- `GET /datamachine/v1/step-types/{type}` - Step type details
+- `GET /datamachine/v1/tools` - General AI tools with configuration status
+- `GET /datamachine/v1/providers` - AI provider metadata and available models
+
 *System & Monitoring:*
 - `GET /datamachine/v1/status` - Flow/pipeline status (query params: flow_id[], pipeline_id[])
 - `GET /datamachine/v1/logs` - Retrieve logs
@@ -944,7 +938,7 @@ composer test       # Run tests (PHPUnit configured, test files pending implemen
 
 **Streamlined Engine Filters** (`inc/Engine/Filters/`):
 - **Create.php**: Centralized creation operations with comprehensive validation and permission checking
-- **StatusDetection.php**: Legacy status detection removed; health check replacement pending implementation
+
 - **EngineData.php**: Centralized engine data access via `datamachine_engine_data` filter - replaces direct database access patterns
 - **Handlers.php**: Cross-cutting handler filters for shared functionality (timeframe parsing, keyword matching, data packet creation)
 - **DataPacket.php**: Centralized data packet creation with standardized structure and timestamp management
@@ -1097,7 +1091,7 @@ These utilities are provided by `Engine/Filters/WordPress.php` and available to 
 - **Fetch**: `get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array`
 - **Publish**: `handle_tool_call(array $parameters, array $tool_def = []): array`
 - **Update**: `handle_tool_call(array $parameters, array $tool_def = []): array` (requires `source_url` from metadata)
-- **Steps**: `execute(array $parameters): array`
+- **Steps**: `execute(array $payload): array`
 
 **Error Handling**: Exception logging via `datamachine_log` action
 
@@ -1136,19 +1130,10 @@ $providers = apply_filters('datamachine_auth_providers', []);
 - **Bluesky**: App Password (username/app_password)
 - **Google Search**: API Key + Custom Search Engine ID (not OAuth)
 
-## Status & Rules
-
-**Status Detection**: Legacy filter removed
-- Previous values: `red` (error), `yellow` (warning), `green` (ready)
-- Previous contexts: `ai_step`, `handler_auth`, `wordpress_draft`, `files_status`, `subsequent_publish_step`, `pipeline_step_status`, `flow_step_status`
-
-**Status System**: Two specialized transports for optimized status refresh operations
-- **Status REST** (`GET /datamachine/v1/status`): Returns flow and pipeline status maps using `flow_id[]` / `pipeline_id[]` query parameters; reuses `flow_step_status` and `pipeline_step_status` contexts for validation
-
-**Core Rules**:
+## Core Rules
 - Engine agnostic (no hardcoded step types in `/inc/Engine/`)
 - Filter-based service discovery only
 - Security: `wp_unslash()` BEFORE `sanitize_text_field()`
-- CSS namespace: `dm-` prefix
+- CSS namespace: `datamachine-` prefix (explicit clarity, no abbreviations)
 - Auth: `manage_options` only
 - Field naming: `pipeline_step_id` (UUID4)

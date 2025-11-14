@@ -267,22 +267,8 @@ export default function ConfigureStepModal( {
 					) }
 				/>
 
-				<div
-					style={ {
-						marginTop: '16px',
-						padding: '12px',
-						background: '#f9f9f9',
-						border: '1px solid #dcdcde',
-						borderRadius: '4px',
-					} }
-				>
-					<p
-						style={ {
-							margin: 0,
-							fontSize: '12px',
-							color: '#757575',
-						} }
-					>
+				<div className="datamachine-modal-info-box datamachine-modal-info-box--note">
+					<p>
 						<strong>{ __( 'Note:', 'datamachine' ) }</strong>{ ' ' }
 						{ __(
 							'The system prompt is shared across all flows using this pipeline. To add flow-specific instructions, use the user message field in the flow step card.',
@@ -291,15 +277,7 @@ export default function ConfigureStepModal( {
 					</p>
 				</div>
 
-				<div
-					style={ {
-						display: 'flex',
-						justifyContent: 'space-between',
-						marginTop: '24px',
-						paddingTop: '20px',
-						borderTop: '1px solid #dcdcde',
-					} }
-				>
+				<div className="datamachine-modal-actions">
 					<Button
 						variant="secondary"
 						onClick={ onClose }

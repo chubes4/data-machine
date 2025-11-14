@@ -19,50 +19,19 @@ export default function ConfigurationWarning( { unconfiguredTools = [] } ) {
 	}
 
 	return (
-		<div
-			style={ {
-				marginTop: '12px',
-				padding: '12px',
-				background: '#fff8e5',
-				border: '1px solid #f0b849',
-				borderRadius: '4px',
-				display: 'flex',
-				alignItems: 'flex-start',
-				gap: '8px',
-			} }
-		>
-			<span
-				style={ {
-					color: '#f0b849',
-					fontSize: '18px',
-					lineHeight: '1',
-				} }
-			>
-				⚠️
-			</span>
-			<div style={ { flex: 1 } }>
-				<p
-					style={ {
-						margin: '0 0 4px 0',
-						fontWeight: '500',
-						fontSize: '13px',
-					} }
-				>
+		<div className="datamachine-warning-box datamachine-warning-flex-container">
+			<span className="datamachine-warning-icon">⚠️</span>
+			<div className="datamachine-warning-content">
+				<p className="datamachine-warning-title">
 					{ __( 'Configuration Required', 'datamachine' ) }
 				</p>
-				<p style={ { margin: 0, fontSize: '12px', color: '#757575' } }>
+				<p className="datamachine-warning-description">
 					{ __(
 						'The following tools require configuration before use:',
 						'datamachine'
 					) }
 				</p>
-				<ul
-					style={ {
-						margin: '8px 0 0 20px',
-						fontSize: '12px',
-						color: '#757575',
-					} }
-				>
+				<ul className="datamachine-warning-list">
 					{ unconfiguredTools.map( ( toolName, index ) => (
 						<li key={ index }>{ toolName }</li>
 					) ) }

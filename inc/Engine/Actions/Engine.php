@@ -109,11 +109,6 @@ function datamachine_register_execution_engine() {
 
     add_action( 'datamachine_execute_step', function( $job_id, $flow_step_id, $data = null ) {
 
-        // Set execution context for complete runtime state access
-        \DataMachine\Engine\ExecutionContext::$job_id = $job_id;
-        \DataMachine\Engine\ExecutionContext::$flow_step_id = $flow_step_id;
-        \DataMachine\Engine\ExecutionContext::$data = $data ?: [];
-
         try {
             $repositories = apply_filters('datamachine_files_repository', []);
             $repository = $repositories['files'] ?? null;
@@ -121,10 +116,6 @@ function datamachine_register_execution_engine() {
             if ($repository && $repository->is_data_reference($data)) {
                 $data = $repository->retrieve_data_packet($data);
                 if ($data === null) {
-                    do_action('datamachine_log', 'error', 'Failed to retrieve data from storage', [
-                        'job_id' => $job_id,
-                        'flow_step_id' => $flow_step_id
-                    ]);
                     do_action('datamachine_fail_job', $job_id, 'data_retrieval_failure', [
                         'flow_step_id' => $flow_step_id
                     ]);
@@ -133,10 +124,6 @@ function datamachine_register_execution_engine() {
             }
             $flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id, $job_id);
             if (!$flow_step_config) {
-                do_action('datamachine_log', 'error', 'Failed to load flow step configuration', [
-                    'job_id' => $job_id,
-                    'flow_step_id' => $flow_step_id
-                ]);
                 do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
                     'flow_step_id' => $flow_step_id,
                     'reason' => 'failed_to_load_flow_step_configuration'
@@ -149,10 +136,6 @@ function datamachine_register_execution_engine() {
             $step_definition = $all_steps[$step_type] ?? null;
             
             if ( ! $step_definition ) {
-                do_action('datamachine_log', 'error', 'Step type not found in registry', [
-                    'flow_step_id' => $flow_step_id,
-                    'step_type' => $step_type
-                ]);
                 do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
                     'flow_step_id' => $flow_step_id,
                     'step_type' => $step_type,
@@ -167,18 +150,31 @@ function datamachine_register_execution_engine() {
             // Get engine data for step execution
             $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 
-            // Execute step with explicit parameters
-            $data = $flow_step->execute($job_id, $flow_step_id, $data, $flow_step_config, $engine_data);
+            $payload = [
+                'job_id' => $job_id,
+                'flow_step_id' => $flow_step_id,
+                'data' => is_array($data) ? $data : [],
+                'flow_step_config' => $flow_step_config,
+                'engine_data' => is_array($engine_data) ? $engine_data : [],
+            ];
 
-            // Update execution context with modified data
-            \DataMachine\Engine\ExecutionContext::$data = $data;
+            $data = $flow_step->execute($payload);
 
-            // Clear execution context
-            \DataMachine\Engine\ExecutionContext::clear();
+            if (!is_array($data)) {
+                do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
+                    'flow_step_id' => $flow_step_id,
+                    'class' => $step_class,
+                    'reason' => 'non_array_payload_returned'
+                ]);
+
+                return false;
+            }
+
+            $payload['data'] = $data;
 
             $step_success = ! empty( $data );
             if ( $step_success ) {
-                $next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $flow_step_id);
+                $next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $flow_step_id, $payload);
 
                 if ( $next_flow_step_id ) {
                     do_action('datamachine_schedule_next_step', $job_id, $next_flow_step_id, $data);
@@ -211,11 +207,6 @@ function datamachine_register_execution_engine() {
             return $step_success;
 
         } catch ( \Throwable $e ) {
-            do_action('datamachine_log', 'error', 'Error in pipeline step execution', [
-                'flow_step_id' => $flow_step_id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
             do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
                 'flow_step_id' => $flow_step_id,
                 'exception_message' => $e->getMessage(),
@@ -228,10 +219,6 @@ function datamachine_register_execution_engine() {
 
     add_action('datamachine_schedule_next_step', function($job_id, $flow_step_id, $data = []) {
         if (!function_exists('as_schedule_single_action')) {
-            do_action('datamachine_log', 'error', 'Action Scheduler not available for step scheduling', [
-                'job_id' => $job_id,
-                'flow_step_id' => $flow_step_id
-            ]);
             return false;
         }
 

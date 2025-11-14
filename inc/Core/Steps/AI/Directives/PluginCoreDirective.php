@@ -9,7 +9,7 @@ defined('ABSPATH') || exit;
 
 class PluginCoreDirective {
 
-    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null): array {
+    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null, array $context = []): array {
         if (!isset($request['messages']) || !is_array($request['messages'])) {
             return $request;
         }
@@ -59,4 +59,4 @@ class PluginCoreDirective {
     }
 }
 
-add_filter('ai_request', [PluginCoreDirective::class, 'inject'], 10, 5);
+add_filter('ai_request', [PluginCoreDirective::class, 'inject'], 10, 6);

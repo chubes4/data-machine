@@ -254,13 +254,7 @@ export default function HandlerSettingsModal( {
 				) }
 
 				<div className="datamachine-modal-section">
-					<div
-						style={ {
-							display: 'flex',
-							justifyContent: 'space-between',
-							alignItems: 'center',
-						} }
-					>
+					<div className="datamachine-modal-header-section">
 						<div>
 							<strong>{ __( 'Handler:', 'datamachine' ) }</strong>{ ' ' }
 							{ handlerInfo.label || slugToLabel( handlerSlug ) }
@@ -275,7 +269,7 @@ export default function HandlerSettingsModal( {
 					</div>
 
 					{ handlerInfo.requires_auth && (
-						<div style={ { marginTop: '12px' } }>
+						<div className="datamachine-modal-handler-display">
 							<Button
 								variant="secondary"
 								onClick={ () => {
@@ -295,8 +289,8 @@ export default function HandlerSettingsModal( {
 
 				{ /* Loading state while fetching settings schema */ }
 				{ isLoadingSettings && (
-					<div style={ { padding: '40px', textAlign: 'center' } }>
-						<p style={ { margin: 0, color: '#757575' } }>
+					<div className="datamachine-modal-loading-state">
+						<p className="datamachine-modal-loading-text">
 							{ __(
 								'Loading handler settings...',
 								'datamachine'
@@ -320,21 +314,8 @@ export default function HandlerSettingsModal( {
 					! isLoadingSettings && (
 						<>
 							{ Object.keys( settingsFields ).length === 0 && (
-								<div
-									style={ {
-										padding: '20px',
-										background: '#f9f9f9',
-										border: '1px solid #dcdcde',
-										borderRadius: '4px',
-										textAlign: 'center',
-									} }
-								>
-									<p
-										style={ {
-											margin: 0,
-											color: '#757575',
-										} }
-									>
+								<div className="datamachine-modal-no-config">
+									<p>
 										{ __(
 											'No configuration options available for this handler.',
 											'datamachine'
@@ -355,15 +336,7 @@ export default function HandlerSettingsModal( {
 					)
 				) }
 
-				<div
-					style={ {
-						display: 'flex',
-						justifyContent: 'space-between',
-						marginTop: '24px',
-						paddingTop: '20px',
-						borderTop: '1px solid #dcdcde',
-					} }
-				>
+				<div className="datamachine-modal-actions">
 					<Button
 						variant="secondary"
 						onClick={ onClose }

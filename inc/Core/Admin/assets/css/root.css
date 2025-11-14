@@ -1,0 +1,34 @@
+/**
+ * Data Machine - Root CSS Variables
+ * Centralized design tokens for entire admin interface
+ *
+ * IMPORTANT: All variables use datamachine- prefix for explicit clarity (no abbreviations)
+ */
+
+:root {
+    /* Colors - Text */
+    --datamachine-text-primary: #333;
+    --datamachine-text-secondary: #666;
+    --datamachine-text-muted: #757575;
+
+    /* Colors - Borders */
+    --datamachine-border: #dcdcde;
+    --datamachine-border-light: #e1e1e1;
+
+    /* Colors - Backgrounds */
+    --datamachine-bg-light: #f9f9f9;
+    --datamachine-bg-lighter: #f8f9fa;
+
+    /* Colors - Brand */
+    --datamachine-blue: #0073aa;
+
+    /* Spacing Scale: 8px, 12px, 16px, 24px, 40px */
+    --datamachine-spacing-xs: 8px;
+    --datamachine-spacing-sm: 12px;
+    --datamachine-spacing-md: 16px;
+    --datamachine-spacing-lg: 24px;
+    --datamachine-spacing-xl: 40px;
+
+    /* Border Radius - Single value for entire interface */
+    --datamachine-border-radius: 4px;
+}

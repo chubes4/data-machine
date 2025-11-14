@@ -55,23 +55,11 @@ export default function FilesHandlerSettings( {
 
 	return (
 		<div className="datamachine-files-handler-settings">
-			<div style={ { marginBottom: '16px' } }>
-				<h4
-					style={ {
-						margin: '0 0 8px 0',
-						fontSize: '14px',
-						fontWeight: '600',
-					} }
-				>
+			<div className="datamachine-files-section">
+				<h4 className="datamachine-files-section-title">
 					{ __( 'Upload Files', 'datamachine' ) }
 				</h4>
-				<p
-					style={ {
-						margin: '0 0 12px 0',
-						fontSize: '12px',
-						color: '#757575',
-					} }
-				>
+				<p className="datamachine-files-section-description">
 					{ __(
 						'Upload files to be processed by this flow. Each file will be processed individually.',
 						'datamachine'
@@ -81,23 +69,11 @@ export default function FilesHandlerSettings( {
 
 			<FileUploadInterface onFileUploaded={ handleFileUploaded } />
 
-			<div style={ { marginTop: '24px', marginBottom: '16px' } }>
-				<h4
-					style={ {
-						margin: '0 0 8px 0',
-						fontSize: '14px',
-						fontWeight: '600',
-					} }
-				>
+			<div className="datamachine-files-section datamachine-files-section-spacing--mt-24">
+				<h4 className="datamachine-files-section-title">
 					{ __( 'Uploaded Files', 'datamachine' ) }
 				</h4>
-				<p
-					style={ {
-						margin: '0 0 12px 0',
-						fontSize: '12px',
-						color: '#757575',
-					} }
-				>
+				<p className="datamachine-files-section-description">
 					{ __(
 						'Files will be processed in order when the flow runs.',
 						'datamachine'
@@ -112,16 +88,8 @@ export default function FilesHandlerSettings( {
 				onChange={ handleAutoCleanupChange }
 			/>
 
-			<div
-				style={ {
-					marginTop: '16px',
-					padding: '12px',
-					background: '#f0f6fc',
-					border: '1px solid #0073aa',
-					borderRadius: '4px',
-				} }
-			>
-				<p style={ { margin: 0, fontSize: '12px', color: '#0073aa' } }>
+			<div className="datamachine-modal-info-box datamachine-modal-info-box--highlight datamachine-modal-spacing--mt-16">
+				<p>
 					<strong>{ __( 'Note:', 'datamachine' ) }</strong>{ ' ' }
 					{ __(
 						'Files are stored specifically for this flow. Each uploaded file will create a separate processing job when the flow runs.',

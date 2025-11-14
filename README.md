@@ -18,11 +18,11 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 
 **Features**:
 - **Modern React Admin Interface**: Complete Pipelines page rebuild with 6,591 lines of React code using @wordpress/element and @wordpress/components
-- **Zero jQuery/AJAX Architecture**: 2,223 lines of jQuery removed, 6 PHP templates eliminated, all AJAX endpoints eliminated
+- **Zero jQuery/AJAX Architecture**: Modern React frontend with REST API integration
 - **Tool-First AI**: Enhanced multi-turn conversation management with duplicate detection and temporal context
 - **Visual Pipeline Builder**: Real-time updates with 50+ React components, custom hooks, and Context API state management
 - **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter with 5-tier directive system
-- **Complete REST API**: 10 comprehensive endpoints (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users)
+- **Complete REST API**: 10 endpoints (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users)
 - **Ephemeral Workflows**: Execute workflows without database persistence via REST API
 - **Centralized Engine Data**: Unified filter access pattern with clean AI data packets and structured engine parameters
 - **Enhanced Handler System**: Universal filter patterns with shared functionality across all handlers
@@ -212,7 +212,7 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 
 **Requirements**: WordPress application password or cookie authentication with `manage_options` capability (except `/users/me` which requires authentication only). Action Scheduler required for scheduled flow execution (woocommerce/action-scheduler via Composer).
 
-**Frontend Integration**: Complete React architecture migration with zero jQuery/AJAX dependencies across all admin pages.
+**Frontend Integration**: React architecture with REST API integration across all admin pages.
 
 *For complete REST API documentation, see `docs/api-reference/rest-api.md` | For technical specifications, see `CLAUDE.md`*
 
@@ -266,13 +266,7 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
   - Single `datamachine_auto_save` action handles pipeline persistence, flow synchronization, and cache invalidation
 - **Filter-Based Discovery**:
   - All components self-register via WordPress filters maintaining consistent architectural patterns
-- **Migration Status** (dm_ → datamachine_):
-  - Filters/actions: ✅ Complete (`datamachine_` prefix)
-  - Cache keys/options/transients: ✅ Complete (`datamachine_` prefix)
-  - OAuth URLs: ✅ Complete (`datamachine_` prefix)
-  - CSS classes: ✅ Complete (`datamachine-` prefix)
-  - Database tables: ✅ Complete (`wp_datamachine_*` tables)
-  - Migration complete for all code and database table names
+
 
 *All handlers are fully functional with OAuth authentication where required and comprehensive error handling*
 
@@ -321,7 +315,7 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
   - Modern state management with custom hooks (usePipelines, useFlows, useStepTypes, useHandlers)
   - Context API for global state (PipelineContext)
   - Complete REST API integration for all data operations
-  - Zero jQuery/AJAX dependencies (2,223 lines removed, all AJAX endpoints eliminated)
+  - Zero jQuery/AJAX dependencies
 - **PSR-4 Autoloading**: Composer-managed dependency structure
 - **Filter-Based Service Discovery**: WordPress hooks for component registration
 - **Unified Handler Filter System**:
@@ -342,14 +336,14 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
   - Handler settings modal load: 50% query reduction (single flow config query, metadata-based auth check)
   - Handler settings save: 50% query reduction (memory-based config building)
   - Status system: Unified REST endpoint (`GET /datamachine/v1/status`) serving flow and pipeline requests via query batching
-  - Legacy status detection contexts removed pending new health indicators
+
   - Composer-managed ai-http-client dependency
 - **REST API Integration**:
-  - **10 Complete Endpoints**: Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users
+  - **10 Endpoints**: Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users
   - **Ephemeral Workflow Support**: Execute workflows without database persistence
   - **Unified Execute Endpoint**: Supports database flows, ephemeral workflows, immediate/delayed/recurring execution
   - **Complete Authentication**: WordPress application password or cookie authentication
-  - **React Frontend Integration**: Pipelines page fully migrated to REST API consumption
+  - **React Frontend Integration**: Pipelines page with REST API consumption
 
 See `CLAUDE.md` for complete technical specifications.
 

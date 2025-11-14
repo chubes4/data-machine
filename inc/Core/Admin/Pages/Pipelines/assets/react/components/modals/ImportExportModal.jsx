@@ -62,8 +62,7 @@ export default function ImportExportModal( {
 		<Modal
 			title={ __( 'Import / Export Pipelines', 'datamachine' ) }
 			onRequestClose={ onClose }
-			className="datamachine-import-export-modal"
-			style={ { maxWidth: '700px' } }
+			className="datamachine-import-export-modal datamachine-modal--max-width-700"
 		>
 			<div className="datamachine-modal-content">
 				<TabPanel

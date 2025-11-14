@@ -164,31 +164,15 @@ export default function PipelineStepCard( {
 					</Notice>
 				) }
 
-				<div style={ { marginBottom: '12px' } }>
-					<div
-						style={ {
-							display: 'flex',
-							alignItems: 'center',
-							gap: '8px',
-							marginBottom: '8px',
-						} }
-					>
+				<div className="datamachine-step-card-wrapper">
+					<div className="datamachine-step-card-header">
 						<strong>{ slugToLabel( step.step_type ) }</strong>
 					</div>
 
 					{ /* AI Configuration Display */ }
 					{ aiConfig && (
-						<div
-							className="datamachine-ai-config-display"
-							style={ { marginTop: '12px' } }
-						>
-							<div
-								style={ {
-									fontSize: '12px',
-									color: '#757575',
-									marginBottom: '8px',
-								} }
-							>
+						<div className="datamachine-ai-config-display datamachine-step-card-ai-config">
+							<div className="datamachine-step-card-ai-label">
 								<strong>
 									{ __( 'AI Provider:', 'datamachine' ) }
 								</strong>{ ' ' }
@@ -220,13 +204,7 @@ export default function PipelineStepCard( {
 				</div>
 
 				{ /* Action Buttons */ }
-				<div
-					style={ {
-						display: 'flex',
-						gap: '8px',
-						justifyContent: 'flex-end',
-					} }
-				>
+				<div className="datamachine-step-card-actions">
 					{ canConfigure && (
 						<Button
 							variant="secondary"

@@ -78,11 +78,8 @@ export default function PipelineSteps( {
 	 */
 	if ( sortedSteps.length === 0 ) {
 		return (
-			<div
-				className="datamachine-pipeline-steps-empty"
-				style={ { padding: '20px', textAlign: 'center' } }
-			>
-				<p style={ { color: '#757575', marginBottom: '16px' } }>
+			<div className="datamachine-pipeline-steps-empty datamachine-steps-empty-state">
+				<p className="datamachine-steps-empty-text">
 					{ __(
 						'No steps configured. Add your first step to get started.',
 						'datamachine'
@@ -113,15 +110,12 @@ export default function PipelineSteps( {
 					onDragOver={ ( e ) => e.preventDefault() }
 					onDrop={ () => handleDrop( index ) }
 					className={
-						draggedIndex === index
-							? 'datamachine-step-dragging'
-							: ''
+						`datamachine-step-card-draggable ${
+							draggedIndex === index
+								? 'datamachine-step-dragging'
+								: ''
+						}`
 					}
-					style={ {
-						flex: '0 0 auto',
-						minWidth: '300px',
-						maxWidth: '300px',
-					} }
 				>
 					<PipelineStepCard
 						step={ step }
@@ -146,14 +140,7 @@ export default function PipelineSteps( {
 
 		// Add empty card
 		items.push(
-			<div
-				key="empty-card"
-				style={ {
-					flex: '0 0 auto',
-					minWidth: '300px',
-					maxWidth: '300px',
-				} }
-			>
+			<div key="empty-card" className="datamachine-step-card-draggable">
 				<EmptyStepCard
 					pipelineId={ pipelineId }
 					onAddStep={ onStepAdded }
@@ -165,16 +152,7 @@ export default function PipelineSteps( {
 	};
 
 	return (
-		<div
-			className="datamachine-pipeline-steps"
-			style={ {
-				display: 'flex',
-				flexWrap: 'wrap',
-				alignItems: 'center',
-				gap: '20px',
-				padding: '20px 0',
-			} }
-		>
+		<div className="datamachine-pipeline-steps datamachine-steps-container">
 			{ renderItems() }
 		</div>
 	);

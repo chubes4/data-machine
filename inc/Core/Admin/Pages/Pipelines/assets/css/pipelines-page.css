@@ -14,12 +14,11 @@
     --datamachine-color-text-secondary: #646970;
     --datamachine-color-border: #ddd;
     --datamachine-color-border-light: #e1e1e1;
-    --datamachine-spacing-xs: 4px;
-    --datamachine-spacing-sm: 8px;
-    --datamachine-spacing-md: 12px;
-    --datamachine-spacing-lg: 20px;
-    --datamachine-border-radius: 4px;
-    --datamachine-border-radius-lg: 8px;
+    --datamachine-spacing-xs: 8px;
+    --datamachine-spacing-sm: 12px;
+    --datamachine-spacing-md: 16px;
+    --datamachine-spacing-lg: 24px;
+    --datamachine-border-radius: var(--datamachine-border-radius);
 }
 
 /* ===== LAYOUT & CONTAINER CLASSES ===== */
@@ -43,7 +42,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .datamachine-header--flex-start {
@@ -64,7 +63,7 @@
 }
 
 .datamachine-spacing--margin-bottom-20 {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .datamachine-spacing--margin-bottom-24 {
@@ -132,12 +131,6 @@
     text-align: center;
 }
 
-.datamachine-empty-state--bordered {
-    background: #f9f9f9;
-    border: 1px solid #dcdcde;
-    border-radius: 4px;
-}
-
 .datamachine-empty-state p {
     margin: 0;
     color: #757575;
@@ -151,7 +144,7 @@
 
 .datamachine-table--bordered {
     border: 1px solid #dcdcde;
-    border-radius: 4px;
+    border-radius: var(--datamachine-border-radius);
     max-height: 300px;
     overflow-y: auto;
 }
@@ -162,32 +155,12 @@
     align-items: center;
     gap: 4px;
     padding: 4px 8px;
-    border-radius: 3px;
+    border-radius: var(--datamachine-border-radius);
     font-size: 11px;
     font-weight: 500;
 }
 
-.datamachine-status-badge--processed {
-    background: #d4edda;
-    color: #155724;
-}
-
-.datamachine-status-badge--pending {
-    background: #fff3cd;
-    color: #856404;
-}
-
-/* Info boxes */
-.datamachine-info-box {
-    padding: 12px;
-    background: #f0f6fc;
-    border: 1px solid #0073aa;
-    border-radius: 4px;
-}
-
-.datamachine-info-box p {
-    margin: 0;
-}
+/* Info boxes removed - will be recreated with proper naming */
 
 
 
@@ -195,8 +168,8 @@
 .datamachine-pipeline-card {
     background: #fff;
     border: 1px solid #ddd;
-    border-radius: 8px;
-    margin-bottom: 20px;
+    border-radius: var(--datamachine-border-radius);
+    margin-bottom: 16px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
@@ -256,13 +229,11 @@
     padding: 20px 0;
 }
 
-/* Universal step containers - removed, grid items are direct children */
-
 /* Step cards */
 .datamachine-step-card {
     background: #fff;
     border: 1px solid #ddd;
-    border-radius: 6px;
+    border-radius: var(--datamachine-border-radius);
     padding: 12px;
     height: 100px;
     width: 100%;
@@ -276,8 +247,6 @@
 .datamachine-prompt-display {
     margin-top: 8px;
 }
-
-/* Prompt excerpt styling removed - single textarea used for all states */
 
 /* AI prompt textarea styling */
 .datamachine-ai-prompt-input {
@@ -305,8 +274,6 @@
     font-style: italic;
 }
 
-/* AI prompt always visible - no expansion state visibility rules */
-
 /* User message styling for flow step cards */
 .datamachine-user-message-display {
     margin-top: 8px;
@@ -318,7 +285,7 @@
     border: 1px solid #ddd;
     border-radius: var(--datamachine-border-radius);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.4;
     resize: vertical;
     min-height: 60px;
@@ -365,8 +332,8 @@
 .datamachine-flow-instance-card {
 	background: #fff;
 	border: 1px solid #ddd;
-	border-radius: 6px;
-	margin-bottom: 20px;
+	border-radius: var(--datamachine-border-radius);
+	margin-bottom: 16px;
 	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
@@ -375,6 +342,9 @@
 
 .datamachine-flow-header {
 	padding: 12px 16px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
 	border-bottom: 1px solid #eee;
 	background: #fafafa;
 }
@@ -383,7 +353,6 @@
 	display: flex;
 	align-items: baseline;
 	gap: 12px;
-	margin-bottom: 16px;
 }
 
 .datamachine-flow-header__title-section {
@@ -416,19 +385,6 @@
 	align-items: center;
 }
 
-.datamachine-flow-status {
-    margin-top: 4px;
-}
-
-.datamachine-schedule-status {
-    font-size: 12px;
-    padding: 2px 6px;
-    border-radius: 3px;
-    text-transform: uppercase;
-    font-weight: 600;
-}
-
-
 /* ===== COMPONENT: FLOW STEPS ===== */
 
 .datamachine-flow-steps {
@@ -436,7 +392,7 @@
 	align-items: center;
 	gap: 20px;
 	overflow-x: auto;
-	padding: 20px 0;
+	padding: 20px;
 }
 
 .datamachine-flow-steps--empty {
@@ -444,7 +400,7 @@
 	text-align: center;
 	background-color: #f9f9f9;
 	border: 1px solid #dcdcde;
-	border-radius: 4px;
+	border-radius: var(--datamachine-border-radius);
 }
 
 .datamachine-flow-steps--empty p {
@@ -452,15 +408,145 @@
 	margin: 0;
 }
 
-.datamachine-flow-steps__header {
+/* Flow step card inline style replacements */
+.datamachine-step-content {
 	margin-bottom: 12px;
 }
 
-.datamachine-flow-steps__header h5 {
-	margin: 0;
-	color: #555;
+.datamachine-step-header-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.datamachine-ai-provider-info {
+	font-size: 12px;
+	color: #757575;
+	margin-bottom: 8px;
+}
+
+.datamachine-ai-config-display {
+	margin-top: 12px;
+}
+
+/* Pipeline table styles */
+.datamachine-pipeline-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.datamachine-pipeline-table tr {
+	border-bottom: 1px solid #e1e1e1;
+}
+
+.datamachine-pipeline-table td,
+.datamachine-pipeline-table th {
+	padding: 12px 16px;
+	text-align: left;
+}
+
+.datamachine-pipeline-table th {
+	background-color: #f5f5f5;
+	font-weight: 600;
+}
+
+/* ===== HIGH-IMPACT UTILITIES ===== */
+
+/* Table sticky headers */
+.datamachine-table-sticky-header {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: #f9f9f9;
+	border-bottom: 1px solid #dcdcde;
+}
+
+/* Warning boxes */
+.datamachine-warning-box {
+	margin-top: 12px;
+	padding: 12px;
+	background: #fff8e5;
+	border: 1px solid #f0b849;
+	border-radius: var(--datamachine-border-radius);
+}
+
+/* Section headers */
+.datamachine-section-header {
+	margin-bottom: 16px;
 	font-size: 14px;
 	font-weight: 600;
+	color: #1d2327;
+}
+
+/* ===== TABLE UTILITIES ===== */
+
+/* Pipeline table base styles */
+.datamachine-pipeline-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.datamachine-pipeline-table th {
+	padding: 12px 16px;
+	text-align: left;
+	font-weight: 600;
+}
+
+.datamachine-pipeline-table td {
+	padding: 12px 16px;
+}
+
+.datamachine-pipeline-table tbody tr {
+	border-bottom: 1px solid #dcdcde;
+}
+
+.datamachine-table-cell--muted {
+	color: #757575;
+}
+
+.datamachine-table-cell--small {
+	font-size: 12px;
+}
+
+.datamachine-table-cell--medium {
+	font-weight: 500;
+}
+
+.datamachine-table-cell--center {
+	text-align: center;
+}
+
+.datamachine-table-container {
+	border: 1px solid #dcdcde;
+	border-radius: var(--datamachine-border-radius);
+	max-height: 400px;
+	overflow-y: auto;
+}
+
+.datamachine-table-container--small {
+	max-height: 300px;
+}
+
+/* Status badge base */
+.datamachine-status-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 8px;
+	border-radius: var(--datamachine-border-radius);
+	font-size: 11px;
+	font-weight: 500;
+}
+
+.datamachine-status-badge--processed {
+	background: rgba(70, 180, 80, 0.13);
+	color: #46b450;
+}
+
+.datamachine-status-badge--pending {
+	background: rgba(240, 184, 73, 0.13);
+	color: #f0b849;
 }
 
 .datamachine-flow-steps__list {
@@ -479,7 +565,7 @@
 /* ===== COMPONENT: FLOW FOOTER ===== */
 
 .datamachine-flow-footer {
-	padding: 12px 16px;
+	padding: 8px 16px;
 	border-top: 1px solid #eee;
 	background: #f9f9f9;
 }
@@ -537,29 +623,6 @@
     font-weight: 600;
 }
 
-.datamachine-flow-steps {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-}
-
-/* Flow step containers - uniform sizing, just different styling */
-.datamachine-flow-steps .datamachine-step-card {
-    background: #f9f9f9;
-    display: flex;
-    flex-direction: column;
-}
-
-.datamachine-flow-steps .datamachine-step-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.datamachine-flow-step-info {
-    padding-top: 8px;
-}
-
 /* Handler settings display */
 .datamachine-handler-settings-display {
     margin-top: 8px;
@@ -569,7 +632,7 @@
     display: inline-block;
     padding: 2px 6px;
     margin: 2px 0;
-    border-radius: 3px;
+    border-radius: var(--datamachine-border-radius);
     font-size: 11px;
     word-break: break-all;
     max-width: 100%;
@@ -627,7 +690,7 @@
     }
     
     .datamachine-flow-instance-card {
-        margin-bottom: 20px;
+        margin-bottom: 16px;
     }
     
     .datamachine-pipeline-header__title-input,
@@ -810,7 +873,7 @@
 .datamachine-step-drag-placeholder {
     border: 2px dashed #0073aa !important;
     background: rgba(0, 115, 170, 0.1) !important;
-    border-radius: 6px;
+    border-radius: var(--datamachine-border-radius);
     opacity: 0.7;
     width: 150px;
     height: 100px;
@@ -852,7 +915,7 @@
     margin: 5px 0 15px;
     padding: 1px 12px;
     position: relative;
-    border-radius: 3px;
+    border-radius: var(--datamachine-border-radius);
 }
 
 .datamachine-admin-notice--error {
@@ -884,7 +947,7 @@
     color: #787c82;
     cursor: pointer;
     float: right;
-    font-size: 13px;
+    font-size: 12px;
     height: 38px;
     margin: 0;
     overflow: hidden;
@@ -919,12 +982,6 @@
 }
 
 
-/* Update flow header to accommodate reorder controls */
-.datamachine-flow-header {
-    display: flex;
-    align-items: center;
-    gap: 0;
-}
 
 /* === Flow Actions === */
 
@@ -997,5 +1054,63 @@
         padding: 2px 8px;
         min-height: 28px;
     }
+}
+
+/* ===== PIPELINE STEP CARD ===== */
+.datamachine-step-card-wrapper {
+    margin-bottom: 12px;
+}
+
+.datamachine-step-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.datamachine-step-card-ai-config {
+    margin-top: 12px;
+}
+
+.datamachine-step-card-ai-label {
+    font-size: 12px;
+    color: #757575;
+    margin-bottom: 8px;
+}
+
+.datamachine-step-card-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* ===== PIPELINE STEPS CONTAINER ===== */
+.datamachine-steps-empty-state {
+    padding: 20px;
+    text-align: center;
+}
+
+.datamachine-steps-empty-text {
+    color: #757575;
+    margin-bottom: 16px;
+}
+
+.datamachine-step-card-draggable {
+    flex: 0 0 auto;
+    min-width: 300px;
+    max-width: 300px;
+}
+
+.datamachine-steps-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 0;
+}
+
+/* ===== STEP SELECTION MODAL ===== */
+.datamachine-step-selection-section {
+    margin-bottom: 16px;
 }
 

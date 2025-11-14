@@ -15,14 +15,14 @@ class UpdateStep {
     /**
      * Execute update handler with AI tool result detection.
      *
-     * @param int $job_id Current job ID
-     * @param string $flow_step_id Current flow step ID
-     * @param array $data Current data packet array
-     * @param array $flow_step_config Flow step configuration
-     * @param array $engine_data Engine data array
+     * @param array $payload Unified step payload
      * @return array Updated data packet array
      */
-    public function execute(int $job_id, string $flow_step_id, array $data, array $flow_step_config, array $engine_data): array {
+    public function execute(array $payload): array {
+        $job_id = $payload['job_id'] ?? 0;
+        $flow_step_id = $payload['flow_step_id'] ?? '';
+        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $flow_step_config = $payload['flow_step_config'] ?? [];
         
         try {
             if (empty($flow_step_config)) {
@@ -61,7 +61,7 @@ class UpdateStep {
                 return $this->create_update_entry_from_tool_result($tool_result_entry, $data, $handler_slug, $flow_step_id);
             }
 
-            $handler_result = $this->execute_handler($handler_slug, $data, $handler_config, $flow_step_config);
+            $handler_result = $this->execute_handler($handler_slug, $data, $handler_config, $flow_step_config, $job_id);
             
             if ($handler_result === null) {
                 do_action('datamachine_log', 'error', 'Update Step: Handler execution failed', [
@@ -100,11 +100,6 @@ class UpdateStep {
             return $data;
 
         } catch (\Exception $e) {
-            do_action('datamachine_log', 'error', 'Update Step: Exception during processing', [
-                'flow_step_id' => $flow_step_id,
-                'exception' => $e->getMessage()
-            ]);
-            
             do_action('datamachine_fail_job', $job_id, 'update_step_exception', [
                 'flow_step_id' => $flow_step_id,
                 'exception_message' => $e->getMessage(),
@@ -124,7 +119,7 @@ class UpdateStep {
      * @param array $flow_step_config Complete step configuration
      * @return array|null Handler result or null on failure
      */
-    private function execute_handler($handler_slug, $data, $handler_config, $flow_step_config) {
+    private function execute_handler($handler_slug, $data, $handler_config, $flow_step_config, $job_id) {
         try {
             $update_handlers = apply_filters('datamachine_handlers', [], 'update');
 
@@ -152,8 +147,6 @@ class UpdateStep {
                 return isset($tool['handler']) && $tool['handler'] === $handler_slug;
             });
             
-            $job_id = \DataMachine\Engine\ExecutionContext::$job_id;
-
             // Access engine data via centralized filter pattern (source_url, image_url from fetch handlers)
             $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 

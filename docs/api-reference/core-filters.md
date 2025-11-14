@@ -440,10 +440,6 @@ $data = apply_filters('datamachine_data_packet', $data, $packet_data, $flow_step
 
 **Return**: Boolean processed status
 
-### `datamachine_detect_status` *(removed)*
-
-**Status**: Deprecated and removed with the legacy status detection system. References should be migrated to the forthcoming health-check API once available.
-
 
 ## Files Repository Filters
 

@@ -25,42 +25,28 @@ export default function AccountDetails( { account } ) {
 	const accountId = account.id || account.user_id || null;
 
 	return (
-		<div
-			style={ {
-				marginTop: '16px',
-				padding: '12px',
-				background: '#f9f9f9',
-				border: '1px solid #dcdcde',
-				borderRadius: '4px',
-			} }
-		>
-			<h4
-				style={ {
-					margin: '0 0 8px 0',
-					fontSize: '13px',
-					fontWeight: '600',
-				} }
-			>
+		<div className="datamachine-account-details-box">
+			<h4 className="datamachine-account-details-title">
 				{ __( 'Connected Account', 'datamachine' ) }
 			</h4>
 
-			<div style={ { fontSize: '12px', color: '#555' } }>
+			<div className="datamachine-account-details-content">
 				{ username && (
-					<div style={ { marginBottom: '4px' } }>
+					<div className="datamachine-account-details-field">
 						<strong>{ __( 'Username:', 'datamachine' ) }</strong>{ ' ' }
 						{ username }
 					</div>
 				) }
 
 				{ email && (
-					<div style={ { marginBottom: '4px' } }>
+					<div className="datamachine-account-details-field">
 						<strong>{ __( 'Email:', 'datamachine' ) }</strong>{ ' ' }
 						{ email }
 					</div>
 				) }
 
 				{ accountId && (
-					<div style={ { marginBottom: '4px' } }>
+					<div className="datamachine-account-details-field">
 						<strong>{ __( 'Account ID:', 'datamachine' ) }</strong>{ ' ' }
 						{ accountId }
 					</div>
@@ -91,7 +77,10 @@ export default function AccountDetails( { account } ) {
 					}
 
 					return (
-						<div key={ key } style={ { marginBottom: '4px' } }>
+						<div
+							key={ key }
+							className="datamachine-account-details-field"
+						>
 							<strong>{ key }:</strong> { String( value ) }
 						</div>
 					);

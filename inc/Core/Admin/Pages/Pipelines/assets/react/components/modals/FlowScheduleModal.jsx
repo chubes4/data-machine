@@ -80,20 +80,18 @@ export default function FlowScheduleModal( {
 		<Modal
 			title={ __( 'Schedule Flow', 'datamachine' ) }
 			onRequestClose={ onClose }
-			className="datamachine-flow-schedule-modal"
-			style={ { maxWidth: '500px' } }
+			className="datamachine-flow-schedule-modal datamachine-modal--max-width-500"
 		>
 			<div className="datamachine-modal-content">
 				{ error && (
 					<div
-						className="notice notice-error"
-						style={ { marginBottom: '16px' } }
+						className="notice notice-error datamachine-modal-spacing--mb-16"
 					>
 						<p>{ error }</p>
 					</div>
 				) }
 
-				<div style={ { marginBottom: '20px' } }>
+				<div className="datamachine-modal-spacing--mb-20">
 					<strong>{ __( 'Flow:', 'datamachine' ) }</strong>{ ' ' }
 					{ flowName }
 				</div>
@@ -110,22 +108,8 @@ export default function FlowScheduleModal( {
 				/>
 
 				{ selectedInterval === 'manual' && (
-					<div
-						style={ {
-							marginTop: '16px',
-							padding: '12px',
-							background: '#f0f6fc',
-							border: '1px solid #0073aa',
-							borderRadius: '4px',
-						} }
-					>
-						<p
-							style={ {
-								margin: 0,
-								fontSize: '13px',
-								color: '#0073aa',
-							} }
-						>
+					<div className="datamachine-modal-info-box datamachine-modal-info-box--highlight">
+						<p>
 							<strong>
 								{ __( 'Manual Mode:', 'datamachine' ) }
 							</strong>{ ' ' }
@@ -138,22 +122,8 @@ export default function FlowScheduleModal( {
 				) }
 
 				{ selectedInterval !== 'manual' && (
-					<div
-						style={ {
-							marginTop: '16px',
-							padding: '12px',
-							background: '#f9f9f9',
-							border: '1px solid #dcdcde',
-							borderRadius: '4px',
-						} }
-					>
-						<p
-							style={ {
-								margin: 0,
-								fontSize: '13px',
-								color: '#757575',
-							} }
-						>
+					<div className="datamachine-modal-info-box datamachine-modal-info-box--note">
+						<p>
 							<strong>
 								{ __( 'Automatic Scheduling:', 'datamachine' ) }
 							</strong>{ ' ' }
@@ -165,15 +135,7 @@ export default function FlowScheduleModal( {
 					</div>
 				) }
 
-				<div
-					style={ {
-						display: 'flex',
-						justifyContent: 'space-between',
-						marginTop: '24px',
-						paddingTop: '20px',
-						borderTop: '1px solid #dcdcde',
-					} }
-				>
+				<div className="datamachine-modal-actions">
 					<Button
 						variant="secondary"
 						onClick={ onClose }

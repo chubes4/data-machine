@@ -216,18 +216,13 @@ function datamachine_register_database_filters() {
         return [];
     }, 10, 3);
     
-    add_filter('datamachine_get_next_flow_step_id', function($default, $flow_step_id) {
-        $job_id = \DataMachine\Engine\ExecutionContext::$job_id;
+    add_filter('datamachine_get_next_flow_step_id', function($default, $flow_step_id, array $context = []) {
+        $engine_data = $context['engine_data'] ?? [];
 
-        if (!$job_id) {
-            do_action('datamachine_log', 'error', 'Step navigation called outside execution context', [
-                'filter' => 'datamachine_get_next_flow_step_id',
-                'flow_step_id' => $flow_step_id
-            ]);
-            return null;
+        if (empty($engine_data) && !empty($context['job_id'])) {
+            $engine_data = apply_filters('datamachine_engine_data', [], $context['job_id']);
         }
 
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $flow_config = $engine_data['flow_config'] ?? [];
 
         $current_step = $flow_config[$flow_step_id] ?? null;
@@ -245,20 +240,15 @@ function datamachine_register_database_filters() {
         }
 
         return null;
-    }, 10, 2);
+    }, 10, 3);
     
-    add_filter('datamachine_get_previous_flow_step_id', function($default, $flow_step_id) {
-        $job_id = \DataMachine\Engine\ExecutionContext::$job_id;
+    add_filter('datamachine_get_previous_flow_step_id', function($default, $flow_step_id, array $context = []) {
+        $engine_data = $context['engine_data'] ?? [];
 
-        if (!$job_id) {
-            do_action('datamachine_log', 'error', 'Step navigation called outside execution context', [
-                'filter' => 'datamachine_get_previous_flow_step_id',
-                'flow_step_id' => $flow_step_id
-            ]);
-            return null;
+        if (empty($engine_data) && !empty($context['job_id'])) {
+            $engine_data = apply_filters('datamachine_engine_data', [], $context['job_id']);
         }
 
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $flow_config = $engine_data['flow_config'] ?? [];
 
         $current_step = $flow_config[$flow_step_id] ?? null;
@@ -276,7 +266,7 @@ function datamachine_register_database_filters() {
         }
 
         return null;
-    }, 10, 2);
+    }, 10, 3);
     
     add_filter('datamachine_get_next_pipeline_step_id', function($default, $pipeline_step_id) {
         if (!$pipeline_step_id) {

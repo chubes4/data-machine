@@ -83,34 +83,23 @@ export default function StepSelectionModal( {
 		<Modal
 			title={ __( 'Add Pipeline Step', 'datamachine' ) }
 			onRequestClose={ onClose }
-			className="datamachine-step-selection-modal"
-			style={ { maxWidth: '600px' } }
+			className="datamachine-step-selection-modal datamachine-modal--max-width-600"
 		>
 			<div className="datamachine-modal-content">
 				{ error && (
-					<div
-						className="notice notice-error"
-						style={ { marginBottom: '16px' } }
-					>
+					<div className="notice notice-error datamachine-step-selection-section">
 						<p>{ error }</p>
 					</div>
 				) }
 
-				<p style={ { marginBottom: '20px', color: '#757575' } }>
+				<p className="datamachine-modal-header-text">
 					{ __(
 						'Select the type of step you want to add to your pipeline:',
 						'datamachine'
 					) }
 				</p>
 
-				<div
-					className="datamachine-step-type-grid"
-					style={ {
-						display: 'grid',
-						gridTemplateColumns: 'repeat(2, 1fr)',
-						gap: '16px',
-					} }
-				>
+				<div className="datamachine-modal-grid-2col">
 					{ Object.entries( stepTypes ).map(
 						( [ stepType, config ] ) => {
 							const handlerCount = getHandlerCount( stepType );
@@ -119,61 +108,22 @@ export default function StepSelectionModal( {
 								<button
 									key={ stepType }
 									type="button"
-									className="datamachine-step-type-card"
+									className="datamachine-modal-card"
 									onClick={ () =>
 										handleSelectStep( stepType )
 									}
 									disabled={ isAdding }
-									style={ {
-										padding: '20px',
-										border: '2px solid #dcdcde',
-										borderRadius: '4px',
-										background: '#ffffff',
-										cursor: 'pointer',
-										textAlign: 'left',
-										transition: 'all 0.2s',
-										display: 'flex',
-										flexDirection: 'column',
-										gap: '8px',
-									} }
-									onMouseEnter={ ( e ) => {
-										e.currentTarget.style.background =
-											'#f9f9f9';
-									} }
-									onMouseLeave={ ( e ) => {
-										e.currentTarget.style.background =
-											'#ffffff';
-									} }
 								>
-									<div
-										style={ {
-											display: 'flex',
-											alignItems: 'center',
-											gap: '8px',
-										} }
-									>
-										<strong style={ { fontSize: '16px' } }>
-											{ slugToLabel( stepType ) }
-										</strong>
-									</div>
+									<strong>
+										{ slugToLabel( stepType ) }
+									</strong>
 
-									<p
-										style={ {
-											margin: 0,
-											fontSize: '13px',
-											color: '#757575',
-										} }
-									>
+									<p>
 										{ config.description || '' }
 									</p>
 
 									{ stepType !== 'ai' && handlerCount > 0 && (
-										<span
-											style={ {
-												fontSize: '12px',
-												color: '#757575',
-											} }
-										>
+										<span className="datamachine-modal-card-meta">
 											{ handlerCount }{ ' ' }
 											{ handlerCount === 1
 												? __( 'handler', 'datamachine' )
@@ -190,21 +140,8 @@ export default function StepSelectionModal( {
 					) }
 				</div>
 
-				<div
-					style={ {
-						marginTop: '24px',
-						padding: '16px',
-						background: '#f9f9f9',
-						borderRadius: '4px',
-					} }
-				>
-					<p
-						style={ {
-							margin: 0,
-							fontSize: '12px',
-							color: '#757575',
-						} }
-					>
+				<div className="datamachine-modal-info-box">
+					<p>
 						<strong>{ __( 'Tip:', 'datamachine' ) }</strong>{ ' ' }
 						{ __(
 							'Steps execute in order. You can configure each step after adding it.',
@@ -213,15 +150,7 @@ export default function StepSelectionModal( {
 					</p>
 				</div>
 
-				<div
-					style={ {
-						display: 'flex',
-						justifyContent: 'flex-end',
-						marginTop: '20px',
-						paddingTop: '20px',
-						borderTop: '1px solid #dcdcde',
-					} }
-				>
+				<div className="datamachine-modal-actions datamachine-modal-actions--end">
 					<Button
 						variant="secondary"
 						onClick={ onClose }

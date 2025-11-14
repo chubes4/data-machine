@@ -512,7 +512,15 @@ $action_id = as_schedule_single_action(
 ```php
 try {
     // Step execution
-    $result = $step->execute($job_id, $flow_step_id, $data, $config);
+    $payload = [
+        'job_id' => $job_id,
+        'flow_step_id' => $flow_step_id,
+        'flow_step_config' => $config,
+        'data' => $data,
+        'engine_data' => apply_filters('datamachine_engine_data', [], $job_id)
+    ];
+
+    $result = $step->execute($payload);
     
     if (!empty($result)) {
         // Success - schedule next step

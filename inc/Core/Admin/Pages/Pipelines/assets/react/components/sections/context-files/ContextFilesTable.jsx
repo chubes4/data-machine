@@ -62,16 +62,8 @@ export default function ContextFilesTable( {
 
 	if ( files.length === 0 ) {
 		return (
-			<div
-				style={ {
-					padding: '40px 20px',
-					textAlign: 'center',
-					background: '#f9f9f9',
-					border: '1px solid #dcdcde',
-					borderRadius: '4px',
-				} }
-			>
-				<p style={ { margin: 0, color: '#757575' } }>
+			<div className="datamachine-modal-empty-state datamachine-modal-empty-state--bordered">
+				<p className="datamachine-text--margin-reset">
 					{ __( 'No context files uploaded yet.', 'datamachine' ) }
 				</p>
 			</div>
@@ -79,62 +71,18 @@ export default function ContextFilesTable( {
 	}
 
 	return (
-		<div
-			style={ {
-				border: '1px solid #dcdcde',
-				borderRadius: '4px',
-				maxHeight: '400px',
-				overflowY: 'auto',
-			} }
-		>
-			<table style={ { width: '100%', borderCollapse: 'collapse' } }>
+		<div className="datamachine-table-container">
+			<table className="datamachine-pipeline-table">
 				<thead>
-					<tr
-						style={ {
-							background: '#f9f9f9',
-							borderBottom: '1px solid #dcdcde',
-							position: 'sticky',
-							top: 0,
-							zIndex: 1,
-						} }
-					>
-						<th
-							style={ {
-								padding: '12px 16px',
-								textAlign: 'left',
-								fontWeight: '600',
-							} }
-						>
-							{ __( 'File Name', 'datamachine' ) }
-						</th>
-						<th
-							style={ {
-								padding: '12px 16px',
-								textAlign: 'left',
-								fontWeight: '600',
-								width: '100px',
-							} }
-						>
+					<tr className="datamachine-table-sticky-header">
+						<th>{ __( 'File Name', 'datamachine' ) }</th>
+						<th className="datamachine-table-col--compact">
 							{ __( 'Size', 'datamachine' ) }
 						</th>
-						<th
-							style={ {
-								padding: '12px 16px',
-								textAlign: 'left',
-								fontWeight: '600',
-								width: '180px',
-							} }
-						>
+						<th className="datamachine-table-col--date">
 							{ __( 'Uploaded', 'datamachine' ) }
 						</th>
-						<th
-							style={ {
-								padding: '12px 16px',
-								textAlign: 'center',
-								fontWeight: '600',
-								width: '100px',
-							} }
-						>
+						<th className="datamachine-table-cell--center datamachine-table-col--compact">
 							{ __( 'Actions', 'datamachine' ) }
 						</th>
 					</tr>
@@ -144,43 +92,17 @@ export default function ContextFilesTable( {
 						const isCurrentlyDeleting = deletingId === file.file_id;
 
 						return (
-							<tr
-								key={ file.file_id }
-								style={ {
-									borderBottom: '1px solid #dcdcde',
-								} }
-							>
-								<td
-									style={ {
-										padding: '12px 16px',
-										fontWeight: '500',
-									} }
-								>
+							<tr key={ file.file_id }>
+								<td className="datamachine-table-cell--medium">
 									{ file.file_name }
 								</td>
-								<td
-									style={ {
-										padding: '12px 16px',
-										color: '#757575',
-									} }
-								>
+								<td className="datamachine-table-cell--muted">
 									{ formatFileSize( file.file_size ) }
 								</td>
-								<td
-									style={ {
-										padding: '12px 16px',
-										color: '#757575',
-										fontSize: '13px',
-									} }
-								>
+								<td className="datamachine-table-cell--muted datamachine-table-cell--small">
 									{ formatDate( file.uploaded_at ) }
 								</td>
-								<td
-									style={ {
-										padding: '12px 16px',
-										textAlign: 'center',
-									} }
-								>
+								<td className="datamachine-table-cell--center">
 									<Button
 										variant="link"
 										onClick={ () =>
@@ -190,7 +112,7 @@ export default function ContextFilesTable( {
 											isDeleting || isCurrentlyDeleting
 										}
 										isBusy={ isCurrentlyDeleting }
-										style={ { color: '#dc3232' } }
+										className="datamachine-table-text-error"
 									>
 										{ isCurrentlyDeleting
 											? __( 'Deleting...', 'datamachine' )

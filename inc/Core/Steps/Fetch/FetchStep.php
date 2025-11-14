@@ -1,14 +1,14 @@
-<?php
-
-namespace DataMachine\Core\Steps\Fetch;
-
-if (!defined('ABSPATH')) {
-    exit;
-}
-
-/**
- * Data fetching step for Data Machine pipelines.
- *
+    /**
+     * Execute data fetching for the current step.
+     *
+     * @param array $payload Unified step payload (job_id, flow_step_id, data, flow_step_config, engine_data)
+     * @return array Updated data packet array
+     */
+    public function execute(array $payload): array {
+        $job_id = $payload['job_id'] ?? 0;
+        $flow_step_id = $payload['flow_step_id'] ?? '';
+        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        $flow_step_config = $payload['flow_step_config'] ?? [];
  * @package DataMachine
  */
 class FetchStep {
@@ -48,7 +48,7 @@ class FetchStep {
             $handler_settings = $flow_step_config['handler_config'] ?? [];
             $handler_settings['flow_step_id'] = $flow_step_config['flow_step_id'] ?? null;
 
-            $fetch_entry = $this->execute_handler($handler, $flow_step_config, $handler_settings, $job_id);
+            $fetch_entry = $this->execute_handler($handler, $flow_step_config, $handler_settings, (string) $job_id);
 
             if (!$fetch_entry) {
                 do_action('datamachine_log', 'error', 'Fetch handler returned no content', ['flow_step_id' => $flow_step_id]);

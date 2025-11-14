@@ -26,23 +26,8 @@ export default function FlowStepHandler( {
 } ) {
 	if ( ! handlerSlug ) {
 		return (
-			<div
-				className="datamachine-flow-step-handler datamachine-flow-step-handler--empty"
-				style={ {
-					padding: '12px',
-					backgroundColor: '#fff3cd',
-					border: '1px solid #ffc107',
-					borderRadius: '4px',
-					marginTop: '12px',
-				} }
-			>
-				<p
-					style={ {
-						margin: '0 0 8px 0',
-						fontSize: '12px',
-						color: '#856404',
-					} }
-				>
+			<div className="datamachine-flow-step-handler datamachine-flow-step-handler--empty datamachine-handler-warning">
+				<p className="datamachine-handler-warning-text">
 					{ __( 'No handler configured', 'datamachine' ) }
 				</p>
 				<Button
@@ -60,41 +45,16 @@ export default function FlowStepHandler( {
 		handlerConfig && Object.keys( handlerConfig ).length > 0;
 
 	return (
-		<div
-			className="datamachine-flow-step-handler"
-			style={ { marginTop: '12px' } }
-		>
-			<div
-				className="datamachine-handler-tag"
-				style={ {
-					display: 'inline-block',
-					padding: '4px 12px',
-					backgroundColor: '#0073aa',
-					color: '#ffffff',
-					borderRadius: '3px',
-					fontSize: '11px',
-					fontWeight: '500',
-					marginBottom: '8px',
-				} }
-			>
+		<div className="datamachine-flow-step-handler datamachine-handler-container">
+			<div className="datamachine-handler-tag datamachine-handler-badge">
 				{ slugToLabel( handlerSlug ) }
 			</div>
 
 			{ hasSettings && (
-				<div
-					className="datamachine-handler-settings-display"
-					style={ {
-						padding: '8px 12px',
-						backgroundColor: '#f6f7f7',
-						border: '1px solid #dcdcde',
-						borderRadius: '4px',
-						fontSize: '12px',
-						marginBottom: '8px',
-					} }
-				>
+				<div className="datamachine-handler-settings-display">
 					{ Object.entries( handlerConfig ).map(
 						( [ key, value ] ) => (
-							<div key={ key } style={ { marginBottom: '4px' } }>
+							<div key={ key } className="datamachine-handler-settings-entry">
 								<strong>{ slugToLabel( key ) }:</strong>{ ' ' }
 								{ typeof value === 'object'
 									? JSON.stringify( value )

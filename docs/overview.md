@@ -37,7 +37,7 @@ Data Machine uses a Pipeline+Flow architecture where:
         'original_id' => $id,
         'original_title' => $title,
         'original_date_gmt' => $date
-        // URLs removed from AI-visible metadata
+        // Clean data packet for AI processing
     ]
 ]
 

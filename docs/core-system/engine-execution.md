@@ -40,14 +40,15 @@ do_action('datamachine_run_flow_now', $flow_id, 'manual');
 
 **Step Execution Pattern**:
 ```php
-$parameters = [
+$payload = [
     'job_id' => $job_id,
     'flow_step_id' => $flow_step_id,
     'flow_step_config' => $flow_step_config,
-    'data' => $data
+    'data' => $data,
+    'engine_data' => apply_filters('datamachine_engine_data', [], $job_id)
 ];
-// Engine data accessed by steps via centralized datamachine_engine_data filter
-$data = $flow_step->execute($parameters);
+
+$data = $flow_step->execute($payload);
 ```
 
 ### 3. Step Scheduling (`datamachine_schedule_next_step`)
@@ -103,30 +104,27 @@ add_filter('datamachine_step_types', function($steps) {
 
 ### Step Implementation
 
-All steps implement the same interface:
+All steps implement the same payload contract:
 
 ```php
 class MyStep {
-    public function execute(array $parameters): array {
-        // Extract from flat parameter structure
-        $job_id = $parameters['job_id'];
-        $flow_step_id = $parameters['flow_step_id'];
-        $data = $parameters['data'] ?? [];
-        $flow_step_config = $parameters['flow_step_config'] ?? [];
-        
-        // Access engine data via centralized datamachine_engine_data filter
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+    public function execute(array $payload): array {
+        $job_id = $payload['job_id'];
+        $flow_step_id = $payload['flow_step_id'];
+        $data = $payload['data'] ?? [];
+        $flow_step_config = $payload['flow_step_config'] ?? [];
+        $engine_data = $payload['engine_data'] ?? [];
+
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;
-        
-        // Process data packet
+
         array_unshift($data, [
             'type' => 'my_step',
             'content' => ['title' => $title, 'body' => $content],
             'metadata' => ['source_type' => 'my_source'],
             'timestamp' => time()
         ]);
-        
+
         return $data;
     }
 }
@@ -134,56 +132,27 @@ class MyStep {
 
 ## Parameter Passing
 
-### Flat Parameter Architecture
+### Unified Step Payload
 
-Engine uses unified flat parameter passing with centralized engine data access via `EngineData.php` filter:
+Engine now delivers a documented payload array to every step:
 
-**Core Parameters** (always provided):
 ```php
-$parameters = [
+$payload = [
     'job_id' => $job_id,
     'flow_step_id' => $flow_step_id,
     'flow_step_config' => $flow_step_config,
-    'data' => $data
+    'data' => $data,
+    'engine_data' => apply_filters('datamachine_engine_data', [], $job_id)
 ];
-
-// Centralized engine data access via datamachine_engine_data filter
-$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
 ```
 
 **Benefits**:
-- ✅ **Simple Interface**: Core parameters always provided, engine data accessed via centralized filter
-- ✅ **Architectural Consistency**: EngineData.php filter maintains filter-based service discovery pattern
-- ✅ **Unified Access**: Single filter replaces direct database access patterns
-- ✅ **Consistent**: Same pattern across all step types
+- ✅ **Explicit Dependencies**: Steps read everything from a single payload without relying on shared globals
+- ✅ **Consistent Evolvability**: New metadata can be appended to the payload without changing method signatures
+- ✅ **Pure Testing**: Steps are testable via simple array fixtures, enabling isolated unit tests
+- ✅ **Unified Access**: `engine_data` travels with the payload, removing the need for `ExecutionContext`
 
-**Step Implementation Pattern**:
-```php
-class MyStep {
-    public function execute(array $parameters): array {
-        // Extract from flat parameter structure
-        $job_id = $parameters['job_id'];
-        $flow_step_id = $parameters['flow_step_id'];
-        $data = $parameters['data'] ?? [];
-        $flow_step_config = $parameters['flow_step_config'] ?? [];
-
-        // Access engine data via centralized datamachine_engine_data filter
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
-        $source_url = $engine_data['source_url'] ?? null;
-        $image_url = $engine_data['image_url'] ?? null;
-
-        // Process data packet
-        array_unshift($data, [
-            'type' => 'my_step',
-            'content' => ['title' => $title, 'body' => $content],
-            'metadata' => ['source_type' => 'my_source'],
-            'timestamp' => time()
-        ]);
-
-        return $data;
-    }
-}
-```
+**Step Implementation Pattern** remains identical to the example above—extract what you need from `$payload`, process data, and return the updated packet.
 
 ## Job Management
 

@@ -30,7 +30,7 @@ class GlobalSystemPromptDirective {
      * @param string|null $pipeline_step_id Pipeline step ID (unused)
      * @return array Modified request with global system prompt added
      */
-    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null): array {
+    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null, array $context = []): array {
         if (!isset($request['messages']) || !is_array($request['messages'])) {
             return $request;
         }
@@ -58,4 +58,4 @@ class GlobalSystemPromptDirective {
 }
 
 // Self-register (Priority 20 = second in 5-tier directive system)
-add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 20, 5);
+add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 20, 6);

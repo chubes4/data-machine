@@ -30,7 +30,7 @@ class ToolDefinitionsDirective {
      * @param string|null $pipeline_step_id Pipeline step ID for workflow context
      * @return array Modified request with tool definitions and workflow context added
      */
-    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null): array {
+    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null, array $context = []): array {
         if (empty($tools) || !is_array($tools)) {
             return $request;
         }
@@ -39,9 +39,9 @@ class ToolDefinitionsDirective {
             return $request;
         }
 
-    $flow_step_id = \DataMachine\Engine\ExecutionContext::$flow_step_id;
+        $flow_step_id = $context['flow_step_id'] ?? null;
 
-    $directive = self::generate_dynamic_directive($tools, $request, $pipeline_step_id, $flow_step_id);
+        $directive = self::generate_dynamic_directive($tools, $request, $pipeline_step_id, $flow_step_id);
 
         array_push($request['messages'], [
             'role' => 'system',
@@ -96,4 +96,4 @@ class ToolDefinitionsDirective {
 }
 
 // Self-register (Priority 40 = fourth in 5-tier directive system)
-add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 40, 5);
+add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 40, 6);

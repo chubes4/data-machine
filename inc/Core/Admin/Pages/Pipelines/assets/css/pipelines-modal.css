@@ -10,6 +10,23 @@
 
 /* ===== MODAL LAYOUT CLASSES ===== */
 
+/* Modal width utilities - Replace inline maxWidth styles with these classes */
+.datamachine-modal--max-width-500 {
+    max-width: 500px;
+}
+
+.datamachine-modal--max-width-600 {
+    max-width: 600px;
+}
+
+.datamachine-modal--max-width-700 {
+    max-width: 700px;
+}
+
+.datamachine-modal--max-width-800 {
+    max-width: 800px;
+}
+
 /* Modal content containers */
 .datamachine-modal-content {
     padding: 0;
@@ -17,7 +34,7 @@
 
 /* Modal sections */
 .datamachine-modal-section {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     padding-bottom: 16px;
     border-bottom: 1px solid #dcdcde;
 }
@@ -28,6 +45,803 @@
 
 .datamachine-modal-section--no-border {
     border-bottom: none;
+}
+
+/* ===== MODAL UTILITIES ===== */
+
+/* Modal empty states */
+.datamachine-modal-empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: #757575;
+}
+
+.datamachine-modal-empty-state--bordered {
+    background: #f9f9f9;
+    border: 1px solid #dcdcde;
+    border-radius: var(--datamachine-border-radius);
+}
+
+/* Modal descriptions */
+.datamachine-modal-description {
+    margin-bottom: 16px;
+    color: #757575;
+    font-size: 14px;
+}
+
+/* Modal info boxes */
+.datamachine-modal-info-box {
+    margin-top: 16px;
+    padding: 12px;
+    background: #f9f9f9;
+    border: 1px solid #dcdcde;
+    border-radius: var(--datamachine-border-radius);
+}
+
+.datamachine-modal-info-box p {
+    margin: 0;
+    font-size: 12px;
+    color: #757575;
+}
+
+/* Modal action footer */
+.datamachine-modal-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #dcdcde;
+}
+
+.datamachine-modal-actions--end {
+    justify-content: flex-end;
+}
+
+/* Modal header sections */
+.datamachine-modal-header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+/* Modal header text */
+.datamachine-modal-header-text {
+    margin-bottom: 16px;
+    color: #757575;
+}
+
+/* Modal loading state */
+.datamachine-modal-loading {
+    padding: 40px;
+    text-align: center;
+}
+
+.datamachine-modal-loading p {
+    margin: 0;
+    color: #757575;
+}
+
+/* No config message */
+.datamachine-modal-no-config {
+    padding: 20px;
+    background: #f9f9f9;
+    border: 1px solid #dcdcde;
+    border-radius: var(--datamachine-border-radius);
+    text-align: center;
+}
+
+.datamachine-modal-no-config p {
+    margin: 0;
+    color: #757575;
+}
+
+/* Modal grid layouts */
+.datamachine-modal-grid-2col {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+/* Modal cards with hover states */
+.datamachine-modal-card {
+    padding: 20px;
+    border: 2px solid #dcdcde;
+    border-radius: var(--datamachine-border-radius);
+    background: #ffffff;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.datamachine-modal-card:hover {
+    border-color: #0073aa;
+    background: #f9f9f9;
+}
+
+.datamachine-modal-card strong {
+    font-size: 16px;
+}
+
+.datamachine-modal-card p {
+    margin: 0;
+    font-size: 12px;
+    color: #757575;
+}
+
+/* Card meta information */
+.datamachine-modal-card-meta {
+    font-size: 12px;
+    color: #757575;
+}
+
+/* Badge styles for modal cards */
+.datamachine-modal-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #f0b849;
+    color: #000;
+    border-radius: var(--datamachine-border-radius);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.datamachine-modal-badge--info {
+    background: #0073aa;
+    color: #fff;
+}
+
+/* Handler display in modal sections */
+.datamachine-modal-handler-display {
+    margin-top: 12px;
+}
+
+/* ===== MODAL UTILITY VARIANTS ===== */
+
+/* Info box variants */
+.datamachine-modal-info-box--note {
+    background: #f9f9f9;
+    border-color: #dcdcde;
+}
+
+.datamachine-modal-info-box--highlight {
+    background: #f0f6fc;
+    border-color: #0073aa;
+}
+
+.datamachine-modal-info-box--highlight p {
+    color: #0073aa;
+}
+
+/* Modal spacing utilities */
+.datamachine-modal-spacing--mt-16 {
+    margin-top: 16px;
+}
+
+.datamachine-modal-spacing--mb-16 {
+    margin-bottom: 16px;
+}
+
+.datamachine-modal-spacing--mb-20 {
+    margin-bottom: 16px;
+}
+
+/* Modal text variants */
+.datamachine-modal-text--note {
+    margin: 0;
+    font-size: 12px;
+    color: #757575;
+}
+
+.datamachine-modal-text--info {
+    margin: 0;
+    font-size: 12px;
+    color: #757575;
+}
+
+.datamachine-modal-text--highlight {
+    margin: 0;
+    font-size: 12px;
+    color: #0073aa;
+}
+
+.datamachine-modal-text--strong {
+    font-weight: 600;
+}
+
+/* Modal loading/empty states */
+.datamachine-modal-loading-state {
+    padding: 40px;
+    text-align: center;
+}
+
+.datamachine-modal-loading-text {
+    margin: 0;
+    color: #757575;
+}
+
+/* ===== SPACING UTILITIES ===== */
+.datamachine-spacing--mb-8 { margin-bottom: 8px; }
+.datamachine-spacing--mb-12 { margin-bottom: 12px; }
+.datamachine-spacing--mb-16 { margin-bottom: 16px; }
+.datamachine-spacing--mb-24 { margin-bottom: 24px; }
+.datamachine-spacing--mt-12 { margin-top: 12px; }
+.datamachine-spacing--padding-12 { padding: 12px; }
+
+/* ===== LAYOUT UTILITIES ===== */
+.datamachine-layout--flex-gap-8 {
+    display: flex;
+    gap: 8px;
+}
+
+.datamachine-layout--flex-gap-20 {
+    display: flex;
+    gap: 20px;
+}
+
+.datamachine-layout--flex-column-gap-8 {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.datamachine-layout--flex-end {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.datamachine-layout--flex-center {
+    display: flex;
+    align-items: center;
+}
+
+/* ===== TYPOGRAPHY UTILITIES ===== */
+.datamachine-text--font-12 { font-size: 12px; }
+.datamachine-text--font-16 { font-size: 16px; }
+.datamachine-text--font-weight-500 { font-weight: 500; }
+.datamachine-text--color-muted { color: #757575; }
+.datamachine-text--center { text-align: center; }
+.datamachine-text--margin-reset { margin: 0; }
+
+/* ===== TABLE UTILITIES ===== */
+.datamachine-table-col--compact {
+    width: 100px;
+}
+
+.datamachine-table-col--date {
+    width: 180px;
+}
+
+.datamachine-table-text-error {
+    color: #dc3232;
+}
+
+/* ===== CONFIGURE STEP UTILITIES ===== */
+
+/* Warning component layouts */
+.datamachine-warning-flex-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.datamachine-warning-icon-container {
+    flex-shrink: 0;
+}
+
+.datamachine-warning-content {
+    flex: 1;
+}
+
+/* Warning icons */
+.datamachine-warning-icon {
+    width: 24px;
+    height: 24px;
+    color: #f0b849;
+}
+
+/* Warning text */
+.datamachine-warning-title {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.datamachine-warning-description {
+    margin: 0;
+    font-size: 12px;
+    color: #757575;
+}
+
+/* Tool selector layouts */
+.datamachine-tools-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.datamachine-tool-checkbox-container {
+    padding: 12px;
+    border: 1px solid #dcdcde;
+    border-radius: var(--datamachine-border-radius);
+    background: #ffffff;
+    transition: all 0.2s;
+}
+
+.datamachine-tool-checkbox-container--checked {
+    border-color: #0073aa;
+    background: #f0f6fc;
+}
+
+/* Tool checkbox content */
+.datamachine-tool-checkbox-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.datamachine-tool-checkbox-label {
+    flex: 1;
+}
+
+.datamachine-tool-checkbox-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.datamachine-tool-checkbox-title {
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.datamachine-tool-checkbox-status {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.datamachine-tool-checkbox-description {
+    margin: 0;
+    font-size: 12px;
+    color: #757575;
+}
+
+.datamachine-tool-checkbox-badge {
+    margin-left: 8px;
+    padding: 2px 6px;
+    background: #0073aa;
+    color: #fff;
+    border-radius: var(--datamachine-border-radius);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* Tool spacing */
+.datamachine-tools-spacing--mt-16 {
+    margin-top: 16px;
+}
+
+.datamachine-tools-header {
+    margin-bottom: 12px;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: var(--datamachine-border-radius);
+}
+
+/* ============================================================================
+   PHASE 6: Handler Settings Sub-Components
+   ========================================================================= */
+
+/* API Config Form */
+.datamachine-api-config-description {
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: #757575;
+}
+
+/* Account Details */
+.datamachine-account-details-box {
+    margin-top: 16px;
+    padding: 12px;
+    background: #f9f9f9;
+    border: 1px solid #dcdcde;
+    border-radius: var(--datamachine-border-radius);
+}
+
+.datamachine-account-details-title {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.datamachine-account-details-content {
+    font-size: 12px;
+    color: #555;
+}
+
+.datamachine-account-details-field {
+    margin-bottom: 8px;
+}
+
+/* Connection Status */
+.datamachine-connection-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--datamachine-border-radius);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.datamachine-connection-status--connected {
+    background: #e6f4ea;
+    border: 1px solid #46b450;
+}
+
+.datamachine-connection-status--disconnected {
+    background: #fef7f7;
+    border: 1px solid #dc3232;
+}
+
+.datamachine-connection-status__icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.datamachine-connection-status__icon--connected {
+    color: #46b450;
+}
+
+.datamachine-connection-status__icon--disconnected {
+    color: #dc3232;
+}
+
+.datamachine-connection-status__label--connected {
+    color: #46b450;
+}
+
+.datamachine-connection-status__label--disconnected {
+    color: #dc3232;
+}
+
+/* Files Handler */
+.datamachine-files-section {
+    margin-bottom: 16px;
+}
+
+.datamachine-files-section-title {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.datamachine-files-section-description {
+    margin: 0 0 12px 0;
+    font-size: 12px;
+    color: #757575;
+}
+
+.datamachine-files-section-spacing--mt-24 {
+    margin-top: 24px;
+}
+
+.datamachine-auto-cleanup-option {
+    margin-top: 16px;
+    padding: 12px;
+    background: #f9f9f9;
+    border: 1px solid #dcdcde;
+    border-radius: var(--datamachine-border-radius);
+}
+
+/* ============================================================================
+   PHASE 7: Import/Export Components
+   ========================================================================= */
+
+/* Import/Export Tabs */
+.datamachine-import-export-description {
+    margin-bottom: 16px;
+    color: #757575;
+}
+
+.datamachine-file-selected-display {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.datamachine-file-selected-label {
+    color: #46b450;
+    font-weight: 500;
+}
+
+.datamachine-tab-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #dcdcde;
+}
+
+/* CSV Dropzone */
+.datamachine-csv-dropzone {
+    border: 2px dashed #dcdcde;
+    border-radius: var(--datamachine-border-radius);
+    padding: 40px 20px;
+    text-align: center;
+    background: #f9f9f9;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.datamachine-csv-dropzone--dragging {
+    border-color: #0073aa;
+    background: #f0f6fc;
+}
+
+.datamachine-csv-dropzone--disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.datamachine-csv-dropzone__icon {
+    margin-bottom: 16px;
+    font-size: 48px;
+    color: #757575;
+}
+
+.datamachine-csv-dropzone__title {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.datamachine-csv-dropzone__divider {
+    margin: 0 0 16px 0;
+    color: #757575;
+    font-size: 14px;
+}
+
+.datamachine-csv-dropzone__error {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #fef7f7;
+    border: 1px solid #dc3232;
+    border-radius: var(--datamachine-border-radius);
+    color: #dc3232;
+    font-size: 12px;
+}
+
+/* Pipeline Table */
+.datamachine-pipeline-table-wrapper {
+    border: 1px solid #dcdcde;
+    border-radius: var(--datamachine-border-radius);
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.datamachine-pipeline-table-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.datamachine-pipeline-table-row {
+    border-bottom: 1px solid #dcdcde;
+    background: transparent;
+    transition: background 0.2s;
+}
+
+.datamachine-pipeline-table-row--selected {
+    background: #f0f6fc;
+}
+
+.datamachine-pipeline-table-row:hover:not(.datamachine-pipeline-table-row--selected) {
+    background: #f9f9f9;
+}
+
+.datamachine-pipeline-table-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #757575;
+}
+
+.datamachine-pipeline-table-name {
+    font-weight: 500;
+}
+
+.datamachine-pipeline-table-meta {
+    color: #757575;
+}
+
+/* ============================================================================
+   PHASE 8: Complete Zero Inline CSS
+   ========================================================================= */
+
+/* Global Utilities */
+.datamachine-hidden {
+    display: none;
+}
+
+.datamachine-button--destructive {
+    color: #dc3232;
+}
+
+.datamachine-table-col--40 {
+    width: 40px;
+}
+
+.datamachine-table-col--100 {
+    width: 100px;
+}
+
+/* Step Cards */
+.datamachine-step-card-section {
+    margin-bottom: 12px;
+}
+
+.datamachine-step-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.datamachine-step-card-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* AI Config Display */
+.datamachine-ai-config-section {
+    margin-top: 12px;
+}
+
+.datamachine-ai-config-meta {
+    font-size: 12px;
+    color: #757575;
+    margin-bottom: 8px;
+}
+
+/* Empty Cards */
+.datamachine-empty-card {
+    border: 2px dashed #dcdcde;
+    border-radius: var(--datamachine-border-radius);
+    padding: 40px 20px;
+    text-align: center;
+    background-color: #f9f9f9;
+}
+
+.datamachine-empty-flow-card {
+    min-width: 300px;
+    margin-bottom: 16px;
+}
+
+.datamachine-empty-step-card {
+    width: 100%;
+}
+
+/* Flow Handler Components */
+.datamachine-flow-step-handler {
+    margin-top: 12px;
+}
+
+.datamachine-flow-step-handler--empty {
+    padding: 12px;
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: var(--datamachine-border-radius);
+    margin-top: 12px;
+}
+
+.datamachine-handler-empty-text {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    color: #856404;
+}
+
+.datamachine-handler-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    background-color: #0073aa;
+    color: #ffffff;
+    border-radius: var(--datamachine-border-radius);
+    font-size: 11px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.datamachine-handler-settings-display {
+    padding: 8px 12px;
+    background-color: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: var(--datamachine-border-radius);
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.datamachine-handler-settings-field {
+    margin-bottom: 8px;
+}
+
+/* Section Components */
+.datamachine-section-header {
+    margin-bottom: 16px;
+}
+
+.datamachine-section-title {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.datamachine-section-description {
+    margin: 0;
+    color: #757575;
+    font-size: 12px;
+}
+
+.datamachine-section-content {
+    margin-bottom: 24px;
+}
+
+.datamachine-section-loading {
+    text-align: center;
+    padding: 20px;
+    color: #757575;
+}
+
+/* Pipeline Steps Layout */
+.datamachine-pipeline-steps-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 0;
+}
+
+.datamachine-pipeline-steps-empty {
+    padding: 20px;
+    text-align: center;
+}
+
+.datamachine-pipeline-steps-empty-text {
+    color: #757575;
+    margin-bottom: 16px;
+}
+
+.datamachine-step-item {
+    flex: 0 0 auto;
+    min-width: 300px;
+    max-width: 300px;
+}
+
+/* Modal Empty States */
+.datamachine-modal-empty-state-text {
+    margin: 0;
+}
+
+/* Responsive adjustments for modal utilities */
+@media (max-width: 768px) {
+    .datamachine-modal-grid-2col {
+        grid-template-columns: 1fr;
+    }
+
+    .datamachine-modal-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .datamachine-modal-actions .button {
+        width: 100%;
+    }
 }
 
 /* ===== FILES HANDLER MODAL STYLES ===== */
@@ -135,7 +949,7 @@
 }
 
 .datamachine-step-selection-header {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     text-align: center;
 }
 
@@ -156,7 +970,7 @@
 .datamachine-step-selection-card {
     background: #fff;
     border: 2px solid #e1e1e1;
-    border-radius: 8px;
+    border-radius: var(--datamachine-border-radius);
     padding: 20px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -214,7 +1028,7 @@
     font-weight: 600;
     color: #666;
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
 }
 
 .datamachine-handlers-list {
@@ -230,7 +1044,7 @@
 }
 
 .datamachine-handler-selection-header {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     text-align: center;
 }
 
@@ -249,7 +1063,7 @@
 .datamachine-handler-selection-card {
     background: #fff;
     border: 2px solid #e1e1e1;
-    border-radius: 6px;
+    border-radius: var(--datamachine-border-radius);
     padding: 16px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -352,7 +1166,7 @@
 }
 
 .datamachine-handler-settings-header {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     text-align: center;
 }
 
@@ -373,7 +1187,7 @@
 .datamachine-handler-config-tabs {
     display: flex;
     border-bottom: 2px solid #e1e1e1;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     background: #f8f9fa;
     border-radius: 6px 6px 0 0;
 }
@@ -467,7 +1281,7 @@
     text-align: center;
     padding: 30px 20px;
     background: #f8f9fa;
-    border-radius: 6px;
+    border-radius: var(--datamachine-border-radius);
     border: 1px solid #e1e1e1;
 }
 
@@ -493,11 +1307,11 @@
 
 /* Auth configuration section */
 .datamachine-auth-config-section {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .datamachine-auth-config-form {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .datamachine-redirect-uri-section {
@@ -518,7 +1332,7 @@
 .datamachine-redirect-uri-section p {
     margin: 0 0 10px 0;
     color: #646970;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .datamachine-redirect-uri-code {
@@ -529,7 +1343,7 @@
     word-break: break-all;
     font-family: monospace;
     font-size: 12px;
-    border-radius: 3px;
+    border-radius: var(--datamachine-border-radius);
     color: #23282d;
     line-height: 1.4;
 }
@@ -541,9 +1355,9 @@
 .datamachine-auth-status {
     background: #f8f9fa;
     border: 1px solid #dee2e6;
-    border-radius: 6px;
+    border-radius: var(--datamachine-border-radius);
     padding: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -584,7 +1398,7 @@
 
 .datamachine-auth-account-details p {
     margin: 4px 0;
-    font-size: 13px;
+    font-size: 12px;
     color: #666;
 }
 
@@ -598,7 +1412,7 @@
 .datamachine-auth-help {
     background: #fff;
     border: 1px solid #e1e1e1;
-    border-radius: 6px;
+    border-radius: var(--datamachine-border-radius);
     padding: 15px;
 }
 
@@ -611,7 +1425,7 @@
 .datamachine-auth-help p {
     margin: 0;
     color: #666;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.4;
 }
 
@@ -619,7 +1433,7 @@
     text-align: center;
     padding: 30px 20px;
     background: #f8f9fa;
-    border-radius: 6px;
+    border-radius: var(--datamachine-border-radius);
     border: 1px solid #e1e1e1;
 }
 
@@ -641,7 +1455,7 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     padding-bottom: 15px;
     border-bottom: 1px solid #e1e1e1;
 }
@@ -699,7 +1513,7 @@
 }
 
 .datamachine-flow-schedule-header {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     text-align: center;
 }
 
@@ -763,14 +1577,14 @@
 .datamachine-schedule-interval-field {
     background: #f8f9fa;
     border: 1px solid #e1e1e1;
-    border-radius: 6px;
+    border-radius: var(--datamachine-border-radius);
     padding: 15px;
 }
 
 .datamachine-schedule-info {
     background: #fff;
     border: 1px solid #e1e1e1;
-    border-radius: 6px;
+    border-radius: var(--datamachine-border-radius);
     padding: 15px;
 }
 
@@ -828,7 +1642,7 @@
     }
     
     .datamachine-step-card-description {
-        font-size: 13px;
+        font-size: 12px;
     }
     
     /* Auth modal responsive adjustments */
@@ -892,7 +1706,7 @@
 .datamachine-file-drop-zone,
 #datamachine-file-drop-zone {
     border: 2px dashed #ccc;
-    border-radius: 8px;
+    border-radius: var(--datamachine-border-radius);
     padding: 40px 20px;
     text-align: center;
     cursor: pointer;
@@ -1003,7 +1817,7 @@
     align-items: center;
     gap: 5px;
     padding: 6px 12px;
-    font-size: 13px;
+    font-size: 12px;
     border: 1px solid #ddd;
     border-radius: var(--datamachine-border-radius);
     background: #fff;
@@ -1043,7 +1857,7 @@
     color: #888;
     background: #f8f9fa;
     border: 1px solid #e1e1e1;
-    border-radius: 6px;
+    border-radius: var(--datamachine-border-radius);
 }
 
 .datamachine-empty-files .dashicons {
@@ -1096,7 +1910,7 @@
     border-collapse: collapse;
     background: #fff;
     border: 1px solid #e1e1e1;
-    border-radius: 6px;
+    border-radius: var(--datamachine-border-radius);
     overflow: hidden;
 }
 
@@ -1119,7 +1933,7 @@
 .datamachine-file-status-table th {
     font-weight: 600;
     color: #333;
-    font-size: 13px;
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -1184,7 +1998,7 @@
 /* File size formatting */
 .datamachine-file-size {
     color: #888;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 /* File name styling */
@@ -1255,10 +2069,10 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     padding: 2px 8px;
-    border-radius: 12px;
+    border-radius: var(--datamachine-border-radius);
     background: #f8f9fa;
 }
 
@@ -1296,7 +2110,7 @@
     
     .datamachine-files-table,
     .datamachine-file-status-table {
-        font-size: 13px;
+        font-size: 12px;
     }
     
     .datamachine-files-table th,
@@ -1389,11 +2203,11 @@
     background: #333;
     color: white;
     padding: 10px 12px;
-    border-radius: 6px;
+    border-radius: var(--datamachine-border-radius);
     white-space: normal;
     width: 280px;
     z-index: 1000;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.4;
     font-weight: normal;
     text-align: left;
@@ -1466,4 +2280,124 @@
     text-align: center;
     padding: 40px;
     color: #666;
+}
+
+/* ===== AI TOOLS SELECTOR ===== */
+.datamachine-ai-tools-description {
+    margin-bottom: 12px;
+}
+
+.datamachine-ai-tools-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ===== FLOW STEP HANDLER ===== */
+.datamachine-handler-warning {
+    padding: 12px;
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: var(--datamachine-border-radius);
+    margin-top: 12px;
+}
+
+.datamachine-handler-warning-text {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    color: #856404;
+}
+
+.datamachine-handler-container {
+    margin-top: 12px;
+}
+
+.datamachine-handler-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background-color: #0073aa;
+    color: #ffffff;
+    border-radius: var(--datamachine-border-radius);
+    font-size: 11px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.datamachine-handler-settings-display {
+    padding: 8px 12px;
+    background-color: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: var(--datamachine-border-radius);
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.datamachine-handler-settings-entry {
+    margin-bottom: 8px;
+}
+
+/* ===== FILE UPLOAD DROPZONE ===== */
+.datamachine-dropzone {
+    border: 2px dashed #ddd;
+    border-radius: var(--datamachine-border-radius);
+    padding: 40px;
+    text-align: center;
+    background: #fafafa;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.datamachine-dropzone--dragging {
+    border-color: #0073aa;
+    background: #e5f5fa;
+    opacity: 0.8;
+}
+
+.datamachine-dropzone-icon {
+    margin-bottom: 16px;
+    font-size: 48px;
+    color: #757575;
+}
+
+.datamachine-dropzone-title {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.datamachine-dropzone-helper {
+    margin: 0 0 12px 0;
+    color: #757575;
+    font-size: 12px;
+}
+
+.datamachine-dropzone-or {
+    margin: 0 0 16px 0;
+    color: #757575;
+    font-size: 14px;
+}
+
+.datamachine-dropzone-error {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #fef7f7;
+    border: 1px solid #dc3232;
+    border-radius: var(--datamachine-border-radius);
+    color: #dc3232;
+    font-size: 12px;
+}
+
+/* ===== CONTEXT FILES ===== */
+.datamachine-context-files-wrapper {
+    margin-bottom: 16px;
+}
+
+.datamachine-context-files-helper {
+    margin: 0;
+    color: #757575;
+    font-size: 12px;
+}
+
+.datamachine-context-files-section {
+    margin-bottom: 24px;
 }

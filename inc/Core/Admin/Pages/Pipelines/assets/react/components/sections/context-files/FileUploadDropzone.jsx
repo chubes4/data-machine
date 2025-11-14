@@ -141,60 +141,25 @@ export default function FileUploadDropzone( {
 				onDragLeave={ handleDragLeave }
 				onDragOver={ handleDragOver }
 				onDrop={ handleDrop }
-				style={ {
-					border: `2px dashed ${
-						isDragging ? '#0073aa' : '#dcdcde'
-					}`,
-					borderRadius: '4px',
-					padding: '40px 20px',
-					textAlign: 'center',
-					background: isDragging ? '#f0f6fc' : '#f9f9f9',
-					transition: 'all 0.2s',
-					cursor: disabled ? 'not-allowed' : 'pointer',
-					opacity: disabled ? 0.6 : 1,
-				} }
+				className={`datamachine-dropzone ${isDragging ? 'datamachine-dropzone--dragging' : ''}`}
 				onClick={ ! disabled ? handleBrowseClick : undefined }
 			>
-				<div
-					style={ {
-						marginBottom: '16px',
-						fontSize: '48px',
-						color: '#757575',
-					} }
-				>
+				<div className="datamachine-dropzone-icon">
 					📁
 				</div>
 
-				<p
-					style={ {
-						margin: '0 0 8px 0',
-						fontSize: '16px',
-						fontWeight: '500',
-					} }
-				>
+				<p className="datamachine-dropzone-title">
 					{ uploadText || defaultUploadText }
 				</p>
 
-				<p
-					style={ {
-						margin: '0 0 12px 0',
-						color: '#757575',
-						fontSize: '13px',
-					} }
-				>
+				<p className="datamachine-dropzone-helper">
 					{ __(
 						`Allowed: ${ formatAllowedTypes() } (max ${ maxSizeMB }MB)`,
 						'datamachine'
 					) }
 				</p>
 
-				<p
-					style={ {
-						margin: '0 0 16px 0',
-						color: '#757575',
-						fontSize: '14px',
-					} }
-				>
+				<p className="datamachine-dropzone-or">
 					{ __( 'or', 'datamachine' ) }
 				</p>
 
@@ -211,23 +176,13 @@ export default function FileUploadDropzone( {
 					type="file"
 					accept={ getAcceptAttribute() }
 					onChange={ handleFileInputChange }
-					style={ { display: 'none' } }
+					className="datamachine-hidden"
 					disabled={ disabled }
 				/>
 			</div>
 
 			{ error && (
-				<div
-					style={ {
-						marginTop: '12px',
-						padding: '8px 12px',
-						background: '#fef7f7',
-						border: '1px solid #dc3232',
-						borderRadius: '4px',
-						color: '#dc3232',
-						fontSize: '13px',
-					} }
-				>
+				<div className="datamachine-dropzone-error">
 					{ error }
 				</div>
 			) }

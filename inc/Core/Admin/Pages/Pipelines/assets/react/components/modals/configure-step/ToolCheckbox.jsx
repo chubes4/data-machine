@@ -28,23 +28,13 @@ export default function ToolCheckbox( {
 	onChange,
 	disabled = false,
 } ) {
+	const containerClass = checked
+		? 'datamachine-tool-checkbox-container datamachine-tool-checkbox-container--checked'
+		: 'datamachine-tool-checkbox-container';
+
 	return (
-		<div
-			style={ {
-				padding: '12px',
-				border: `1px solid ${ checked ? '#0073aa' : '#dcdcde' }`,
-				borderRadius: '4px',
-				background: checked ? '#f0f6fc' : '#ffffff',
-				transition: 'all 0.2s',
-			} }
-		>
-			<div
-				style={ {
-					display: 'flex',
-					alignItems: 'flex-start',
-					gap: '8px',
-				} }
-			>
+		<div className={ containerClass }>
+			<div className="datamachine-tool-checkbox-inner">
 				<CheckboxControl
 					checked={ checked }
 					onChange={ onChange }
@@ -52,26 +42,16 @@ export default function ToolCheckbox( {
 					__nextHasNoMarginBottom
 				/>
 
-				<div style={ { flex: 1 } }>
-					<div
-						style={ {
-							display: 'flex',
-							alignItems: 'center',
-							gap: '8px',
-							marginBottom: '4px',
-						} }
-					>
-						<span style={ { fontWeight: '500', fontSize: '14px' } }>
+				<div className="datamachine-tool-checkbox-label">
+					<div className="datamachine-tool-checkbox-header">
+						<span className="datamachine-tool-checkbox-title">
 							{ label }
 						</span>
 
 						{ /* Configuration status indicator */ }
 						{ checked && (
 							<span
-								style={ {
-									fontSize: '16px',
-									lineHeight: '1',
-								} }
+								className="datamachine-tool-checkbox-status"
 								title={
 									configured
 										? 'Configured'
@@ -84,13 +64,7 @@ export default function ToolCheckbox( {
 					</div>
 
 					{ description && (
-						<p
-							style={ {
-								margin: 0,
-								fontSize: '12px',
-								color: '#757575',
-							} }
-						>
+						<p className="datamachine-tool-checkbox-description">
 							{ description }
 						</p>
 					) }

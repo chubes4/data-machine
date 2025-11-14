@@ -31,14 +31,12 @@ class PipelineSystemPromptDirective {
      * @param string|null $pipeline_step_id Pipeline step ID for context
      * @return array Modified request with pipeline system prompt added
      */
-    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null): array {
+    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null, array $context = []): array {
         if (!isset($request['messages']) || !is_array($request['messages'])) {
             return $request;
         }
 
-        self::require_pipeline_context($pipeline_step_id, __METHOD__);
-
-        $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id);
+        $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, $context);
         $system_prompt = $step_ai_config['system_prompt'] ?? '';
 
         if (empty($system_prompt)) {
@@ -46,7 +44,7 @@ class PipelineSystemPromptDirective {
         }
 
         // Extract current pipeline step ID for "YOU ARE HERE" context
-        $current_flow_step_id = \DataMachine\Engine\ExecutionContext::$flow_step_id;
+        $current_flow_step_id = $context['flow_step_id'] ?? null;
         $current_pipeline_step_id = null;
         if ($current_flow_step_id) {
             $flow_parts = apply_filters('datamachine_split_flow_step_id', null, $current_flow_step_id);
@@ -54,7 +52,7 @@ class PipelineSystemPromptDirective {
         }
 
         // Build workflow visualization with current step context
-        $workflow_visualization = self::buildWorkflowVisualization($pipeline_step_id, $current_pipeline_step_id);
+        $workflow_visualization = self::buildWorkflowVisualization($pipeline_step_id, $current_pipeline_step_id, $context);
 
         // Construct enhanced message with workflow context
         $content = '';
@@ -88,13 +86,13 @@ class PipelineSystemPromptDirective {
      * @param string|null $current_pipeline_step_id Currently executing pipeline step ID
      * @return string Workflow visualization (e.g., "REDDIT FETCH → AI (YOU ARE HERE) → WORDPRESS PUBLISH")
      */
-    private static function buildWorkflowVisualization($pipeline_step_id, $current_pipeline_step_id = null): string {
+    private static function buildWorkflowVisualization($pipeline_step_id, $current_pipeline_step_id = null, array $context = []): string {
         if (empty($pipeline_step_id)) {
             return '';
         }
 
         // Get flow_id from current execution context
-        $current_flow_step_id = \DataMachine\Engine\ExecutionContext::$flow_step_id;
+        $current_flow_step_id = $context['flow_step_id'] ?? null;
         if (!$current_flow_step_id) {
             do_action('datamachine_log', 'debug', 'Workflow visualization: No flow context available');
             return '';
@@ -167,29 +165,8 @@ class PipelineSystemPromptDirective {
         return $workflow_string;
     }
 
-    /**
-     * Ensure pipeline context is available for AI directive injection.
-     *
-     * @param string|null $pipeline_step_id Pipeline step ID
-     * @param string $context Method context for error logging
-     */
-    private static function require_pipeline_context($pipeline_step_id, string $context): void {
-        if (empty($pipeline_step_id)) {
-            do_action('datamachine_log', 'error', 'Pipeline context missing', [
-                'context' => $context,
-                'pipeline_step_id' => $pipeline_step_id
-            ]);
-            // Use execution context for job_id access in error scenarios
-            $job_id = \DataMachine\Engine\ExecutionContext::$job_id ?? null;
-            if ($job_id) {
-                do_action('datamachine_fail_job', $job_id, 'missing_pipeline_context', [
-                    'context' => $context,
-                    'pipeline_step_id' => $pipeline_step_id
-                ]);
-            }
-        }
-    }
+
 }
 
 // Self-register (Priority 30 = third in 5-tier directive system)
-add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 30, 5);
+add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 30, 6);

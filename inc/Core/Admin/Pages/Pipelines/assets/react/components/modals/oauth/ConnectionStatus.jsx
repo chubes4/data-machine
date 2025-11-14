@@ -17,43 +17,29 @@ export default function ConnectionStatus( { connected } ) {
 	const statusConfig = connected
 		? {
 				label: __( 'Connected', 'datamachine' ),
-				color: '#46b450',
 				icon: '✓',
-				background: '#e6f4ea',
 		  }
 		: {
 				label: __( 'Not Connected', 'datamachine' ),
-				color: '#dc3232',
 				icon: '✗',
-				background: '#fef7f7',
 		  };
 
+	const statusClass = connected
+		? 'datamachine-connection-status datamachine-connection-status--connected'
+		: 'datamachine-connection-status datamachine-connection-status--disconnected';
+
+	const iconClass = connected
+		? 'datamachine-connection-status__icon datamachine-connection-status__icon--connected'
+		: 'datamachine-connection-status__icon datamachine-connection-status__icon--disconnected';
+
+	const labelClass = connected
+		? 'datamachine-connection-status__label--connected'
+		: 'datamachine-connection-status__label--disconnected';
+
 	return (
-		<div
-			style={ {
-				display: 'inline-flex',
-				alignItems: 'center',
-				gap: '6px',
-				padding: '6px 12px',
-				background: statusConfig.background,
-				border: `1px solid ${ statusConfig.color }`,
-				borderRadius: '4px',
-				fontSize: '13px',
-				fontWeight: '500',
-			} }
-		>
-			<span
-				style={ {
-					color: statusConfig.color,
-					fontSize: '16px',
-					lineHeight: '1',
-				} }
-			>
-				{ statusConfig.icon }
-			</span>
-			<span style={ { color: statusConfig.color } }>
-				{ statusConfig.label }
-			</span>
+		<div className={ statusClass }>
+			<span className={ iconClass }>{ statusConfig.icon }</span>
+			<span className={ labelClass }>{ statusConfig.label }</span>
 		</div>
 	);
 }

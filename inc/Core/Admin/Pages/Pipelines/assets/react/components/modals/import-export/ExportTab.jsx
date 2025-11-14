@@ -102,7 +102,7 @@ export default function ExportTab( { pipelines, onClose } ) {
 				</Notice>
 			) }
 
-			<p style={ { marginBottom: '20px', color: '#757575' } }>
+			<p className="datamachine-import-export-description">
 				{ __(
 					'Select the pipelines you want to export to CSV:',
 					'datamachine'
@@ -115,15 +115,7 @@ export default function ExportTab( { pipelines, onClose } ) {
 				onSelectionChange={ setSelectedIds }
 			/>
 
-			<div
-				style={ {
-					display: 'flex',
-					justifyContent: 'space-between',
-					marginTop: '24px',
-					paddingTop: '20px',
-					borderTop: '1px solid #dcdcde',
-				} }
-			>
+			<div className="datamachine-tab-actions">
 				<Button
 					variant="secondary"
 					onClick={ onClose }

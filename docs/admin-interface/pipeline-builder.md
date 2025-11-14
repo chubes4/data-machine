@@ -148,9 +148,6 @@ The Pipelines page uses modern React architecture built with WordPress component
 **Code Statistics:**
 - 6,591 lines of React code
 - 50+ specialized components
-- 2,223 lines of jQuery removed
-- 6 PHP template files removed
-- 2 AJAX endpoint classes eliminated (PipelinePageAjax, PipelineStatusAjax)
 
 ### Component Structure
 
@@ -281,9 +278,7 @@ All requests use WordPress REST API nonce from `wpApiSettings.nonce` with `manag
 ### Migration Impact
 
 **Eliminated Code:**
-- 2,223 lines of jQuery removed from 12 JavaScript files
-- 6 PHP template files removed (pipeline-card.php, flow-instance-card.php, pipeline-step-card.php, flow-step-card.php, flow-instance-footer.php, pipeline-templates.php)
-- 2 AJAX endpoint classes deleted (PipelinePageAjax, PipelineStatusAjax)
+
 
 **Simplified Maintenance:**
 - Single responsibility components

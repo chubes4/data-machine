@@ -954,12 +954,6 @@ else:
     print(f"Import failed: {response.json()['message']}")
 ```
 
-## Status Detection (Legacy - Removed)
-
-**Note**: The Status.php endpoint has been removed. Legacy status detection system has been deprecated pending replacement with new health check indicators.
-
-**Migration**: Status checks previously handled via this endpoint should transition to alternative monitoring approaches using Jobs and Logs endpoints.
-
 ## Files Endpoint
 
 **Implementation**: `inc/Api/Files.php`
