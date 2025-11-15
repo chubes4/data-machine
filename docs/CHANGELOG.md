@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2025-11-14
 
 ### Added
+- **Complete REST API Implementation**: Brand new REST API architecture with 10+ endpoints (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users) - did not exist in 0.1.2
 - Complete Chat API implementation with session management, conversation persistence, and tool integration
 - New REST API endpoints: Handlers, Providers, StepTypes, Tools for enhanced frontend integration
 - AdminRootFilters.php for centralized admin functionality
