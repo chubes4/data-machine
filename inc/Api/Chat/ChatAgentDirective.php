@@ -5,7 +5,7 @@
  * System prompt defining chat agent identity, capabilities, and API documentation.
  *
  * @package DataMachine\Api\Chat
- * @since 0.1.2
+ * @since 0.2.0
  */
 
 namespace DataMachine\Api\Chat;

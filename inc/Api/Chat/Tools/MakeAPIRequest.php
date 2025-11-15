@@ -6,7 +6,7 @@
  * Allows agent to discover handlers, execute workflows, and manage pipelines.
  *
  * @package DataMachine\Api\Chat\Tools
- * @since 0.1.2
+ * @since 0.2.0
  */
 
 namespace DataMachine\Api\Chat\Tools;
