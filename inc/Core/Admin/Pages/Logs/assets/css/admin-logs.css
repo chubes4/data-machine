@@ -27,7 +27,7 @@
 /* Log configuration section */
 .datamachine-log-configuration {
     background: #fff;
-    border: 1px solid #ccd0d4;
+    border: 1px solid var(--datamachine-border-1);
     padding: 20px;
     margin-bottom: 20px;
 }
@@ -59,7 +59,7 @@
 /* Log file information section */
 .datamachine-log-file-info {
     background: #fff;
-    border: 1px solid #ccd0d4;
+    border: 1px solid var(--datamachine-border-1);
     padding: 20px;
     margin-bottom: 20px;
 }
@@ -116,7 +116,7 @@
 /* Recent logs section */
 .datamachine-recent-logs {
     background: #fff;
-    border: 1px solid #ccd0d4;
+    border: 1px solid var(--datamachine-border-1);
     padding: 20px;
 }
 
@@ -131,7 +131,7 @@
 
 .datamachine-log-viewer {
     background: #f9f9f9;
-    border: 1px solid #ddd;
+    border: 1px solid var(--datamachine-border-2);
     padding: 15px;
     font-family: 'Courier New', monospace;
     font-size: 12px;
@@ -145,7 +145,7 @@
 .datamachine-log-status-message {
     padding: 8px 12px;
     margin: 10px 0;
-    border-radius: 3px;
+    border-radius: var(--datamachine-border-radius);
     font-size: 13px;
 }
 

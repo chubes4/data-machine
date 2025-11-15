@@ -118,35 +118,37 @@ export default function FlowHeader( {
 					/>
 				</div>
 
-				<div className="datamachine-flow-header__actions">
+				<div className="datamachine-flow-header__primary-actions">
 					<Button
 						variant="primary"
 						onClick={ () => onRun && onRun( flowId ) }
 					>
 						{ __( 'Run Now', 'datamachine' ) }
 					</Button>
-
-					<Button
-						variant="secondary"
-						onClick={ () => onSchedule && onSchedule( flowId ) }
-					>
-						{ __( 'Schedule', 'datamachine' ) }
-					</Button>
-
-					<Button
-						variant="secondary"
-						onClick={ () => onDuplicate && onDuplicate( flowId ) }
-					>
-						{ __( 'Duplicate', 'datamachine' ) }
-					</Button>
-
-					<Button
-						variant="secondary"
-						isDestructive
-						onClick={ handleDelete }
-						icon="trash"
-					/>
 				</div>
+			</div>
+
+			<div className="datamachine-flow-header__secondary-actions">
+				<Button
+					variant="secondary"
+					onClick={ () => onSchedule && onSchedule( flowId ) }
+				>
+					{ __( 'Schedule', 'datamachine' ) }
+				</Button>
+
+				<Button
+					variant="secondary"
+					onClick={ () => onDuplicate && onDuplicate( flowId ) }
+				>
+					{ __( 'Duplicate', 'datamachine' ) }
+				</Button>
+
+				<Button
+					variant="secondary"
+					isDestructive
+					onClick={ handleDelete }
+					icon="trash"
+				/>
 			</div>
 		</div>
 	);

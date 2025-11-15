@@ -22,7 +22,7 @@
 /* Empty state styling */
 .datamachine-jobs-empty-state {
     background: #fff;
-    border: 1px solid #ccd0d4;
+    border: 1px solid var(--datamachine-border-1);
     padding: 20px;
     text-align: center;
     color: #666;
@@ -36,7 +36,7 @@
 /* Jobs table container */
 .datamachine-jobs-table-container {
     background: #fff;
-    border: 1px solid #ccd0d4;
+    border: 1px solid var(--datamachine-border-1);
 }
 
 /* Jobs table column widths */
@@ -173,7 +173,7 @@
 
 /* Clear Jobs Section Styles */
 .datamachine-admin-section + .datamachine-admin-section {
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid var(--datamachine-border-2);
     padding-top: 2rem;
     margin-top: 2rem;
 }

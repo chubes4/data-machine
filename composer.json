@@ -37,6 +37,7 @@
 			"inc/Core/Database/Jobs/JobsFilters.php",
 			"inc/Core/Database/Flows/FlowsFilters.php",
 			"inc/Core/Admin/Modal/ModalFilters.php",
+			"inc/Core/Admin/AdminRootFilters.php",
 			"inc/Core/Admin/Pages/Pipelines/PipelinesFilters.php",
 			"inc/Core/Admin/Settings/SettingsFilters.php",
 			"inc/Core/Admin/Pages/Logs/LogsFilters.php",
@@ -74,7 +75,9 @@
 			"inc/Api/StepTypes.php",
 			"inc/Api/Handlers.php",
 			"inc/Api/Providers.php",
-			"inc/Api/Tools.php"
+			"inc/Api/Tools.php",
+			"inc/Api/Chat/Chat.php",
+			"inc/Api/Chat/ChatFilters.php"
 		]
 	},
 	"autoload-dev": {

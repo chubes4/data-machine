@@ -22,7 +22,7 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 - **Tool-First AI**: Enhanced multi-turn conversation management with duplicate detection and temporal context
 - **Visual Pipeline Builder**: Real-time updates with 50+ React components, custom hooks, and Context API state management
 - **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter with 5-tier directive system
-- **Complete REST API**: 10 endpoints (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users)
+- **Complete REST API**: 14 endpoints (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users)
 - **Ephemeral Workflows**: Execute workflows without database persistence via REST API
 - **Centralized Engine Data**: Unified filter access pattern with clean AI data packets and structured engine parameters
 - **Enhanced Handler System**: Universal filter patterns with shared functionality across all handlers
@@ -132,7 +132,7 @@ $response = apply_filters('ai_request', [
 
 ### REST API
 
-Data Machine provides comprehensive REST API access via 10 endpoint files (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users) for flow execution, pipeline management, and system monitoring.
+Data Machine provides comprehensive REST API access via 14 endpoint files (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users) for flow execution, pipeline management, and system monitoring.
 
 **Unified Execute Endpoint** (`POST /datamachine/v1/execute`):
 
@@ -208,7 +208,7 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 - `GET /datamachine/v1/processed-items` - Processed items
 - `DELETE /datamachine/v1/processed-items` - Clear processed items
 
-**Implementation**: 10 endpoint files in `inc/Api/` directory (Auth.php, Execute.php, Files.php, Flows.php, Jobs.php, Logs.php, Pipelines.php, ProcessedItems.php, Settings.php, Users.php) with automatic REST route registration
+**Implementation**: 14 endpoint files in `inc/Api/` directory (Auth.php, Execute.php, Files.php, Flows.php, Handlers.php, Jobs.php, Logs.php, Pipelines.php, ProcessedItems.php, Providers.php, Settings.php, StepTypes.php, Tools.php, Users.php) with automatic REST route registration
 
 **Requirements**: WordPress application password or cookie authentication with `manage_options` capability (except `/users/me` which requires authentication only). Action Scheduler required for scheduled flow execution (woocommerce/action-scheduler via Composer).
 
@@ -339,7 +339,7 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
 
   - Composer-managed ai-http-client dependency
 - **REST API Integration**:
-  - **10 Endpoints**: Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users
+  - **14 Endpoints**: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users
   - **Ephemeral Workflow Support**: Execute workflows without database persistence
   - **Unified Execute Endpoint**: Supports database flows, ephemeral workflows, immediate/delayed/recurring execution
   - **Complete Authentication**: WordPress application password or cookie authentication

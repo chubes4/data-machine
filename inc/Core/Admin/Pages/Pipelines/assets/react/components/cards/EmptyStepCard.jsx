@@ -17,7 +17,7 @@ import { __ } from '@wordpress/i18n';
  */
 export default function EmptyStepCard( { pipelineId, onAddStep } ) {
 	return (
-		<div className="datamachine-empty-step-card datamachine-empty-card">
+		<div className="datamachine-step-card--empty">
 			<Button
 				variant="secondary"
 				onClick={ () => onAddStep && onAddStep( pipelineId ) }

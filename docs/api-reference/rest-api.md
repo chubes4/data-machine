@@ -1,8 +1,8 @@
 # REST API Reference
 
-Data Machine provides a comprehensive REST API for programmatic access to pipelines, flows, file uploads, job monitoring, and user preferences via 10 endpoint files. All endpoints are implemented in the `inc/Api/` directory with automatic registration via `rest_api_init`.
+Data Machine provides a comprehensive REST API for programmatic access to pipelines, flows, file uploads, job monitoring, and user preferences via 14 endpoint files. All endpoints are implemented in the `inc/Api/` directory with automatic registration via `rest_api_init`.
 
-**Implemented Endpoints**: Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users
+**Implemented Endpoints**: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users
 
 ## Overview
 

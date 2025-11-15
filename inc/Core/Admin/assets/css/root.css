@@ -12,8 +12,12 @@
     --datamachine-text-muted: #757575;
 
     /* Colors - Borders */
-    --datamachine-border: #dcdcde;
-    --datamachine-border-light: #e1e1e1;
+    --datamachine-border-1: #dcdcde;
+    --datamachine-border-2: #e1e1e1;
+
+    /* Border Styles - Utility classes for consistent dashed/dotted borders */
+    --datamachine-border-dashed: 2px dashed var(--datamachine-border-1);
+    --datamachine-border-dotted: 2px dotted var(--datamachine-border-1);
 
     /* Colors - Backgrounds */
     --datamachine-bg-light: #f9f9f9;

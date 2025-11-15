@@ -17,7 +17,7 @@ import { __ } from '@wordpress/i18n';
  */
 export default function EmptyFlowCard( { pipelineId, onAddFlow } ) {
 	return (
-		<div className="datamachine-empty-flow-card datamachine-empty-card">
+		<div className="datamachine-flow-card--empty">
 			<Button
 				variant="secondary"
 				onClick={ () => onAddFlow && onAddFlow( pipelineId ) }
