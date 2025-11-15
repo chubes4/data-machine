@@ -1,6 +1,6 @@
 {
 	"name": "datamachine",
-	"version": "0.1.2",
+	"version": "0.2.0",
 	"description": "AI-first WordPress plugin with Pipeline+Flow architecture",
 	"private": true,
 	"scripts": {
@@ -11,7 +11,11 @@
 		"lint:style": "wp-scripts lint-style"
 	},
 	"devDependencies": {
-		"@wordpress/scripts": "^27.0.0"
+		"@wordpress/scripts": "^27.0.0",
+		"js-yaml": "^4.1.1"
+	},
+	"overrides": {
+		"js-yaml": "^4.1.1"
 	},
 	"dependencies": {
 		"@wordpress/api-fetch": "^7.0.0",
