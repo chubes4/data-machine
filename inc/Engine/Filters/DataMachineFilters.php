@@ -60,8 +60,8 @@ function datamachine_register_utility_filters() {
         }
 
         $args = wp_parse_args($args, [
-            'user-agent' => sprintf('DataMachine/%s (+%s)', 
-                defined('DATAMACHINE_VERSION') ? DATAMACHINE_VERSION : '1.0', 
+            'user-agent' => sprintf('DataMachine/%s (+%s)',
+                defined('DATAMACHINE_VERSION') ? DATAMACHINE_VERSION : '1.0',
                 home_url()),
             'timeout' => 120
         ]);

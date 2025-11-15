@@ -1,5 +1,9 @@
 # WebFetch AI Tool
 
+**File Location**: `inc/Engine/AI/Tools/WebFetch.php`
+
+**Registration**: `datamachine_global_tools` filter (available to all AI agents - pipeline + chat)
+
 Enables AI models to retrieve and process web page content for analysis, research, and content extraction from external websites with built-in content processing and safety features.
 
 ## Configuration

@@ -5,14 +5,13 @@
  * Conversational AI endpoint for building and executing Data Machine workflows
  * through natural language interaction.
  *
- * @package DataMachine\Api\Chat
- * @since 0.2.0
+ * @package DataMachine\Api
+ * @since 0.1.2
  */
 
-namespace DataMachine\Api\Chat;
+namespace DataMachine\Api;
 
 use DataMachine\Core\Database\Chat\Chat as ChatDatabase;
-use DataMachine\Engine\AI\ConversationManager;
 use WP_REST_Server;
 use WP_REST_Request;
 use WP_Error;
@@ -58,15 +57,15 @@ class Chat {
 				],
 				'provider' => [
 					'type' => 'string',
-					'required' => false,
+					'required' => true,
 					'enum' => ['openai', 'anthropic', 'google', 'grok', 'openrouter'],
-					'description' => __('AI provider (optional, uses default if not provided)', 'datamachine'),
+					'description' => __('AI provider', 'datamachine'),
 					'sanitize_callback' => 'sanitize_text_field'
 				],
 				'model' => [
 					'type' => 'string',
-					'required' => false,
-					'description' => __('Model identifier (optional, uses default if not provided)', 'datamachine'),
+					'required' => true,
+					'description' => __('Model identifier', 'datamachine'),
 					'sanitize_callback' => 'sanitize_text_field'
 				]
 			]
@@ -82,39 +81,9 @@ class Chat {
 	public static function handle_chat(WP_REST_Request $request) {
 		$message = sanitize_textarea_field(wp_unslash($request->get_param('message')));
 		$session_id = $request->get_param('session_id');
-
-		// Get provider and model with defaults
-		$settings = get_option('datamachine_settings', []);
-		$provider = $request->get_param('provider');
-		$model = $request->get_param('model');
-
-		if (empty($provider)) {
-			$provider = $settings['default_provider'] ?? '';
-		}
-		if (empty($model)) {
-			$model = $settings['default_model'] ?? '';
-		}
-
-		$provider = sanitize_text_field($provider);
-		$model = sanitize_text_field($model);
+		$provider = sanitize_text_field($request->get_param('provider'));
+		$model = sanitize_text_field($request->get_param('model'));
 		$user_id = get_current_user_id();
-
-		// Validate that we have provider and model
-		if (empty($provider)) {
-			return new WP_Error(
-				'provider_required',
-				__('AI provider is required. Please set a default provider in Data Machine settings or provide one in the request.', 'datamachine'),
-				['status' => 400]
-			);
-		}
-
-		if (empty($model)) {
-			return new WP_Error(
-				'model_required',
-				__('AI model is required. Please set a default model in Data Machine settings or provide one in the request.', 'datamachine'),
-				['status' => 400]
-			);
-		}
 
 		$chat_db = new ChatDatabase();
 
@@ -155,16 +124,24 @@ class Chat {
 			$messages = [];
 		}
 
-		$messages[] = ConversationManager::buildConversationMessage('user', $message);
+		$messages[] = [
+			'role' => 'user',
+			'content' => $message
+		];
 
-		// Load global tools (available to all AI agents)
-		$global_tools = apply_filters('datamachine_global_tools', []);
+		$ai_request = [
+			'model' => $model,
+			'messages' => $messages,
+		];
 
-		// Load chat-specific tools
-		$chat_specific_tools = apply_filters('datamachine_chat_tools', []);
+		$all_tools = apply_filters('ai_tools', [], null, []);
 
-		// Merge both
-		$all_tools = array_merge($global_tools, $chat_specific_tools);
+		$chat_tools = [];
+		foreach ($all_tools as $tool_name => $tool_def) {
+			if (isset($tool_def['chat_enabled']) && $tool_def['chat_enabled'] === true) {
+				$chat_tools[$tool_name] = $tool_def;
+			}
+		}
 
 		do_action('datamachine_log', 'debug', 'Chat endpoint processing message', [
 			'session_id' => $session_id,
@@ -172,18 +149,13 @@ class Chat {
 			'provider' => $provider,
 			'model' => $model,
 			'message_length' => strlen($message),
-			'available_tools' => array_keys($all_tools)
+			'available_tools' => array_keys($chat_tools)
 		]);
 
-		// Build AI request using centralized RequestBuilder
-		$response = \DataMachine\Engine\AI\RequestBuilder::build(
-			$messages,
-			$provider,
-			$model,
-			$all_tools,
-			'chat',
-			['session_id' => $session_id]
-		);
+		$response = apply_filters('ai_request', $ai_request, $provider, null, $chat_tools, [
+			'context' => 'chat',
+			'session_id' => $session_id
+		]);
 
 		if (is_wp_error($response)) {
 			do_action('datamachine_log', 'error', 'Chat AI request failed', [
@@ -195,27 +167,19 @@ class Chat {
 			return $response;
 		}
 
-		if (!$response['success']) {
-			do_action('datamachine_log', 'error', 'Chat AI request failed', [
+		$ai_message = $response['choices'][0]['message'] ?? null;
+
+		if (!$ai_message) {
+			do_action('datamachine_log', 'error', 'Invalid AI response format', [
 				'session_id' => $session_id,
-				'provider' => $provider,
-				'error' => $response['error'] ?? 'Unknown error'
+				'response' => $response
 			]);
 
 			return new WP_Error(
-				'ai_request_failed',
-				$response['error'] ?? __('AI request failed', 'datamachine'),
+				'invalid_ai_response',
+				__('Invalid AI response format', 'datamachine'),
 				['status' => 500]
 			);
-		}
-
-		$ai_content = $response['data']['content'] ?? '';
-		$tool_calls = $response['data']['tool_calls'] ?? [];
-
-		$ai_message = ConversationManager::buildConversationMessage('assistant', $ai_content);
-
-		if (!empty($tool_calls)) {
-			$ai_message['tool_calls'] = $tool_calls;
 		}
 
 		$messages[] = $ai_message;

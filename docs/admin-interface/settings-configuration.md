@@ -36,7 +36,7 @@ Tabbed settings interface providing centralized control over Data Machine system
 - Inheritance and override behavior for pipeline-specific prompts
 - Template variables and dynamic content injection
 
-**General Tools Management**:
+**Global Tools Management**:
 - Global enablement toggles for universal AI tools
 - Tool-specific configuration requirements and status
 - Capability validation and setup guidance

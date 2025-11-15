@@ -1,12 +1,12 @@
 # AI Tools Overview
 
-AI tools provide capabilities to AI agents for interacting with external services, processing data, and performing research tasks. Data Machine supports both general-purpose tools and handler-specific tools.
+AI tools provide capabilities to AI agents for interacting with external services, processing data, and performing research tasks. Data Machine supports both global tools and handler-specific tools.
 
 ## Tool Categories
 
-### General Tools (Universal)
+### Global Tools (Universal)
 
-Available to all AI steps regardless of next pipeline step:
+Available to all AI agents (pipeline + chat) via `datamachine_global_tools` filter:
 
 **Google Search** (`google_search`)
 - **Purpose**: Search Google and return structured JSON results with titles, links, and snippets from external websites. Use for external information, current events, and fact-checking.
@@ -31,9 +31,18 @@ Available to all AI steps regardless of next pipeline step:
 - **Use Cases**: Content analysis before WordPress Update operations, detailed post examination after Local Search
 
 
+### Chat-Specific Tools
+
+Available only to chat AI agents via `datamachine_chat_tools` filter:
+
+**MakeAPIRequest** (`make_api_request`)
+- **Purpose**: Execute Data Machine REST API operations from chat conversations
+- **Configuration**: None required
+- **Use Cases**: Conversational pipeline/flow creation, workflow execution, system queries
+
 ### Handler-Specific Tools
 
-Available only when next step matches the handler type:
+Available only when next step matches the handler type, registered via `ai_tools` filter:
 
 **Publishing Tools**:
 - `twitter_publish` - Post to Twitter (280 char limit)
@@ -50,13 +59,15 @@ Available only when next step matches the handler type:
 
 ### Registration System
 
-**General Tools** (no `handler` property):
+**Global Tools** (available to all AI agents - pipeline + chat):
 ```php
-add_filter('ai_tools', function($tools) {
+// Registered via datamachine_global_tools filter
+add_filter('datamachine_global_tools', function($tools) {
     $tools['google_search'] = [
-        'class' => 'DataMachine\\Core\\Steps\\AI\\Tools\\GoogleSearch',
+        'class' => 'DataMachine\\Engine\\AI\\Tools\\GoogleSearch',
         'method' => 'handle_tool_call',
         'description' => 'Search Google for information',
+        'requires_config' => true,
         'parameters' => [
             'query' => [
                 'type' => 'string',
@@ -66,11 +77,32 @@ add_filter('ai_tools', function($tools) {
         ]
     ];
     return $tools;
+}, 10, 1);
+```
+
+**File Locations**: Global tools are located in `inc/Engine/AI/Tools/`:
+- `GoogleSearch.php` - Web search with site restriction
+- `LocalSearch.php` - WordPress content search
+- `WebFetch.php` - Web page content retrieval
+- `WordPressPostReader.php` - Single post analysis
+
+**Chat-Specific Tools** (available only to chat AI agents):
+```php
+// Registered via datamachine_chat_tools filter
+add_filter('datamachine_chat_tools', function($tools) {
+    $tools['make_api_request'] = [
+        'class' => 'DataMachine\\Api\\Chat\\Tools\\MakeAPIRequest',
+        'method' => 'handle_tool_call',
+        'description' => 'Execute Data Machine REST API operations',
+        'parameters' => [/* ... */]
+    ];
+    return $tools;
 });
 ```
 
-**Handler-Specific Tools** (with `handler` property):
+**Handler-Specific Tools** (available when next step matches handler type):
 ```php
+// Registered via ai_tools filter with handler context
 add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
     if ($handler_slug === 'twitter') {
         $tools['twitter_publish'] = [
@@ -149,7 +181,7 @@ if (empty($parameters['query'])) {
 ```
 
 **Configuration Storage**:
-- General tools: WordPress options table
+- Global tools: WordPress options table
 - Handler tools: Handler-specific configuration
 - OAuth tools: Separate OAuth storage system
 
@@ -214,7 +246,7 @@ All tool results flow through AIStepConversationManager for consistent conversat
 
 ## Tool Implementation Examples
 
-### General Tool (Google Search)
+### Global Tool (Google Search)
 
 ```php
 class GoogleSearch {
@@ -313,10 +345,32 @@ class TwitterHandler {
 
 ## Extension Development
 
-### Custom General Tool
+### Custom Global Tool
 
 ```php
 class CustomTool {
+    public function __construct() {
+        // Self-register via datamachine_global_tools filter
+        add_filter('datamachine_global_tools', [$this, 'register_tool'], 10, 1);
+    }
+
+    public function register_tool($tools) {
+        $tools['custom_tool'] = [
+            'class' => __CLASS__,
+            'method' => 'handle_tool_call',
+            'description' => 'Custom data processing tool',
+            'requires_config' => false,
+            'parameters' => [
+                'input' => [
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'Data to process'
+                ]
+            ]
+        ];
+        return $tools;
+    }
+
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         // Validate parameters
         if (empty($parameters['input'])) {
@@ -326,10 +380,10 @@ class CustomTool {
                 'tool_name' => 'custom_tool'
             ];
         }
-        
+
         // Process data
         $result = $this->process_data($parameters['input']);
-        
+
         return [
             'success' => true,
             'data' => ['processed_result' => $result],
@@ -338,20 +392,6 @@ class CustomTool {
     }
 }
 
-// Register tool
-add_filter('ai_tools', function($tools) {
-    $tools['custom_tool'] = [
-        'class' => 'CustomTool',
-        'method' => 'handle_tool_call',
-        'description' => 'Custom data processing tool',
-        'parameters' => [
-            'input' => [
-                'type' => 'string',
-                'required' => true,
-                'description' => 'Data to process'
-            ]
-        ]
-    ];
-    return $tools;
-});
+// Self-register the tool
+new CustomTool();
 ```

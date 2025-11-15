@@ -28,12 +28,12 @@ class PipelineContextDirective {
 	 *
 	 * @param array $request AI request array with messages
 	 * @param string $provider_name AI provider name
-	 * @param callable|null $streaming_callback Streaming callback (unused)
 	 * @param array $tools Available tools (unused)
 	 * @param string|null $pipeline_step_id Pipeline step ID for context
+	 * @param array $payload Execution payload (unused)
 	 * @return array Modified request with context files added
 	 */
-	public static function inject( $request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null, array $context = [] ): array {
+	public static function inject( $request, $provider_name, $tools, $pipeline_step_id = null, array $payload = [] ): array {
 		if ( ! isset( $request['messages'] ) || ! is_array( $request['messages'] ) ) {
 			return $request;
 		}
@@ -117,4 +117,4 @@ class PipelineContextDirective {
 }
 
 // Self-register at Priority 35 (fourth in directive system)
-add_filter( 'ai_request', [ PipelineContextDirective::class, 'inject' ], 35, 6 );
+add_filter( 'datamachine_pipeline_directives', [ PipelineContextDirective::class, 'inject' ], 35, 5 );

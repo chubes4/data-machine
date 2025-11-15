@@ -26,17 +26,17 @@ class PipelineSystemPromptDirective {
      *
      * @param array $request AI request array with messages
      * @param string $provider_name AI provider name
-     * @param callable $streaming_callback Streaming callback (unused)
      * @param array $tools Available tools (unused)
      * @param string|null $pipeline_step_id Pipeline step ID for context
+     * @param array $payload Execution payload for context
      * @return array Modified request with pipeline system prompt added
      */
-    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null, array $context = []): array {
+    public static function inject($request, $provider_name, $tools, $pipeline_step_id = null, array $payload = []): array {
         if (!isset($request['messages']) || !is_array($request['messages'])) {
             return $request;
         }
 
-        $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, $context);
+        $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, $payload);
         $system_prompt = $step_ai_config['system_prompt'] ?? '';
 
         if (empty($system_prompt)) {
@@ -44,7 +44,7 @@ class PipelineSystemPromptDirective {
         }
 
         // Extract current pipeline step ID for "YOU ARE HERE" context
-        $current_flow_step_id = $context['flow_step_id'] ?? null;
+        $current_flow_step_id = $payload['flow_step_id'] ?? null;
         $current_pipeline_step_id = null;
         if ($current_flow_step_id) {
             $flow_parts = apply_filters('datamachine_split_flow_step_id', null, $current_flow_step_id);
@@ -52,7 +52,7 @@ class PipelineSystemPromptDirective {
         }
 
         // Build workflow visualization with current step context
-        $workflow_visualization = self::buildWorkflowVisualization($pipeline_step_id, $current_pipeline_step_id, $context);
+        $workflow_visualization = self::buildWorkflowVisualization($pipeline_step_id, $current_pipeline_step_id, $payload);
 
         // Construct enhanced message with workflow context
         $content = '';
@@ -84,15 +84,16 @@ class PipelineSystemPromptDirective {
      *
      * @param string|null $pipeline_step_id Pipeline step ID for context
      * @param string|null $current_pipeline_step_id Currently executing pipeline step ID
+     * @param array $payload Execution payload for context
      * @return string Workflow visualization (e.g., "REDDIT FETCH → AI (YOU ARE HERE) → WORDPRESS PUBLISH")
      */
-    private static function buildWorkflowVisualization($pipeline_step_id, $current_pipeline_step_id = null, array $context = []): string {
+    private static function buildWorkflowVisualization($pipeline_step_id, $current_pipeline_step_id = null, array $payload = []): string {
         if (empty($pipeline_step_id)) {
             return '';
         }
 
         // Get flow_id from current execution context
-        $current_flow_step_id = $context['flow_step_id'] ?? null;
+        $current_flow_step_id = $payload['flow_step_id'] ?? null;
         if (!$current_flow_step_id) {
             do_action('datamachine_log', 'debug', 'Workflow visualization: No flow context available');
             return '';
@@ -169,4 +170,4 @@ class PipelineSystemPromptDirective {
 }
 
 // Self-register (Priority 30 = third in 5-tier directive system)
-add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 30, 6);
+add_filter('datamachine_pipeline_directives', [PipelineSystemPromptDirective::class, 'inject'], 30, 5);

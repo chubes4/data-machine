@@ -5,7 +5,7 @@
  * @package DataMachine
  */
 
-namespace DataMachine\Core\Steps\AI\Tools;
+namespace DataMachine\Engine\AI\Tools;
 
 defined('ABSPATH') || exit;
 
@@ -17,7 +17,7 @@ class WordPressPostReader {
     }
 
     private function register_configuration() {
-        add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
+        add_filter('datamachine_global_tools', [$this, 'register_tool'], 10, 1);
         add_filter('datamachine_tool_configured', [$this, 'check_configuration'], 10, 2);
     }
 

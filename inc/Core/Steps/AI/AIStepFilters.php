@@ -52,5 +52,3 @@ add_action('ai_library_error', function($error_data) {
         'timestamp' => $error_data['timestamp']
     ]);
 });
-
-require_once __DIR__ . '/Tools/GeneralToolsFilters.php';

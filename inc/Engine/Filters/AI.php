@@ -50,10 +50,15 @@ function datamachine_register_ai_filters() {
             ];
         }
 
+        // Get default settings for fallback
+        $default_settings = get_option('datamachine_settings', []);
+        $default_provider = $default_settings['default_provider'] ?? '';
+        $default_model = $default_settings['default_model'] ?? '';
+
         return [
-            'selected_provider' => $step_config['provider'] ?? '',
+            'selected_provider' => $step_config['provider'] ?? $default_provider,
             'system_prompt' => $step_config['system_prompt'] ?? '',
-            'model' => $step_config['model'] ?? '',
+            'model' => $step_config['model'] ?? $default_model,
             'enabled_tools' => $step_config['enabled_tools'] ?? []
         ];
     }, 20, 3);

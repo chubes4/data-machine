@@ -62,9 +62,17 @@ class Providers {
 				];
 			}
 
+			// Get default settings
+			$settings = get_option('datamachine_settings', []);
+			$defaults = [
+				'provider' => $settings['default_provider'] ?? '',
+				'model' => $settings['default_model'] ?? ''
+			];
+
 			return rest_ensure_response([
 				'success' => true,
-				'providers' => $providers
+				'providers' => $providers,
+				'defaults' => $defaults
 			]);
 
 		} catch (\Exception $e) {

@@ -42,7 +42,7 @@ class Tools {
 	 * Get all registered general AI tools
 	 *
 	 * Returns tool metadata including labels, descriptions, and configuration status.
-	 * Filters to only general tools (excludes handler-specific tools).
+	 * Filters to only global tools (excludes handler-specific tools).
 	 *
 	 * @since 0.1.2
 	 * @return \WP_REST_Response Tools response
@@ -51,13 +51,13 @@ class Tools {
 		// Get all tools via filter
 		$all_tools = apply_filters('ai_tools', []);
 
-		// Filter to only general tools (no handler property)
-		$general_tools = array_filter($all_tools, function($tool_def) {
+		// Filter to only global tools (no handler property)
+		$global_tools = array_filter($all_tools, function($tool_def) {
 			return !isset($tool_def['handler']);
 		});
 
 		$tools = [];
-		foreach ($general_tools as $tool_id => $tool_def) {
+		foreach ($global_tools as $tool_id => $tool_def) {
 			$tools[$tool_id] = [
 				'label' => $tool_def['label'] ?? ucfirst(str_replace('_', ' ', $tool_id)),
 				'description' => $tool_def['description'] ?? '',

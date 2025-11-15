@@ -25,12 +25,12 @@ class ToolDefinitionsDirective {
      *
      * @param array $request AI request array with messages
      * @param string $provider_name AI provider name
-     * @param callable|null $streaming_callback Streaming callback (unused)
      * @param array $tools Available tools array from AIStepTools
      * @param string|null $pipeline_step_id Pipeline step ID for workflow context
+     * @param array $payload Execution payload for context
      * @return array Modified request with tool definitions and workflow context added
      */
-    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null, array $context = []): array {
+    public static function inject($request, $provider_name, $tools, $pipeline_step_id = null, array $payload = []): array {
         if (empty($tools) || !is_array($tools)) {
             return $request;
         }
@@ -39,7 +39,7 @@ class ToolDefinitionsDirective {
             return $request;
         }
 
-        $flow_step_id = $context['flow_step_id'] ?? null;
+        $flow_step_id = $payload['flow_step_id'] ?? null;
 
         $directive = self::generate_dynamic_directive($tools, $request, $pipeline_step_id, $flow_step_id);
 
@@ -96,4 +96,4 @@ class ToolDefinitionsDirective {
 }
 
 // Self-register (Priority 40 = fourth in 5-tier directive system)
-add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 40, 6);
+add_filter('datamachine_pipeline_directives', [ToolDefinitionsDirective::class, 'inject'], 40, 5);

@@ -24,26 +24,21 @@ class ChatAgentDirective {
 	 *
 	 * @param array       $request             AI request array
 	 * @param string      $provider_name       AI provider name
-	 * @param callable    $streaming_callback  Streaming callback
 	 * @param array       $tools               Available tools
-	 * @param array       $conversation_data   Conversation data
-	 * @param array       $context             Request context
+	 * @param string      $session_id          Chat session ID
 	 * @return array Modified AI request
 	 */
-	public static function inject($request, $provider_name, $streaming_callback, $tools, $conversation_data, $context) {
-		if (!isset($context['context']) || $context['context'] !== 'chat') {
-			return $request;
-		}
-
+	public static function inject($request, $provider_name, $tools, $session_id) {
 		$directive = self::get_directive($tools);
 
-		array_unshift($request['messages'], [
+		// Use array_push to match all other directives (consistent message ordering)
+		array_push($request['messages'], [
 			'role' => 'system',
 			'content' => $directive
 		]);
 
 		do_action('datamachine_log', 'debug', 'Chat agent directive injected', [
-			'session_id' => $context['session_id'] ?? 'unknown',
+			'session_id' => $session_id,
 			'directive_length' => strlen($directive)
 		]);
 
@@ -192,7 +187,7 @@ Ephemeral workflows consist of ordered steps executed sequentially:
 **ai**: Process or transform data with AI
 - Requires: provider, model
 - Optional: system_prompt, user_message, enabled_tools
-- Can use general tools like web_fetch, google_search
+- Can use global tools like web_fetch, google_search
 
 **publish**: Send data to a destination
 - Handlers: twitter, bluesky, threads, facebook, wordpress, google_sheets
@@ -268,3 +263,6 @@ Begin by greeting the user and asking how you can help with their workflow autom
 PROMPT;
 	}
 }
+
+// Self-register for chat context (Priority 15)
+add_filter('datamachine_chat_directives', [ChatAgentDirective::class, 'inject'], 15, 4);

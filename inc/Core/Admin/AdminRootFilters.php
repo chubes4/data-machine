@@ -43,7 +43,7 @@ function datamachine_register_root_css_filter() {
 
 			return $pages;
 		},
-		5 // Priority 5 to run before page-specific filters (priority 10)
+		15 // Priority 15 to run after page-specific filters (priority 10)
 	);
 }
 

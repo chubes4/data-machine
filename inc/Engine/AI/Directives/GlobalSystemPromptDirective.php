@@ -14,30 +14,30 @@
  * 5. Priority 50 - WordPress Site Context
  */
 
-namespace DataMachine\Core\Steps\AI\Directives;
+namespace DataMachine\Engine\AI\Directives;
 
 defined('ABSPATH') || exit;
 
 class GlobalSystemPromptDirective {
-    
+
     /**
      * Inject global system prompt into AI request.
      *
      * @param array $request AI request array with messages
      * @param string $provider_name AI provider name
-     * @param callable $streaming_callback Streaming callback (unused)
      * @param array $tools Available tools (unused)
      * @param string|null $pipeline_step_id Pipeline step ID (unused)
+     * @param array $payload Execution payload (unused)
      * @return array Modified request with global system prompt added
      */
-    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null, array $context = []): array {
+    public static function inject($request, $provider_name, $tools, $pipeline_step_id = null, array $payload = []): array {
         if (!isset($request['messages']) || !is_array($request['messages'])) {
             return $request;
         }
 
         $settings = get_option('datamachine_datamachine_settings', []);
         $global_prompt = $settings['global_system_prompt'] ?? '';
-        
+
         if (empty($global_prompt)) {
             return $request;
         }
@@ -57,5 +57,5 @@ class GlobalSystemPromptDirective {
     }
 }
 
-// Self-register (Priority 20 = second in 5-tier directive system)
-add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 20, 6);
+// Self-register (Priority 20 = global directive for all AI agents)
+add_filter('datamachine_global_directives', [GlobalSystemPromptDirective::class, 'inject'], 20, 5);

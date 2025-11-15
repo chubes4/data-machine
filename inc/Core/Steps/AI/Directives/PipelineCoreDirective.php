@@ -7,9 +7,9 @@ namespace DataMachine\Core\Steps\AI\Directives;
 
 defined('ABSPATH') || exit;
 
-class PluginCoreDirective {
+class PipelineCoreDirective {
 
-    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null, array $context = []): array {
+    public static function inject($request, $provider_name, $tools, $pipeline_step_id = null, array $payload = []): array {
         if (!isset($request['messages']) || !is_array($request['messages'])) {
             return $request;
         }
@@ -21,7 +21,7 @@ class PluginCoreDirective {
             'content' => $directive
         ]);
 
-        do_action('datamachine_log', 'debug', 'Plugin Core Directive: Injected foundational identity', [
+        do_action('datamachine_log', 'debug', 'Pipeline Core Directive: Injected foundational identity', [
             'directive_length' => strlen($directive),
             'provider' => $provider_name,
             'total_messages' => count($request['messages'])
@@ -59,4 +59,4 @@ class PluginCoreDirective {
     }
 }
 
-add_filter('ai_request', [PluginCoreDirective::class, 'inject'], 10, 6);
+add_filter('datamachine_pipeline_directives', [PipelineCoreDirective::class, 'inject'], 10, 5);

@@ -181,6 +181,8 @@ function datamachine_get_datamachine_settings() {
         'site_context_enabled' => true,
         'cleanup_job_data_on_failure' => true,
         'file_retention_days' => 7,
+        'default_provider' => '',
+        'default_model' => '',
         'wordpress_settings' => []
     ]);
 }
@@ -208,19 +210,19 @@ function datamachine_get_enabled_admin_pages() {
 /**
  * Get enabled general AI tools (non-handler-specific).
  */
-function datamachine_get_enabled_general_tools() {
+function datamachine_get_enabled_global_tools() {
     $settings = datamachine_get_datamachine_settings();
     $all_tools = apply_filters('ai_tools', []);
 
-    $general_tools = array_filter($all_tools, function($tool_config) {
+    $global_tools = array_filter($all_tools, function($tool_config) {
         return !isset($tool_config['handler']);
     });
 
     if (empty($settings['enabled_tools'])) {
-        return $general_tools;
+        return $global_tools;
     }
 
-    return array_intersect_key($general_tools, array_filter($settings['enabled_tools']));
+    return array_intersect_key($global_tools, array_filter($settings['enabled_tools']));
 }
 
 function datamachine_store_hook_suffix($page_slug, $hook_suffix) {
@@ -430,7 +432,7 @@ function datamachine_enqueue_page_assets($assets, $page_slug) {
             wp_enqueue_script(
                 $handle,
                 $js_url,
-                $js_config['deps'] ?? ['jquery'],
+                $js_config['deps'] ?? [],
                 $js_version,
                 $js_config['in_footer'] ?? true
             );

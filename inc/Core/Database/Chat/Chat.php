@@ -1,24 +1,90 @@
 <?php
 /**
- * Chat Session Manager
+ * Chat Database Operations
  *
- * Handles CRUD operations for chat sessions including creation,
- * retrieval, updates, and cleanup.
+ * Unified database component for chat session management including
+ * table creation and CRUD operations for persistent conversation storage.
  *
- * @package DataMachine\Api\Chat
+ * @package DataMachine\Core\Database\Chat
  * @since 0.2.0
  */
 
-namespace DataMachine\Api\Chat;
+namespace DataMachine\Core\Database\Chat;
 
 if (!defined('ABSPATH')) {
 	exit;
 }
 
 /**
- * Chat Session Manager
+ * Chat Database Manager
  */
-class ChatSessionManager {
+class Chat {
+
+	/**
+	 * Table name (without prefix)
+	 */
+	const TABLE_NAME = 'datamachine_chat_sessions';
+
+	/**
+	 * Create chat sessions table
+	 *
+	 * Uses dbDelta for safe table creation/updates
+	 *
+	 * @return void
+	 */
+	public static function create_table(): void {
+		global $wpdb;
+
+		$table_name = $wpdb->prefix . self::TABLE_NAME;
+		$charset_collate = $wpdb->get_charset_collate();
+
+		$sql = "CREATE TABLE {$table_name} (
+			session_id VARCHAR(50) NOT NULL,
+			user_id BIGINT(20) UNSIGNED NOT NULL,
+			messages LONGTEXT NOT NULL COMMENT 'JSON array of conversation messages',
+			metadata LONGTEXT NULL COMMENT 'JSON object for session metadata',
+			provider VARCHAR(50) NULL COMMENT 'AI provider (anthropic, openai, etc)',
+			model VARCHAR(100) NULL COMMENT 'AI model identifier',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			expires_at DATETIME NULL COMMENT 'Auto-cleanup timestamp',
+			PRIMARY KEY  (session_id),
+			KEY user_id (user_id),
+			KEY created_at (created_at),
+			KEY expires_at (expires_at)
+		) {$charset_collate};";
+
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		dbDelta($sql);
+
+		do_action('datamachine_log', 'info', 'Chat sessions table created or verified', [
+			'table_name' => $table_name
+		]);
+	}
+
+	/**
+	 * Check if table exists
+	 *
+	 * @return bool True if table exists
+	 */
+	public static function table_exists(): bool {
+		global $wpdb;
+
+		$table_name = $wpdb->prefix . self::TABLE_NAME;
+		$query = $wpdb->prepare('SHOW TABLES LIKE %s', $table_name);
+
+		return $wpdb->get_var($query) === $table_name;
+	}
+
+	/**
+	 * Get table name with prefix
+	 *
+	 * @return string Full table name
+	 */
+	public static function get_table_name(): string {
+		global $wpdb;
+		return $wpdb->prefix . self::TABLE_NAME;
+	}
 
 	/**
 	 * Create new chat session
@@ -31,7 +97,7 @@ class ChatSessionManager {
 		global $wpdb;
 
 		$session_id = wp_generate_uuid4();
-		$table_name = ChatSessionsTable::get_table_name();
+		$table_name = self::get_table_name();
 
 		$expires_at = gmdate('Y-m-d H:i:s', time() + (24 * HOUR_IN_SECONDS));
 
@@ -74,7 +140,7 @@ class ChatSessionManager {
 	public function get_session(string $session_id): ?array {
 		global $wpdb;
 
-		$table_name = ChatSessionsTable::get_table_name();
+		$table_name = self::get_table_name();
 
 		$session = $wpdb->get_row(
 			$wpdb->prepare(
@@ -121,7 +187,7 @@ class ChatSessionManager {
 	): bool {
 		global $wpdb;
 
-		$table_name = ChatSessionsTable::get_table_name();
+		$table_name = self::get_table_name();
 
 		$update_data = [
 			'messages' => wp_json_encode($messages),
@@ -168,7 +234,7 @@ class ChatSessionManager {
 	public function delete_session(string $session_id): bool {
 		global $wpdb;
 
-		$table_name = ChatSessionsTable::get_table_name();
+		$table_name = self::get_table_name();
 
 		$result = $wpdb->delete(
 			$table_name,
@@ -199,7 +265,7 @@ class ChatSessionManager {
 	public function cleanup_expired_sessions(): int {
 		global $wpdb;
 
-		$table_name = ChatSessionsTable::get_table_name();
+		$table_name = self::get_table_name();
 
 		$deleted = $wpdb->query(
 			$wpdb->prepare(

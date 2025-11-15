@@ -39,6 +39,7 @@ yarn.lock
 Thumbs.db
 
 # Documentation that should be excluded from distribution
+.claude/
 CLAUDE.md
 README.MD
 docs/

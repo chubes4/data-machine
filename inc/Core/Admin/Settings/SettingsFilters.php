@@ -29,6 +29,8 @@ function datamachine_register_settings_admin_page_filters() {
     
     add_filter('datamachine_admin_assets', function($assets, $context) {
         if ($context === 'settings') {
+            $settings = get_option('datamachine_settings', []);
+
             $assets['css'] = [
                 'datamachine-core-modal' => [
                     'src' => '../Modal/assets/css/core-modal.css',
@@ -49,6 +51,21 @@ function datamachine_register_settings_admin_page_filters() {
                             'strings' => [
                                 'saving' => __('Saving...', 'datamachine'),
                                 'clearing' => __('Clearing...', 'datamachine')
+                            ]
+                        ]
+                    ]
+                ],
+                'datamachine-agent-tab' => [
+                    'src' => 'assets/js/agent-tab.js',
+                    'deps' => ['wp-api-fetch'],
+                    'localize' => [
+                        'object' => 'datamachineAgentTab',
+                        'data' => [
+                            'savedProvider' => $settings['default_provider'] ?? '',
+                            'savedModel' => $settings['default_model'] ?? '',
+                            'strings' => [
+                                'selectProviderFirst' => __('Select provider first...', 'datamachine'),
+                                'selectModel' => __('Select Model...', 'datamachine')
                             ]
                         ]
                     ]
@@ -119,7 +136,7 @@ function datamachine_enqueue_settings_assets($hook) {
         wp_enqueue_script(
             $handle,
             $js_url,
-            $js_config['deps'] ?? ['jquery'],
+            $js_config['deps'] ?? [],
             $js_version,
             $js_config['in_footer'] ?? true
         );
@@ -161,6 +178,17 @@ function datamachine_sanitize_settings($input) {
     }
     
     $sanitized['site_context_enabled'] = !empty($input['site_context_enabled']);
+
+    // Default AI provider and model
+    $sanitized['default_provider'] = '';
+    if (isset($input['default_provider'])) {
+        $sanitized['default_provider'] = sanitize_text_field($input['default_provider']);
+    }
+
+    $sanitized['default_model'] = '';
+    if (isset($input['default_model'])) {
+        $sanitized['default_model'] = sanitize_text_field($input['default_model']);
+    }
 
     // Handle AI provider API keys
     if (isset($input['ai_provider_keys']) && is_array($input['ai_provider_keys'])) {

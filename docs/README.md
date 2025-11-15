@@ -244,7 +244,7 @@ AI with Google Search and Local Search tools for comprehensive content analysis
 
 ### Security
 - `manage_options` capability required for all operations
-- Nonce validation for AJAX requests
+- WordPress REST API authentication and nonce validation
 - Input sanitization and validation
 - Secure OAuth credential storage
 

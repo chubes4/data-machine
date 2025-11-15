@@ -16,16 +16,8 @@ if (!defined('WPINC')) {
 class AIStepTools {
     
     public function get_global_enabled_tools(): array {
-        $all_tools = apply_filters('ai_tools', []);
-        $general_tools = [];
-
-        foreach ($all_tools as $tool_name => $tool_config) {
-            if (!isset($tool_config['handler'])) {
-                $general_tools[$tool_name] = $tool_config;
-            }
-        }
-
-        return $general_tools;
+        // Get global tools (available to all AI agents)
+        return apply_filters('datamachine_global_tools', []);
     }
     
     public function get_step_enabled_tools(string $pipeline_step_id): array {
@@ -114,11 +106,12 @@ class AIStepTools {
                 $available_tools = array_merge($available_tools, $allowed_next_tools);
             }
         }
-        
-        $general_tools = apply_filters('ai_tools', []);
-        $allowed_general_tools = self::getAllowedTools($general_tools, null, $current_pipeline_step_id);
-        $available_tools = array_merge($available_tools, $allowed_general_tools);
-        
+
+        // Load global tools (available to all AI agents)
+        $global_tools = apply_filters('datamachine_global_tools', []);
+        $allowed_global_tools = self::getAllowedTools($global_tools, null, $current_pipeline_step_id);
+        $available_tools = array_merge($available_tools, $allowed_global_tools);
+
         return array_unique($available_tools, SORT_REGULAR);
     }
 
@@ -138,7 +131,7 @@ class AIStepTools {
                 $step_enabled_tools = $tools_instance->get_step_enabled_tools($pipeline_step_id);
                 $step_enabled = in_array($tool_name, $step_enabled_tools);
             } else {
-                $step_enabled = self::isGeneralToolEnabled($tool_name);
+                $step_enabled = self::isGlobalToolEnabled($tool_name);
             }
             
             $tool_configured = apply_filters('datamachine_tool_configured', false, $tool_name);
@@ -152,12 +145,12 @@ class AIStepTools {
         return $allowed_tools;
     }
 
-    private static function isGeneralToolEnabled(string $tool_name): bool {
+    private static function isGlobalToolEnabled(string $tool_name): bool {
         $tool_configured = apply_filters('datamachine_tool_configured', false, $tool_name);
-        $all_tools = apply_filters('ai_tools', []);
-        $tool_config = $all_tools[$tool_name] ?? [];
+        $global_tools = apply_filters('datamachine_global_tools', []);
+        $tool_config = $global_tools[$tool_name] ?? [];
         $requires_config = !empty($tool_config['requires_config']);
-        
+
         return !$requires_config || $tool_configured;
     }
 

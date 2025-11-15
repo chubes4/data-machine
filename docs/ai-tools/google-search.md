@@ -1,5 +1,9 @@
 # Google Search Tool
 
+**File Location**: `inc/Engine/AI/Tools/GoogleSearch.php`
+
+**Registration**: `datamachine_global_tools` filter (available to all AI agents - pipeline + chat)
+
 Searches Google for current information, facts, and external context. Provides real-time web data to inform content creation, fact-checking, and research.
 
 ## Configuration
@@ -191,4 +195,4 @@ $result = $google_search_tool->handle_tool_call([
 **Permissions**: Requires `manage_options` capability for configuration
 **Storage**: Configuration stored in WordPress options table
 **Logging**: All operations logged via `datamachine_log` action
-**AJAX**: Configuration handled through WordPress admin AJAX
+**REST API**: Configuration handled through Data Machine REST API endpoints

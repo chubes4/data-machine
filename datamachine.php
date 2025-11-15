@@ -102,7 +102,7 @@ function activate_datamachine() {
 		$db_processed_items->create_table();
 	}
 
-	\DataMachine\Api\Chat\ChatSessionsTable::create_table();
+	\DataMachine\Core\Database\Chat\Chat::create_table();
 
 	// Create log directory during activation
 	$upload_dir = wp_upload_dir();

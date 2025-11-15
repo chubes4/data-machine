@@ -126,13 +126,13 @@ function datamachine_get_ai_tools_for_react() {
     // Get all available tools
     $all_tools = apply_filters('ai_tools', []);
 
-    // Filter to only general tools (no handler property)
-    $general_tools = array_filter($all_tools, function($tool_def) {
+    // Filter to only global tools (no handler property)
+    $global_tools = array_filter($all_tools, function($tool_def) {
         return !isset($tool_def['handler']);
     });
 
     $tools = [];
-    foreach ($general_tools as $tool_id => $tool_def) {
+    foreach ($global_tools as $tool_id => $tool_def) {
         $tools[$tool_id] = [
             'label' => $tool_def['label'] ?? ucfirst(str_replace('_', ' ', $tool_id)),
             'description' => $tool_def['description'] ?? '',

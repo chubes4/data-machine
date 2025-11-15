@@ -2,10 +2,10 @@
 /**
  * Google Custom Search API integration with site restrictions and result limits.
  *
- * @package DataMachine\Core\Steps\AI\Tools
+ * @package DataMachine\Engine\AI\Tools
  */
 
-namespace DataMachine\Core\Steps\AI\Tools;
+namespace DataMachine\Engine\AI\Tools;
 
 defined('ABSPATH') || exit;
 
@@ -17,7 +17,7 @@ class GoogleSearch {
     }
 
     private function register_configuration() {
-        add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
+        add_filter('datamachine_global_tools', [$this, 'register_tool'], 10, 1);
         add_filter('datamachine_tool_configured', [$this, 'check_configuration'], 10, 2);
         add_filter('datamachine_get_tool_config', [$this, 'get_configuration'], 10, 2);
         add_action('datamachine_save_tool_config', [$this, 'save_configuration'], 10, 2);
@@ -42,7 +42,7 @@ class GoogleSearch {
 
         $config = get_site_option('datamachine_search_config', []);
         $google_config = $config['google_search'] ?? [];
-        
+
         if (empty($google_config['api_key']) || empty($google_config['search_engine_id'])) {
             return [
                 'success' => false,
@@ -54,7 +54,7 @@ class GoogleSearch {
         $query = sanitize_text_field($parameters['query']);
         $max_results = 10;
         $site_restrict = !empty($parameters['site_restrict']) ? sanitize_text_field($parameters['site_restrict']) : '';
-        
+
         $search_url = 'https://www.googleapis.com/customsearch/v1';
         $search_params = [
             'key' => $google_config['api_key'],
@@ -63,20 +63,20 @@ class GoogleSearch {
             'num' => $max_results,
             'safe' => 'active'
         ];
-        
+
         if ($site_restrict) {
             $search_params['siteSearch'] = $site_restrict;
         }
-        
+
         $request_url = add_query_arg($search_params, $search_url);
-        
+
         $response = wp_remote_get($request_url, [
             'timeout' => 10,
             'headers' => [
                 'Accept' => 'application/json'
             ]
         ]);
-        
+
         if (is_wp_error($response)) {
             return [
                 'success' => false,
@@ -84,10 +84,10 @@ class GoogleSearch {
                 'tool_name' => 'google_search'
             ];
         }
-        
+
         $response_code = wp_remote_retrieve_response_code($response);
         $response_body = wp_remote_retrieve_body($response);
-        
+
         if ($response_code !== 200) {
             return [
                 'success' => false,
@@ -95,9 +95,9 @@ class GoogleSearch {
                 'tool_name' => 'google_search'
             ];
         }
-        
+
         $search_data = json_decode($response_body, true);
-        
+
         if (json_last_error() !== JSON_ERROR_NONE) {
             return [
                 'success' => false,
@@ -105,7 +105,7 @@ class GoogleSearch {
                 'tool_name' => 'google_search'
             ];
         }
-        
+
         $results = [];
         if (!empty($search_data['items'])) {
             foreach ($search_data['items'] as $item) {
@@ -117,11 +117,11 @@ class GoogleSearch {
                 ];
             }
         }
-        
+
         $search_info = $search_data['searchInformation'] ?? [];
         $total_results = $search_info['totalResults'] ?? '0';
         $search_time = $search_info['searchTime'] ?? 0;
-        
+
         return [
             'success' => true,
             'data' => [
@@ -164,7 +164,7 @@ class GoogleSearch {
 
         return !empty($google_config['api_key']) && !empty($google_config['search_engine_id']);
     }
-    
+
     public static function get_config(): array {
         $config = get_site_option('datamachine_search_config', []);
         return $config['google_search'] ?? [];
@@ -233,7 +233,7 @@ class GoogleSearch {
             ]
         ];
     }
-    
+
     /**
      * Format success message for Google search results.
      *
@@ -247,15 +247,15 @@ class GoogleSearch {
         if ($tool_name !== 'google_search') {
             return $message;
         }
-        
+
         $data = $tool_result['data'] ?? [];
         $results = $data['results'] ?? $data ?? [];
         $query = $tool_parameters['query'] ?? 'your query';
-        
+
         if (empty($results)) {
             return "SEARCH COMPLETE: No results found for \"{$query}\". Search task finished.";
         }
-        
+
         $result_count = count($results);
         return "SEARCH COMPLETE: Found {$result_count} results for \"{$query}\".\nSearch Results:";
     }

@@ -91,13 +91,7 @@ class AIStep {
             $next_step_config = $next_flow_step_id ? apply_filters('datamachine_get_flow_step_config', [], $next_flow_step_id) : null;
             
             $available_tools = AIStepTools::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id);
-            $ai_request = [
-                'messages' => $messages
-            ];
-            
-            if (!empty($step_ai_config['model'])) {
-                $ai_request['model'] = $step_ai_config['model'];
-            }
+
             $provider_name = $step_ai_config['selected_provider'] ?? '';
             if (empty($provider_name)) {
                 do_action('datamachine_fail_job', $job_id, 'ai_provider_missing', [
@@ -107,17 +101,6 @@ class AIStep {
                     'solution' => 'Configure AI provider in pipeline step settings'
                 ]);
                 return $data;
-            }
-
-            $ai_provider_tools = [];
-            foreach ($available_tools as $tool_name => $tool_config) {
-                $ai_provider_tools[$tool_name] = [
-                    'name' => $tool_name,
-                    'description' => $tool_config['description'] ?? '',
-                    'parameters' => $tool_config['parameters'] ?? [],
-                    'handler' => $tool_config['handler'] ?? null,
-                    'handler_config' => $tool_config['handler_config'] ?? []
-                ];
             }
             
             $conversation_messages = $messages;
@@ -133,19 +116,25 @@ class AIStep {
                     $conversation_messages = AIStepConversationManager::updateDataPacketMessages($conversation_messages, $data);
                 }
 
-                $current_request = [
-                    'messages' => $conversation_messages,
-                    'model' => $step_ai_config['model'] ?? null
-                ];
-                
                 do_action('datamachine_log', 'debug', 'AI Agent: Full conversation being sent to AI', [
                     'flow_step_id' => $flow_step_id,
                     'turn_count' => $turn_count,
-                    'message_count' => count($current_request['messages']),
-                    'messages' => $current_request['messages']
+                    'message_count' => count($conversation_messages),
+                    'messages' => $conversation_messages
                 ]);
-                
-                $ai_response = apply_filters('ai_request', $current_request, $provider_name, null, $ai_provider_tools, $pipeline_step_id, $payload);
+
+                // Build AI request using centralized RequestBuilder
+                $ai_response = \DataMachine\Engine\AI\RequestBuilder::build(
+                    $conversation_messages,
+                    $provider_name,
+                    $step_ai_config['model'] ?? '',
+                    $available_tools,
+                    'pipeline',
+                    [
+                        'step_id' => $pipeline_step_id,
+                        'payload' => $payload
+                    ]
+                );
 
                 if (!$ai_response['success']) {
                     $error_message = 'AI processing failed: ' . ($ai_response['error'] ?? 'Unknown error');

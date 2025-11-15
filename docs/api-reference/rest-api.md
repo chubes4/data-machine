@@ -1,8 +1,8 @@
 # REST API Reference
 
-Data Machine provides a comprehensive REST API for programmatic access to pipelines, flows, file uploads, job monitoring, and user preferences via 14 endpoint files. All endpoints are implemented in the `inc/Api/` directory with automatic registration via `rest_api_init`.
+Data Machine provides a comprehensive REST API for programmatic access to pipelines, flows, file uploads, job monitoring, and user preferences via 15 endpoint files. All endpoints are implemented in the `inc/Api/` directory with automatic registration via `rest_api_init`.
 
-**Implemented Endpoints**: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users
+**Implemented Endpoints**: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users, Chat
 
 ## Overview
 
@@ -1497,6 +1497,294 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items \
 - Reset deduplication tracking after fixing handler configuration
 - Force re-import of content from fetch handlers
 - Debug workflow behavior by clearing processed item history
+
+## Chat Endpoints
+
+**Implementation**: `inc/Api/Chat/Chat.php`
+
+### Send Chat Message
+
+**Endpoint**: `POST /datamachine/v1/chat`
+
+**Permission**: `manage_options` capability required
+
+**Purpose**: Conversational AI interface for building and executing Data Machine workflows through natural language interaction with multi-turn conversation support.
+
+**Parameters**:
+- `message` (string, required): User message to send to AI
+- `session_id` (string, optional): Session ID for conversation continuity (omit to create new session)
+- `provider` (string, optional): AI provider (`openai`, `anthropic`, `google`, `grok`, `openrouter`) - uses default from settings if not provided
+- `model` (string, optional): Model identifier (e.g., `gpt-4`, `claude-sonnet-4`) - uses default from settings if not provided
+
+**Session Management** (`inc/Core/Database/Chat/Chat.php`):
+- Unified database component with table creation and CRUD operations
+- First message creates new session automatically in `wp_datamachine_chat_sessions` table
+- Session ID returned in response for subsequent messages
+- Sessions are user-scoped (users can only access their own sessions)
+- Session expiration with 24-hour default timeout
+- Session metadata tracks message count, timestamps, provider, and model
+- Invalid/expired session returns 404 error
+- Access to another user's session returns 403 error
+
+**Filter-Based Architecture**:
+- Global tools loaded via `datamachine_global_tools` filter (available to all AI agents)
+- Chat-specific tools loaded via `datamachine_chat_tools` filter
+- Global directives applied via `datamachine_global_directives` filter
+- Chat directives applied via `datamachine_chat_directives` filter
+
+**Example Requests**:
+```bash
+# Start new conversation
+curl -X POST https://example.com/wp-json/datamachine/v1/chat \
+  -H "Content-Type: application/json" \
+  -u username:application_password \
+  -d '{
+    "message": "Create a pipeline that fetches from RSS and publishes to Twitter",
+    "provider": "anthropic",
+    "model": "claude-sonnet-4"
+  }'
+
+# Continue existing conversation
+curl -X POST https://example.com/wp-json/datamachine/v1/chat \
+  -H "Content-Type: application/json" \
+  -u username:application_password \
+  -d '{
+    "message": "Now add a flow for that pipeline",
+    "session_id": "session_abc123",
+    "provider": "anthropic",
+    "model": "claude-sonnet-4"
+  }'
+```
+
+**Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "session_id": "session_abc123",
+  "response": "I'll help you create a pipeline with RSS fetch and Twitter publish steps...",
+  "tool_calls": [
+    {
+      "id": "call_abc123",
+      "type": "function",
+      "function": {
+        "name": "make_api_request",
+        "arguments": "{\"endpoint\":\"/datamachine/v1/pipelines\",\"method\":\"POST\"}"
+      }
+    }
+  ],
+  "conversation": [
+    {"role": "user", "content": "Create a pipeline..."},
+    {"role": "assistant", "content": "I'll help you...", "tool_calls": [...]}
+  ],
+  "metadata": {
+    "last_activity": "2024-01-02 14:30:00",
+    "message_count": 2
+  }
+}
+```
+
+**Error Response (404 Not Found)** - Invalid session:
+```json
+{
+  "code": "session_not_found",
+  "message": "Session not found or expired",
+  "data": {"status": 404}
+}
+```
+
+**Error Response (403 Forbidden)** - Access denied:
+```json
+{
+  "code": "session_access_denied",
+  "message": "Access denied to this session",
+  "data": {"status": 403}
+}
+```
+
+**Available Tools**:
+- **Global Tools** - Available to all AI agents via `datamachine_global_tools` filter:
+  - `google_search` - Web search with site restriction
+  - `local_search` - WordPress content search
+  - `web_fetch` - Web page content retrieval
+  - `wordpress_post_reader` - Single post analysis
+- **Chat-Specific Tools** - Available only to chat AI agents via `datamachine_chat_tools` filter:
+  - `make_api_request` - Execute Data Machine REST API operations
+
+**Use Cases**:
+- Conversational pipeline builder interface
+- Natural language flow configuration
+- Interactive workflow debugging and monitoring
+- AI-assisted Data Machine administration
+
+## Handlers Endpoints
+
+**Implementation**: `inc/Api/Handlers.php`
+
+### Get Available Handlers
+
+**Endpoint**: `GET /datamachine/v1/handlers`
+
+**Permission**: `manage_options` capability required
+
+**Purpose**: Retrieve list of registered fetch, publish, and update handlers with metadata
+
+**Parameters**:
+- `step_type` (string, optional): Filter by step type (`fetch`, `publish`, `update`)
+
+**Example Requests**:
+```bash
+# Get all handlers
+curl https://example.com/wp-json/datamachine/v1/handlers \
+  -u username:application_password
+
+# Get publish handlers only
+curl https://example.com/wp-json/datamachine/v1/handlers?step_type=publish \
+  -u username:application_password
+```
+
+**Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "handlers": {
+    "rss": {
+      "type": "fetch",
+      "class": "DataMachine\\Core\\Steps\\Fetch\\Handlers\\RSS\\RSS",
+      "label": "RSS Feed",
+      "description": "Fetch content from RSS feeds",
+      "requires_auth": false
+    },
+    "twitter": {
+      "type": "publish",
+      "class": "DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter",
+      "label": "Twitter",
+      "description": "Post content to Twitter",
+      "requires_auth": true
+    }
+  }
+}
+```
+
+## Providers Endpoints
+
+**Implementation**: `inc/Api/Providers.php`
+
+### Get AI Providers
+
+**Endpoint**: `GET /datamachine/v1/providers`
+
+**Permission**: `manage_options` capability required
+
+**Purpose**: Retrieve available AI providers and their configuration status
+
+**Example Request**:
+```bash
+curl https://example.com/wp-json/datamachine/v1/providers \
+  -u username:application_password
+```
+
+**Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "providers": {
+    "openai": {
+      "label": "OpenAI",
+      "configured": true,
+      "models": ["gpt-4", "gpt-3.5-turbo"]
+    },
+    "anthropic": {
+      "label": "Anthropic",
+      "configured": true,
+      "models": ["claude-3-opus", "claude-3-sonnet"]
+    }
+  }
+}
+```
+
+## StepTypes Endpoints
+
+**Implementation**: `inc/Api/StepTypes.php`
+
+### Get Step Types
+
+**Endpoint**: `GET /datamachine/v1/step-types`
+
+**Permission**: `manage_options` capability required
+
+**Purpose**: Retrieve available step types for pipeline builder
+
+**Example Request**:
+```bash
+curl https://example.com/wp-json/datamachine/v1/step-types \
+  -u username:application_password
+```
+
+**Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "step_types": [
+    {
+      "type": "fetch",
+      "label": "Fetch",
+      "description": "Retrieve content from external sources"
+    },
+    {
+      "type": "ai",
+      "label": "AI Processing",
+      "description": "Process content with AI providers"
+    },
+    {
+      "type": "publish",
+      "label": "Publish",
+      "description": "Publish content to destinations"
+    },
+    {
+      "type": "update",
+      "label": "Update",
+      "description": "Update existing content"
+    }
+  ]
+}
+```
+
+## Tools Endpoints
+
+**Implementation**: `inc/Api/Tools.php`
+
+### Get Available Tools
+
+**Endpoint**: `GET /datamachine/v1/tools`
+
+**Permission**: `manage_options` capability required
+
+**Purpose**: Retrieve registered AI tools and their configuration status
+
+**Example Request**:
+```bash
+curl https://example.com/wp-json/datamachine/v1/tools \
+  -u username:application_password
+```
+
+**Success Response (200 OK)**:
+```json
+{
+  "success": true,
+  "tools": {
+    "google_search": {
+      "label": "Google Search",
+      "configured": true,
+      "chat_enabled": false
+    },
+    "make_api_request": {
+      "label": "Make API Request",
+      "configured": true,
+      "chat_enabled": true
+    }
+  }
+}
+```
 
 ## Auth Endpoints
 

@@ -1,14 +1,14 @@
 === Data Machine ===
 Contributors: chubes4
-Tags: ai, automation, content, workflow, pipeline
+Tags: ai, automation, content, workflow, pipeline, chat
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 0.1.2
+Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-AI-first WordPress plugin for content processing workflows with visual pipeline builder and multi-provider AI integration.
+AI-first WordPress plugin for content processing workflows with visual pipeline builder, conversational chat interface, and multi-provider AI integration.
 
 ## Architecture
 
@@ -22,7 +22,8 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 - **Tool-First AI**: Enhanced multi-turn conversation management with duplicate detection and temporal context
 - **Visual Pipeline Builder**: Real-time updates with 50+ React components, custom hooks, and Context API state management
 - **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter with 5-tier directive system
-- **Complete REST API**: 14 endpoints (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users)
+- **Complete REST API**: 15 endpoints (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users, Chat)
+- **Chat API**: Conversational interface for building and executing workflows through natural language
 - **Ephemeral Workflows**: Execute workflows without database persistence via REST API
 - **Centralized Engine Data**: Unified filter access pattern with clean AI data packets and structured engine parameters
 - **Enhanced Handler System**: Universal filter patterns with shared functionality across all handlers
@@ -132,7 +133,7 @@ $response = apply_filters('ai_request', [
 
 ### REST API
 
-Data Machine provides comprehensive REST API access via 14 endpoint files (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users) for flow execution, pipeline management, and system monitoring.
+Data Machine provides comprehensive REST API access via 15 endpoint files (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users, Chat) for flow execution, pipeline management, and system monitoring.
 
 **Unified Execute Endpoint** (`POST /datamachine/v1/execute`):
 
@@ -175,6 +176,9 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 *Execution:*
 - `POST /datamachine/v1/execute` - Execute flows or ephemeral workflows (immediate, recurring, delayed)
 
+*Chat Interface:*
+- `POST /datamachine/v1/chat` - Conversational AI endpoint with session management
+
 *Flow Management:*
 - `POST /datamachine/v1/flows` - Create flows
 - `DELETE /datamachine/v1/flows/{id}` - Delete flows
@@ -208,7 +212,7 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 - `GET /datamachine/v1/processed-items` - Processed items
 - `DELETE /datamachine/v1/processed-items` - Clear processed items
 
-**Implementation**: 14 endpoint files in `inc/Api/` directory (Auth.php, Execute.php, Files.php, Flows.php, Handlers.php, Jobs.php, Logs.php, Pipelines.php, ProcessedItems.php, Providers.php, Settings.php, StepTypes.php, Tools.php, Users.php) with automatic REST route registration
+**Implementation**: 15 endpoint files in `inc/Api/` directory (Auth.php, Execute.php, Files.php, Flows.php, Handlers.php, Jobs.php, Logs.php, Pipelines.php, ProcessedItems.php, Providers.php, Settings.php, StepTypes.php, Tools.php, Users.php, Chat/Chat.php) with automatic REST route registration
 
 **Requirements**: WordPress application password or cookie authentication with `manage_options` capability (except `/users/me` which requires authentication only). Action Scheduler required for scheduled flow execution (woocommerce/action-scheduler via Composer).
 
@@ -244,7 +248,7 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 **AI Providers**:
 - OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 
-**General Tools**:
+**Global Tools**:
 - Google Search, Local Search
 - WebFetch (50K character limit)
 - WordPress Post Reader
@@ -339,7 +343,8 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
 
   - Composer-managed ai-http-client dependency
 - **REST API Integration**:
-  - **14 Endpoints**: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users
+  - **15 Endpoints**: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users, Chat
+  - **Chat API**: Conversational interface with session management for multi-turn natural language workflow building
   - **Ephemeral Workflow Support**: Execute workflows without database persistence
   - **Unified Execute Endpoint**: Supports database flows, ephemeral workflows, immediate/delayed/recurring execution
   - **Complete Authentication**: WordPress application password or cookie authentication

@@ -65,12 +65,24 @@ $image_url = $engine_data['image_url'] ?? null;
 
 - **Multi-Provider Support** - OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
 - **Tool-First Architecture** - AI agents can call tools to interact with publish handlers
-- **5-Tier AI Directive System** - Structured system messages via auto-registering directive classes:
-  - **Priority 10**: Plugin Core Directive (foundational AI agent identity and core behavioral principles)
-  - **Priority 20**: Global System Prompt (foundational AI behavior)
-  - **Priority 30**: Pipeline System Prompt (workflow structure visualization)
-  - **Priority 40**: Tool Definitions (usage instructions and workflow context)
-  - **Priority 50**: Site Context (WordPress environment info)
+- **Filter-Based Directive System** - Structured system messages via auto-registering directive classes with separate global and pipeline directives:
+
+  **Global Directives** (apply to ALL AI agents - pipeline + chat):
+  - `datamachine_global_directives` filter for universal directive registration
+  - **Priority 20**: Global System Prompt - User-configured foundational AI behavior
+  - **Priority 50**: WordPress Site Context - WordPress environment info (toggleable)
+
+  **Pipeline-Specific Directives** (apply ONLY to pipeline AI steps):
+  - `datamachine_pipeline_directives` filter for pipeline-only directive registration
+  - **Priority 10**: Pipeline Core Directive - Foundational pipeline agent identity
+  - **Priority 30**: Pipeline System Prompt - Workflow structure visualization
+  - **Priority 40**: Pipeline Context Directive - Workflow context and execution state
+  - **Priority 40**: Tool Definitions Directive - Usage instructions and workflow context
+
+  **Chat-Specific Directives** (apply ONLY to chat AI agents):
+  - `datamachine_chat_directives` filter for chat-only directive registration
+  - **Priority 15**: Chat Agent Directive - Chat agent identity, REST API documentation, conversation guidelines
+
 - **AIStepConversationManager** - Centralized conversation state management:
   - Turn-based conversation loops with chronological message ordering
   - AI tool calls recorded before execution with turn number tracking
@@ -81,9 +93,17 @@ $image_url = $engine_data['image_url'] ?? null;
   - `buildParameters()` for standard AI tools
   - `buildForHandlerTool()` for handler tools with engine parameters
   - Content/title extraction from data packets
-- **General AI Tools Available** - Google Search, Local Search, WebFetch (50K limit), WordPress Post Reader
-- **Handler-Specific Tools** - Available when next step matches handler type
-- **Context-Aware** - Automatic WordPress site context injection
+- **Global AI Tools** - Available to all AI agents (pipeline + chat):
+  - Google Search - Web search with site restriction
+  - Local Search - WordPress content search
+  - WebFetch - Web page content retrieval (50K limit)
+  - WordPress Post Reader - Single post analysis
+  - Registered via `datamachine_global_tools` filter
+- **Chat-Specific Tools** - Available only to chat AI agents:
+  - MakeAPIRequest - Execute Data Machine REST API operations
+  - Registered via `datamachine_chat_tools` filter
+- **Handler-Specific Tools** - Available when next step matches handler type, registered via `ai_tools` filter
+- **Context-Aware** - Automatic WordPress site context injection (toggleable)
 - **Clear Tool Result Messaging** - Human-readable success messages enabling natural conversation termination
 
 ### Authentication

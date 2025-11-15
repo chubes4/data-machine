@@ -48,7 +48,6 @@ class MakeAPIRequest {
 					'description' => 'Request body data for POST/PUT requests (optional)'
 				]
 			],
-			'chat_enabled' => true
 		];
 		return $tools;
 	}
@@ -127,3 +126,6 @@ class MakeAPIRequest {
 		];
 	}
 }
+
+// Self-register for chat tools
+add_filter('datamachine_chat_tools', [MakeAPIRequest::class, 'register_tool']);

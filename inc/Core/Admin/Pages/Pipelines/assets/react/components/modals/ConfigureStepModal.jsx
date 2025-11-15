@@ -38,9 +38,9 @@ export default function ConfigureStepModal( {
 	onSuccess,
 } ) {
 	const [ provider, setProvider ] = useState(
-		currentConfig?.provider || ''
+		currentConfig?.provider || aiDefaults.provider
 	);
-	const [ model, setModel ] = useState( currentConfig?.model || '' );
+	const [ model, setModel ] = useState( currentConfig?.model || aiDefaults.model );
 	const [ systemPrompt, setSystemPrompt ] = useState(
 		currentConfig?.system_prompt || ''
 	);
@@ -48,6 +48,7 @@ export default function ConfigureStepModal( {
 		currentConfig?.enabled_tools || []
 	);
 	const [ aiProviders, setAiProviders ] = useState( {} );
+	const [ aiDefaults, setAiDefaults ] = useState( { provider: '', model: '' } );
 	const [ isLoadingProviders, setIsLoadingProviders ] = useState( false );
 	const [ isSaving, setIsSaving ] = useState( false );
 	const [ error, setError ] = useState( null );
@@ -63,6 +64,7 @@ export default function ConfigureStepModal( {
 				.then( ( data ) => {
 					if ( data.success ) {
 						setAiProviders( data.providers );
+						setAiDefaults( data.defaults || { provider: '', model: '' } );
 					}
 				} )
 				.catch( ( err ) =>
@@ -77,13 +79,13 @@ export default function ConfigureStepModal( {
 	 */
 	useEffect( () => {
 		if ( isOpen ) {
-			setProvider( currentConfig?.provider || '' );
-			setModel( currentConfig?.model || '' );
+			setProvider( currentConfig?.provider || aiDefaults.provider );
+			setModel( currentConfig?.model || aiDefaults.model );
 			setSystemPrompt( currentConfig?.system_prompt || '' );
 			setSelectedTools( currentConfig?.enabled_tools || [] );
 			setError( null );
 		}
-	}, [ isOpen, currentConfig ] );
+	}, [ isOpen, currentConfig, aiDefaults ] );
 
 	if ( ! isOpen ) {
 		return null;

@@ -2,7 +2,7 @@
 /**
  * Web page content retrieval with HTML processing and 50K character limit.
  */
-namespace DataMachine\Core\Steps\AI\Tools;
+namespace DataMachine\Engine\AI\Tools;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -16,7 +16,7 @@ class WebFetch {
     }
 
     private function register_configuration() {
-        add_filter('ai_tools', [$this, 'register_tool'], 10, 1);
+        add_filter('datamachine_global_tools', [$this, 'register_tool'], 10, 1);
         add_filter('datamachine_tool_configured', [$this, 'check_configuration'], 10, 2);
     }
 

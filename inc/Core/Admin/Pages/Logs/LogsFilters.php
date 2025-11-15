@@ -49,7 +49,7 @@ function datamachine_register_logs_admin_page_filters() {
                 'js' => [
                     'datamachine-admin-logs' => [
                         'file' => 'inc/Core/Admin/Pages/Logs/assets/js/admin-logs.js',
-                        'deps' => ['jquery', 'wp-api-fetch'],
+                        'deps' => ['wp-api-fetch'],
                         'in_footer' => true
                     ]
                 ]

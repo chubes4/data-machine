@@ -14,25 +14,25 @@
  * 5. Priority 50 - WordPress Site Context (THIS CLASS)
  */
 
-namespace DataMachine\Core\Steps\AI\Directives;
+namespace DataMachine\Engine\AI\Directives;
 
 use DataMachine\Core\Steps\AI\SiteContext;
 
 defined('ABSPATH') || exit;
 
 class SiteContextDirective {
-    
+
     /**
      * Inject WordPress site context into AI request.
      *
      * @param array $request AI request array with messages
      * @param string $provider_name AI provider name
-     * @param callable $streaming_callback Streaming callback (unused)
      * @param array $tools Available tools (unused)
      * @param string|null $pipeline_step_id Pipeline step ID (unused)
+     * @param array $payload Execution payload (unused)
      * @return array Modified request with site context added
      */
-    public static function inject($request, $provider_name, $streaming_callback, $tools, $pipeline_step_id = null, array $context = []): array {
+    public static function inject($request, $provider_name, $tools, $pipeline_step_id = null, array $payload = []): array {
         if (!self::is_site_context_enabled()) {
             return $request;
         }
@@ -42,7 +42,7 @@ class SiteContextDirective {
         }
 
         $context_message = self::generate_site_context();
-        
+
         if (empty($context_message)) {
             do_action('datamachine_log', 'warning', 'Site Context Directive: Empty context generated');
             return $request;
@@ -61,7 +61,7 @@ class SiteContextDirective {
 
         return $request;
     }
-    
+
     /**
      * Check if site context injection is enabled in plugin settings.
      *
@@ -69,7 +69,7 @@ class SiteContextDirective {
      */
     public static function is_site_context_enabled(): bool {
         $settings = datamachine_get_datamachine_settings();
-        
+
         return $settings['site_context_enabled'] ?? true;
     }
 
@@ -79,14 +79,12 @@ class SiteContextDirective {
      * @return string JSON-formatted site context data
      */
     public static function generate_site_context(): string {
-        require_once __DIR__ . '/../SiteContext.php';
-        
         $context_data = SiteContext::get_context();
-        
+
         $context_message = "WORDPRESS SITE CONTEXT:\n\n";
         $context_message .= "The following structured data provides comprehensive information about this WordPress site:\n\n";
         $context_message .= json_encode($context_data, JSON_PRETTY_PRINT);
-        
+
         return $context_message;
     }
 }
@@ -100,7 +98,7 @@ class SiteContextDirective {
  */
 $site_context_directive = apply_filters('datamachine_site_context_directive', SiteContextDirective::class);
 
-// Register the filtered directive (allows replacement by multisite plugin)
+// Register the filtered directive for global context (applies to all AI agents - allows replacement by multisite plugin)
 if ($site_context_directive) {
-    add_filter('ai_request', [$site_context_directive, 'inject'], 50, 6);
+    add_filter('datamachine_global_directives', [$site_context_directive, 'inject'], 50, 5);
 }

@@ -1,6 +1,6 @@
 # Database Schema
 
-Data Machine uses four core tables for managing pipelines, flows, jobs, and deduplication tracking.
+Data Machine uses five core tables for managing pipelines, flows, jobs, deduplication tracking, and chat sessions.
 
 ## Core Tables
 
@@ -122,6 +122,47 @@ CREATE TABLE wp_datamachine_processed_items (
 - `job_id` - Job that processed this item
 - `processed_at` - Processing timestamp
 
+### `wp_datamachine_chat_sessions`
+
+**Purpose**: Persistent conversation state for chat API with multi-turn conversation support
+
+**Implementation**: `inc/Core/Database/Chat/Chat.php` (unified database component)
+
+```sql
+CREATE TABLE wp_datamachine_chat_sessions (
+    session_id VARCHAR(50) NOT NULL,
+    user_id BIGINT(20) UNSIGNED NOT NULL,
+    messages LONGTEXT NOT NULL COMMENT 'JSON array of conversation messages',
+    metadata LONGTEXT NULL COMMENT 'JSON object for session metadata',
+    provider VARCHAR(50) NULL COMMENT 'AI provider (anthropic, openai, etc)',
+    model VARCHAR(100) NULL COMMENT 'AI model identifier',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    expires_at DATETIME NULL COMMENT 'Auto-cleanup timestamp',
+    PRIMARY KEY (session_id),
+    KEY user_id (user_id),
+    KEY created_at (created_at),
+    KEY expires_at (expires_at)
+);
+```
+
+**Fields**:
+- `session_id` - UUID4 session identifier (primary key)
+- `user_id` - WordPress user ID (user-scoped isolation)
+- `messages` - JSON array of conversation messages (chronological ordering)
+- `metadata` - JSON object with message_count, last_activity timestamps
+- `provider` - AI provider used for session (optional, tracked for continuity)
+- `model` - AI model used for session (optional, tracked for continuity)
+- `created_at` - Session creation timestamp
+- `updated_at` - Last activity timestamp
+- `expires_at` - Expiration timestamp (24-hour default timeout)
+
+**Session Management**:
+- User-scoped session isolation (users can only access their own sessions)
+- Automatic session creation on first message
+- Session expiration with cleanup mechanism
+- Metadata tracking for message count and activity timestamps
+
 ## Relationships
 
 ### Primary Relationships
@@ -130,6 +171,8 @@ CREATE TABLE wp_datamachine_processed_items (
 Pipeline (1) → Flow (many) → Job (many)
                 ↓
             ProcessedItems (many)
+
+User (1) → ChatSession (many)
 ```
 
 ### Key Identifiers
@@ -202,6 +245,41 @@ do_action('datamachine_mark_item_processed', $flow_step_id, 'rss', $item_id, $jo
 **Check If Processed**:
 ```php
 $is_processed = apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'rss', $item_id);
+```
+
+### Chat Session Operations
+
+**Create Session**:
+```php
+use DataMachine\Core\Database\Chat\Chat as ChatDatabase;
+
+$chat_db = new ChatDatabase();
+$session_id = $chat_db->create_session($user_id, [
+    'started_at' => current_time('mysql'),
+    'message_count' => 0
+]);
+```
+
+**Get Session**:
+```php
+$session = $chat_db->get_session($session_id);
+// Returns: ['session_id', 'user_id', 'messages', 'metadata', 'provider', 'model', 'created_at', 'updated_at', 'expires_at']
+```
+
+**Update Session**:
+```php
+$chat_db->update_session(
+    $session_id,
+    $messages,  // Complete messages array
+    $metadata,  // Updated metadata
+    $provider,  // AI provider
+    $model      // AI model
+);
+```
+
+**Cleanup Expired Sessions**:
+```php
+$deleted_count = $chat_db->cleanup_expired_sessions();
 ```
 
 ## Configuration Storage
