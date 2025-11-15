@@ -3,7 +3,7 @@
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/datamachine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:         0.1.2
+ * Version:         0.2.0
  * Requires at least: 6.0
  * Requires PHP:     8.0
  * Author:          Chris Huber
@@ -21,7 +21,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.1.2' );
+define( 'DATAMACHINE_VERSION', '0.2.0' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -59,6 +59,7 @@ function run_datamachine() {
 	\DataMachine\Api\Jobs::register();
 	\DataMachine\Api\Settings::register();
 	\DataMachine\Api\Auth::register();
+	\DataMachine\Api\Chat\Chat::register();
 }
 
 
@@ -100,6 +101,8 @@ function activate_datamachine() {
 	if ($db_processed_items) {
 		$db_processed_items->create_table();
 	}
+
+	\DataMachine\Api\Chat\ChatSessionsTable::create_table();
 
 	// Create log directory during activation
 	$upload_dir = wp_upload_dir();

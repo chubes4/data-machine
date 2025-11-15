@@ -5,6 +5,29 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-11-14
+
+### Added
+- New REST API endpoints: Handlers, Providers, StepTypes, Tools for enhanced frontend integration
+- Major AI HTTP Client integration with execution context refactoring
+- Standardized execution method across all step type extension files
+
+### Changed
+- Complete React UI production readiness with jQuery removal across admin interfaces
+- Major cache system overhaul with granular WordPress action-based clearing
+- Security updates with latest stable package versions and vulnerability resolutions
+- Prefix standardization from `data-machine` to `datamachine` for ecosystem consistency
+- Enhanced modal system with legacy modal conflict resolution
+
+### Improved
+- Filter system optimizations reducing database load and query overhead
+- Performance enhancements with 50% reduction in modal load queries
+- Streamlined codebase with removal of dead PHP template files and unused CSS
+
+### Removed
+- Dead pipeline status CSS file and unused PHP template files
+- Outdated gitignore patterns for development assets
+
 ## [0.1.2] - 2025-10-10
 
 ### Security
