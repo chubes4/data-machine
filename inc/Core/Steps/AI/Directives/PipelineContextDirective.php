@@ -116,5 +116,16 @@ class PipelineContextDirective {
 	}
 }
 
-// Self-register at Priority 35 (fourth in directive system)
-add_filter( 'datamachine_pipeline_directives', [ PipelineContextDirective::class, 'inject' ], 35, 5 );
+// Register with universal agent directive system (Priority 35 = fourth in directive system)
+add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
+    if ($agent_type === 'pipeline') {
+        $request = PipelineContextDirective::inject(
+            $request,
+            $provider,
+            $tools,
+            $context['step_id'] ?? null,
+            $context['payload'] ?? []
+        );
+    }
+    return $request;
+}, 35, 5);

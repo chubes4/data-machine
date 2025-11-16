@@ -42,7 +42,7 @@ Available only to chat AI agents via `datamachine_chat_tools` filter:
 
 ### Handler-Specific Tools
 
-Available only when next step matches the handler type, registered via `ai_tools` filter:
+Available only when next step matches the handler type, registered via `chubes_ai_tools` filter:
 
 **Publishing Tools**:
 - `twitter_publish` - Post to Twitter (280 char limit)
@@ -102,8 +102,8 @@ add_filter('datamachine_chat_tools', function($tools) {
 
 **Handler-Specific Tools** (available when next step matches handler type):
 ```php
-// Registered via ai_tools filter with handler context
-add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
+// Registered via chubes_ai_tools filter with handler context
+add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
     if ($handler_slug === 'twitter') {
         $tools['twitter_publish'] = [
             'class' => 'Twitter\\Handler',

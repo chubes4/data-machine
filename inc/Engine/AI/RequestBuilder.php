@@ -21,7 +21,7 @@ class RequestBuilder {
 	 *
 	 * Centralizes request construction logic to ensure Chat and Pipeline agents
 	 * build identical request structures. Handles tool restructuring, directive
-	 * application, and consistent ai_request filter invocation.
+	 * application, and consistent chubes_ai_request filter invocation.
 	 *
 	 * @param array  $messages    Initial messages array with role/content
 	 * @param string $provider    AI provider name (openai, anthropic, google, grok, openrouter)
@@ -59,27 +59,15 @@ class RequestBuilder {
 			$context['payload'] ?? []
 		);
 
-		// 4. Apply agent-specific directives
-		if ($agent_type === 'chat') {
-			// Chat-specific directives
-			$request = apply_filters(
-				'datamachine_chat_directives',
-				$request,
-				$provider,
-				$structured_tools,
-				$context['session_id'] ?? null
-			);
-		} elseif ($agent_type === 'pipeline') {
-			// Pipeline-specific directives
-			$request = apply_filters(
-				'datamachine_pipeline_directives',
-				$request,
-				$provider,
-				$structured_tools,
-				$context['step_id'] ?? null,
-				$context['payload'] ?? []
-			);
-		}
+		// 4. Apply agent directives (universal system - agents implement via filter)
+		$request = apply_filters(
+			'datamachine_agent_directives',
+			$request,
+			$agent_type,
+			$provider,
+			$structured_tools,
+			$context
+		);
 
 		do_action('datamachine_log', 'debug', 'RequestBuilder: Built AI request', [
 			'agent_type' => $agent_type,
@@ -89,9 +77,9 @@ class RequestBuilder {
 			'tool_count' => count($structured_tools)
 		]);
 
-		// 5. Send to ai-http-client via ai_request filter
+		// 5. Send to ai-http-client via chubes_ai_request filter
 		return apply_filters(
-			'ai_request',
+			'chubes_ai_request',
 			$request,
 			$provider,
 			null, // streaming_callback

@@ -22,7 +22,7 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 - **Tool-First AI**: Enhanced multi-turn conversation management with duplicate detection and temporal context
 - **Visual Pipeline Builder**: Real-time updates with 50+ React components, custom hooks, and Context API state management
 - **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter with 5-tier directive system
-- **Complete REST API**: 15 endpoints (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users, Chat)
+- **Complete REST API**: 16 endpoints (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users, Chat base, Chat/Chat)
 - **Chat API**: Conversational interface for building and executing workflows through natural language
 - **Ephemeral Workflows**: Execute workflows without database persistence via REST API
 - **Centralized Engine Data**: Unified filter access pattern with clean AI data packets and structured engine parameters
@@ -125,7 +125,7 @@ $flow_id = apply_filters('datamachine_create_flow', null, ['pipeline_id' => $pip
 do_action('datamachine_run_flow_now', $flow_id, 'manual');
 
 // AI integration
-$response = apply_filters('ai_request', [
+$response = apply_filters('chubes_ai_request', [
     'messages' => [['role' => 'user', 'content' => $prompt]],
     'model' => 'gpt-5-mini'
 ], 'openai');
@@ -133,7 +133,9 @@ $response = apply_filters('ai_request', [
 
 ### REST API
 
-Data Machine provides comprehensive REST API access via 15 endpoint files (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users, Chat) for flow execution, pipeline management, and system monitoring.
+Data Machine provides comprehensive REST API access via 16 endpoints for flow execution, pipeline management, and system monitoring:
+- **Core**: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users
+- **Chat**: Chat (base), Chat/Chat (conversations)
 
 **Unified Execute Endpoint** (`POST /datamachine/v1/execute`):
 
@@ -212,7 +214,9 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 - `GET /datamachine/v1/processed-items` - Processed items
 - `DELETE /datamachine/v1/processed-items` - Clear processed items
 
-**Implementation**: 15 endpoint files in `inc/Api/` directory (Auth.php, Execute.php, Files.php, Flows.php, Handlers.php, Jobs.php, Logs.php, Pipelines.php, ProcessedItems.php, Providers.php, Settings.php, StepTypes.php, Tools.php, Users.php, Chat/Chat.php) with automatic REST route registration
+**Implementation**: 16 endpoint files in `inc/Api/` directory with automatic REST route registration:
+- Core: Auth.php, Execute.php, Files.php, Flows.php, Handlers.php, Jobs.php, Logs.php, Pipelines.php, ProcessedItems.php, Providers.php, Settings.php, StepTypes.php, Tools.php, Users.php
+- Chat: Chat.php (base), Chat/Chat.php (conversations)
 
 **Requirements**: WordPress application password or cookie authentication with `manage_options` capability (except `/users/me` which requires authentication only). Action Scheduler required for scheduled flow execution (woocommerce/action-scheduler via Composer).
 
@@ -343,12 +347,12 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
 
   - Composer-managed ai-http-client dependency
 - **REST API Integration**:
-  - **15 Endpoints**: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users, Chat
+  - **16 Endpoints**: Core (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users) + Chat (base, conversations)
   - **Chat API**: Conversational interface with session management for multi-turn natural language workflow building
   - **Ephemeral Workflow Support**: Execute workflows without database persistence
   - **Unified Execute Endpoint**: Supports database flows, ephemeral workflows, immediate/delayed/recurring execution
   - **Complete Authentication**: WordPress application password or cookie authentication
-  - **React Frontend Integration**: Pipelines page with REST API consumption
+  - **React Frontend Integration**: Zero AJAX dependencies, complete REST API consumption
 
 See `CLAUDE.md` for complete technical specifications.
 

@@ -33,7 +33,9 @@ export function PipelineProvider( { children } ) {
 	const [ stepTypeSettings, setStepTypeSettings ] = useState( {} );
 	const [ handlers, setHandlers ] = useState( {} );
 
-	// Modal state
+	// Modal state (pipeline-level only)
+	// Flow-level modals (FLOW_SCHEDULE, HANDLER_SELECTION, HANDLER_SETTINGS, OAUTH)
+	// are now managed by FlowContext
 	const [ activeModal, setActiveModal ] = useState( null );
 	const [ modalData, setModalData ] = useState( null );
 

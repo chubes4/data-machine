@@ -16,36 +16,37 @@ import {
 	HandlerSettingsModal,
 	OAuthAuthenticationModal,
 } from '../modals';
-import { usePipelineContext } from '../../context/PipelineContext';
+import { FlowProvider, useFlowContext } from '../../context/FlowContext';
 import { deleteFlow, duplicateFlow, runFlow, updateFlowHandler } from '../../utils/api';
 import { MODAL_TYPES } from '../../utils/constants';
 
 /**
- * Flow Card Component
- *
- * @param {Object} props - Component props
- * @param {Object} props.flow - Flow data
- * @param {Object} props.pipelineConfig - Pipeline configuration
- * @returns {React.ReactElement} Flow card
+ * Flow Card Inner Component (has access to FlowContext)
  */
-export default function FlowCard( { flow, pipelineConfig } ) {
-	const { refreshData, openModal, closeModal, activeModal, modalData } =
-		usePipelineContext();
+function FlowCardInner() {
+	const {
+		flow,
+		pipelineConfig,
+		refreshFlow,
+		openModal,
+		closeModal,
+		activeModal,
+		modalData,
+		onFlowDeleted,
+		onFlowDuplicated,
+	} = useFlowContext();
+
 	const [ handlerModalData, setHandlerModalData ] = useState( null );
 	const [ oauthModalData, setOauthModalData ] = useState( null );
-
-	if ( ! flow ) {
-		return null;
-	}
 
 	/**
 	 * Handle flow name change
 	 */
 	const handleNameChange = useCallback( () => {
 		// Name change already saved by FlowHeader
-		// Just trigger refresh to update local state
-		refreshData();
-	}, [ refreshData ] );
+		// Refresh only this flow
+		refreshFlow();
+	}, [ refreshFlow ] );
 
 	/**
 	 * Handle flow deletion
@@ -56,7 +57,10 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 				const response = await deleteFlow( flowId );
 
 				if ( response.success ) {
-					refreshData();
+					// Delete affects pipeline - trigger pipeline refresh
+					if ( onFlowDeleted ) {
+						onFlowDeleted( flowId );
+					}
 				} else {
 					alert(
 						response.message ||
@@ -73,7 +77,7 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 				);
 			}
 		},
-		[ refreshData ]
+		[ onFlowDeleted ]
 	);
 
 	/**
@@ -85,7 +89,10 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 				const response = await duplicateFlow( flowId );
 
 				if ( response.success ) {
-					refreshData();
+					// Duplicate affects pipeline - trigger pipeline refresh
+					if ( onFlowDuplicated ) {
+						onFlowDuplicated( flowId );
+					}
 				} else {
 					alert(
 						response.message ||
@@ -102,7 +109,7 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 				);
 			}
 		},
-		[ refreshData ]
+		[ onFlowDuplicated ]
 	);
 
 	/**
@@ -115,7 +122,8 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 
 				if ( response.success ) {
 					alert( __( 'Flow started successfully!', 'datamachine' ) );
-					refreshData();
+					// Run flow only affects this flow - refresh flow only
+					refreshFlow();
 				} else {
 					alert(
 						response.message ||
@@ -132,7 +140,7 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 				);
 			}
 		},
-		[ refreshData ]
+		[ refreshFlow ]
 	);
 
 	/**
@@ -205,7 +213,8 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 				);
 
 				if ( response.success ) {
-					refreshData(); // Update UI immediately
+					// Handler update only affects this flow - refresh flow only
+					refreshFlow();
 
 					// Then open settings modal for configuration
 					const updatedData = {
@@ -231,7 +240,7 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 				);
 			}
 		},
-		[ handlerModalData, openModal, refreshData ]
+		[ handlerModalData, openModal, refreshFlow ]
 	);
 
 	/**
@@ -256,6 +265,10 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 		},
 		[ openModal ]
 	);
+
+	if ( ! flow ) {
+		return null;
+	}
 
 	return (
 		<>
@@ -299,7 +312,7 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 					{ ...modalData }
 					onSuccess={ () => {
 						closeModal();
-						refreshData();
+						refreshFlow(); // Flow-level refresh
 					} }
 				/>
 			) }
@@ -320,13 +333,14 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 					{ ...modalData }
 					onSuccess={ () => {
 						closeModal();
-						refreshData();
+						refreshFlow(); // Flow-level refresh
 						setHandlerModalData( null );
 					} }
 					onChangeHandler={ handleChangeHandler }
 					onOAuthConnect={ handleOAuthConnect }
 				/>
 			) }
+
 			{ activeModal === MODAL_TYPES.OAUTH && (
 				<OAuthAuthenticationModal
 					isOpen={ true }
@@ -335,11 +349,39 @@ export default function FlowCard( { flow, pipelineConfig } ) {
 					handlerInfo={ oauthModalData?.handlerInfo }
 					onSuccess={ () => {
 						closeModal();
-						refreshData();
+						refreshFlow(); // Flow-level refresh
 						setOauthModalData( null );
 					} }
 				/>
 			) }
 		</>
+	);
+}
+
+/**
+ * Flow Card Component (Outer wrapper with FlowProvider)
+ *
+ * @param {Object} props - Component props
+ * @param {Object} props.flow - Flow data
+ * @param {Object} props.pipelineConfig - Pipeline configuration
+ * @param {Function} props.onFlowDeleted - Callback when flow is deleted
+ * @param {Function} props.onFlowDuplicated - Callback when flow is duplicated
+ * @returns {React.ReactElement} Flow card
+ */
+export default function FlowCard( {
+	flow,
+	pipelineConfig,
+	onFlowDeleted,
+	onFlowDuplicated,
+} ) {
+	return (
+		<FlowProvider
+			initialFlow={ flow }
+			pipelineConfig={ pipelineConfig }
+			onFlowDeleted={ onFlowDeleted }
+			onFlowDuplicated={ onFlowDuplicated }
+		>
+			<FlowCardInner />
+		</FlowProvider>
 	);
 }

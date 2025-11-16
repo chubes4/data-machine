@@ -102,7 +102,7 @@ $image_url = $engine_data['image_url'] ?? null;
 - **Chat-Specific Tools** - Available only to chat AI agents:
   - MakeAPIRequest - Execute Data Machine REST API operations
   - Registered via `datamachine_chat_tools` filter
-- **Handler-Specific Tools** - Available when next step matches handler type, registered via `ai_tools` filter
+- **Handler-Specific Tools** - Available when next step matches handler type, registered via `chubes_ai_tools` filter
 - **Context-Aware** - Automatic WordPress site context injection (toggleable)
 - **Clear Tool Result Messaging** - Human-readable success messages enabling natural conversation termination
 

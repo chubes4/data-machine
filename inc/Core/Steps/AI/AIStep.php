@@ -2,7 +2,9 @@
 
 namespace DataMachine\Core\Steps\AI;
 
-use DataMachine\Core\Steps\AI\AIStepConversationManager;
+use DataMachine\Engine\AI\AIConversationLoop;
+use DataMachine\Engine\AI\ConversationManager;
+use DataMachine\Engine\AI\ToolExecutor;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -90,7 +92,7 @@ class AIStep {
             $next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $flow_step_id, $payload);
             $next_step_config = $next_flow_step_id ? apply_filters('datamachine_get_flow_step_config', [], $next_flow_step_id) : null;
             
-            $available_tools = AIStepTools::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id);
+            $available_tools = ToolExecutor::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id);
 
             $provider_name = $step_ai_config['selected_provider'] ?? '';
             if (empty($provider_name)) {
@@ -113,7 +115,7 @@ class AIStep {
                 $turn_count++;
                 
                 if ($turn_count > 1) {
-                    $conversation_messages = AIStepConversationManager::updateDataPacketMessages($conversation_messages, $data);
+                    $conversation_messages = self::updateDataPacketMessages($conversation_messages, $data);
                 }
 
                 do_action('datamachine_log', 'debug', 'AI Agent: Full conversation being sent to AI', [
@@ -179,7 +181,7 @@ class AIStep {
                     ], $flow_step_id, 'ai');
                     
                     if (!empty($ai_content)) {
-                        array_push($conversation_messages, AIStepConversationManager::buildConversationMessage('assistant', $ai_content));
+                        array_push($conversation_messages, ConversationManager::buildConversationMessage('assistant', $ai_content));
                     }
                 }
                 
@@ -196,12 +198,12 @@ class AIStep {
                             continue;
                         }
 
-                        $validation_result = AIStepConversationManager::validateToolCall(
+                        $validation_result = ConversationManager::validateToolCall(
                             $tool_name, $tool_parameters, $conversation_messages
                         );
 
                         if ($validation_result['is_duplicate']) {
-                            $correction_message = AIStepConversationManager::generateDuplicateToolCallMessage($tool_name);
+                            $correction_message = ConversationManager::generateDuplicateToolCallMessage($tool_name);
                             array_push($conversation_messages, $correction_message);
 
                             do_action('datamachine_log', 'info', 'AI Agent: Duplicate tool call prevented', [
@@ -214,7 +216,7 @@ class AIStep {
                             continue;
                         }
 
-                        $tool_call_message = AIStepConversationManager::formatToolCallMessage(
+                        $tool_call_message = ConversationManager::formatToolCallMessage(
                             $tool_name, $tool_parameters, $turn_count
                         );
                         array_push($conversation_messages, $tool_call_message);
@@ -228,11 +230,11 @@ class AIStep {
                         ];
 
 
-                        $tool_result = AIStepTools::executeTool($tool_name, $tool_parameters, $available_tools, $data, $flow_step_id, $unified_parameters);
+                        $tool_result = ToolExecutor::executeTool($tool_name, $tool_parameters, $available_tools, $data, $flow_step_id, $unified_parameters);
                         $tool_def = $available_tools[$tool_name] ?? null;
                         $is_handler_tool = $tool_def && isset($tool_def['handler']);
                         
-                        $tool_result_message = AIStepConversationManager::formatToolResultMessage(
+                        $tool_result_message = ConversationManager::formatToolResultMessage(
                             $tool_name, $tool_result, $tool_parameters, $is_handler_tool, $turn_count
                         );
                         array_push($conversation_messages, $tool_result_message);
@@ -264,11 +266,13 @@ class AIStep {
                                 ],
                                 'timestamp' => time()
                             ];
-                            
+
                             $data = apply_filters('datamachine_data_packet', $data, $tool_result_entry, $flow_step_id, 'ai');
-                            
+
+                            $conversation_complete = true;
+
                         } else {
-                            $success_message = AIStepConversationManager::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
+                            $success_message = ConversationManager::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
                             
                             $data = apply_filters('datamachine_data_packet', $data, [
                                 'type' => 'tool_result',
@@ -311,5 +315,36 @@ class AIStep {
             ]);
             return $data;
         }
+    }
+
+    /**
+     * Update data packet content in conversation messages.
+     *
+     * Pipeline-specific functionality for updating data packet JSON in conversation history.
+     *
+     * @param array $conversation_messages Conversation message array
+     * @param array $data Data packet array to inject
+     * @return array Updated conversation messages
+     */
+    private static function updateDataPacketMessages(array $conversation_messages, array $data): array {
+        if (empty($conversation_messages) || empty($data)) {
+            return $conversation_messages;
+        }
+
+        foreach ($conversation_messages as $index => $message) {
+            if ($message['role'] === 'user' &&
+                isset($message['content']) &&
+                is_string($message['content']) &&
+                strpos($message['content'], '"data_packets"') !== false) {
+
+                $conversation_messages[$index]['content'] = json_encode(
+                    ['data_packets' => $data],
+                    JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
+                );
+                break;
+            }
+        }
+
+        return $conversation_messages;
     }
 }

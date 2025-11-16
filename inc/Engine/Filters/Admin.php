@@ -212,7 +212,7 @@ function datamachine_get_enabled_admin_pages() {
  */
 function datamachine_get_enabled_global_tools() {
     $settings = datamachine_get_datamachine_settings();
-    $all_tools = apply_filters('ai_tools', []);
+    $all_tools = apply_filters('chubes_ai_tools', []);
 
     $global_tools = array_filter($all_tools, function($tool_config) {
         return !isset($tool_config['handler']);

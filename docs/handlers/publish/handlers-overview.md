@@ -124,7 +124,7 @@ public function handle_tool_call(array $parameters, array $tool_def = []): array
 Each handler registers its tool via filters:
 
 ```php
-add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
+add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
     if ($handler_slug === 'twitter') {
         $tools['twitter_publish'] = [
             'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
@@ -409,7 +409,7 @@ class CustomPublishHandler {
 ### Tool Registration
 
 ```php
-add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
+add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
     if ($handler_slug === 'custom_platform') {
         $tools['custom_publish'] = [
             'class' => 'CustomPublishHandler',

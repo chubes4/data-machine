@@ -23,13 +23,27 @@ class JobsOperations {
         $this->table_name = $wpdb->prefix . 'datamachine_jobs';
     }
 
+    /**
+     * Create a new job record.
+     *
+     * Supports two execution modes:
+     * - Direct execution: pipeline_id=0, flow_id=0 (chat/API workflows without saved pipeline/flow)
+     * - Database flow: pipeline_id>0, flow_id>0 (saved pipelines and flows)
+     *
+     * @param array $job_data Job data with pipeline_id and flow_id
+     * @return int|false Job ID on success, false on failure
+     */
     public function create_job(array $job_data): int|false {
-        
+
         $pipeline_id = absint($job_data['pipeline_id'] ?? 0);
         $flow_id = absint($job_data['flow_id'] ?? 0);
-        
-        if (empty($pipeline_id) || empty($flow_id)) {
-            do_action('datamachine_log', 'error', 'Invalid pipeline+flow-based job data', [
+
+        // Validate execution mode: allow direct execution (0,0) or database flow (>0,>0)
+        $is_direct_execution = ($pipeline_id === 0 && $flow_id === 0);
+        $is_database_flow = ($pipeline_id > 0 && $flow_id > 0);
+
+        if (!$is_direct_execution && !$is_database_flow) {
+            do_action('datamachine_log', 'error', 'Invalid job data: mixed or invalid IDs', [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id
             ]);

@@ -93,12 +93,12 @@ function datamachine_register_pipelines_admin_page_filters() {
 function datamachine_get_ai_providers_for_react() {
     try {
         // Use AI HTTP Client library's filters directly
-        $library_providers = apply_filters('ai_providers', []);
+        $library_providers = apply_filters('chubes_ai_providers', []);
 
         $providers = [];
         foreach ($library_providers as $key => $provider_info) {
             // Get models for this provider via filter
-            $models = apply_filters('ai_models', $key);
+            $models = apply_filters('chubes_ai_models', $key);
 
             $providers[$key] = [
                 'label' => $provider_info['name'] ?? ucfirst($key),
@@ -122,9 +122,9 @@ function datamachine_get_ai_providers_for_react() {
  *
  * @return array AI tools with configuration status
  */
-function datamachine_get_ai_tools_for_react() {
+function datamachine_get_chubes_ai_tools_for_react() {
     // Get all available tools
-    $all_tools = apply_filters('ai_tools', []);
+    $all_tools = apply_filters('chubes_ai_tools', []);
 
     // Filter to only global tools (no handler property)
     $global_tools = array_filter($all_tools, function($tool_def) {

@@ -77,7 +77,7 @@ $databases['service_name'] = new ServiceClass();
 
 ## AI Integration Filters
 
-### `ai_tools`
+### `chubes_ai_tools`
 
 **Purpose**: Register AI tools for agentic execution
 
@@ -107,7 +107,7 @@ $tools['tool_name'] = [
 ];
 ```
 
-### `ai_request`
+### `chubes_ai_request`
 
 **Purpose**: Process AI requests with provider routing and modular directive system message injection
 
@@ -139,22 +139,22 @@ $request = [
 ];
 ```
 
-**5-Tier Auto-Registration**: Each directive class automatically registers with the ai_request filter:
+**5-Tier Auto-Registration**: Each directive class automatically registers with the chubes_ai_request filter:
 ```php
 // Priority 10: Plugin core directive (foundational AI agent identity)
-add_filter('ai_request', [PluginCoreDirective::class, 'inject'], 10, 5);
+add_filter('chubes_ai_request', [PluginCoreDirective::class, 'inject'], 10, 5);
 
 // Priority 20: Global system prompt (background guidance)
-add_filter('ai_request', [GlobalSystemPromptDirective::class, 'inject'], 20, 5);
+add_filter('chubes_ai_request', [GlobalSystemPromptDirective::class, 'inject'], 20, 5);
 
 // Priority 30: Pipeline system prompt (user configuration)
-add_filter('ai_request', [PipelineSystemPromptDirective::class, 'inject'], 30, 5);
+add_filter('chubes_ai_request', [PipelineSystemPromptDirective::class, 'inject'], 30, 5);
 
 // Priority 40: Tool definitions and directives (how to use available tools)
-add_filter('ai_request', [ToolDefinitionsDirective::class, 'inject'], 40, 5);
+add_filter('chubes_ai_request', [ToolDefinitionsDirective::class, 'inject'], 40, 5);
 
 // Priority 50: WordPress site context (environment info - lowest priority)
-add_filter('ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
+add_filter('chubes_ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
 ```
 
 ## Pipeline Operations Filters
@@ -456,26 +456,106 @@ $data = apply_filters('datamachine_data_packet', $data, $packet_data, $flow_step
 
 ### `datamachine_enabled_settings`
 
-**Purpose**: Get enabled settings for handlers/steps
+**Purpose**: Control which admin settings tabs are displayed
 
 **Parameters**:
-- `$fields` (array) - Default settings fields
-- `$handler_slug` (string) - Handler identifier
-- `$step_type` (string) - Step type
-- `$context` (array) - Additional context
+- `$settings` (array) - Array of settings tabs
 
-**Return**: Array of enabled settings fields
+**Return**: Modified array of enabled settings
+
+**Usage Example**:
+```php
+add_filter('datamachine_enabled_settings', function($settings) {
+    // Remove specific settings tabs
+    unset($settings['advanced']);
+    return $settings;
+});
+```
 
 ### `datamachine_apply_global_defaults`
 
-**Purpose**: Apply global default settings
+**Purpose**: Determine whether global defaults apply to specific handlers
 
 **Parameters**:
-- `$current_settings` (array) - Current settings
+- `$apply` (bool) - Whether to apply defaults (default: true)
 - `$handler_slug` (string) - Handler identifier
-- `$step_type` (string) - Step type
 
-**Return**: Array of settings with global defaults applied
+**Return**: Boolean indicating whether to apply global defaults
+
+**Usage Example**:
+```php
+add_filter('datamachine_apply_global_defaults', function($apply, $handler_slug) {
+    // Skip global defaults for specific handler
+    if ($handler_slug === 'custom_handler') {
+        return false;
+    }
+    return $apply;
+}, 10, 2);
+```
+
+## Directive System Filters
+
+### `datamachine_global_directives`
+
+**Purpose**: Modify global AI system directives applied across all AI interactions (pipeline + chat)
+
+**Parameters**:
+- `$directives` (array) - Current global directives
+
+**Return**: Modified directives array
+
+**Usage Example**:
+```php
+add_filter('datamachine_global_directives', function($directives) {
+    $directives[] = [
+        'priority' => 25,
+        'content' => 'Custom global directive for all AI agents'
+    ];
+    return $directives;
+});
+```
+
+### `datamachine_pipeline_directives`
+
+**Purpose**: Modify AI system directives for pipeline execution only
+
+**Parameters**:
+- `$directives` (array) - Current pipeline directives
+- `$pipeline_id` (int) - Pipeline ID for context
+
+**Return**: Modified directives array
+
+**Usage Example**:
+```php
+add_filter('datamachine_pipeline_directives', function($directives, $pipeline_id) {
+    $directives[] = [
+        'priority' => 35,
+        'content' => "Pipeline-specific directive for pipeline {$pipeline_id}"
+    ];
+    return $directives;
+}, 10, 2);
+```
+
+### `datamachine_chat_directives`
+
+**Purpose**: Modify AI system directives for chat conversations only
+
+**Parameters**:
+- `$directives` (array) - Current chat directives
+- `$session_id` (string) - Chat session ID for context
+
+**Return**: Modified directives array
+
+**Usage Example**:
+```php
+add_filter('datamachine_chat_directives', function($directives, $session_id) {
+    $directives[] = [
+        'priority' => 18,
+        'content' => 'Chat-specific directive for conversational interface'
+    ];
+    return $directives;
+}, 10, 2);
+```
 
 ## Navigation Filters
 

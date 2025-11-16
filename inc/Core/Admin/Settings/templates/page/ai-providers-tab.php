@@ -9,8 +9,8 @@ if (!defined('WPINC')) {
     die;
 }
 
-$providers = apply_filters('ai_providers', []);
-$current_keys = apply_filters('ai_provider_api_keys', null);
+$providers = apply_filters('chubes_ai_providers', []);
+$current_keys = apply_filters('chubes_ai_provider_api_keys', null);
 ?>
 
 <table class="form-table">

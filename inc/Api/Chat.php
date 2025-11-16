@@ -129,12 +129,12 @@ class Chat {
 			'content' => $message
 		];
 
-		$ai_request = [
+		$chubes_ai_request = [
 			'model' => $model,
 			'messages' => $messages,
 		];
 
-		$all_tools = apply_filters('ai_tools', [], null, []);
+		$all_tools = apply_filters('chubes_ai_tools', [], null, []);
 
 		$chat_tools = [];
 		foreach ($all_tools as $tool_name => $tool_def) {
@@ -152,7 +152,7 @@ class Chat {
 			'available_tools' => array_keys($chat_tools)
 		]);
 
-		$response = apply_filters('ai_request', $ai_request, $provider, null, $chat_tools, [
+		$response = apply_filters('chubes_ai_request', $chubes_ai_request, $provider, null, $chat_tools, [
 			'context' => 'chat',
 			'session_id' => $session_id
 		]);

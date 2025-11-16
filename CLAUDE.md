@@ -28,7 +28,7 @@ function datamachine_register_twitter_filters() {
         $providers['twitter'] = new TwitterAuth();
         return $providers;
     });
-    add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
+    add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
         if ($handler_slug === 'twitter') {
             $tools['twitter_publish'] = [
                 'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
@@ -47,7 +47,7 @@ datamachine_register_twitter_filters(); // Auto-execute at file load
 
 **Core Components**:
 - **Pipeline+Flow**: Templates → instances pattern
-- **Database**: 4 core tables (see Database Schema)
+- **Database**: 5 core tables (pipelines, flows, jobs, processed_items, chat_sessions)
 - **Handlers**: See Handler Matrix section
 - **AutoSave**: Complete pipeline persistence
 - **Admin**: `manage_options` security model
@@ -93,125 +93,22 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 
 **Dual-Layer Persistence**: Pipeline-level system prompts (templates) + flow-level user messages (instances)
 
-**5-Tier AI Directive Priority System**: AI requests receive multiple system messages via auto-registering directive classes with filter-based architecture:
-
-**Global Directives** (apply to ALL AI agents - pipeline + chat):
-- `datamachine_global_directives` filter for universal directive registration
-- **Priority 20** - Global System Prompt (`inc/Engine/AI/Directives/GlobalSystemPromptDirective.php`): User-configured foundational AI behavior
-- **Priority 50** - WordPress Site Context (`inc/Engine/AI/Directives/SiteContextDirective.php`): WordPress environment info (toggleable)
-
-**Pipeline-Specific Directives** (apply ONLY to pipeline AI steps):
-- `datamachine_pipeline_directives` filter for pipeline-only directive registration
-- **Priority 10** - Pipeline Core Directive (`inc/Core/Steps/AI/Directives/PipelineCoreDirective.php`): Foundational pipeline agent identity and operational principles
-- **Priority 30** - Pipeline System Prompt (`inc/Core/Steps/AI/Directives/PipelineSystemPromptDirective.php`): Pipeline instructions and workflow visualization
-- **Priority 40** - Pipeline Context Directive (`inc/Core/Steps/AI/Directives/PipelineContextDirective.php`): Workflow context and execution state
-- **Priority 40** - Tool Definitions Directive (`inc/Core/Steps/AI/Directives/ToolDefinitionsDirective.php`): Dynamic tool prompts and availability
-
-**Chat-Specific Directives** (apply ONLY to chat AI agents):
-- `datamachine_chat_directives` filter for chat-only directive registration
-- **Priority 15** - Chat Agent Directive (`inc/Api/Chat/ChatAgentDirective.php`): Chat agent identity, REST API documentation, conversation guidelines
+**AI Directive System**: Filter-based architecture with three directive categories - global (all AI agents), pipeline-only, and chat-only. Detailed system in `/docs/ai-system/` directory.
 
 **AI Conversation State Management**: Turn-based conversation loops with chronological ordering, state preservation, and duplicate detection via `AIStepConversationManager`.
 
 **Tool Categories**:
-- **Handler Tools**: Step-specific tools (twitter_publish, wordpress_update) registered via `ai_tools` filter, available when next step matches handler type
-- **Global Tools**: Universal tools (Google Search, Local Search, WebFetch, WordPress Post Reader) registered via `datamachine_global_tools` filter, available to all AI agents (pipeline + chat)
-- **Chat Tools**: Chat-specific tools (MakeAPIRequest) registered via `datamachine_chat_tools` filter, available only to chat AI agents
-
-**Tool Registration Patterns**:
-
-```php
-// Handler tools (step-specific)
-add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
-    if ($handler_slug === 'twitter') {
-        $tools['twitter_publish'] = [
-            'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
-            'method' => 'handle_tool_call',
-            'handler' => 'twitter',
-            'description' => 'Post content to Twitter (280 character limit)',
-            'parameters' => ['content' => ['type' => 'string', 'required' => true]],
-            'handler_config' => $handler_config
-        ];
-    }
-    return $tools;
-}, 10, 3);
-
-// Global tools (available to all AI agents)
-add_filter('datamachine_global_tools', function($tools) {
-    $tools['google_search'] = [
-        'class' => 'DataMachine\\Engine\\AI\\Tools\\GoogleSearch',
-        'method' => 'handle_tool_call',
-        'description' => 'Search Google for external information',
-        'requires_config' => true,
-        'parameters' => [/* ... */]
-    ];
-    return $tools;
-}, 10, 1);
-
-// Chat-specific tools
-add_filter('datamachine_chat_tools', function($tools) {
-    $tools['make_api_request'] = [
-        'class' => 'DataMachine\\Api\\Chat\\Tools\\MakeAPIRequest',
-        'method' => 'handle_tool_call',
-        'description' => 'Execute Data Machine REST API requests',
-        'parameters' => [/* ... */]
-    ];
-    return $tools;
-});
-```
-
-**Global Tool File Locations** (`inc/Engine/AI/Tools/`):
-- `GoogleSearch.php` - Web search with site restriction
-- `LocalSearch.php` - WordPress content search
-- `WebFetch.php` - Web page content retrieval
-- `WordPressPostReader.php` - Single post analysis
+- **Handler Tools**: Step-specific, registered via `chubes_ai_tools` filter
+- **Global Tools**: Universal, registered via `datamachine_global_tools` filter (GoogleSearch, LocalSearch, WebFetch, WordPressPostReader)
+- **Chat Tools**: Chat-only, registered via `datamachine_chat_tools` filter (MakeAPIRequest)
 
 ## Chat API
 
-**Conversational AI System**: Natural language interface for building and executing Data Machine workflows through multi-turn conversations.
+**Endpoint**: `POST /datamachine/v1/chat` - conversational AI for workflow building
 
-**Endpoint**: `POST /datamachine/v1/chat`
+**Session Management**: Persistent sessions via `wp_datamachine_chat_sessions` table with user isolation, 24-hour expiration
 
-**Implementation**: `inc/Api/Chat/Chat.php` with unified database component architecture
-
-**Session Management** (`inc/Core/Database/Chat/Chat.php`):
-- Unified database component with table creation and CRUD operations
-- Persistent conversation state across requests via `wp_datamachine_chat_sessions` table
-- User-scoped session isolation (users can only access their own sessions)
-- Automatic session creation on first message
-- Session expiration with 24-hour default timeout
-- Session metadata tracking (message count, timestamps, provider, model)
-
-**Filter-Based Architecture**:
-- Global tools loaded via `datamachine_global_tools` filter (available to all AI agents)
-- Chat-specific tools loaded via `datamachine_chat_tools` filter
-- Global directives applied via `datamachine_global_directives` filter
-- Chat directives applied via `datamachine_chat_directives` filter
-
-**Key Components**:
-- **ChatDatabase** (`inc/Core/Database/Chat/Chat.php`): Unified session management with table creation, CRUD operations, and expiration cleanup
-- **ChatAgentDirective** (`inc/Api/Chat/ChatAgentDirective.php`): AI system directive with REST API documentation and conversation guidelines
-- **MakeAPIRequest Tool** (`inc/Api/Chat/Tools/MakeAPIRequest.php`): Execute REST API operations from chat, registered via `datamachine_chat_tools` filter
-
-**Parameters**:
-- `message` (string, required): User message
-- `session_id` (string, optional): Continue existing conversation
-- `provider` (string, optional): AI provider (openai, anthropic, google, grok, openrouter) - uses default from settings if not provided
-- `model` (string, optional): Model identifier - uses default from settings if not provided
-
-**Response Format**:
-```json
-{
-  "success": true,
-  "session_id": "session_abc123",
-  "response": "AI response content",
-  "tool_calls": [],
-  "conversation": [/* message history */],
-  "metadata": {"message_count": 5, "last_activity": "2024-01-02 14:30:00"}
-}
-```
-
-**Integration Pattern**: Frontend chat interfaces connect via REST API with session continuity for multi-turn conversations. Provider and model parameters are optional - system uses defaults from Data Machine settings when not specified.
+**Key Components**: ChatDatabase, ChatAgentDirective, MakeAPIRequest tool - see `/docs/api-reference/rest-api.md` for complete API documentation
 
 ## Handler Matrix
 

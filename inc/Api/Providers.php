@@ -49,12 +49,12 @@ class Providers {
  	public static function handle_get_providers() {
 		try {
 			// Use AI HTTP Client library's filters directly
-			$library_providers = apply_filters('ai_providers', []);
+			$library_providers = apply_filters('chubes_ai_providers', []);
 
 			$providers = [];
 			foreach ($library_providers as $key => $provider_info) {
 				// Get models for this provider via filter
-				$models = apply_filters('ai_models', $key);
+				$models = apply_filters('chubes_ai_models', $key);
 
 				$providers[$key] = [
 					'label' => $provider_info['name'] ?? ucfirst($key),

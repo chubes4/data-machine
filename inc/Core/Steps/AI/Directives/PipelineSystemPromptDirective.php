@@ -169,5 +169,16 @@ class PipelineSystemPromptDirective {
 
 }
 
-// Self-register (Priority 30 = third in 5-tier directive system)
-add_filter('datamachine_pipeline_directives', [PipelineSystemPromptDirective::class, 'inject'], 30, 5);
+// Register with universal agent directive system (Priority 30 = third in 5-tier directive system)
+add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
+    if ($agent_type === 'pipeline') {
+        $request = PipelineSystemPromptDirective::inject(
+            $request,
+            $provider,
+            $tools,
+            $context['step_id'] ?? null,
+            $context['payload'] ?? []
+        );
+    }
+    return $request;
+}, 30, 5);

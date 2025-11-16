@@ -36,7 +36,7 @@ export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
 				);
 
 				if ( response.success ) {
-					refreshData();
+					refreshData(); // Pipeline-level refresh for new flow
 				} else {
 					alert(
 						response.message ||
@@ -52,6 +52,26 @@ export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
 					)
 				);
 			}
+		},
+		[ refreshData ]
+	);
+
+	/**
+	 * Handle flow deletion (pipeline-level refresh needed)
+	 */
+	const handleFlowDeleted = useCallback(
+		( flowId ) => {
+			refreshData(); // Refresh entire pipeline when flow is deleted
+		},
+		[ refreshData ]
+	);
+
+	/**
+	 * Handle flow duplication (pipeline-level refresh needed)
+	 */
+	const handleFlowDuplicated = useCallback(
+		( flowId ) => {
+			refreshData(); // Refresh entire pipeline when flow is duplicated
 		},
 		[ refreshData ]
 	);
@@ -99,6 +119,8 @@ export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
 						key={ flow.flow_id }
 						flow={ flow }
 						pipelineConfig={ pipelineConfig }
+						onFlowDeleted={ handleFlowDeleted }
+						onFlowDuplicated={ handleFlowDuplicated }
 					/>
 				) ) }
 

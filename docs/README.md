@@ -96,8 +96,8 @@ docs/
 
 **Engine Execution**
 - Three-action cycle (datamachine_run_flow_now → datamachine_execute_step → datamachine_schedule_next_step)
-- Action Scheduler integration
-- Enhanced centralized engine data architecture with `EngineData.php` filter providing unified `datamachine_engine_data` access with storage/retrieval mode detection - clean AI data packets with structured engine parameters via database storage and filter retrieval
+- Action Scheduler integration for scheduled flow execution
+- Centralized engine data architecture - clean AI data packets with structured engine parameters via database storage and filter retrieval
 - Job management and status tracking
 - Error handling and failure recovery
 - AutoSave system with complete pipeline persistence, flow synchronization, and cache invalidation
@@ -158,7 +158,10 @@ docs/
 - Publishing tools for each platform (twitter_publish, facebook_publish, etc.)
 - Update tools for content modification
 
-**Note**: Data Machine core plugin implements 10 REST API endpoint files with comprehensive functionality (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users). React architecture with REST API integration.
+**REST API Architecture**: 16 REST API endpoints implemented
+- Core endpoints: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users
+- Chat endpoints: Chat (base), Chat/Chat (conversations)
+- Admin interface: React 18 with complete REST API integration, zero AJAX dependencies
 
 ### ✅ Authentication Systems
 

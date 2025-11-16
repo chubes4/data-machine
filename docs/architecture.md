@@ -96,7 +96,7 @@ AI agents use tools to interact with handlers:
 ### Filter-Based Discovery
 All components self-register via WordPress filters:
 - `datamachine_handlers` - Register fetch/publish/update handlers
-- `ai_tools` - Register AI tools and capabilities
+- `chubes_ai_tools` - Register AI tools and capabilities
 - `datamachine_auth_providers` - Register authentication providers
 - `datamachine_step_types` - Register custom step types
 

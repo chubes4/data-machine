@@ -57,8 +57,8 @@ class Cache {
 
         add_action('datamachine_cache_set', [$instance, 'handle_cache_set'], 10, 4);
 
-        add_action('ai_model_cache_cleared', [$instance, 'handle_ai_cache_cleared'], 10, 1);
-        add_action('ai_all_model_cache_cleared', [$instance, 'handle_ai_all_cache_cleared'], 10, 0);
+        add_action('chubes_ai_model_cache_cleared', [$instance, 'handle_ai_cache_cleared'], 10, 1);
+        add_action('chubes_ai_all_model_cache_cleared', [$instance, 'handle_ai_all_cache_cleared'], 10, 0);
     }
 
     public function handle_clear_pipeline_cache($pipeline_id) {
@@ -214,7 +214,7 @@ class Cache {
         // CRITICAL: Fire the action so database components can respond with their own cache clearing
         do_action('datamachine_clear_all_cache');
 
-        do_action('ai_clear_all_cache');
+        do_action('chubes_ai_clear_all_cache');
 
         if (function_exists('wp_cache_flush')) {
             wp_cache_flush();

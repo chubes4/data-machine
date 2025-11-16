@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 }
 
 function datamachine_register_ai_step_filters() {
-    
+
     add_filter('datamachine_step_types', function($steps) {
         $steps['ai'] = [
             'label' => __('AI Agent', 'datamachine'),
@@ -24,7 +24,7 @@ function datamachine_register_ai_step_filters() {
         ];
         return $steps;
     });
-    
+
     add_filter('datamachine_step_settings', function($configs) {
         $configs['ai'] = [
             'config_type' => 'ai_configuration',
@@ -34,7 +34,22 @@ function datamachine_register_ai_step_filters() {
         ];
         return $configs;
     });
-    
+
+    // Register pipeline-specific tool enablement for universal Engine layer
+    add_filter('datamachine_tool_enabled', function($enabled, $tool_name, $tool_config, $context_id) {
+        // Pipeline agent: check step-specific tool selections
+        if ($context_id) {
+            $tools_instance = new AIStepTools();
+            $step_enabled_tools = $tools_instance->get_step_enabled_tools($context_id);
+            return in_array($tool_name, $step_enabled_tools);
+        }
+
+        // No context ID: use global tool enablement logic
+        $tool_configured = apply_filters('datamachine_tool_configured', false, $tool_name);
+        $requires_config = !empty($tool_config['requires_config']);
+        return !$requires_config || $tool_configured;
+    }, 10, 4);
+
 }
 
 add_filter('datamachine_parse_ai_response', '__return_empty_array');
@@ -44,7 +59,7 @@ add_filter('datamachine_parse_ai_response', '__return_empty_array');
 
 datamachine_register_ai_step_filters();
 
-add_action('ai_library_error', function($error_data) {
+add_action('chubes_ai_library_error', function($error_data) {
     do_action('datamachine_log', 'error', 'AI Library Error: ' . $error_data['component'] . ' - ' . $error_data['message'], [
         'component' => $error_data['component'],
         'message' => $error_data['message'],

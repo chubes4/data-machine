@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 class MakeAPIRequest {
 
 	/**
-	 * Register tool with ai_tools filter
+	 * Register tool with chubes_ai_tools filter
 	 *
 	 * @param array $tools Existing tools array
 	 * @return array Modified tools array
@@ -84,7 +84,7 @@ class MakeAPIRequest {
 		do_action('datamachine_log', 'debug', 'Chat agent making API request', [
 			'endpoint' => $endpoint,
 			'method' => $method,
-			'has_data' => !empty($data)
+			'request_data' => $data
 		]);
 
 		$request = new \WP_REST_Request($method, $endpoint);
@@ -115,7 +115,8 @@ class MakeAPIRequest {
 		do_action('datamachine_log', 'debug', 'Chat agent API request completed', [
 			'endpoint' => $endpoint,
 			'method' => $method,
-			'status' => $status_code
+			'status' => $status_code,
+			'response_data' => $response_data
 		]);
 
 		return [

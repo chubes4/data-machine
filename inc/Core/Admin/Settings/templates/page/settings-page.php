@@ -75,7 +75,7 @@ if (!in_array($active_tab, $valid_tabs)) {
     <!-- Pre-rendered Tool Config Modals (no AJAX loading) -->
     <?php
     // Get all configurable tools
-    $all_tools = apply_filters('ai_tools', []);
+    $all_tools = apply_filters('chubes_ai_tools', []);
     $configurable_tools = [];
     foreach ($all_tools as $tool_name => $tool_config) {
         if (!isset($tool_config['handler']) && ($tool_config['requires_config'] ?? false)) {

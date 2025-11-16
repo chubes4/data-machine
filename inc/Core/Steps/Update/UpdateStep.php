@@ -7,6 +7,8 @@
 
 namespace DataMachine\Core\Steps\Update;
 
+use DataMachine\Engine\AI\ToolParameters;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -142,7 +144,7 @@ class UpdateStep {
                 return null;
             }
 
-            $all_tools = apply_filters('ai_tools', [], $handler_slug, $handler_config);
+            $all_tools = apply_filters('chubes_ai_tools', [], $handler_slug, $handler_config);
             $handler_tools = array_filter($all_tools, function($tool) use ($handler_slug) {
                 return isset($tool['handler']) && $tool['handler'] === $handler_slug;
             });
@@ -171,7 +173,7 @@ class UpdateStep {
                 $tool_name = array_key_first($handler_tools);
                 $tool_def = $handler_tools[$tool_name];
                 
-                $handler_parameters = \DataMachine\Core\Steps\AI\AIStepToolParameters::buildForHandlerTool(
+                $handler_parameters = ToolParameters::buildForHandlerTool(
                     [], // No AI parameters - direct handler execution
                     $data,
                     $tool_def,

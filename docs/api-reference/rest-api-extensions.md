@@ -160,11 +160,11 @@ class DMEventsRestApi {
     public static function get_calendar_events($request) {
         // Server-side SQL filtering
         $query_args = [
-            'post_type' => 'dm_events',
+            'post_type' => 'datamachine_events',
             'post_status' => 'publish',
             'posts_per_page' => get_option('posts_per_page', 10),
             'paged' => $request->get_param('paged'),
-            'meta_key' => '_dm_event_datetime',
+            'meta_key' => '_datamachine_event_datetime',
             'orderby' => 'meta_value',
             'order' => 'ASC'
         ];
@@ -428,7 +428,7 @@ Move filtering/processing to server for performance:
 // Server-side SQL filtering
 $meta_query = [
     [
-        'key' => '_dm_event_datetime',
+        'key' => '_datamachine_event_datetime',
         'value' => [$date_start, $date_end],
         'compare' => 'BETWEEN',
         'type' => 'DATETIME'

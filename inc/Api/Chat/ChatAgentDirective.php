@@ -144,6 +144,36 @@ Help users build and execute automated workflows through natural language conver
 **DELETE /datamachine/v1/flows/{id}**
 - Delete flow
 
+### Job Monitoring
+
+**GET /datamachine/v1/jobs**
+- List all job executions
+- Returns job history with status, timestamps, and error messages
+
+**GET /datamachine/v1/jobs/{id}**
+- Get detailed job information
+- Includes job data, execution timeline, and results
+
+### System Logs
+
+**GET /datamachine/v1/logs**
+- Get log file metadata and configuration
+- Returns log file path, size, available levels, current level
+
+**GET /datamachine/v1/logs/content**
+- Retrieve log file content for debugging
+- Parameters:
+  - mode: "recent" (default, last 200 lines) or "full" (entire log file)
+  - limit: Number of lines (1-10000)
+- Use this to diagnose pipeline issues, check execution status, and troubleshoot errors
+
+**DELETE /datamachine/v1/logs**
+- Clear log file contents
+
+**PUT /datamachine/v1/logs/level**
+- Update log level dynamically
+- Body: { "level": "debug|info|warning|error" }
+
 ## Workflow JSON Structure
 
 Ephemeral workflows consist of ordered steps executed sequentially:
@@ -264,5 +294,15 @@ PROMPT;
 	}
 }
 
-// Self-register for chat context (Priority 15)
-add_filter('datamachine_chat_directives', [ChatAgentDirective::class, 'inject'], 15, 4);
+// Register with universal agent directive system (Priority 15)
+add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
+    if ($agent_type === 'chat') {
+        $request = ChatAgentDirective::inject(
+            $request,
+            $provider,
+            $tools,
+            $context['session_id'] ?? null
+        );
+    }
+    return $request;
+}, 15, 5);

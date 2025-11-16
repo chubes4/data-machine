@@ -112,4 +112,110 @@ class ConversationManager {
         $tool_display = ucwords(str_replace('_', ' ', $tool_name));
         return "TOOL FAILED: {$tool_display} execution failed - {$error_message}. Please review the error and adjust your approach if needed.";
     }
+
+    /**
+     * Validate if a tool call is a duplicate of the previous tool call.
+     *
+     * @param string $tool_name Tool name to validate
+     * @param array $tool_parameters Tool parameters to validate
+     * @param array $conversation_messages Conversation history
+     * @return array Validation result with is_duplicate and message
+     */
+    public static function validateToolCall(string $tool_name, array $tool_parameters, array $conversation_messages): array {
+        if (empty($conversation_messages)) {
+            return ['is_duplicate' => false, 'message' => ''];
+        }
+
+        $previous_tool_call = null;
+        for ($i = count($conversation_messages) - 1; $i >= 0; $i--) {
+            $message = $conversation_messages[$i];
+
+            if ($message['role'] === 'assistant' &&
+                isset($message['content']) &&
+                is_string($message['content']) &&
+                strpos($message['content'], 'AI ACTION') === 0) {
+
+                $previous_tool_call = self::extractToolCallFromMessage($message);
+                break;
+            }
+        }
+
+        if (!$previous_tool_call) {
+            return ['is_duplicate' => false, 'message' => ''];
+        }
+
+        $is_duplicate = ($previous_tool_call['tool_name'] === $tool_name) &&
+                       ($previous_tool_call['parameters'] === $tool_parameters);
+
+        if ($is_duplicate) {
+            $correction_message = "You just called the {$tool_name} tool with the exact same parameters as your previous action. Please try a different approach or use different parameters instead.";
+            return ['is_duplicate' => true, 'message' => $correction_message];
+        }
+
+        return ['is_duplicate' => false, 'message' => ''];
+    }
+
+    /**
+     * Extract tool call details from a conversation message.
+     *
+     * @param array $message Conversation message
+     * @return array|null Tool call details or null if not a tool call message
+     */
+    public static function extractToolCallFromMessage(array $message): ?array {
+        if ($message['role'] !== 'assistant' || !isset($message['content'])) {
+            return null;
+        }
+
+        $content = $message['content'];
+
+        if (!preg_match('/AI ACTION \(Turn \d+\): Executing (.+?)(?: with parameters: (.+))?$/', $content, $matches)) {
+            return null;
+        }
+
+        $tool_display_name = trim($matches[1]);
+        $tool_name = strtolower(str_replace(' ', '_', $tool_display_name));
+
+        $parameters = [];
+        if (isset($matches[2]) && !empty($matches[2])) {
+            $params_string = $matches[2];
+
+            $param_pairs = explode(', ', $params_string);
+            foreach ($param_pairs as $pair) {
+                if (strpos($pair, ': ') !== false) {
+                    list($key, $value) = explode(': ', $pair, 2);
+                    $key = trim($key);
+                    $value = trim($value);
+
+                    if (substr($value, -3) === '...') {
+                        $value = substr($value, 0, -3) . '_truncated_' . time();
+                    }
+
+                    $decoded = json_decode($value, true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $parameters[$key] = $decoded;
+                    } else {
+                        $parameters[$key] = $value;
+                    }
+                }
+            }
+        }
+
+        return [
+            'tool_name' => $tool_name,
+            'parameters' => $parameters
+        ];
+    }
+
+    /**
+     * Generate a user message for duplicate tool call prevention.
+     *
+     * @param string $tool_name Tool name that was duplicated
+     * @return array Formatted user message
+     */
+    public static function generateDuplicateToolCallMessage(string $tool_name): array {
+        $tool_display = ucwords(str_replace('_', ' ', $tool_name));
+        $message = "You just called the {$tool_display} tool with the exact same parameters as your previous action. Please try a different approach or use different parameters instead.";
+
+        return self::buildConversationMessage('user', $message);
+    }
 }

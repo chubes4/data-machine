@@ -13,6 +13,7 @@ namespace DataMachine\Api\Chat;
 
 use DataMachine\Core\Database\Chat\Chat as ChatDatabase;
 use DataMachine\Engine\AI\ConversationManager;
+use DataMachine\Engine\AI\AIConversationLoop;
 use WP_REST_Server;
 use WP_REST_Request;
 use WP_Error;
@@ -129,7 +130,7 @@ class Chat {
 				);
 			}
 
-			if ($session['user_id'] !== $user_id) {
+			if ((int) $session['user_id'] !== $user_id) {
 				return new WP_Error(
 					'session_access_denied',
 					__('Access denied to this session', 'datamachine'),
@@ -175,50 +176,37 @@ class Chat {
 			'available_tools' => array_keys($all_tools)
 		]);
 
-		// Build AI request using centralized RequestBuilder
-		$response = \DataMachine\Engine\AI\RequestBuilder::build(
+		// Execute conversation loop with tool execution
+		$loop = new AIConversationLoop();
+		$loop_result = $loop->execute(
 			$messages,
+			$all_tools,
 			$provider,
 			$model,
-			$all_tools,
 			'chat',
-			['session_id' => $session_id]
+			['session_id' => $session_id],
+			8
 		);
 
-		if (is_wp_error($response)) {
-			do_action('datamachine_log', 'error', 'Chat AI request failed', [
+		// Check for errors
+		if (isset($loop_result['error'])) {
+			do_action('datamachine_log', 'error', 'Chat conversation loop failed', [
 				'session_id' => $session_id,
 				'provider' => $provider,
-				'error' => $response->get_error_message()
-			]);
-
-			return $response;
-		}
-
-		if (!$response['success']) {
-			do_action('datamachine_log', 'error', 'Chat AI request failed', [
-				'session_id' => $session_id,
-				'provider' => $provider,
-				'error' => $response['error'] ?? 'Unknown error'
+				'error' => $loop_result['error'],
+				'turn_count' => $loop_result['turn_count'] ?? 0
 			]);
 
 			return new WP_Error(
-				'ai_request_failed',
-				$response['error'] ?? __('AI request failed', 'datamachine'),
+				'chubes_ai_request_failed',
+				$loop_result['error'],
 				['status' => 500]
 			);
 		}
 
-		$ai_content = $response['data']['content'] ?? '';
-		$tool_calls = $response['data']['tool_calls'] ?? [];
-
-		$ai_message = ConversationManager::buildConversationMessage('assistant', $ai_content);
-
-		if (!empty($tool_calls)) {
-			$ai_message['tool_calls'] = $tool_calls;
-		}
-
-		$messages[] = $ai_message;
+		// Use final conversation state from loop
+		$messages = $loop_result['messages'];
+		$final_content = $loop_result['final_content'];
 
 		$metadata = [
 			'last_activity' => current_time('mysql'),
@@ -242,14 +230,15 @@ class Chat {
 		do_action('datamachine_log', 'info', 'Chat message processed successfully', [
 			'session_id' => $session_id,
 			'message_count' => count($messages),
-			'tool_calls' => count($ai_message['tool_calls'] ?? [])
+			'turn_count' => $loop_result['turn_count'],
+			'completed_naturally' => $loop_result['completed']
 		]);
 
 		return rest_ensure_response([
 			'success' => true,
 			'session_id' => $session_id,
-			'response' => $ai_message['content'] ?? '',
-			'tool_calls' => $ai_message['tool_calls'] ?? [],
+			'response' => $final_content,
+			'tool_calls' => $loop_result['last_tool_calls'],
 			'conversation' => $messages,
 			'metadata' => $metadata
 		]);

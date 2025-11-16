@@ -37,7 +37,7 @@ function datamachine_register_twitter_filters() {
         return $all_settings;
     }, 10, 2);
 
-    add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
+    add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
         if ($handler_slug === 'twitter') {
             $tools['twitter_publish'] = datamachine_get_twitter_tool($handler_config);
         }

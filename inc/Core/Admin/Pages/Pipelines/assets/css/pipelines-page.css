@@ -333,8 +333,9 @@
 	display: flex;
 	align-items: center;
 	position: relative;
-	border-bottom: 1px solid #eee;
-	background: #fafafa;
+	border-bottom: 1px solid var(--datamachine-border-1);
+	background: var(--datamachine-bg-light);
+	border-radius: var(--datamachine-border-radius);
 }
 
 .datamachine-flow-header__content {
@@ -410,6 +411,7 @@
 /* Flow step card inline style replacements */
 .datamachine-step-content {
 	margin-bottom: 12px;
+    padding: 15px;
 }
 
 .datamachine-step-header-row {
@@ -565,8 +567,9 @@
 
 .datamachine-flow-footer {
 	padding: 8px 16px;
-	border-top: 1px solid #eee;
-	background: #f9f9f9;
+	border-top: 1px solid var(--datamachine-border-1);
+	background: var(--datamachine-bg-light);
+	border-radius: var(--datamachine-border-radius);
 }
 
 /* ===== COMPONENT: FLOWS SECTION ===== */
@@ -1083,7 +1086,7 @@
  * WordPress Components Overrides
  * Override default WordPress core CardBody padding in Data Machine modals
  */
-.components-card-body {
+.datamachine-flows-list .components-card-body {
     padding: 0;
 }
 .datamachine-step-card-wrapper {

@@ -199,9 +199,9 @@ function datamachine_sanitize_settings($input) {
 
         // Save to AI HTTP Client library's storage
         if (!empty($provider_keys)) {
-            $all_keys = apply_filters('ai_provider_api_keys', null);
+            $all_keys = apply_filters('chubes_ai_provider_api_keys', null);
             $updated_keys = array_merge($all_keys, $provider_keys);
-            apply_filters('ai_provider_api_keys', $updated_keys);
+            apply_filters('chubes_ai_provider_api_keys', $updated_keys);
         }
     }
 

@@ -136,7 +136,7 @@ class Handlers {
 
 		// Get AI tool definition
 		$ai_tool = null;
-		$tools = apply_filters('ai_tools', [], $handler_slug, []);
+		$tools = apply_filters('chubes_ai_tools', [], $handler_slug, []);
 
 		// Find the tool associated with this handler
 		foreach ($tools as $tool_name => $tool_def) {

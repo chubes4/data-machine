@@ -46,8 +46,7 @@ class PipelineCoreDirective {
         $directive .= "WORKFLOW APPROACH:\n";
         $directive .= "- Analyze available data and context before taking action\n";
         $directive .= "- Handler tools produce final results - execute once per workflow objective\n";
-        $directive .= "- Execute handler tools only when ready to produce final pipeline outputs\n";
-        $directive .= "- STOP EXECUTION after successful handler tool completion\n\n";
+        $directive .= "- Execute handler tools only when ready to produce final pipeline outputs\n\n";
 
         $directive .= "DATA PACKET STRUCTURE:\n";
         $directive .= "You will receive content as JSON data packets. Every packet contains these guaranteed fields:\n";
@@ -59,4 +58,16 @@ class PipelineCoreDirective {
     }
 }
 
-add_filter('datamachine_pipeline_directives', [PipelineCoreDirective::class, 'inject'], 10, 5);
+// Register with universal agent directive system
+add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
+    if ($agent_type === 'pipeline') {
+        $request = PipelineCoreDirective::inject(
+            $request,
+            $provider,
+            $tools,
+            $context['step_id'] ?? null,
+            $context['payload'] ?? []
+        );
+    }
+    return $request;
+}, 10, 5);

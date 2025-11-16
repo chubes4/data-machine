@@ -29,7 +29,7 @@ function datamachine_register_wordpress_update_filters() {
         return $all_settings;
     }, 10, 2);
 
-    add_filter('ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
+    add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
         if ($handler_slug === 'wordpress_update') {
             $tools['wordpress_update'] = datamachine_get_dynamic_wordpress_update_tool($handler_config);
         }

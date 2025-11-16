@@ -973,9 +973,9 @@ class Pipelines {
 		if (!empty($ai_api_key) && !empty($ai_provider)) {
 			try {
 				// Use AI HTTP Client library's filters directly to save API key
-				$all_keys = apply_filters('ai_provider_api_keys', null);
+				$all_keys = apply_filters('chubes_ai_provider_api_keys', null);
 				$all_keys[$ai_provider] = $ai_api_key;
-				apply_filters('ai_provider_api_keys', $all_keys);
+				apply_filters('chubes_ai_provider_api_keys', $all_keys);
 
 				do_action('datamachine_log', 'debug', 'API key saved via AI HTTP Client filters', [
 					'provider' => $ai_provider,
