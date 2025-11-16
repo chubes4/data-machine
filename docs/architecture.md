@@ -81,17 +81,28 @@ Unified OAuth2 and API key management:
 - API key providers: Google Search, AI services
 - Centralized configuration validation
 
-### Tool-First AI Architecture
-AI agents use tools to interact with handlers:
+### Universal Engine Architecture
+
+Data Machine v0.2.0 introduced a universal Engine layer (`/inc/Engine/AI/`) that serves both Pipeline and Chat agents with shared AI infrastructure:
+
+**Core Engine Components**:
+
+- **AIConversationLoop** (`/inc/Engine/AI/AIConversationLoop.php`): Multi-turn conversation execution with tool calling support, automatic conversation completion detection, turn-based state management with chronological ordering, and duplicate message prevention
+
+- **ToolExecutor** (`/inc/Engine/AI/ToolExecutor.php`): Universal tool discovery via `getAvailableTools()` method, filter-based tool enablement per agent type, handler tool and global tool integration, and tool configuration validation
+
+- **ToolParameters** (`/inc/Engine/AI/ToolParameters.php`): Centralized parameter building for all AI tools, content/title extraction from data packets, tool metadata integration (tool_definition, tool_name, handler_config), and engine parameter merging for handlers (source_url, image_url)
+
+- **ConversationManager** (`/inc/Engine/AI/ConversationManager.php`): Message formatting utilities for AI requests, tool call recording and tracking, conversation message normalization, and chronological message ordering
+
+- **RequestBuilder** (`/inc/Engine/AI/RequestBuilder.php`): Centralized AI request construction for all agents, directive application system (global, agent-specific, pipeline, chat), tool restructuring for AI provider compatibility, and integration with ai-http-client library
+
+**Tool Categories**:
 - Handler-specific tools for publish/update operations (twitter_publish, wordpress_update)
-- General tools for search and analysis (Google Search, Local Search, WebFetch)
-- Automatic tool discovery and configuration
-- AIStepToolParameters class provides unified flat parameter building:
-  - Content/title extraction from data packets
-  - Tool metadata integration (tool_definition, tool_name, handler_config)
-  - Engine parameter merging for handlers (source_url for link attribution and post identification)
+- Global tools in `/inc/Engine/AI/Tools/` for search and analysis (GoogleSearch, LocalSearch, WebFetch, WordPressPostReader)
+- Chat-only tools for workflow building (MakeAPIRequest)
+- Automatic tool discovery and configuration via filter-based system
 - Three-layer tool enablement: Global settings → Modal selection → Runtime validation
-- Enhanced AIStepConversationManager for conversation state management with turn tracking, temporal context, duplicate detection, and conversation validation
 
 ### Filter-Based Discovery
 All components self-register via WordPress filters:
@@ -214,26 +225,20 @@ Complete extension system for custom handlers and tools:
 
 ### AI Integration
 - Multiple provider support (200+ models via OpenRouter)
-- Enhanced 5-tier AI directive priority system with standardized spacing and auto-registration:
-  - **Priority 10**: PluginCoreDirective (foundational AI agent identity with workflow termination logic and data packet structure guidance)
-  - **Priority 20**: GlobalSystemPromptDirective (user-configured foundational AI behavior)
-  - **Priority 30**: PipelineSystemPromptDirective (pipeline instructions and workflow visualization)
-  - **Priority 40**: ToolDefinitionsDirective (dynamic tool prompts and workflow context)
-  - **Priority 50**: SiteContextDirective (WordPress environment info, toggleable)
-- Advanced AIStepConversationManager for centralized conversation state management:
-  - Turn-based conversation loops with chronological message ordering and temporal context
-  - AI tool calls recorded before execution with turn number tracking and duplicate detection
-  - Enhanced tool result messaging with temporal context and conversation validation
-  - Conversation completion with natural AI agent termination and success/failure tracking
-  - Data packet synchronization via `updateDataPacketMessages()` with JSON synchronization
-  - Duplicate tool call detection with parameter comparison and corrective messaging
-- Enhanced AIStepToolParameters class for unified tool execution:
-  - `buildParameters()` for standard AI tools with centralized parameter management
-  - `buildForHandlerTool()` for handler tools with engine parameters and unified execution patterns
-  - Flat parameter structure with content/title extraction and structured processing
-- Clear tool result messaging enabling natural AI agent conversation termination with enhanced validation
-- Site context injection with automatic cache invalidation
+- **Filter-Based Directive System**: Four directive categories applied by RequestBuilder:
+  - `datamachine_global_directives` - Applied to all AI agents (Pipeline and Chat)
+  - `datamachine_agent_directives` - Agent-specific directives differentiated by type
+  - `datamachine_pipeline_directives` - Pipeline-only directives (PipelineCoreDirective, PipelineSystemPromptDirective, PipelineContextDirective, ToolDefinitionsDirective)
+  - `datamachine_chat_directives` - Chat-only directives
+- **Universal Engine Architecture**: Shared AI infrastructure via `/inc/Engine/AI/` components:
+  - AIConversationLoop for multi-turn conversation execution with automatic tool calling
+  - ToolExecutor for universal tool discovery and execution
+  - ToolParameters for centralized parameter building (`buildParameters()` for standard tools, `buildForHandlerTool()` for handler tools with engine data)
+  - ConversationManager for message formatting and conversation utilities
+  - RequestBuilder for centralized AI request construction with directive application
+- Site context injection with automatic cache invalidation (SiteContextDirective in global directives)
 - Tool result formatting with success/failure messages
+- Clear tool result messaging enabling natural AI agent conversation termination
 
 ### Data Processing
 - **Explicit Data Separation Architecture**: Clean data packets for AI processing vs engine parameters for handlers

@@ -1,0 +1,602 @@
+# Tool Execution Architecture
+
+**Files**:
+- `/inc/Engine/AI/ToolExecutor.php`
+- `/inc/Engine/AI/ToolParameters.php`
+
+**Since**: 0.2.0
+
+Universal tool discovery, enablement, and execution infrastructure shared by Pipeline AI and Chat API agents. Provides centralized tool management with filter-based registration and configuration validation.
+
+## Overview
+
+The tool execution architecture consists of two core components:
+
+1. **ToolExecutor** - Tool discovery, validation, and execution
+2. **ToolParameters** - Centralized parameter building and merging
+
+Together, these components ensure consistent tool behavior across all AI agents while supporting flexible, filter-based tool registration.
+
+## ToolExecutor
+
+**File**: `/inc/Engine/AI/ToolExecutor.php`
+
+Handles tool discovery via filters, enablement validation, and execution with comprehensive error handling.
+
+### Tool Discovery
+
+Tools are discovered through three filter-based registration patterns:
+
+```php
+public static function getAvailableTools(
+    ?array $previous_step_config = null,
+    ?array $next_step_config = null,
+    ?string $current_pipeline_step_id = null
+): array
+```
+
+**Pipeline Agent Usage** (with step context):
+```php
+$tools = ToolExecutor::getAvailableTools(
+    $previous_step_config,    // Previous step configuration
+    $next_step_config,        // Next step configuration
+    $current_pipeline_step_id // Current pipeline step ID
+);
+```
+
+**Chat Agent Usage** (global tools only):
+```php
+$tools = ToolExecutor::getAvailableTools(null, null, null);
+```
+
+### Tool Registration Patterns
+
+#### 1. Handler Tools (Step-Specific)
+
+Tools registered via `chubes_ai_tools` filter, scoped to specific handlers:
+
+```php
+add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
+    if ($handler_slug === 'twitter') {
+        $tools['twitter_publish'] = [
+            'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
+            'method' => 'handle_tool_call',
+            'handler' => 'twitter',
+            'description' => 'Post content to Twitter (280 character limit)',
+            'parameters' => [
+                'content' => [
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'Tweet content (max 280 chars)'
+                ]
+            ],
+            'handler_config' => $handler_config
+        ];
+    }
+    return $tools;
+}, 10, 3);
+```
+
+**Key**: Tools with `'handler'` field are automatically filtered to matching handler slug.
+
+#### 2. Global Tools (All Agents)
+
+Tools registered via `datamachine_global_tools` filter, available to all AI agents:
+
+```php
+add_filter('datamachine_global_tools', function($tools) {
+    $tools['google_search'] = [
+        'class' => 'DataMachine\\Engine\\AI\\Tools\\GoogleSearch',
+        'method' => 'handle_tool_call',
+        'description' => 'Search the web using Google Custom Search',
+        'parameters' => [
+            'query' => [
+                'type' => 'string',
+                'required' => true,
+                'description' => 'Search query'
+            ]
+        ],
+        'requires_config' => true
+    ];
+    return $tools;
+});
+```
+
+**Location**: `/inc/Engine/AI/Tools/`
+
+**Global Tools**:
+- `google_search` - Web search via Google Custom Search API
+- `local_search` - WordPress content search
+- `web_fetch` - Retrieve web page content
+- `wordpress_post_reader` - Read specific WordPress post by URL
+
+#### 3. Chat-Only Tools
+
+Tools registered via `datamachine_chat_tools` filter, available only to Chat agent:
+
+```php
+add_filter('datamachine_chat_tools', function($tools) {
+    $tools['make_api_request'] = [
+        'class' => 'DataMachine\\Api\\Chat\\Tools\\MakeAPIRequest',
+        'method' => 'handle_tool_call',
+        'description' => 'Make REST API requests to Data Machine endpoints',
+        'parameters' => [
+            'endpoint' => [
+                'type' => 'string',
+                'required' => true,
+                'description' => 'API endpoint path'
+            ],
+            'method' => [
+                'type' => 'string',
+                'required' => true,
+                'description' => 'HTTP method (GET, POST, PUT, DELETE)'
+            ]
+        ]
+    ];
+    return $tools;
+});
+```
+
+**Chat Tools**:
+- `make_api_request` - Execute Data Machine REST API operations
+
+### Tool Enablement Control
+
+Tools must pass enablement validation before being made available to AI agents:
+
+```php
+private static function getAllowedTools(
+    array $all_tools,
+    ?string $handler_slug,
+    ?string $pipeline_step_id = null
+): array
+```
+
+**Enablement Logic**:
+
+1. **Handler Tools**: Automatically enabled if handler matches
+2. **Global/Chat Tools**: Must pass two checks:
+   - `datamachine_tool_enabled` filter returns true
+   - `datamachine_tool_configured` filter returns true (if tool requires configuration)
+
+**Pipeline Agent Enablement** (step-specific):
+```php
+add_filter('datamachine_tool_enabled', function($enabled, $tool_name, $tool_config, $pipeline_step_id) {
+    if ($pipeline_step_id) {
+        // Check if tool is enabled for this specific pipeline step
+        $step_config = apply_filters('datamachine_get_flow_step_config', [], $pipeline_step_id);
+        $enabled_tools = $step_config['enabled_tools'] ?? [];
+        return in_array($tool_name, $enabled_tools);
+    }
+    return $enabled;
+}, 10, 4);
+```
+
+**Chat Agent Enablement** (global):
+```php
+add_filter('datamachine_tool_enabled', function($enabled, $tool_name, $tool_config, $context_id) {
+    if ($context_id === null) {
+        // Chat agent: use global tool enablement
+        $tool_configured = apply_filters('datamachine_tool_configured', false, $tool_name);
+        $requires_config = !empty($tool_config['requires_config']);
+        return !$requires_config || $tool_configured;
+    }
+    return $enabled;
+}, 5, 4); // Priority 5 so pipeline (priority 10) can override
+```
+
+### Configuration Validation
+
+Tools requiring external services or API keys use the `requires_config` flag:
+
+```php
+$tools['google_search'] = [
+    'class' => 'DataMachine\\Engine\\AI\\Tools\\GoogleSearch',
+    'method' => 'handle_tool_call',
+    'description' => 'Search the web using Google Custom Search',
+    'parameters' => [...],
+    'requires_config' => true  // Requires API key + search engine ID
+];
+```
+
+**Configuration Check**:
+```php
+add_filter('datamachine_tool_configured', function($configured, $tool_name) {
+    if ($tool_name === 'google_search') {
+        $settings = datamachine_get_data_machine_settings();
+        $api_key = $settings['google_search_api_key'] ?? '';
+        $search_engine_id = $settings['google_search_engine_id'] ?? '';
+        return !empty($api_key) && !empty($search_engine_id);
+    }
+    return $configured;
+}, 10, 2);
+```
+
+### Tool Execution
+
+Execute tools with automatic parameter building and error handling:
+
+```php
+public static function executeTool(
+    string $tool_name,
+    array $tool_parameters,
+    array $available_tools,
+    array $data,
+    ?string $flow_step_id,
+    array $unified_parameters
+): array
+```
+
+**Pipeline Agent Execution**:
+```php
+$result = ToolExecutor::executeTool(
+    $tool_name,           // 'twitter_publish'
+    $tool_parameters,     // ['content' => 'Tweet text']
+    $available_tools,     // All available tools array
+    $data,                // Data packets from previous steps
+    $flow_step_id,        // 'step_uuid_flow_123'
+    [
+        'job_id' => $job_id,
+        'data' => $data,
+        'handler_config' => $handler_config,
+        // ... additional engine parameters
+    ]
+);
+```
+
+**Chat Agent Execution**:
+```php
+$result = ToolExecutor::executeTool(
+    $tool_name,           // 'make_api_request'
+    $tool_parameters,     // ['endpoint' => '/flows', 'method' => 'GET']
+    $available_tools,     // All available tools array
+    [],                   // Empty data packets for chat
+    null,                 // No flow_step_id for chat
+    [
+        'session_id' => $session_id
+    ]
+);
+```
+
+**Execution Process**:
+
+1. Validate tool exists in available tools
+2. Build complete parameters via `ToolParameters::buildParameters()`
+3. Instantiate tool class
+4. Call `handle_tool_call()` method with complete parameters
+5. Return standardized result array
+
+**Result Structure**:
+```php
+[
+    'success' => true,           // Execution status
+    'data' => [...],             // Tool-specific result data
+    'tool_name' => 'tool_name',  // Tool identifier
+    'error' => 'Error message'   // Only present if success=false
+]
+```
+
+### Error Handling
+
+Comprehensive error handling for tool execution failures:
+
+**Tool Not Found**:
+```php
+if (!$tool_def) {
+    return [
+        'success' => false,
+        'error' => "Tool '{$tool_name}' not found",
+        'tool_name' => $tool_name
+    ];
+}
+```
+
+**Class Not Found**:
+```php
+if (!class_exists($class_name)) {
+    return [
+        'success' => false,
+        'error' => "Tool class '{$class_name}' not found",
+        'tool_name' => $tool_name
+    ];
+}
+```
+
+**Execution Exception**:
+```php
+try {
+    $tool_handler = new $class_name();
+    $tool_result = $tool_handler->handle_tool_call($complete_parameters, $tool_def);
+    return $tool_result;
+} catch (\Exception $e) {
+    do_action('datamachine_log', 'error', 'ToolExecutor: Tool execution exception', [
+        'flow_step_id' => $flow_step_id,
+        'tool_name' => $tool_name,
+        'exception' => $e->getMessage(),
+        'trace' => $e->getTraceAsString()
+    ]);
+
+    return [
+        'success' => false,
+        'error' => 'Tool execution exception: ' . $e->getMessage(),
+        'tool_name' => $tool_name
+    ];
+}
+```
+
+## ToolParameters
+
+**File**: `/inc/Engine/AI/ToolParameters.php`
+
+Centralized parameter building for AI tool execution. Merges AI-provided parameters with engine context to create complete parameter sets.
+
+### Standard Parameter Building
+
+Build unified flat parameter structure for tool execution:
+
+```php
+public static function buildParameters(
+    array $ai_tool_parameters,
+    array $unified_parameters,
+    array $tool_definition
+): array
+```
+
+**Usage**:
+```php
+$complete_parameters = ToolParameters::buildParameters(
+    ['query' => 'WordPress SEO tips'],  // AI parameters
+    ['session_id' => $session_id],      // Unified context
+    $tool_definition                     // Tool definition array
+);
+
+// Result:
+// [
+//     'session_id' => 'session_123',
+//     'content' => null,
+//     'title' => null,
+//     'tool_definition' => [...],
+//     'tool_name' => 'google_search',
+//     'handler_config' => [],
+//     'query' => 'WordPress SEO tips'
+// ]
+```
+
+**Parameter Building Process**:
+
+1. Start with unified parameters (session_id, job_id, data, etc.)
+2. Extract `content` from data packet if tool requires it
+3. Extract `title` from data packet if tool requires it
+4. Add tool metadata (tool_definition, tool_name, handler_config)
+5. Merge AI-provided parameters (overwrites defaults)
+
+### Content Extraction
+
+Automatic content extraction from data packets for tools requiring content:
+
+```php
+private static function extractContent(array $data_packet, array $tool_definition): ?string
+{
+    $tool_params = $tool_definition['parameters'] ?? [];
+    if (!isset($tool_params['content'])) {
+        return null; // Tool doesn't require content
+    }
+
+    $latest_entry = !empty($data_packet) ? $data_packet[0] : [];
+    $content_data = $latest_entry['content'] ?? [];
+    return $content_data['body'] ?? null;
+}
+```
+
+**Example**: Twitter publish tool receives content from AI step's data packet automatically.
+
+### Title Extraction
+
+Automatic title extraction from data packets for tools requiring title:
+
+```php
+private static function extractTitle(array $data_packet, array $tool_definition): ?string
+{
+    $tool_params = $tool_definition['parameters'] ?? [];
+    if (!isset($tool_params['title'])) {
+        return null; // Tool doesn't require title
+    }
+
+    $latest_entry = !empty($data_packet) ? $data_packet[0] : [];
+    $content_data = $latest_entry['content'] ?? [];
+    return $content_data['title'] ?? null;
+}
+```
+
+### Handler Tool Parameter Building
+
+Build parameters for handler tools with engine data integration:
+
+```php
+public static function buildForHandlerTool(
+    array $ai_tool_parameters,
+    array $data,
+    array $tool_definition,
+    array $engine_parameters,
+    array $handler_config
+): array
+```
+
+**Usage**:
+```php
+$complete_parameters = ToolParameters::buildForHandlerTool(
+    ['content' => 'Tweet text'],           // AI parameters
+    $data,                                  // Data packets
+    $tool_definition,                       // Tool definition
+    [
+        'source_url' => 'https://example.com/post',
+        'image_url' => 'https://example.com/image.jpg'
+    ],                                      // Engine parameters
+    $handler_config                         // Handler configuration
+);
+
+// Result:
+// [
+//     'data' => [...],
+//     'handler_config' => [...],
+//     'content' => 'Generated content from AI step',
+//     'title' => 'Generated title from AI step',
+//     'tool_definition' => [...],
+//     'tool_name' => 'twitter_publish',
+//     'content' => 'Tweet text',  // AI parameter overwrites default
+//     'source_url' => 'https://example.com/post',
+//     'image_url' => 'https://example.com/image.jpg'
+// ]
+```
+
+**Engine Data Integration**:
+
+Handler tools receive engine parameters (source_url, image_url) from centralized storage:
+
+```php
+// Merge engine data (source_url, image_url) from centralized access
+foreach ($engine_parameters as $key => $value) {
+    $parameters[$key] = $value;
+}
+```
+
+## Tool Categories
+
+### Handler Tools
+
+**Registration**: `chubes_ai_tools` filter
+**Scope**: Step-specific (publish, update handlers)
+**Enablement**: Automatic if handler matches
+**Examples**: `twitter_publish`, `wordpress_publish`, `bluesky_publish`
+
+**Characteristics**:
+- Registered with `'handler'` field matching handler slug
+- Automatically filtered to current/next step handler
+- Receive data packets and engine parameters
+- Execute final workflow actions (publishing, updating)
+
+### Global Tools
+
+**Registration**: `datamachine_global_tools` filter
+**Scope**: All AI agents (pipeline + chat)
+**Enablement**: Via `datamachine_tool_enabled` filter + configuration check
+**Examples**: `google_search`, `local_search`, `web_fetch`, `wordpress_post_reader`
+
+**Characteristics**:
+- Available to all agents if enabled
+- May require configuration (`requires_config` flag)
+- Used for information gathering and research
+- Do not modify external systems
+
+### Chat-Only Tools
+
+**Registration**: `datamachine_chat_tools` filter
+**Scope**: Chat agent only
+**Enablement**: Via `datamachine_tool_enabled` filter
+**Examples**: `make_api_request`
+
+**Characteristics**:
+- Only available to chat agent
+- Enable conversational workflow building
+- Interact with Data Machine REST API
+- Bridge chat interface to system operations
+
+## Best Practices
+
+### Tool Registration
+
+**Handler Tools**:
+```php
+add_filter('chubes_ai_tools', function($tools, $handler_slug, $handler_config) {
+    if ($handler_slug === 'my_handler') {
+        $tools['my_tool'] = [
+            'class' => 'MyNamespace\\MyHandler',
+            'method' => 'handle_tool_call',
+            'handler' => 'my_handler',  // Critical for automatic filtering
+            'description' => 'Clear, concise tool description',
+            'parameters' => [
+                'param_name' => [
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'Parameter description for AI'
+                ]
+            ],
+            'handler_config' => $handler_config
+        ];
+    }
+    return $tools;
+}, 10, 3);
+```
+
+**Global Tools**:
+```php
+add_filter('datamachine_global_tools', function($tools) {
+    $tools['my_global_tool'] = [
+        'class' => 'DataMachine\\Engine\\AI\\Tools\\MyTool',
+        'method' => 'handle_tool_call',
+        'description' => 'Tool description visible to all agents',
+        'parameters' => [...],
+        'requires_config' => true  // If tool needs API keys/configuration
+    ];
+    return $tools;
+});
+```
+
+### Parameter Building
+
+**AI-Provided Parameters Override Defaults**:
+```php
+// AI provides: ['content' => 'Custom content']
+// Data packet has: ['content' => ['body' => 'Default content']]
+// Result: 'Custom content' (AI parameter wins)
+```
+
+**Access Engine Data in Tool Handler**:
+```php
+public function handle_tool_call(array $parameters, array $tool_def = []): array {
+    $source_url = $parameters['source_url'] ?? null;
+    $image_url = $parameters['image_url'] ?? null;
+    $handler_config = $parameters['handler_config'] ?? [];
+
+    // Use engine data for operations
+    return ['success' => true, 'data' => [...]];
+}
+```
+
+### Tool Execution
+
+**Always Check Tool Result**:
+```php
+$result = ToolExecutor::executeTool(...);
+
+if ($result['success']) {
+    $data = $result['data'];
+    // Process successful result
+} else {
+    $error = $result['error'];
+    // Handle failure
+}
+```
+
+**Provide Complete Unified Parameters**:
+```php
+// Pipeline
+$unified_parameters = [
+    'job_id' => $job_id,
+    'data' => $data,
+    'handler_config' => $handler_config,
+    // ... additional context
+];
+
+// Chat
+$unified_parameters = [
+    'session_id' => $session_id
+];
+```
+
+## Related Components
+
+- [Universal Engine Architecture](/docs/core-system/universal-engine.md) - Overall engine structure
+- [AI Conversation Loop](/docs/core-system/ai-conversation-loop.md) - Tool execution integration
+- [RequestBuilder Pattern](/docs/core-system/request-builder.md) - AI request construction
+- [Universal Engine Filters](/docs/api-reference/engine-filters.md) - Filter hook reference

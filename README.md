@@ -8,7 +8,7 @@ Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-AI-first WordPress plugin for content processing workflows with visual pipeline builder, conversational chat interface, and multi-provider AI integration.
+AI-first WordPress plugin for content processing workflows with visual pipeline builder, conversational chat interface, REST API, and multi-provider AI integration.
 
 ## Architecture
 
@@ -19,9 +19,10 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 **Features**:
 - **Modern React Admin Interface**: Complete Pipelines page rebuild with 6,591 lines of React code using @wordpress/element and @wordpress/components
 - **Zero jQuery/AJAX Architecture**: Modern React frontend with REST API integration
-- **Tool-First AI**: Enhanced multi-turn conversation management with duplicate detection and temporal context
+- **Tool-First AI**: Universal Engine architecture with multi-turn conversation loops, centralized tool execution, and filter-based directive system
+- **Universal Engine Layer**: Shared AI infrastructure serving both Pipeline and Chat agents with AIConversationLoop, ToolExecutor, ToolParameters, ConversationManager, and RequestBuilder components
 - **Visual Pipeline Builder**: Real-time updates with 50+ React components, custom hooks, and Context API state management
-- **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter with 5-tier directive system
+- **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter with filter-based directive system (global, agent-specific, pipeline, chat)
 - **Complete REST API**: 16 endpoints (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users, Chat base, Chat/Chat)
 - **Chat API**: Conversational interface for building and executing workflows through natural language
 - **Ephemeral Workflows**: Execute workflows without database persistence via REST API
@@ -264,9 +265,10 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 - **Universal Handler Filters**:
   - Shared functionality (`datamachine_timeframe_limit`, `datamachine_keyword_search_match`, `datamachine_data_packet`)
   - Eliminates code duplication across multiple handlers
-- **Tool-First AI Integration**:
-  - Multi-turn conversation management with `AIStepConversationManager`
-  - Unified parameter building via `AIStepToolParameters`
+- **Universal Engine Architecture**:
+  - Shared AI infrastructure (`AIConversationLoop`, `RequestBuilder`, `ToolExecutor`, `ToolParameters`, `ConversationManager`)
+  - Multi-turn conversation execution with automatic tool handling
+  - Centralized parameter building and request construction
 - **Modular WordPress Publisher**:
   - Specialized components (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`)
   - Configuration hierarchy system
@@ -300,9 +302,9 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 - Site Context toggle (WordPress info injection)
 - Job data cleanup on failure toggle (debugging)
 - File retention settings (1-90 days)
-- **5-Tier AI Directive System**: Auto-registering directive classes with priority spacing for comprehensive AI context
-- **AIStepConversationManager**: Multi-turn conversation state with turn tracking, chronological ordering, and duplicate detection
-- **AIStepToolParameters**: Centralized parameter building with buildForHandlerTool() for unified tool execution
+- **Filter-Based AI Directive System**: Auto-registering directive classes via `datamachine_global_directives` and `datamachine_agent_directives` filters
+- **Universal Engine Components**: AIConversationLoop for multi-turn conversations, ToolExecutor for tool discovery, ToolParameters for parameter building
+- **Dual-Agent Architecture**: Shared engine infrastructure for Pipeline and Chat agents with agent-specific behaviors
 - Tool configuration (API keys, OAuth)
 - WordPress defaults (post types, taxonomies, author, status)
 - Three-layer tool management (global → modal → validation)
@@ -330,9 +332,9 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
   - Centralized cross-cutting filters (`datamachine_timeframe_limit`, `datamachine_keyword_search_match`, `datamachine_data_packet`)
 - **Centralized Engine Data**: `EngineData.php` filter providing unified `datamachine_engine_data` access with clean AI data packets
 - **Centralized Cache System**: Actions/Cache.php with comprehensive WordPress action-based clearing and granular methods
-- **5-Tier AI Directive System**: Auto-registering directive classes with priority spacing from PluginCoreDirective to SiteContextDirective
-- **Intelligent Tool Discovery**: UpdateStep and PublishStep with exact handler matching and partial name matching
-- **Advanced Conversation Management**: AIStepConversationManager with turn tracking and AIStepToolParameters for unified execution
+- **Filter-Based AI Directive System**: Auto-registering directive classes with hierarchical application (global → agent → type-specific)
+- **Intelligent Tool Discovery**: ToolExecutor with handler matching, enablement validation, and configuration checks
+- **Universal Engine Architecture**: Shared AI infrastructure (AIConversationLoop, RequestBuilder, ToolExecutor, ToolParameters, ConversationManager)
 - **AutoSave System**:
   - Complete pipeline persistence and flow synchronization
 - **Modular WordPress Publisher**:

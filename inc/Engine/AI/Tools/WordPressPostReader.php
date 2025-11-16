@@ -110,7 +110,7 @@ class WordPressPostReader {
             'class' => __CLASS__,
             'method' => 'handle_tool_call',
             'name' => 'WordPress Post Reader',
-            'description' => 'Read full content from specific WordPress posts by URL for detailed analysis. Use after Local Search to get complete post content instead of excerpts. Perfect for content analysis before WordPress Update operations.',
+            'description' => 'Read full content and metadata from a specific WordPress post by URL for detailed analysis. Use after Local Search when you need complete post content instead of excerpts. Essential for content analysis before WordPress Update operations. Provides title, content, author, date, categories, tags, and featured image data.',
             'requires_config' => false,
             'parameters' => [
                 'source_url' => [

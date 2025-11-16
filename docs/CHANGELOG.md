@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Complete REST API Implementation**: Brand new REST API architecture with 10+ endpoints (Auth, Execute, Files, Flows, Jobs, Logs, Pipelines, ProcessedItems, Settings, Users) - did not exist in 0.1.2
 - Complete Chat API implementation with session management, conversation persistence, and tool integration
 - New REST API endpoints: Handlers, Providers, StepTypes, Tools for enhanced frontend integration
+- **Universal Engine Architecture**: Shared AI infrastructure layer at `/inc/Engine/AI/` for Pipeline and Chat agents
+- **AIConversationLoop**: Multi-turn conversation execution with automatic tool execution and completion detection
+- **RequestBuilder**: Centralized AI request construction with hierarchical directive application
+- **ToolExecutor**: Universal tool discovery, enablement validation, and execution with error handling
+- **ToolParameters**: Unified parameter building for standard tools and handler tools with engine data integration
+- **ConversationManager**: Message formatting and validation utilities for standardized conversation management
+- **Filter-Based Directive System**: `datamachine_global_directives` and `datamachine_agent_directives` filters for extensible AI behavior
 - AdminRootFilters.php for centralized admin functionality
 - Standardized execution method across all step type extension files
 
@@ -34,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Legacy prefix cleanup**: All remaining `dm_` prefixed code components
 - **Dead code elimination**: Unused PHP templates, CSS files, and development artifacts
 - **Outdated files**: Removed next-steps.md and other obsolete documentation
+
+### Deprecated
+- **AIStepConversationManager**: Replaced by Universal Engine components (AIConversationLoop + ConversationManager)
+- **AIStepToolParameters**: Replaced by ToolParameters class in Universal Engine
+- **Direct ai-http-client calls**: Use RequestBuilder::build() instead for consistent directive application
 
 ### Fixed
 - **Chat endpoint refinements**: Improved chat API functionality and error handling

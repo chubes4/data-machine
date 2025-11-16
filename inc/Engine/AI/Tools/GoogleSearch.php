@@ -139,7 +139,7 @@ class GoogleSearch {
         $tools['google_search'] = [
             'class' => __CLASS__,
             'method' => 'handle_tool_call',
-            'description' => 'Search Google and return structured JSON results with titles, links, and snippets from external websites. Use for external information, current events, and fact-checking. Returns complete web search data in JSON format with title, link, snippet for each result.',
+            'description' => 'Search the web using Google Custom Search and return 1-10 structured JSON results with titles, links, and snippets. Best for discovering external information when you don\'t have specific URLs. Use for current events, factual verification, or broad topic research. Returns complete web search data in JSON format with title, link, snippet for each result.',
             'requires_config' => true,
             'parameters' => [
                 'query' => [

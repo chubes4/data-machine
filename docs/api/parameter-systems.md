@@ -11,7 +11,7 @@ Data Machine uses an engine data filter architecture that provides clean data se
 1. **Engine Data Propagation** - Fetch handlers store engine data via centralized filters; engine bundles the data into the payload passed to every step and tool
 2. **Clean Data Separation** - AI receives clean data packets without URLs; handlers receive engine parameters via the payload-supplied engine data
 3. **Unified Interface** - All steps, handlers, and tools use consistent parameter formats
-4. **Tool-Based Parameter Building** - AIStepToolParameters class provides standardized parameter construction
+4. **Tool-Based Parameter Building** - ToolParameters class (Universal Engine) provides standardized parameter construction
 
 ## Core Payload Structure
 
@@ -116,18 +116,21 @@ class MyFetchHandler {
 ```
 
 ### Publish Handlers (Tool-Based)
-Use `AIStepToolParameters::buildForHandlerTool()` for parameter building with engine data access:
+Use `ToolParameters::buildForHandlerTool()` for parameter building with engine data access:
 
 ```php
 class MyPublishHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        // Parameters built by AIStepToolParameters::buildParameters()
-        // Already contain: content, title, job_id, flow_step_id, engine_data
+        // Parameters built by ToolParameters::buildParameters()
+        // Already contain: content, title, job_id, flow_step_id, handler_config
+        // Engine data accessed via filter for handler tools
 
         $content = $parameters['content'] ?? '';
         $handler_config = $tool_def['handler_config'] ?? [];
 
-        $engine_data = $parameters['engine_data'] ?? [];
+        // Access engine data via centralized filter
+        $job_id = $parameters['job_id'] ?? null;
+        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $source_url = $engine_data['source_url'] ?? null;
         $image_url = $engine_data['image_url'] ?? null;
 
@@ -142,8 +145,9 @@ Require `source_url` from engine data stored by fetch handlers and delivered on 
 ```php
 class MyUpdateHandler {
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        // Engine data already provided on the payload
-        $engine_data = $parameters['engine_data'] ?? [];
+        // Access engine data via centralized filter
+        $job_id = $parameters['job_id'] ?? null;
+        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
         $source_url = $engine_data['source_url'] ?? null;
 
         if (empty($source_url)) {
@@ -160,19 +164,24 @@ class MyUpdateHandler {
 
 ## AI Tool Parameter Building
 
-### AIStepToolParameters Class
+### ToolParameters Class (Universal Engine)
+**File**: `/inc/Engine/AI/ToolParameters.php`
+**Since**: 0.2.0
+
 Centralized parameter building for AI tool execution:
 
 ```php
+use DataMachine\Engine\AI\ToolParameters;
+
 // Standard tool parameter building
-$parameters = AIStepToolParameters::buildParameters(
+$parameters = ToolParameters::buildParameters(
     $ai_tool_parameters,     // Parameters from AI tool call
-    $unified_parameters,     // Engine parameter structure
+    $unified_parameters,     // Unified context (session_id or job_id + engine_data)
     $tool_definition         // Tool definition array
 );
 
 // Handler tool parameter building (includes engine data)
-$parameters = AIStepToolParameters::buildForHandlerTool(
+$parameters = ToolParameters::buildForHandlerTool(
     $ai_tool_parameters,     // AI tool call parameters
     $data,                   // Data packet array
     $tool_definition,        // Tool specification
@@ -193,29 +202,30 @@ $parameters = AIStepToolParameters::buildForHandlerTool(
 
 ```php
 [
-    // Core engine parameters
-    'job_id' => 'uuid-job-123',
-    'flow_step_id' => 'uuid-step-1_456',
-    'data' => [...], // Data packet array
-    'flow_step_config' => [...],
-    'engine_data' => [
-        'source_url' => 'https://example.com/post/123',
-        'image_url' => 'https://example.com/post/123/cover.jpg'
-    ],
+    // Core unified parameters
+    'session_id' => 'session_123', // Chat agent
+    // OR
+    'job_id' => 'uuid-job-123',   // Pipeline agent
 
-    // Extracted content (from data packets)
+    // Data context (pipeline only)
+    'data' => [...], // Data packet array
+    'handler_config' => ['include_images' => true],
+
+    // Extracted content (from data packets if tool requires)
     'content' => 'Article content from data packet',
     'title' => 'Article title from data packet',
 
     // Tool metadata
     'tool_definition' => [...],
     'tool_name' => 'twitter_publish',
-    'handler_config' => ['include_images' => true],
 
-    // AI-provided parameters
-    'content' => 'AI-modified tweet content', // Overwrites extracted content
+    // AI-provided parameters (overwrites extracted defaults)
+    'content' => 'AI-modified tweet content',
     'hashtags' => '#ai #automation'
 ]
+
+// Note: Engine data (source_url, image_url) accessed via datamachine_engine_data filter
+// Not included in parameters structure - accessed separately by handlers as needed
 ```
 
 ## Handler-Specific Engine Parameters

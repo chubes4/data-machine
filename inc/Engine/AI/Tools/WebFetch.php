@@ -110,7 +110,7 @@ class WebFetch {
         $tools['web_fetch'] = [
             'class' => __CLASS__,
             'method' => 'handle_tool_call',
-            'description' => 'Fetch and extract readable content from web pages. Use after Google Search to retrieve full article content. Returns page title and cleaned text content from any HTTP/HTTPS URL.',
+            'description' => 'Fetch and extract readable content from any HTTP/HTTPS web page URL (50K character limit). Use when you have a specific URL to retrieve full article content. Automatically converts HTML to readable text. Best for single-page content analysis after discovery via Google Search.',
             'requires_config' => false,
             'parameters' => [
                 'url' => [

@@ -228,7 +228,7 @@ Fetch handlers provide essential metadata that AI steps use for content processi
 
 **Content Structure**: All handlers structure content in consistent format that AI steps process through the modular AI directive system.
 
-**Metadata Preservation**: Handler metadata (original titles, dates) flows through pipeline to AI tools via AIStepToolParameters while URLs are accessed via engine data filter.
+**Metadata Preservation**: Handler metadata (original titles, dates) flows through pipeline to AI tools via ToolParameters while URLs are accessed via engine data filter.
 
 ### Tool-First Architecture Support
 
@@ -245,7 +245,7 @@ if ($job_id) {
 
 // AI step processes clean content without URL pollution
 // Update tools access source_url via centralized datamachine_engine_data filter
-// Publishing tools receive clean content via AIStepToolParameters
+// Publishing tools receive clean content via ToolParameters
 ```
 
 ## Integration Examples

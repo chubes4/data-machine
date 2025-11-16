@@ -37,10 +37,8 @@ export default function ConfigureStepModal( {
 	currentConfig,
 	onSuccess,
 } ) {
-	const [ provider, setProvider ] = useState(
-		currentConfig?.provider || aiDefaults.provider
-	);
-	const [ model, setModel ] = useState( currentConfig?.model || aiDefaults.model );
+	const [ provider, setProvider ] = useState( currentConfig?.provider || '' );
+	const [ model, setModel ] = useState( currentConfig?.model || '' );
 	const [ systemPrompt, setSystemPrompt ] = useState(
 		currentConfig?.system_prompt || ''
 	);

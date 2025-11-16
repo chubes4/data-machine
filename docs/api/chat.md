@@ -194,6 +194,135 @@ Tools are executed automatically by the AI during conversation:
 }
 ```
 
+## Universal Engine Architecture
+
+**Since**: v0.2.0
+
+The Chat endpoint uses the Universal Engine architecture at `/inc/Engine/AI/` for consistent AI request handling across Pipeline and Chat agents.
+
+### Core Components Used
+
+**AIConversationLoop**
+- Multi-turn conversation execution
+- Automatic tool call detection and execution
+- Completion detection (conversation ends when AI returns no tool calls)
+- Turn limiting (default: 8 turns)
+- Duplicate tool call prevention
+
+**RequestBuilder**
+- Centralized AI request construction
+- Hierarchical directive application (global → agent → chat-specific)
+- Tool restructuring for provider compatibility
+- Integration with ai-http-client
+
+**ToolExecutor**
+- Universal tool discovery via filters (`datamachine_global_tools`, `datamachine_chat_tools`)
+- Tool enablement validation
+- Execution with comprehensive error handling
+
+**ConversationManager**
+- Message formatting utilities
+- Tool call/result message generation
+- Duplicate detection logic
+
+**ToolParameters**
+- Unified parameter building for tools
+- Automatic content/title extraction
+- Session context integration
+
+### Chat Agent Implementation
+
+**File**: `/inc/Api/Chat/ChatFilters.php`
+**Purpose**: Registers chat-specific behavior with Universal Engine
+
+**Tool Enablement** (chat-specific):
+```php
+add_filter('datamachine_tool_enabled', function($enabled, $tool_name, $tool_config, $context_id) {
+    // Chat agent: context_id = null (use global tool enablement)
+    if ($context_id === null) {
+        $tool_configured = apply_filters('datamachine_tool_configured', false, $tool_name);
+        $requires_config = !empty($tool_config['requires_config']);
+        return !$requires_config || $tool_configured;
+    }
+    return $enabled;
+}, 5, 4);
+```
+
+**Directive Registration**:
+```php
+add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
+    if ($agent_type === 'chat') {
+        $request = ChatAgentDirective::inject($request, $provider, $tools, $context);
+    }
+    return $request;
+}, 10, 5);
+```
+
+### Differences from Pipeline Agent
+
+**Chat Agent**:
+- Session-based conversation persistence
+- Global tool enablement (not step-specific)
+- No data packets from previous steps
+- Chat-specific tools (make_api_request)
+- Session context instead of job context
+
+**Pipeline Agent**:
+- Job-based execution within workflows
+- Step-specific tool enablement
+- Data packets flow through steps
+- Handler tools for specific steps
+- Job context with engine data
+
+### Session Context Structure
+
+```php
+$context = [
+    'session_id' => $session_id  // Chat session identifier
+];
+```
+
+Used by:
+- RequestBuilder for directive application
+- ToolExecutor for tool execution
+- ToolParameters for parameter building
+
+### Tool Discovery
+
+Chat agent discovers tools via three sources:
+
+1. **Global Tools** (`datamachine_global_tools` filter):
+   - google_search
+   - local_search
+   - web_fetch
+   - wordpress_post_reader
+
+2. **Chat Tools** (`datamachine_chat_tools` filter):
+   - make_api_request
+
+3. **Filtered by Enablement** (`datamachine_tool_enabled` filter):
+   - Configuration validation
+   - Global enablement check
+
+### Conversation Flow
+
+```
+1. User sends message via POST /chat
+   ↓
+2. Chat endpoint loads or creates session
+   ↓
+3. AIConversationLoop executes:
+   a. RequestBuilder builds AI request with chat directives
+   b. AI responds with content and/or tool calls
+   c. ToolExecutor executes each tool call
+   d. ConversationManager formats tool results
+   e. Repeat until AI returns no tool calls (max 8 turns)
+   ↓
+4. Session updated with conversation history
+   ↓
+5. Response returned to user
+```
+
 ## Filter-Based Architecture
 
 ### Global Directives
@@ -201,22 +330,34 @@ Tools are executed automatically by the AI during conversation:
 Applied to all AI agents via `datamachine_global_directives` filter:
 
 ```php
-add_filter('datamachine_global_directives', function($directives) {
-    $directives[] = "Always use clear, concise language.";
-    return $directives;
-});
+add_filter('datamachine_global_directives', function($request, $provider, $tools, $step_id, $payload) {
+    // Add global directive
+    $request['messages'][] = [
+        'role' => 'system',
+        'content' => 'Always use clear, concise language.'
+    ];
+    return $request;
+}, 10, 5);
 ```
 
-### Chat Directives
+### Chat Agent Directives
 
-Applied only to chat AI agents via `datamachine_chat_directives` filter:
+Applied only to chat AI agents via `datamachine_agent_directives` filter:
 
 ```php
-add_filter('datamachine_chat_directives', function($directives) {
-    $directives[] = "Guide users through workflow creation step-by-step.";
-    return $directives;
-});
+add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
+    if ($agent_type === 'chat') {
+        // Add chat-specific directive
+        $request['messages'][] = [
+            'role' => 'system',
+            'content' => 'Guide users through workflow creation step-by-step.'
+        ];
+    }
+    return $request;
+}, 10, 5);
 ```
+
+**Note**: The legacy `datamachine_chat_directives` filter is still supported but `datamachine_agent_directives` is recommended for new implementations.
 
 ## Integration Examples
 
@@ -383,6 +524,10 @@ AI: [Guides through configuration, saves settings]
 
 ## Related Documentation
 
+- [Universal Engine Architecture](/docs/core-system/universal-engine.md) - Shared AI infrastructure
+- [AI Conversation Loop](/docs/core-system/ai-conversation-loop.md) - Multi-turn conversation execution
+- [Tool Execution Architecture](/docs/core-system/tool-execution.md) - Tool discovery and execution
+- [Universal Engine Filters](/docs/api-reference/engine-filters.md) - Directive and tool filters
 - [Execute Endpoint](execute.md) - Workflow execution
 - [Tools Endpoint](tools.md) - Available tools
 - [Handlers Endpoint](handlers.md) - Handler information

@@ -111,7 +111,7 @@ class LocalSearch {
         $tools['local_search'] = [
             'class' => __CLASS__,
             'method' => 'handle_tool_call',
-            'description' => 'Search this WordPress site and return structured JSON results with post titles, excerpts, permalinks, and metadata. Use ONCE to find existing content before creating new content. Returns complete search data in JSON format - avoid calling multiple times for the same query.',
+            'description' => 'Search this WordPress site and return up to 10 structured JSON results with post titles, excerpts, permalinks, and metadata. Prefer this over external search tools for site-specific content discovery. Use ONCE to find existing content before creating new content. Returns complete search data in JSON format - avoid calling multiple times for the same query.',
             'requires_config' => false,
             'parameters' => [
                 'query' => [

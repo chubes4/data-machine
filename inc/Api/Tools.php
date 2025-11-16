@@ -48,13 +48,8 @@ class Tools {
 	 * @return \WP_REST_Response Tools response
 	 */
 	public static function handle_get_tools() {
-		// Get all tools via filter
-		$all_tools = apply_filters('chubes_ai_tools', []);
-
-		// Filter to only global tools (no handler property)
-		$global_tools = array_filter($all_tools, function($tool_def) {
-			return !isset($tool_def['handler']);
-		});
+		// Get global tools via filter
+		$global_tools = apply_filters('datamachine_global_tools', []);
 
 		$tools = [];
 		foreach ($global_tools as $tool_id => $tool_def) {

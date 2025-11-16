@@ -83,17 +83,16 @@ $image_url = $engine_data['image_url'] ?? null;
   - `datamachine_chat_directives` filter for chat-only directive registration
   - **Priority 15**: Chat Agent Directive - Chat agent identity, REST API documentation, conversation guidelines
 
-- **AIStepConversationManager** - Centralized conversation state management:
-  - Turn-based conversation loops with chronological message ordering
-  - AI tool calls recorded before execution with turn number tracking
-  - Enhanced tool result messaging with temporal context ("Turn X")
-  - Data packet synchronization via `updateDataPacketMessages()`
-  - Natural conversation termination with clear completion messaging
-- **AIStepToolParameters** - Unified flat parameter building:
-  - `buildParameters()` for standard AI tools
-  - `buildForHandlerTool()` for handler tools with engine parameters
-  - Content/title extraction from data packets
-- **Global AI Tools** - Available to all AI agents (pipeline + chat):
+- **Universal Engine Architecture** - Shared AI infrastructure serving Pipeline and Chat agents:
+  - **AIConversationLoop** - Multi-turn conversation execution with automatic tool calling
+  - **ToolExecutor** - Universal tool discovery and execution infrastructure
+  - **ToolParameters** - Centralized parameter building for AI tools
+    - `buildParameters()` for standard AI tools
+    - `buildForHandlerTool()` for handler tools with engine parameters
+    - Content/title extraction from data packets
+  - **ConversationManager** - Message formatting and conversation utilities
+  - **RequestBuilder** - Centralized AI request construction with directive application
+- **Global AI Tools** - Available to all AI agents (pipeline + chat), located in `/inc/Engine/AI/Tools/`:
   - Google Search - Web search with site restriction
   - Local Search - WordPress content search
   - WebFetch - Web page content retrieval (50K limit)

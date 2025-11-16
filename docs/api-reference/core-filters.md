@@ -569,90 +569,145 @@ add_filter('datamachine_chat_directives', function($directives, $session_id) {
 
 **Return**: String next flow step ID or null if last step
 
-## AI Tool Parameter Management
+## Universal Engine Architecture
 
-### AIStepToolParameters Static Methods
+**Since**: 0.2.0
+**Location**: `/inc/Engine/AI/`
 
-**Purpose**: Centralized flat parameter building for AI tool execution with unified structure compatible with all handler tool call methods.
+Data Machine's Universal Engine provides shared AI infrastructure serving both Pipeline and Chat agents. See `/docs/core-system/universal-engine.md` for complete architecture documentation.
+
+### ToolParameters (`/inc/Engine/AI/ToolParameters.php`)
+
+**Purpose**: Centralized parameter building for all AI tools with unified flat structure.
 
 **Core Methods**:
 
 #### `buildParameters()`
 ```php
-AIStepToolParameters::buildParameters(array $ai_tool_parameters, array $unified_parameters, array $tool_definition): array
+\DataMachine\Engine\AI\ToolParameters::buildParameters(array $data, ?string $job_id, ?string $flow_step_id): array
 ```
-Builds flat parameter structure for standard AI tool execution with content extraction and tool metadata.
+Builds flat parameter structure for standard AI tools with content extraction and job context.
+
+**Returns**:
+```php
+[
+    'content_string' => 'Clean content text',
+    'title' => 'Original title',
+    'job_id' => '123',
+    'flow_step_id' => 'step_uuid_flow_123'
+]
+```
 
 #### `buildForHandlerTool()`
 ```php
-AIStepToolParameters::buildForHandlerTool(array $ai_tool_parameters, array $data, array $tool_definition, array $engine_parameters, array $handler_config): array
+\DataMachine\Engine\AI\ToolParameters::buildForHandlerTool(array $data, array $tool_def, ?string $job_id, ?string $flow_step_id): array
 ```
-Builds parameters for handler-specific tools with engine parameters merged (like source_url for link attribution).
+Builds parameters for handler-specific tools with engine data merging (source_url, image_url).
+
+**Returns**:
+```php
+[
+    // Standard parameters
+    'content_string' => 'Clean content',
+    'title' => 'Title',
+    'job_id' => '123',
+    'flow_step_id' => 'step_uuid_flow_123',
+
+    // Tool metadata
+    'tool_definition' => [...],
+    'tool_name' => 'twitter_publish',
+    'handler_config' => [...],
+
+    // Engine parameters (from database)
+    'source_url' => 'https://example.com/post',
+    'image_url' => 'https://example.com/image.jpg'
+]
+```
 
 **Key Features**:
-- **Content Extraction**: Automatically extracts content and title from data packets based on tool specifications
-- **Flat Parameter Structure**: Single array containing all parameters without nested objects
-- **Tool Metadata Integration**: Adds tool_definition, tool_name, handler_config directly to parameter structure
-- **Engine Parameter Merging**: For handler tools, merges additional engine parameters like source_url
-- **AI Parameter Priority**: AI-provided parameters overwrite any conflicting keys in final structure
+- Content/title extraction from data packets
+- Flat parameter structure for AI simplicity
+- Tool metadata integration
+- Engine parameter injection for handlers (source_url for link attribution, image_url for media handling)
 
-## AI Conversation Management
+### ToolExecutor (`/inc/Engine/AI/ToolExecutor.php`)
 
-### AIStepConversationManager Static Methods
+**Purpose**: Universal tool discovery and execution infrastructure.
 
-**Purpose**: Centralized conversation state management and message formatting for AI steps with turn tracking and chronological message ordering
+**Core Method**:
 
-**Core Methods**:
-
-#### `generateSuccessMessage()`
+#### `getAvailableTools()`
 ```php
-AIStepConversationManager::generateSuccessMessage(string $tool_name, array $tool_result, array $tool_parameters): string
+\DataMachine\Engine\AI\ToolExecutor::getAvailableTools(
+    string $agent_type,      // 'pipeline' or 'chat'
+    ?string $handler_slug,   // Handler identifier
+    array $handler_config,   // Handler configuration
+    ?string $flow_step_id    // Flow step identifier
+): array
 ```
-Creates human-readable success messages for tool execution results, enabling natural AI agent conversation termination.
 
-#### `formatToolCallMessage()`
+**Discovery Process**:
+1. Handler Tools - Retrieved via `chubes_ai_tools` filter
+2. Global Tools - Retrieved via `datamachine_global_tools` filter
+3. Chat Tools - Retrieved via `datamachine_chat_tools` filter (chat only)
+4. Enablement Check - Each tool filtered through `datamachine_tool_enabled`
+
+### AIConversationLoop (`/inc/Engine/AI/AIConversationLoop.php`)
+
+**Purpose**: Multi-turn conversation execution with automatic tool calling.
+
+**Core Method**:
+
+#### `execute()`
 ```php
-AIStepConversationManager::formatToolCallMessage(string $tool_name, array $tool_parameters, int $turn_count): array
+$loop = new \DataMachine\Engine\AI\AIConversationLoop();
+$final_response = $loop->execute(
+    array $initial_messages,
+    array $available_tools,
+    string $provider_name,
+    string $model,
+    string $agent_type,      // 'pipeline' or 'chat'
+    array $context
+): array
 ```
-Records AI tool calls in conversation history with turn tracking before execution.
 
-#### `formatToolResultMessage()`
-```php  
-AIStepConversationManager::formatToolResultMessage(string $tool_name, array $tool_result, array $tool_parameters, bool $is_handler_tool = false, int $turn_count = 0): array
-```
-Formats tool results into conversation message structure for AI consumption with temporal context.
+**Features**:
+- Automatic tool execution during conversation turns
+- Conversation completion detection
+- Turn-based state management with chronological ordering
+- Duplicate message prevention
+- Maximum turn limiting (default: 10)
 
-#### `updateDataPacketMessages()`
-```php
-AIStepConversationManager::updateDataPacketMessages(array $conversation_messages, array $data): array
-```
-Updates data packet messages in multi-turn conversations to keep AI aware of current data state.
+### ConversationManager (`/inc/Engine/AI/ConversationManager.php`)
 
-#### `buildConversationMessage()`
-```php
-AIStepConversationManager::buildConversationMessage(string $role, string $content): array
-```
-Creates standardized conversation message structure with proper role assignment.
-
-#### `generateFailureMessage()`
-```php
-AIStepConversationManager::generateFailureMessage(string $tool_name, string $error_message): string
-```
-Generates clear error messages when tools fail to execute properly.
-
-#### `logConversationAction()`
-```php
-AIStepConversationManager::logConversationAction(string $action, array $context = []): void
-```
-Provides debug logging for conversation message generation with context data.
+**Purpose**: Message formatting utilities for AI requests.
 
 **Key Features**:
-- **Turn Tracking**: Each conversation iteration tracked with turn counter for multi-turn AI executions
-- **Chronological Message Ordering**: `array_push()` maintains temporal sequence in conversation messages (newest at end)
-- **AI Action Records**: Tool calls recorded in conversation history before execution with turn number context
-- **Tool Result Messaging**: Enhanced tool result messages with temporal context (`Turn X`) and specialized formatting
-- Platform-specific success message templates (Twitter, WordPress, Google Search, etc.)
-- Clear completion messaging enabling natural conversation termination
-- Multi-turn conversation state preservation with complete conversation history
-- Centralized conversation history building with context awareness
-- Tool result formatting for optimal AI model consumption
+- Message formatting for AI providers
+- Tool call recording and tracking
+- Conversation message normalization
+- Chronological message ordering
+
+### RequestBuilder (`/inc/Engine/AI/RequestBuilder.php`)
+
+**Purpose**: Centralized AI request construction for all agents.
+
+**Core Method**:
+
+#### `build()`
+```php
+$response = \DataMachine\Engine\AI\RequestBuilder::build(
+    array $messages,
+    string $provider,
+    string $model,
+    array $tools,
+    string $agent_type,      // 'pipeline' or 'chat'
+    array $context
+): array
+```
+
+**Features**:
+- Directive application system (global, agent-specific, pipeline, chat)
+- Tool restructuring for AI provider compatibility
+- Integration with ai-http-client library
+- Unified request format across all providers

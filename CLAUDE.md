@@ -93,13 +93,20 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 
 **Dual-Layer Persistence**: Pipeline-level system prompts (templates) + flow-level user messages (instances)
 
-**AI Directive System**: Filter-based architecture with three directive categories - global (all AI agents), pipeline-only, and chat-only. Detailed system in `/docs/ai-system/` directory.
+**AI Directive System**: Filter-based architecture with directive categories applied by `RequestBuilder`:
+- `datamachine_global_directives` - Applied to all AI agents (GlobalSystemPromptDirective, SiteContextDirective)
+- `datamachine_agent_directives` - Agent-specific directives (PipelineCoreDirective, ChatAgentDirective, PipelineSystemPromptDirective)
 
-**AI Conversation State Management**: Turn-based conversation loops with chronological ordering, state preservation, and duplicate detection via `AIStepConversationManager`.
+**Universal Engine Architecture**: Shared AI infrastructure serving both Pipeline and Chat agents with centralized components in `/inc/Engine/AI/`:
+- **AIConversationLoop** - Multi-turn conversation execution with automatic tool calling
+- **ToolExecutor** - Universal tool discovery and execution infrastructure
+- **ToolParameters** - Centralized parameter building for AI tools
+- **ConversationManager** - Message formatting and conversation utilities
+- **RequestBuilder** - Centralized AI request construction with directive application
 
 **Tool Categories**:
 - **Handler Tools**: Step-specific, registered via `chubes_ai_tools` filter
-- **Global Tools**: Universal, registered via `datamachine_global_tools` filter (GoogleSearch, LocalSearch, WebFetch, WordPressPostReader)
+- **Global Tools**: Universal, registered via `datamachine_global_tools` filter, located in `/inc/Engine/AI/Tools/` (GoogleSearch, LocalSearch, WebFetch, WordPressPostReader)
 - **Chat Tools**: Chat-only, registered via `datamachine_chat_tools` filter (MakeAPIRequest)
 
 ## Chat API

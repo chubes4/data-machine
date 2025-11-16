@@ -121,13 +121,79 @@ add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_co
 ### Discovery Hierarchy
 
 1. **Global Level**: Admin settings enable/disable tools site-wide
-2. **Modal Level**: Per-step tool selection in pipeline configuration  
+2. **Modal Level**: Per-step tool selection in pipeline configuration
 3. **Runtime Level**: Configuration validation checks at execution
 
 **Configuration Check**:
 ```php
 $tool_configured = apply_filters('datamachine_tool_configured', false, $tool_id);
 ```
+
+## Tool Execution Architecture
+
+### ToolExecutor Pattern
+
+All tools integrate via the universal `ToolExecutor` class (`/inc/Engine/AI/ToolExecutor.php`):
+
+```php
+// Tool discovery
+$available_tools = \DataMachine\Engine\AI\ToolExecutor::getAvailableTools(
+    $agent_type,  // 'pipeline' or 'chat'
+    $handler_slug,
+    $handler_config,
+    $flow_step_id
+);
+```
+
+**Discovery Process**:
+1. **Handler Tools**: Retrieved via `chubes_ai_tools` filter for specific handler
+2. **Global Tools**: Retrieved via `datamachine_global_tools` filter
+3. **Chat Tools**: Retrieved via `datamachine_chat_tools` filter (chat agent only)
+4. **Enablement Check**: Each tool filtered through `datamachine_tool_enabled`
+
+### Filter-Based Enablement
+
+Tools can be enabled/disabled per agent type via filters:
+
+```php
+add_filter('datamachine_tool_enabled', function($enabled, $tool_id, $agent_type) {
+    if ($agent_type === 'chat' && $tool_id === 'make_api_request') {
+        return true;  // Chat-only tool
+    }
+    return $enabled;
+}, 10, 3);
+```
+
+### Parameter Building
+
+`ToolParameters` (`/inc/Engine/AI/ToolParameters.php`) provides unified parameter construction:
+
+**Standard Tools** (global tools):
+```php
+$parameters = \DataMachine\Engine\AI\ToolParameters::buildParameters(
+    $data,
+    $job_id,
+    $flow_step_id
+);
+// Returns: ['content_string' => ..., 'title' => ..., 'job_id' => ..., 'flow_step_id' => ...]
+```
+
+**Handler Tools** (publish/update handlers):
+```php
+$parameters = \DataMachine\Engine\AI\ToolParameters::buildForHandlerTool(
+    $data,
+    $tool_def,
+    $job_id,
+    $flow_step_id
+);
+// Returns: [...standard params, 'source_url' => ..., 'image_url' => ..., 'tool_definition' => ..., 'handler_config' => ...]
+```
+
+**Benefits**:
+- Handler tools receive engine data (source_url, image_url) for link attribution and post identification
+- Global tools receive clean data packets for content processing
+- All tools receive job_id and flow_step_id context for tracking
+- Unified flat parameter structure for AI simplicity
 
 ## Tool Interface
 
@@ -225,24 +291,43 @@ AI agents receive available tools based on:
 
 ### Conversation Integration
 
-**AIStepConversationManager** (Centralized State Management with Turn Tracking):
+**Universal Engine Architecture** - Tool execution flows through centralized Engine components:
 
-All tool results flow through AIStepConversationManager for consistent conversation formatting and chronological ordering:
+**AIConversationLoop** (`/inc/Engine/AI/AIConversationLoop.php`):
+- Multi-turn conversation execution with automatic tool calling
+- Executes tools returned by AI and appends results to conversation
+- Continues conversation loop until AI completes without tool calls
+- Prevents infinite loops with maximum turn counter
 
-- **Turn-Based Tracking**: `formatToolCallMessage()` records AI tool calls in conversation history with turn counter before execution
-- **Tool Result Formatting**: `formatToolResultMessage()` converts tool outputs to AI-consumable conversation messages with temporal context (`Turn X`)
-- **Chronological Ordering**: `array_push()` maintains temporal sequence in conversation messages (newest at end)
-- **Success Messaging**: `generateSuccessMessage()` creates platform-specific completion messages (Twitter: "Tweet posted successfully", WordPress: "Post published successfully")
-- **Data Packet Updates**: `updateDataPacketMessages()` maintains current workflow data state across multi-turn conversations
-- **Failure Handling**: `generateFailureMessage()` provides clear error feedback for tool execution failures
-- **Conversation Building**: `buildConversationMessage()` creates standardized message structures for AI consumption
-- **Debug Logging**: `logConversationAction()` tracks conversation state changes and tool interactions
+**ToolExecutor** (`/inc/Engine/AI/ToolExecutor.php`):
+- Universal tool discovery via `getAvailableTools()` method
+- Filter-based tool enablement per agent type (pipeline vs chat)
+- Handler tool and global tool integration
+- Tool configuration validation
+
+**ToolParameters** (`/inc/Engine/AI/ToolParameters.php`):
+- Centralized parameter building for all AI tools
+- `buildParameters()` for standard AI tools with clean data extraction
+- `buildForHandlerTool()` for handler tools with engine parameters (source_url, image_url)
+- Flat parameter structure for AI simplicity
+
+**ConversationManager** (`/inc/Engine/AI/ConversationManager.php`):
+- Message formatting utilities for AI providers
+- Tool call recording and tracking
+- Conversation message normalization
+- Chronological message ordering
+
+**RequestBuilder** (`/inc/Engine/AI/RequestBuilder.php`):
+- Centralized AI request construction for all agents
+- Directive application system (global, agent-specific, pipeline, chat)
+- Tool restructuring for AI provider compatibility
+- Integration with ai-http-client library
 
 **Tool Results Processing**:
-- All tool responses automatically formatted through AIStepConversationManager
+- Tool responses formatted by ConversationManager for AI consumption
 - Structured data converted to human-readable success messages
 - Platform-specific messaging enables natural AI agent conversation termination
-- Multi-turn context preservation across tool executions
+- Multi-turn context preservation via AIConversationLoop
 
 ## Tool Implementation Examples
 

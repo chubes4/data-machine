@@ -9,6 +9,12 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 - [Core System Overview](core-system/engine-execution.md) - Engine execution cycle
 - [Database Schema](core-system/database-schema.md) - Data storage and relationships
 
+### Universal Engine (v0.2.0)
+- [Universal Engine Architecture](core-system/universal-engine.md) - Shared AI infrastructure layer
+- [AI Conversation Loop](core-system/ai-conversation-loop.md) - Multi-turn conversation execution
+- [Tool Execution Architecture](core-system/tool-execution.md) - Tool discovery and execution
+- [RequestBuilder Pattern](core-system/request-builder.md) - Centralized AI request construction
+
 ### Handler Documentation
 
 #### Fetch Handlers
@@ -41,6 +47,7 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 ### API Reference
 - [**Core Filters**](api-reference/core-filters.md) - All WordPress filters
 - [**Core Actions**](api-reference/core-actions.md) - All WordPress actions
+- [**Universal Engine Filters**](api-reference/engine-filters.md) - Directive and tool filters (v0.2.0)
 - [**REST API**](api-reference/rest-api.md) - Flow trigger endpoint with authentication
 
 ### Admin Interface
@@ -55,7 +62,11 @@ docs/
 ├── overview.md                          # System overview and concepts
 ├── core-system/
 │   ├── engine-execution.md             # Three-action execution cycle
-│   └── database-schema.md              # Database tables and relationships
+│   ├── database-schema.md              # Database tables and relationships
+│   ├── universal-engine.md             # Universal Engine architecture (v0.2.0)
+│   ├── ai-conversation-loop.md         # Multi-turn conversation execution (v0.2.0)
+│   ├── tool-execution.md               # Tool discovery and execution (v0.2.0)
+│   └── request-builder.md              # Centralized AI request construction (v0.2.0)
 ├── handlers/
 │   ├── fetch/
 │   │   ├── wordpress-local.md          # Local WordPress content
@@ -87,6 +98,7 @@ docs/
 └── api-reference/
     ├── core-filters.md                 # WordPress filters
     ├── core-actions.md                 # WordPress actions
+    ├── engine-filters.md               # Universal Engine filters (v0.2.0)
     └── rest-api.md                     # REST API trigger endpoint
 ```
 
@@ -203,10 +215,14 @@ docs/
 
 ### AI Integration
 - Multi-provider support (OpenAI, Anthropic, Google, Grok, OpenRouter)
-- **5-Tier AI Directive System**: Auto-registering directive classes with priority spacing (PluginCoreDirective → GlobalSystemPromptDirective → PipelineSystemPromptDirective → ToolDefinitionsDirective → SiteContextDirective)
-- **AIStepConversationManager**: Centralized conversation state management with turn-based loops, chronological ordering, duplicate detection, and data packet synchronization
+- **Universal Engine Architecture**: Shared AI infrastructure at `/inc/Engine/AI/` for Pipeline and Chat agents
+- **AIConversationLoop**: Multi-turn conversation execution with automatic tool execution and completion detection
+- **RequestBuilder**: Centralized AI request construction with hierarchical directive application
+- **ToolExecutor**: Universal tool discovery, enablement validation, and execution with error handling
+- **ToolParameters**: Unified parameter building for standard tools and handler tools with engine data integration
+- **ConversationManager**: Message formatting and validation utilities for standardized conversation management
+- **AI Directive System**: Filter-based directive architecture (global → agent → type-specific) with automatic registration
 - **Tool-First Architecture**: Agentic execution with intelligent tool discovery and enhanced tool result detection
-- **AIStepToolParameters**: Unified parameter building with buildParameters() for standard tools and buildForHandlerTool() for handler tools with engine parameters
 - **Context-Aware Processing**: WordPress site context integration with metadata and clear tool result messaging
 
 ### Extension System

@@ -72,7 +72,6 @@
 			"inc/Core/Steps/AI/Directives/PipelineCoreDirective.php",
 			"inc/Core/Steps/AI/Directives/PipelineSystemPromptDirective.php",
 			"inc/Core/Steps/AI/Directives/PipelineContextDirective.php",
-			"inc/Core/Steps/AI/Directives/ToolDefinitionsDirective.php",
 			"inc/Core/Steps/Update/UpdateStepFilters.php",
 			"inc/Core/Steps/Update/Handlers/WordPress/WordPressFilters.php",
 			"inc/Engine/Filters/FilesRepository.php",
