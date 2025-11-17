@@ -135,13 +135,20 @@ class FilesRepository {
     /**
      * Get flow files directory path
      *
-     * @param int $pipeline_id Pipeline ID
+     * @param int|string $pipeline_id Pipeline ID or 'ephemeral' sentinel
      * @param string $pipeline_name Pipeline name
-     * @param int $flow_id Flow ID
+     * @param int|string $flow_id Flow ID or 'ephemeral' sentinel
      * @param string $flow_name Flow name
      * @return string Full path to flow files directory
      */
-    public function get_flow_files_directory(int $pipeline_id, string $pipeline_name, int $flow_id, string $flow_name): string {
+    public function get_flow_files_directory($pipeline_id, string $pipeline_name, $flow_id, string $flow_name): string {
+        // Handle ephemeral workflows with temp directory
+        if ($pipeline_id === 0 || $flow_id === 0) {
+            $temp_dir = sys_get_temp_dir();
+            $ephemeral_id = uniqid('datamachine-ephemeral-', true);
+            return "{$temp_dir}/{$ephemeral_id}/files";
+        }
+
         $flow_dir = $this->get_flow_directory($pipeline_id, $pipeline_name, $flow_id, $flow_name);
         return "{$flow_dir}/files";
     }

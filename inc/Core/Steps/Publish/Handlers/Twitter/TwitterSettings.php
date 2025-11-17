@@ -15,9 +15,6 @@ defined('ABSPATH') || exit;
 
 class TwitterSettings {
 
-    public function __construct() {
-    }
-
     /**
      * Get settings fields for Twitter publish handler.
      *

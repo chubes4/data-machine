@@ -18,9 +18,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class FacebookSettings {
 
-    public function __construct() {
-    }
-
     /**
      * Get settings fields for Facebook publish handler.
      *

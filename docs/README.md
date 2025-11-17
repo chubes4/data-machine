@@ -16,7 +16,9 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 - [RequestBuilder Pattern](core-system/request-builder.md) - Centralized AI request construction
 - [ConversationManager](core-system/conversation-manager.md) - Message formatting and conversation utilities
 - [ToolParameters](core-system/tool-parameters.md) - Unified parameter building for AI tools
+- [ToolResultFinder](core-system/tool-result-finder.md) - Universal tool result search utility
 - [Chat Database](core-system/chat-database.md) - Session management and CRUD operations
+- [OAuth Handlers](core-system/oauth-handlers.md) - Centralized OAuth 1.0a and OAuth 2.0 flow handlers
 
 ### Handler Documentation
 
@@ -72,7 +74,9 @@ docs/
 │   ├── request-builder.md              # Centralized AI request construction (v0.2.0)
 │   ├── conversation-manager.md         # Message formatting and conversation utilities (v0.2.0)
 │   ├── tool-parameters.md              # Unified parameter building for AI tools (v0.2.0)
-│   └── chat-database.md                # Session management and CRUD operations (v0.2.0)
+│   ├── tool-result-finder.md           # Universal tool result search utility (v0.2.0)
+│   ├── chat-database.md                # Session management and CRUD operations (v0.2.0)
+│   └── oauth-handlers.md               # Centralized OAuth 1.0a and OAuth 2.0 handlers (v0.2.0)
 ├── handlers/
 │   ├── fetch/
 │   │   ├── wordpress-local.md          # Local WordPress content

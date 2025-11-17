@@ -12,14 +12,27 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
+/**
+ * WordPress REST API Fetch Handler
+ *
+ * Fetches content from external WordPress sites via REST API.
+ * Supports timeframe filtering, keyword search, and structured data extraction.
+ * Stores source URLs and image URLs in engine data for downstream handlers.
+ */
 class WordPressAPI {
-
-    public function __construct() {
-    }
 
     /**
      * Fetch WordPress REST API content with timeframe and keyword filtering.
+     *
+     * Retrieves posts/pages from external WordPress sites via REST API.
      * Engine data (source_url, image_url) stored via datamachine_engine_data filter.
+     *
+     * @param int $pipeline_id Pipeline ID for context
+     * @param array $handler_config Handler configuration settings
+     * @param string|null $job_id Job ID for engine data storage
+     * @return array {
+     *     @type array[] $processed_items Array of processed content items
+     * }
      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
@@ -28,6 +41,7 @@ class WordPressAPI {
         }
         
         $flow_step_id = $handler_config['flow_step_id'] ?? null;
+        $flow_id = $handler_config['flow_id'] ?? 0;
 
         if ($flow_step_id === null) {
             do_action('datamachine_log', 'debug', 'WordPress API fetch called without flow_step_id - processed items tracking disabled');
@@ -180,18 +194,19 @@ class WordPressAPI {
                     }
                     $filename = 'wp_api_image_' . time() . '_' . sanitize_file_name(basename($url_path ?: 'image')) . '.' . $extension;
 
-                    $download_result = $files_repo->store_remote_file($image_url, $filename, $flow_step_id);
+                    // Build context with fallback names (no database queries)
+                    $context = [
+                        'pipeline_id' => $pipeline_id,
+                        'pipeline_name' => "pipeline-{$pipeline_id}",
+                        'flow_id' => $flow_id,
+                        'flow_name' => "flow-{$flow_id}"
+                    ];
+
+                    $download_result = $files_repo->store_remote_file($image_url, $filename, $context);
 
                     if ($download_result) {
-                        // Determine MIME type from extension
-                        $mime_map = [
-                            'jpg' => 'image/jpeg',
-                            'jpeg' => 'image/jpeg',
-                            'png' => 'image/png',
-                            'gif' => 'image/gif',
-                            'webp' => 'image/webp'
-                        ];
-                        $mime_type = $mime_map[strtolower($extension)] ?? 'image/jpeg';
+                        $file_check = wp_check_filetype($filename);
+                        $mime_type = $file_check['type'] ?: 'image/jpeg';
 
                         $file_info = [
                             'file_path' => $download_result['path'],

@@ -19,9 +19,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class BlueskyAuth {
 
-    public function __construct() {
-    }
-
     public function is_authenticated(): bool {
         $auth_data = apply_filters('datamachine_retrieve_oauth_account', [], 'bluesky');
         return !empty($auth_data) &&

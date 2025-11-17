@@ -205,10 +205,9 @@ add_filter('datamachine_agent_directives', function($request, $agent_type, $prov
 **Current Directive Implementations**:
 
 **Pipeline Directives**:
-- `PipelineCoreDirective` - Foundational agent identity (priority 10)
+- `PipelineCoreDirective` - Foundational agent identity and tool instructions (priority 10)
 - `PipelineSystemPromptDirective` - User-defined system prompts (priority 20)
 - `PipelineContextDirective` - WordPress site context (priority 30)
-- `ToolDefinitionsDirective` - Available tool descriptions (priority 40)
 
 **Chat Directives**:
 - `ChatAgentDirective` - Chat agent identity and capabilities

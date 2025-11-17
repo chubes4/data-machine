@@ -51,6 +51,7 @@ datamachine_register_twitter_filters(); // Auto-execute at file load
 - **Handlers**: See Handler Matrix section
 - **AutoSave**: Complete pipeline persistence
 - **Admin**: `manage_options` security model
+- **OAuth Handlers**: Centralized OAuth 1.0a and OAuth 2.0 flow implementations (`/inc/Core/OAuth/`)
 
 **Filter-Based Architecture**: All functionality accessed via WordPress filters for service discovery, configuration, and cross-cutting concerns.
 
@@ -103,6 +104,7 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 - **ToolParameters** - Centralized parameter building for AI tools
 - **ConversationManager** - Message formatting and conversation utilities
 - **RequestBuilder** - Centralized AI request construction with directive application
+- **ToolResultFinder** - Universal tool result search utility for data packet interpretation
 
 **Tool Categories**:
 - **Handler Tools**: Step-specific, registered via `chubes_ai_tools` filter
@@ -114,10 +116,10 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 **Endpoint**: `POST /datamachine/v1/chat` - conversational AI for workflow building
 
 **Implementation**: Directory-based structure at `/inc/Api/Chat/` (@since v0.2.0):
-- `Chat.php` - Main endpoint handler (namespace `DataMachine\Api\Chat`)
-- `ChatAgentDirective.php` - Chat-specific AI directive for RequestBuilder integration
-- `ChatFilters.php` - Self-registration filters for tool enablement and directive application
-- `Tools/MakeAPIRequest.php` - Chat-only tool for REST API operations
+- `Chat.php` - Main endpoint handler (`POST /datamachine/v1/chat`, namespace `DataMachine\Api\Chat`)
+- `ChatAgentDirective.php` - Chat-specific AI directive implementing filter-based directive registration
+- `ChatFilters.php` - Self-registration filters loaded via composer.json for tool enablement (`datamachine_tool_enabled`) and directive application (`datamachine_agent_directives`)
+- `Tools/MakeAPIRequest.php` - Chat-only tool for REST API operations (registered via `datamachine_chat_tools` filter)
 
 **Session Management**: Persistent sessions via `wp_datamachine_chat_sessions` table with user isolation, 24-hour expiration
 
@@ -485,15 +487,31 @@ do_action('datamachine_cache_set', $key, $data, $timeout, $group);
 
 ## OAuth Integration
 
-**Unified OAuth System**: Streamlined OAuth operations with automatic provider discovery and validation
+**Centralized OAuth Handlers**: Unified OAuth flow implementations eliminating code duplication across all providers
 
+**Service Discovery**:
 ```php
-// Account operations
+// OAuth 1.0a Handler (Twitter)
+$oauth1 = apply_filters('datamachine_get_oauth1_handler', null);
+$request_token = $oauth1->get_request_token($url, $key, $secret, $callback, 'twitter');
+$auth_url = $oauth1->get_authorization_url($authorize_url, $oauth_token, 'twitter');
+$result = $oauth1->handle_callback('twitter', $access_url, $key, $secret, $account_fn);
+
+// OAuth 2.0 Handler (Reddit, Facebook, Threads, Google Sheets)
+$oauth2 = apply_filters('datamachine_get_oauth2_handler', null);
+$state = $oauth2->create_state('provider_key');
+$auth_url = $oauth2->get_authorization_url($base_url, $params);
+$result = $oauth2->handle_callback($provider_key, $token_url, $token_params, $account_fn);
+```
+
+**Account Operations**:
+```php
+// Account management
 $account = apply_filters('datamachine_retrieve_oauth_account', [], 'twitter');
 apply_filters('datamachine_store_oauth_account', $account_data, 'twitter');
 apply_filters('datamachine_clear_oauth_account', false, 'twitter');
 
-// Configuration with validation  
+// Configuration with validation
 $is_configured = apply_filters('datamachine_tool_configured', false, 'twitter');
 $provider_url = apply_filters('datamachine_oauth_callback', '', 'twitter');
 

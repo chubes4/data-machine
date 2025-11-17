@@ -29,8 +29,25 @@ function datamachine_get_file_context(int $flow_id): array {
     ];
 }
 
+/**
+ * Register execution engine actions and handlers.
+ *
+ * Sets up the core execution cycle actions:
+ * - datamachine_run_flow_now: Initiates flow execution
+ * - datamachine_execute_step: Executes individual steps
+ * - datamachine_schedule_next_step: Schedules subsequent steps
+ */
 function datamachine_register_execution_engine() {
 
+    /**
+     * Execute flow immediately.
+     *
+     * Creates a job record, loads flow/pipeline configurations,
+     * and schedules the first step for execution.
+     *
+     * @param int $flow_id Flow ID to execute
+     * @return bool True on success, false on failure
+     */
     add_action('datamachine_run_flow_now', function($flow_id) {
         $all_databases = apply_filters('datamachine_db', []);
         $db_flows = $all_databases['flows'] ?? null;
@@ -106,7 +123,17 @@ function datamachine_register_execution_engine() {
         return true;
     });
 
-
+    /**
+     * Execute individual step in a flow.
+     *
+     * Loads step configuration, instantiates step class, executes the step,
+     * and schedules the next step in the flow.
+     *
+     * @param int $job_id Job ID for the execution
+     * @param string $flow_step_id Flow step ID to execute
+     * @param array|null $data Input data for the step
+     * @return bool True on success, false on failure
+     */
     add_action( 'datamachine_execute_step', function( $job_id, $flow_step_id, $data = null ) {
 
         try {
@@ -181,8 +208,8 @@ function datamachine_register_execution_engine() {
                 } else {
                     do_action('datamachine_update_job_status', $job_id, 'completed', 'complete');
                     if ($repository) {
-                        $parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
-                        $context = datamachine_get_file_context($parts['flow_id']);
+                        $flow_id = $flow_step_config['flow_id'] ?? 0;
+                        $context = datamachine_get_file_context($flow_id);
                         $repository->cleanup_job_data_packets($job_id, $context);
                     }
                     do_action('datamachine_log', 'info', 'Pipeline execution completed successfully', [
@@ -217,6 +244,17 @@ function datamachine_register_execution_engine() {
         }
     }, 10, 3 );
 
+    /**
+     * Schedule next step in flow execution.
+     *
+     * Stores data packet in repository if needed, then schedules
+     * the step execution via Action Scheduler.
+     *
+     * @param int $job_id Job ID for the execution
+     * @param string $flow_step_id Flow step ID to schedule
+     * @param array $data Data to pass to the next step
+     * @return bool True on successful scheduling, false on failure
+     */
     add_action('datamachine_schedule_next_step', function($job_id, $flow_step_id, $data = []) {
         if (!function_exists('as_schedule_single_action')) {
             return false;
@@ -226,8 +264,9 @@ function datamachine_register_execution_engine() {
         $repository = $repositories['files'] ?? null;
 
         if ($repository) {
-            $parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
-            $context = datamachine_get_file_context($parts['flow_id']);
+            $flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
+            $flow_id = $flow_step_config['flow_id'] ?? 0;
+            $context = datamachine_get_file_context($flow_id);
             $data_reference = $repository->store_data_packet($data, $job_id, $context);
         } else {
             $data_reference = ['data' => $data];
@@ -255,6 +294,16 @@ function datamachine_register_execution_engine() {
         return $action_id !== false;
     }, 10, 3);
 
+    /**
+     * Schedule flow execution for later.
+     *
+     * Handles both one-time execution at specific timestamps and
+     * recurring execution at defined intervals. Use 'manual' to
+     * clear existing schedules.
+     *
+     * @param int $flow_id Flow ID to schedule
+     * @param string|int $interval_or_timestamp Either 'manual', numeric timestamp, or interval key
+     */
     add_action('datamachine_run_flow_later', function($flow_id, $interval_or_timestamp) {
         // 1. Always unschedule existing to prevent duplicates
         if (function_exists('as_unschedule_action')) {

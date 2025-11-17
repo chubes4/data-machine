@@ -33,14 +33,14 @@ Build unified flat parameter structure for tool execution.
 ```php
 public static function buildParameters(
     array $ai_tool_parameters,
-    array $unified_parameters,
+    array $payload,
     array $tool_definition
 ): array
 ```
 
 **Parameters**:
 - `$ai_tool_parameters` (array) - Parameters from AI tool call
-- `$unified_parameters` (array) - Context parameters with `data` array
+- `$payload` (array) - Step payload with `data` array and engine context
 - `$tool_definition` (array) - Tool definition with `parameters`, `handler_config`, `name`
 
 **Returns**: Complete flat parameter array for tool handler
@@ -275,10 +275,10 @@ AIConversationLoop uses ToolParameters differently for each agent type:
 
 **Chat Agent**:
 ```php
-$unified_parameters = ['session_id' => $session_id, 'data' => []];
+$payload = ['session_id' => $session_id, 'data' => []];
 $params = ToolParameters::buildParameters(
     $ai_tool_parameters,
-    $unified_parameters,
+    $payload,
     $tool_definition
 );
 ```

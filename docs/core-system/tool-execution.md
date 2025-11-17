@@ -223,7 +223,7 @@ public static function executeTool(
     array $available_tools,
     array $data,
     ?string $flow_step_id,
-    array $unified_parameters
+    array $payload
 ): array
 ```
 
@@ -337,7 +337,7 @@ Build unified flat parameter structure for tool execution:
 ```php
 public static function buildParameters(
     array $ai_tool_parameters,
-    array $unified_parameters,
+    array $payload,
     array $tool_definition
 ): array
 ```
@@ -578,10 +578,10 @@ if ($result['success']) {
 }
 ```
 
-**Provide Complete Unified Parameters**:
+**Provide Complete Payload Parameters**:
 ```php
 // Pipeline
-$unified_parameters = [
+$payload = [
     'job_id' => $job_id,
     'data' => $data,
     'handler_config' => $handler_config,
@@ -589,7 +589,7 @@ $unified_parameters = [
 ];
 
 // Chat
-$unified_parameters = [
+$payload = [
     'session_id' => $session_id
 ];
 ```

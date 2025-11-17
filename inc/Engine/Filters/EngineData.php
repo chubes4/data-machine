@@ -18,7 +18,7 @@ function datamachine_register_engine_data_filter() {
      * Retrieval mode: apply_filters('datamachine_engine_data', [], $job_id)
      */
     add_filter('datamachine_engine_data', function($default, $job_id, $data = null) {
-        if (empty($job_id)) {
+        if ($job_id === null || $job_id === '') {
             return $default;
         }
 

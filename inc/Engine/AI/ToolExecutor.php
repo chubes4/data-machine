@@ -98,17 +98,15 @@ class ToolExecutor {
 
     /**
      * Execute tool with parameter merging and comprehensive error handling.
-     * Builds complete parameters by combining AI parameters with unified engine parameters.
+     * Builds complete parameters by combining AI parameters with step payload.
      *
      * @param string $tool_name Tool name to execute
      * @param array $tool_parameters Parameters from AI
      * @param array $available_tools Available tools array
-     * @param array $data Data packets (empty for chat, populated for pipeline)
-     * @param string|null $flow_step_id Flow step ID (null for chat, string for pipeline)
-     * @param array $unified_parameters Unified parameters (session_id for chat, job_id + engine_data for pipeline)
+     * @param array $payload Step payload (job_id, flow_step_id, data, flow_step_config, engine_data)
      * @return array Tool execution result
      */
-    public static function executeTool(string $tool_name, array $tool_parameters, array $available_tools, array $data, ?string $flow_step_id, array $unified_parameters): array {
+    public static function executeTool(string $tool_name, array $tool_parameters, array $available_tools, array $payload): array {
         $tool_def = $available_tools[$tool_name] ?? null;
         if (!$tool_def) {
             return [
@@ -118,40 +116,24 @@ class ToolExecutor {
             ];
         }
 
-        try {
-            $complete_parameters = ToolParameters::buildParameters(
-                $tool_parameters,
-                $unified_parameters,
-                $tool_def
-            );
+        $complete_parameters = ToolParameters::buildParameters(
+            $tool_parameters,
+            $payload,
+            $tool_def
+        );
 
-            $class_name = $tool_def['class'];
-            if (!class_exists($class_name)) {
-                return [
-                    'success' => false,
-                    'error' => "Tool class '{$class_name}' not found",
-                    'tool_name' => $tool_name
-                ];
-            }
-
-            $tool_handler = new $class_name();
-            $tool_result = $tool_handler->handle_tool_call($complete_parameters, $tool_def);
-
-            return $tool_result;
-
-        } catch (\Exception $e) {
-            do_action('datamachine_log', 'error', 'ToolExecutor: Tool execution exception', [
-                'flow_step_id' => $flow_step_id,
-                'tool_name' => $tool_name,
-                'exception' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
+        $class_name = $tool_def['class'];
+        if (!class_exists($class_name)) {
             return [
                 'success' => false,
-                'error' => 'Tool execution exception: ' . $e->getMessage(),
+                'error' => "Tool class '{$class_name}' not found",
                 'tool_name' => $tool_name
             ];
         }
+
+        $tool_handler = new $class_name();
+        $tool_result = $tool_handler->handle_tool_call($complete_parameters, $tool_def);
+
+        return $tool_result;
     }
 }

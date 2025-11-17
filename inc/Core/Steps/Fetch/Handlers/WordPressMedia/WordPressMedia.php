@@ -16,9 +16,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPressMedia {
 
-    public function __construct() {
-    }
-
     /**
      * Fetch WordPress media with optional parent content inclusion.
      * Engine data (source_url, image_url) stored via datamachine_engine_data filter.
@@ -41,19 +38,8 @@ class WordPressMedia {
 
         // Access config from handler config structure
         $config = $handler_config['wordpress_media'] ?? [];
-        
-        // Fetch from local WordPress media library and normalize to flat list
-        $items_result = $this->fetch_media_data($pipeline_id, $config, $user_id, $flow_step_id, $job_id);
 
-        if (isset($items_result['processed_items'])) {
-            $items = $items_result['processed_items'];
-        } elseif (is_array($items_result)) {
-            $items = $items_result; // already a flat list or empty
-        } else {
-            $items = [];
-        }
-
-        return ['processed_items' => $items];
+        return $this->fetch_media_data($pipeline_id, $config, $user_id, $flow_step_id, $job_id);
     }
 
     /**

@@ -15,10 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Files {
 
-	public function __construct() {
-	}
-
-
     /**
      * Get repository instance via filter discovery
      */
@@ -38,7 +34,17 @@ class Files {
         $uploaded_files = $config['uploaded_files'] ?? [];
 
         if (empty($uploaded_files)) {
-            $repo_files = $repository->get_all_files($flow_step_id);
+            $flow_id = $handler_config['flow_id'] ?? 0;
+
+            // Build context with fallback names (no database queries)
+            $context = [
+                'pipeline_id' => $pipeline_id,
+                'pipeline_name' => "pipeline-{$pipeline_id}",
+                'flow_id' => $flow_id,
+                'flow_name' => "flow-{$flow_id}"
+            ];
+
+            $repo_files = $repository->get_all_files($context);
             if (empty($repo_files)) {
                 do_action('datamachine_log', 'debug', 'Files Input: No files available in repository.', [
                     'pipeline_id' => $pipeline_id,
@@ -102,12 +108,9 @@ class Files {
         // Generate public URL for image files (for WordPress featured images, etc.)
         $file_url = '';
         if (strpos($mime_type, 'image/') === 0) {
-            // For image files, provide public URL for publish handlers
-            $repositories = apply_filters('datamachine_files_repository', []);
-            $file_repository = $repositories['files'] ?? null;
-            if ($file_repository && $flow_step_id) {
-                $file_url = trailingslashit($file_repository->get_repository_url($flow_step_id)) . $next_file['original_name'];
-            }
+            // For image files, convert file path to public URL
+            $upload_dir = wp_upload_dir();
+            $file_url = str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $next_file['persistent_path']);
         }
 
         // Store URLs in engine_data via centralized filter
@@ -173,55 +176,5 @@ class Files {
 
     public static function get_label(): string {
         return __('File Upload', 'datamachine');
-    }
-
-    private function get_upload_error_message(int $error_code): string {
-        switch ($error_code) {
-            case UPLOAD_ERR_INI_SIZE:
-                $message = __( "The uploaded file exceeds the upload_max_filesize directive in php.ini.", 'datamachine' );
-                break;
-            case UPLOAD_ERR_FORM_SIZE:
-                $message = __( "The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form.", 'datamachine' );
-                break;
-            case UPLOAD_ERR_PARTIAL:
-                $message = __( "The uploaded file was only partially uploaded.", 'datamachine' );
-                break;
-            case UPLOAD_ERR_NO_FILE:
-                $message = __( "No file was uploaded.", 'datamachine' );
-                break;
-            case UPLOAD_ERR_NO_TMP_DIR:
-                $message = __( "Missing a temporary folder.", 'datamachine' );
-                break;
-            case UPLOAD_ERR_CANT_WRITE:
-                $message = __( "Failed to write file to disk.", 'datamachine' );
-                break;
-            case UPLOAD_ERR_EXTENSION:
-                $message = __( "A PHP extension stopped the file upload.", 'datamachine' );
-                break;
-            default:
-                $message = __( "Unknown upload error.", 'datamachine' );
-                break;
-        }
-        return $message;
-    }
-
-    /**
-     * Security validation blocking dangerous executable files.
-     */
-    private function validate_file_basic(string $file_path, string $filename): bool {
-        $dangerous_extensions = ['php', 'exe', 'bat', 'cmd', 'scr', 'com', 'pif', 'vbs', 'js'];
-        $file_extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-
-        if (in_array($file_extension, $dangerous_extensions)) {
-            do_action('datamachine_log', 'error', 'Files Input: File type not allowed for security reasons.', ['file_extension' => $file_extension]);
-            return false;
-        }
-
-        if (!file_exists($file_path) || !is_readable($file_path)) {
-            do_action('datamachine_log', 'error', 'Files Input: File is not accessible.', ['file_path' => $file_path]);
-            return false;
-        }
-
-        return true;
     }
 }

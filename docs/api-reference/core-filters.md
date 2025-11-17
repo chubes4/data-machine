@@ -75,6 +75,63 @@ $steps['step_type'] = [
 $databases['service_name'] = new ServiceClass();
 ```
 
+### `datamachine_get_oauth1_handler`
+
+**Purpose**: Service discovery for OAuth 1.0a handler
+
+**Parameters**:
+- `$handler` (OAuth1Handler|null) - Current handler instance
+
+**Return**: OAuth1Handler instance
+
+**Location**: `/inc/Core/OAuth/OAuth1Handler.php`
+
+**Usage Example**:
+```php
+$oauth1 = apply_filters('datamachine_get_oauth1_handler', null);
+$request_token = $oauth1->get_request_token($url, $key, $secret, $callback, 'twitter');
+$auth_url = $oauth1->get_authorization_url($authorize_url, $oauth_token, 'twitter');
+$result = $oauth1->handle_callback('twitter', $access_url, $key, $secret, $account_fn);
+```
+
+**Methods**:
+- `get_request_token()` - Obtain OAuth request token (step 1)
+- `get_authorization_url()` - Build authorization URL (step 2)
+- `handle_callback()` - Complete OAuth flow (step 3)
+
+**Providers**: Twitter
+
+**Version**: 0.2.0
+
+### `datamachine_get_oauth2_handler`
+
+**Purpose**: Service discovery for OAuth 2.0 handler
+
+**Parameters**:
+- `$handler` (OAuth2Handler|null) - Current handler instance
+
+**Return**: OAuth2Handler instance
+
+**Location**: `/inc/Core/OAuth/OAuth2Handler.php`
+
+**Usage Example**:
+```php
+$oauth2 = apply_filters('datamachine_get_oauth2_handler', null);
+$state = $oauth2->create_state('provider_key');
+$auth_url = $oauth2->get_authorization_url($base_url, $params);
+$result = $oauth2->handle_callback($provider_key, $token_url, $token_params, $account_fn);
+```
+
+**Methods**:
+- `create_state()` - Generate OAuth state nonce
+- `verify_state()` - Verify OAuth state nonce
+- `get_authorization_url()` - Build authorization URL
+- `handle_callback()` - Complete OAuth flow with token exchange
+
+**Providers**: Reddit, Facebook, Threads, Google Sheets
+
+**Version**: 0.2.0
+
 ## AI Integration Filters
 
 ### `chubes_ai_tools`
@@ -120,42 +177,62 @@ $tools['tool_name'] = [
 
 **Return**: Array with AI response
 
-**5-Tier Directive System**: System messages automatically injected via separate directive classes in priority order:
+**Universal Engine Directive System** (@since v0.2.0): Centralized AI request construction via `RequestBuilder` with hierarchical directive application through filter-based architecture.
 
-**Priority 10**: Plugin core directive (`PluginCoreDirective`) - foundational AI agent identity with workflow termination logic and data packet structure guidance
-**Priority 20**: Global system prompt (`GlobalSystemPromptDirective`) - background guidance
-**Priority 30**: Pipeline system prompt (`PipelineSystemPromptDirective`) - user configuration
-**Priority 40**: Tool definitions and directives (`ToolDefinitionsDirective`) - usage instructions
-**Priority 50**: WordPress site context (`SiteContextDirective`) - environment info
+**Directive Application via RequestBuilder**:
+All AI requests now use `RequestBuilder::build()` which applies directives in this hierarchical order:
+
+1. **Global Directives** (`datamachine_global_directives` filter) - Applied to all AI agents
+2. **Agent Directives** (`datamachine_agent_directives` filter) - Agent-specific (pipeline vs chat)
 
 **Request Structure**:
 ```php
-$request = [
-    'messages' => [
-        ['role' => 'user', 'content' => 'Prompt text']
-    ],
-    'model' => 'model-name',
-    'tools' => $tools_array // Optional
-];
+$ai_response = RequestBuilder::build(
+    $messages,      // Messages array with role/content
+    $provider,      // AI provider name
+    $model,         // Model identifier
+    $tools,         // Raw tools array from filters
+    $agent_type,    // 'chat' or 'pipeline'
+    $context        // Agent-specific context
+);
 ```
 
-**5-Tier Auto-Registration**: Each directive class automatically registers with the chubes_ai_request filter:
+**Current Directive Implementations**:
+
+**Global Directives** (all agents):
+- `GlobalSystemPromptDirective` - Background guidance for all AI agents
+- `SiteContextDirective` - WordPress environment information (optional)
+
+**Pipeline Agent Directives**:
+- `PipelineCoreDirective` - Foundational agent identity with tool instructions (priority 10)
+- `PipelineSystemPromptDirective` - User-defined system prompts (priority 20)
+- `PipelineContextDirective` - WordPress site context (priority 30)
+
+**Chat Agent Directives**:
+- `ChatAgentDirective` - Chat agent identity and capabilities
+
+**Filter-Based Registration**:
 ```php
-// Priority 10: Plugin core directive (foundational AI agent identity)
-add_filter('chubes_ai_request', [PluginCoreDirective::class, 'inject'], 10, 5);
+// Global directives (all AI agents)
+add_filter('datamachine_global_directives', function($request, $provider, $tools, $step_id, $payload) {
+    $request['messages'][] = ['role' => 'system', 'content' => 'Global directive'];
+    return $request;
+}, 10, 5);
 
-// Priority 20: Global system prompt (background guidance)
-add_filter('chubes_ai_request', [GlobalSystemPromptDirective::class, 'inject'], 20, 5);
-
-// Priority 30: Pipeline system prompt (user configuration)
-add_filter('chubes_ai_request', [PipelineSystemPromptDirective::class, 'inject'], 30, 5);
-
-// Priority 40: Tool definitions and directives (how to use available tools)
-add_filter('chubes_ai_request', [ToolDefinitionsDirective::class, 'inject'], 40, 5);
-
-// Priority 50: WordPress site context (environment info - lowest priority)
-add_filter('chubes_ai_request', [SiteContextDirective::class, 'inject'], 50, 5);
+// Agent-specific directives
+add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
+    if ($agent_type === 'pipeline') {
+        // Pipeline directives
+        $request = PipelineCoreDirective::inject($request, $provider, $tools, $context['step_id'] ?? null, $context['payload'] ?? []);
+    } elseif ($agent_type === 'chat') {
+        // Chat directives
+        $request = ChatAgentDirective::inject($request, $provider, $tools, $context);
+    }
+    return $request;
+}, 10, 5);
 ```
+
+**Note**: All AI request building now uses `RequestBuilder::build()` to ensure consistent request structure and directive application. Direct calls to `chubes_ai_request` filter are deprecated - use RequestBuilder instead.
 
 ## Pipeline Operations Filters
 

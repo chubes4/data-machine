@@ -16,9 +16,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPress {
 
-    public function __construct() {
-    }
-
     /**
      * Fetch local WordPress content with timeframe and keyword filtering.
      * Engine data (source_url, image_url) stored via datamachine_engine_data filter.

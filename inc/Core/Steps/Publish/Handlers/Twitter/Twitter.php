@@ -1,21 +1,52 @@
 <?php
 /**
  * Twitter publishing handler with OAuth 1.0a and AI tool integration.
+ *
+ * Handles posting content to Twitter with support for:
+ * - Text content (280 character limit)
+ * - Media uploads (images)
+ * - URL handling and link shortening
+ * - Thread creation for long content
+ *
+ * @package DataMachine\Core\Steps\Publish\Handlers\Twitter
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
 
 defined('ABSPATH') || exit;
 
+/**
+ * Twitter Publishing Handler
+ *
+ * Publishes content to Twitter via OAuth 1.0a authentication.
+ * Supports media uploads and handles URL shortening automatically.
+ */
 class Twitter {
 
+    /** @var TwitterAuth OAuth authentication handler */
     private $auth;
 
+    /**
+     * Constructor - Initialize Twitter authentication.
+     */
     public function __construct() {
         $all_auth = apply_filters('datamachine_auth_providers', []);
         $this->auth = $all_auth['twitter'] ?? null;
     }
 
+    /**
+     * Handle AI tool call for Twitter publishing.
+     *
+     * @param array $parameters Tool parameters including content and configuration
+     * @param array $tool_def Tool definition with handler config
+     * @return array {
+     *     @type bool $success Whether the post was successful
+     *     @type string $error Error message if failed
+     *     @type string $tool_name Tool identifier
+     *     @type string $url Twitter post URL if successful
+     *     @type string $id Twitter post ID if successful
+     * }
+     */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
 
         $handler_config = $parameters['handler_config'] ?? [];

@@ -71,15 +71,50 @@ For detailed examples and complete endpoint documentation, see the [API Overview
 
 ## Implementation Notes
 
-All endpoints are implemented in `/datamachine/inc/Api/` with automatic registration via `rest_api_init`:
+REST API endpoints use directory-based structure (@since v0.2.0) for organized, modular implementations:
 
+**Directory Structure**:
+- `/inc/Api/Pipelines/` - Pipelines.php (main CRUD), PipelineSteps.php (step management), PipelineFlows.php (pipeline-flow relationships)
+- `/inc/Api/Flows/` - Flows.php (main CRUD), FlowSteps.php (flow step configuration)
+- `/inc/Api/Chat/` - Chat.php (endpoint), ChatAgentDirective.php (AI directive), ChatFilters.php (registration), Tools/MakeAPIRequest.php (chat tool)
+- `/inc/Api/*.php` - All other endpoints (single-file implementations)
+
+**Example Endpoint Registration**:
 ```php
-// Example endpoint registration
-register_rest_route('datamachine/v1', '/pipelines', [
-    'methods' => 'GET',
-    'callback' => [Pipelines::class, 'get_pipelines'],
-    'permission_callback' => [Pipelines::class, 'check_permission']
+// Pipelines directory structure example
+register_rest_route('datamachine/v1', '/pipelines/(?P<pipeline_id>\d+)/steps', [
+    'methods' => 'POST',
+    'callback' => [PipelineSteps::class, 'handle_create_step'],
+    'permission_callback' => [PipelineSteps::class, 'check_permission']
 ]);
+```
+
+**Complete Endpoint Structure**:
+```
+/wp-json/datamachine/v1/
+├── auth                          (OAuth account management)
+├── execute                       (Flow/workflow execution)
+├── files                         (File upload/management)
+├── flows                         (Flow CRUD)
+│   ├── {id}/config               (Flow configuration retrieval)
+│   ├── {id}/duplicate            (Flow duplication)
+│   └── steps/{flow_step_id}/config (Flow step configuration)
+├── handlers                      (Handler discovery)
+├── jobs                          (Job monitoring)
+├── logs                          (Log management)
+├── pipelines                     (Pipeline CRUD)
+│   ├── {id}/steps                (Pipeline step management)
+│   ├── {id}/steps/reorder        (Step reordering)
+│   ├── {id}/steps/{step_id}      (Step deletion)
+│   └── {id}/flows                (Pipeline-flow relationships)
+├── processed-items               (Deduplication tracking)
+├── providers                     (AI provider configuration)
+├── settings                      (System settings)
+├── step-types                    (Step type registry)
+├── tools                         (AI tool configuration)
+├── users                         (User preferences)
+└── chat                          (Conversational AI)
+    └── sessions                  (Chat session management)
 ```
 
 **Implemented Endpoints**: Auth, Chat, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users

@@ -18,9 +18,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class BlueskySettings {
 
-    public function __construct() {
-    }
-
     /**
      * Get settings fields for Bluesky publish handler.
      *

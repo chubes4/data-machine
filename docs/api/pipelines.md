@@ -1,12 +1,15 @@
 # Pipelines Endpoints
 
-**Implementation**: `inc/Api/Pipelines.php`
+**Implementation**: `/inc/Api/Pipelines/` directory structure
+- `Pipelines.php` - Main pipeline CRUD operations
+- `PipelineSteps.php` - Step management (`/pipelines/{id}/steps`)
+- `PipelineFlows.php` - Pipeline-flow relationships (`/pipelines/{id}/flows`)
 
 **Base URL**: `/wp-json/datamachine/v1/pipelines`
 
 ## Overview
 
-Pipeline endpoints provide complete pipeline template management including creation, retrieval, modification, deletion, and CSV import/export functionality.
+Pipeline endpoints provide complete pipeline template management including creation, retrieval, modification, deletion, step management, and CSV import/export functionality. Directory-based structure (@since v0.2.0) organizes related operations with nested endpoints for steps and flows.
 
 ## Authentication
 
@@ -428,4 +431,5 @@ else:
 
 **Base URL**: `/wp-json/datamachine/v1/pipelines`
 **Permission**: `manage_options` capability required
-**Implementation**: `inc/Api/Pipelines.php`
+**Implementation**: `/inc/Api/Pipelines/` directory (Pipelines.php, PipelineSteps.php, PipelineFlows.php)
+**Version**: Directory structure introduced in v0.2.0

@@ -28,10 +28,11 @@ The Universal Engine consolidates this shared functionality into a centralized l
 │  │ Tool execution   │      │ building         │   │
 │  └──────────────────┘      └──────────────────┘   │
 │                                                      │
-│  ┌──────────────────────────────────────────────┐  │
-│  │ ConversationManager                          │  │
-│  │ Message formatting and validation utilities  │  │
-│  └──────────────────────────────────────────────┘  │
+│  ┌──────────────────┐      ┌──────────────────┐   │
+│  │ConversationManager│      │ ToolResultFinder │   │
+│  │ Message utilities│      │ Result search    │   │
+│  │ and validation   │      │ utility          │   │
+│  └──────────────────┘      └──────────────────┘   │
 └─────────────────────────────────────────────────────┘
                         │
         ┌───────────────┴───────────────┐
@@ -48,8 +49,6 @@ The Universal Engine consolidates this shared functionality into a centralized l
 │   SystemPrompt   │          │   tool           │
 │   Directive      │          │ • Session        │
 │ • PipelineContext│          │   management     │
-│   Directive      │          │                  │
-│ • ToolDefinitions│          │                  │
 │   Directive      │          │                  │
 └──────────────────┘          └──────────────────┘
 ```
@@ -130,7 +129,7 @@ $result = ToolExecutor::executeTool(
     $available_tools,     // Available tools array
     $data,                // Data packets (empty for chat)
     $flow_step_id,        // Flow step ID (null for chat)
-    $unified_parameters   // Unified parameters (session_id or job_id + engine_data)
+    $payload              // Step payload (session_id or job_id + engine_data)
 );
 ```
 
@@ -152,7 +151,7 @@ use DataMachine\Engine\AI\ToolParameters;
 
 $complete_parameters = ToolParameters::buildParameters(
     $ai_tool_parameters,   // Parameters from AI
-    $unified_parameters,   // Unified context (session_id or job_id + engine_data)
+    $payload,              // Step payload (session_id or job_id + engine_data)
     $tool_definition       // Tool definition array
 );
 ```
@@ -219,6 +218,52 @@ if ($validation_result['is_duplicate']) {
 }
 ```
 
+### ToolResultFinder
+
+**File**: `/inc/Engine/AI/ToolResultFinder.php`
+
+Universal utility for finding AI tool execution results in data packets. Provides reusable data packet interpretation for update handlers and other components that need to locate specific tool results.
+
+**Key Features**:
+- Handler-specific result search by slug matching
+- Support for 'tool_result' and 'ai_handler_complete' entry types
+- Null-safe search with graceful failure handling
+- Centralized search logic eliminates code duplication
+
+**Usage**:
+```php
+use DataMachine\Engine\AI\ToolResultFinder;
+
+// Search for handler tool result
+$result = ToolResultFinder::findHandlerResult($data, 'wordpress_update');
+
+if ($result) {
+    $tool_result = $result['metadata']['tool_result'] ?? [];
+    $success = $tool_result['success'] ?? false;
+    $updated_id = $tool_result['data']['updated_id'] ?? null;
+}
+```
+
+**Integration Pattern**:
+```php
+// Update step example
+$tool_result_entry = ToolResultFinder::findHandlerResult($data, $handler_slug);
+
+if ($tool_result_entry) {
+    // AI successfully executed handler tool
+    return $this->create_update_entry_from_tool_result(
+        $tool_result_entry,
+        $data,
+        $handler_slug,
+        $flow_step_id
+    );
+}
+
+// AI did not execute handler tool - fail cleanly
+do_action('datamachine_log', 'error', 'UpdateStep: AI did not execute handler tool');
+return [];
+```
+
 ### RequestBuilder
 
 **File**: `/inc/Engine/AI/RequestBuilder.php`
@@ -260,7 +305,7 @@ The Universal Engine supports two distinct agent types with specialized behavior
 - Executes within structured pipeline workflows
 - Receives data packets from previous steps
 - Has access to handler tools for immediate next step
-- Uses pipeline-specific directives (PipelineCoreDirective, PipelineSystemPromptDirective, PipelineContextDirective, ToolDefinitionsDirective)
+- Uses pipeline-specific directives (PipelineCoreDirective, PipelineSystemPromptDirective, PipelineContextDirective)
 - Operates with job_id and flow_step_id context
 
 **Directive Registration**:
@@ -395,5 +440,6 @@ add_filter('datamachine_tool_configured', function($configured, $tool_name) {
 - [AI Conversation Loop](/docs/core-system/ai-conversation-loop.md) - Multi-turn conversation execution
 - [Tool Execution Architecture](/docs/core-system/tool-execution.md) - Tool discovery and execution
 - [RequestBuilder Pattern](/docs/core-system/request-builder.md) - Centralized request building
+- [ToolResultFinder](/docs/core-system/tool-result-finder.md) - Tool result search utility
 - [Universal Engine Filters](/docs/api-reference/engine-filters.md) - Filter hook reference
 - [Chat API](/docs/api/chat.md) - Chat agent implementation

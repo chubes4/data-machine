@@ -14,10 +14,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Rss {
 
-    public function __construct() {
-    }
-
-
     /**
      * Fetch RSS/Atom content with timeframe and keyword filtering.
      * Engine data (source_url, image_url) stored via datamachine_engine_data filter.
@@ -25,6 +21,7 @@ class Rss {
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
         $flow_step_id = $handler_config['flow_step_id'] ?? null;
+        $flow_id = $handler_config['flow_id'] ?? 0;
         $config = $handler_config['rss'] ?? [];
         $feed_url = trim($config['feed_url'] ?? '');
 
@@ -152,7 +149,8 @@ class Rss {
 
             $file_info = null;
             if (!empty($enclosure_url)) {
-                $mime_type = $this->guess_mime_type_from_url($enclosure_url);
+                $file_check = wp_check_filetype($enclosure_url);
+                $mime_type = $file_check['type'] ?: 'application/octet-stream';
 
                 if (strpos($mime_type, 'image/') === 0 && in_array($mime_type, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
                     $repositories = apply_filters('datamachine_files_repository', []);
@@ -160,7 +158,16 @@ class Rss {
 
                     if ($files_repo && $flow_step_id) {
                         $filename = 'rss_image_' . time() . '_' . sanitize_file_name(basename(wp_parse_url($enclosure_url, PHP_URL_PATH)));
-                        $download_result = $files_repo->store_remote_file($enclosure_url, $filename, $flow_step_id);
+
+                        // Build context with fallback names (no database queries)
+                        $context = [
+                            'pipeline_id' => $pipeline_id,
+                            'pipeline_name' => "pipeline-{$pipeline_id}",
+                            'flow_id' => $flow_id,
+                            'flow_name' => "flow-{$flow_id}"
+                        ];
+
+                        $download_result = $files_repo->store_remote_file($enclosure_url, $filename, $context);
 
                         if ($download_result) {
                             $file_info = [
@@ -324,24 +331,6 @@ class Rss {
             return (string) $item->enclosure['url'];
         }
         return null;
-    }
-
-    private function guess_mime_type_from_url(string $url): string {
-        $extension = strtolower(pathinfo(wp_parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
-        
-        $mime_map = [
-            'jpg' => 'image/jpeg',
-            'jpeg' => 'image/jpeg',
-            'png' => 'image/png',
-            'gif' => 'image/gif',
-            'webp' => 'image/webp',
-            'mp3' => 'audio/mpeg',
-            'mp4' => 'video/mp4',
-            'pdf' => 'application/pdf',
-            'zip' => 'application/zip'
-        ];
-        
-        return $mime_map[$extension] ?? 'application/octet-stream';
     }
 
     public static function get_label(): string {

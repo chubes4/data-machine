@@ -26,6 +26,7 @@ export default function FlowStepHandler( {
 	onConfigure,
 } ) {
 	const { globalSettings } = usePipelineContext();
+
 	if ( ! handlerSlug ) {
 		return (
 			<div className="datamachine-flow-step-handler datamachine-flow-step-handler--empty datamachine-handler-warning">
@@ -43,27 +44,66 @@ export default function FlowStepHandler( {
 		);
 	}
 
-	const hasSettings =
-		handlerConfig && Object.keys( handlerConfig ).length > 0;
+	// Pattern-based check: all WordPress handlers follow wordpress_* naming convention
+	const isWordPressHandler = handlerSlug.startsWith( 'wordpress' );
 
-	// Prepare global settings to display
-	const globalSettingsToShow = {};
-	if ( globalSettings ) {
-		if ( globalSettings.default_author_id && ! handlerConfig?.post_author ) {
-			globalSettingsToShow.author = `${ globalSettings.default_author_name || globalSettings.default_author_id } (Global)`;
+	// Build unified display settings
+	const displaySettings = {};
+
+	// Add handler-configured settings
+	if ( handlerConfig ) {
+		Object.entries( handlerConfig ).forEach( ( [ key, value ] ) => {
+			displaySettings[ key ] = {
+				label: slugToLabel( key ),
+				value:
+					typeof value === 'object'
+						? JSON.stringify( value )
+						: String( value ),
+			};
+		} );
+	}
+
+	// Add global WordPress settings (only for WordPress handlers)
+	if ( isWordPressHandler && globalSettings ) {
+		if (
+			globalSettings.default_author_id &&
+			! handlerConfig?.post_author
+		) {
+			displaySettings.author = {
+				label: __( 'Author', 'datamachine' ),
+				value: `${ globalSettings.default_author_name || globalSettings.default_author_id } (${ __( 'global default', 'datamachine' ) })`,
+			};
 		}
-		if ( globalSettings.default_post_status && ! handlerConfig?.post_status ) {
-			globalSettingsToShow.status = `${ globalSettings.default_post_status } (Global)`;
+		if (
+			globalSettings.default_post_status &&
+			! handlerConfig?.post_status
+		) {
+			displaySettings.status = {
+				label: __( 'Status', 'datamachine' ),
+				value: `${ globalSettings.default_post_status } (${ __( 'global default', 'datamachine' ) })`,
+			};
 		}
-		if ( globalSettings.default_include_source !== undefined && ! handlerConfig?.include_source ) {
-			globalSettingsToShow.include_source = `${ globalSettings.default_include_source ? 'Yes' : 'No' } (Global)`;
+		if (
+			globalSettings.default_include_source !== undefined &&
+			! handlerConfig?.include_source
+		) {
+			displaySettings.include_source = {
+				label: __( 'Include Source', 'datamachine' ),
+				value: `${ globalSettings.default_include_source ? __( 'Yes', 'datamachine' ) : __( 'No', 'datamachine' ) } (${ __( 'global default', 'datamachine' ) })`,
+			};
 		}
-		if ( globalSettings.default_enable_images !== undefined && ! handlerConfig?.enable_images ) {
-			globalSettingsToShow.enable_images = `${ globalSettings.default_enable_images ? 'Yes' : 'No' } (Global)`;
+		if (
+			globalSettings.default_enable_images !== undefined &&
+			! handlerConfig?.enable_images
+		) {
+			displaySettings.enable_images = {
+				label: __( 'Enable Images', 'datamachine' ),
+				value: `${ globalSettings.default_enable_images ? __( 'Yes', 'datamachine' ) : __( 'No', 'datamachine' ) } (${ __( 'global default', 'datamachine' ) })`,
+			};
 		}
 	}
 
-	const hasGlobalSettings = Object.keys( globalSettingsToShow ).length > 0;
+	const hasSettings = Object.keys( displaySettings ).length > 0;
 
 	return (
 		<div className="datamachine-flow-step-handler datamachine-handler-container">
@@ -73,26 +113,13 @@ export default function FlowStepHandler( {
 
 			{ hasSettings && (
 				<div className="datamachine-handler-settings-display">
-					{ Object.entries( handlerConfig ).map(
-						( [ key, value ] ) => (
-							<div key={ key } className="datamachine-handler-settings-entry">
-								<strong>{ slugToLabel( key ) }:</strong>{ ' ' }
-								{ typeof value === 'object'
-									? JSON.stringify( value )
-									: String( value ) }
-							</div>
-						)
-					) }
-				</div>
-			) }
-
-			{ hasGlobalSettings && (
-				<div className="datamachine-handler-settings-display datamachine-global-settings">
-					{ Object.entries( globalSettingsToShow ).map(
-						( [ key, value ] ) => (
-							<div key={ key } className="datamachine-handler-settings-entry datamachine-global-setting">
-								<strong>{ slugToLabel( key ) }:</strong>{ ' ' }
-								{ value }
+					{ Object.entries( displaySettings ).map(
+						( [ key, setting ] ) => (
+							<div
+								key={ key }
+								className="datamachine-handler-settings-entry"
+							>
+								<strong>{ setting.label }:</strong> { setting.value }
 							</div>
 						)
 					) }

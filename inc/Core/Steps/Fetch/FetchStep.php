@@ -49,6 +49,8 @@ class FetchStep {
 
             $handler_settings = $flow_step_config['handler_config'] ?? [];
             $handler_settings['flow_step_id'] = $flow_step_config['flow_step_id'] ?? null;
+            $handler_settings['pipeline_id'] = $flow_step_config['pipeline_id'] ?? null;
+            $handler_settings['flow_id'] = $flow_step_config['flow_id'] ?? null;
 
             $fetch_entry = $this->execute_handler($handler, $flow_step_config, $handler_settings, (string) $job_id);
 
@@ -88,7 +90,7 @@ class FetchStep {
             $pipeline_id = $flow_step_config['pipeline_id'] ?? null;
             $flow_id = $flow_step_config['flow_id'] ?? null;
 
-            if (!$pipeline_id) {
+            if ($pipeline_id === null) {
                 do_action('datamachine_log', 'error', 'Fetch Step: Pipeline ID not found in step config', [
                     'flow_step_config_keys' => array_keys($flow_step_config)
                 ]);

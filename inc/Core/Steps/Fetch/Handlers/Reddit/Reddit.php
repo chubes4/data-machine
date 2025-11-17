@@ -25,7 +25,7 @@ class Reddit {
 		return $repositories['files'] ?? null;
 	}
 
-	private function store_reddit_image(string $image_url, string $flow_step_id, string $item_id): ?array {
+	private function store_reddit_image(string $image_url, int $pipeline_id, int $flow_id, string $item_id): ?array {
 		$repository = $this->get_repository();
 		if (!$repository) {
 			do_action('datamachine_log', 'error', 'Reddit: FilesRepository not available for image storage', [
@@ -42,35 +42,36 @@ class Reddit {
 		}
 		$filename = "reddit_image_{$item_id}.{$extension}";
 
+		// Build context with fallback names (no database queries)
+		$context = [
+			'pipeline_id' => $pipeline_id,
+			'pipeline_name' => "pipeline-{$pipeline_id}",
+			'flow_id' => $flow_id,
+			'flow_name' => "flow-{$flow_id}"
+		];
+
 		$options = [
 			'timeout' => 30,
 			'user_agent' => 'php:DataMachineWPPlugin:v' . DATAMACHINE_VERSION
 		];
 
-		return $repository->store_remote_file($image_url, $filename, $flow_step_id, $options);
+		return $repository->store_remote_file($image_url, $filename, $context, $options);
 	}
 
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
 		$flow_step_id = $handler_config['flow_step_id'] ?? null;
+		$flow_id = $handler_config['flow_id'] ?? 0;
 		$oauth_reddit = $this->oauth_reddit;
 
 		$reddit_account = apply_filters('datamachine_retrieve_oauth_account', [], 'reddit');
-		$needs_refresh = false;
-		if (empty($reddit_account) || !is_array($reddit_account) || empty($reddit_account['access_token'])) {
-			 if (!empty($reddit_account['refresh_token'])) {
-				do_action('datamachine_log', 'debug', 'Reddit Input: Token missing or empty, refresh needed.', ['pipeline_id' => $pipeline_id]);
-				  $needs_refresh = true;
-			 } else {
-				do_action('datamachine_log', 'error', 'Reddit Input: Reddit account not authenticated or token/refresh token missing.', ['pipeline_id' => $pipeline_id]);
-				return ['processed_items' => []];
-			}
-		} else {
-			 $token_expires_at = $reddit_account['token_expires_at'] ?? 0;
-			if (time() >= ($token_expires_at - 300)) { // Check if expired or within 5 mins
-				do_action('datamachine_log', 'debug', 'Reddit Input: Token expired or expiring soon, refresh needed.', ['pipeline_id' => $pipeline_id, 'expiry' => $token_expires_at]);
-				$needs_refresh = true;
-			 }
+		$access_token = $reddit_account['access_token'] ?? null;
+		$token_expires_at = $reddit_account['token_expires_at'] ?? 0;
+		$needs_refresh = empty($access_token) || time() >= ($token_expires_at - 300);
+
+		if ($needs_refresh && empty($reddit_account['refresh_token'])) {
+			do_action('datamachine_log', 'error', 'Reddit: No refresh token available');
+			return ['processed_items' => []];
 		}
 
 		if ($needs_refresh) {
@@ -226,35 +227,9 @@ class Reddit {
 				}
 
 				if ($cutoff_timestamp !== null) {
-					if (empty($item_data['created_utc'])) {
-						do_action('datamachine_log', 'debug', 'Reddit Input: Skipping item (missing creation date for timeframe check).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
-						continue;
-					}
-					$item_timestamp = (int) $item_data['created_utc'];
+					$item_timestamp = (int) ($item_data['created_utc'] ?? 0);
 					if ($item_timestamp < $cutoff_timestamp) {
-						if (!isset($consecutive_old_posts)) {
-							$consecutive_old_posts = 0;
-						}
-						$consecutive_old_posts++;
-						do_action('datamachine_log', 'debug', 'Reddit Input: Found old post - consecutive count.', [
-							'item_id' => $current_item_id,
-							'item_date' => gmdate('Y-m-d H:i:s', $item_timestamp),
-							'cutoff' => gmdate('Y-m-d H:i:s', $cutoff_timestamp),
-							'consecutive_count' => $consecutive_old_posts,
-							'pipeline_id' => $pipeline_id
-						]);
-
-						if ($consecutive_old_posts >= 3) {
-							do_action('datamachine_log', 'debug', 'Reddit Input: Hit timeframe limit after 3 consecutive old posts - stopping.', [
-								'consecutive_old_posts' => $consecutive_old_posts,
-								'pipeline_id' => $pipeline_id
-							]);
-							$batch_hit_time_limit = true;
-							break;
-						}
 						continue;
-					} else {
-						$consecutive_old_posts = 0;
 					}
 				}
 
@@ -402,7 +377,7 @@ class Reddit {
 				}
 
 				if ($image_info) {
-					$stored_image = $this->store_reddit_image($image_info['url'], $flow_step_id, $current_item_id);
+					$stored_image = $this->store_reddit_image($image_info['url'], $pipeline_id, $flow_id, $current_item_id);
 				}
 
 				$metadata = [
@@ -422,6 +397,13 @@ class Reddit {
 					$content_data['comments'] = $comments_array;
 				}
 
+				$metadata = array_merge($metadata, [
+					'original_title' => $title,
+					'original_id' => $current_item_id,
+					'original_date_gmt' => gmdate('Y-m-d H:i:s', (int)($item_data['created_utc'] ?? time())),
+					'item_identifier_to_log' => $current_item_id
+				]);
+
 				if ($stored_image) {
 					$file_info = [
 						'file_path' => $stored_image['path'],
@@ -429,25 +411,11 @@ class Reddit {
 						'mime_type' => $image_info['mime_type'],
 						'file_size' => $stored_image['size']
 					];
-					$metadata = array_merge($metadata, [
-						'original_title' => $title,
-						'original_id' => $current_item_id,
-						'original_date_gmt' => gmdate('Y-m-d H:i:s', (int)($item_data['created_utc'] ?? time())),
-						'item_identifier_to_log' => $current_item_id
-					]);
-
 					$input_data = [
 						'data' => array_merge($content_data, ['file_info' => $file_info]),
 						'metadata' => $metadata
 					];
 				} else {
-					$metadata = array_merge($metadata, [
-						'original_title' => $title,
-						'original_id' => $current_item_id,
-						'original_date_gmt' => gmdate('Y-m-d H:i:s', (int)($item_data['created_utc'] ?? time())),
-						'item_identifier_to_log' => $current_item_id
-					]);
-
 					$input_data = [
 						'data' => $content_data,
 						'metadata' => $metadata
@@ -457,14 +425,8 @@ class Reddit {
 				if ($job_id) {
 					$source_url = $item_data['permalink'] ? 'https://www.reddit.com' . $item_data['permalink'] : '';
 
-					$image_url = '';
-					if ($stored_image && $flow_step_id) {
-						$repositories = apply_filters('datamachine_files_repository', []);
-						$file_repository = $repositories['files'] ?? null;
-						if ($file_repository && !empty($stored_image['filename'])) {
-							$image_url = trailingslashit($file_repository->get_repository_url($flow_step_id)) . $stored_image['filename'];
-						}
-					}
+					// Use the URL already provided by store_remote_file()
+					$image_url = $stored_image['url'] ?? '';
 
 					apply_filters('datamachine_engine_data', null, $job_id, [
 						'source_url' => $source_url,

@@ -168,7 +168,41 @@ $parameters = [
 
 **Source URL Requirement**: Requires source URL from centralized engine data via datamachine_engine_data filter for post identification, making it suitable for content update workflows.
 
-**Enhanced Tool Discovery**: UpdateStep implements intelligent tool result detection with handler slug matching and partial name matching for improved AI workflow integration.
+**ToolResultFinder Integration** (@since v0.2.0): UpdateStep uses the `ToolResultFinder` utility class for locating handler tool execution results in data packets.
+
+**Tool Result Search Pattern**:
+```php
+use DataMachine\Engine\AI\ToolResultFinder;
+
+// UpdateStep.php
+$tool_result_entry = ToolResultFinder::findHandlerResult($data, $handler_slug);
+
+if ($tool_result_entry) {
+    // AI successfully executed handler tool
+    return $this->create_update_entry_from_tool_result(
+        $tool_result_entry,
+        $data,
+        $handler_slug,
+        $flow_step_id
+    );
+}
+
+// AI did not execute handler tool - fail cleanly
+do_action('datamachine_log', 'error', 'UpdateStep: AI did not execute handler tool');
+return [];
+```
+
+**Search Logic**:
+- Searches data packets for `type` = 'tool_result' or 'ai_handler_complete'
+- Matches `metadata.handler_tool` against handler slug (e.g., 'wordpress_update')
+- Returns first matching entry or null if no match found
+- Centralizes search logic eliminating code duplication
+
+**Benefits**:
+- Universal search utility shared across all update handlers
+- Consistent tool result detection across step types
+- Simplified update handler implementation
+- Centralized maintenance for search improvements
 
 **Metadata Preservation**: Maintains existing post metadata, publication dates, and author information.
 

@@ -176,7 +176,7 @@ use DataMachine\Engine\AI\ToolParameters;
 // Standard tool parameter building
 $parameters = ToolParameters::buildParameters(
     $ai_tool_parameters,     // Parameters from AI tool call
-    $unified_parameters,     // Unified context (session_id or job_id + engine_data)
+    $payload,                // Step payload (session_id or job_id + engine_data)
     $tool_definition         // Tool definition array
 );
 

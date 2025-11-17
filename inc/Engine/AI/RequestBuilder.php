@@ -28,7 +28,7 @@ class RequestBuilder {
 	 * @param string $model       Model identifier
 	 * @param array  $tools       Raw tools array from filters
 	 * @param string $agent_type  Agent type: 'chat' or 'pipeline'
-	 * @param array  $context     Agent-specific context (session_id, step_id, payload, etc)
+	 * @param array  $payload     Step payload (session_id, job_id, flow_step_id, data, etc)
 	 * @return array AI response from provider
 	 */
 	public static function build(
@@ -37,7 +37,7 @@ class RequestBuilder {
 		string $model,
 		array $tools,
 		string $agent_type,
-		array $context = []
+		array $payload = []
 	): array {
 
 		// 1. Initialize request with model and messages
@@ -55,8 +55,8 @@ class RequestBuilder {
 			$request,
 			$provider,
 			$structured_tools,
-			$context['step_id'] ?? null,
-			$context['payload'] ?? []
+			$payload['step_id'] ?? null,
+			$payload
 		);
 
 		// 4. Apply agent directives (universal system - agents implement via filter)
@@ -66,7 +66,7 @@ class RequestBuilder {
 			$agent_type,
 			$provider,
 			$structured_tools,
-			$context
+			$payload
 		);
 
 		do_action('datamachine_log', 'debug', 'RequestBuilder: Built AI request', [
@@ -84,10 +84,10 @@ class RequestBuilder {
 			$provider,
 			null, // streaming_callback
 			$structured_tools,
-			$context['step_id'] ?? $context['session_id'] ?? null,
+			$payload['step_id'] ?? $payload['session_id'] ?? null,
 			[
 				'agent_type' => $agent_type,
-				'context' => $context
+				'payload' => $payload
 			]
 		);
 	}

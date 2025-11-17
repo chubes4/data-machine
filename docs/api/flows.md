@@ -1,12 +1,14 @@
 # Flows Endpoints
 
-**Implementation**: `inc/Api/Flows.php`
+**Implementation**: `/inc/Api/Flows/` directory structure
+- `Flows.php` - Main flow CRUD operations
+- `FlowSteps.php` - Flow step configuration (`/flows/{id}/config`, `/flows/steps/{flow_step_id}/config`)
 
 **Base URL**: `/wp-json/datamachine/v1/flows`
 
 ## Overview
 
-Flow endpoints manage flow instances - configured, scheduled executions of pipeline templates. Flows represent the instance layer of the Pipeline+Flow architecture.
+Flow endpoints manage flow instances - configured, scheduled executions of pipeline templates. Flows represent the instance layer of the Pipeline+Flow architecture. Directory-based structure (@since v0.2.0) organizes flow management and step configuration operations.
 
 ## Authentication
 
@@ -199,6 +201,94 @@ Scheduling configuration defines execution intervals:
 - `weekly` - Once per week
 - Custom intervals via WordPress cron system
 
+## Flow Step Configuration
+
+### GET /flows/{flow_id}/config
+
+Retrieve complete flow configuration including all step settings.
+
+**Permission**: `manage_options` capability required
+
+**Parameters**:
+- `flow_id` (integer, required): Flow ID (in URL path)
+
+**Example Request**:
+
+```bash
+curl https://example.com/wp-json/datamachine/v1/flows/42/config \
+  -u username:application_password
+```
+
+**Success Response (200 OK)**:
+
+```json
+{
+  "success": true,
+  "flow_id": 42,
+  "flow_config": {
+    "flow_step_id_123": {
+      "flow_step_id": "flow_step_id_123",
+      "pipeline_step_id": "step_uuid",
+      "step_type": "fetch",
+      "execution_order": 0,
+      "handler_slug": "rss",
+      "handler_config": {
+        "feed_url": "https://example.com/feed/",
+        "max_items": 10
+      },
+      "enabled": true
+    }
+  }
+}
+```
+
+### GET /flows/steps/{flow_step_id}/config
+
+Retrieve configuration for a specific flow step.
+
+**Permission**: `manage_options` capability required
+
+**Parameters**:
+- `flow_step_id` (string, required): Flow step ID (in URL path)
+
+**Example Request**:
+
+```bash
+curl https://example.com/wp-json/datamachine/v1/flows/steps/flow_step_id_123/config \
+  -u username:application_password
+```
+
+**Success Response (200 OK)**:
+
+```json
+{
+  "success": true,
+  "flow_step_id": "flow_step_id_123",
+  "config": {
+    "flow_step_id": "flow_step_id_123",
+    "pipeline_step_id": "step_uuid",
+    "step_type": "fetch",
+    "execution_order": 0,
+    "handler_slug": "rss",
+    "handler_config": {
+      "feed_url": "https://example.com/feed/",
+      "max_items": 10
+    },
+    "enabled": true
+  }
+}
+```
+
+**Error Response (404 Not Found)**:
+
+```json
+{
+  "code": "config_not_found",
+  "message": "Flow step configuration not found.",
+  "data": {"status": 404}
+}
+```
+
 ## Common Workflows
 
 ### Create and Execute Flow
@@ -316,4 +406,5 @@ const deletedJobs = await deleteFlow(flowId);
 
 **Base URL**: `/wp-json/datamachine/v1/flows`
 **Permission**: `manage_options` capability required
-**Implementation**: `inc/Api/Flows.php`
+**Implementation**: `/inc/Api/Flows/` directory (Flows.php, FlowSteps.php)
+**Version**: Directory structure introduced in v0.2.0

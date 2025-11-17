@@ -65,11 +65,11 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 
 
 **OAuth Providers**:
-- Twitter: OAuth 1.0a
-- Reddit/Facebook/Threads/Google Sheets: OAuth2
-- Bluesky: App Password
+- Twitter: OAuth 1.0a (centralized OAuth1Handler at `/inc/Core/OAuth/`)
+- Reddit/Facebook/Threads/Google Sheets: OAuth 2.0 (centralized OAuth2Handler at `/inc/Core/OAuth/`)
+- Bluesky: App Password (direct authentication)
 
-Auth via `/datamachine-auth/{provider}/` popup flow.
+**OAuth Architecture**: Centralized handler services via `datamachine_get_oauth1_handler` and `datamachine_get_oauth2_handler` filters eliminate code duplication across providers. Auth via `/datamachine-auth/{provider}/` popup flow.
 
 ### Quick Example: Document Processing System
 
@@ -215,9 +215,13 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 - `GET /datamachine/v1/processed-items` - Processed items
 - `DELETE /datamachine/v1/processed-items` - Clear processed items
 
-**Implementation**: 16 REST API endpoints with automatic route registration:
-- Core endpoints: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users (`inc/Api/*.php` files)
-- Chat endpoint: Single directory-based implementation at `inc/Api/Chat/` containing Chat.php (endpoint handler), ChatAgentDirective.php (AI directive), ChatFilters.php (self-registration), and Tools/MakeAPIRequest.php (chat-only tool)
+**Implementation**: 16 REST API endpoints with directory-based structure (@since v0.2.0):
+- **Directory-based endpoints**:
+  - **Pipelines** (`/inc/Api/Pipelines/`): Pipelines.php (main endpoint), PipelineSteps.php (steps CRUD), PipelineFlows.php (pipeline flows)
+  - **Flows** (`/inc/Api/Flows/`): Flows.php (main endpoint), FlowSteps.php (flow steps CRUD)
+  - **Chat** (`/inc/Api/Chat/`): Chat.php (endpoint handler), ChatAgentDirective.php (AI directive), ChatFilters.php (self-registration), Tools/MakeAPIRequest.php (chat-only tool)
+- **Single-file endpoints**: Auth, Execute, Files, Handlers, Jobs, Logs, ProcessedItems, Providers, Settings, StepTypes, Tools, Users (at `/inc/Api/*.php`)
+- **Nested endpoints**: Pipeline steps, flow configuration, chat sessions with structured URL routing
 
 **Requirements**: WordPress application password or cookie authentication with `manage_options` capability (except `/users/me` which requires authentication only). Action Scheduler required for scheduled flow execution (woocommerce/action-scheduler via Composer).
 
@@ -259,6 +263,10 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 - WordPress Post Reader
 
 **Architecture Highlights**:
+- **Centralized OAuth Handlers**:
+  - `OAuth1Handler` and `OAuth2Handler` classes at `/inc/Core/OAuth/` eliminate duplication
+  - Service discovery via `datamachine_get_oauth1_handler` and `datamachine_get_oauth2_handler` filters
+  - Single implementation for 6 providers (Twitter, Reddit, Facebook, Threads, Google Sheets, future providers)
 - **Centralized Engine Data**:
   - `datamachine_engine_data` filter provides unified access to source_url, image_url
   - Clean separation between AI data packets and handler engine parameters
@@ -266,9 +274,10 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
   - Shared functionality (`datamachine_timeframe_limit`, `datamachine_keyword_search_match`, `datamachine_data_packet`)
   - Eliminates code duplication across multiple handlers
 - **Universal Engine Architecture**:
-  - Shared AI infrastructure (`AIConversationLoop`, `RequestBuilder`, `ToolExecutor`, `ToolParameters`, `ConversationManager`)
+  - Shared AI infrastructure (`AIConversationLoop`, `RequestBuilder`, `ToolExecutor`, `ToolParameters`, `ConversationManager`, `ToolResultFinder`)
   - Multi-turn conversation execution with automatic tool handling
   - Centralized parameter building and request construction
+  - Universal tool result search utility for data packet interpretation
 - **Modular WordPress Publisher**:
   - Specialized components (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`)
   - Configuration hierarchy system

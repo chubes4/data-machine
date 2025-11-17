@@ -33,7 +33,7 @@ class AIConversationLoop {
 	 * @param string $provider       AI provider (openai, anthropic, etc.)
 	 * @param string $model          AI model identifier
 	 * @param string $agent_type     Agent type: 'pipeline' or 'chat'
-	 * @param array  $context        Agent-specific context data
+	 * @param array  $payload        Step payload (job_id, flow_step_id, data, flow_step_config, engine_data)
 	 * @param int    $max_turns      Maximum conversation turns (default 8)
 	 * @return array {
 	 *     @type array  $messages        Final conversation state
@@ -49,7 +49,7 @@ class AIConversationLoop {
 		string $provider,
 		string $model,
 		string $agent_type,
-		array $context = [],
+		array $payload = [],
 		int $max_turns = 12
 	): array {
 		$conversation_complete = false;
@@ -82,7 +82,7 @@ class AIConversationLoop {
 				$model,
 				$tools,
 				$agent_type,
-				$context
+				$payload
 			);
 
 			// Handle AI request failure
@@ -182,9 +182,7 @@ class AIConversationLoop {
 						$tool_name,
 						$tool_parameters,
 						$tools,
-						[], // data packets (empty for chat, populated by pipeline)
-						null, // flow_step_id (null for chat, set by pipeline)
-						$context
+						$payload
 					);
 
 					do_action('datamachine_log', 'debug', 'AIConversationLoop: Tool executed', [

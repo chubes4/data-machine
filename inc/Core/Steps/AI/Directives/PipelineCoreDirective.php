@@ -1,14 +1,35 @@
 <?php
 /**
- * Priority 10 AI directive (foundational agent identity).
+ * Pipeline Core Directive
+ *
+ * Priority 10 AI directive that establishes foundational agent identity
+ * and operational principles for pipeline AI agents.
+ *
+ * @package DataMachine\Core\Steps\AI\Directives
  */
 
 namespace DataMachine\Core\Steps\AI\Directives;
 
 defined('ABSPATH') || exit;
 
+/**
+ * Pipeline Core Directive
+ *
+ * Injects foundational AI agent identity and operational principles
+ * into pipeline AI requests.
+ */
 class PipelineCoreDirective {
 
+    /**
+     * Inject core directive into AI request.
+     *
+     * @param array $request AI request data
+     * @param string $provider_name AI provider name
+     * @param array $tools Available tools
+     * @param string|null $pipeline_step_id Pipeline step ID
+     * @param array $payload Step payload
+     * @return array Modified request with directive injected
+     */
     public static function inject($request, $provider_name, $tools, $pipeline_step_id = null, array $payload = []): array {
         if (!isset($request['messages']) || !is_array($request['messages'])) {
             return $request;
@@ -30,6 +51,11 @@ class PipelineCoreDirective {
         return $request;
     }
 
+    /**
+     * Generate core directive content.
+     *
+     * @return string Core directive text
+     */
     private static function generate_core_directive(): string {
         $directive = "You are an AI content processing agent in the Data Machine WordPress plugin pipeline system.\n\n";
 

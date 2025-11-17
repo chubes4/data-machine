@@ -15,9 +15,6 @@ defined('ABSPATH') || exit;
 
 class WordPressSettings {
 
-    public function __construct() {
-    }
-
     /**
      * Get settings fields for WordPress publish handler.
      *

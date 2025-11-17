@@ -76,8 +76,26 @@ $image_url = $engine_data['image_url'] ?? null;
 - **Update**: Content modification (WordPress posts/pages)
 
 ### Authentication System
-Unified OAuth2 and API key management:
-- OAuth providers: Twitter, Reddit, Facebook, Google services
+
+**Centralized OAuth Handlers** (@since v0.2.0): Unified OAuth flow implementations eliminate code duplication across all authentication providers.
+
+**Architecture**:
+- **OAuth1Handler** (`/inc/Core/OAuth/OAuth1Handler.php`): Three-legged OAuth 1.0a flow for Twitter
+- **OAuth2Handler** (`/inc/Core/OAuth/OAuth2Handler.php`): Authorization code flow for Reddit, Facebook, Threads, Google Sheets
+- **Service Discovery**: Filter-based access via `datamachine_get_oauth1_handler` and `datamachine_get_oauth2_handler`
+
+**OAuth2 Flow**:
+1. Create state nonce for CSRF protection
+2. Build authorization URL with parameters
+3. Handle callback: verify state, exchange code for token, retrieve account details, store credentials
+
+**OAuth1 Flow**:
+1. Get request token
+2. Build authorization URL
+3. Handle callback: validate parameters, exchange for access token, store credentials
+
+**Other Authentication**:
+- Bluesky: App Password (direct authentication)
 - API key providers: Google Search, AI services
 - Centralized configuration validation
 
@@ -97,6 +115,8 @@ Data Machine v0.2.0 introduced a universal Engine layer (`/inc/Engine/AI/`) that
 
 - **RequestBuilder** (`/inc/Engine/AI/RequestBuilder.php`): Centralized AI request construction for all agents, directive application system (global, agent-specific, pipeline, chat), tool restructuring for AI provider compatibility, and integration with ai-http-client library
 
+- **ToolResultFinder** (`/inc/Engine/AI/ToolResultFinder.php`): Universal utility for finding AI tool execution results in data packets, handler-specific result search by slug matching, centralized search logic eliminating code duplication across update handlers
+
 **Tool Categories**:
 - Handler-specific tools for publish/update operations (twitter_publish, wordpress_update)
 - Global tools in `/inc/Engine/AI/Tools/` for search and analysis (GoogleSearch, LocalSearch, WebFetch, WordPressPostReader)
@@ -110,6 +130,8 @@ All components self-register via WordPress filters:
 - `chubes_ai_tools` - Register AI tools and capabilities
 - `datamachine_auth_providers` - Register authentication providers
 - `datamachine_step_types` - Register custom step types
+- `datamachine_get_oauth1_handler` - OAuth 1.0a handler service discovery
+- `datamachine_get_oauth2_handler` - OAuth 2.0 handler service discovery
 
 ### Centralized Handler Filter System
 
@@ -228,7 +250,7 @@ Complete extension system for custom handlers and tools:
 - **Filter-Based Directive System**: Four directive categories applied by RequestBuilder:
   - `datamachine_global_directives` - Applied to all AI agents (Pipeline and Chat)
   - `datamachine_agent_directives` - Agent-specific directives differentiated by type
-  - `datamachine_pipeline_directives` - Pipeline-only directives (PipelineCoreDirective, PipelineSystemPromptDirective, PipelineContextDirective, ToolDefinitionsDirective)
+  - `datamachine_pipeline_directives` - Pipeline-only directives (PipelineCoreDirective, PipelineSystemPromptDirective, PipelineContextDirective)
   - `datamachine_chat_directives` - Chat-only directives
 - **Universal Engine Architecture**: Shared AI infrastructure via `/inc/Engine/AI/` components:
   - AIConversationLoop for multi-turn conversation execution with automatic tool calling
@@ -236,6 +258,7 @@ Complete extension system for custom handlers and tools:
   - ToolParameters for centralized parameter building (`buildParameters()` for standard tools, `buildForHandlerTool()` for handler tools with engine data)
   - ConversationManager for message formatting and conversation utilities
   - RequestBuilder for centralized AI request construction with directive application
+  - ToolResultFinder for universal tool result search in data packets
 - Site context injection with automatic cache invalidation (SiteContextDirective in global directives)
 - Tool result formatting with success/failure messages
 - Clear tool result messaging enabling natural AI agent conversation termination

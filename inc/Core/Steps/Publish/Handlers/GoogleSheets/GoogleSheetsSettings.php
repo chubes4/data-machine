@@ -18,9 +18,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class GoogleSheetsSettings {
 
-    public function __construct() {
-    }
-
     /**
      * Get settings fields for Google Sheets publish handler.
      *
