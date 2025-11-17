@@ -14,6 +14,9 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 - [AI Conversation Loop](core-system/ai-conversation-loop.md) - Multi-turn conversation execution
 - [Tool Execution Architecture](core-system/tool-execution.md) - Tool discovery and execution
 - [RequestBuilder Pattern](core-system/request-builder.md) - Centralized AI request construction
+- [ConversationManager](core-system/conversation-manager.md) - Message formatting and conversation utilities
+- [ToolParameters](core-system/tool-parameters.md) - Unified parameter building for AI tools
+- [Chat Database](core-system/chat-database.md) - Session management and CRUD operations
 
 ### Handler Documentation
 
@@ -66,7 +69,10 @@ docs/
 │   ├── universal-engine.md             # Universal Engine architecture (v0.2.0)
 │   ├── ai-conversation-loop.md         # Multi-turn conversation execution (v0.2.0)
 │   ├── tool-execution.md               # Tool discovery and execution (v0.2.0)
-│   └── request-builder.md              # Centralized AI request construction (v0.2.0)
+│   ├── request-builder.md              # Centralized AI request construction (v0.2.0)
+│   ├── conversation-manager.md         # Message formatting and conversation utilities (v0.2.0)
+│   ├── tool-parameters.md              # Unified parameter building for AI tools (v0.2.0)
+│   └── chat-database.md                # Session management and CRUD operations (v0.2.0)
 ├── handlers/
 │   ├── fetch/
 │   │   ├── wordpress-local.md          # Local WordPress content
@@ -171,8 +177,8 @@ docs/
 - Update tools for content modification
 
 **REST API Architecture**: 16 REST API endpoints implemented
-- Core endpoints: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users
-- Chat endpoints: Chat (base), Chat/Chat (conversations)
+- Core endpoints: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users (individual files at `inc/Api/*.php`)
+- Chat endpoint: Single directory-based implementation at `inc/Api/Chat/` with Chat.php (endpoint handler), ChatAgentDirective.php (AI directive), ChatFilters.php (self-registration), Tools/MakeAPIRequest.php (chat-only tool)
 - Admin interface: React 18 with complete REST API integration, zero AJAX dependencies
 
 ### ✅ Authentication Systems

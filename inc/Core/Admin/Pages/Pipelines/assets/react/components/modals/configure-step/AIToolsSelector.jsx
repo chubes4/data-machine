@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import apiFetch from '@wordpress/api-fetch';
 import ToolCheckbox from './ToolCheckbox';
 import ConfigurationWarning from './ConfigurationWarning';
 
@@ -31,8 +32,7 @@ export default function AIToolsSelector( {
 	useEffect( () => {
 		const loadTools = async () => {
 			try {
-				const response = await fetch( '/wp-json/datamachine/v1/tools' );
-				const data = await response.json();
+				const data = await apiFetch( { path: '/datamachine/v1/tools' } );
 
 				if ( data.success ) {
 					const toolsArray = Object.entries( data.tools ).map(
@@ -116,6 +116,7 @@ export default function AIToolsSelector( {
 						description={ tool.description }
 						checked={ selectedTools.includes( tool.toolId ) }
 						configured={ tool.configured }
+						globallyEnabled={ tool.globallyEnabled }
 						onChange={ () => handleToggle( tool.toolId ) }
 					/>
 				) ) }

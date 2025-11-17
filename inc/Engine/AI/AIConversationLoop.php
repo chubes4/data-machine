@@ -50,7 +50,7 @@ class AIConversationLoop {
 		string $model,
 		string $agent_type,
 		array $context = [],
-		int $max_turns = 8
+		int $max_turns = 12
 	): array {
 		$conversation_complete = false;
 		$turn_count = 0;

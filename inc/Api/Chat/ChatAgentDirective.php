@@ -120,7 +120,7 @@ Help users build and execute automated workflows through natural language conver
 **GET /datamachine/v1/pipelines/{id}**
 - Get pipeline details
 
-**PUT /datamachine/v1/pipelines/{id}**
+**PATCH /datamachine/v1/pipelines/{id}**
 - Update pipeline
 
 **DELETE /datamachine/v1/pipelines/{id}**
@@ -138,7 +138,7 @@ Help users build and execute automated workflows through natural language conver
 **GET /datamachine/v1/flows/{id}**
 - Get flow details
 
-**PUT /datamachine/v1/flows/{id}**
+**PATCH /datamachine/v1/flows/{id}**
 - Update flow
 
 **DELETE /datamachine/v1/flows/{id}**
@@ -149,6 +149,14 @@ Help users build and execute automated workflows through natural language conver
 **GET /datamachine/v1/jobs**
 - List all job executions
 - Returns job history with status, timestamps, and error messages
+- Query parameters:
+  - pipeline_id: Filter by pipeline ID
+  - flow_id: Filter by flow ID
+  - status: Filter by status (pending, running, completed, failed, completed_no_items)
+  - orderby: Order by field (default: job_id)
+  - order: Sort order (ASC or DESC, default: DESC)
+  - per_page: Results per page (1-100, default: 50)
+  - offset: Pagination offset (default: 0)
 
 **GET /datamachine/v1/jobs/{id}**
 - Get detailed job information
@@ -163,8 +171,8 @@ Help users build and execute automated workflows through natural language conver
 **GET /datamachine/v1/logs/content**
 - Retrieve log file content for debugging
 - Parameters:
-  - mode: "recent" (default, last 200 lines) or "full" (entire log file)
-  - limit: Number of lines (1-10000)
+  - mode: "full" (default, entire file) or "recent" (last 200 lines)
+  - limit: Number of lines (1-10000, default: 200)
 - Use this to diagnose pipeline issues, check execution status, and troubleshoot errors
 
 **DELETE /datamachine/v1/logs**

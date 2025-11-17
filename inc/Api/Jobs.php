@@ -84,6 +84,20 @@ class Jobs {
 			]
 		]);
 
+		// GET /datamachine/v1/jobs/{id} - Get specific job details
+		register_rest_route('datamachine/v1', '/jobs/(?P<id>\d+)', [
+			'methods' => 'GET',
+			'callback' => [self::class, 'handle_get_job_by_id'],
+			'permission_callback' => [self::class, 'check_permission'],
+			'args' => [
+				'id' => [
+					'required' => true,
+					'type' => 'integer',
+					'description' => __('Job ID', 'datamachine')
+				]
+			]
+		]);
+
 		// DELETE /datamachine/v1/jobs - Clear jobs
 		register_rest_route('datamachine/v1', '/jobs', [
 			'methods' => 'DELETE',
@@ -168,6 +182,36 @@ class Jobs {
 			'total' => $total_jobs,
 			'per_page' => $args['per_page'],
 			'offset' => $args['offset']
+		];
+	}
+
+	/**
+	 * Handle get specific job by ID request
+	 *
+	 * GET /datamachine/v1/jobs/{id}
+	 */
+	public static function handle_get_job_by_id($request) {
+		$job_id = $request->get_param('id');
+
+		// Get job from database via filter
+		$job = apply_filters('datamachine_get_job_by_id', null, $job_id);
+
+		if (!$job) {
+			return new \WP_Error(
+				'job_not_found',
+				sprintf(__('Job %d not found.', 'datamachine'), $job_id),
+				['status' => 404]
+			);
+		}
+
+		do_action('datamachine_log', 'debug', 'Job retrieved via REST API', [
+			'job_id' => $job_id,
+			'user_id' => get_current_user_id()
+		]);
+
+		return [
+			'success' => true,
+			'job' => $job
 		];
 	}
 

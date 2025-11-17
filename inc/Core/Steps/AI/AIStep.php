@@ -45,7 +45,7 @@ class AIStep {
                     $mime_type = $file_info['mime_type'] ?? '';
                 }
             }
-            
+
             $messages = [];
 
             if (!empty($data)) {
@@ -91,7 +91,7 @@ class AIStep {
 
             $next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $flow_step_id, $payload);
             $next_step_config = $next_flow_step_id ? apply_filters('datamachine_get_flow_step_config', [], $next_flow_step_id) : null;
-            
+
             $available_tools = ToolExecutor::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id);
 
             $provider_name = $step_ai_config['selected_provider'] ?? '';
@@ -104,208 +104,33 @@ class AIStep {
                 ]);
                 return $data;
             }
-            
-            $conversation_messages = $messages;
-            
-            $conversation_complete = false;
-            $max_turns = 8;
-            $turn_count = 0;
 
-            do {
-                $turn_count++;
-                
-                if ($turn_count > 1) {
-                    $conversation_messages = self::updateDataPacketMessages($conversation_messages, $data);
-                }
+            // Execute conversation loop
+            $loop = new AIConversationLoop();
+            $loop_result = $loop->execute(
+                $messages,
+                $available_tools,
+                $provider_name,
+                $step_ai_config['model'] ?? '',
+                'pipeline',
+                [
+                    'step_id' => $pipeline_step_id,
+                    'payload' => $payload
+                ]
+            );
 
-                do_action('datamachine_log', 'debug', 'AI Agent: Full conversation being sent to AI', [
+            // Check for errors
+            if (isset($loop_result['error'])) {
+                do_action('datamachine_fail_job', $job_id, 'ai_processing_failed', [
                     'flow_step_id' => $flow_step_id,
-                    'turn_count' => $turn_count,
-                    'message_count' => count($conversation_messages),
-                    'messages' => $conversation_messages
+                    'ai_error' => $loop_result['error'],
+                    'ai_provider' => $provider_name
                 ]);
-
-                // Build AI request using centralized RequestBuilder
-                $ai_response = \DataMachine\Engine\AI\RequestBuilder::build(
-                    $conversation_messages,
-                    $provider_name,
-                    $step_ai_config['model'] ?? '',
-                    $available_tools,
-                    'pipeline',
-                    [
-                        'step_id' => $pipeline_step_id,
-                        'payload' => $payload
-                    ]
-                );
-
-                if (!$ai_response['success']) {
-                    $error_message = 'AI processing failed: ' . ($ai_response['error'] ?? 'Unknown error');
-                    do_action('datamachine_fail_job', $job_id, 'ai_processing_failed', [
-                        'flow_step_id' => $flow_step_id,
-                        'turn_count' => $turn_count,
-                        'ai_error' => $ai_response['error'] ?? 'Unknown error',
-                        'ai_provider' => $ai_response['provider'] ?? 'Unknown'
-                    ]);
-                    
-                    return [];
-                }
-
-                $tool_calls = $ai_response['data']['tool_calls'] ?? [];
-                $ai_content = $ai_response['data']['content'] ?? '';
-                if (!empty($ai_content) || !empty($tool_calls)) {
-                    if (!empty($ai_content)) {
-                        $content_lines = explode("\n", trim($ai_content), 2);
-                        $ai_title = (strlen($content_lines[0]) <= 100) ? $content_lines[0] : "AI Response - Turn {$turn_count}";
-                        $response_body = $ai_content;
-                    } else {
-                        $ai_title = "AI Tool Execution - Turn {$turn_count}";
-                        $tool_names = array_column($tool_calls, 'name');
-                        $response_body = "AI executed " . count($tool_calls) . " tool(s): " . implode(', ', $tool_names);
-                    }
-                    
-                    $data = apply_filters('datamachine_data_packet', $data, [
-                        'type' => 'ai_response',
-                        'content' => [
-                            'title' => $ai_title,
-                            'body' => $response_body
-                        ],
-                        'metadata' => [
-                            'source_type' => 'ai_response',
-                            'flow_step_id' => $flow_step_id,
-                            'conversation_turn' => $turn_count,
-                            'has_tool_calls' => !empty($tool_calls),
-                            'tool_count' => count($tool_calls),
-                            'ai_model' => $ai_response['data']['model'] ?? 'unknown',
-                            'ai_provider' => $ai_response['provider'] ?? 'unknown'
-                        ]
-                    ], $flow_step_id, 'ai');
-                    
-                    if (!empty($ai_content)) {
-                        array_push($conversation_messages, ConversationManager::buildConversationMessage('assistant', $ai_content));
-                    }
-                }
-                
-                if (!empty($tool_calls)) {
-                    foreach ($tool_calls as $tool_call) {
-                        $tool_name = $tool_call['name'] ?? '';
-                        $tool_parameters = $tool_call['parameters'] ?? [];
-                        if (empty($tool_name)) {
-                            do_action('datamachine_log', 'warning', 'AI Agent: Tool call missing name', [
-                                'flow_step_id' => $flow_step_id,
-                                'turn_count' => $turn_count,
-                                'tool_call' => $tool_call
-                            ]);
-                            continue;
-                        }
-
-                        $validation_result = ConversationManager::validateToolCall(
-                            $tool_name, $tool_parameters, $conversation_messages
-                        );
-
-                        if ($validation_result['is_duplicate']) {
-                            $correction_message = ConversationManager::generateDuplicateToolCallMessage($tool_name);
-                            array_push($conversation_messages, $correction_message);
-
-                            do_action('datamachine_log', 'info', 'AI Agent: Duplicate tool call prevented', [
-                                'flow_step_id' => $flow_step_id,
-                                'turn_count' => $turn_count,
-                                'tool_name' => $tool_name,
-                                'duplicate_prevention' => 'soft_rejection_applied'
-                            ]);
-
-                            continue;
-                        }
-
-                        $tool_call_message = ConversationManager::formatToolCallMessage(
-                            $tool_name, $tool_parameters, $turn_count
-                        );
-                        array_push($conversation_messages, $tool_call_message);
-
-                        $unified_parameters = [
-                            'data' => $data,
-                            'flow_step_config' => $flow_step_config,
-                            'job_id' => $job_id,
-                            'flow_step_id' => $flow_step_id,
-                            'engine_data' => $engine_data
-                        ];
-
-
-                        $tool_result = ToolExecutor::executeTool($tool_name, $tool_parameters, $available_tools, $data, $flow_step_id, $unified_parameters);
-                        $tool_def = $available_tools[$tool_name] ?? null;
-                        $is_handler_tool = $tool_def && isset($tool_def['handler']);
-                        
-                        $tool_result_message = ConversationManager::formatToolResultMessage(
-                            $tool_name, $tool_result, $tool_parameters, $is_handler_tool, $turn_count
-                        );
-                        array_push($conversation_messages, $tool_result_message);
-                        
-                        if ($is_handler_tool && $tool_result['success']) {
-                            $clean_tool_parameters = $tool_parameters;
-                            $handler_config = $tool_def['handler_config'] ?? [];
-                            
-                            $handler_key = $tool_def['handler'] ?? $tool_name;
-                            if (isset($clean_tool_parameters[$handler_key])) {
-                                unset($clean_tool_parameters[$handler_key]);
-                            }
-                            $tool_result_entry = [
-                                'type' => 'ai_handler_complete',
-                                'content' => [
-                                    'title' => 'Handler Tool Executed: ' . $tool_name,
-                                    'body' => 'Tool executed successfully by AI agent in ' . $turn_count . ' conversation turns'
-                                ],
-                                'metadata' => [
-                                    'tool_name' => $tool_name,
-                                    'handler_tool' => $tool_def['handler'] ?? null,
-                                    'tool_parameters' => $clean_tool_parameters,
-                                    'handler_config' => $handler_config,
-                                    'source_type' => $data[0]['metadata']['source_type'] ?? 'unknown',
-                                    'flow_step_id' => $flow_step_id,
-                                    'conversation_turn' => $turn_count,
-                                    'ai_model' => $ai_response['data']['model'] ?? 'unknown',
-                                    'ai_provider' => $ai_response['provider'] ?? 'unknown'
-                                ],
-                                'timestamp' => time()
-                            ];
-
-                            $data = apply_filters('datamachine_data_packet', $data, $tool_result_entry, $flow_step_id, 'ai');
-
-                            $conversation_complete = true;
-
-                        } else {
-                            $success_message = ConversationManager::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
-                            
-                            $data = apply_filters('datamachine_data_packet', $data, [
-                                'type' => 'tool_result',
-                                'tool_name' => $tool_name,
-                                'content' => [
-                                    'title' => ucwords(str_replace('_', ' ', $tool_name)) . ' Result',
-                                    'body' => $success_message
-                                ],
-                                'metadata' => [
-                                    'tool_name' => $tool_name,
-                                    'tool_parameters' => $tool_parameters,
-                                    'tool_success' => $tool_result['success'] ?? false,
-                                    'tool_result' => $tool_result['data'] ?? [],
-                                    'source_type' => $data[0]['metadata']['source_type'] ?? 'unknown'
-                                ]
-                            ], $flow_step_id, 'ai');
-                        }
-                    }
-                } else {
-                    $conversation_complete = true;
-                }
-                
-            } while (!$conversation_complete && $turn_count < $max_turns);
-            
-            if ($turn_count >= $max_turns && !$conversation_complete) {
-                do_action('datamachine_log', 'warning', 'AI Agent: Conversation hit max turns limit', [
-                    'flow_step_id' => $flow_step_id,
-                    'max_turns' => $max_turns,
-                    'final_turn_count' => $turn_count
-                ]);
+                return [];
             }
 
-            return $data;
+            // Process loop results into data packets
+            return self::processLoopResults($loop_result, $data, $payload, $available_tools);
 
         } catch (\Exception $e) {
             do_action('datamachine_log', 'error', 'AI Agent: Exception during processing', [
@@ -318,33 +143,127 @@ class AIStep {
     }
 
     /**
-     * Update data packet content in conversation messages.
+     * Process AIConversationLoop results into pipeline data packets.
      *
-     * Pipeline-specific functionality for updating data packet JSON in conversation history.
-     *
-     * @param array $conversation_messages Conversation message array
-     * @param array $data Data packet array to inject
-     * @return array Updated conversation messages
+     * @param array $loop_result Result from AIConversationLoop
+     * @param array $data Current data packet array
+     * @param array $payload Step payload
+     * @param array $available_tools Available tool definitions
+     * @return array Updated data packet array
      */
-    private static function updateDataPacketMessages(array $conversation_messages, array $data): array {
-        if (empty($conversation_messages) || empty($data)) {
-            return $conversation_messages;
-        }
+    private static function processLoopResults(array $loop_result, array $data, array $payload, array $available_tools): array {
+        $flow_step_id = $payload['flow_step_id'] ?? '';
+        $messages = $loop_result['messages'] ?? [];
+        $turn_count = 0;
+        $handler_completed = false;
 
-        foreach ($conversation_messages as $index => $message) {
-            if ($message['role'] === 'user' &&
-                isset($message['content']) &&
-                is_string($message['content']) &&
-                strpos($message['content'], '"data_packets"') !== false) {
+        // Process conversation messages to build data packets
+        foreach ($messages as $message) {
+            $role = $message['role'] ?? '';
 
-                $conversation_messages[$index]['content'] = json_encode(
-                    ['data_packets' => $data],
-                    JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
-                );
-                break;
+            // Track turns by counting assistant messages
+            if ($role === 'assistant') {
+                $turn_count++;
+            }
+
+            // Process assistant responses (AI content or tool calls)
+            if ($role === 'assistant') {
+                $content = $message['content'] ?? '';
+                $tool_calls = $message['tool_calls'] ?? [];
+
+                if (!empty($content) || !empty($tool_calls)) {
+                    if (!empty($content)) {
+                        $content_lines = explode("\n", trim($content), 2);
+                        $ai_title = (strlen($content_lines[0]) <= 100) ? $content_lines[0] : "AI Response - Turn {$turn_count}";
+                        $response_body = $content;
+                    } else {
+                        $ai_title = "AI Tool Execution - Turn {$turn_count}";
+                        $tool_names = array_column($tool_calls, 'name');
+                        $response_body = "AI executed " . count($tool_calls) . " tool(s): " . implode(', ', $tool_names);
+                    }
+
+                    $data = apply_filters('datamachine_data_packet', $data, [
+                        'type' => 'ai_response',
+                        'content' => [
+                            'title' => $ai_title,
+                            'body' => $response_body
+                        ],
+                        'metadata' => [
+                            'source_type' => 'ai_response',
+                            'flow_step_id' => $flow_step_id,
+                            'conversation_turn' => $turn_count,
+                            'has_tool_calls' => !empty($tool_calls),
+                            'tool_count' => count($tool_calls)
+                        ]
+                    ], $flow_step_id, 'ai');
+                }
+            }
+
+            // Process tool result messages
+            if ($role === 'tool_result') {
+                $tool_name = $message['tool_name'] ?? '';
+                $tool_result = $message['result'] ?? [];
+                $tool_parameters = $message['parameters'] ?? [];
+
+                if (empty($tool_name)) {
+                    continue;
+                }
+
+                $tool_def = $available_tools[$tool_name] ?? null;
+                $is_handler_tool = $tool_def && isset($tool_def['handler']);
+
+                if ($is_handler_tool && ($tool_result['success'] ?? false)) {
+                    // Handler tool succeeded - mark completion
+                    $clean_tool_parameters = $tool_parameters;
+                    $handler_config = $tool_def['handler_config'] ?? [];
+
+                    $handler_key = $tool_def['handler'] ?? $tool_name;
+                    if (isset($clean_tool_parameters[$handler_key])) {
+                        unset($clean_tool_parameters[$handler_key]);
+                    }
+
+                    $data = apply_filters('datamachine_data_packet', $data, [
+                        'type' => 'ai_handler_complete',
+                        'content' => [
+                            'title' => 'Handler Tool Executed: ' . $tool_name,
+                            'body' => 'Tool executed successfully by AI agent in ' . $turn_count . ' conversation turns'
+                        ],
+                        'metadata' => [
+                            'tool_name' => $tool_name,
+                            'handler_tool' => $tool_def['handler'] ?? null,
+                            'tool_parameters' => $clean_tool_parameters,
+                            'handler_config' => $handler_config,
+                            'source_type' => $data[0]['metadata']['source_type'] ?? 'unknown',
+                            'flow_step_id' => $flow_step_id,
+                            'conversation_turn' => $turn_count
+                        ],
+                        'timestamp' => time()
+                    ], $flow_step_id, 'ai');
+
+                    $handler_completed = true;
+                } else {
+                    // Non-handler tool or failed tool - add tool result data packet
+                    $success_message = ConversationManager::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
+
+                    $data = apply_filters('datamachine_data_packet', $data, [
+                        'type' => 'tool_result',
+                        'tool_name' => $tool_name,
+                        'content' => [
+                            'title' => ucwords(str_replace('_', ' ', $tool_name)) . ' Result',
+                            'body' => $success_message
+                        ],
+                        'metadata' => [
+                            'tool_name' => $tool_name,
+                            'tool_parameters' => $tool_parameters,
+                            'tool_success' => $tool_result['success'] ?? false,
+                            'tool_result' => $tool_result['data'] ?? [],
+                            'source_type' => $data[0]['metadata']['source_type'] ?? 'unknown'
+                        ]
+                    ], $flow_step_id, 'ai');
+                }
             }
         }
 
-        return $conversation_messages;
+        return $data;
     }
 }

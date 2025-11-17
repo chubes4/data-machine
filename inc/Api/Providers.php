@@ -51,10 +51,16 @@ class Providers {
 			// Use AI HTTP Client library's filters directly
 			$library_providers = apply_filters('chubes_ai_providers', []);
 
+			// Get all API keys for model fetching
+			$all_api_keys = apply_filters('chubes_ai_provider_api_keys', null);
+
 			$providers = [];
 			foreach ($library_providers as $key => $provider_info) {
-				// Get models for this provider via filter
-				$models = apply_filters('chubes_ai_models', $key);
+				// Get API key for this provider
+				$api_key = $all_api_keys[$key] ?? '';
+
+				// Get models for this provider via filter with API key
+				$models = apply_filters('chubes_ai_models', $key, ['api_key' => $api_key]);
 
 				$providers[$key] = [
 					'label' => $provider_info['name'] ?? ucfirst($key),

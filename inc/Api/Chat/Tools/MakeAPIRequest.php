@@ -87,8 +87,21 @@ class MakeAPIRequest {
 			'request_data' => $data
 		]);
 
-		$request = new \WP_REST_Request($method, $endpoint);
+		// Parse endpoint and query string
+		$parsed = parse_url($endpoint);
+		$path = $parsed['path'] ?? $endpoint;
+		$query_string = $parsed['query'] ?? '';
 
+		// Create request with clean path (no query string)
+		$request = new \WP_REST_Request($method, $path);
+
+		// Set query parameters if present
+		if (!empty($query_string)) {
+			parse_str($query_string, $query_params);
+			$request->set_query_params($query_params);
+		}
+
+		// Set body parameters for POST/PUT
 		if (!empty($data) && in_array($method, ['POST', 'PUT'], true)) {
 			$request->set_body_params($data);
 		}

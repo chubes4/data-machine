@@ -11,6 +11,7 @@ import {
 	useCallback,
 	useEffect,
 } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
 
 /**
  * Context for pipeline data and state
@@ -32,6 +33,7 @@ export function PipelineProvider( { children } ) {
 	const [ stepTypes, setStepTypes ] = useState( {} );
 	const [ stepTypeSettings, setStepTypeSettings ] = useState( {} );
 	const [ handlers, setHandlers ] = useState( {} );
+	const [ globalSettings, setGlobalSettings ] = useState( null );
 
 	// Modal state (pipeline-level only)
 	// Flow-level modals (FLOW_SCHEDULE, HANDLER_SELECTION, HANDLER_SETTINGS, OAUTH)
@@ -45,10 +47,9 @@ export function PipelineProvider( { children } ) {
 	useEffect( () => {
 		const loadStepTypes = async () => {
 			try {
-				const response = await fetch(
-					'/wp-json/datamachine/v1/step-types'
-				);
-				const data = await response.json();
+				const data = await apiFetch( {
+					path: '/datamachine/v1/step-types',
+				} );
 
 				if ( data.success && data.step_types ) {
 					setStepTypes( data.step_types );
@@ -58,11 +59,9 @@ export function PipelineProvider( { children } ) {
 						const detailPairs = await Promise.all(
 							typeSlugs.map( async ( slug ) => {
 								try {
-									const detailResponse = await fetch(
-										`/wp-json/datamachine/v1/step-types/${ slug }`
-									);
-									const detailData =
-										await detailResponse.json();
+									const detailData = await apiFetch( {
+										path: `/datamachine/v1/step-types/${ slug }`,
+									} );
 
 									if ( detailData.success ) {
 										return [
@@ -112,10 +111,9 @@ export function PipelineProvider( { children } ) {
 	useEffect( () => {
 		const loadHandlers = async () => {
 			try {
-				const response = await fetch(
-					'/wp-json/datamachine/v1/handlers'
-				);
-				const data = await response.json();
+				const data = await apiFetch( {
+					path: '/datamachine/v1/handlers',
+				} );
 
 				if ( data.success && data.handlers ) {
 					setHandlers( data.handlers );
@@ -126,6 +124,27 @@ export function PipelineProvider( { children } ) {
 		};
 
 		loadHandlers();
+	}, [] );
+
+	/**
+	 * Fetch global settings on mount (one-time system configuration load)
+	 */
+	useEffect( () => {
+		const loadGlobalSettings = async () => {
+			try {
+				const data = await apiFetch( {
+					path: '/datamachine/v1/settings',
+				} );
+
+				if ( data.success && data.settings ) {
+					setGlobalSettings( data.settings.wordpress_settings || {} );
+				}
+			} catch ( error ) {
+				console.error( 'Failed to load global settings:', error );
+			}
+		};
+
+		loadGlobalSettings();
 	}, [] );
 
 	/**
@@ -211,6 +230,7 @@ export function PipelineProvider( { children } ) {
 		stepTypes,
 		stepTypeSettings,
 		handlers,
+		globalSettings,
 
 		// Refresh mechanism
 		refreshData,

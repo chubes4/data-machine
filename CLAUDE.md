@@ -113,9 +113,17 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 
 **Endpoint**: `POST /datamachine/v1/chat` - conversational AI for workflow building
 
+**Implementation**: Directory-based structure at `/inc/Api/Chat/` (@since v0.2.0):
+- `Chat.php` - Main endpoint handler (namespace `DataMachine\Api\Chat`)
+- `ChatAgentDirective.php` - Chat-specific AI directive for RequestBuilder integration
+- `ChatFilters.php` - Self-registration filters for tool enablement and directive application
+- `Tools/MakeAPIRequest.php` - Chat-only tool for REST API operations
+
 **Session Management**: Persistent sessions via `wp_datamachine_chat_sessions` table with user isolation, 24-hour expiration
 
-**Key Components**: ChatDatabase, ChatAgentDirective, MakeAPIRequest tool - see `/docs/api-reference/rest-api.md` for complete API documentation
+**Database Component**: `ChatDatabase` class at `/inc/Core/Database/Chat/Chat.php` handles CRUD operations for chat sessions
+
+**Key Integration**: Uses Universal Engine architecture (AIConversationLoop, RequestBuilder, ToolExecutor, ToolParameters, ConversationManager) - see `/docs/api-reference/rest-api.md` for complete API documentation
 
 ## Handler Matrix
 

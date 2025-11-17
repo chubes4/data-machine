@@ -29,6 +29,30 @@ class Settings {
 	 * Register /datamachine/v1/settings and /datamachine/v1/cache endpoints
 	 */
 	public static function register_routes() {
+		// Get all settings
+		register_rest_route('datamachine/v1', '/settings', [
+			'methods' => WP_REST_Server::READABLE,
+			'callback' => [self::class, 'handle_get_settings'],
+			'permission_callback' => [self::class, 'check_permission'],
+		]);
+
+		// Update settings (partial update)
+		register_rest_route('datamachine/v1', '/settings', [
+			'methods' => 'PATCH',
+			'callback' => [self::class, 'handle_update_settings'],
+			'permission_callback' => [self::class, 'check_permission'],
+			'args' => [
+				'wordpress_settings' => [
+					'type' => 'object',
+					'description' => __('WordPress-specific settings', 'datamachine'),
+				],
+				'ai_settings' => [
+					'type' => 'object',
+					'description' => __('AI-specific settings', 'datamachine'),
+				],
+			],
+		]);
+
 		// Tool configuration endpoint
 		register_rest_route('datamachine/v1', '/settings/tools/(?P<tool_id>[a-zA-Z0-9_-]+)', [
 			'methods' => 'POST',
@@ -141,5 +165,112 @@ class Settings {
 			'success' => true,
 			'message' => __('All cache has been cleared successfully.', 'datamachine')
 		];
+	}
+
+	/**
+	 * Handle get settings request
+	 *
+	 * @return array Settings data
+	 */
+	public static function handle_get_settings($request) {
+		$all_settings = get_option('datamachine_settings', []);
+		$wp_settings = $all_settings['wordpress_settings'] ?? [];
+		$ai_settings = $all_settings['ai_settings'] ?? [];
+
+		// Enrich author ID with author name
+		if (!empty($wp_settings['default_author_id'])) {
+			$author = get_userdata($wp_settings['default_author_id']);
+			$wp_settings['default_author_name'] = $author ? $author->display_name : '';
+		}
+
+		do_action('datamachine_log', 'debug', 'Settings fetched via REST API', [
+			'user_id' => get_current_user_id()
+		]);
+
+		return [
+			'success' => true,
+			'settings' => [
+				'wordpress_settings' => $wp_settings,
+				'ai_settings' => $ai_settings
+			]
+		];
+	}
+
+	/**
+	 * Handle update settings request (partial update)
+	 *
+	 * @param \WP_REST_Request $request
+	 * @return array|\WP_Error Updated settings or error
+	 */
+	public static function handle_update_settings($request) {
+		$all_settings = get_option('datamachine_settings', []);
+
+		// Get incoming updates
+		$wp_settings_update = $request->get_param('wordpress_settings');
+		$ai_settings_update = $request->get_param('ai_settings');
+
+		// Merge updates with existing settings (partial update)
+		if (is_array($wp_settings_update)) {
+			$all_settings['wordpress_settings'] = array_merge(
+				$all_settings['wordpress_settings'] ?? [],
+				self::sanitize_settings_array($wp_settings_update)
+			);
+		}
+
+		if (is_array($ai_settings_update)) {
+			$all_settings['ai_settings'] = array_merge(
+				$all_settings['ai_settings'] ?? [],
+				self::sanitize_settings_array($ai_settings_update)
+			);
+		}
+
+		// Update the option
+		$updated = update_option('datamachine_settings', $all_settings);
+
+		if (!$updated && get_option('datamachine_settings') !== $all_settings) {
+			return new \WP_Error(
+				'settings_update_failed',
+				__('Failed to update settings.', 'datamachine'),
+				['status' => 500]
+			);
+		}
+
+		// Clear relevant caches
+		do_action('datamachine_clear_flow_cache');
+
+		do_action('datamachine_log', 'info', 'Settings updated via REST API', [
+			'user_id' => get_current_user_id(),
+			'user_login' => wp_get_current_user()->user_login,
+			'updated_keys' => array_keys($wp_settings_update ?? []) + array_keys($ai_settings_update ?? [])
+		]);
+
+		// Return updated settings
+		return self::handle_get_settings($request);
+	}
+
+	/**
+	 * Sanitize settings array recursively
+	 *
+	 * @param array $settings Settings to sanitize
+	 * @return array Sanitized settings
+	 */
+	private static function sanitize_settings_array($settings) {
+		$sanitized = [];
+
+		foreach ($settings as $key => $value) {
+			$sanitized_key = sanitize_text_field($key);
+
+			if (is_array($value)) {
+				$sanitized[$sanitized_key] = self::sanitize_settings_array($value);
+			} elseif (is_bool($value)) {
+				$sanitized[$sanitized_key] = (bool) $value;
+			} elseif (is_numeric($value)) {
+				$sanitized[$sanitized_key] = is_float($value) ? (float) $value : (int) $value;
+			} else {
+				$sanitized[$sanitized_key] = sanitize_text_field($value);
+			}
+		}
+
+		return $sanitized;
 	}
 }

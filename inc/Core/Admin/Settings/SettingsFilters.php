@@ -44,7 +44,7 @@ function datamachine_register_settings_admin_page_filters() {
             $assets['js'] = [
                 'datamachine-settings-page' => [
                     'src' => 'assets/js/settings-page.js',
-                    'deps' => ['wp-api-fetch'],
+                    'deps' => ['wp-api-fetch', 'datamachine-modal-manager'],
                     'localize' => [
                         'object' => 'datamachineSettings',
                         'data' => [
@@ -308,22 +308,32 @@ add_filter('datamachine_enabled_settings', function($fields, $handler_slug, $ste
         }
         
         if ($field_name === 'post_author' && $default_author_id) {
-            $include_field = false;
+            $author = get_userdata($default_author_id);
+            $field_config['disabled'] = true;
+            $field_config['global_indicator'] = __('Set Globally in Settings > WordPress', 'datamachine');
+            $field_config['global_value'] = $default_author_id;
+            $field_config['global_value_label'] = $author ? $author->display_name : '';
         }
 
         if ($field_name === 'post_status' && $default_post_status) {
-            $include_field = false;
+            $field_config['disabled'] = true;
+            $field_config['global_indicator'] = __('Set Globally in Settings > WordPress', 'datamachine');
+            $field_config['global_value'] = $default_post_status;
         }
 
-        // Global boolean settings - hide fields when globally controlled
+        // Global boolean settings - mark as disabled when globally controlled
         if ($field_name === 'include_source' && isset($wp_settings['default_include_source'])) {
-            $include_field = false;
+            $field_config['disabled'] = true;
+            $field_config['global_indicator'] = __('Set Globally in Settings > WordPress', 'datamachine');
+            $field_config['global_value'] = (bool) $wp_settings['default_include_source'];
         }
 
         if ($field_name === 'enable_images' && isset($wp_settings['default_enable_images'])) {
-            $include_field = false;
+            $field_config['disabled'] = true;
+            $field_config['global_indicator'] = __('Set Globally in Settings > WordPress', 'datamachine');
+            $field_config['global_value'] = (bool) $wp_settings['default_enable_images'];
         }
-        
+
         if (!$include_field) {
             unset($fields[$field_name]);
         }

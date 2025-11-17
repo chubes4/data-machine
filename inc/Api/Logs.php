@@ -62,6 +62,14 @@ class Logs {
 					'validate_callback' => function($param) {
 						return is_numeric($param) && $param > 0 && $param <= 10000;
 					}
+				],
+				'job_id' => [
+					'required' => false,
+					'type' => 'integer',
+					'description' => __('Filter logs by job ID', 'datamachine'),
+					'validate_callback' => function($param) {
+						return is_numeric($param) && $param > 0;
+					}
 				]
 			]
 		]);
@@ -133,6 +141,7 @@ class Logs {
 	public static function handle_get_content($request) {
 		$mode = $request->get_param('mode');
 		$limit = $request->get_param('limit');
+		$job_id = $request->get_param('job_id');
 
 		$log_file = datamachine_get_log_file_path();
 
@@ -160,6 +169,13 @@ class Logs {
 		$file_content = array_reverse($file_content);
 		$total_lines = count($file_content);
 
+		// Apply job_id filter if provided
+		$filtered_lines = null;
+		if ($job_id !== null) {
+			$file_content = self::filter_logs_by_job_id($file_content, $job_id);
+			$filtered_lines = count($file_content);
+		}
+
 		// Apply limit if mode is recent
 		if ($mode === 'recent') {
 			$file_content = array_slice($file_content, 0, $limit);
@@ -171,22 +187,65 @@ class Logs {
 		// Log operation
 		do_action('datamachine_log', 'debug', 'Log content retrieved via REST API', [
 			'mode' => $mode,
+			'job_id' => $job_id,
 			'lines_returned' => count($file_content),
+			'filtered_lines' => $filtered_lines,
 			'total_lines' => $total_lines,
 			'user_id' => get_current_user_id()
 		]);
 
-		return [
+		// Build response
+		$response = [
 			'success' => true,
 			'content' => $content,
 			'total_lines' => $total_lines,
-			'mode' => $mode,
-			'message' => sprintf(
+			'mode' => $mode
+		];
+
+		// Add filtered_lines if filtering was applied
+		if ($filtered_lines !== null) {
+			$response['filtered_lines'] = $filtered_lines;
+			$response['job_id'] = $job_id;
+		}
+
+		// Build message
+		if ($job_id !== null) {
+			$response['message'] = sprintf(
+				__('Retrieved %d log entries for job %d.', 'datamachine'),
+				count($file_content),
+				$job_id
+			);
+		} else {
+			$response['message'] = sprintf(
 				__('Loaded %d %s log entries.', 'datamachine'),
 				count($file_content),
 				$mode === 'recent' ? 'recent' : 'total'
-			)
-		];
+			);
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Filter log lines by job ID
+	 *
+	 * Searches for "job_id":{value} or "job_id": {value} pattern in JSON context
+	 *
+	 * @param array $lines Log file lines
+	 * @param int $job_id Job ID to filter by
+	 * @return array Filtered log lines
+	 */
+	private static function filter_logs_by_job_id($lines, $job_id) {
+		$filtered = [];
+
+		foreach ($lines as $line) {
+			// Match "job_id":{value} or "job_id": {value} in JSON context
+			if (preg_match('/"job_id"\s*:\s*' . preg_quote($job_id, '/') . '(?:[,\}])/', $line)) {
+				$filtered[] = $line;
+			}
+		}
+
+		return $filtered;
 	}
 
 	/**

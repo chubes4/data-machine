@@ -12,6 +12,7 @@ import {
 	TextareaControl,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import apiFetch from '@wordpress/api-fetch';
 import { updateSystemPrompt } from '../../utils/api';
 import AIToolsSelector from './configure-step/AIToolsSelector';
 
@@ -45,32 +46,28 @@ export default function ConfigureStepModal( {
 	const [ selectedTools, setSelectedTools ] = useState(
 		currentConfig?.enabled_tools || []
 	);
-	const [ aiProviders, setAiProviders ] = useState( {} );
-	const [ aiDefaults, setAiDefaults ] = useState( { provider: '', model: '' } );
-	const [ isLoadingProviders, setIsLoadingProviders ] = useState( false );
+  const [ aiProviders, setAiProviders ] = useState( {} );
+  const [ aiDefaults, setAiDefaults ] = useState( { provider: '', model: '' } );
 	const [ isSaving, setIsSaving ] = useState( false );
 	const [ error, setError ] = useState( null );
 
 	/**
 	 * Fetch AI providers when modal opens
 	 */
-	useEffect( () => {
-		if ( isOpen ) {
-			setIsLoadingProviders( true );
-			fetch( '/wp-json/datamachine/v1/providers' )
-				.then( ( res ) => res.json() )
-				.then( ( data ) => {
-					if ( data.success ) {
-						setAiProviders( data.providers );
-						setAiDefaults( data.defaults || { provider: '', model: '' } );
-					}
-				} )
-				.catch( ( err ) =>
-					console.error( 'Failed to load providers:', err )
-				)
-				.finally( () => setIsLoadingProviders( false ) );
-		}
-	}, [ isOpen ] );
+  useEffect( () => {
+    if ( isOpen ) {
+      apiFetch( { path: '/datamachine/v1/providers' } )
+        .then( ( data ) => {
+          if ( data.success ) {
+            setAiProviders( data.providers );
+            setAiDefaults( data.defaults || { provider: '', model: '' } );
+          }
+        } )
+        .catch( ( err ) =>
+          console.error( 'Failed to load providers:', err )
+        );
+    }
+  }, [ isOpen ] );
 
 	/**
 	 * Reset form when modal opens with new config
@@ -80,7 +77,28 @@ export default function ConfigureStepModal( {
 			setProvider( currentConfig?.provider || aiDefaults.provider );
 			setModel( currentConfig?.model || aiDefaults.model );
 			setSystemPrompt( currentConfig?.system_prompt || '' );
-			setSelectedTools( currentConfig?.enabled_tools || [] );
+
+			// Pre-populate with all globally enabled tools for new AI steps
+			if ( ! currentConfig?.enabled_tools ) {
+				apiFetch( { path: '/datamachine/v1/tools' } )
+					.then( ( data ) => {
+						if ( data.success && data.tools ) {
+							const availableTools = Object.entries( data.tools )
+								.filter(
+									( [ id, tool ] ) =>
+										tool.configured && tool.globally_enabled
+								)
+								.map( ( [ id ] ) => id );
+							setSelectedTools( availableTools );
+						}
+					} )
+					.catch( ( err ) =>
+						console.error( 'Failed to load default tools:', err )
+					);
+			} else {
+				setSelectedTools( currentConfig.enabled_tools );
+			}
+
 			setError( null );
 		}
 	}, [ isOpen, currentConfig, aiDefaults ] );

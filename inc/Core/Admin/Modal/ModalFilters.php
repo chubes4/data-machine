@@ -23,15 +23,30 @@ if (!defined('ABSPATH')) {
 /**
  * Register Modal System infrastructure filters
  *
- * Provides only CSS infrastructure.
+ * Provides shared modal JavaScript utilities and CSS infrastructure.
  * Components pre-render their own modal content in page templates.
  *
  * @since 0.1.0
  */
 function datamachine_register_modal_system_filters() {
-    // Note: Modal CSS is included directly in page-specific asset configurations
-    // Modals are now pre-rendered in page templates (Settings, Jobs)
-    // No AJAX loading, no jQuery dependencies
+    add_action('admin_enqueue_scripts', 'DataMachine\\Core\\Admin\\Modal\\enqueue_modal_manager_script');
+}
+
+/**
+ * Enqueue shared modal manager JavaScript
+ *
+ * Provides reusable modal utilities for Jobs, Settings, and other vanilla JS pages.
+ *
+ * @since 0.2.0
+ */
+function enqueue_modal_manager_script() {
+    wp_enqueue_script(
+        'datamachine-modal-manager',
+        DATAMACHINE_URL . 'inc/Core/Admin/Modal/assets/js/modal-manager.js',
+        [],
+        DATAMACHINE_VERSION,
+        true
+    );
 }
 
 // Auto-register when file loads - achieving complete self-containment

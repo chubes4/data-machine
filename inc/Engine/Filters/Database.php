@@ -343,12 +343,17 @@ function datamachine_register_database_filters() {
     }, 10, 2);
     
     add_filter('datamachine_is_item_processed', function($default, $flow_step_id, $source_type, $item_identifier) {
+        // Skip processed items check for ephemeral workflows
+        if (strpos($flow_step_id, 'ephemeral_step_') === 0) {
+            return false;
+        }
+
         $all_databases = apply_filters('datamachine_db', []);
         $processed_items = $all_databases['processed_items'] ?? null;
-        
+
         if (!$processed_items) {
             do_action('datamachine_log', 'warning', 'ProcessedItems service unavailable for item check', [
-                'flow_step_id' => $flow_step_id, 
+                'flow_step_id' => $flow_step_id,
                 'source_type' => $source_type,
                 'item_identifier' => substr($item_identifier, 0, 50) . '...'
             ]);

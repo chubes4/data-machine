@@ -54,12 +54,12 @@ function datamachine_register_jobs_admin_page_filters() {
                 'js' => [
                     'datamachine-jobs-admin' => [
                         'file' => 'inc/Core/Admin/Pages/Jobs/assets/js/datamachine-jobs.js',
-                        'deps' => ['wp-api-fetch'],
+                        'deps' => ['wp-api-fetch', 'datamachine-modal-manager'],
                         'in_footer' => true
                     ],
                     'datamachine-jobs-modal' => [
                         'file' => 'inc/Core/Admin/Pages/Jobs/assets/js/jobs-modal.js',
-                        'deps' => ['wp-api-fetch'],
+                        'deps' => ['wp-api-fetch', 'datamachine-modal-manager'],
                         'in_footer' => true
                     ]
                 ]

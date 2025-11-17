@@ -13,6 +13,7 @@ $global_prompt = $settings['global_system_prompt'];
 $site_context_enabled = $settings['site_context_enabled'];
 $default_provider = $settings['default_provider'] ?? '';
 $default_model = $settings['default_model'] ?? '';
+$enabled_tools = $settings['enabled_tools'] ?? [];
 
 $disabled_attr = $engine_mode ? 'disabled' : '';
 
@@ -21,6 +22,15 @@ $configurable_tools = [];
 foreach ($all_tools as $tool_name => $tool_config) {
     if (!isset($tool_config['handler']) && ($tool_config['requires_config'] ?? false)) {
         $configurable_tools[$tool_name] = $tool_config;
+    }
+}
+
+// Pre-populate enabled_tools with all configured tools (opt-out pattern)
+if (empty($enabled_tools)) {
+    foreach ($configurable_tools as $tool_name => $tool_config) {
+        if (apply_filters('datamachine_tool_configured', false, $tool_name)) {
+            $enabled_tools[$tool_name] = true;
+        }
     }
 }
 ?>
@@ -32,20 +42,32 @@ foreach ($all_tools as $tool_name => $tool_config) {
             <?php if ($configurable_tools): ?>
                 <div class="datamachine-tool-config-grid">
                     <?php foreach ($configurable_tools as $tool_name => $tool_config): ?>
+                        <?php $is_configured = apply_filters('datamachine_tool_configured', false, $tool_name); ?>
+                        <?php $is_enabled = isset($enabled_tools[$tool_name]); ?>
                         <div class="datamachine-tool-config-item">
                             <h4><?php echo esc_html(ucfirst(str_replace('_', ' ', $tool_name))); ?></h4>
                             <p class="description"><?php echo esc_html($tool_config['description'] ?? ''); ?></p>
-                            <?php $is_configured = apply_filters('datamachine_tool_configured', false, $tool_name); ?>
-                            <span class="datamachine-config-status <?php echo $is_configured ? 'configured' : 'not-configured'; ?>">
-                                <?php echo $is_configured ? esc_html__('Configured', 'datamachine') : esc_html__('Not Configured', 'datamachine'); ?>
-                            </span>
-                            <?php if (!$engine_mode): ?>
-                                <button type="button"
-                                        class="button datamachine-open-modal"
-                                        data-modal-id="datamachine-modal-tool-config-<?php echo esc_attr($tool_name); ?>">
-                                    <?php esc_html_e('Configure', 'datamachine'); ?>
-                                </button>
-                            <?php endif; ?>
+                            <div class="datamachine-tool-controls">
+                                <span class="datamachine-config-status <?php echo $is_configured ? 'configured' : 'not-configured'; ?>">
+                                    <?php echo $is_configured ? esc_html__('Configured', 'datamachine') : esc_html__('Not Configured', 'datamachine'); ?>
+                                </span>
+                                <?php if ($is_configured && !$engine_mode): ?>
+                                    <label class="datamachine-tool-enabled-toggle">
+                                        <input type="checkbox"
+                                               name="datamachine_settings[enabled_tools][<?php echo esc_attr($tool_name); ?>]"
+                                               value="1"
+                                               <?php checked($is_enabled, true); ?>>
+                                        <?php esc_html_e('Enable for agents', 'datamachine'); ?>
+                                    </label>
+                                <?php endif; ?>
+                                <?php if (!$engine_mode): ?>
+                                    <button type="button"
+                                            class="button datamachine-open-modal"
+                                            data-modal-id="datamachine-modal-tool-config-<?php echo esc_attr($tool_name); ?>">
+                                        <?php esc_html_e('Configure', 'datamachine'); ?>
+                                    </button>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>

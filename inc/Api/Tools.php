@@ -51,12 +51,17 @@ class Tools {
 		// Get global tools via filter
 		$global_tools = apply_filters('datamachine_global_tools', []);
 
+		// Get globally enabled tools from settings
+		$all_settings = get_option('datamachine_settings', []);
+		$enabled_tools = $all_settings['enabled_tools'] ?? [];
+
 		$tools = [];
 		foreach ($global_tools as $tool_id => $tool_def) {
 			$tools[$tool_id] = [
 				'label' => $tool_def['label'] ?? ucfirst(str_replace('_', ' ', $tool_id)),
 				'description' => $tool_def['description'] ?? '',
-				'configured' => apply_filters('datamachine_tool_configured', false, $tool_id)
+				'configured' => apply_filters('datamachine_tool_configured', false, $tool_id),
+				'globally_enabled' => isset($enabled_tools[$tool_id])
 			];
 		}
 

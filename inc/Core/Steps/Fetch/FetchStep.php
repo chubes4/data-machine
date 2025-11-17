@@ -1,3 +1,18 @@
+<?php
+
+namespace DataMachine\Core\Steps\Fetch;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+/**
+ * Data fetching step for Data Machine pipelines.
+ *
+ * @package DataMachine
+ */
+class FetchStep {
+
     /**
      * Execute data fetching for the current step.
      *
@@ -9,21 +24,8 @@
         $flow_step_id = $payload['flow_step_id'] ?? '';
         $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
         $flow_step_config = $payload['flow_step_config'] ?? [];
- * @package DataMachine
- */
-class FetchStep {
+        $engine_data = $payload['engine_data'] ?? [];
 
-    /**
-     * Execute data fetching for the current step.
-     *
-     * @param int $job_id Current job ID
-     * @param string $flow_step_id Current flow step ID
-     * @param array $data Current data packet array
-     * @param array $flow_step_config Flow step configuration
-     * @param array $engine_data Engine data array
-     * @return array Updated data packet array
-     */
-    public function execute(int $job_id, string $flow_step_id, array $data, array $flow_step_config, array $engine_data): array {
         try {
             do_action('datamachine_log', 'debug', 'Fetch Step: Starting data collection', [
                 'flow_step_id' => $flow_step_id,
@@ -85,7 +87,7 @@ class FetchStep {
         try {
             $pipeline_id = $flow_step_config['pipeline_id'] ?? null;
             $flow_id = $flow_step_config['flow_id'] ?? null;
-            
+
             if (!$pipeline_id) {
                 do_action('datamachine_log', 'error', 'Fetch Step: Pipeline ID not found in step config', [
                     'flow_step_config_keys' => array_keys($flow_step_config)
@@ -99,12 +101,12 @@ class FetchStep {
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id
             ];
-            
+
             try {
                 if (!is_array($result)) {
                     throw new \InvalidArgumentException('Handler output must be an array');
                 }
-                
+
                 $has_data_title_key = null;
                 $has_data_content_key = null;
                 $attachments_count = is_array($result['attachments'] ?? null) ? count($result['attachments']) : 0;
@@ -205,7 +207,7 @@ class FetchStep {
                     'attachments' => $result['attachments'] ?? [],
                     'timestamp' => time()
                 ];
-                
+
             } catch (\Exception $e) {
                 do_action('datamachine_log', 'error', 'Fetch Step: Failed to create data entry from handler output', [
                     'handler' => $handler_name,

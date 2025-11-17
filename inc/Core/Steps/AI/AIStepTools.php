@@ -37,11 +37,21 @@ class AIStepTools {
             $raw_enabled_tools = array_map('sanitize_text_field', wp_unslash($post_data['enabled_tools']));
 
             $global_enabled_tools = $this->get_global_enabled_tools();
+
+            // Get globally enabled tools from settings
+            $all_settings = get_option('datamachine_settings', []);
+            $globally_enabled = $all_settings['enabled_tools'] ?? [];
+
             $valid_enabled_tools = [];
 
             foreach ($raw_enabled_tools as $tool_id) {
                 if (!isset($global_enabled_tools[$tool_id])) {
                     continue;
+                }
+
+                // Check global enablement
+                if (!isset($globally_enabled[$tool_id])) {
+                    continue; // Globally disabled
                 }
 
                 $tool_config = $global_enabled_tools[$tool_id];

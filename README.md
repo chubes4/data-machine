@@ -1,5 +1,5 @@
 === Data Machine ===
-Contributors: chubes4
+Contributors: extrachill
 Tags: ai, automation, content, workflow, pipeline, chat
 Requires at least: 6.2
 Tested up to: 6.8
@@ -215,9 +215,9 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 - `GET /datamachine/v1/processed-items` - Processed items
 - `DELETE /datamachine/v1/processed-items` - Clear processed items
 
-**Implementation**: 16 endpoint files in `inc/Api/` directory with automatic REST route registration:
-- Core: Auth.php, Execute.php, Files.php, Flows.php, Handlers.php, Jobs.php, Logs.php, Pipelines.php, ProcessedItems.php, Providers.php, Settings.php, StepTypes.php, Tools.php, Users.php
-- Chat: Chat.php (base), Chat/Chat.php (conversations)
+**Implementation**: 16 REST API endpoints with automatic route registration:
+- Core endpoints: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users (`inc/Api/*.php` files)
+- Chat endpoint: Single directory-based implementation at `inc/Api/Chat/` containing Chat.php (endpoint handler), ChatAgentDirective.php (AI directive), ChatFilters.php (self-registration), and Tools/MakeAPIRequest.php (chat-only tool)
 
 **Requirements**: WordPress application password or cookie authentication with `manage_options` capability (except `/users/me` which requires authentication only). Action Scheduler required for scheduled flow execution (woocommerce/action-scheduler via Composer).
 
@@ -292,6 +292,120 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 - Content repurposing
 - Research automation
 - WordPress workflow integration
+
+## External Services
+
+This plugin connects to third-party services for AI processing, content fetching, and publishing. All external connections are **user-initiated** through workflow configuration. No data is sent to external services without explicit user setup and workflow execution.
+
+### AI Providers (User Configured, Optional)
+
+Users must configure at least one AI provider to use Data Machine's workflow automation features. API keys and configuration are stored locally in your WordPress database.
+
+**OpenAI** - https://openai.com/
+- **Purpose**: AI text processing and content generation for workflow automation
+- **Data Sent**: User-configured prompts, content for processing, selected AI model preferences
+- **When**: During flow execution when OpenAI is selected as the AI provider
+- **Terms of Service**: https://openai.com/policies/terms-of-use
+- **Privacy Policy**: https://openai.com/policies/privacy-policy
+
+**Anthropic (Claude)** - https://anthropic.com/
+- **Purpose**: AI text processing and content generation for workflow automation
+- **Data Sent**: User-configured prompts, content for processing, selected AI model preferences
+- **When**: During flow execution when Anthropic is selected as the AI provider
+- **Terms of Service**: https://www.anthropic.com/legal/consumer-terms
+- **Privacy Policy**: https://www.anthropic.com/legal/privacy
+
+**Google Gemini** - https://ai.google.dev/
+- **Purpose**: AI text processing and content generation for workflow automation
+- **Data Sent**: User-configured prompts, content for processing, selected AI model preferences
+- **When**: During flow execution when Google is selected as the AI provider
+- **Terms of Service**: https://ai.google.dev/gemini-api/terms
+- **Privacy Policy**: https://policies.google.com/privacy
+
+**Grok (X.AI)** - https://x.ai/
+- **Purpose**: AI text processing and content generation for workflow automation
+- **Data Sent**: User-configured prompts, content for processing, selected AI model preferences
+- **When**: During flow execution when Grok is selected as the AI provider
+- **Terms of Service**: https://x.ai/legal/terms-of-service
+- **Privacy Policy**: https://x.ai/legal/privacy-policy
+
+**OpenRouter** - https://openrouter.ai/
+- **Purpose**: AI model routing and processing (provides access to 200+ AI models from multiple providers)
+- **Data Sent**: User-configured prompts, content for processing, selected AI model preferences
+- **When**: During flow execution when OpenRouter is selected as the AI provider
+- **Terms of Service**: https://openrouter.ai/terms
+- **Privacy Policy**: https://openrouter.ai/privacy
+
+### Content Fetch Handlers (User Configured, Optional)
+
+**Google Sheets API** - https://developers.google.com/sheets/api
+- **Purpose**: Read data from Google Sheets spreadsheets for content workflows
+- **Data Sent**: OAuth2 credentials, spreadsheet IDs, range specifications
+- **When**: During flow execution with Google Sheets fetch handler enabled
+- **Terms of Service**: https://developers.google.com/terms
+- **Privacy Policy**: https://policies.google.com/privacy
+
+**Reddit API** - https://www.reddit.com/dev/api
+- **Purpose**: Fetch posts and comments from specified subreddits for content workflows
+- **Data Sent**: OAuth2 credentials, subreddit names, search queries, timeframe filters
+- **When**: During flow execution with Reddit fetch handler enabled
+- **Terms of Service**: https://www.redditinc.com/policies/user-agreement
+- **Privacy Policy**: https://www.reddit.com/policies/privacy-policy
+
+### Content Publish Handlers (User Configured, Optional)
+
+**Twitter API** - https://developer.twitter.com/
+- **Purpose**: Post tweets with media support as part of content publishing workflows
+- **Data Sent**: OAuth 1.0a credentials, tweet content (max 280 characters), media files
+- **When**: During flow execution with Twitter publish handler enabled
+- **Terms of Service**: https://developer.twitter.com/en/developer-terms/agreement-and-policy
+- **Privacy Policy**: https://twitter.com/en/privacy
+
+**Facebook Graph API** - https://developers.facebook.com/
+- **Purpose**: Post content to Facebook pages as part of content publishing workflows
+- **Data Sent**: OAuth2 credentials, post content, media files, page access tokens
+- **When**: During flow execution with Facebook publish handler enabled
+- **Terms of Service**: https://developers.facebook.com/terms
+- **Privacy Policy**: https://www.facebook.com/privacy/policy
+
+**Threads API** - https://developers.facebook.com/docs/threads
+- **Purpose**: Post content to Instagram Threads as part of content publishing workflows
+- **Data Sent**: OAuth2 credentials (via Facebook authentication), post content (max 500 characters), media files
+- **When**: During flow execution with Threads publish handler enabled
+- **Terms of Service**: https://developers.facebook.com/terms
+- **Privacy Policy**: https://help.instagram.com/privacy/
+
+**Bluesky (AT Protocol)** - https://bsky.app/
+- **Purpose**: Post content to Bluesky social network as part of content publishing workflows
+- **Data Sent**: App password credentials, post content (max 300 characters), media files
+- **When**: During flow execution with Bluesky publish handler enabled
+- **Terms of Service**: https://bsky.social/about/support/tos
+- **Privacy Policy**: https://bsky.social/about/support/privacy-policy
+
+**Google Sheets API** (Publishing)
+- **Purpose**: Write data to Google Sheets spreadsheets as part of content publishing workflows
+- **Data Sent**: OAuth2 credentials, spreadsheet IDs, row data for insertion
+- **When**: During flow execution with Google Sheets publish handler enabled
+- **Terms of Service**: https://developers.google.com/terms
+- **Privacy Policy**: https://policies.google.com/privacy
+
+### AI Tools (User Configured, Optional)
+
+**Google Custom Search API** - https://developers.google.com/custom-search
+- **Purpose**: Provide web search functionality for AI agents during content research and generation
+- **Data Sent**: API key, Custom Search Engine ID, search queries initiated by AI
+- **When**: When AI uses the Google Search tool during workflow execution (requires user-configured API credentials)
+- **Terms of Service**: https://developers.google.com/terms
+- **Privacy Policy**: https://policies.google.com/privacy
+- **Free Tier**: 100 queries per day
+
+### Data Handling and Privacy
+
+- **Local Storage**: All API keys, OAuth credentials, and configuration data are stored locally in your WordPress database
+- **User Control**: Users have complete control over which services are configured and when workflows execute
+- **No Automatic Connections**: The plugin makes no external connections until a user explicitly creates and executes a workflow
+- **Data Transmission**: Only user-configured content and prompts are sent to external services during workflow execution
+- **Opt-In Only**: All external service integrations require explicit user configuration and are disabled by default
 
 ## Administration
 

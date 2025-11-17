@@ -50,8 +50,11 @@ function run_datamachine() {
     \DataMachine\Engine\Filters\Create::register();
 
     \DataMachine\Api\Execute::register();
-    \DataMachine\Api\Pipelines::register();
-    \DataMachine\Api\Flows::register();
+    \DataMachine\Api\Pipelines\Pipelines::register();
+    \DataMachine\Api\Pipelines\PipelineSteps::register();
+    \DataMachine\Api\Pipelines\PipelineFlows::register();
+    \DataMachine\Api\Flows\Flows::register();
+    \DataMachine\Api\Flows\FlowSteps::register();
 	\DataMachine\Api\Files::register();
 	\DataMachine\Api\Users::register();
 	\DataMachine\Api\Logs::register();

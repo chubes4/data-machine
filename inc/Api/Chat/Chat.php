@@ -184,8 +184,7 @@ class Chat {
 			$provider,
 			$model,
 			'chat',
-			['session_id' => $session_id],
-			8
+			['session_id' => $session_id]
 		);
 
 		// Check for errors

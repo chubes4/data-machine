@@ -161,76 +161,95 @@ export default function HandlerSettingsModal( {
 	 * Render form field based on type
 	 */
 	const renderField = ( fieldKey, fieldConfig ) => {
-		const value = settings[ fieldKey ] || fieldConfig.default || '';
+		const isDisabled = !! fieldConfig.disabled;
+		const displayValue = isDisabled && fieldConfig.global_value_label
+			? fieldConfig.global_value_label
+			: isDisabled && fieldConfig.global_value !== undefined
+			? fieldConfig.global_value
+			: settings[ fieldKey ] || fieldConfig.default || '';
+
+		const helpText = isDisabled && fieldConfig.global_indicator
+			? fieldConfig.global_indicator
+			: fieldConfig.description;
 
 		switch ( fieldConfig.type ) {
 			case 'text':
 				return (
-					<TextControl
-						key={ fieldKey }
-						label={ fieldConfig.label || slugToLabel( fieldKey ) }
-						value={ value }
-						onChange={ ( val ) =>
-							handleSettingChange( fieldKey, val )
-						}
-						help={ fieldConfig.description }
-					/>
+					<div key={ fieldKey } className={ isDisabled ? 'datamachine-field-disabled' : '' }>
+						<TextControl
+							label={ fieldConfig.label || slugToLabel( fieldKey ) }
+							value={ displayValue }
+							onChange={ ( val ) =>
+								handleSettingChange( fieldKey, val )
+							}
+							help={ helpText }
+							disabled={ isDisabled }
+						/>
+					</div>
 				);
 
 			case 'textarea':
 				return (
-					<TextareaControl
-						key={ fieldKey }
-						label={ fieldConfig.label || slugToLabel( fieldKey ) }
-						value={ value }
-						onChange={ ( val ) =>
-							handleSettingChange( fieldKey, val )
-						}
-						help={ fieldConfig.description }
-						rows={ fieldConfig.rows || 4 }
-					/>
+					<div key={ fieldKey } className={ isDisabled ? 'datamachine-field-disabled' : '' }>
+						<TextareaControl
+							label={ fieldConfig.label || slugToLabel( fieldKey ) }
+							value={ displayValue }
+							onChange={ ( val ) =>
+								handleSettingChange( fieldKey, val )
+							}
+							help={ helpText }
+							rows={ fieldConfig.rows || 4 }
+							disabled={ isDisabled }
+						/>
+					</div>
 				);
 
 			case 'select':
 				const rawOptions = fieldConfig.options || [];
 				const formattedOptions = formatSelectOptions( rawOptions );
 				return (
-					<SelectControl
-						key={ fieldKey }
-						label={ fieldConfig.label || slugToLabel( fieldKey ) }
-						value={ value }
-						options={ formattedOptions }
-						onChange={ ( val ) =>
-							handleSettingChange( fieldKey, val )
-						}
-						help={ fieldConfig.description }
-					/>
+					<div key={ fieldKey } className={ isDisabled ? 'datamachine-field-disabled' : '' }>
+						<SelectControl
+							label={ fieldConfig.label || slugToLabel( fieldKey ) }
+							value={ displayValue }
+							options={ formattedOptions }
+							onChange={ ( val ) =>
+								handleSettingChange( fieldKey, val )
+							}
+							help={ helpText }
+							disabled={ isDisabled }
+						/>
+					</div>
 				);
 
 			case 'checkbox':
 				return (
-					<CheckboxControl
-						key={ fieldKey }
-						label={ fieldConfig.label || slugToLabel( fieldKey ) }
-						checked={ !! value }
-						onChange={ ( val ) =>
-							handleSettingChange( fieldKey, val )
-						}
-						help={ fieldConfig.description }
-					/>
+					<div key={ fieldKey } className={ isDisabled ? 'datamachine-field-disabled' : '' }>
+						<CheckboxControl
+							label={ fieldConfig.label || slugToLabel( fieldKey ) }
+							checked={ !! displayValue }
+							onChange={ ( val ) =>
+								handleSettingChange( fieldKey, val )
+							}
+							help={ helpText }
+							disabled={ isDisabled }
+						/>
+					</div>
 				);
 
 			default:
 				return (
-					<TextControl
-						key={ fieldKey }
-						label={ fieldConfig.label || slugToLabel( fieldKey ) }
-						value={ value }
-						onChange={ ( val ) =>
-							handleSettingChange( fieldKey, val )
-						}
-						help={ fieldConfig.description }
-					/>
+					<div key={ fieldKey } className={ isDisabled ? 'datamachine-field-disabled' : '' }>
+						<TextControl
+							label={ fieldConfig.label || slugToLabel( fieldKey ) }
+							value={ displayValue }
+							onChange={ ( val ) =>
+								handleSettingChange( fieldKey, val )
+							}
+							help={ helpText }
+							disabled={ isDisabled }
+						/>
+					</div>
 				);
 		}
 	};

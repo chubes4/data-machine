@@ -60,7 +60,12 @@ require_once __DIR__ . '/Cache.php';
 function datamachine_register_core_actions() {
     
     add_action('datamachine_mark_item_processed', function($flow_step_id, $source_type, $item_identifier, $job_id) {
-        
+
+        // Skip marking for ephemeral workflows
+        if (strpos($flow_step_id, 'ephemeral_step_') === 0) {
+            return;
+        }
+
         if (empty($job_id) || !is_numeric($job_id) || $job_id <= 0) {
             do_action('datamachine_log', 'error', 'datamachine_mark_item_processed called without valid job_id', [
                 'flow_step_id' => $flow_step_id,

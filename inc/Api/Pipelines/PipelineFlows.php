@@ -1,0 +1,92 @@
+<?php
+/**
+ * REST API Pipeline Flows Endpoint
+ *
+ * Provides REST API access to pipeline-flow relationship operations.
+ * Requires WordPress manage_options capability.
+ *
+ * @package DataMachine\Api\Pipelines
+ */
+
+namespace DataMachine\Api\Pipelines;
+
+if (!defined('WPINC')) {
+	die;
+}
+
+class PipelineFlows {
+
+	/**
+	 * Register REST API routes
+	 */
+	public static function register() {
+		add_action('rest_api_init', [self::class, 'register_routes']);
+	}
+
+	/**
+	 * Register pipeline flows relationship endpoint
+	 */
+	public static function register_routes() {
+		register_rest_route('datamachine/v1', '/pipelines/(?P<pipeline_id>\d+)/flows', [
+			'methods' => 'GET',
+			'callback' => [self::class, 'handle_get_pipeline_flows'],
+			'permission_callback' => [self::class, 'check_permission'],
+			'args' => [
+				'pipeline_id' => [
+					'required' => true,
+					'type' => 'integer',
+					'sanitize_callback' => 'absint',
+					'description' => __('Pipeline ID to retrieve flows for', 'datamachine'),
+				],
+			]
+		]);
+	}
+
+	/**
+	 * Check if user has permission to access pipeline flows
+	 */
+	public static function check_permission($request) {
+		if (!current_user_can('manage_options')) {
+			return new \WP_Error(
+				'rest_forbidden',
+				__('You do not have permission to access pipeline flows.', 'datamachine'),
+				['status' => 403]
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Handle pipeline flows retrieval request
+	 */
+	public static function handle_get_pipeline_flows($request) {
+		$pipeline_id = (int) $request->get_param('pipeline_id');
+
+		// Retrieve flows for pipeline via filter
+		$pipeline_flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
+
+		// Verify pipeline exists by checking if it has any data
+		$pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
+		if (!$pipeline) {
+			return new \WP_Error(
+				'pipeline_not_found',
+				__('Pipeline not found.', 'datamachine'),
+				['status' => 404]
+			);
+		}
+
+		$first_flow_id = null;
+		if (!empty($pipeline_flows)) {
+			$first_flow_id = $pipeline_flows[0]['flow_id'] ?? null;
+		}
+
+		return [
+			'success' => true,
+			'pipeline_id' => $pipeline_id,
+			'flows' => $pipeline_flows,
+			'flow_count' => count($pipeline_flows),
+			'first_flow_id' => $first_flow_id
+		];
+	}
+}

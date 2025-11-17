@@ -7,6 +7,7 @@
 import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { slugToLabel } from '../../utils/formatters';
+import { usePipelineContext } from '../../context/PipelineContext';
 
 /**
  * Flow Step Handler Component
@@ -24,6 +25,7 @@ export default function FlowStepHandler( {
 	stepType,
 	onConfigure,
 } ) {
+	const { globalSettings } = usePipelineContext();
 	if ( ! handlerSlug ) {
 		return (
 			<div className="datamachine-flow-step-handler datamachine-flow-step-handler--empty datamachine-handler-warning">
@@ -44,6 +46,25 @@ export default function FlowStepHandler( {
 	const hasSettings =
 		handlerConfig && Object.keys( handlerConfig ).length > 0;
 
+	// Prepare global settings to display
+	const globalSettingsToShow = {};
+	if ( globalSettings ) {
+		if ( globalSettings.default_author_id && ! handlerConfig?.post_author ) {
+			globalSettingsToShow.author = `${ globalSettings.default_author_name || globalSettings.default_author_id } (Global)`;
+		}
+		if ( globalSettings.default_post_status && ! handlerConfig?.post_status ) {
+			globalSettingsToShow.status = `${ globalSettings.default_post_status } (Global)`;
+		}
+		if ( globalSettings.default_include_source !== undefined && ! handlerConfig?.include_source ) {
+			globalSettingsToShow.include_source = `${ globalSettings.default_include_source ? 'Yes' : 'No' } (Global)`;
+		}
+		if ( globalSettings.default_enable_images !== undefined && ! handlerConfig?.enable_images ) {
+			globalSettingsToShow.enable_images = `${ globalSettings.default_enable_images ? 'Yes' : 'No' } (Global)`;
+		}
+	}
+
+	const hasGlobalSettings = Object.keys( globalSettingsToShow ).length > 0;
+
 	return (
 		<div className="datamachine-flow-step-handler datamachine-handler-container">
 			<div className="datamachine-handler-tag datamachine-handler-badge">
@@ -59,6 +80,19 @@ export default function FlowStepHandler( {
 								{ typeof value === 'object'
 									? JSON.stringify( value )
 									: String( value ) }
+							</div>
+						)
+					) }
+				</div>
+			) }
+
+			{ hasGlobalSettings && (
+				<div className="datamachine-handler-settings-display datamachine-global-settings">
+					{ Object.entries( globalSettingsToShow ).map(
+						( [ key, value ] ) => (
+							<div key={ key } className="datamachine-handler-settings-entry datamachine-global-setting">
+								<strong>{ slugToLabel( key ) }:</strong>{ ' ' }
+								{ value }
 							</div>
 						)
 					) }
