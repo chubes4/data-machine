@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0f012b3d6d8a7094d7726a1dafa8e7e6",
+    "content-hash": "a8e0c910864ad59d2eecd4c2bf62c1ba",
     "packages": [
         {
             "name": "abraham/twitteroauth",
@@ -70,16 +70,16 @@
         },
         {
             "name": "chubes4/ai-http-client",
-            "version": "v2.0.1",
+            "version": "v2.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/chubes4/ai-http-client.git",
-                "reference": "05c251761acac9f102a881be10ba36991b2b739a"
+                "reference": "741249960660c33576655efd0ea6178a6bde0a76"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/chubes4/ai-http-client/zipball/05c251761acac9f102a881be10ba36991b2b739a",
-                "reference": "05c251761acac9f102a881be10ba36991b2b739a",
+                "url": "https://api.github.com/repos/chubes4/ai-http-client/zipball/741249960660c33576655efd0ea6178a6bde0a76",
+                "reference": "741249960660c33576655efd0ea6178a6bde0a76",
                 "shasum": ""
             },
             "require": {
@@ -126,7 +126,7 @@
                 "issues": "https://github.com/chubes4/ai-http-client/issues",
                 "source": "https://github.com/chubes4/ai-http-client"
             },
-            "time": "2025-11-16T19:34:23+00:00"
+            "time": "2025-11-17T04:19:33+00:00"
         },
         {
             "name": "composer/ca-bundle",
