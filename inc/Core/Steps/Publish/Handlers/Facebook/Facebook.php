@@ -312,13 +312,7 @@ class Facebook extends PublishHandler {
      * Uploads unpublished photo to Facebook, returns photo object for attachment to post.
      */
     private function upload_image_file_to_facebook(string $image_file_path, string $page_access_token, string $page_id): ?array {
-        $file_storage = apply_filters('datamachine_get_file_storage', null);
-
-        if (!$file_storage) {
-            $this->log('error', 'Facebook: File storage service unavailable for image upload');
-            return null;
-        }
-
+        $file_storage = new \DataMachine\Core\FilesRepository\FileStorage();
         $image_url = $file_storage->get_public_url($image_file_path);
 
         if (empty($image_url) || !filter_var($image_url, FILTER_VALIDATE_URL)) {

@@ -187,7 +187,8 @@ class Pipelines {
 				$export_ids = [$pipeline_id];
 			} else {
 				// Export all pipelines
-				$all_pipelines = apply_filters('datamachine_get_pipelines', []);
+				$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+				$all_pipelines = $db_pipelines->get_all_pipelines();
 				$export_ids = array_column($all_pipelines, 'pipeline_id');
 			}
 
@@ -228,7 +229,8 @@ class Pipelines {
 		// Get pipeline data via filter
 		if ($pipeline_id) {
 			// Single pipeline retrieval
-			$pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
+			$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+			$pipeline = $db_pipelines->get_pipeline($pipeline_id);
 
 			if (!$pipeline) {
 				return new \WP_Error(
@@ -244,9 +246,8 @@ class Pipelines {
 			}
 
 			// Get flows for this pipeline
-			$all_databases = apply_filters('datamachine_db', []);
-			$db_flows = $all_databases['flows'] ?? null;
-			$flows = $db_flows ? $db_flows->get_flows_for_pipeline($pipeline_id) : [];
+			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+			$flows = $db_flows->get_flows_for_pipeline($pipeline_id);
 
 			return [
 				'success' => true,
@@ -255,7 +256,8 @@ class Pipelines {
 			];
 		} else {
 			// All pipelines retrieval
-			$pipelines = apply_filters('datamachine_get_pipelines', []);
+			$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+			$pipelines = $db_pipelines->get_all_pipelines();
 
 			// Apply field filtering if requested
 			if (!empty($requested_fields)) {
@@ -276,64 +278,40 @@ class Pipelines {
 	 * Handle pipeline creation request
 	 */
 	public static function handle_create_pipeline($request) {
-		$params = $request->get_params();
-		$batch_import = $request->get_param('batch_import') ?: false;
-		$format = $request->get_param('format') ?: 'json';
-		$data = $request->get_param('data');
-
-		// Handle batch import
-		if ($batch_import && $format === 'csv' && $data) {
-			// Use existing import logic
-			$import_export = new \DataMachine\Engine\Actions\ImportExport();
-			$result = $import_export->handle_import('pipelines', $data);
-
-			if (!$result) {
-				return new \WP_Error(
-					'import_failed',
-					__('Failed to import pipelines from CSV.', 'datamachine'),
-					['status' => 500]
-				);
-			}
-
-			do_action('datamachine_log', 'info', 'Pipelines imported via REST API (CSV)', [
-				'pipeline_count' => count($result['imported'] ?? []),
-				'user_id' => get_current_user_id(),
-				'user_login' => wp_get_current_user()->user_login
-			]);
-
-			return [
-				'success' => true,
-				'imported_pipeline_ids' => $result['imported'] ?? [],
-				'count' => count($result['imported'] ?? []),
-				'message' => sprintf(
-					__('Successfully imported %d pipeline(s)', 'datamachine'),
-					count($result['imported'] ?? [])
-				)
-			];
+		// Validate permissions
+		if (!current_user_can('manage_options')) {
+			return new \WP_Error(
+				'rest_forbidden',
+				__('Insufficient permissions.', 'datamachine'),
+				['status' => 403]
+			);
 		}
 
-		// Delegate to existing datamachine_create_pipeline filter
-		$pipeline_id = apply_filters('datamachine_create_pipeline', false, $params);
-
-		if (!$pipeline_id) {
-			do_action('datamachine_log', 'error', 'Failed to create pipeline via REST API', [
-				'params' => $params,
-				'user_id' => get_current_user_id()
-			]);
-
+		// Get parameters from request
+		$params = $request->get_json_params();
+		if (empty($params) || !isset($params['pipeline_name'])) {
 			return new \WP_Error(
-				'pipeline_creation_failed',
+				'rest_invalid_param',
+				__('Pipeline name is required.', 'datamachine'),
+				['status' => 400]
+			);
+		}
+
+		// Create the pipeline using the centralized filter
+		$pipeline_id = apply_filters('datamachine_create_pipeline', null, $params);
+		if (!$pipeline_id) {
+			return new \WP_Error(
+				'rest_internal_server_error',
 				__('Failed to create pipeline.', 'datamachine'),
 				['status' => 500]
 			);
 		}
 
 		// Get pipeline and flow data for response
-		$all_databases = apply_filters('datamachine_db', []);
-		$db_pipelines = $all_databases['pipelines'] ?? null;
-		$db_flows = $all_databases['flows'] ?? null;
+		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
 
-		$pipeline = $db_pipelines ? $db_pipelines->get_pipeline($pipeline_id) : null;
+		$pipeline = $db_pipelines->get_pipeline($pipeline_id);
 		$existing_flows = $db_flows ? $db_flows->get_flows_for_pipeline($pipeline_id) : [];
 
 		$creation_mode = isset($params['steps']) && is_array($params['steps']) ? 'complete' : 'simple';
@@ -377,32 +355,33 @@ class Pipelines {
 	 * PATCH /datamachine/v1/pipelines/{id}
 	 */
 	public static function handle_update_pipeline_title($request) {
-		$pipeline_id = (int) $request->get_param('pipeline_id');
-		$pipeline_name = sanitize_text_field($request->get_param('pipeline_name'));
-
-		if (empty($pipeline_name)) {
+		// Validate permissions
+		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
-				'empty_title',
-				__('Pipeline title cannot be empty', 'datamachine'),
+				'rest_forbidden',
+				__('Insufficient permissions.', 'datamachine'),
+				['status' => 403]
+			);
+		}
+
+		// Get parameters from request
+		$pipeline_id = (int) $request->get_param('id');
+		$params = $request->get_json_params();
+
+		if (!$pipeline_id || empty($params['pipeline_name'])) {
+			return new \WP_Error(
+				'rest_invalid_param',
+				__('Pipeline ID and name are required.', 'datamachine'),
 				['status' => 400]
 			);
 		}
 
 		// Get database service
-		$all_databases = apply_filters('datamachine_db', []);
-		$db_pipelines = $all_databases['pipelines'] ?? null;
-
-		if (!$db_pipelines) {
-			return new \WP_Error(
-				'database_unavailable',
-				__('Database service unavailable', 'datamachine'),
-				['status' => 500]
-			);
-		}
+		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 
 		// Update pipeline title
 		$success = $db_pipelines->update_pipeline($pipeline_id, [
-			'pipeline_name' => $pipeline_name
+			'pipeline_name' => sanitize_text_field(wp_unslash($params['pipeline_name']))
 		]);
 
 		if (!$success) {
@@ -421,7 +400,7 @@ class Pipelines {
 			'success' => true,
 			'message' => __('Pipeline title saved successfully', 'datamachine'),
 			'pipeline_id' => $pipeline_id,
-			'pipeline_name' => $pipeline_name
+			'pipeline_name' => sanitize_text_field(wp_unslash($params['pipeline_name']))
 		];
 	}
 }

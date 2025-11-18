@@ -6,6 +6,7 @@
  * Manages retention policies, job cleanup, and pipeline directory removal.
  *
  * @package DataMachine\Core\FilesRepository
+ * @since 0.2.1
  */
 
 namespace DataMachine\Core\FilesRepository;
@@ -193,3 +194,34 @@ class FileCleanup {
         return $deleted_count;
     }
 }
+
+/**
+ * Register scheduled cleanup action for old files
+ */
+add_action('datamachine_cleanup_old_files', function() {
+    $file_cleanup = new FileCleanup();
+    $settings = datamachine_get_datamachine_settings();
+    $retention_days = $settings['file_retention_days'] ?? 7;
+
+    $deleted_count = $file_cleanup->cleanup_old_files($retention_days);
+
+    do_action('datamachine_log', 'debug', 'FilesRepository: Cleanup completed', [
+        'files_deleted' => $deleted_count,
+        'retention_days' => $retention_days
+    ]);
+});
+
+/**
+ * Schedule cleanup on WordPress init
+ */
+add_action('init', function() {
+    if (!as_next_scheduled_action('datamachine_cleanup_old_files')) {
+        as_schedule_recurring_action(
+            time() + WEEK_IN_SECONDS,
+            WEEK_IN_SECONDS,
+            'datamachine_cleanup_old_files',
+            [],
+            'datamachine-files'
+        );
+    }
+});

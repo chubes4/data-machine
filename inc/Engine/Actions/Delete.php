@@ -51,6 +51,9 @@ class Delete {
             return $result;
         }
 
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+
         if (wp_doing_ajax()) {
             wp_send_json_success($result);
         }
@@ -105,6 +108,18 @@ class Delete {
             return $result;
         }
 
+        $pipeline_id = absint($pipeline_id);
+        if ($pipeline_id <= 0) {
+            return new WP_Error(
+                'invalid_pipeline_id',
+                __('Valid pipeline ID is required.', 'datamachine'),
+                ['status' => 400]
+            );
+        }
+
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+
         if (wp_doing_ajax()) {
             wp_send_json_success($result);
         }
@@ -134,19 +149,10 @@ class Delete {
             );
         }
 
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        $db_flows = $all_databases['flows'] ?? null;
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
 
-        if (!$db_pipelines || !$db_flows) {
-            return new WP_Error(
-                'database_unavailable',
-                __('Database services unavailable.', 'datamachine'),
-                ['status' => 500]
-            );
-        }
-
-        $pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
+        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
         if (!$pipeline) {
             return new WP_Error(
                 'pipeline_not_found',
@@ -156,7 +162,7 @@ class Delete {
         }
 
         $pipeline_name = $pipeline['pipeline_name'] ?? '';
-        $affected_flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
+        $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
         $flow_count = count($affected_flows);
 
         foreach ($affected_flows as $flow) {
@@ -173,16 +179,13 @@ class Delete {
             }
         }
 
-        $cleanup = apply_filters('datamachine_get_file_cleanup', null);
+        $cleanup = new \DataMachine\Core\FilesRepository\FileCleanup();
+        $filesystem_deleted = $cleanup->delete_pipeline_directory($pipeline_id, $pipeline_name);
 
-        if ($cleanup) {
-            $filesystem_deleted = $cleanup->delete_pipeline_directory($pipeline_id, $pipeline_name);
-
-            if (!$filesystem_deleted) {
-                do_action('datamachine_log', 'warning', 'Pipeline filesystem cleanup failed, but continuing with database deletion.', [
-                    'pipeline_id' => $pipeline_id
-                ]);
-            }
+        if (!$filesystem_deleted) {
+            do_action('datamachine_log', 'warning', 'Pipeline filesystem cleanup failed, but continuing with database deletion.', [
+                'pipeline_id' => $pipeline_id
+            ]);
         }
 
         $success = $db_pipelines->delete_pipeline($pipeline_id);
@@ -231,18 +234,9 @@ class Delete {
             );
         }
 
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
 
-        if (!$db_flows) {
-            return new WP_Error(
-                'database_unavailable',
-                __('Database services unavailable.', 'datamachine'),
-                ['status' => 500]
-            );
-        }
-
-        $flow = apply_filters('datamachine_get_flow', null, $flow_id);
+        $flow = $db_flows->get_flow($flow_id);
         if (!$flow) {
             return new WP_Error(
                 'flow_not_found',
@@ -303,19 +297,10 @@ class Delete {
             );
         }
 
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        $db_flows = $all_databases['flows'] ?? null;
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
 
-        if (!$db_pipelines || !$db_flows) {
-            return new WP_Error(
-                'database_unavailable',
-                __('Database services unavailable.', 'datamachine'),
-                ['status' => 500]
-            );
-        }
-
-        $pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
+        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
         if (!$pipeline) {
             return new WP_Error(
                 'pipeline_not_found',
@@ -325,10 +310,10 @@ class Delete {
         }
 
         $pipeline_name = $pipeline['pipeline_name'] ?? '';
-        $affected_flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
+        $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
         $flow_count = count($affected_flows);
 
-        $current_steps = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
+        $current_steps = $db_pipelines->get_pipeline_config($pipeline_id);
         $remaining_steps = [];
         $step_found = false;
 
@@ -380,7 +365,7 @@ class Delete {
                 }
             }
 
-            apply_filters('datamachine_update_flow', false, $flow_id, [
+            $db_flows->update_flow($flow_id, [
                 'flow_config' => json_encode($flow_config)
             ]);
         }
@@ -388,7 +373,8 @@ class Delete {
         do_action('datamachine_clear_pipeline_cache', $pipeline_id);
         do_action('datamachine_auto_save', $pipeline_id);
 
-        $remaining_steps = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $remaining_steps = $db_pipelines->get_pipeline_config($pipeline_id);
 
         return [
             'message' => sprintf(
@@ -414,16 +400,7 @@ class Delete {
      * @since 1.0.0
      */
     public function handle_processed_items_deletion($criteria) {
-        $all_databases = apply_filters('datamachine_db', []);
-        $processed_items = $all_databases['processed_items'] ?? null;
-
-        if (!$processed_items) {
-            do_action('datamachine_log', 'error', 'ProcessedItems service unavailable for cleanup');
-            if (wp_doing_ajax()) {
-                wp_send_json_error(['message' => __('ProcessedItems service unavailable.', 'datamachine')]);
-            }
-            return;
-        }
+        $processed_items = new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
 
         if (empty($criteria) || !is_array($criteria)) {
             do_action('datamachine_log', 'error', 'Invalid criteria for processed items deletion', ['criteria' => $criteria]);
@@ -468,13 +445,7 @@ class Delete {
      * @since 1.0.0
      */
     public function handle_jobs_deletion($clear_type, $cleanup_processed = false) {
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-
-        if (!$db_jobs) {
-            wp_send_json_error(['message' => __('Jobs database service unavailable.', 'datamachine')]);
-            return;
-        }
+        $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
 
         $job_ids_to_delete = [];
         if ($cleanup_processed) {

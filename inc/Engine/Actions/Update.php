@@ -65,16 +65,8 @@ class Update {
      * @since 1.0.0
      */
     public function handle_job_status_update($job_id, $new_status, $context = 'update', $old_status = null) {
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-        
-        if (!$db_jobs) {
-            do_action('datamachine_log', 'error', 'Job status update failed - database service unavailable', [
-                'job_id' => $job_id, 'new_status' => $new_status
-            ]);
-            return false;
-        }
-        
+        $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
+
         $success = false;
         $method_used = '';
         
@@ -121,19 +113,11 @@ class Update {
             return false;
         }
         $flow_id = $parts['flow_id'];
-        
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        if (!$db_flows) {
-            do_action('datamachine_log', 'error', 'Flow handler update failed - database service unavailable', [
-                'flow_step_id' => $flow_step_id,
-                'handler_slug' => $handler_slug
-            ]);
-            return false;
-        }
-        
+
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+
         // Get current flow
-        $flow = apply_filters('datamachine_get_flow', null, $flow_id);
+        $flow = $db_flows->get_flow($flow_id);
         if (!$flow) {
             do_action('datamachine_log', 'error', 'Flow handler update failed - flow not found', [
                 'flow_id' => $flow_id,
@@ -164,7 +148,7 @@ class Update {
         $flow_config[$flow_step_id]['enabled'] = true;
 
          // Update flow with new configuration
-         $success = apply_filters('datamachine_update_flow', false, $flow_id, [
+         $success = $db_flows->update_flow($flow_id, [
              'flow_config' => wp_json_encode($flow_config)
          ]);
          
@@ -193,20 +177,10 @@ class Update {
      * @since 1.0.0
      */
     public function handle_flow_steps_sync($flow_id, $steps, $context = []) {
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        
-        if (!$db_flows) {
-            do_action('datamachine_log', 'error', 'Flow steps sync failed - flows database service unavailable', [
-                'flow_id' => $flow_id,
-                'steps_count' => count($steps),
-                'context' => $context
-            ]);
-            return false;
-        }
-        
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+
         // Validate flow exists
-        $flow = apply_filters('datamachine_get_flow', null, $flow_id);
+        $flow = $db_flows->get_flow($flow_id);
         if (!$flow) {
             do_action('datamachine_log', 'error', 'Flow steps sync failed - flow not found', [
                 'flow_id' => $flow_id,
@@ -246,7 +220,7 @@ class Update {
         }
 
         // Update flow configuration
-        $success = apply_filters('datamachine_update_flow', false, $flow_id, [
+        $success = $db_flows->update_flow($flow_id, [
             'flow_config' => wp_json_encode($flow_config)
         ]);
         
@@ -298,19 +272,10 @@ class Update {
         }
         $flow_id = $parts['flow_id'];
 
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        
-        if (!$db_flows) {
-            do_action('datamachine_log', 'error', 'Flow user message update failed - flows database service unavailable', [
-                'flow_id' => $flow_id,
-                'flow_step_id' => $flow_step_id
-            ]);
-            return false;
-        }
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
 
         // Get current flow
-        $flow = apply_filters('datamachine_get_flow', null, $flow_id);
+        $flow = $db_flows->get_flow($flow_id);
         if (!$flow) {
             do_action('datamachine_log', 'error', 'Flow user message update failed - flow not found', [
                 'flow_id' => $flow_id,
@@ -336,7 +301,7 @@ class Update {
         $flow_config[$flow_step_id]['user_message'] = wp_unslash(sanitize_textarea_field($user_message));
 
         // Update flow with new configuration
-        $success = apply_filters('datamachine_update_flow', false, $flow_id, [
+        $success = $db_flows->update_flow($flow_id, [
             'flow_config' => wp_json_encode($flow_config)
         ]);
 
@@ -374,18 +339,10 @@ class Update {
             $pipeline_step_id = $result;
         }
         // Get database services
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        
-        if (!$db_pipelines) {
-            do_action('datamachine_log', 'error', 'System prompt update failed - pipelines database service unavailable', [
-                'pipeline_step_id' => $pipeline_step_id
-            ]);
-            return false;
-        }
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 
-        // Get step configuration using existing filter
-        $step_config = apply_filters('datamachine_get_pipeline_step_config', [], $pipeline_step_id);
+        // Get step configuration
+        $step_config = $db_pipelines->get_pipeline_step_config( $pipeline_step_id );
 
         if (empty($step_config) || empty($step_config['pipeline_id'])) {
             do_action('datamachine_log', 'error', 'System prompt update failed - pipeline step not found', [
@@ -397,7 +354,8 @@ class Update {
         $pipeline_id = $step_config['pipeline_id'];
 
         // Get the complete pipeline data
-        $target_pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $target_pipeline = $db_pipelines->get_pipeline($pipeline_id);
         if (!$target_pipeline) {
             do_action('datamachine_log', 'error', 'System prompt update failed - pipeline not found', [
                 'pipeline_id' => $pipeline_id,
@@ -444,18 +402,8 @@ class Update {
      * @since 1.0.0
      */
     public function handle_job_failure($job_id, $reason, $context_data = []) {
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-        
-        if (!$db_jobs) {
-            do_action('datamachine_log', 'error', 'Job failure failed - database service unavailable', [
-                'job_id' => $job_id,
-                'reason' => $reason,
-                'context' => $context_data
-            ]);
-            return false;
-        }
-        
+        $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
+
         // Always use complete_job method for failed status (sets completion timestamp)
         $success = $db_jobs->complete_job($job_id, 'failed');
         
@@ -476,15 +424,13 @@ class Update {
         $files_cleaned = false;
 
         if ($cleanup_files) {
-            $cleanup = apply_filters('datamachine_get_file_cleanup', null);
-            if ($cleanup) {
-                // Get flow_id from job to build file context
-                $job = $db_jobs->get_job($job_id);
-                if ($job && function_exists('datamachine_get_file_context')) {
-                    $context = datamachine_get_file_context($job['flow_id']);
-                    $deleted_count = $cleanup->cleanup_job_data_packets($job_id, $context);
-                    $files_cleaned = $deleted_count > 0;
-                }
+            $cleanup = new \DataMachine\Core\FilesRepository\FileCleanup();
+            // Get flow_id from job to build file context
+            $job = $db_jobs->get_job($job_id);
+            if ($job && function_exists('datamachine_get_file_context')) {
+                $context = datamachine_get_file_context($job['flow_id']);
+                $deleted_count = $cleanup->cleanup_job_data_packets($job_id, $context);
+                $files_cleaned = $deleted_count > 0;
             }
         }
         

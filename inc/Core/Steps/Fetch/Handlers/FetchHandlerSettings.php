@@ -7,7 +7,7 @@
  * to add handler-specific customizations.
  *
  * @package DataMachine\Core\Steps\Fetch\Handlers
- * @since 0.2.0
+ * @since 0.2.1
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers;

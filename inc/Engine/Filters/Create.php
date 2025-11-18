@@ -33,17 +33,8 @@ class Create {
             return false;
         }
 
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        $db_flows = $all_databases['flows'] ?? null;
-
-        if (!$db_pipelines || !$db_flows) {
-            do_action('datamachine_log', 'error', 'Required database services unavailable for pipeline creation', [
-                'pipelines_db' => $db_pipelines ? 'available' : 'missing',
-                'flows_db' => $db_flows ? 'available' : 'missing'
-            ]);
-            return false;
-        }
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
 
         $is_complete_mode = isset($data['steps']) && is_array($data['steps']) && !empty($data['steps']);
 
@@ -208,7 +199,7 @@ class Create {
             ];
         }
 
-        $update_success = apply_filters('datamachine_update_flow', false, $flow_id, [
+        $update_success = $db_flows->update_flow($flow_id, [
             'flow_config' => json_encode($flow_config)
         ]);
 
@@ -278,18 +269,9 @@ class Create {
             do_action('datamachine_log', 'error', 'Step type is required for step creation');
             return false;
         }
-        
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        $db_flows = $all_databases['flows'] ?? null;
-        
-        if (!$db_pipelines || !$db_flows) {
-            do_action('datamachine_log', 'error', 'Required database services unavailable for step creation', [
-                'pipelines_db' => $db_pipelines ? 'available' : 'missing',
-                'flows_db' => $db_flows ? 'available' : 'missing'
-            ]);
-            return false;
-        }
+
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
         
         $all_steps = apply_filters('datamachine_step_types', []);
         $step_config = $all_steps[$step_type] ?? null;
@@ -298,7 +280,7 @@ class Create {
             return false;
         }
         
-        $current_steps = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
+        $current_steps = $db_pipelines->get_pipeline_config($pipeline_id);
         $next_execution_order = count($current_steps);
         
         $new_step = [
@@ -326,7 +308,7 @@ class Create {
             return false;
         }
         
-        $flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
+        $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
         foreach ($flows as $flow) {
             $flow_id = $flow['flow_id'];
             do_action('datamachine_sync_steps_to_flow', $flow_id, [$new_step], ['context' => 'add_step']);
@@ -358,21 +340,12 @@ class Create {
             do_action('datamachine_log', 'error', 'Pipeline ID is required for flow creation');
             return false;
         }
-        
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        
-        if (!$db_flows || !$db_pipelines) {
-            do_action('datamachine_log', 'error', 'Required database services unavailable for flow creation', [
-                'flows_db' => $db_flows ? 'available' : 'missing',
-                'pipelines_db' => $db_pipelines ? 'available' : 'missing'
-            ]);
-            return false;
-        }
+
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
         
         // Validate pipeline exists
-        $pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
+        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
         if (!$pipeline) {
             do_action('datamachine_log', 'error', 'Pipeline not found for flow creation', ['pipeline_id' => $pipeline_id]);
             return false;
@@ -405,7 +378,8 @@ class Create {
             return false;
         }
 
-        $pipeline_steps = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $pipeline_steps = $db_pipelines->get_pipeline_config($pipeline_id);
         if (!empty($pipeline_steps)) {
             do_action('datamachine_sync_steps_to_flow', $flow_id, $pipeline_steps, ['context' => 'create_flow']);
         }
@@ -418,8 +392,8 @@ class Create {
         ]);
 
         if (wp_doing_ajax()) {
-            $flow_data = apply_filters('datamachine_get_flow', null, $flow_id);
-            $pipeline_steps = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
+            $flow_data = $db_flows->get_flow($flow_id);
+            $pipeline_steps = $db_pipelines->get_pipeline_config($pipeline_id);
             do_action('datamachine_clear_pipeline_cache', $pipeline_id);
 
             wp_send_json_success([
@@ -447,18 +421,10 @@ class Create {
             return false;
         }
 
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-
-        if (!$db_flows) {
-            do_action('datamachine_log', 'error', 'Required database services unavailable for flow duplication', [
-                'flows_db' => $db_flows ? 'available' : 'missing'
-            ]);
-            return false;
-        }
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
 
         // Get source flow data
-        $source_flow = apply_filters('datamachine_get_flow', null, $source_flow_id);
+        $source_flow = $db_flows->get_flow($source_flow_id);
         if (!$source_flow) {
             do_action('datamachine_log', 'error', 'Source flow not found for duplication', ['source_flow_id' => $source_flow_id]);
             return false;
@@ -487,7 +453,7 @@ class Create {
 
         $remapped_config = $this->remap_flow_step_ids($source_flow['flow_config'], $source_flow_id, $new_flow_id);
 
-        $update_success = apply_filters('datamachine_update_flow', false, $new_flow_id, [
+        $update_success = $db_flows->update_flow($new_flow_id, [
             'flow_config' => json_encode($remapped_config)
         ]);
 

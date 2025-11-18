@@ -213,7 +213,8 @@ class PipelineSteps {
 		// Get step data and registered steps for response
 		$all_steps = apply_filters('datamachine_step_types', []);
 		$step_config = $all_steps[$step_type] ?? [];
-		$pipeline_steps = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
+		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+		$pipeline_steps = $db_pipelines->get_pipeline_config($pipeline_id);
 
 		// Find the newly created step
 		$step_data = null;
@@ -309,19 +310,10 @@ class PipelineSteps {
 		$step_order = $request->get_param('step_order');
 
 		// Get database service
-		$all_databases = apply_filters('datamachine_db', []);
-		$db_pipelines = $all_databases['pipelines'] ?? null;
-
-		if (!$db_pipelines) {
-			return new \WP_Error(
-				'database_unavailable',
-				__('Database service unavailable', 'datamachine'),
-				['status' => 500]
-			);
-		}
+		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 
 		// Retrieve current pipeline configuration
-		$pipeline_steps = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
+		$pipeline_steps = $db_pipelines->get_pipeline_config($pipeline_id);
 		if (empty($pipeline_steps)) {
 			return new \WP_Error(
 				'pipeline_not_found',
@@ -391,7 +383,8 @@ class PipelineSteps {
 		do_action('datamachine_clear_pipeline_cache', $pipeline_id);
 
 		// Sync execution_order to flows
-		$flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
+		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+		$flows = $db_flows->get_flows_for_pipeline($pipeline_id);
 
 		foreach ($flows as $flow) {
 			$flow_id = $flow['flow_id'];
@@ -412,7 +405,8 @@ class PipelineSteps {
 			unset($flow_step);
 
 			// Update flow with only execution_order changes
-			apply_filters('datamachine_update_flow', false, $flow_id, [
+			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+			$db_flows->update_flow($flow_id, [
 				'flow_config' => $flow_config
 			]);
 
@@ -457,7 +451,8 @@ class PipelineSteps {
 		}
 
 		// Get pipeline_id from pipeline_step_id for cache clearing
-		$pipeline_step_config = apply_filters('datamachine_get_pipeline_step_config', [], $pipeline_step_id);
+		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+		$pipeline_step_config = $db_pipelines->get_pipeline_step_config( $pipeline_step_id );
 
 		if (!empty($pipeline_step_config['pipeline_id'])) {
 			$pipeline_id = (int) $pipeline_step_config['pipeline_id'];
@@ -476,19 +471,17 @@ class PipelineSteps {
 	 * PUT /datamachine/v1/pipelines/steps/{pipeline_step_id}/config
 	 */
 	public static function handle_update_step_config($request) {
-		$pipeline_step_id = sanitize_text_field($request->get_param('pipeline_step_id'));
-		$step_type = sanitize_text_field($request->get_param('step_type'));
-		$pipeline_id = (int) $request->get_param('pipeline_id');
-
-		// Validate step type
-		if ($step_type !== 'ai') {
+		// Validate permissions
+		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
-				'invalid_step_type',
-				/* translators: %s: Step type name */
-				sprintf(__('Configuration for %s steps is not yet implemented', 'datamachine'), $step_type),
-				['status' => 400]
+				'rest_forbidden',
+				__('Insufficient permissions.', 'datamachine'),
+				['status' => 403]
 			);
 		}
+
+		// Get pipeline and merge configuration
+		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 
 		// Validate pipeline_step_id format
 		$parsed_step_id = apply_filters('datamachine_split_pipeline_step_id', null, $pipeline_step_id);
@@ -576,16 +569,7 @@ class PipelineSteps {
 		}
 
 		// Get pipeline and merge configuration
-		$all_databases = apply_filters('datamachine_db', []);
-		$db_pipelines = $all_databases['pipelines'] ?? null;
-
-		if (!$db_pipelines) {
-			return new \WP_Error(
-				'database_unavailable',
-				__('Pipeline database service not available', 'datamachine'),
-				['status' => 500]
-			);
-		}
+		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 
 		$pipeline = $db_pipelines->get_pipeline($pipeline_id);
 		if (!$pipeline) {

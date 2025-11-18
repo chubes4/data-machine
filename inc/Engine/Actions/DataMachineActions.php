@@ -60,9 +60,14 @@ require_once __DIR__ . '/Cache.php';
 function datamachine_register_core_actions() {
     
     add_action('datamachine_mark_item_processed', function($flow_step_id, $source_type, $item_identifier, $job_id) {
-
-        // Skip marking for ephemeral workflows
-        if (strpos($flow_step_id, 'ephemeral_step_') === 0) {
+        if (!isset($flow_step_id) || !isset($source_type) || !isset($item_identifier)) {
+            do_action('datamachine_log', 'error', 'datamachine_mark_item_processed called with missing required parameters', [
+                'flow_step_id' => $flow_step_id,
+                'source_type' => $source_type,
+                'item_identifier' => substr($item_identifier ?? '', 0, 50) . '...',
+                'job_id' => $job_id,
+                'parameter_provided' => func_num_args() >= 4
+            ]);
             return;
         }
 
@@ -77,18 +82,19 @@ function datamachine_register_core_actions() {
             ]);
             return;
         }
-        
-        $all_databases = apply_filters('datamachine_db', []);
-        $processed_items = $all_databases['processed_items'] ?? null;
-        
-        if (!$processed_items) {
-                do_action('datamachine_log', 'error', 'ProcessedItems service unavailable for item marking', [
-                'flow_step_id' => $flow_step_id, 
+
+        $processed_items = new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
+
+        if (empty($job_id) || !is_numeric($job_id) || $job_id <= 0) {
+            do_action('datamachine_log', 'error', 'datamachine_mark_item_processed called without valid job_id', [
+                'flow_step_id' => $flow_step_id,
                 'source_type' => $source_type,
-                'identifier' => substr($item_identifier, 0, 50) . '...',
-                'job_id' => $job_id
+                'item_identifier' => substr($item_identifier, 0, 50) . '...',
+                'job_id' => $job_id,
+                'job_id_type' => gettype($job_id),
+                'parameter_provided' => func_num_args() >= 4
             ]);
-            return false;
+            return;
         }
         
         $success = $processed_items->add_processed_item($flow_step_id, $source_type, $item_identifier, $job_id);
@@ -134,8 +140,6 @@ function datamachine_register_core_actions() {
         return false;
     }, 10, 4);
 
-    datamachine_register_execution_engine();
-    
     \DataMachine\Engine\Actions\Delete::register();
     \DataMachine\Engine\Actions\Update::register();
     \DataMachine\Engine\Actions\AutoSave::register();

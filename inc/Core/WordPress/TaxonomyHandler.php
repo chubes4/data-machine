@@ -7,6 +7,7 @@
  *
  * @package DataMachine
  * @subpackage Core\Steps\Publish\Handlers\WordPress
+ * @since 0.2.1
  */
 
 namespace DataMachine\Core\WordPress;

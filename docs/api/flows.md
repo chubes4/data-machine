@@ -407,4 +407,4 @@ const deletedJobs = await deleteFlow(flowId);
 **Base URL**: `/wp-json/datamachine/v1/flows`
 **Permission**: `manage_options` capability required
 **Implementation**: `/inc/Api/Flows/` directory (Flows.php, FlowSteps.php)
-**Version**: Directory structure introduced in v0.2.0
+**Version**: Directory structure introduced in v0.2.1

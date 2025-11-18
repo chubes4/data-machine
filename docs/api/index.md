@@ -97,5 +97,5 @@ For detailed implementation patterns, see:
 ---
 
 **API Version**: v1
-**Data Machine Version**: 0.2.0
+**Data Machine Version**: 0.2.1
 **Last Updated**: 2025-11-15

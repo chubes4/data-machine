@@ -1,10 +1,10 @@
 === Data Machine ===
 Contributors: extrachill
 Tags: ai, automation, content, workflow, pipeline, chat
-Requires at least: 6.0
+Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,26 +12,28 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 
 ## Architecture
 
-[![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue)](https://wordpress.org/)
+[![WordPress](https://img.shields.io/badge/WordPress-6.2%2B-blue)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
 **Features**:
+- **Base Class Architecture**: Standardized inheritance patterns for steps, handlers, and settings reducing code duplication
 - **Modern React Admin Interface**: Complete Pipelines page rebuild with 6,591 lines of React code using @wordpress/element and @wordpress/components
 - **Zero jQuery/AJAX Architecture**: Modern React frontend with REST API integration
 - **Tool-First AI**: Universal Engine architecture with multi-turn conversation loops, centralized tool execution, and filter-based directive system
 - **Universal Engine Layer**: Shared AI infrastructure serving both Pipeline and Chat agents with AIConversationLoop, ToolExecutor, ToolParameters, ConversationManager, and RequestBuilder components
 - **Visual Pipeline Builder**: Real-time updates with 50+ React components, custom hooks, and Context API state management
 - **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter with filter-based directive system (global, agent-specific, pipeline, chat)
-- **Complete REST API**: 16 endpoints (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users, Chat base, Chat/Chat)
+- **Complete REST API**: 17 endpoints (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Schedule, Settings, StepTypes, Tools, Users, Chat base, Chat/Chat)
 - **Chat API**: Conversational interface for building and executing workflows through natural language
+- **Schedule API**: Dedicated endpoint for recurring and one-time flow scheduling
 - **Ephemeral Workflows**: Execute workflows without database persistence via REST API
 - **Centralized Engine Data**: Unified filter access pattern with clean AI data packets and structured engine parameters
-- **Enhanced Handler System**: Universal filter patterns with shared functionality across all handlers
+- **Modular Components**: FilesRepository and WordPress shared components with specialized functionality
 - **Performance Optimizations**: 50% query reduction in handler settings operations with metadata-based auth detection
 - **Advanced Cache Management**: Granular WordPress action-based clearing with pattern-based invalidation
 
-**Requirements**: WordPress 6.0+, PHP 8.0+, Action Scheduler (woocommerce/action-scheduler), Composer (for development)
+**Requirements**: WordPress 6.2+, PHP 8.0+, Action Scheduler (woocommerce/action-scheduler), Composer (for development)
 
 **Pipeline+Flow**: Pipelines are reusable templates, Flows are configured instances
 
@@ -134,8 +136,8 @@ $response = apply_filters('chubes_ai_request', [
 
 ### REST API
 
-Data Machine provides comprehensive REST API access via 16 endpoints for flow execution, pipeline management, and system monitoring:
-- **Core**: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users
+Data Machine provides comprehensive REST API access via 17 endpoints for flow execution, pipeline management, and system monitoring:
+- **Core**: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Schedule, Settings, StepTypes, Tools, Users
 - **Chat**: Chat (base), Chat/Chat (conversations)
 
 **Unified Execute Endpoint** (`POST /datamachine/v1/execute`):
@@ -147,17 +149,17 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
   -u username:application_password \
   -d '{"flow_id": 123}'
 
-# Database Flow - Recurring
+# Database Flow - Recurring (Schedule API)
 curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{"flow_id": 123, "action": "schedule", "interval": "hourly"}'
 
-# Database Flow - Delayed (one-time)
-curl -X POST https://example.com/wp-json/datamachine/v1/execute \
+# Database Flow - One-Time Scheduled (Schedule API)
+curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
   -H "Content-Type: application/json" \
   -u username:application_password \
-  -d '{"flow_id": 123, "timestamp": 1704153600}'
+  -d '{"flow_id": 123, "action": "schedule", "timestamp": 1704153600}'
 
 # Ephemeral Workflow - Immediate
 curl -X POST https://example.com/wp-json/datamachine/v1/execute \
@@ -215,11 +217,12 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 - `GET /datamachine/v1/processed-items` - Processed items
 - `DELETE /datamachine/v1/processed-items` - Clear processed items
 
-**Implementation**: 16 REST API endpoints with directory-based structure (@since v0.2.0):
+**Implementation**: 17 REST API endpoints with directory-based structure (@since v0.2.0):
 - **Directory-based endpoints**:
   - **Pipelines** (`/inc/Api/Pipelines/`): Pipelines.php (main endpoint), PipelineSteps.php (steps CRUD), PipelineFlows.php (pipeline flows)
   - **Flows** (`/inc/Api/Flows/`): Flows.php (main endpoint), FlowSteps.php (flow steps CRUD)
   - **Chat** (`/inc/Api/Chat/`): Chat.php (endpoint handler), ChatAgentDirective.php (AI directive), ChatFilters.php (self-registration), Tools/MakeAPIRequest.php (chat-only tool)
+  - **Schedule** (`/inc/Api/Schedule/`): Schedule.php (recurring and one-time flow scheduling)
 - **Single-file endpoints**: Auth, Execute, Files, Handlers, Jobs, Logs, ProcessedItems, Providers, Settings, StepTypes, Tools, Users (at `/inc/Api/*.php`)
 - **Nested endpoints**: Pipeline steps, flow configuration, chat sessions with structured URL routing
 
@@ -263,6 +266,18 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 - WordPress Post Reader
 
 **Architecture Highlights**:
+- **Base Class Architecture** (@since v0.2.0):
+  - **Step** base class for unified payload handling across all step types
+  - **FetchHandler** base class with deduplication, engine data storage, filtering
+  - **PublishHandler** base class with engine data retrieval, image validation, response formatting
+  - **SettingsHandler** base classes with auto-sanitization for all handler settings
+  - **DataPacket** class for standardized data packet creation
+  - Eliminates code duplication through inheritance and shared functionality
+- **Modular Component Architecture** (@since v0.2.1):
+  - **FilesRepository**: 6 specialized components (DirectoryManager, FileStorage, FileCleanup, ImageValidator, RemoteFileDownloader, FileRetrieval)
+  - **WordPress Shared Components**: Centralized functionality (FeaturedImageHandler, TaxonomyHandler, SourceUrlHandler, WordPressSettingsHandler)
+  - **StepNavigator**: Centralized step navigation logic for execution flow
+  - Reduces duplication across handlers and step types
 - **Centralized OAuth Handlers**:
   - `OAuth1Handler` and `OAuth2Handler` classes at `/inc/Core/OAuth/` eliminate duplication
   - Service discovery via `datamachine_get_oauth1_handler` and `datamachine_get_oauth2_handler` filters
@@ -278,9 +293,6 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
   - Multi-turn conversation execution with automatic tool handling
   - Centralized parameter building and request construction
   - Universal tool result search utility for data packet interpretation
-- **Modular WordPress Publisher**:
-  - Specialized components (`FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`)
-  - Configuration hierarchy system
 - **Complete AutoSave System**:
   - Single `datamachine_auto_save` action handles pipeline persistence, flow synchronization, and cache invalidation
 - **Filter-Based Discovery**:
@@ -472,10 +484,11 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
 
   - Composer-managed ai-http-client dependency
 - **REST API Integration**:
-  - **16 Endpoints**: Core (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users) + Chat (base, conversations)
+  - **17 Endpoints**: Core (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Schedule, Settings, StepTypes, Tools, Users) + Chat (base, conversations)
   - **Chat API**: Conversational interface with session management for multi-turn natural language workflow building
+  - **Schedule API**: Dedicated endpoint for recurring and one-time flow scheduling
   - **Ephemeral Workflow Support**: Execute workflows without database persistence
-  - **Unified Execute Endpoint**: Supports database flows, ephemeral workflows, immediate/delayed/recurring execution
+  - **Unified Execute Endpoint**: Supports database flows and ephemeral workflows
   - **Complete Authentication**: WordPress application password or cookie authentication
   - **React Frontend Integration**: Zero AJAX dependencies, complete REST API consumption
 

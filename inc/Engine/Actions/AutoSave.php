@@ -40,20 +40,10 @@ class AutoSave
      * @return bool Success status - true if all operations complete successfully
      */
     public function handle_pipeline_auto_save($pipeline_id) {
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        $db_flows = $all_databases['flows'] ?? null;
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
 
-        if (!$db_pipelines || !$db_flows) {
-            do_action('datamachine_log', 'error', 'Database services unavailable for auto-save', [
-                'pipeline_id' => $pipeline_id,
-                'pipelines_db' => $db_pipelines ? 'available' : 'missing',
-                'flows_db' => $db_flows ? 'available' : 'missing'
-            ]);
-            return false;
-        }
-
-        $pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
+        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
         if (!$pipeline) {
             do_action('datamachine_log', 'error', 'Pipeline not found for auto-save', [
                 'pipeline_id' => $pipeline_id
@@ -62,7 +52,7 @@ class AutoSave
         }
 
         $pipeline_name = $pipeline['pipeline_name'];
-        $pipeline_config = apply_filters('datamachine_get_pipeline_steps', [], $pipeline_id);
+        $pipeline_config = $db_pipelines->get_pipeline_config($pipeline_id);
 
         $pipeline_success = $db_pipelines->update_pipeline($pipeline_id, [
             'pipeline_name' => $pipeline_name,
@@ -76,7 +66,7 @@ class AutoSave
             return false;
         }
 
-        $flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
+        $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
         $flows_saved = 0;
         $flow_steps_saved = 0;
 
@@ -91,7 +81,7 @@ class AutoSave
                 }
             }
 
-            $flow_success = apply_filters('datamachine_update_flow', false, $flow_id, [
+            $flow_success = $db_flows->update_flow($flow_id, [
                 'flow_name' => $flow['flow_name'],
                 'flow_config' => wp_json_encode($flow_config),
                 'scheduling_config' => wp_json_encode($flow['scheduling_config'])

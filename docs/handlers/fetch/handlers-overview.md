@@ -52,12 +52,28 @@ Fetch handlers retrieve content from various sources and convert it into standar
 
 ## Common Interface
 
+**Base Class Architecture** (@since v0.2.0):
+
+All fetch handlers extend `FetchHandler` base class (`/inc/Core/Steps/Fetch/Handlers/FetchHandler.php`) which provides:
+- Deduplication checking via `isItemProcessed()` and `markItemProcessed()`
+- Engine data storage via `storeEngineData()`
+- Remote file downloading via `downloadRemoteFile()`
+- Timeframe filtering via `applyTimeframeFilter()`
+- Keyword search filtering via `applyKeywordSearch()`
+- Standardized logging via `log()`
+- Response formatting via `successResponse()` and `emptyResponse()`
+
 ### `get_fetch_data()` Method
 
-All fetch handlers implement the same interface:
+All fetch handlers implement the same public interface:
 
 ```php
 public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array
+```
+
+Internally, the base class calls:
+```php
+abstract protected function executeFetch(int $pipeline_id, array $config, ?string $flow_step_id, int $flow_id, ?string $job_id): array
 ```
 
 **Parameters**:

@@ -135,7 +135,9 @@ export default function HandlerSettingsModal( {
 			const response = await updateFlowHandler(
 				flowStepId,
 				handlerSlug,
-				settings
+				settings,
+				pipelineId,
+				stepType
 			);
 
 			if ( response.success ) {

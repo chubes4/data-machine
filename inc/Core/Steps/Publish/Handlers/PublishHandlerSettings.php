@@ -7,7 +7,7 @@
  * to add platform-specific customizations.
  *
  * @package DataMachine\Core\Steps\Publish\Handlers
- * @since 0.2.0
+ * @since 0.2.1
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers;

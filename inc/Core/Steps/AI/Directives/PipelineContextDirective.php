@@ -43,7 +43,8 @@ class PipelineContextDirective {
 		}
 
 		// Get pipeline ID from step config
-		$step_config = apply_filters( 'datamachine_get_pipeline_step_config', [], $pipeline_step_id );
+		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+		$step_config = $db_pipelines->get_pipeline_step_config( $pipeline_step_id );
 		$pipeline_id = $step_config['pipeline_id'] ?? null;
 
 		if ( empty( $pipeline_id ) ) {
@@ -51,12 +52,6 @@ class PipelineContextDirective {
 		}
 
 		// Get context files from pipeline config
-		$all_databases = apply_filters( 'datamachine_db', [] );
-		$db_pipelines  = $all_databases['pipelines'] ?? null;
-
-		if ( ! $db_pipelines ) {
-			return $request;
-		}
 
 		$context_files  = $db_pipelines->get_pipeline_context_files( $pipeline_id );
 		$uploaded_files = $context_files['uploaded_files'] ?? [];

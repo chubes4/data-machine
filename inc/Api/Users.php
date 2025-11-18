@@ -223,7 +223,8 @@ class Users
      */
     protected static function pipeline_exists(int $pipeline_id): bool
     {
-        $pipelines = apply_filters('datamachine_get_pipelines_list', []);
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $pipelines = $db_pipelines->get_pipelines_list();
 
         foreach ($pipelines as $pipeline) {
             if ((int) ($pipeline['pipeline_id'] ?? 0) === $pipeline_id) {

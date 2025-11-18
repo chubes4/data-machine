@@ -2,7 +2,7 @@
 
 Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and multi-provider AI integration.
 
-**Version**: 0.2.0
+**Version**: 0.2.1
 
 *For user documentation, see `docs/README.md` | For GitHub overview, see `README.md`*
 
@@ -11,6 +11,30 @@ Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and mult
 **Engine**: Three-action execution cycle: `datamachine_run_flow_now` → `datamachine_execute_step` → `datamachine_schedule_next_step`
 
 **Job Status**: `completed`, `failed`, `completed_no_items`
+
+**Base Class Architecture** (@since v0.2.1): Standardized inheritance patterns reduce code duplication and provide consistent functionality:
+- **Step** (`/inc/Core/Steps/Step.php`) - Abstract base for all step types with unified payload handling, validation, logging
+- **FetchHandler** (`/inc/Core/Steps/Fetch/Handlers/FetchHandler.php`) - Base for fetch handlers with deduplication, engine data storage, filtering, logging
+- **PublishHandler** (`/inc/Core/Steps/Publish/Handlers/PublishHandler.php`) - Base for publish handlers with engine data retrieval, image validation, response formatting
+- **SettingsHandler** (`/inc/Core/Steps/SettingsHandler.php`) - Base for all handler settings with auto-sanitization based on field schema
+- **PublishHandlerSettings** (`/inc/Core/Steps/Publish/Handlers/PublishHandlerSettings.php`) - Base settings for publish handlers with common fields
+- **FetchHandlerSettings** (`/inc/Core/Steps/Fetch/Handlers/FetchHandlerSettings.php`) - Base settings for fetch handlers with common fields
+- **DataPacket** (`/inc/Core/DataPacket.php`) - Standardized data packet creation replacing scattered array construction
+
+**FilesRepository Architecture** (@since v0.2.1): Modular component structure at `/inc/Core/FilesRepository/`:
+- **DirectoryManager** - Directory creation and path management
+- **FileStorage** - File operations and flow-isolated storage
+- **FileCleanup** - Retention policy enforcement and cleanup
+- **ImageValidator** - Image validation and metadata extraction
+- **RemoteFileDownloader** - Remote file downloading with validation
+- **FileRetrieval** - Data retrieval from file storage
+
+**WordPress Shared Components** (@since v0.2.1): Centralized WordPress functionality at `/inc/Core/WordPress/`:
+- **FeaturedImageHandler** - Image processing and media library integration
+- **TaxonomyHandler** - Taxonomy selection and term creation
+- **SourceUrlHandler** - URL attribution with Gutenberg blocks
+- **WordPressSettingsHandler** - Shared WordPress settings fields
+- **WordPressFilters** - Service discovery registration
 
 **Self-Registration**: Components auto-register via `*Filters.php` files loaded through composer.json:
 ```php
@@ -45,6 +69,9 @@ function datamachine_register_twitter_filters() {
 datamachine_register_twitter_filters(); // Auto-execute at file load
 ```
 
+**Engine Components** (@since v0.2.1):
+- **StepNavigator** (`/inc/Engine/StepNavigator.php`) - Centralized step navigation logic for execution flow
+
 **Core Components**:
 - **Pipeline+Flow**: Templates → instances pattern
 - **Database**: 5 core tables (pipelines, flows, jobs, processed_items, chat_sessions)
@@ -52,6 +79,7 @@ datamachine_register_twitter_filters(); // Auto-execute at file load
 - **AutoSave**: Complete pipeline persistence
 - **Admin**: `manage_options` security model
 - **OAuth Handlers**: Centralized OAuth 1.0a and OAuth 2.0 flow implementations (`/inc/Core/OAuth/`)
+- **Schedule API**: Dedicated REST endpoint at `/datamachine/v1/schedule` for recurring and one-time flow scheduling (`/inc/Api/Schedule/Schedule.php`)
 
 **Filter-Based Architecture**: All functionality accessed via WordPress filters for service discovery, configuration, and cross-cutting concerns.
 
@@ -321,10 +349,12 @@ apply_filters('datamachine_apply_global_defaults', $current_settings, $handler_s
 
 ## Step Implementation
 
-**Standard Implementation Patterns**:
+**Standard Implementation Patterns** (@since v0.2.1 - Base Class Architecture):
 
 ```php
 // Step Pattern - Extends base Step class
+use DataMachine\Core\Steps\Step;
+
 class MyStep extends Step {
     public function __construct() {
         parent::__construct('my_step');
@@ -335,68 +365,98 @@ class MyStep extends Step {
         // $this->job_id, $this->flow_step_id, $this->dataPackets,
         // $this->flow_step_config, $this->engine_data
 
-        do_action('datamachine_mark_item_processed', $this->flow_step_id, 'my_step', $item_id, $this->job_id);
+        // Use DataPacket for standardized packet creation
+        $dataPacket = new \DataMachine\Core\DataPacket(
+            ['title' => $title, 'body' => $content],
+            ['source_type' => $this->dataPackets[0]['metadata']['source_type'] ?? 'unknown'],
+            'my_step'
+        );
 
-        array_unshift($this->dataPackets, [
-            'type' => 'my_step',
-            'content' => ['title' => $title, 'body' => $content],
-            'metadata' => ['source_type' => $this->dataPackets[0]['metadata']['source_type'] ?? 'unknown'],
-            'timestamp' => time()
+        return $dataPacket->addTo($this->dataPackets);
+    }
+}
+
+// Fetch Handler - Extends base FetchHandler class
+use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
+
+class MyFetchHandler extends FetchHandler {
+    public function __construct() {
+        parent::__construct('my_handler');
+    }
+
+    protected function executeFetch(int $pipeline_id, array $config, ?string $flow_step_id, int $flow_id, ?string $job_id): array {
+        // Check deduplication (provided by base class)
+        if ($this->isItemProcessed($item_id, $flow_step_id)) {
+            return $this->emptyResponse();
+        }
+
+        // Mark as processed (base class method)
+        $this->markItemProcessed($item_id, $flow_step_id, $job_id);
+
+        // Store engine parameters (base class method)
+        $this->storeEngineData($job_id, [
+            'source_url' => $source_url,
+            'image_url' => $image_url
         ]);
-        return $this->dataPackets;
+
+        // Use DataPacket for standardized creation
+        $dataPacket = new \DataMachine\Core\DataPacket(
+            ['content_string' => $content_string, 'file_info' => null],
+            ['source_type' => 'my_handler', 'item_identifier_to_log' => $item_id],
+            'fetch'
+        );
+
+        return $this->successResponse([$dataPacket->addTo([])]);
     }
 }
 
-// Fetch Handler with Database Storage
-class MyFetchHandler {
-    public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
-        // Extract flow_step_id from handler config
-        $flow_step_id = $handler_config['flow_step_id'] ?? null;
+// Publish Handler - Extends base PublishHandler class
+use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 
-        // Mark as processed for deduplication
-        if ($flow_step_id) {
-            do_action('datamachine_mark_item_processed', $flow_step_id, 'my_handler', $item_id, $job_id);
+class MyPublishHandler extends PublishHandler {
+    public function __construct() {
+        parent::__construct('my_handler');
+    }
+
+    protected function executePublish(array $parameters, array $handler_config): array {
+        // Access engine data (base class method)
+        $source_url = $this->getSourceUrl($parameters['job_id'] ?? null);
+        $image_file_path = $this->getImageFilePath($parameters['job_id'] ?? null);
+
+        // Validate image if present (base class method)
+        if ($image_file_path) {
+            $validation = $this->validateImage($image_file_path);
+            if (!$validation['valid']) {
+                return $this->errorResponse('Invalid image', ['errors' => $validation['errors']]);
+            }
         }
 
-        // Create clean data packet (no URLs)
-        $clean_data = [
-            'data' => [
-                'content_string' => $content_string,
-                'file_info' => null
-            ],
-            'metadata' => [
-                'source_type' => 'my_handler',
-                'item_identifier_to_log' => $item_id,
-                'original_id' => $item_id
+        // Handler-specific publishing logic
+        $result_id = $this->publish_content($parameters['content']);
+
+        // Use base class response methods
+        return $this->successResponse(['id' => $result_id, 'url' => $url]);
+    }
+}
+
+// Handler Settings - Extends base SettingsHandler classes
+use DataMachine\Core\Steps\Fetch\Handlers\FetchHandlerSettings;
+
+class MyFetchHandlerSettings extends FetchHandlerSettings {
+    public static function get_fields(): array {
+        return array_merge(
+            self::get_common_fields(), // timeframe_limit, search
+            [
+                'custom_field' => [
+                    'type' => 'text',
+                    'label' => __('Custom Setting', 'datamachine'),
+                    'default' => ''
+                ]
             ]
-        ];
-
-        // Store engine parameters in database via centralized datamachine_engine_data filter
-        if ($job_id) {
-            apply_filters('datamachine_engine_data', null, $job_id, [
-                'source_url' => $source_url,
-                'image_url' => $image_url
-            ]);
-        }
-
-        return ['processed_items' => [$clean_data]];
+        );
     }
-}
 
-// Publish/Update Handler with Engine Data Access
-class MyPublishHandler {
-    public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        $handler_config = $tool_def['handler_config'] ?? [];
-
-        // Access engine data via centralized filter pattern
-        $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
-        $source_url = $engine_data['source_url'] ?? null;
-        $image_url = $engine_data['image_url'] ?? null;
-
-        // Access source_url from engine data for link attribution (publish handlers) or post identification (update handlers)
-        return ['success' => true, 'data' => ['id' => $id, 'url' => $url]];
-    }
+    // Auto-sanitization provided by SettingsHandler base class
 }
 ```
 

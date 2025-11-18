@@ -9,6 +9,7 @@
  * - Centralized logging
  *
  * @package DataMachine\Core\Steps\Publish\Handlers
+ * @since 0.2.1
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers;
@@ -91,17 +92,7 @@ abstract class PublishHandler {
      * @return array Validation result with valid, errors, mime_type, size
      */
     protected function validateImage(string $image_file_path): array {
-        $image_validator = apply_filters('datamachine_get_image_validator', null);
-
-        if (!$image_validator) {
-            return [
-                'valid' => false,
-                'errors' => ['Image validator not available'],
-                'mime_type' => null,
-                'size' => 0
-            ];
-        }
-
+        $image_validator = new \DataMachine\Core\FilesRepository\ImageValidator();
         $validation = $image_validator->validate_repository_file($image_file_path);
 
         return [

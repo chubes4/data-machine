@@ -26,7 +26,8 @@ class AIStepTools {
             return [];
         }
 
-        $saved_step_config = apply_filters('datamachine_get_pipeline_step_config', [], $pipeline_step_id);
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $saved_step_config = $db_pipelines->get_pipeline_step_config( $pipeline_step_id );
         $modal_enabled_tools = $saved_step_config['enabled_tools'] ?? [];
 
         return is_array($modal_enabled_tools) ? $modal_enabled_tools : [];

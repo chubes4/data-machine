@@ -3,8 +3,8 @@
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/datamachine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:         0.2.0
- * Requires at least: 6.0
+ * Version:         0.2.1
+ * Requires at least: 6.2
  * Requires PHP:     8.0
  * Author:          Chris Huber
  * Author URI:      https://chubes.net
@@ -21,7 +21,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.2.0' );
+define( 'DATAMACHINE_VERSION', '0.2.1' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -39,8 +39,6 @@ if ( ! class_exists( 'ActionScheduler' ) ) {
 
 function run_datamachine() {
 
-	datamachine_register_database_service_system();
-	datamachine_register_database_filters();
 	datamachine_register_utility_filters();
 	datamachine_register_admin_filters();
 	datamachine_register_logger_filters();
@@ -83,28 +81,18 @@ function datamachine_deactivate_plugin() {
 }
 
 function activate_datamachine() {
-	datamachine_register_database_service_system();
 
-	$all_databases = apply_filters('datamachine_db', []);
-	$db_pipelines = $all_databases['pipelines'] ?? null;
-	if ($db_pipelines) {
-		$db_pipelines->create_table();
-	}
+	$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+	$db_pipelines->create_table();
 
-	$db_flows = $all_databases['flows'] ?? null;
-	if ($db_flows) {
-		$db_flows->create_table();
-	}
+	$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+	$db_flows->create_table();
 
-	$db_jobs = $all_databases['jobs'] ?? null;
-	if ($db_jobs) {
-		$db_jobs->create_table();
-	}
+	$db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
+	$db_jobs->create_table();
 
-	$db_processed_items = $all_databases['processed_items'] ?? null;
-	if ($db_processed_items) {
-		$db_processed_items->create_table();
-	}
+	$db_processed_items = new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
+	$db_processed_items->create_table();
 
 	\DataMachine\Core\Database\Chat\Chat::create_table();
 
@@ -137,14 +125,14 @@ function datamachine_check_requirements() {
 	}
 	
 	global $wp_version;
-	if ( version_compare( $wp_version, '6.0', '<' ) ) {
+	if ( version_compare( $wp_version, '6.2', '<' ) ) {
 		add_action( 'admin_notices', function() use ( $wp_version ) {
 			echo '<div class="notice notice-error"><p>';
-			printf( 
+			printf(
 				/* translators: %1$s: current WordPress version, %2$s: required WordPress version */
 				esc_html__( 'Data Machine requires WordPress %2$s or higher. You are running WordPress %1$s.', 'datamachine' ),
 				esc_html( $wp_version ),
-				'6.0'
+				'6.2'
 			);
 			echo '</p></div>';
 		});

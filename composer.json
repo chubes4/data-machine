@@ -23,7 +23,6 @@
 		"files": [
 			"inc/Engine/Filters/DataMachineFilters.php",
 			"inc/Engine/Filters/Handlers.php",
-			"inc/Engine/Filters/Database.php",
 			"inc/Engine/Filters/Admin.php",
 			"inc/Engine/Filters/Logger.php",
 			"inc/Engine/Filters/OAuth.php",
@@ -33,10 +32,6 @@
 
 			"inc/Engine/Filters/WordPress.php",
 			"inc/Engine/AI/ConversationManager.php",
-			"inc/Core/Database/ProcessedItems/ProcessedItemsFilters.php",
-			"inc/Core/Database/Pipelines/PipelinesFilters.php",
-			"inc/Core/Database/Jobs/JobsFilters.php",
-			"inc/Core/Database/Flows/FlowsFilters.php",
 			"inc/Core/Admin/Modal/ModalFilters.php",
 			"inc/Core/Admin/AdminRootFilters.php",
 			"inc/Core/Admin/Pages/Pipelines/PipelinesFilters.php",
@@ -74,7 +69,7 @@
 			"inc/Core/Steps/AI/Directives/PipelineContextDirective.php",
 			"inc/Core/Steps/Update/UpdateStepFilters.php",
 			"inc/Core/Steps/Update/Handlers/WordPress/WordPressFilters.php",
-			"inc/Core/FilesRepository/FilesRepositoryFilters.php",
+			"inc/Core/FilesRepository/FileCleanup.php",
 			"inc/Core/WordPress/WordPressFilters.php",
 			"inc/Api/StepTypes.php",
 			"inc/Api/Handlers.php",

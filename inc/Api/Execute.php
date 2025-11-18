@@ -92,7 +92,8 @@ class Execute {
      */
     private static function execute_database_flow($flow_id, $timestamp) {
         // Validate flow exists
-        $flow = apply_filters('datamachine_get_flow', null, $flow_id);
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+        $flow = $db_flows->get_flow($flow_id);
         if (!$flow) {
             return new \WP_Error(
                 'flow_not_found',
@@ -172,16 +173,7 @@ class Execute {
         $configs = self::build_configs_from_workflow($workflow);
 
         // Get database service
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-
-        if (!$db_jobs) {
-            return new \WP_Error(
-                'database_error',
-                'Jobs database service unavailable',
-                ['status' => 500]
-            );
-        }
+        $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
 
         // Create job record
         $job_id = $db_jobs->create_job([

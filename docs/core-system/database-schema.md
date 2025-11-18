@@ -320,11 +320,10 @@ $deleted_count = $chat_db->cleanup_expired_sessions();
 All database operations use filter-based discovery:
 
 ```php
-$all_databases = apply_filters('datamachine_db', []);
-$db_pipelines = $all_databases['pipelines'] ?? null;
-$db_flows = $all_databases['flows'] ?? null;
-$db_jobs = $all_databases['jobs'] ?? null;
-$db_processed_items = $all_databases['processed_items'] ?? null;
+$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+$db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
+$db_processed_items = new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
 ```
 
 ### Transactional Operations

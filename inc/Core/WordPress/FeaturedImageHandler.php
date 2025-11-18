@@ -6,6 +6,7 @@
  * Supports configuration hierarchy with system defaults and handler-specific settings.
  *
  * @package DataMachine\Core\Steps\Publish\Handlers\WordPress
+ * @since 0.2.1
  */
 
 namespace DataMachine\Core\WordPress;
@@ -46,7 +47,7 @@ class FeaturedImageHandler {
             return null;
         }
 
-        $image_validator = apply_filters('datamachine_get_image_validator', null);
+        $image_validator = new \DataMachine\Core\FilesRepository\ImageValidator();
         $validation = $image_validator->validate_repository_file($image_file_path);
 
         if (!$validation['valid']) {

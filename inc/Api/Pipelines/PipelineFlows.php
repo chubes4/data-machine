@@ -64,10 +64,12 @@ class PipelineFlows {
 		$pipeline_id = (int) $request->get_param('pipeline_id');
 
 		// Retrieve flows for pipeline via filter
-		$pipeline_flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
+		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+		$pipeline_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
 
 		// Verify pipeline exists by checking if it has any data
-		$pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
+		$pipeline = $db_pipelines->get_pipeline($pipeline_id);
 		if (!$pipeline) {
 			return new \WP_Error(
 				'pipeline_not_found',

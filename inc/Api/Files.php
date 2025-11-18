@@ -209,128 +209,12 @@ class Files {
             );
         }
 
-        $storage = apply_filters('datamachine_get_file_storage', null);
-        if (!$storage) {
-            return new WP_Error(
-                'files_repository_unavailable',
-                __('File storage service not available.', 'datamachine'),
-                ['status' => 500]
-            );
-        }
+        $storage = new \DataMachine\Core\FilesRepository\FileStorage();
 
         // PIPELINE CONTEXT
         if ($pipeline_id) {
-            $pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
-            if (empty($pipeline)) {
-                return new WP_Error(
-                    'pipeline_not_found',
-                    __('Pipeline not found.', 'datamachine'),
-                    ['status' => 404]
-                );
-            }
-
-            $pipeline_name = $pipeline['pipeline_name'] ?? "pipeline-{$pipeline_id}";
-
-            $file_info = $storage->store_pipeline_file($pipeline_id, $pipeline_name, [
-                'source_path' => $file['tmp_name'],
-                'original_name' => $file['name']
-            ]);
-
-            if (!$file_info) {
-                return new WP_Error(
-                    'pipeline_file_store_failed',
-                    __('Failed to store pipeline context file.', 'datamachine'),
-                    ['status' => 500]
-                );
-            }
-
-            // Update database
-            $context_files = apply_filters('datamachine_get_pipeline_context_files', [], $pipeline_id);
-            $context_files['uploaded_files'][] = $file_info;
-            apply_filters('datamachine_update_pipeline_context_files', null, $pipeline_id, $context_files);
-
-            do_action('datamachine_log', 'debug', 'Pipeline context file uploaded successfully.', [
-                'filename' => $file['name'],
-                'pipeline_id' => $pipeline_id
-            ]);
-
-            $response = rest_ensure_response([
-                'success' => true,
-                'file' => $file_info,
-                'scope' => 'pipeline',
-                /* translators: %s: Uploaded file name */
-                'message' => sprintf(__('Pipeline context file "%s" uploaded successfully.', 'datamachine'), $file['name']),
-            ]);
-            $response->set_status(201);
-            return $response;
-        }
-
-        // FLOW FILES
-        if ($flow_step_id) {
-            $parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
-            if (!$parts || empty($parts['flow_id'])) {
-                return new WP_Error(
-                    'invalid_flow_step_id',
-                    __('Invalid flow step ID format.', 'datamachine'),
-                    ['status' => 400]
-                );
-            }
-
-            $context = self::get_file_context($parts['flow_id']);
-
-            $stored_path = $storage->store_file($file['tmp_name'], $file['name'], $context);
-            if (!$stored_path) {
-                return new WP_Error(
-                    'files_repository_store_failed',
-                    __('Failed to store file.', 'datamachine'),
-                    ['status' => 500]
-                );
-            }
-
-            $file_info = [
-                'filename' => basename($stored_path),
-                'path' => $stored_path,
-                'size' => filesize($stored_path),
-                'modified' => filemtime($stored_path)
-            ];
-
-            do_action('datamachine_log', 'debug', 'Flow file uploaded successfully.', [
-                'filename' => $file['name'],
-                'flow_step_id' => $flow_step_id
-            ]);
-
-            $response = rest_ensure_response([
-                'success' => true,
-                'file_info' => $file_info,
-                'scope' => 'flow',
-                /* translators: %s: Uploaded file name */
-                'message' => sprintf(__('File "%s" uploaded successfully.', 'datamachine'), $file['name']),
-            ]);
-            $response->set_status(201);
-            return $response;
-        }
-    }
-
-    /**
-     * List files (flow or pipeline context)
-     */
-    public static function list_files(WP_REST_Request $request) {
-        $flow_step_id = $request->get_param('flow_step_id');
-        $pipeline_id = $request->get_param('pipeline_id');
-
-        if (!$flow_step_id && !$pipeline_id) {
-            return new WP_Error(
-                'missing_scope',
-                __('Must provide either flow_step_id or pipeline_id.', 'datamachine'),
-                ['status' => 400]
-            );
-        }
-
-        $storage = apply_filters('datamachine_get_file_storage', null);
-
-        // PIPELINE CONTEXT
-        if ($pipeline_id) {
-            $context_files = apply_filters('datamachine_get_pipeline_context_files', [], $pipeline_id);
+            $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+            $context_files = $db_pipelines->get_pipeline_context_files($pipeline_id);
 
             return rest_ensure_response([
                 'success' => true,
@@ -377,11 +261,12 @@ class Files {
             );
         }
 
-        $storage = apply_filters('datamachine_get_file_storage', null);
+        $storage = new \DataMachine\Core\FilesRepository\FileStorage();
 
         // PIPELINE CONTEXT
         if ($pipeline_id) {
-            $context_files = apply_filters('datamachine_get_pipeline_context_files', [], $pipeline_id);
+            $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+            $context_files = $db_pipelines->get_pipeline_context_files($pipeline_id);
             $uploaded_files = $context_files['uploaded_files'] ?? [];
 
             foreach ($uploaded_files as $index => $file) {
@@ -395,7 +280,7 @@ class Files {
             }
 
             $context_files['uploaded_files'] = array_values($uploaded_files);
-            apply_filters('datamachine_update_pipeline_context_files', null, $pipeline_id, $context_files);
+            $db_pipelines->update_pipeline_context_files($pipeline_id, $context_files);
 
             do_action('datamachine_log', 'debug', 'Pipeline context file deleted.', [
                 'filename' => $filename,
@@ -438,10 +323,13 @@ class Files {
     /**
      * Get file context array from flow ID
      */
-    private static function get_file_context(int $flow_id): array {
-        $flow = apply_filters('datamachine_get_flow_config', [], $flow_id);
+    public static function get_file_context(int $flow_id): array {
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+        $flow_data = $db_flows->get_flow($flow_id);
+        $flow = $flow_data ? $flow_data['flow_config'] : [];
         $pipeline_id = $flow['pipeline_id'] ?? 0;
-        $pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
 
         return [
             'pipeline_id' => $pipeline_id,

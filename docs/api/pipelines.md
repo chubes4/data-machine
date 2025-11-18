@@ -432,4 +432,4 @@ else:
 **Base URL**: `/wp-json/datamachine/v1/pipelines`
 **Permission**: `manage_options` capability required
 **Implementation**: `/inc/Api/Pipelines/` directory (Pipelines.php, PipelineSteps.php, PipelineFlows.php)
-**Version**: Directory structure introduced in v0.2.0
+**Version**: Directory structure introduced in v0.2.1

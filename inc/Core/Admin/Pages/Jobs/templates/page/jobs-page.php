@@ -72,15 +72,12 @@ if (!defined('WPINC')) {
             <div class="datamachine-modal-body">
                 <?php
                 // Get all pipelines for the dropdown
-                $all_databases = apply_filters('datamachine_db', []);
-                $db_pipelines = $all_databases['pipelines'] ?? null;
+                $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 
                 $pipelines = [];
-                if ($db_pipelines) {
-                    $pipelines_list = $db_pipelines->get_pipelines_list();
-                    foreach ($pipelines_list as $pipeline) {
-                        $pipelines[$pipeline['pipeline_id']] = $pipeline['pipeline_name'];
-                    }
+                $pipelines_list = $db_pipelines->get_pipelines_list();
+                foreach ($pipelines_list as $pipeline) {
+                    $pipelines[$pipeline['pipeline_id']] = $pipeline['pipeline_name'];
                 }
                 ?>
 

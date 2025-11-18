@@ -36,7 +36,7 @@ do_action('datamachine_run_flow_now', $flow_id, 'manual');
 2. Loads complete flow step configuration
 3. Discovers step class via `datamachine_step_types` filter
 4. Creates step instance and executes with parameters
-5. Determines next step or completes pipeline
+5. Uses `StepNavigator` (@since v0.2.1) to determine next step or completes pipeline
 
 **Step Execution Pattern**:
 ```php
@@ -64,6 +64,37 @@ $data = $flow_step->execute($payload);
 1. Stores data packet in files repository
 2. Creates lightweight reference for Action Scheduler
 3. Schedules immediate execution of next step
+
+## Step Navigation
+
+The engine uses **StepNavigator** (@since v0.2.1) to determine step transitions during execution:
+
+```php
+use DataMachine\Engine\StepNavigator;
+
+$step_navigator = new StepNavigator();
+
+// Determine next step after current step completes
+$next_flow_step_id = $step_navigator->get_next_flow_step_id($flow_step_id, [
+    'engine_data' => $engine_data
+]);
+
+if ($next_flow_step_id) {
+    // Schedule next step execution
+    do_action('datamachine_schedule_next_step', $job_id, $next_flow_step_id, $data);
+} else {
+    // Pipeline complete
+    do_action('datamachine_update_job_status', $job_id, 'completed');
+}
+```
+
+**Benefits**:
+- Centralized step navigation logic
+- Support for complex step ordering
+- Rollback capability via `get_previous_flow_step_id()`
+- Performance optimized via engine_data context
+
+**See**: [StepNavigator Documentation](/docs/core-system/step-navigator.md) for complete details
 
 ## Data Storage
 

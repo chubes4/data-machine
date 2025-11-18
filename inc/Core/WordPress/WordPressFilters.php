@@ -6,6 +6,7 @@
  * Provides filter-based access to all WordPress handler utilities.
  *
  * @package DataMachine\Core\WordPress
+ * @since 0.2.1
  */
 
 namespace DataMachine\Core\WordPress;

@@ -22,15 +22,7 @@ function datamachine_register_engine_data_filter() {
             return $default;
         }
 
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_jobs = $all_databases['jobs'] ?? null;
-
-        if (!$db_jobs) {
-            do_action('datamachine_log', 'debug', 'Engine Data: Database service unavailable', [
-                'job_id' => $job_id
-            ]);
-            return $default;
-        }
+        $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
 
         // Storage mode: when data array is provided
         if ($data !== null && is_array($data)) {

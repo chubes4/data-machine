@@ -92,11 +92,10 @@ class Cache {
             return;
         }
 
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
 
-        if ($db_flows) {
-            $flow = apply_filters('datamachine_get_flow', null, $flow_id);
+        $flow = $db_flows->get_flow($flow_id);
+        if ($flow) {
             $pipeline_id = $flow['pipeline_id'] ?? null;
             $flow_config = $flow['flow_config'] ?? [];
 
@@ -123,9 +122,8 @@ class Cache {
             if ($pipeline_id) {
                 delete_transient(self::PIPELINE_FLOWS_CACHE_KEY . $pipeline_id);
             }
-
         } else {
-            do_action('datamachine_log', 'warning', 'Could not clear flow cache - flows database not available', [
+            do_action('datamachine_log', 'warning', 'Could not clear flow cache - flow not found', [
                 'flow_id' => $flow_id
             ]);
         }
@@ -169,11 +167,10 @@ class Cache {
             return;
         }
 
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
 
-        if ($db_flows) {
-            $flow = apply_filters('datamachine_get_flow', null, $flow_id);
+        $flow = $db_flows->get_flow($flow_id);
+        if ($flow) {
             $flow_config = $flow['flow_config'] ?? [];
 
             foreach ($flow_config as $flow_step_id => $step_config) {
@@ -185,7 +182,7 @@ class Cache {
                 'steps_count' => count($flow_config)
             ]);
         } else {
-            do_action('datamachine_log', 'warning', 'Could not clear flow steps cache - flows database not available', [
+            do_action('datamachine_log', 'warning', 'Could not clear flow steps cache - flow not found', [
                 'flow_id' => $flow_id
             ]);
         }
@@ -210,9 +207,9 @@ class Cache {
     /**
      * Complete cache invalidation across all Data Machine components.
      *
-     * Uses action-based architecture where each database component responds to
-     * datamachine_clear_all_cache action to clear its own cache patterns. This ensures
-     * extensibility and follows the "plugins within plugins" architecture.
+     * Fires actions for extension hooks and directly calls cache clearing methods.
+     * Extensions can listen to datamachine_clear_all_cache or component-specific
+     * actions to clear their own caches.
      */
     public function handle_clear_all_cache() {
         delete_transient(self::ALL_PIPELINES_CACHE_KEY);
@@ -221,8 +218,18 @@ class Cache {
         delete_transient(self::PIPELINE_EXPORT_CACHE_KEY);
         delete_transient(self::TOTAL_JOBS_COUNT_CACHE_KEY);
 
-        // CRITICAL: Fire the action so database components can respond with their own cache clearing
+        // Fire global action for extensions to listen
         do_action('datamachine_clear_all_cache');
+
+        // Fire component-specific actions for extensions
+        do_action('datamachine_clear_all_flows_cache');
+        do_action('datamachine_clear_all_pipelines_cache');
+        do_action('datamachine_clear_jobs_cache');
+
+        // Directly call our own cache clearing methods (no relay needed)
+        $this->handle_clear_all_flows_cache();
+        $this->handle_clear_all_pipelines_cache();
+        $this->handle_clear_jobs_cache();
 
         do_action('chubes_ai_clear_all_cache');
 

@@ -6,6 +6,7 @@
  * All methods are static with no state management.
  *
  * @package DataMachine\Engine\AI
+ * @since 0.2.1
  */
 
 namespace DataMachine\Engine\AI;

@@ -39,7 +39,8 @@ function datamachine_register_reddit_fetch_filters() {
 
     add_filter('datamachine_get_handler_settings_display', function($settings_display, $flow_step_id, $step_type) {
         // Get flow step config to identify handler
-        $flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+        $flow_step_config = $db_flows->get_flow_step_config( $flow_step_id );
         $handler_slug = $flow_step_config['handler_slug'] ?? '';
 
         if ($handler_slug !== 'reddit') {

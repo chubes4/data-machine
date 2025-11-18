@@ -7,10 +7,13 @@
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers
- * @since      0.2.0
+ * @since      0.2.1
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers;
+
+use DataMachine\Core\FilesRepository\FileStorage;
+use DataMachine\Core\FilesRepository\RemoteFileDownloader;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -105,13 +108,8 @@ abstract class FetchHandler {
 			return false;
 		}
 
-		return apply_filters(
-			'datamachine_is_item_processed',
-			false,
-			$flow_step_id,
-			$this->handler_type,
-			$item_id
-		);
+		$processed_items = new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
+		return $processed_items->has_item_been_processed( $flow_step_id, $this->handler_type, $item_id );
 	}
 
 	/**
@@ -200,10 +198,6 @@ abstract class FetchHandler {
 	): ?array {
 		$downloader = $this->getRemoteDownloader();
 
-		if ( ! $downloader ) {
-			return null;
-		}
-
 		$context = [
 			'pipeline_id'   => $pipeline_id,
 			'pipeline_name' => "pipeline-{$pipeline_id}",
@@ -217,19 +211,19 @@ abstract class FetchHandler {
 	/**
 	 * Get remote file downloader service
 	 *
-	 * @return object|null Remote downloader instance or null
+	 * @return RemoteFileDownloader Remote downloader instance
 	 */
-	protected function getRemoteDownloader(): ?object {
-		return apply_filters( 'datamachine_get_remote_downloader', null );
+	protected function getRemoteDownloader(): RemoteFileDownloader {
+		return new RemoteFileDownloader();
 	}
 
 	/**
 	 * Get file storage service
 	 *
-	 * @return object|null File storage instance or null
+	 * @return FileStorage File storage instance
 	 */
-	protected function getFileStorage(): ?object {
-		return apply_filters( 'datamachine_get_file_storage', null );
+	protected function getFileStorage(): FileStorage {
+		return new FileStorage();
 	}
 
 	/**

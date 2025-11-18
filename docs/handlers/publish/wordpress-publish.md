@@ -395,3 +395,134 @@ $handler_config = [
 **Comprehensive Logging**: All components provide detailed debug logging for monitoring and troubleshooting.
 
 The modular WordPress publish handler architecture provides enhanced maintainability, configuration flexibility, and feature separation while maintaining backward compatibility and WordPress integration standards.
+
+## WordPress Shared Components
+
+The WordPress publish handler uses centralized shared components from `/inc/Core/WordPress/` that provide reusable functionality across all WordPress-related handlers (publish, fetch, update).
+
+### WordPressSettingsHandler
+
+**Location**: `/inc/Core/WordPress/WordPressSettingsHandler.php`
+**Purpose**: Centralized WordPress settings utilities for handler configuration
+**Since**: 0.2.1
+
+Provides reusable WordPress-specific settings utilities for taxonomy fields, post type options, and user options, eliminating duplication between Publish, Fetch, and Update handler Settings classes.
+
+**Key Methods**:
+
+#### get_taxonomy_fields()
+
+Generates dynamic taxonomy field definitions for all public taxonomies.
+
+```php
+$taxonomy_fields = WordPressSettingsHandler::get_taxonomy_fields([
+    'field_suffix' => '_selection',  // or '_filter'
+    'first_options' => [
+        'skip' => __('Skip', 'datamachine'),
+        'ai_decides' => __('AI Decides', 'datamachine')
+    ],
+    'description_template' => __('Configure %1$s assignment...', 'datamachine')
+]);
+```
+
+**Returns**: Array of field definitions for all public taxonomies with term options.
+
+#### sanitize_taxonomy_fields()
+
+Sanitizes dynamic taxonomy field settings with validation.
+
+```php
+$sanitized = WordPressSettingsHandler::sanitize_taxonomy_fields($raw_settings, [
+    'field_suffix' => '_selection',
+    'allowed_values' => ['skip', 'ai_decides'],
+    'default_value' => 'skip'
+]);
+```
+
+**Returns**: Sanitized taxonomy settings validated against allowed values and term existence.
+
+#### get_post_type_options()
+
+Returns available WordPress post type options for handler configuration.
+
+```php
+$post_types = WordPressSettingsHandler::get_post_type_options($include_any = false);
+// Returns: ['post' => 'Posts', 'page' => 'Pages', 'custom_type' => 'Custom Type']
+```
+
+#### get_user_options()
+
+Returns available WordPress users for post authorship selection.
+
+```php
+$users = WordPressSettingsHandler::get_user_options();
+// Returns: [1 => 'Admin User', 2 => 'Editor User']
+```
+
+### WordPressFilters
+
+**Location**: `/inc/Core/WordPress/WordPressFilters.php`
+**Purpose**: Self-registration filter system for WordPress components
+**Since**: 0.2.0 (consolidated in v0.2.1)
+
+Handles automatic registration of WordPress components via filter-based architecture.
+
+**Registration Pattern**:
+```php
+function datamachine_register_wordpress_filters() {
+    add_filter('datamachine_handlers', function($handlers) {
+        $handlers['wordpress'] = [
+            'type' => 'publish',
+            'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\WordPress\\WordPress',
+            'label' => __('WordPress', 'datamachine'),
+            'description' => __('Create WordPress posts with full Gutenberg support', 'datamachine')
+        ];
+        return $handlers;
+    });
+
+    add_filter('datamachine_get_featured_image_handler', function() {
+        return new FeaturedImageHandler();
+    });
+
+    add_filter('datamachine_get_taxonomy_handler', function() {
+        return new TaxonomyHandler();
+    });
+
+    add_filter('datamachine_get_source_url_handler', function() {
+        return new SourceUrlHandler();
+    });
+}
+datamachine_register_wordpress_filters();
+```
+
+**Registered Filters**:
+- `datamachine_handlers` - WordPress handler registration
+- `datamachine_get_featured_image_handler` - FeaturedImageHandler service discovery
+- `datamachine_get_taxonomy_handler` - TaxonomyHandler service discovery
+- `datamachine_get_source_url_handler` - SourceUrlHandler service discovery
+
+### Configuration Hierarchy
+
+System-wide WordPress defaults (from Settings page) override handler-specific configuration across all WordPress components:
+
+**Hierarchy Order**:
+1. **System Defaults** (Global WordPress settings from Settings page) - Highest priority
+2. **Handler Configuration** (Flow-specific handler settings) - Fallback
+
+**Example**:
+```php
+// Configuration priority pattern (used across all WordPress components)
+if (isset($wp_settings['default_enable_images'])) {
+    return (bool) $wp_settings['default_enable_images'];  // System default overrides
+}
+return (bool) ($handler_config['enable_images'] ?? true);  // Handler fallback
+```
+
+This configuration hierarchy ensures consistent behavior across all WordPress handlers while allowing per-handler customization when system defaults are not set.
+
+## Related Documentation
+
+- [WordPress Shared Components - FeaturedImageHandler, TaxonomyHandler, SourceUrlHandler](/docs/core-system/wordpress-components.md)
+- [WordPress Fetch Handler](/docs/handlers/fetch/wordpress-local.md)
+- [WordPress Update Handler](/docs/handlers/update/wordpress-update.md)
+- [SettingsHandler Base Class](/docs/core-system/settings-handler.md)

@@ -18,7 +18,9 @@ export const formatDateTime = ( timestamp ) => {
 	}
 
 	try {
-		const date = new Date( timestamp );
+		// Treat MySQL datetime as UTC (timestamps stored in GMT)
+		const utcTimestamp = timestamp.includes( 'Z' ) ? timestamp : timestamp + 'Z';
+		const date = new Date( utcTimestamp );
 		const now = new Date();
 		const diffMs = now - date;
 		const diffMins = Math.floor( diffMs / 60000 );

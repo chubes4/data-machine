@@ -163,7 +163,7 @@ class WordPressMedia extends FetchHandler {
             $parent_post = null;
             if ($include_parent_content && $post->post_parent > 0) {
                 $parent_post = get_post($post->post_parent);
-                if ($parent_post) {
+                if ($parent_post && $parent_post->post_status === 'publish') {
                     $content_data = [
                         'title' => $parent_post->post_title ?: 'Untitled',
                         'content' => $parent_post->post_content ?: ''

@@ -142,16 +142,7 @@ class Jobs {
 	 */
 	public static function handle_get_jobs($request) {
 		// Get database service
-		$all_databases = apply_filters('datamachine_db', []);
-		$db_jobs = $all_databases['jobs'] ?? null;
-
-		if (!$db_jobs) {
-			return new \WP_Error(
-				'database_unavailable',
-				__('Database service unavailable.', 'datamachine'),
-				['status' => 500]
-			);
-		}
+		$db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
 
 		// Build query args
 		$args = [

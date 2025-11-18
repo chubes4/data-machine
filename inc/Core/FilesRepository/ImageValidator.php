@@ -6,6 +6,7 @@
  * processed by publish handlers. Centralizes image validation logic.
  *
  * @package DataMachine\Core\FilesRepository
+ * @since 0.2.1
  */
 
 namespace DataMachine\Core\FilesRepository;

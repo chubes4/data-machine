@@ -10,150 +10,113 @@
 
 defined('ABSPATH') || exit;
 
-     /**
-      * Execute a single step in a Data Machine flow.
-      *
-      * @param int $job_id Job ID for the execution
-      * @param string $flow_step_id Flow step ID to execute
-      * @param array|null $dataPackets Input data packets for the step
-      * @return bool True on success, false on failure
-      */
+/**
+ * Get file context array from flow ID
+ *
+ * @param int $flow_id Flow ID
+ * @return array Context array with pipeline/flow metadata
+ */
 function datamachine_get_file_context(int $flow_id): array {
-    $flow = apply_filters('datamachine_get_flow_config', [], $flow_id);
-    $pipeline_id = $flow['pipeline_id'] ?? 0;
-    $pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
-
-    return [
-        'pipeline_id' => $pipeline_id,
-        'pipeline_name' => $pipeline['pipeline_name'] ?? "pipeline-{$pipeline_id}",
-        'flow_id' => $flow_id,
-        'flow_name' => $flow['flow_name'] ?? "flow-{$flow_id}"
-    ];
+    return \DataMachine\Api\Files::get_file_context($flow_id);
 }
 
 /**
- * Register execution engine actions and handlers.
+ * Execute flow immediately.
  *
- * Sets up the core execution cycle actions:
- * - datamachine_run_flow_now: Initiates flow execution
- * - datamachine_execute_step: Executes individual steps
- * - datamachine_schedule_next_step: Schedules subsequent steps
+ * Creates a job record, loads flow/pipeline configurations,
+ * and schedules the first step for execution.
+ *
+ * @param int $flow_id Flow ID to execute
+ * @return bool True on success, false on failure
  */
-function datamachine_register_execution_engine() {
+add_action('datamachine_run_flow_now', function($flow_id) {
+    $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+    $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
 
-    /**
-     * Execute flow immediately.
-     *
-     * Creates a job record, loads flow/pipeline configurations,
-     * and schedules the first step for execution.
-     *
-     * @param int $flow_id Flow ID to execute
-     * @return bool True on success, false on failure
-     */
-    add_action('datamachine_run_flow_now', function($flow_id) {
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        $db_jobs = $all_databases['jobs'] ?? null;
-        
-        if (!$db_flows || !$db_jobs) {
-            do_action('datamachine_log', 'error', 'Flow execution failed - database services unavailable', [
-                'flow_id' => $flow_id,
-                'flows_db' => $db_flows ? 'available' : 'missing',
-                'jobs_db' => $db_jobs ? 'available' : 'missing'
-            ]);
-            return false;
-        }
-        
-        $flow = apply_filters('datamachine_get_flow', null, $flow_id);
-        if (!$flow) {
-            do_action('datamachine_log', 'error', 'Flow execution failed - flow not found', ['flow_id' => $flow_id]);
-            return false;
-        }
-        
-        $job_id = $db_jobs->create_job([
-            'pipeline_id' => (int)$flow['pipeline_id'],
-            'flow_id' => $flow_id
-        ]);
-        
-        if (!$job_id) {
-            do_action('datamachine_log', 'error', 'Flow execution failed - job creation failed', [
-                'flow_id' => $flow_id,
-                'pipeline_id' => $flow['pipeline_id']
-            ]);
-            return false;
-        }
+    $flow = $db_flows->get_flow($flow_id);
+    if (!$flow) {
+        do_action('datamachine_log', 'error', 'Flow execution failed - flow not found', ['flow_id' => $flow_id]);
+        return false;
+    }
 
-        // Load flow and pipeline configs once
-        $flow = apply_filters('datamachine_get_flow', null, $flow_id);
-        $flow_config = $flow['flow_config'] ?? [];
-        $pipeline_id = (int)$flow['pipeline_id'];
+    $job_id = $db_jobs->create_job([
+        'pipeline_id' => (int)$flow['pipeline_id'],
+        'flow_id' => $flow_id
+    ]);
 
-        // Load pipeline config
-        $pipeline = apply_filters('datamachine_get_pipelines', [], $pipeline_id);
-        $pipeline_config = $pipeline['pipeline_config'] ?? [];
-
-        // Store both in engine_data for execution
-        $db_jobs->store_engine_data($job_id, [
-            'flow_config' => $flow_config,
-            'pipeline_config' => $pipeline_config
-        ]);
-
-        $first_flow_step_id = null;
-        foreach ($flow_config as $flow_step_id => $config) {
-            if (($config['execution_order'] ?? -1) === 0) {
-                $first_flow_step_id = $flow_step_id;
-                break;
-            }
-        }
-        
-        if (!$first_flow_step_id) {
-            do_action('datamachine_log', 'error', 'Flow execution failed - no first step found', [
-                'flow_id' => $flow_id,
-                'job_id' => $job_id
-            ]);
-            return false;
-        }
-
-        do_action('datamachine_schedule_next_step', $job_id, $first_flow_step_id, []);
-
-        do_action('datamachine_log', 'info', 'Flow execution started successfully', [
+    if (!$job_id) {
+        do_action('datamachine_log', 'error', 'Flow execution failed - job creation failed', [
             'flow_id' => $flow_id,
-            'job_id' => $job_id,
-            'first_step' => $first_flow_step_id
+            'pipeline_id' => $flow['pipeline_id']
         ]);
-        
-        return true;
-    });
+        return false;
+    }
 
-    /**
-     * Execute individual step in a flow.
-     *
-     * Loads step configuration, instantiates step class, executes the step,
-     * and schedules the next step in the flow.
-     *
-     * @param int $job_id Job ID for the execution
-     * @param string $flow_step_id Flow step ID to execute
-     * @param array|null $data Input data for the step
-     * @return bool True on success, false on failure
-     */
-    add_action( 'datamachine_execute_step', function( $job_id, $flow_step_id, $dataPackets = null ) {
+    // Load flow and pipeline configs once
+    $flow_config = $flow['flow_config'] ?? [];
+    $pipeline_id = (int)$flow['pipeline_id'];
+
+    // Load pipeline config
+    $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+    $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+    $pipeline_config = $pipeline['pipeline_config'] ?? [];
+
+    // Store both in engine_data for execution
+    $db_jobs->store_engine_data($job_id, [
+        'flow_config' => $flow_config,
+        'pipeline_config' => $pipeline_config
+    ]);
+
+    $first_flow_step_id = null;
+    foreach ($flow_config as $flow_step_id => $config) {
+        if (($config['execution_order'] ?? -1) === 0) {
+            $first_flow_step_id = $flow_step_id;
+            break;
+        }
+    }
+
+    if (!$first_flow_step_id) {
+        do_action('datamachine_log', 'error', 'Flow execution failed - no first step found', [
+            'flow_id' => $flow_id,
+            'job_id' => $job_id
+        ]);
+        return false;
+    }
+
+    do_action('datamachine_schedule_next_step', $job_id, $first_flow_step_id, []);
+
+    do_action('datamachine_log', 'info', 'Flow execution started successfully', [
+        'flow_id' => $flow_id,
+        'job_id' => $job_id,
+        'first_step' => $first_flow_step_id
+    ]);
+
+    return true;
+}, 10, 1);
+
+/**
+ * Execute a single step in a pipeline flow.
+ *
+ * @param int $job_id Job ID for the execution
+ * @param string $flow_step_id Flow step ID to execute
+ * @param array|null $data Input data for the step
+ * @return bool True on success, false on failure
+ */
+add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step_id, ?array $dataPackets = null ) {
 
         try {
-            // Convert Action Scheduler's stdClass to array
-            $dataPackets = is_object($dataPackets) ? json_decode(json_encode($dataPackets), true) : $dataPackets;
+            // Retrieve data by job_id
+            $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+            /** @var array $flow_step_config */
+            $flow_step_config = $db_flows->get_flow_step_config( $flow_step_id, $job_id, true );
+            $flow_id = $flow_step_config['flow_id'] ?? 0;
+            /** @var array $context */
+            $context = datamachine_get_file_context($flow_id);
 
-            $storage = apply_filters('datamachine_get_file_storage', null);
+            $retrieval = new \DataMachine\Core\FilesRepository\FileRetrieval();
+            /** @var array $dataPackets */
+            $dataPackets = $retrieval->retrieve_data_by_job_id($job_id, $context);
 
-            if ($storage && is_array($dataPackets) && isset($dataPackets['is_data_reference']) && $dataPackets['is_data_reference']) {
-                $dataPackets = $storage->retrieve_data_packet($dataPackets);
-                if ($dataPackets === null) {
-                    do_action('datamachine_fail_job', $job_id, 'data_retrieval_failure', [
-                        'flow_step_id' => $flow_step_id
-                    ]);
-                    return false;
-                }
-            }
-            $flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id, $job_id);
             if (!$flow_step_config) {
                 do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
                     'flow_step_id' => $flow_step_id,
@@ -205,18 +168,17 @@ function datamachine_register_execution_engine() {
 
             $step_success = ! empty( $dataPackets );
             if ( $step_success ) {
-                $next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $flow_step_id, $payload);
+                $navigator = new \DataMachine\Engine\StepNavigator();
+                $next_flow_step_id = $navigator->get_next_flow_step_id($flow_step_id, $payload);
 
                 if ( $next_flow_step_id ) {
                     do_action('datamachine_schedule_next_step', $job_id, $next_flow_step_id, $dataPackets);
                 } else {
                     do_action('datamachine_update_job_status', $job_id, 'completed', 'complete');
-                    $cleanup = apply_filters('datamachine_get_file_cleanup', null);
-                    if ($cleanup) {
-                        $flow_id = $flow_step_config['flow_id'] ?? 0;
-                        $context = datamachine_get_file_context($flow_id);
-                        $cleanup->cleanup_job_data_packets($job_id, $context);
-                    }
+                    $cleanup = new \DataMachine\Core\FilesRepository\FileCleanup();
+                    $flow_id = $flow_step_config['flow_id'] ?? 0;
+                    $context = datamachine_get_file_context($flow_id);
+                    $cleanup->cleanup_job_data_packets($job_id, $context);
                     do_action('datamachine_log', 'info', 'Pipeline execution completed successfully', [
                         'job_id' => $job_id,
                         'flow_step_id' => $flow_step_id,
@@ -265,38 +227,41 @@ function datamachine_register_execution_engine() {
             return false;
         }
 
-        $storage = apply_filters('datamachine_get_file_storage', null);
-
-        if ($storage) {
-            $flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
+        // Store data by job_id (if present)
+        if (!empty($dataPackets)) {
+            $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+            $flow_step_config = $db_flows->get_flow_step_config( $flow_step_id, $job_id, true );
             $flow_id = $flow_step_config['flow_id'] ?? 0;
             $context = datamachine_get_file_context($flow_id);
-            $data_reference = $storage->store_data_packet($dataPackets, $job_id, $context);
-        } else {
-            $data_reference = ['data' => $dataPackets];
+
+            $storage = new \DataMachine\Core\FilesRepository\FileStorage();
+            $storage->store_data_packet($dataPackets, $job_id, $context);
         }
+
+        // Action Scheduler only receives IDs
         $action_id = as_schedule_single_action(
             time(),
             'datamachine_execute_step',
             [
                 'job_id' => $job_id,
-                'flow_step_id' => $flow_step_id,
-                'dataPackets' => $data_reference
+                'flow_step_id' => $flow_step_id
             ],
             'datamachine'
         );
+
         if (!empty($dataPackets)) {
             do_action('datamachine_log', 'debug', 'Next step scheduled via Action Scheduler', [
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id,
                 'action_id' => $action_id,
-                'success' => ($action_id !== false),
-                'data_stored' => isset($data_reference['is_data_reference'])
+                'success' => ($action_id !== false)
             ]);
         }
 
         return $action_id !== false;
     }, 10, 3);
+
+
 
     /**
      * Schedule flow execution for later.
@@ -373,5 +338,3 @@ function datamachine_register_execution_engine() {
             }
         }
     }, 10, 2);
-
-}

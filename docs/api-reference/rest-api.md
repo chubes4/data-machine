@@ -13,7 +13,8 @@
 ## Endpoint Categories
 
 ### Workflow Execution
-- **[Execute](../api/execute.md)** - Trigger flows and ephemeral workflows with immediate, recurring, or delayed execution
+- **[Execute](../api/execute.md)** - Trigger flows and ephemeral workflows with immediate execution
+- **[Schedule](../api/schedule.md)** - Manage flow scheduling (recurring and one-time)
 
 ### Pipeline & Flow Management
 - **[Pipelines](../api/pipelines.md)** - Create, manage, export, and import pipeline templates
@@ -77,6 +78,7 @@ REST API endpoints use directory-based structure (@since v0.2.0) for organized, 
 - `/inc/Api/Pipelines/` - Pipelines.php (main CRUD), PipelineSteps.php (step management), PipelineFlows.php (pipeline-flow relationships)
 - `/inc/Api/Flows/` - Flows.php (main CRUD), FlowSteps.php (flow step configuration)
 - `/inc/Api/Chat/` - Chat.php (endpoint), ChatAgentDirective.php (AI directive), ChatFilters.php (registration), Tools/MakeAPIRequest.php (chat tool)
+- `/inc/Api/Schedule/` - Schedule.php (recurring and one-time flow scheduling)
 - `/inc/Api/*.php` - All other endpoints (single-file implementations)
 
 **Example Endpoint Registration**:
@@ -94,6 +96,7 @@ register_rest_route('datamachine/v1', '/pipelines/(?P<pipeline_id>\d+)/steps', [
 /wp-json/datamachine/v1/
 ├── auth                          (OAuth account management)
 ├── execute                       (Flow/workflow execution)
+├── schedule                      (Flow scheduling - recurring/one-time)
 ├── files                         (File upload/management)
 ├── flows                         (Flow CRUD)
 │   ├── {id}/config               (Flow configuration retrieval)
@@ -117,7 +120,7 @@ register_rest_route('datamachine/v1', '/pipelines/(?P<pipeline_id>\d+)/steps', [
     └── sessions                  (Chat session management)
 ```
 
-**Implemented Endpoints**: Auth, Chat, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users
+**Implemented Endpoints**: Auth, Chat, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Schedule, Settings, StepTypes, Tools, Users
 
 ## Related Documentation
 
@@ -155,4 +158,4 @@ If you have bookmarked specific sections of the old documentation:
 
 **Last Updated**: 2025-11-15
 **New Structure Created**: 2025-11-15
-**Data Machine Version**: 0.2.0
+**Data Machine Version**: 0.2.1

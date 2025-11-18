@@ -6,6 +6,7 @@
  * All methods use WordPress native functions (wp_delete_file, wp_json_encode, sanitize_file_name).
  *
  * @package DataMachine\Core\FilesRepository
+ * @since 0.2.1
  */
 
 namespace DataMachine\Core\FilesRepository;
@@ -40,7 +41,7 @@ class FileStorage {
      * @param array $context Context array with pipeline/flow metadata
      * @return string|false Repository file path on success, false on failure
      */
-    public function store_file(string $source_path, string $filename, array $context) {
+    public function store_file(string $source_path, string $filename, array $context): string|false {
         $directory = $this->directory_manager->get_flow_files_directory(
             $context['pipeline_id'],
             $context['pipeline_name'],
@@ -81,7 +82,7 @@ class FileStorage {
      * @param array $file_data File data array (source_path, original_name)
      * @return array|false File information on success, false on failure
      */
-    public function store_pipeline_file(int $pipeline_id, string $pipeline_name, array $file_data) {
+    public function store_pipeline_file(int $pipeline_id, string $pipeline_name, array $file_data): array|false {
         $directory = $this->directory_manager->get_pipeline_context_directory($pipeline_id, $pipeline_name);
 
         if (!$this->directory_manager->ensure_directory_exists($directory)) {
@@ -216,7 +217,7 @@ class FileStorage {
      * @param array $context Context array with pipeline/flow metadata
      * @return array|false Reference object on success, false on failure
      */
-    public function store_data_packet(array $data, int $job_id, array $context) {
+    public function store_data_packet(array $data, int $job_id, array $context): array|false {
         $directory = $this->directory_manager->get_job_directory(
             $context['pipeline_id'],
             $context['pipeline_name'],

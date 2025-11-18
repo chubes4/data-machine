@@ -93,12 +93,28 @@ if ($link_handling === 'append' && !empty($source_url) && filter_var($source_url
 
 ## Tool-First Architecture
 
+**Base Class Architecture** (@since v0.2.0):
+
+All publish handlers extend `PublishHandler` base class (`/inc/Core/Steps/Publish/Handlers/PublishHandler.php`) which provides:
+- Engine data retrieval via `getEngineData()`, `getSourceUrl()`, `getImageFilePath()`
+- Image validation via `validateImage()`
+- Response formatting via `successResponse()` and `errorResponse()`
+- Centralized logging via `log()`
+- Standardized error handling
+
+The base class provides `handle_tool_call()` as the final public entry point, calling abstract `executePublish()` method in child classes.
+
 ### `handle_tool_call()` Interface
 
 All publish handlers use the same tool interface:
 
 ```php
 public function handle_tool_call(array $parameters, array $tool_def = []): array
+```
+
+Internally, the base class calls:
+```php
+abstract protected function executePublish(array $parameters, array $handler_config): array
 ```
 
 **Parameters Structure**:

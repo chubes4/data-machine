@@ -173,7 +173,8 @@ class ProcessedItems {
         // Handle pipeline_id (get all flows for pipeline and delete their processed items)
         else if (!empty($criteria['pipeline_id']) && empty($criteria['flow_step_id'])) {
             // Get all flows for this pipeline using the existing filter
-            $pipeline_flows = apply_filters('datamachine_get_pipeline_flows', [], $criteria['pipeline_id']);
+            $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+            $pipeline_flows = $db_flows->get_flows_for_pipeline($criteria['pipeline_id']);
             $flow_ids = array_column($pipeline_flows, 'flow_id');
             
             if (empty($flow_ids)) {

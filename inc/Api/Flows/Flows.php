@@ -183,8 +183,10 @@ class Flows {
 		}
 
 		// Get flow data for response
-		$flow = apply_filters('datamachine_get_flow', null, $flow_id);
-		$pipeline_steps = apply_filters('datamachine_get_pipeline_steps', [], $params['pipeline_id']);
+		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+		$flow = $db_flows->get_flow($flow_id);
+		$pipeline_steps = $db_pipelines->get_pipeline_config($params['pipeline_id']);
 
 		do_action('datamachine_log', 'info', 'Flow created via REST API', [
 			'flow_id' => $flow_id,
@@ -243,9 +245,11 @@ class Flows {
 		}
 
 		// Get duplicated flow data for response
-		$flow = apply_filters('datamachine_get_flow', null, $new_flow_id);
-		$source_flow = apply_filters('datamachine_get_flow', null, $source_flow_id);
-		$pipeline_steps = apply_filters('datamachine_get_pipeline_steps', [], $source_flow['pipeline_id'] ?? 0);
+		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+		$flow = $db_flows->get_flow($new_flow_id);
+		$source_flow = $db_flows->get_flow($source_flow_id);
+		$pipeline_steps = $db_pipelines->get_pipeline_config($source_flow['pipeline_id'] ?? 0);
 
 		do_action('datamachine_log', 'info', 'Flow duplicated via REST API', [
 			'source_flow_id' => $source_flow_id,
@@ -275,7 +279,8 @@ class Flows {
 
 		if ($pipeline_id) {
 			// Get flows for specific pipeline
-			$flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
+			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+			$flows = $db_flows->get_flows_for_pipeline($pipeline_id);
 
 			return [
 				'success' => true,
@@ -285,11 +290,13 @@ class Flows {
 		}
 
 		// Get all flows across all pipelines
-		$all_pipelines = apply_filters('datamachine_get_pipelines_list', []);
+		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+		$all_pipelines = $db_pipelines->get_pipelines_list();
 		$all_flows = [];
 
 		foreach ($all_pipelines as $pipeline) {
-			$pipeline_flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline['pipeline_id']);
+			$pipeline_flows = $db_flows->get_flows_for_pipeline($pipeline['pipeline_id']);
 			$all_flows = array_merge($all_flows, $pipeline_flows);
 		}
 
@@ -306,7 +313,8 @@ class Flows {
 		$flow_id = (int) $request->get_param('flow_id');
 
 		// Retrieve flow data via filter
-		$flow = apply_filters('datamachine_get_flow', null, $flow_id);
+		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+		$flow = $db_flows->get_flow($flow_id);
 
 		if (!$flow) {
 			return new \WP_Error(
@@ -322,20 +330,7 @@ class Flows {
 			json_decode($flow['scheduling_config'] ?? '{}', true);
 
 		// Calculate last_run
-		$last_run = null;
-		if (!empty($scheduling_config['last_run_at'])) {
-			$last_run = $scheduling_config['last_run_at'];
-		} else {
-			// Fallback: get most recent job
-			$all_databases = apply_filters('datamachine_db', []);
-			$db_jobs = $all_databases['jobs'] ?? null;
-			if ($db_jobs) {
-				$recent_jobs = $db_jobs->get_jobs(['flow_id' => $flow_id, 'limit' => 1]);
-				if (!empty($recent_jobs)) {
-					$last_run = $recent_jobs[0]['started_at'] ?? null;
-				}
-			}
-		}
+		$last_run = $scheduling_config['last_run_at'] ?? null;
 
 		// Calculate next_run using Action Scheduler
 		$next_run = null;
@@ -390,7 +385,8 @@ class Flows {
 		}
 
 		// Update flow title using centralized filter
-		$success = apply_filters('datamachine_update_flow', false, $flow_id, [
+		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+		$success = $db_flows->update_flow($flow_id, [
 			'flow_name' => $flow_name
 		]);
 

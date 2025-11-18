@@ -6,6 +6,7 @@
  * Replaces scattered array creation with centralized, consistent data packet handling.
  *
  * @package DataMachine\Core
+ * @since 0.2.1
  */
 
 namespace DataMachine\Core;

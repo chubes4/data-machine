@@ -85,7 +85,8 @@ function datamachine_register_handler_filters() {
      */
     add_filter('datamachine_get_handler_settings_display', function($default, $flow_step_id, $step_type) {
         // Get flow step configuration
-        $flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+        $flow_step_config = $db_flows->get_flow_step_config( $flow_step_id );
         if (empty($flow_step_config)) {
             return [];
         }

@@ -7,6 +7,7 @@
  * subdirectory hierarchy.
  *
  * @package DataMachine\Core\FilesRepository
+ * @since 0.2.1
  */
 
 namespace DataMachine\Core\FilesRepository;
@@ -37,57 +38,15 @@ class DirectoryManager {
     }
 
     /**
-     * Get flow directory path
-     *
-     * @param int $pipeline_id Pipeline ID
-     * @param string $pipeline_name Pipeline name
-     * @param int $flow_id Flow ID
-     * @param string $flow_name Flow name
-     * @return string Full path to flow directory
-     */
-    public function get_flow_directory(int $pipeline_id, string $pipeline_name, int $flow_id, string $flow_name): string {
-        $pipeline_dir = $this->get_pipeline_directory($pipeline_id, $pipeline_name);
-        $safe_name = $this->sanitize_directory_name($flow_name);
-        return "{$pipeline_dir}/flow-{$flow_id}-{$safe_name}";
-    }
-
-    /**
-     * Get job directory path
-     *
-     * @param int $pipeline_id Pipeline ID
-     * @param string $pipeline_name Pipeline name
-     * @param int $flow_id Flow ID
-     * @param string $flow_name Flow name
-     * @param int $job_id Job ID
-     * @return string Full path to job directory
-     */
-    public function get_job_directory(int $pipeline_id, string $pipeline_name, int $flow_id, string $flow_name, int $job_id): string {
-        $flow_dir = $this->get_flow_directory($pipeline_id, $pipeline_name, $flow_id, $flow_name);
-        return "{$flow_dir}/jobs/job-{$job_id}";
-    }
-
-    /**
-     * Get pipeline context directory path
-     *
-     * @param int $pipeline_id Pipeline ID
-     * @param string $pipeline_name Pipeline name
-     * @return string Full path to pipeline context directory
-     */
-    public function get_pipeline_context_directory(int $pipeline_id, string $pipeline_name): string {
-        $pipeline_dir = $this->get_pipeline_directory($pipeline_id, $pipeline_name);
-        return "{$pipeline_dir}/context";
-    }
-
-    /**
      * Get flow files directory path
      *
-     * @param int|string $pipeline_id Pipeline ID or 'ephemeral' sentinel
+     * @param int $pipeline_id Pipeline ID
      * @param string $pipeline_name Pipeline name
      * @param int|string $flow_id Flow ID or 'ephemeral' sentinel
      * @param string $flow_name Flow name
      * @return string Full path to flow files directory
      */
-    public function get_flow_files_directory($pipeline_id, string $pipeline_name, $flow_id, string $flow_name): string {
+    public function get_flow_files_directory(int $pipeline_id, string $pipeline_name, int|string $flow_id, string $flow_name): string {
         // Handle ephemeral workflows with temp directory
         if ($pipeline_id === 0 || $flow_id === 0) {
             $temp_dir = sys_get_temp_dir();

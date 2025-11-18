@@ -89,7 +89,8 @@ class JobsStatus {
         }
 
         // Get job details once for both operations
-        $job = apply_filters('datamachine_get_job', null, $job_id);
+        $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
+        $job = $db_jobs->get_job($job_id);
         if (!$job) {
             return false;
         }
@@ -115,9 +116,8 @@ class JobsStatus {
         }
 
         // Update flow last_run_at using existing services if available
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        if ($db_flows && !empty($job->flow_id)) {
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+        if (!empty($job->flow_id)) {
             // Update flow's last_run_at in scheduling configuration
             $flow_updated = $db_flows->update_flow_last_run($job->flow_id, current_time('mysql', 1));
             

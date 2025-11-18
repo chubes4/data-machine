@@ -109,13 +109,9 @@ class ImportExport {
         }
         
         // Generate CSV
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_pipelines = $all_databases['pipelines'] ?? null;
-        
-        if (!$db_pipelines) {
-            return false;
-        }
-        
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+
         // Build CSV using WordPress-compliant string approach
         $csv_rows = [];
         $csv_rows[] = ['pipeline_id', 'pipeline_name', 'step_position', 'step_type', 'step_config', 'flow_id', 'flow_name', 'handler', 'settings'];
@@ -125,7 +121,7 @@ class ImportExport {
             if (!$pipeline) continue;
 
             $pipeline_config = json_decode($pipeline['pipeline_config'], true) ?: [];
-            $flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
+            $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
 
             $position = 0;
             // Sort steps by execution_order for consistent export
@@ -184,7 +180,8 @@ class ImportExport {
      * Find pipeline by name
      */
     private function find_pipeline_by_name($name) {
-        $all_pipelines = apply_filters('datamachine_get_pipelines', []);
+        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $all_pipelines = $db_pipelines->get_all_pipelines();
         foreach ($all_pipelines as $pipeline) {
             if ($pipeline['pipeline_name'] === $name) {
                 return $pipeline['pipeline_id'];

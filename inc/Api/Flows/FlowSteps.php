@@ -132,7 +132,8 @@ class FlowSteps {
 		$flow_id = (int) $request->get_param('flow_id');
 
 		// Retrieve flow data via filter
-		$flow = apply_filters('datamachine_get_flow', null, $flow_id);
+		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+		$flow = $db_flows->get_flow($flow_id);
 
 		if (!$flow) {
 			return new \WP_Error(
@@ -165,8 +166,9 @@ class FlowSteps {
 			);
 		}
 
-		// Retrieve step configuration via filter
-		$step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
+		// Retrieve step configuration
+		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+		$step_config = $db_flows->get_flow_step_config( $flow_step_id );
 
 		if (empty($step_config)) {
 			return new \WP_Error(
@@ -259,8 +261,7 @@ class FlowSteps {
 			];
 
 			// Preserve execution_order if it exists
-			$all_databases = apply_filters('datamachine_db', []);
-			$db_flows = $all_databases['flows'] ?? null;
+			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
 			if ($db_flows) {
 				$flow = $db_flows->get_flow($flow_id);
 				$flow_config = $flow['flow_config'] ?? [];
@@ -328,7 +329,8 @@ class FlowSteps {
 			$flow_id = $parts['flow_id'];
 
 			// Get flow data to extract pipeline_id
-			$flow = apply_filters('datamachine_get_flow', null, $flow_id);
+			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+			$flow = $db_flows->get_flow($flow_id);
 			if ($flow && !empty($flow['pipeline_id'])) {
 				$pipeline_id = (int) $flow['pipeline_id'];
 				do_action('datamachine_clear_pipeline_cache', $pipeline_id);

@@ -289,23 +289,21 @@ class Pipelines {
 		] );
 
 		// Delete pipeline filesystem directory (cascade deletion)
-		$dir_manager = apply_filters('datamachine_get_directory_manager', null);
-		if ($dir_manager) {
-			$pipeline_dir = $dir_manager->get_pipeline_directory($pipeline_id, $pipeline_name);
+		$dir_manager = new \DataMachine\Core\FilesRepository\DirectoryManager();
+		$pipeline_dir = $dir_manager->get_pipeline_directory($pipeline_id, $pipeline_name);
 
-			if (is_dir($pipeline_dir)) {
-				if (!function_exists('WP_Filesystem')) {
-					require_once(ABSPATH . 'wp-admin/includes/file.php');
-				}
-				if (WP_Filesystem()) {
-					global $wp_filesystem;
-					$wp_filesystem->rmdir($pipeline_dir, true);
+		if (is_dir($pipeline_dir)) {
+			if (!function_exists('WP_Filesystem')) {
+				require_once(ABSPATH . 'wp-admin/includes/file.php');
+			}
+			if (WP_Filesystem()) {
+				global $wp_filesystem;
+				$wp_filesystem->rmdir($pipeline_dir, true);
 
-					do_action('datamachine_log', 'debug', 'Deleted pipeline directory', [
-						'pipeline_id' => $pipeline_id,
-						'directory' => $pipeline_dir
-					]);
-				}
+				do_action('datamachine_log', 'debug', 'Deleted pipeline directory', [
+					'pipeline_id' => $pipeline_id,
+					'directory' => $pipeline_dir
+				]);
 			}
 		}
 
@@ -452,6 +450,55 @@ class Pipelines {
 		}
 
 		return $result !== false;
+	}
+
+	/**
+	 * Get configuration for a specific pipeline step.
+	 *
+	 * Retrieves step configuration from pipeline config and adds pipeline_id.
+	 *
+	 * @param string $pipeline_step_id Pipeline step ID (format: {pipeline_id}_{uuid})
+	 * @return array Step configuration with pipeline_id, or empty array on failure
+	 */
+	public function get_pipeline_step_config( string $pipeline_step_id ): array {
+		if ( empty( $pipeline_step_id ) ) {
+			return [];
+		}
+
+		// Extract pipeline_id from pipeline-prefixed step ID
+		$parts = apply_filters( 'datamachine_split_pipeline_step_id', null, $pipeline_step_id );
+		if ( ! $parts || empty( $parts['pipeline_id'] ) ) {
+			do_action( 'datamachine_log', 'error', 'Invalid pipeline step ID format', [
+				'pipeline_step_id' => $pipeline_step_id
+			] );
+			return [];
+		}
+
+		$pipeline_id = (int) $parts['pipeline_id'];
+		$pipeline = $this->get_pipeline( $pipeline_id );
+
+		if ( ! $pipeline ) {
+			do_action( 'datamachine_log', 'error', 'Pipeline not found', [
+				'pipeline_step_id' => $pipeline_step_id,
+				'pipeline_id' => $pipeline_id
+			] );
+			return [];
+		}
+
+		$pipeline_config = $pipeline['pipeline_config'] ?? [];
+
+		if ( ! isset( $pipeline_config[ $pipeline_step_id ] ) ) {
+			do_action( 'datamachine_log', 'error', 'Pipeline step not found in pipeline config', [
+				'pipeline_step_id' => $pipeline_step_id,
+				'pipeline_id' => $pipeline_id
+			] );
+			return [];
+		}
+
+		$step_config = $pipeline_config[ $pipeline_step_id ];
+		$step_config['pipeline_id'] = $pipeline_id;
+
+		return $step_config;
 	}
 
 	public static function create_table() {

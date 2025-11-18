@@ -5,6 +5,38 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-11-18
+
+### Added
+- **Complete Base Class Architecture**: Major OOP refactoring with standardized inheritance patterns
+  - **Step** (`/inc/Core/Steps/Step.php`) - Abstract base for all step types with unified payload handling, validation, logging
+  - **FetchHandler** (`/inc/Core/Steps/Fetch/Handlers/FetchHandler.php`) - Base for fetch handlers with deduplication, engine data storage, filtering, logging
+  - **PublishHandler** (`/inc/Core/Steps/Publish/Handlers/PublishHandler.php`) - Base for publish handlers with engine data retrieval, image validation, response formatting
+  - **SettingsHandler** (`/inc/Core/Steps/SettingsHandler.php`) - Base for all handler settings with auto-sanitization based on field schema
+  - **PublishHandlerSettings** (`/inc/Core/Steps/Publish/Handlers/PublishHandlerSettings.php`) - Base settings for publish handlers with common fields
+  - **FetchHandlerSettings** (`/inc/Core/Steps/Fetch/Handlers/FetchHandlerSettings.php`) - Base settings for fetch handlers with common fields
+  - **DataPacket** (`/inc/Core/DataPacket.php`) - Standardized data packet creation replacing scattered array construction
+- **FilesRepository Architecture**: Modular component structure at `/inc/Core/FilesRepository/`
+  - **DirectoryManager** - Directory creation and path management
+  - **FileStorage** - File operations and flow-isolated storage
+  - **FileCleanup** - Retention policy enforcement and cleanup
+  - **ImageValidator** - Image validation and metadata extraction
+  - **RemoteFileDownloader** - Remote file downloading with validation
+- **WordPress Shared Components**: Centralized WordPress functionality at `/inc/Core/WordPress/`
+  - **FeaturedImageHandler** - Image processing and media library integration
+  - **TaxonomyHandler** - Taxonomy selection and term creation
+  - **SourceUrlHandler** - URL attribution with Gutenberg blocks
+  - **WordPressSettingsHandler** - Shared WordPress settings fields
+  - **WordPressFilters** - Service discovery registration
+- **Enhanced Universal Engine**: Additional conversation management utilities
+  - **ConversationManager** - Message formatting and conversation utilities
+  - **ToolResultFinder** - Universal tool result search utility for data packet interpretation
+
+### Improved
+- **Code Consistency**: Standardized execution method across all step type extension files
+- **Architectural Clarity**: Eliminated code duplication through inheritance patterns
+- **Maintainability**: Centralized common functionality in reusable base classes
+
 ## [0.2.0] - 2025-11-14
 
 ### Added

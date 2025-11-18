@@ -299,18 +299,24 @@ export const runFlow = async ( flowId ) => {
  * @param {string} flowStepId - Flow step ID
  * @param {string} handlerSlug - Handler slug
  * @param {Object} settings - Handler settings
+ * @param {number} pipelineId - Pipeline ID
+ * @param {string} stepType - Step type
  * @returns {Promise<Object>} Updated flow step data
  */
 export const updateFlowHandler = async (
 	flowStepId,
 	handlerSlug,
-	settings = {}
+	settings = {},
+	pipelineId,
+	stepType
 ) => {
 	return await apiRequest( `/flows/steps/${ flowStepId }/handler`, {
 		method: 'PUT',
 		data: {
 			handler_slug: handlerSlug,
 			settings: settings,
+			pipeline_id: pipelineId,
+			step_type: stepType,
 		},
 	} );
 };

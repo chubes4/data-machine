@@ -72,9 +72,9 @@ docs/
 │   ├── ai-conversation-loop.md         # Multi-turn conversation execution (v0.2.0)
 │   ├── tool-execution.md               # Tool discovery and execution (v0.2.0)
 │   ├── request-builder.md              # Centralized AI request construction (v0.2.0)
-│   ├── conversation-manager.md         # Message formatting and conversation utilities (v0.2.0)
+│   ├── conversation-manager.md         # Message formatting and conversation utilities (v0.2.1)
 │   ├── tool-parameters.md              # Unified parameter building for AI tools (v0.2.0)
-│   ├── tool-result-finder.md           # Universal tool result search utility (v0.2.0)
+│   ├── tool-result-finder.md           # Universal tool result search utility (v0.2.1)
 │   ├── chat-database.md                # Session management and CRUD operations (v0.2.0)
 │   └── oauth-handlers.md               # Centralized OAuth 1.0a and OAuth 2.0 handlers (v0.2.0)
 ├── handlers/
@@ -115,6 +115,18 @@ docs/
 ## Component Coverage
 
 ### ✅ Core System Components
+
+**Base Class Architecture** (@since v0.2.1)
+- Step base class - Unified payload handling for all step types
+- FetchHandler base class - Deduplication, engine data storage, filtering, logging
+- PublishHandler base class - Engine data retrieval, image validation, response formatting
+- SettingsHandler base classes - Auto-sanitization for all handler settings
+- DataPacket class - Standardized data packet creation
+
+**Modular Components** (@since v0.2.1)
+- FilesRepository - 6 specialized components (DirectoryManager, FileStorage, FileCleanup, ImageValidator, RemoteFileDownloader, FileRetrieval)
+- WordPress shared components - Centralized functionality (FeaturedImageHandler, TaxonomyHandler, SourceUrlHandler, WordPressSettingsHandler)
+- StepNavigator - Centralized step navigation logic for pipeline execution
 
 **Engine Execution**
 - Three-action cycle (datamachine_run_flow_now → datamachine_execute_step → datamachine_schedule_next_step)
@@ -180,9 +192,9 @@ docs/
 - Publishing tools for each platform (twitter_publish, facebook_publish, etc.)
 - Update tools for content modification
 
-**REST API Architecture**: 16 REST API endpoints implemented
-- Core endpoints: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users (individual files at `inc/Api/*.php`)
-- Chat endpoint: Single directory-based implementation at `inc/Api/Chat/` with Chat.php (endpoint handler), ChatAgentDirective.php (AI directive), ChatFilters.php (self-registration), Tools/MakeAPIRequest.php (chat-only tool)
+**REST API Architecture**: 17 REST API endpoints implemented
+- Core endpoints: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Schedule, Settings, StepTypes, Tools, Users (individual files at `inc/Api/*.php`)
+- Directory-based endpoints: Chat (`inc/Api/Chat/`), Schedule (`inc/Api/Schedule/`)
 - Admin interface: React 18 with complete REST API integration, zero AJAX dependencies
 
 ### ✅ Authentication Systems
@@ -266,7 +278,7 @@ AI with Google Search and Local Search tools for comprehensive content analysis
 ## Integration Notes
 
 ### WordPress Compatibility
-- Requires PHP 8.0+, WordPress 6.0+
+- Requires PHP 8.0+, WordPress 6.2+
 - Uses WordPress core functions and standards  
 - Integrates with WordPress admin, users, and permissions
 - Compatible with multisite installations

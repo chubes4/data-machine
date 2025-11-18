@@ -4,12 +4,19 @@
 
 ## System Architecture
 
-Data Machine uses a Pipeline+Flow architecture where:
+Data Machine uses a Pipeline+Flow architecture with standardized base classes for code reuse:
 
 - **Pipelines** are reusable workflow templates containing step configurations
-- **Flows** are scheduled instances of pipelines with specific settings  
+- **Flows** are scheduled instances of pipelines with specific settings
 - **Jobs** are individual executions of flows
 - **Steps** process data sequentially: Fetch → AI → Publish/Update
+
+**Base Class Architecture** (@since v0.2.1):
+- All steps extend `Step` base class for unified payload handling
+- Fetch handlers extend `FetchHandler` base class for shared functionality
+- Publish handlers extend `PublishHandler` base class for consistent behavior
+- Handler settings extend `SettingsHandler` base classes for auto-sanitization
+- `DataPacket` class provides standardized data packet creation
 
 ## Core Concepts
 
@@ -114,7 +121,7 @@ $image_url = $engine_data['image_url'] ?? null;
 
 ## Quick Start
 
-1. **Install Requirements** - PHP 8.0+, WordPress 6.0+
+1. **Install Requirements** - PHP 8.0+, WordPress 6.2+
 2. **Configure AI Provider** - Add API keys in WordPress Settings → Data Machine
 3. **Create Pipeline** - Use visual builder with drag-and-drop steps
 4. **Configure Authentication** - Set up OAuth for external services
@@ -162,6 +169,6 @@ docs/
 ## Requirements
 
 - **PHP** 8.0 or higher
-- **WordPress** 6.0 or higher
+- **WordPress** 6.2 or higher
 - **Composer Dependencies** - Automatically managed including ai-http-client
 - **Admin Capabilities** - `manage_options` required for all operations

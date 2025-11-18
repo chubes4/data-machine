@@ -125,7 +125,7 @@ class JobsOperations {
             $order = 'DESC';
         }
         
-        $allowed_orderby = ['j.job_id', 'j.pipeline_id', 'j.flow_id', 'j.status', 'j.started_at', 'j.completed_at', 'p.pipeline_name', 'f.flow_name'];
+        $allowed_orderby = ['j.job_id', 'j.pipeline_id', 'j.flow_id', 'j.status', 'j.completed_at', 'p.pipeline_name', 'f.flow_name'];
         if (!in_array($orderby, $allowed_orderby)) {
             $orderby = 'j.job_id';
         }
@@ -156,14 +156,10 @@ class JobsOperations {
         if ( $pipeline_id <= 0 ) {
             return [];
         }
-        
-        $all_databases = apply_filters('datamachine_db', []);
-        $db_flows = $all_databases['flows'] ?? null;
-        if (!$db_flows) {
-            return [];
-        }
-        
-        $flows = apply_filters('datamachine_get_pipeline_flows', [], $pipeline_id);
+
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+
+        $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
         if (empty($flows)) {
             return [];
         }

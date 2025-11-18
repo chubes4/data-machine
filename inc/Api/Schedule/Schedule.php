@@ -76,7 +76,8 @@ class Schedule {
                 );
             }
 
-            $flow = apply_filters('datamachine_get_flow', null, $flow_id);
+            $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+            $flow = $db_flows->get_flow($flow_id);
             if (!$flow) {
                 return new \WP_Error(
                     'flow_not_found',

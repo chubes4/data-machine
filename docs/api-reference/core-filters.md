@@ -61,20 +61,6 @@ $steps['step_type'] = [
 ];
 ```
 
-### `datamachine_db`
-
-**Purpose**: Register database service classes
-
-**Parameters**:
-- `$databases` (array) - Current database services
-
-**Return**: Array of database service instances
-
-**Structure**:
-```php
-$databases['service_name'] = new ServiceClass();
-```
-
 ### `datamachine_get_oauth1_handler`
 
 **Purpose**: Service discovery for OAuth 1.0a handler
@@ -101,7 +87,7 @@ $result = $oauth1->handle_callback('twitter', $access_url, $key, $secret, $accou
 
 **Providers**: Twitter
 
-**Version**: 0.2.0
+**Version**: 0.2.1
 
 ### `datamachine_get_oauth2_handler`
 
@@ -130,7 +116,7 @@ $result = $oauth2->handle_callback($provider_key, $token_url, $token_params, $ac
 
 **Providers**: Reddit, Facebook, Threads, Google Sheets
 
-**Version**: 0.2.0
+**Version**: 0.2.1
 
 ## AI Integration Filters
 
@@ -389,13 +375,8 @@ add_filter('datamachine_engine_data', function($engine_data, $job_id) {
         return [];
     }
 
-    // Use established filter pattern for database service discovery
-    $all_databases = apply_filters('datamachine_db', []);
-    $db_jobs = $all_databases['jobs'] ?? null;
-
-    if (!$db_jobs) {
-        return [];
-    }
+    // Use direct database class instantiation
+    $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
 
     $retrieved_data = $db_jobs->retrieve_engine_data($job_id);
     return $retrieved_data ?: [];

@@ -7,7 +7,7 @@
  * Eliminates duplication between Publish, Fetch, and Update Settings.
  *
  * @package DataMachine\Core\WordPress
- * @since 0.2.0
+ * @since 0.2.1
  */
 
 namespace DataMachine\Core\WordPress;

@@ -6,6 +6,7 @@
  * download_url() function for better integration and automatic temp file handling.
  *
  * @package DataMachine\Core\FilesRepository
+ * @since 0.2.1
  */
 
 namespace DataMachine\Core\FilesRepository;
