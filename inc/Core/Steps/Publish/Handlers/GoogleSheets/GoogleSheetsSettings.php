@@ -3,7 +3,7 @@
  * Google Sheets Publish Handler Settings
  *
  * Defines settings fields and sanitization for Google Sheets publish handler.
- * Part of the modular handler architecture.
+ * Extends base publish handler settings with Google Sheets-specific configuration.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Publish\Handlers\GoogleSheets
@@ -12,11 +12,13 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\GoogleSheets;
 
+use DataMachine\Core\Steps\Publish\Handlers\PublishHandlerSettings;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-class GoogleSheetsSettings {
+class GoogleSheetsSettings extends PublishHandlerSettings {
 
     /**
      * Get settings fields for Google Sheets publish handler.
@@ -52,20 +54,19 @@ class GoogleSheetsSettings {
     /**
      * Sanitize Google Sheets handler settings.
      *
+     * Uses parent auto-sanitization for text fields, adds custom validation for JSON column mapping.
+     *
      * @param array $raw_settings Raw settings input.
      * @return array Sanitized settings.
      */
     public static function sanitize(array $raw_settings): array {
-        $sanitized = [];
-        
-        // Sanitize spreadsheet ID (should be alphanumeric with hyphens/underscores)
-        $spreadsheet_id = sanitize_text_field($raw_settings['googlesheets_spreadsheet_id'] ?? '');
-        $sanitized['googlesheets_spreadsheet_id'] = preg_replace('/[^a-zA-Z0-9_-]/', '', $spreadsheet_id);
-        
-        // Sanitize worksheet name
-        $sanitized['googlesheets_worksheet_name'] = sanitize_text_field($raw_settings['googlesheets_worksheet_name'] ?? 'Data Machine Output');
-        
-        // Handle JSON column mapping with validation
+        // Let parent handle text fields (spreadsheet_id, worksheet_name)
+        $sanitized = parent::sanitize($raw_settings);
+
+        // Additional regex sanitization for spreadsheet ID (alphanumeric with hyphens/underscores only)
+        $sanitized['googlesheets_spreadsheet_id'] = preg_replace('/[^a-zA-Z0-9_-]/', '', $sanitized['googlesheets_spreadsheet_id']);
+
+        // Custom validation for JSON column mapping
         $column_mapping_raw = $raw_settings['googlesheets_column_mapping'] ?? '';
         if (!empty($column_mapping_raw)) {
             $decoded = json_decode($column_mapping_raw, true);

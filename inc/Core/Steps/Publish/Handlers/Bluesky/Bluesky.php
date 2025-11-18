@@ -193,19 +193,6 @@ class Bluesky extends PublishHandler {
     }
 
     /**
-     * Sanitizes the settings specific to the Bluesky publish handler.
-     *
-     * @param array $raw_settings Raw settings input.
-     * @return array Sanitized settings.
-     */
-    public function sanitize_settings(array $raw_settings): array {
-        $sanitized = [];
-        $sanitized['include_source'] = ($raw_settings['include_source'] ?? false) == '1';
-        $sanitized['enable_images'] = ($raw_settings['enable_images'] ?? false) == '1';
-        return $sanitized;
-    }
-
-    /**
      * Detect link facets in post text for proper Bluesky formatting.
      *
      * @param string $text The post text to analyze.

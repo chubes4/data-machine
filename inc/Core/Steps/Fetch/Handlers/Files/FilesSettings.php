@@ -11,12 +11,11 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Files;
 
+use DataMachine\Core\Steps\SettingsHandler;
+
 defined('ABSPATH') || exit;
 
-class FilesSettings {
-
-    public function __construct() {
-    }
+class FilesSettings extends SettingsHandler {
 
     /**
      * Get settings fields for Files fetch handler.
@@ -41,16 +40,16 @@ class FilesSettings {
     /**
      * Sanitize Files fetch handler settings.
      *
+     * Uses parent auto-sanitization for checkbox, adds custom logic for uploaded files array.
+     *
      * @param array $raw_settings Raw settings input.
      * @return array Sanitized settings.
      */
     public static function sanitize(array $raw_settings): array {
-        $sanitized = [];
-        
-        // Auto-cleanup setting
-        $sanitized['auto_cleanup_enabled'] = isset($raw_settings['auto_cleanup_enabled']) && $raw_settings['auto_cleanup_enabled'] == '1';
-        
-        // Accept any uploaded files without type validation
+        // Let parent handle auto_cleanup_enabled checkbox
+        $sanitized = parent::sanitize($raw_settings);
+
+        // Custom handling for uploaded files array (can't be auto-sanitized)
         if (isset($raw_settings['uploaded_files']) && is_array($raw_settings['uploaded_files'])) {
             $sanitized['uploaded_files'] = array_map(function($file) {
                 return [
@@ -64,7 +63,7 @@ class FilesSettings {
         } else {
             $sanitized['uploaded_files'] = [];
         }
-        
+
         return $sanitized;
     }
 

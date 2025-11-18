@@ -18,10 +18,11 @@ if (!defined('ABSPATH')) {
 
 class FacebookAuth {
 
-    const AUTH_URL = 'https://www.facebook.com/v23.0/dialog/oauth';
-    const TOKEN_URL = 'https://graph.facebook.com/v23.0/oauth/access_token';
-    const SCOPES = 'email,public_profile,pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_engagement,business_management';
-    const GRAPH_API_URL = 'https://graph.facebook.com/v23.0';
+    public const GRAPH_API_VERSION = 'v23.0';
+    public const AUTH_URL = 'https://www.facebook.com/' . self::GRAPH_API_VERSION . '/dialog/oauth';
+    public const TOKEN_URL = 'https://graph.facebook.com/' . self::GRAPH_API_VERSION . '/oauth/access_token';
+    public const SCOPES = 'email,public_profile,pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_engagement,business_management';
+    public const GRAPH_API_URL = 'https://graph.facebook.com/' . self::GRAPH_API_VERSION;
 
     /**
      * @var \DataMachine\Core\OAuth\OAuth2Handler OAuth2 handler instance

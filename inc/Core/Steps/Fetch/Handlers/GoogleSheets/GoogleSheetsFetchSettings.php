@@ -12,14 +12,13 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
 
+use DataMachine\Core\Steps\SettingsHandler;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-class GoogleSheetsFetchSettings {
-
-    public function __construct() {
-    }
+class GoogleSheetsFetchSettings extends SettingsHandler {
 
     /**
      * Get settings fields for Google Sheets fetch handler.
@@ -65,27 +64,18 @@ class GoogleSheetsFetchSettings {
     /**
      * Sanitize Google Sheets fetch handler settings.
      *
+     * Uses parent auto-sanitization for text/select/checkbox fields, adds custom regex for spreadsheet ID.
+     *
      * @param array $raw_settings Raw settings input.
      * @return array Sanitized settings.
      */
     public static function sanitize(array $raw_settings): array {
-        $sanitized = [];
-        
-        // Sanitize spreadsheet ID (should be alphanumeric with hyphens/underscores)
-        $spreadsheet_id = sanitize_text_field($raw_settings['googlesheets_fetch_spreadsheet_id'] ?? '');
-        $sanitized['googlesheets_fetch_spreadsheet_id'] = preg_replace('/[^a-zA-Z0-9_-]/', '', $spreadsheet_id);
-        
-        // Sanitize worksheet name
-        $sanitized['googlesheets_fetch_worksheet_name'] = sanitize_text_field($raw_settings['googlesheets_fetch_worksheet_name'] ?? 'Sheet1');
-        
-        // Processing mode validation
-        $processing_mode = sanitize_text_field($raw_settings['googlesheets_fetch_processing_mode'] ?? 'by_row');
-        $valid_modes = ['by_row', 'by_column', 'full_spreadsheet'];
-        $sanitized['googlesheets_fetch_processing_mode'] = in_array($processing_mode, $valid_modes) ? $processing_mode : 'by_row';
-        
-        // Header row option
-        $sanitized['googlesheets_fetch_has_header_row'] = !empty($raw_settings['googlesheets_fetch_has_header_row']);
-        
+        // Let parent handle text, select, and checkbox fields
+        $sanitized = parent::sanitize($raw_settings);
+
+        // Additional regex sanitization for spreadsheet ID (alphanumeric with hyphens/underscores only)
+        $sanitized['googlesheets_fetch_spreadsheet_id'] = preg_replace('/[^a-zA-Z0-9_-]/', '', $sanitized['googlesheets_fetch_spreadsheet_id']);
+
         return $sanitized;
     }
 

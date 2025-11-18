@@ -3,7 +3,7 @@
  * WordPress Publish Handler Settings
  *
  * Defines settings fields and sanitization for WordPress publish handler.
- * Part of the modular handler architecture.
+ * Extends base publish handler settings with WordPress-specific configuration.
  *
  * @package DataMachine
  * @since 1.0.0
@@ -11,9 +11,11 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
 
+use DataMachine\Core\Steps\Publish\Handlers\PublishHandlerSettings;
+
 defined('ABSPATH') || exit;
 
-class WordPressSettings {
+class WordPressSettings extends PublishHandlerSettings {
 
     /**
      * Get settings fields for WordPress publish handler.
@@ -24,8 +26,8 @@ class WordPressSettings {
         // WordPress publish settings for local WordPress installation only
         $fields = self::get_local_fields();
 
-        // Add common fields for all destination types
-        $fields = array_merge($fields, self::get_common_fields());
+        // Add common publish handler fields with WordPress-specific alignment
+        $fields = array_merge($fields, self::get_wordpress_common_fields());
 
         return $fields;
     }
@@ -149,22 +151,15 @@ class WordPressSettings {
 
 
     /**
-     * Get common settings fields for all destination types.
+     * Get WordPress-specific common fields aligned with base publish handler fields.
      *
      * @return array Settings fields.
      */
-    private static function get_common_fields(): array {
-        return [
-            'include_source' => [
-                'type' => 'checkbox',
-                'label' => __('Include Source Link', 'datamachine'),
-                'description' => __('Append the original source URL to the post content when available.', 'datamachine'),
-            ],
-            'enable_images' => [
-                'type' => 'checkbox',
-                'label' => __('Enable Featured Images', 'datamachine'),
-                'description' => __('Set the image from source data as the featured image for the post when available.', 'datamachine'),
-            ],
+    private static function get_wordpress_common_fields(): array {
+        $common_fields = parent::get_common_fields();
+
+        // Align field names and add WordPress-specific fields
+        return array_merge($common_fields, [
             'post_date_source' => [
                 'type' => 'select',
                 'label' => __('Post Date Setting', 'datamachine'),
@@ -174,7 +169,7 @@ class WordPressSettings {
                     'source_date' => __('Use Source Date (if available)', 'datamachine'),
                 ],
             ],
-        ];
+        ]);
     }
 
     /**
@@ -187,10 +182,10 @@ class WordPressSettings {
         // Sanitize local WordPress settings
         $sanitized = self::sanitize_local_settings($raw_settings);
 
-        // Sanitize common fields - provide defaults for missing values
-        $sanitized['include_source'] = isset($raw_settings['include_source']) && $raw_settings['include_source'] == '1';
-        $sanitized['enable_images'] = isset($raw_settings['enable_images']) && $raw_settings['enable_images'] == '1';
-        
+        // Sanitize common publish handler fields
+        $sanitized = array_merge($sanitized, parent::sanitize($raw_settings));
+
+        // Sanitize WordPress-specific common fields
         $valid_date_sources = ['current_date', 'source_date'];
         $date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
         if (!in_array($date_source, $valid_date_sources)) {

@@ -469,29 +469,6 @@ class Reddit {
 		];
 	}
 
-
-	public function sanitize_settings(array $raw_settings): array {
-		$sanitized = [];
-		$subreddit = sanitize_text_field($raw_settings['subreddit'] ?? '');
-		$sanitized['subreddit'] = (preg_match('/^[a-zA-Z0-9_]+$/', $subreddit)) ? $subreddit : '';
-		$valid_sorts = ['hot', 'new', 'top', 'rising', 'controversial'];
-		$sort_by = sanitize_text_field($raw_settings['sort_by'] ?? 'hot');
-		if (!in_array($sort_by, $valid_sorts)) {
-			do_action('datamachine_log', 'error', 'Reddit Settings: Invalid sort parameter provided in settings.', ['sort_by' => $sort_by]);
-			return [];
-		}
-		$sanitized['sort_by'] = $sort_by;
-		$sanitized['timeframe_limit'] = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
-		$min_upvotes = isset($raw_settings['min_upvotes']) ? absint($raw_settings['min_upvotes']) : 0;
-		$sanitized['min_upvotes'] = max(0, $min_upvotes);
-		$min_comment_count = isset($raw_settings['min_comment_count']) ? absint($raw_settings['min_comment_count']) : 0;
-		$sanitized['min_comment_count'] = max(0, $min_comment_count);
-		$comment_count = isset($raw_settings['comment_count']) ? absint($raw_settings['comment_count']) : 0;
-		$sanitized['comment_count'] = max(0, $comment_count);
-		$sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? '');
-		return $sanitized;
-	}
-
 	public static function get_label(): string {
 		return 'Reddit Subreddit';
 	}

@@ -171,16 +171,6 @@ class Files {
     }
     
     /**
-     * Sanitize handler settings.
-     *
-     * @param array $raw_settings Raw settings from user input
-     * @return array Sanitized settings array
-     */
-    public function sanitize_settings(array $raw_settings): array {
-        return [];
-    }
-
-    /**
      * Get the display label for the Files handler.
      *
      * @return string Localized handler label

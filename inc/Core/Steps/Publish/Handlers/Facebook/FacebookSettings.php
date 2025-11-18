@@ -3,7 +3,7 @@
  * Facebook Publish Handler Settings
  *
  * Defines settings fields and sanitization for Facebook publish handler.
- * Part of the modular handler architecture.
+ * Extends base publish handler settings with Facebook-specific options.
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Publish\Handlers\Facebook
@@ -12,19 +12,21 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Facebook;
 
+use DataMachine\Core\Steps\Publish\Handlers\PublishHandlerSettings;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-class FacebookSettings {
+class FacebookSettings extends PublishHandlerSettings {
 
     /**
      * Get settings fields for Facebook publish handler.
      *
-    * @return array Associative array defining the settings fields.
-    */
+     * @return array Associative array defining the settings fields.
+     */
     public static function get_fields(): array {
-        return [
+        return array_merge(parent::get_common_fields(), [
             'link_handling' => [
                 'type' => 'select',
                 'label' => __('Source URL Handling', 'datamachine'),
@@ -35,28 +37,7 @@ class FacebookSettings {
                     'comment' => __('Post as comment - add URL as separate comment', 'datamachine')
                 ],
                 'default' => 'append'
-            ],
-            'include_images' => [
-                'type' => 'checkbox',
-                'label' => __('Enable Image Posting', 'datamachine'),
-                'description' => __('Upload and attach images to posts when available in the data.', 'datamachine'),
             ]
-        ];
+        ]);
     }
-
-    /**
-     * Sanitize Facebook handler settings.
-     *
-     * @param array $raw_settings Raw settings input.
-     * @return array Sanitized settings.
-     */
-    public static function sanitize(array $raw_settings): array {
-        $sanitized = [];
-        $sanitized['link_handling'] = in_array($raw_settings['link_handling'] ?? 'append', ['none', 'append', 'comment']) 
-            ? $raw_settings['link_handling'] 
-            : 'append';
-        $sanitized['include_images'] = isset($raw_settings['include_images']) && $raw_settings['include_images'] == '1';
-        return $sanitized;
-    }
-
 }

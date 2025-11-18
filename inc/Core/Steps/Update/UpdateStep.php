@@ -24,18 +24,6 @@ class UpdateStep extends Step {
     }
 
     /**
-     * Log step execution start with update-specific context.
-     *
-     * @return void
-     */
-    protected function logStart(): void {
-        $this->log('debug', 'Starting update processing', [
-            'handler_slug' => $this->getHandlerSlug(),
-            'data_packet_count' => count($this->dataPackets)
-        ]);
-    }
-
-    /**
      * Execute update step logic.
      *
      * @return array

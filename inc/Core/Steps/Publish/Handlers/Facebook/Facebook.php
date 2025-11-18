@@ -21,8 +21,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Facebook extends PublishHandler {
 
-    const FACEBOOK_API_VERSION = 'v22.0';
-
     /**
      * @var FacebookAuth Authentication handler instance
      */
@@ -39,10 +37,6 @@ class Facebook extends PublishHandler {
                 'available_providers' => array_keys($all_auth)
             ]);
         }
-    }
-
-    private function get_auth() {
-        return $this->auth;
     }
 
     protected function executePublish(array $parameters, array $handler_config): array {
@@ -128,20 +122,21 @@ class Facebook extends PublishHandler {
             }
 
             // Make API request to Facebook
-            $api_url = "https://graph.facebook.com/" . self::FACEBOOK_API_VERSION . "/{$page_id}/feed";
-            $response = wp_remote_post($api_url, [
+            $api_url = $this->buildGraphUrl("{$page_id}/feed");
+            $response = apply_filters('datamachine_request', null, 'POST', $api_url, [
                 'body' => $post_data,
                 'timeout' => 30
-            ]);
+            ], 'Facebook Feed Publish');
 
-            if (is_wp_error($response)) {
-                return $this->errorResponse('Facebook API request failed: ' . $response->get_error_message());
+            if (!$response['success']) {
+                return $this->errorResponse('Facebook API request failed: ' . ($response['error'] ?? 'Unknown error'));
             }
 
-            $response_body = wp_remote_retrieve_body($response);
+            $response_body = $response['data'] ?? '';
+            $status_code = $response['status_code'] ?? 0;
             $response_data = json_decode($response_body, true);
 
-            if (isset($response_data['id'])) {
+            if ($status_code >= 200 && $status_code < 300 && isset($response_data['id'])) {
                 $post_id = $response_data['id'];
                 $post_url = "https://www.facebook.com/{$page_id}/posts/{$post_id}";
 
@@ -207,12 +202,15 @@ class Facebook extends PublishHandler {
                 }
 
                 return $this->successResponse($result_data);
-            } else {
-                return $this->errorResponse(
-                    'Facebook API error: ' . ($response_data['error']['message'] ?? 'Unknown error'),
-                    ['response_data' => $response_data]
-                );
             }
+
+            return $this->errorResponse(
+                'Facebook API error: ' . ($response_data['error']['message'] ?? 'Unknown error'),
+                [
+                    'response_data' => $response_data,
+                    'status_code' => $status_code
+                ]
+            );
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage());
         }
@@ -229,19 +227,19 @@ class Facebook extends PublishHandler {
 
         try {
             // Post comment using Facebook Graph API
-            $api_url = "https://graph.facebook.com/" . self::FACEBOOK_API_VERSION . "/{$post_id}/comments";
+            $api_url = $this->buildGraphUrl("{$post_id}/comments");
             $comment_data = [
                 'message' => $source_url,
                 'access_token' => $access_token
             ];
 
-            $response = wp_remote_post($api_url, [
+            $response = apply_filters('datamachine_request', null, 'POST', $api_url, [
                 'body' => $comment_data,
                 'timeout' => 30
-            ]);
+            ], 'Facebook Comment Publish');
 
-            if (is_wp_error($response)) {
-                $error_msg = 'Facebook comment API request failed: ' . $response->get_error_message();
+            if (!$response['success']) {
+                $error_msg = 'Facebook comment API request failed: ' . ($response['error'] ?? 'Unknown error');
                 $this->log('warning', $error_msg, ['post_id' => $post_id]);
 
                 return [
@@ -250,10 +248,11 @@ class Facebook extends PublishHandler {
                 ];
             }
 
-            $response_body = wp_remote_retrieve_body($response);
+            $response_body = $response['data'] ?? '';
+            $status_code = $response['status_code'] ?? 0;
             $response_data = json_decode($response_body, true);
 
-            if (isset($response_data['id'])) {
+            if ($status_code >= 200 && $status_code < 300 && isset($response_data['id'])) {
                 $comment_id = $response_data['id'];
                 $comment_url = "https://www.facebook.com/{$post_id}/?comment_id={$comment_id}";
 
@@ -312,65 +311,69 @@ class Facebook extends PublishHandler {
     /**
      * Uploads unpublished photo to Facebook, returns photo object for attachment to post.
      */
+    private function upload_image_file_to_facebook(string $image_file_path, string $page_access_token, string $page_id): ?array {
+        $file_storage = apply_filters('datamachine_get_file_storage', null);
+
+        if (!$file_storage) {
+            $this->log('error', 'Facebook: File storage service unavailable for image upload');
+            return null;
+        }
+
+        $image_url = $file_storage->get_public_url($image_file_path);
+
+        if (empty($image_url) || !filter_var($image_url, FILTER_VALIDATE_URL)) {
+            $this->log('error', 'Facebook: Failed to generate public URL for image', [
+                'file_path' => $image_file_path,
+                'generated_url' => $image_url
+            ]);
+            return null;
+        }
+
+        $endpoint = $this->buildGraphUrl("{$page_id}/photos");
+        $response = apply_filters('datamachine_request', null, 'POST', $endpoint, [
+            'body' => [
+                'url' => $image_url,
+                'published' => 'false',
+                'access_token' => $page_access_token
+            ],
+            'timeout' => 30
+        ], 'Facebook Photo Upload');
+
+        if (!$response['success']) {
+            $this->log('error', 'Facebook: Photo upload failed', [
+                'file_path' => $image_file_path,
+                'error' => $response['error'] ?? 'Unknown error'
+            ]);
+            return null;
+        }
+
+        $response_body = $response['data'] ?? '';
+        $status_code = $response['status_code'] ?? 0;
+        $response_data = json_decode($response_body, true);
+
+        if ($status_code >= 200 && $status_code < 300 && isset($response_data['id'])) {
+            $this->log('debug', 'Facebook: Photo uploaded successfully', [
+                'media_id' => $response_data['id'],
+                'file_path' => $image_file_path
+            ]);
+            return $response_data;
+        }
+
+        $this->log('error', 'Facebook: Photo upload returned unexpected response', [
+            'status_code' => $status_code,
+            'response_data' => $response_data,
+            'file_path' => $image_file_path
+        ]);
+
+        return null;
+    }
+
+    private function buildGraphUrl(string $path): string {
+        return sprintf('https://graph.facebook.com/%s/%s', FacebookAuth::GRAPH_API_VERSION, ltrim($path, '/'));
+    }
 
 
     public static function get_label(): string {
         return __('Facebook', 'datamachine');
-    }
-
-    public function sanitize_settings(array $raw_settings): array {
-        $sanitized = [];
-        $sanitized['include_source'] = (bool) ($raw_settings['include_source'] ?? false);
-        $sanitized['enable_images'] = (bool) ($raw_settings['enable_images'] ?? false);
-        return $sanitized;
-    }
-
-    /**
-     * Validates image accessibility via HEAD request, skips problematic Reddit URLs.
-     */
-    private function is_image_accessible(string $image_url): bool {
-        // Skip certain problematic domains/patterns
-        $problematic_patterns = [
-            'preview.redd.it', // Reddit preview URLs often have access restrictions
-            'i.redd.it'        // Reddit image URLs may have restrictions
-        ];
-        
-        foreach ($problematic_patterns as $pattern) {
-            if (strpos($image_url, $pattern) !== false) {
-                $this->log('warning', 'Facebook: Skipping problematic image URL pattern', [
-                    'url' => $image_url,
-                    'pattern' => $pattern
-                ]);
-                return false;
-            }
-        }
-
-        // Test accessibility with HEAD request
-        $response = wp_remote_head($image_url, [
-            'user-agent' => 'Mozilla/5.0 (compatible; DataMachine/1.0; +https://github.com/chubes/datamachine)'
-        ]);
-
-        if (is_wp_error($response)) {
-            $this->log('warning', 'Facebook: Image URL not accessible', [
-                'url' => $image_url,
-                'error' => $response->get_error_message()
-            ]);
-            return false;
-        }
-
-        $http_code = wp_remote_retrieve_response_code($response);
-        $content_type = wp_remote_retrieve_header($response, 'content-type');
-
-        // Check for successful response and image content type
-        if ($http_code >= 200 && $http_code < 300 && strpos($content_type, 'image/') === 0) {
-            return true;
-        }
-
-        $this->log('warning', 'Facebook: Image URL validation failed', [
-            'url' => $image_url,
-            'http_code' => $http_code,
-            'content_type' => $content_type
-        ]);
-        return false;
     }
 }

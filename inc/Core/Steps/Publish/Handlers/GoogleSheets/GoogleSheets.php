@@ -161,33 +161,6 @@ class GoogleSheets extends PublishHandler {
     }
 
     /**
-     * Sanitizes the settings specific to the Google Sheets publish handler.
-     *
-     * @param array $raw_settings Raw settings input.
-     * @return array Sanitized settings.
-     */
-    public function sanitize_settings(array $raw_settings): array {
-        $sanitized = [];
-        $sanitized['googlesheets_spreadsheet_id'] = sanitize_text_field($raw_settings['googlesheets_spreadsheet_id'] ?? '');
-        $sanitized['googlesheets_worksheet_name'] = sanitize_text_field($raw_settings['googlesheets_worksheet_name'] ?? 'Data Machine Output');
-        
-        // Handle JSON column mapping
-        $column_mapping = $raw_settings['googlesheets_column_mapping'] ?? '';
-        if (!empty($column_mapping)) {
-            $decoded = json_decode($column_mapping, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $sanitized['googlesheets_column_mapping'] = $decoded;
-            } else {
-                $sanitized['googlesheets_column_mapping'] = $this->get_default_column_mapping();
-            }
-        } else {
-            $sanitized['googlesheets_column_mapping'] = $this->get_default_column_mapping();
-        }
-        
-        return $sanitized;
-    }
-
-    /**
      * Get default column mapping for Google Sheets output.
      *
      * @return array Default column mapping configuration.

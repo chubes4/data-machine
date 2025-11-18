@@ -12,14 +12,13 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Rss;
 
+use DataMachine\Core\Steps\SettingsHandler;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-class RssSettings {
-
-    public function __construct() {
-    }
+class RssSettings extends SettingsHandler {
 
     /**
      * Get settings fields for RSS fetch handler.
@@ -48,32 +47,4 @@ class RssSettings {
             ],
         ];
     }
-
-    /**
-     * Sanitize RSS fetch handler settings.
-     *
-     * @param array $raw_settings Raw settings input.
-     * @return array Sanitized settings.
-     */
-    public static function sanitize(array $raw_settings): array {
-        $sanitized = [];
-        
-        // Feed URL is required
-        $feed_url = esc_url_raw($raw_settings['feed_url'] ?? '');
-        if (empty($feed_url)) {
-            throw new \InvalidArgumentException(esc_html__('RSS Feed URL is required.', 'datamachine'));
-        }
-        $sanitized['feed_url'] = $feed_url;
-        
-        
-        // Timeframe limit
-        $sanitized['timeframe_limit'] = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
-        
-        // Search terms
-        $sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? '');
-        
-        
-        return $sanitized;
-    }
-
 }

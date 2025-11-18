@@ -12,14 +12,13 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;
 
+use DataMachine\Core\Steps\SettingsHandler;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-class RedditSettings {
-
-    public function __construct() {
-    }
+class RedditSettings extends SettingsHandler {
 
     /**
      * Get settings fields for Reddit fetch handler.
@@ -84,29 +83,19 @@ class RedditSettings {
     /**
      * Sanitize Reddit fetch handler settings.
      *
+     * Uses parent auto-sanitization for most fields, adds custom regex validation for subreddit.
+     *
      * @param array $raw_settings Raw settings input.
      * @return array Sanitized settings.
      */
     public static function sanitize(array $raw_settings): array {
-        $sanitized = [];
+        // Let parent handle most fields (select, numbers, text)
+        $sanitized = parent::sanitize($raw_settings);
+
+        // Custom regex validation for subreddit name
         $subreddit = sanitize_text_field($raw_settings['subreddit'] ?? '');
         $sanitized['subreddit'] = (preg_match('/^[a-zA-Z0-9_]+$/', $subreddit)) ? $subreddit : '';
-        $valid_sorts = ['hot', 'new', 'top', 'rising', 'controversial'];
-        $sort_by = sanitize_text_field($raw_settings['sort_by'] ?? 'hot');
-        if (!in_array($sort_by, $valid_sorts)) {
-            do_action('datamachine_log', 'error', 'Reddit Settings: Invalid sort parameter provided in settings.', ['sort_by' => $sort_by]);
-            return [];
-        }
-        $sanitized['sort_by'] = $sort_by;
-        $sanitized['timeframe_limit'] = sanitize_text_field($raw_settings['timeframe_limit'] ?? 'all_time');
-        $min_upvotes = isset($raw_settings['min_upvotes']) ? absint($raw_settings['min_upvotes']) : 0;
-        $sanitized['min_upvotes'] = max(0, $min_upvotes);
-        $min_comment_count = isset($raw_settings['min_comment_count']) ? absint($raw_settings['min_comment_count']) : 0;
-        $sanitized['min_comment_count'] = max(0, $min_comment_count);
-        $comment_count = isset($raw_settings['comment_count']) ? absint($raw_settings['comment_count']) : 0;
-        $sanitized['comment_count'] = max(0, $comment_count);
-        $sanitized['search'] = sanitize_text_field($raw_settings['search'] ?? '');
+
         return $sanitized;
     }
-
 }

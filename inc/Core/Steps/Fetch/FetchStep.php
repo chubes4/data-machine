@@ -23,17 +23,6 @@ class FetchStep extends Step {
     }
 
     /**
-     * Log step execution start with fetch-specific context.
-     *
-     * @return void
-     */
-    protected function logStart(): void {
-        $this->log('debug', 'Starting data collection', [
-            'existing_items' => count($this->dataPackets)
-        ]);
-    }
-
-    /**
      * Execute fetch step logic.
      *
      * @return array

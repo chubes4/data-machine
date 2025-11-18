@@ -40,7 +40,7 @@ function datamachine_register_bluesky_filters() {
 
     add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
         if ($handler_slug === null || $handler_slug === 'bluesky') {
-            $all_settings['bluesky'] = new BlueskySettings();
+            $all_settings['bluesky'] = 'DataMachine\\Core\\Steps\\Publish\\Handlers\\PublishHandlerSettings';
         }
         return $all_settings;
     }, 10, 2);

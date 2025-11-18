@@ -32,7 +32,7 @@ function datamachine_register_threads_filters() {
 
     add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
         if ($handler_slug === null || $handler_slug === 'threads') {
-            $all_settings['threads'] = new ThreadsSettings();
+            $all_settings['threads'] = 'DataMachine\\Core\\Steps\\Publish\\Handlers\\PublishHandlerSettings';
         }
         return $all_settings;
     }, 10, 2);

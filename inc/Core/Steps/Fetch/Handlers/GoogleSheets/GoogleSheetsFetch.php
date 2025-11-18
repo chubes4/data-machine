@@ -391,36 +391,6 @@ class GoogleSheetsFetch {
     }
 
     /**
-     * Sanitize Google Sheets fetch configuration.
-     *
-     * @param array $raw_settings Raw configuration array
-     * @return array Sanitized configuration
-     */
-    public function sanitize_settings(array $raw_settings): array {
-        $sanitized = [];
-        
-        // Spreadsheet ID is required
-        $spreadsheet_id = sanitize_text_field($raw_settings['spreadsheet_id'] ?? '');
-        if (empty($spreadsheet_id)) {
-            throw new \InvalidArgumentException(esc_html__('Google Sheets Spreadsheet ID is required.', 'datamachine'));
-        }
-        $sanitized['spreadsheet_id'] = $spreadsheet_id;
-        
-        // Worksheet name
-        $sanitized['worksheet_name'] = sanitize_text_field($raw_settings['worksheet_name'] ?? 'Sheet1');
-        
-        // Processing mode validation
-        $processing_mode = sanitize_text_field($raw_settings['processing_mode'] ?? 'by_row');
-        $valid_modes = ['by_row', 'by_column', 'full_spreadsheet'];
-        $sanitized['processing_mode'] = in_array($processing_mode, $valid_modes) ? $processing_mode : 'by_row';
-        
-        // Header row option
-        $sanitized['has_header_row'] = !empty($raw_settings['has_header_row']);
-        
-        return $sanitized;
-    }
-
-    /**
      * Get handler display label.
      *
      * @return string Handler label

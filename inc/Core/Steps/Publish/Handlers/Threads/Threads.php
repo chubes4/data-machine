@@ -256,12 +256,6 @@ class Threads extends PublishHandler {
         ];
     }
 
-
-    public function sanitize_settings(array $raw_settings): array {
-        // No specific settings to sanitize for Threads
-        return [];
-    }
-
     public static function get_label(): string {
         return __('Threads', 'datamachine');
     }
