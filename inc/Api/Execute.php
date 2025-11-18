@@ -45,11 +45,6 @@ class Execute {
                     'type' => 'integer',
                     'required' => false,
                     'description' => 'Unix timestamp for delayed execution'
-                ],
-                'interval' => [
-                    'type' => 'string',
-                    'required' => false,
-                    'description' => 'Recurring interval (flow_id only)'
                 ]
             ]
         ]);
@@ -57,12 +52,14 @@ class Execute {
 
     /**
      * Handle execute endpoint requests
+     *
+     * Pure execution endpoint - handles immediate and delayed execution only.
+     * For scheduling/recurring execution, use the /schedule endpoint.
      */
     public static function handle_execute($request) {
         $flow_id = $request->get_param('flow_id');
         $workflow = $request->get_param('workflow');
         $timestamp = $request->get_param('timestamp');
-        $interval = $request->get_param('interval');
 
         // Validate: must have flow_id OR workflow
         if (!$flow_id && !$workflow) {
@@ -83,17 +80,17 @@ class Execute {
 
         // Database flow execution
         if ($flow_id) {
-            return self::execute_database_flow($flow_id, $timestamp, $interval);
+            return self::execute_database_flow($flow_id, $timestamp);
         }
 
         // Ephemeral workflow execution
-        return self::execute_ephemeral_workflow($workflow, $timestamp, $interval);
+        return self::execute_ephemeral_workflow($workflow, $timestamp);
     }
 
     /**
-     * Execute database flow with optional scheduling
+     * Execute database flow immediately or with delay
      */
-    private static function execute_database_flow($flow_id, $timestamp, $interval) {
+    private static function execute_database_flow($flow_id, $timestamp) {
         // Validate flow exists
         $flow = apply_filters('datamachine_get_flow', null, $flow_id);
         if (!$flow) {
@@ -105,7 +102,7 @@ class Execute {
         }
 
         // Immediate execution
-        if (!$timestamp && !$interval) {
+        if (!$timestamp) {
             do_action('datamachine_run_flow_now', $flow_id);
 
             do_action('datamachine_log', 'info', 'Database flow executed via REST API', [
@@ -122,59 +119,44 @@ class Execute {
             ]);
         }
 
-        // Recurring execution
-        if ($interval) {
-            do_action('datamachine_run_flow_later', $flow_id, $interval);
-
-            do_action('datamachine_log', 'info', 'Database flow scheduled for recurring execution via REST API', [
-                'flow_id' => $flow_id,
-                'interval' => $interval
-            ]);
-
-            return rest_ensure_response([
-                'success' => true,
-                'execution_type' => 'recurring',
-                'flow_id' => $flow_id,
-                'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}",
-                'interval' => $interval,
-                'message' => "Flow scheduled to run {$interval}"
-            ]);
+        // Delayed execution (one-time)
+        if (!function_exists('as_schedule_single_action')) {
+            return new \WP_Error(
+                'scheduler_unavailable',
+                'Action Scheduler not available for delayed execution',
+                ['status' => 500]
+            );
         }
 
-        // Delayed execution
-        if ($timestamp) {
-            do_action('datamachine_run_flow_later', $flow_id, $timestamp);
+        $action_id = as_schedule_single_action(
+            $timestamp,
+            'datamachine_run_flow_now',
+            [$flow_id],
+            'datamachine'
+        );
 
-            do_action('datamachine_log', 'info', 'Database flow scheduled for delayed execution via REST API', [
-                'flow_id' => $flow_id,
-                'timestamp' => $timestamp,
-                'scheduled_time' => wp_date('c', $timestamp)
-            ]);
+        do_action('datamachine_log', 'info', 'Database flow scheduled for delayed execution via REST API', [
+            'flow_id' => $flow_id,
+            'timestamp' => $timestamp,
+            'scheduled_time' => wp_date('c', $timestamp),
+            'action_id' => $action_id
+        ]);
 
-            return rest_ensure_response([
-                'success' => true,
-                'execution_type' => 'delayed',
-                'flow_id' => $flow_id,
-                'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}",
-                'timestamp' => $timestamp,
-                'scheduled_time' => wp_date('c', $timestamp),
-                'message' => 'Flow scheduled for one-time execution at ' . wp_date('M j, Y g:i A', $timestamp)
-            ]);
-        }
+        return rest_ensure_response([
+            'success' => true,
+            'execution_type' => 'delayed',
+            'flow_id' => $flow_id,
+            'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}",
+            'timestamp' => $timestamp,
+            'scheduled_time' => wp_date('c', $timestamp),
+            'message' => 'Flow scheduled for one-time execution at ' . wp_date('M j, Y g:i A', $timestamp)
+        ]);
     }
 
     /**
-     * Execute ephemeral workflow with optional delayed scheduling
+     * Execute ephemeral workflow with optional delayed execution
      */
-    private static function execute_ephemeral_workflow($workflow, $timestamp, $interval) {
-        // Validate no recurring for ephemeral
-        if ($interval) {
-            return new \WP_Error(
-                'invalid_schedule',
-                'Recurring execution not supported for ephemeral workflows. Create a flow for recurring execution.',
-                ['status' => 400]
-            );
-        }
+    private static function execute_ephemeral_workflow($workflow, $timestamp) {
 
         // Validate workflow structure
         $validation = self::validate_workflow($workflow);

@@ -1,9 +1,8 @@
 <?php
-/**
- * Reddit fetch handler with OAuth2 authentication and image handling.
- *
- * @package DataMachine
- */
+     /**
+      * Fetch Reddit posts with timeframe and keyword filtering.
+      * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
+      */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;
 
@@ -426,10 +425,11 @@ class Reddit {
 
 					// Use the URL already provided by store_remote_file()
 					$image_url = $stored_image['url'] ?? '';
+					$image_file_path = $stored_image['path'] ?? '';
 
 					apply_filters('datamachine_engine_data', null, $job_id, [
 						'source_url' => $source_url,
-						'image_url' => $image_url
+						'image_file_path' => $image_file_path
 					]);
 				}
 

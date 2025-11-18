@@ -4,11 +4,10 @@
  * Modal for configuring flow scheduling interval.
  */
 
-import { useState } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
 import { Modal, Button, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { updateFlowSchedule } from '../../utils/api';
-import { SCHEDULING_INTERVALS } from '../../utils/constants';
 
 /**
  * Flow Schedule Modal Component
@@ -35,6 +34,47 @@ export default function FlowScheduleModal( {
 	);
 	const [ isSaving, setIsSaving ] = useState( false );
 	const [ error, setError ] = useState( null );
+	const [ intervals, setIntervals ] = useState( [] );
+	const [ isLoadingIntervals, setIsLoadingIntervals ] = useState( false );
+
+	// Fetch intervals when modal opens
+	useEffect( () => {
+		if ( isOpen && intervals.length === 0 ) {
+			setIsLoadingIntervals( true );
+			fetch( '/wp-json/datamachine/v1/schedule', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify( { action: 'get_intervals' } )
+			} )
+				.then( response => response.json() )
+				.then( data => {
+					if ( data.success && data.intervals ) {
+						setIntervals( data.intervals );
+					} else {
+						// Fallback to basic intervals if API fails
+						setIntervals( [
+							{ value: 'manual', label: 'Manual only' },
+							{ value: 'hourly', label: 'Every hour' },
+							{ value: 'daily', label: 'Daily' },
+						] );
+					}
+				} )
+				.catch( error => {
+					console.error( 'Failed to fetch intervals:', error );
+					// Fallback to basic intervals
+					setIntervals( [
+						{ value: 'manual', label: 'Manual only' },
+						{ value: 'hourly', label: 'Every hour' },
+						{ value: 'daily', label: 'Daily' },
+					] );
+				} )
+				.finally( () => {
+					setIsLoadingIntervals( false );
+				} );
+		}
+	}, [ isOpen, intervals.length ] );
 
 	if ( ! isOpen ) {
 		return null;
@@ -99,8 +139,9 @@ export default function FlowScheduleModal( {
 				<SelectControl
 					label={ __( 'Schedule Interval', 'datamachine' ) }
 					value={ selectedInterval }
-					options={ SCHEDULING_INTERVALS }
+					options={ intervals }
 					onChange={ ( value ) => setSelectedInterval( value ) }
+					disabled={ isLoadingIntervals }
 					help={ __(
 						'Choose how often this flow should run automatically.',
 						'datamachine'

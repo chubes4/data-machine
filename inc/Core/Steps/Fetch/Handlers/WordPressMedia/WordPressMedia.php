@@ -16,10 +16,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPressMedia {
 
-    /**
-     * Fetch WordPress media with optional parent content inclusion.
-     * Engine data (source_url, image_url) stored via datamachine_engine_data filter.
-     */
+     /**
+      * Fetch WordPress media attachments with parent content integration.
+      * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
+      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
             do_action('datamachine_log', 'error', 'WordPress Media: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
@@ -211,9 +211,15 @@ class WordPressMedia {
                 if ($include_parent_content && $post->post_parent > 0) {
                     $source_url = get_permalink($post->post_parent) ?: '';
                 }
+                // Store URLs and file path in engine_data via centralized filter
+                $image_file_path = '';
+                if ($file_info) {
+                    $image_file_path = $file_info['file_path'];
+                }
+
                 apply_filters('datamachine_engine_data', null, $job_id, [
                     'source_url' => $source_url,
-                    'image_url' => $image_url ?: ''
+                    'image_file_path' => $image_file_path
                 ]);
             }
 

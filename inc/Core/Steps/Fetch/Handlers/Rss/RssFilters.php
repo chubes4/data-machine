@@ -9,6 +9,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Register RSS feed fetch handler filters.
+ *
+ * Registers RSS as a fetch handler for retrieving content from RSS/Atom feeds.
+ * Includes handler metadata and configuration options.
+ *
+ * @since 0.1.0
+ */
 function datamachine_register_rss_fetch_filters() {
     add_filter('datamachine_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'fetch') {

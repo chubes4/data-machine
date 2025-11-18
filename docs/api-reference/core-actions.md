@@ -30,11 +30,11 @@ do_action('datamachine_run_flow_now', $flow_id, 'manual');
 **Parameters**:
 - `$job_id` (string) - Job identifier
 - `$flow_step_id` (string) - Flow step identifier
-- `$data` (array|null) - Data packet or storage reference
+- `$dataPackets` (array|null) - Data packets or storage reference
 
 **Usage**:
 ```php
-do_action('datamachine_execute_step', $job_id, $flow_step_id, $data);
+do_action('datamachine_execute_step', $job_id, $flow_step_id, $dataPackets);
 ```
 
 **Internal Process**:
@@ -50,11 +50,11 @@ do_action('datamachine_execute_step', $job_id, $flow_step_id, $data);
 **Parameters**:
 - `$job_id` (string) - Job identifier
 - `$flow_step_id` (string) - Next step to execute
-- `$data` (array) - Data packet to pass
+- `$dataPackets` (array) - Data packets to pass
 
 **Usage**:
 ```php
-do_action('datamachine_schedule_next_step', $job_id, $next_flow_step_id, $data);
+do_action('datamachine_schedule_next_step', $job_id, $next_flow_step_id, $dataPackets);
 ```
 
 **Process**:

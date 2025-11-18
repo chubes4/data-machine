@@ -2,6 +2,7 @@
 
 namespace DataMachine\Core\Steps\AI;
 
+use DataMachine\Core\Steps\Step;
 use DataMachine\Engine\AI\AIConversationLoop;
 use DataMachine\Engine\AI\ConversationManager;
 use DataMachine\Engine\AI\ToolExecutor;
@@ -17,27 +18,64 @@ require_once __DIR__ . '/AIStepTools.php';
  *
  * @package DataMachine
  */
-class AIStep {
+class AIStep extends Step {
 
     /**
-     * Execute multi-turn AI conversation with tool calling support.
-     *
-     * @param array $payload Unified step payload
-     * @return array Updated data packet array
+     * Initialize AI step.
      */
-    public function execute(array $payload): array {
-        $job_id = $payload['job_id'] ?? 0;
-        $flow_step_id = $payload['flow_step_id'] ?? '';
-        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
-        $flow_step_config = $payload['flow_step_config'] ?? [];
-        $engine_data = $payload['engine_data'] ?? [];
+    public function __construct() {
+        parent::__construct('ai');
+    }
 
-        $user_message = trim($flow_step_config['user_message'] ?? '');
+    /**
+     * Validate AI step configuration requirements.
+     *
+     * @return bool
+     */
+    protected function validateStepConfiguration(): bool {
+        $pipeline_step_id = $this->flow_step_config['pipeline_step_id'] ?? '';
+
+        if (empty($pipeline_step_id)) {
+            $this->log('warning', 'Missing pipeline_step_id, skipping AI processing', [
+                'flow_step_config' => $this->flow_step_config
+            ]);
+            return false;
+        }
+
+        $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, [
+            'job_id' => $this->job_id,
+            'flow_step_id' => $this->flow_step_id,
+            'data' => $this->dataPackets,
+            'flow_step_config' => $this->flow_step_config,
+            'engine_data' => $this->engine_data
+        ]);
+
+        $provider_name = $step_ai_config['selected_provider'] ?? '';
+        if (empty($provider_name)) {
+            do_action('datamachine_fail_job', $this->job_id, 'ai_provider_missing', [
+                'flow_step_id' => $this->flow_step_id,
+                'pipeline_step_id' => $pipeline_step_id,
+                'error_message' => 'AI step requires provider configuration. Please configure an AI provider in step settings.',
+                'solution' => 'Configure AI provider in pipeline step settings'
+            ]);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Execute AI step logic.
+     *
+     * @return array
+     */
+    protected function executeStep(): array {
+        $user_message = trim($this->flow_step_config['user_message'] ?? '');
 
         $file_path = null;
         $mime_type = null;
-        if (!empty($data)) {
-            $first_item = $data[0] ?? [];
+        if (!empty($this->dataPackets)) {
+            $first_item = $this->dataPackets[0] ?? [];
             $file_info = $first_item['content']['file_info'] ?? null;
 
             if ($file_info && isset($file_info['file_path']) && file_exists($file_info['file_path'])) {
@@ -48,10 +86,10 @@ class AIStep {
 
         $messages = [];
 
-        if (!empty($data)) {
+        if (!empty($this->dataPackets)) {
             $messages[] = [
                 'role' => 'user',
-                'content' => json_encode(['data_packets' => $data], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+                'content' => json_encode(['data_packets' => $this->dataPackets], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
             ];
         }
 
@@ -75,35 +113,27 @@ class AIStep {
             ];
         }
 
-        if (empty($flow_step_config['pipeline_step_id'])) {
-            do_action('datamachine_log', 'warning', 'AI Agent: Missing pipeline_step_id, skipping AI processing', [
-                'flow_step_id' => $flow_step_id,
-                'flow_step_config' => $flow_step_config
-            ]);
-            return $data;
-        }
-        $pipeline_step_id = $flow_step_config['pipeline_step_id'];
+        $pipeline_step_id = $this->flow_step_config['pipeline_step_id'];
+
+        $payload = [
+            'job_id' => $this->job_id,
+            'flow_step_id' => $this->flow_step_id,
+            'data' => $this->dataPackets,
+            'flow_step_config' => $this->flow_step_config,
+            'engine_data' => $this->engine_data
+        ];
 
         $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, $payload);
 
-        $previous_flow_step_id = apply_filters('datamachine_get_previous_flow_step_id', null, $flow_step_id, $payload);
+        $previous_flow_step_id = apply_filters('datamachine_get_previous_flow_step_id', null, $this->flow_step_id, $payload);
         $previous_step_config = $previous_flow_step_id ? apply_filters('datamachine_get_flow_step_config', [], $previous_flow_step_id) : null;
 
-        $next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $flow_step_id, $payload);
+        $next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $this->flow_step_id, $payload);
         $next_step_config = $next_flow_step_id ? apply_filters('datamachine_get_flow_step_config', [], $next_flow_step_id) : null;
 
         $available_tools = ToolExecutor::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id);
 
         $provider_name = $step_ai_config['selected_provider'] ?? '';
-        if (empty($provider_name)) {
-            do_action('datamachine_fail_job', $job_id, 'ai_provider_missing', [
-                'flow_step_id' => $flow_step_id,
-                'pipeline_step_id' => $pipeline_step_id,
-                'error_message' => 'AI step requires provider configuration. Please configure an AI provider in step settings.',
-                'solution' => 'Configure AI provider in pipeline step settings'
-            ]);
-            return $data;
-        }
 
         // Execute conversation loop
         $loop = new AIConversationLoop();
@@ -118,8 +148,8 @@ class AIStep {
 
         // Check for errors
         if (isset($loop_result['error'])) {
-            do_action('datamachine_fail_job', $job_id, 'ai_processing_failed', [
-                'flow_step_id' => $flow_step_id,
+            do_action('datamachine_fail_job', $this->job_id, 'ai_processing_failed', [
+                'flow_step_id' => $this->flow_step_id,
                 'ai_error' => $loop_result['error'],
                 'ai_provider' => $provider_name
             ]);
@@ -127,14 +157,14 @@ class AIStep {
         }
 
         // Process loop results into data packets
-        return self::processLoopResults($loop_result, $data, $payload, $available_tools);
+        return self::processLoopResults($loop_result, $this->dataPackets, $payload, $available_tools);
     }
 
     /**
-     * Process AIConversationLoop results into pipeline data packets.
+     * Process AI conversation loop results into pipeline data packets.
      *
      * @param array $loop_result Result from AIConversationLoop
-     * @param array $data Current data packet array
+     * @param array $dataPackets Current data packet array
      * @param array $payload Step payload
      * @param array $available_tools Available tool definitions
      * @return array Updated data packet array
@@ -148,7 +178,7 @@ class AIStep {
      * @param array $available_tools Tools available during conversation
      * @return array Updated data packet array
      */
-    private static function processLoopResults(array $loop_result, array $data, array $payload, array $available_tools): array {
+    private static function processLoopResults(array $loop_result, array $dataPackets, array $payload, array $available_tools): array {
         $flow_step_id = $payload['flow_step_id'] ?? '';
         $messages = $loop_result['messages'] ?? [];
         $turn_count = 0;
@@ -179,7 +209,7 @@ class AIStep {
                         $response_body = "AI executed " . count($tool_calls) . " tool(s): " . implode(', ', $tool_names);
                     }
 
-                    $data = apply_filters('datamachine_data_packet', $data, [
+                    $dataPackets = apply_filters('datamachine_data_packet', $dataPackets, [
                         'type' => 'ai_response',
                         'content' => [
                             'title' => $ai_title,
@@ -219,7 +249,7 @@ class AIStep {
                         unset($clean_tool_parameters[$handler_key]);
                     }
 
-                    $data = apply_filters('datamachine_data_packet', $data, [
+                    $dataPackets = apply_filters('datamachine_data_packet', $dataPackets, [
                         'type' => 'ai_handler_complete',
                         'content' => [
                             'title' => 'Handler Tool Executed: ' . $tool_name,
@@ -230,7 +260,7 @@ class AIStep {
                             'handler_tool' => $tool_def['handler'] ?? null,
                             'tool_parameters' => $clean_tool_parameters,
                             'handler_config' => $handler_config,
-                            'source_type' => $data[0]['metadata']['source_type'] ?? 'unknown',
+                            'source_type' => $dataPackets[0]['metadata']['source_type'] ?? 'unknown',
                             'flow_step_id' => $flow_step_id,
                             'conversation_turn' => $turn_count
                         ],
@@ -242,7 +272,7 @@ class AIStep {
                     // Non-handler tool or failed tool - add tool result data packet
                     $success_message = ConversationManager::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
 
-                    $data = apply_filters('datamachine_data_packet', $data, [
+                    $dataPackets = apply_filters('datamachine_data_packet', $dataPackets, [
                         'type' => 'tool_result',
                         'tool_name' => $tool_name,
                         'content' => [
@@ -255,13 +285,13 @@ class AIStep {
                             'tool_parameters' => $tool_parameters,
                             'tool_success' => $tool_result['success'] ?? false,
                             'tool_result' => $tool_result['data'] ?? [],
-                            'source_type' => $data[0]['metadata']['source_type'] ?? 'unknown'
+                            'source_type' => $dataPackets[0]['metadata']['source_type'] ?? 'unknown'
                         ]
                     ], $flow_step_id, 'ai');
                 }
             }
         }
 
-        return $data;
+        return $dataPackets;
     }
 }

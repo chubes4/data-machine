@@ -7,57 +7,53 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
 
+use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class WordPress {
+class WordPress extends PublishHandler {
 
     private $featured_image_handler;
     private $source_url_handler;
     private $taxonomy_handler;
 
     public function __construct() {
+        parent::__construct('wordpress');
         $this->featured_image_handler = apply_filters('datamachine_get_featured_image_handler', null);
         $this->source_url_handler = apply_filters('datamachine_get_source_url_handler', null);
         $this->taxonomy_handler = apply_filters('datamachine_get_taxonomy_handler', null);
     }
 
     /**
-     * Handle WordPress post publishing tool call.
+     * Execute WordPress post publishing.
      *
      * Creates a WordPress post with modular processing for taxonomies, featured images,
      * and source URL attribution. Uses configuration hierarchy where system defaults
      * override handler-specific settings.
      *
      * @param array $parameters Tool call parameters including title, content, job_id
-     * @param array $tool_def Tool definition with handler configuration
+     * @param array $handler_config Handler configuration
      * @return array Success status with post data or error information
      */
-    public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        
+    protected function executePublish(array $parameters, array $handler_config): array {
         if (empty($parameters['title']) || empty($parameters['content'])) {
-            $error_msg = 'WordPress tool call missing required parameters';
-            do_action('datamachine_log', 'error', $error_msg, [
-                'provided_parameters' => array_keys($parameters),
-                'required_parameters' => ['title', 'content'],
-                'parameter_values' => [
-                    'title' => $parameters['title'] ?? 'NOT_PROVIDED',
-                    'content_length' => isset($parameters['content']) ? strlen($parameters['content']) : 'NOT_PROVIDED'
+            return $this->errorResponse(
+                'WordPress tool call missing required parameters',
+                [
+                    'provided_parameters' => array_keys($parameters),
+                    'required_parameters' => ['title', 'content'],
+                    'parameter_values' => [
+                        'title' => $parameters['title'] ?? 'NOT_PROVIDED',
+                        'content_length' => isset($parameters['content']) ? strlen($parameters['content']) : 'NOT_PROVIDED'
+                    ]
                 ]
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $error_msg,
-                'tool_name' => 'wordpress_publish'
-            ];
+            );
         }
 
-        $handler_config = $tool_def['handler_config'] ?? [];
-
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+        $engine_data = $this->getEngineData($job_id);
 
         $taxonomies = get_taxonomies(['public' => true], 'names');
         $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
@@ -69,23 +65,19 @@ class WordPress {
             }
         }
 
-        do_action('datamachine_log', 'debug', 'WordPress Tool: Handler configuration accessed', [
+        $this->log('debug', 'WordPress Tool: Handler configuration accessed', [
             'taxonomy_settings' => $taxonomy_settings,
             'config_keys_count' => count($handler_config)
         ]);
 
         if (empty($handler_config['post_type'])) {
-            $error_msg = 'WordPress publish handler missing required post_type configuration';
-            do_action('datamachine_log', 'error', $error_msg, [
-                'handler_config_keys' => array_keys($handler_config),
-                'provided_post_type' => $handler_config['post_type'] ?? 'NOT_SET'
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $error_msg,
-                'tool_name' => 'wordpress_publish'
-            ];
+            return $this->errorResponse(
+                'WordPress publish handler missing required post_type configuration',
+                [
+                    'handler_config_keys' => array_keys($handler_config),
+                    'provided_post_type' => $handler_config['post_type'] ?? 'NOT_SET'
+                ]
+            );
         }
         
     $content = wp_unslash($parameters['content']);
@@ -100,7 +92,7 @@ class WordPress {
             'post_author' => $this->get_effective_post_author($handler_config)
         ];
 
-        do_action('datamachine_log', 'debug', 'WordPress Tool: Final post data for wp_insert_post', [
+        $this->log('debug', 'WordPress Tool: Final post data for wp_insert_post', [
             'post_author' => $post_data['post_author'],
             'post_status' => $post_data['post_status'],
             'post_type' => $post_data['post_type'],
@@ -111,40 +103,32 @@ class WordPress {
         $post_id = wp_insert_post($post_data);
 
         if (is_wp_error($post_id)) {
-            $error_msg = 'WordPress post creation failed: ' . $post_id->get_error_message();
-            do_action('datamachine_log', 'error', $error_msg, [
-                'post_data' => $post_data,
-                'wp_error' => $post_id->get_error_data()
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $error_msg,
-                'tool_name' => 'wordpress_publish'
-            ];
+            return $this->errorResponse(
+                'WordPress post creation failed: ' . $post_id->get_error_message(),
+                [
+                    'post_data' => $post_data,
+                    'wp_error' => $post_id->get_error_data()
+                ]
+            );
         }
 
         $taxonomy_results = $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config);
         $featured_image_result = $this->featured_image_handler->processImage($post_id, $engine_data, $handler_config);
 
-        do_action('datamachine_log', 'debug', 'WordPress Tool: Post created successfully', [
+        $this->log('debug', 'WordPress Tool: Post created successfully', [
             'post_id' => $post_id,
             'post_url' => get_permalink($post_id),
             'taxonomy_results' => $taxonomy_results,
             'featured_image_result' => $featured_image_result
         ]);
 
-        return [
-            'success' => true,
-            'data' => [
-                'post_id' => $post_id,
-                'post_title' => $parameters['title'],
-                'post_url' => get_permalink($post_id),
-                'taxonomy_results' => $taxonomy_results,
-                'featured_image_result' => $featured_image_result
-            ],
-            'tool_name' => 'wordpress_publish'
-        ];
+        return $this->successResponse([
+            'post_id' => $post_id,
+            'post_title' => $parameters['title'],
+            'post_url' => get_permalink($post_id),
+            'taxonomy_results' => $taxonomy_results,
+            'featured_image_result' => $featured_image_result
+        ]);
     }
 
 

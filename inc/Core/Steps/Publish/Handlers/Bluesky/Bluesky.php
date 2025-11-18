@@ -5,20 +5,23 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Bluesky;
 
+use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class Bluesky {
+class Bluesky extends PublishHandler {
 
     private $auth;
 
     public function __construct() {
+        parent::__construct('bluesky');
         $all_auth = apply_filters('datamachine_auth_providers', []);
         $this->auth = $all_auth['bluesky'] ?? null;
 
         if ($this->auth === null) {
-            do_action('datamachine_log', 'error', 'Bluesky Handler: Authentication service not available', [
+            $this->log('error', 'Bluesky Handler: Authentication service not available', [
                 'missing_service' => 'bluesky',
                 'available_providers' => array_keys($all_auth)
             ]);
@@ -29,59 +32,48 @@ class Bluesky {
         return $this->auth;
     }
 
-    public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        do_action('datamachine_log', 'debug', 'Bluesky Tool: Handling tool call', [
+    protected function executePublish(array $parameters, array $handler_config): array {
+        $this->log('debug', 'Bluesky Tool: Handling tool call', [
             'parameters' => $parameters,
             'parameter_keys' => array_keys($parameters),
-            'has_handler_config' => !empty($tool_def['handler_config']),
-            'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
+            'has_handler_config' => !empty($handler_config),
+            'handler_config_keys' => array_keys($handler_config)
         ]);
 
         if (empty($parameters['content'])) {
-            $error_msg = 'Bluesky tool call missing required content parameter';
-            do_action('datamachine_log', 'error', $error_msg, [
-                'provided_parameters' => array_keys($parameters),
-                'required_parameters' => ['content']
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $error_msg,
-                'tool_name' => 'bluesky_publish'
-            ];
+            return $this->errorResponse(
+                'Bluesky tool call missing required content parameter',
+                [
+                    'provided_parameters' => array_keys($parameters),
+                    'required_parameters' => ['content']
+                ]
+            );
         }
 
-        $handler_config = $parameters['handler_config'] ?? [];
         $bluesky_config = $handler_config['bluesky'] ?? $handler_config;
-        
-        do_action('datamachine_log', 'debug', 'Bluesky Tool: Using handler configuration', [
+
+        $this->log('debug', 'Bluesky Tool: Using handler configuration', [
             'include_images' => $bluesky_config['include_images'] ?? true,
             'link_handling' => $bluesky_config['link_handling'] ?? 'append'
         ]);
 
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+        $engine_data = $this->getEngineData($job_id);
 
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
         $source_url = $engine_data['source_url'] ?? null;
-        $image_url = $engine_data['image_url'] ?? null;
+        $image_file_path = $engine_data['image_file_path'] ?? null;
         
         $include_images = $bluesky_config['include_images'] ?? true;
         $link_handling = $bluesky_config['link_handling'] ?? 'append';
 
         $session = $this->auth->get_session();
         if (is_wp_error($session)) {
-            $error_msg = 'Bluesky authentication failed: ' . $session->get_error_message();
-            do_action('datamachine_log', 'error', $error_msg, [
-                'error_code' => $session->get_error_code()
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $error_msg,
-                'tool_name' => 'bluesky_publish'
-            ];
+            return $this->errorResponse(
+                'Bluesky authentication failed: ' . $session->get_error_message(),
+                ['error_code' => $session->get_error_code()]
+            );
         }
 
         $access_token = $session['accessJwt'] ?? null;
@@ -89,11 +81,7 @@ class Bluesky {
         $pds_url = $session['pds_url'] ?? null;
 
         if (empty($access_token) || empty($did) || empty($pds_url)) {
-            return [
-                'success' => false,
-                'error' => 'Bluesky session data incomplete',
-                'tool_name' => 'bluesky_publish'
-            ];
+            return $this->errorResponse('Bluesky session data incomplete');
         }
 
         $post_text = $title ? $title . ": " . $content : $content;
@@ -114,11 +102,7 @@ class Bluesky {
         $post_text = trim($post_text);
 
         if (empty($post_text)) {
-            return [
-                'success' => false,
-                'error' => 'Formatted post content is empty',
-                'tool_name' => 'bluesky_publish'
-            ];
+            return $this->errorResponse('Formatted post content is empty');
         }
 
         try {
@@ -136,10 +120,19 @@ class Bluesky {
                 $record['facets'] = $facets;
             }
 
-            if ($include_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
+            if ($include_images && !empty($image_file_path)) {
+                $validation = $this->validateImage($image_file_path);
+
+                if (!$validation['valid']) {
+                    return $this->errorResponse(
+                        implode(', ', $validation['errors']),
+                        ['file_path' => $image_file_path, 'errors' => $validation['errors']]
+                    );
+                }
+
                 $image_alt_text = $title ?: substr($content, 0, 50);
-                $uploaded_image_blob = $this->upload_bluesky_image($pds_url, $access_token, $did, $image_url, $image_alt_text);
-                
+                $uploaded_image_blob = $this->upload_bluesky_image_from_file($pds_url, $access_token, $did, $image_file_path, $image_alt_text);
+
                 if (!is_wp_error($uploaded_image_blob) && isset($uploaded_image_blob['blob'])) {
                     $record['embed'] = [
                         '$type' => 'app.bsky.embed.images',
@@ -150,55 +143,42 @@ class Bluesky {
                             ]
                         ]
                     ];
+                } else {
+                    return $this->errorResponse(
+                        'Failed to upload image',
+                        ['error' => is_wp_error($uploaded_image_blob) ? $uploaded_image_blob->get_error_message() : 'Unknown error']
+                    );
                 }
             }
 
             $post_result = $this->create_bluesky_post($pds_url, $access_token, $did, $record);
 
             if (is_wp_error($post_result)) {
-                $error_msg = 'Bluesky API error: ' . $post_result->get_error_message();
-                do_action('datamachine_log', 'error', $error_msg, [
-                    'error_code' => $post_result->get_error_code()
-                ]);
-
-                return [
-                    'success' => false,
-                    'error' => $error_msg,
-                    'tool_name' => 'bluesky_publish'
-                ];
+                return $this->errorResponse(
+                    'Bluesky API error: ' . $post_result->get_error_message(),
+                    ['error_code' => $post_result->get_error_code()]
+                );
             }
 
             $post_uri = $post_result['uri'] ?? '';
             $post_url = $this->build_post_url($post_uri, $session['handle'] ?? '');
-            
+
             if (is_wp_error($post_url)) {
                 $post_url = 'https://bsky.app/';
             }
-            
-            do_action('datamachine_log', 'debug', 'Bluesky Tool: Post created successfully', [
+
+            $this->log('debug', 'Bluesky Tool: Post created successfully', [
                 'post_uri' => $post_uri,
                 'post_url' => $post_url
             ]);
 
-            return [
-                'success' => true,
-                'data' => [
-                    'post_uri' => $post_uri,
-                    'post_url' => $post_url,
-                    'content' => $post_text
-                ],
-                'tool_name' => 'bluesky_publish'
-            ];
-        } catch (\Exception $e) {
-            do_action('datamachine_log', 'error', 'Bluesky Tool: Exception during posting', [
-                'exception' => $e->getMessage()
+            return $this->successResponse([
+                'post_uri' => $post_uri,
+                'post_url' => $post_url,
+                'content' => $post_text
             ]);
-            
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'tool_name' => 'bluesky_publish'
-            ];
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage());
         }
     }
 
@@ -261,43 +241,32 @@ class Bluesky {
         return $facets;
     }
 
+
+
     /**
-     * Upload image to Bluesky blob storage.
+     * Upload image to Bluesky blob storage from repository file.
      *
      * @param string $pds_url PDS URL
      * @param string $access_token Access token
      * @param string $did User DID
-     * @param string $image_url Image URL to upload
+     * @param string $image_file_path Repository file path to upload
      * @param string $alt_text Alt text for image
      * @return array|WP_Error Upload result or error
      */
-    private function upload_bluesky_image(string $pds_url, string $access_token, string $did, string $image_url, string $alt_text) {
-        
-        if (!function_exists('download_url')) {
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-        }
-        
-        $temp_file_path = download_url($image_url, 30);
-        if (is_wp_error($temp_file_path)) {
-            do_action('datamachine_log', 'error', 'Failed to download image for Bluesky upload.', ['url' => $image_url]);
-            return $temp_file_path;
-        }
+    private function upload_bluesky_image_from_file(string $pds_url, string $access_token, string $did, string $image_file_path, string $alt_text) {
 
-        $file_size = @filesize($temp_file_path);
+        $file_size = @filesize($image_file_path);
         if ($file_size === false || $file_size > 1000000) {
-            wp_delete_file($temp_file_path);
             return new \WP_Error('bluesky_image_too_large', __('Image exceeds Bluesky size limit.', 'datamachine'));
         }
 
-        $mime_type = mime_content_type($temp_file_path);
+        $mime_type = mime_content_type($image_file_path);
         if (!$mime_type || strpos($mime_type, 'image/') !== 0) {
-            wp_delete_file($temp_file_path);
             return new \WP_Error('bluesky_invalid_image_type', __('Invalid image type.', 'datamachine'));
         }
 
-        $image_content = file_get_contents($temp_file_path);
+        $image_content = file_get_contents($image_file_path);
         if ($image_content === false) {
-            wp_delete_file($temp_file_path);
             return new \WP_Error('bluesky_image_read_failed', __('Could not read image file.', 'datamachine'));
         }
 
@@ -310,7 +279,6 @@ class Bluesky {
             'body' => $image_content,
         ], 'Bluesky API');
 
-        wp_delete_file($temp_file_path);
         unset($image_content);
 
         if (!$result['success']) {
@@ -386,8 +354,8 @@ class Bluesky {
             $post_id = $matches[1];
             return "https://bsky.app/profile/{$handle}/post/{$post_id}";
         }
-        
-        do_action('datamachine_log', 'error', 'Failed to extract post ID from AT Protocol URI.', [
+
+        $this->log('error', 'Failed to extract post ID from AT Protocol URI.', [
             'uri' => $uri,
             'handle' => $handle
         ]);

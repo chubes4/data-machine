@@ -10,13 +10,15 @@
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Threads;
+
+use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 use Exception;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
-class Threads {
+class Threads extends PublishHandler {
 
     /**
      * @var ThreadsAuth Authentication handler instance
@@ -24,77 +26,65 @@ class Threads {
     private $auth;
 
     public function __construct() {
+        parent::__construct('threads');
         // Use filter-based auth access following pure discovery architectural standards
         $all_auth = apply_filters('datamachine_auth_providers', []);
         $this->auth = $all_auth['threads'] ?? null;
-        
+
         if ($this->auth === null) {
-            do_action('datamachine_log', 'error', 'Threads Handler: Authentication service not available', [
+            $this->log('error', 'Threads Handler: Authentication service not available', [
                 'missing_service' => 'threads',
                 'available_providers' => array_keys($all_auth)
             ]);
-            // Handler will return error in handle_tool_call() when auth is null
+            // Handler will return error in executePublish() when auth is null
         }
     }
 
-    public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        do_action('datamachine_log', 'debug', 'Threads Tool: Handling tool call', [
+    protected function executePublish(array $parameters, array $handler_config): array {
+        $this->log('debug', 'Threads Tool: Handling tool call', [
             'parameters' => $parameters,
             'parameter_keys' => array_keys($parameters),
-            'has_handler_config' => !empty($tool_def['handler_config']),
-            'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
+            'has_handler_config' => !empty($handler_config),
+            'handler_config_keys' => array_keys($handler_config)
         ]);
 
         if (empty($parameters['content'])) {
-            $error_msg = 'Threads tool call missing required content parameter';
-            do_action('datamachine_log', 'error', $error_msg, [
-                'provided_parameters' => array_keys($parameters),
-                'required_parameters' => ['content']
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $error_msg,
-                'tool_name' => 'threads_publish'
-            ];
+            return $this->errorResponse(
+                'Threads tool call missing required content parameter',
+                [
+                    'provided_parameters' => array_keys($parameters),
+                    'required_parameters' => ['content']
+                ]
+            );
         }
 
-        $handler_config = $parameters['handler_config'] ?? [];
         $threads_config = $handler_config['threads'] ?? $handler_config;
-        
-        do_action('datamachine_log', 'debug', 'Threads Tool: Using handler configuration', [
+
+        $this->log('debug', 'Threads Tool: Using handler configuration', [
             'include_images' => $threads_config['include_images'] ?? true,
             'link_handling' => $threads_config['link_handling'] ?? 'append'
         ]);
 
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+        $engine_data = $this->getEngineData($job_id);
 
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
         $source_url = $engine_data['source_url'] ?? null;
-        $image_url = $engine_data['image_url'] ?? null;
+        $image_file_path = $engine_data['image_file_path'] ?? null;
         
         $include_images = $threads_config['include_images'] ?? true;
         $link_handling = $threads_config['link_handling'] ?? 'append';
 
         $access_token = $this->auth->get_access_token();
         if (empty($access_token)) {
-            return [
-                'success' => false,
-                'error' => 'Threads authentication failed - no access token',
-                'tool_name' => 'threads_publish'
-            ];
+            return $this->errorResponse('Threads authentication failed - no access token');
         }
 
         // Get page ID for posting
         $page_id = $this->auth->get_page_id();
         if (empty($page_id)) {
-            return [
-                'success' => false,
-                'error' => 'Threads page ID not available',
-                'tool_name' => 'threads_publish'
-            ];
+            return $this->errorResponse('Threads page ID not available');
         }
 
         // Format post content (Threads' character limit is 500)
@@ -112,11 +102,7 @@ class Threads {
         $post_text .= $link;
 
         if (empty($post_text)) {
-            return [
-                'success' => false,
-                'error' => 'Formatted post content is empty',
-                'tool_name' => 'threads_publish'
-            ];
+            return $this->errorResponse('Formatted post content is empty');
         }
 
         try {
@@ -127,7 +113,27 @@ class Threads {
             ];
 
             // Handle image if provided and enabled
-            if ($include_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
+            if ($include_images && !empty($image_file_path)) {
+                $validation = $this->validateImage($image_file_path);
+
+                if (!$validation['valid']) {
+                    return $this->errorResponse(
+                        implode(', ', $validation['errors']),
+                        ['image_file_path' => $image_file_path, 'errors' => $validation['errors']]
+                    );
+                }
+
+                // Convert repository file path to public URL
+                $upload_dir = wp_upload_dir();
+                $image_url = str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $image_file_path);
+
+                if (!filter_var($image_url, FILTER_VALIDATE_URL)) {
+                    return $this->errorResponse(
+                        'Could not generate image URL from repository file',
+                        ['image_file_path' => $image_file_path, 'generated_url' => $image_url]
+                    );
+                }
+
                 $container_data['media_type'] = 'IMAGE';
                 $container_data['image_url'] = $image_url;
             }
@@ -135,58 +141,32 @@ class Threads {
             // Step 1: Create media container
             $container_response = $this->create_media_container($page_id, $container_data, $access_token);
             if (!$container_response['success']) {
-                $error_msg = 'Threads API error: Failed to create media container - ' . $container_response['error'];
-                do_action('datamachine_log', 'error', $error_msg);
-
-                return [
-                    'success' => false,
-                    'error' => $error_msg,
-                    'tool_name' => 'threads_publish'
-                ];
+                return $this->errorResponse('Threads API error: Failed to create media container - ' . $container_response['error']);
             }
 
             $creation_id = $container_response['creation_id'];
-            
+
             // Step 2: Publish the media container
             $publish_response = $this->publish_media_container($page_id, $creation_id, $access_token);
             if (!$publish_response['success']) {
-                $error_msg = 'Threads API error: Failed to publish - ' . $publish_response['error'];
-                do_action('datamachine_log', 'error', $error_msg);
-
-                return [
-                    'success' => false,
-                    'error' => $error_msg,
-                    'tool_name' => 'threads_publish'
-                ];
+                return $this->errorResponse('Threads API error: Failed to publish - ' . $publish_response['error']);
             }
 
             $media_id = $publish_response['media_id'];
             $post_url = "https://www.threads.net/t/{$media_id}";
-            
-            do_action('datamachine_log', 'debug', 'Threads Tool: Post created successfully', [
+
+            $this->log('debug', 'Threads Tool: Post created successfully', [
                 'media_id' => $media_id,
                 'post_url' => $post_url
             ]);
 
-            return [
-                'success' => true,
-                'data' => [
-                    'media_id' => $media_id,
-                    'post_url' => $post_url,
-                    'content' => $post_text
-                ],
-                'tool_name' => 'threads_publish'
-            ];
-        } catch (\Exception $e) {
-            do_action('datamachine_log', 'error', 'Threads Tool: Exception during posting', [
-                'exception' => $e->getMessage()
+            return $this->successResponse([
+                'media_id' => $media_id,
+                'post_url' => $post_url,
+                'content' => $post_text
             ]);
-            
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'tool_name' => 'threads_publish'
-            ];
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage());
         }
     }
 

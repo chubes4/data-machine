@@ -13,12 +13,13 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\GoogleSheets;
 
+use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
-class GoogleSheets {
+class GoogleSheets extends PublishHandler {
 
     /**
      * @var GoogleSheetsAuth Authentication handler instance
@@ -29,6 +30,7 @@ class GoogleSheets {
      * Constructor - direct auth initialization for security
      */
     public function __construct() {
+        parent::__construct('googlesheets');
         // Use filter-based auth access following pure discovery architectural standards
         $all_auth = apply_filters('datamachine_auth_providers', []);
         $this->auth = $all_auth['googlesheets_output'] ?? null;
@@ -44,43 +46,37 @@ class GoogleSheets {
     }
 
     /**
-     * Handle AI tool call for Google Sheets publishing.
+     * Execute Google Sheets publishing.
      *
      * @param array $parameters Structured parameters from AI tool call.
-     * @param array $tool_def Tool definition including handler configuration.
+     * @param array $handler_config Handler configuration.
      * @return array Tool execution result.
      */
-    public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        do_action('datamachine_log', 'debug', 'Google Sheets Tool: Handling tool call', [
+    protected function executePublish(array $parameters, array $handler_config): array {
+        $this->log('debug', 'Google Sheets Tool: Handling tool call', [
             'parameters' => $parameters,
             'parameter_keys' => array_keys($parameters),
-            'has_handler_config' => !empty($tool_def['handler_config']),
-            'handler_config_keys' => array_keys($tool_def['handler_config'] ?? [])
+            'has_handler_config' => !empty($handler_config),
+            'handler_config_keys' => array_keys($handler_config)
         ]);
 
         if (empty($parameters['content'])) {
-            $error_msg = 'Google Sheets tool call missing required content parameter';
-            do_action('datamachine_log', 'error', $error_msg, [
-                'provided_parameters' => array_keys($parameters),
-                'required_parameters' => ['content']
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $error_msg,
-                'tool_name' => 'googlesheets_append'
-            ];
+            return $this->errorResponse(
+                'Google Sheets tool call missing required content parameter',
+                [
+                    'provided_parameters' => array_keys($parameters),
+                    'required_parameters' => ['content']
+                ]
+            );
         }
 
-        $handler_config = $tool_def['handler_config'] ?? [];
-        
-        do_action('datamachine_log', 'debug', 'Google Sheets Tool: Using handler configuration', [
+        $this->log('debug', 'Google Sheets Tool: Using handler configuration', [
             'spreadsheet_id' => !empty($handler_config['googlesheets_spreadsheet_id']) ? 'present' : 'missing',
             'worksheet_name' => $handler_config['googlesheets_worksheet_name'] ?? 'Sheet1'
         ]);
 
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+        $engine_data = $this->getEngineData($job_id);
 
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
@@ -94,26 +90,16 @@ class GoogleSheets {
 
         // Validate spreadsheet ID
         if (empty($spreadsheet_id)) {
-            return [
-                'success' => false,
-                'error' => 'Google Sheets spreadsheet ID is required',
-                'tool_name' => 'googlesheets_append'
-            ];
+            return $this->errorResponse('Google Sheets spreadsheet ID is required');
         }
 
         // Get authenticated service
         $sheets_service = $this->auth->get_service();
         if (is_wp_error($sheets_service)) {
-            $error_msg = 'Google Sheets authentication failed: ' . $sheets_service->get_error_message();
-            do_action('datamachine_log', 'error', $error_msg, [
-                'error_code' => $sheets_service->get_error_code()
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $error_msg,
-                'tool_name' => 'googlesheets_append'
-            ];
+            return $this->errorResponse(
+                'Google Sheets authentication failed: ' . $sheets_service->get_error_message(),
+                ['error_code' => $sheets_service->get_error_code()]
+            );
         }
 
         try {
@@ -129,58 +115,38 @@ class GoogleSheets {
             $row_data = $this->prepare_row_data($title, $content, $metadata, $column_mapping);
 
             if (empty($row_data)) {
-                return [
-                    'success' => false,
-                    'error' => 'Failed to prepare data for Google Sheets',
-                    'tool_name' => 'googlesheets_append'
-                ];
+                return $this->errorResponse('Failed to prepare data for Google Sheets');
             }
 
             // Append data to Google Sheets
             $result = $this->append_to_sheet($sheets_service, $spreadsheet_id, $worksheet_name, $row_data);
 
             if (is_wp_error($result)) {
-                $error_msg = 'Google Sheets API error: ' . $result->get_error_message();
-                do_action('datamachine_log', 'error', $error_msg, [
-                    'error_code' => $result->get_error_code(),
-                    'spreadsheet_id' => $spreadsheet_id
-                ]);
-
-                return [
-                    'success' => false,
-                    'error' => $error_msg,
-                    'tool_name' => 'googlesheets_append'
-                ];
+                return $this->errorResponse(
+                    'Google Sheets API error: ' . $result->get_error_message(),
+                    [
+                        'error_code' => $result->get_error_code(),
+                        'spreadsheet_id' => $spreadsheet_id
+                    ]
+                );
             }
 
             $sheet_url = "https://docs.google.com/spreadsheets/d/{$spreadsheet_id}";
-            
-            do_action('datamachine_log', 'debug', 'Google Sheets Tool: Data appended successfully', [
+
+            $this->log('debug', 'Google Sheets Tool: Data appended successfully', [
                 'spreadsheet_id' => $spreadsheet_id,
                 'worksheet_name' => $worksheet_name,
                 'sheet_url' => $sheet_url
             ]);
 
-            return [
-                'success' => true,
-                'data' => [
-                    'spreadsheet_id' => $spreadsheet_id,
-                    'worksheet_name' => $worksheet_name,
-                    'sheet_url' => $sheet_url,
-                    'row_data' => $row_data
-                ],
-                'tool_name' => 'googlesheets_append'
-            ];
-        } catch (\Exception $e) {
-            do_action('datamachine_log', 'error', 'Google Sheets Tool: Exception during append operation', [
-                'exception' => $e->getMessage()
+            return $this->successResponse([
+                'spreadsheet_id' => $spreadsheet_id,
+                'worksheet_name' => $worksheet_name,
+                'sheet_url' => $sheet_url,
+                'row_data' => $row_data
             ]);
-            
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'tool_name' => 'googlesheets_append'
-            ];
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage());
         }
     }
 
@@ -304,7 +270,7 @@ class GoogleSheets {
             ], 'Google Sheets API');
 
             if (!$result['success']) {
-                do_action('datamachine_log', 'error', 'Google Sheets API request failed.', [
+                $this->log('error', 'Google Sheets API request failed.', [
                     'error' => $result['error'],
                     'spreadsheet_id' => $spreadsheet_id
                 ]);
@@ -317,29 +283,29 @@ class GoogleSheets {
             if ($response_code !== 200) {
                 $error_data = json_decode($response_body, true);
                 $error_message = $error_data['error']['message'] ?? 'Unknown Google Sheets API error';
-                
-                do_action('datamachine_log', 'error', 'Google Sheets API error.', [
+
+                $this->log('error', 'Google Sheets API error.', [
                     'response_code' => $response_code,
                     'error_message' => $error_message,
                     'spreadsheet_id' => $spreadsheet_id
                 ]);
-                
+
                 return new \WP_Error('googlesheets_api_error',
                     /* translators: %1$s: Error message, %2$d: HTTP response code */
                     sprintf(__('Google Sheets API error: %1$s (Code: %2$d)', 'datamachine'), $error_message, $response_code));
             }
 
             $result = json_decode($response_body, true);
-            
+
             if (json_last_error() !== JSON_ERROR_NONE) {
-                do_action('datamachine_log', 'error', 'Failed to decode Google Sheets API response.');
+                $this->log('error', 'Failed to decode Google Sheets API response.');
                 return new \WP_Error('googlesheets_decode_error', __('Invalid response from Google Sheets API.', 'datamachine'));
             }
 
             return $result;
 
         } catch (\Exception $e) {
-            do_action('datamachine_log', 'error', 'Exception during Google Sheets append operation: ' . $e->getMessage());
+            $this->log('error', 'Exception during Google Sheets append operation: ' . $e->getMessage());
             return new \WP_Error('googlesheets_exception', $e->getMessage());
         }
     }

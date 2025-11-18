@@ -10,12 +10,14 @@
 
 defined('ABSPATH') || exit;
 
-/**
- * Get file context array from flow ID
- *
- * @param int $flow_id Flow ID
- * @return array Context array with pipeline/flow metadata
- */
+     /**
+      * Execute a single step in a Data Machine flow.
+      *
+      * @param int $job_id Job ID for the execution
+      * @param string $flow_step_id Flow step ID to execute
+      * @param array|null $dataPackets Input data packets for the step
+      * @return bool True on success, false on failure
+      */
 function datamachine_get_file_context(int $flow_id): array {
     $flow = apply_filters('datamachine_get_flow_config', [], $flow_id);
     $pipeline_id = $flow['pipeline_id'] ?? 0;
@@ -134,14 +136,17 @@ function datamachine_register_execution_engine() {
      * @param array|null $data Input data for the step
      * @return bool True on success, false on failure
      */
-    add_action( 'datamachine_execute_step', function( $job_id, $flow_step_id, $data = null ) {
+    add_action( 'datamachine_execute_step', function( $job_id, $flow_step_id, $dataPackets = null ) {
 
         try {
+            // Convert Action Scheduler's stdClass to array
+            $dataPackets = is_object($dataPackets) ? json_decode(json_encode($dataPackets), true) : $dataPackets;
+
             $storage = apply_filters('datamachine_get_file_storage', null);
 
-            if ($storage && is_array($data) && isset($data['is_data_reference']) && $data['is_data_reference']) {
-                $data = $storage->retrieve_data_packet($data);
-                if ($data === null) {
+            if ($storage && is_array($dataPackets) && isset($dataPackets['is_data_reference']) && $dataPackets['is_data_reference']) {
+                $dataPackets = $storage->retrieve_data_packet($dataPackets);
+                if ($dataPackets === null) {
                     do_action('datamachine_fail_job', $job_id, 'data_retrieval_failure', [
                         'flow_step_id' => $flow_step_id
                     ]);
@@ -179,14 +184,14 @@ function datamachine_register_execution_engine() {
             $payload = [
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id,
-                'data' => is_array($data) ? $data : [],
+                'data' => is_array($dataPackets) ? $dataPackets : [],
                 'flow_step_config' => $flow_step_config,
                 'engine_data' => is_array($engine_data) ? $engine_data : [],
             ];
 
-            $data = $flow_step->execute($payload);
+            $dataPackets = $flow_step->execute($payload);
 
-            if (!is_array($data)) {
+            if (!is_array($dataPackets)) {
                 do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
                     'flow_step_id' => $flow_step_id,
                     'class' => $step_class,
@@ -196,14 +201,14 @@ function datamachine_register_execution_engine() {
                 return false;
             }
 
-            $payload['data'] = $data;
+            $payload['data'] = $dataPackets;
 
-            $step_success = ! empty( $data );
+            $step_success = ! empty( $dataPackets );
             if ( $step_success ) {
                 $next_flow_step_id = apply_filters('datamachine_get_next_flow_step_id', null, $flow_step_id, $payload);
 
                 if ( $next_flow_step_id ) {
-                    do_action('datamachine_schedule_next_step', $job_id, $next_flow_step_id, $data);
+                    do_action('datamachine_schedule_next_step', $job_id, $next_flow_step_id, $dataPackets);
                 } else {
                     do_action('datamachine_update_job_status', $job_id, 'completed', 'complete');
                     $cleanup = apply_filters('datamachine_get_file_cleanup', null);
@@ -215,7 +220,7 @@ function datamachine_register_execution_engine() {
                     do_action('datamachine_log', 'info', 'Pipeline execution completed successfully', [
                         'job_id' => $job_id,
                         'flow_step_id' => $flow_step_id,
-                        'final_data_count' => count($data)
+                        'final_packet_count' => count($dataPackets)
                     ]);
                 }
             } else {
@@ -244,18 +249,18 @@ function datamachine_register_execution_engine() {
         }
     }, 10, 3 );
 
-    /**
-     * Schedule next step in flow execution.
-     *
-     * Stores data packet in repository if needed, then schedules
-     * the step execution via Action Scheduler.
-     *
-     * @param int $job_id Job ID for the execution
-     * @param string $flow_step_id Flow step ID to schedule
-     * @param array $data Data to pass to the next step
-     * @return bool True on successful scheduling, false on failure
-     */
-    add_action('datamachine_schedule_next_step', function($job_id, $flow_step_id, $data = []) {
+     /**
+      * Schedule next step in flow execution.
+      *
+      * Stores data packet in repository if needed, then schedules
+      * the step execution via Action Scheduler.
+      *
+      * @param int $job_id Job ID for the execution
+      * @param string $flow_step_id Flow step ID to schedule
+      * @param array $dataPackets Data packets to pass to the next step
+      * @return bool True on successful scheduling, false on failure
+      */
+    add_action('datamachine_schedule_next_step', function($job_id, $flow_step_id, $dataPackets = []) {
         if (!function_exists('as_schedule_single_action')) {
             return false;
         }
@@ -266,9 +271,9 @@ function datamachine_register_execution_engine() {
             $flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
             $flow_id = $flow_step_config['flow_id'] ?? 0;
             $context = datamachine_get_file_context($flow_id);
-            $data_reference = $storage->store_data_packet($data, $job_id, $context);
+            $data_reference = $storage->store_data_packet($dataPackets, $job_id, $context);
         } else {
-            $data_reference = ['data' => $data];
+            $data_reference = ['data' => $dataPackets];
         }
         $action_id = as_schedule_single_action(
             time(),
@@ -276,11 +281,11 @@ function datamachine_register_execution_engine() {
             [
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id,
-                'data' => $data_reference
+                'dataPackets' => $data_reference
             ],
             'datamachine'
         );
-        if (!empty($data)) {
+        if (!empty($dataPackets)) {
             do_action('datamachine_log', 'debug', 'Next step scheduled via Action Scheduler', [
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id,
@@ -338,7 +343,7 @@ function datamachine_register_execution_engine() {
         } else {
             // Recurring execution
             $intervals = apply_filters('datamachine_scheduler_intervals', []);
-            $interval_seconds = $intervals[$interval_or_timestamp] ?? null;
+            $interval_seconds = $intervals[$interval_or_timestamp]['seconds'] ?? null;
 
             if (!$interval_seconds) {
                 do_action('datamachine_log', 'error', 'Invalid schedule interval', [

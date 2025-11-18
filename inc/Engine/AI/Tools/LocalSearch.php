@@ -107,6 +107,12 @@ class LocalSearch {
         ];
     }
 
+    /**
+     * Register Local Search tool with the global tools system.
+     *
+     * @param array $tools Existing tools array
+     * @return array Updated tools array with Local Search tool
+     */
     public function register_tool($tools) {
         $tools['local_search'] = [
             'class' => __CLASS__,
@@ -134,6 +140,13 @@ class LocalSearch {
         return true;
     }
 
+    /**
+     * Check if Local Search tool is properly configured.
+     *
+     * @param bool $configured Current configuration status
+     * @param string $tool_id Tool identifier to check
+     * @return bool True if configured, false otherwise
+     */
     public function check_configuration($configured, $tool_id) {
         if ($tool_id !== 'local_search') {
             return $configured;

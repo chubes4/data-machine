@@ -9,6 +9,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Register Bluesky publishing handler and authentication filters.
+ *
+ * Registers Bluesky as a publish handler with app password authentication support.
+ * Includes handler metadata, authentication provider, and AI tool registration.
+ *
+ * @since 0.1.0
+ */
 function datamachine_register_bluesky_filters() {
     add_filter('datamachine_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'publish') {

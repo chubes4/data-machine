@@ -13,11 +13,13 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Facebook;
 
+use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
-class Facebook {
+class Facebook extends PublishHandler {
 
     const FACEBOOK_API_VERSION = 'v22.0';
 
@@ -27,11 +29,12 @@ class Facebook {
     private $auth;
 
     public function __construct() {
+        parent::__construct('facebook');
         $all_auth = apply_filters('datamachine_auth_providers', []);
         $this->auth = $all_auth['facebook'] ?? null;
-        
+
         if ($this->auth === null) {
-            do_action('datamachine_log', 'error', 'Facebook Handler: Authentication service not available', [
+            $this->log('error', 'Facebook Handler: Authentication service not available', [
                 'missing_service' => 'facebook',
                 'available_providers' => array_keys($all_auth)
             ]);
@@ -42,49 +45,37 @@ class Facebook {
         return $this->auth;
     }
 
-    public function handle_tool_call(array $parameters, array $tool_def = []): array {
-
+    protected function executePublish(array $parameters, array $handler_config): array {
         if (empty($parameters['content'])) {
-            $error_msg = 'Facebook tool call missing required content parameter';
-            do_action('datamachine_log', 'error', $error_msg, [
-                'provided_parameters' => array_keys($parameters),
-                'required_parameters' => ['content']
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $error_msg,
-                'tool_name' => 'facebook_publish'
-            ];
+            return $this->errorResponse(
+                'Facebook tool call missing required content parameter',
+                [
+                    'provided_parameters' => array_keys($parameters),
+                    'required_parameters' => ['content']
+                ]
+            );
         }
 
-        $handler_config = $parameters['handler_config'] ?? [];
-        
         // Extract Facebook-specific configuration (it's nested under 'facebook' key)
         $facebook_config = $handler_config['facebook'] ?? $handler_config;
-        
 
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+        $engine_data = $this->getEngineData($job_id);
 
         // Extract parameters from flat structure
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
         $source_url = $engine_data['source_url'] ?? null;
-        $image_url = $engine_data['image_url'] ?? null;
+        $image_file_path = $engine_data['image_file_path'] ?? null;
         
         // Get config from Facebook-specific settings
         $include_images = $facebook_config['include_images'] ?? false;
         $link_handling = $facebook_config['link_handling'] ?? 'append'; // 'none', 'append', or 'comment'
         
         // Debug logging to verify parameter flow
-        do_action('datamachine_log', 'debug', 'Facebook Handler: Parameter extraction complete', [
+        $this->log('debug', 'Facebook Handler: Parameter extraction complete', [
             'source_url' => $source_url,
-            'image_url' => $image_url,
             'include_images' => $include_images,
-            'image_url_empty' => empty($image_url),
-            'image_url_valid' => $image_url ? filter_var($image_url, FILTER_VALIDATE_URL) : false,
-            'upload_condition' => $include_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL),
             'facebook_config_keys' => array_keys($facebook_config)
         ]);
 
@@ -94,19 +85,11 @@ class Facebook {
 
         // Validate auto-discovered page ID
         if (empty($page_id)) {
-            return [
-                'success' => false,
-                'error' => 'Facebook page not found. Please re-authenticate your Facebook account.',
-                'tool_name' => 'facebook_publish'
-            ];
+            return $this->errorResponse('Facebook page not found. Please re-authenticate your Facebook account.');
         }
 
         if (empty($page_access_token)) {
-            return [
-                'success' => false,
-                'error' => 'Facebook authentication failed - no access token',
-                'tool_name' => 'facebook_publish'
-            ];
+            return $this->errorResponse('Facebook authentication failed - no access token');
         }
 
         try {
@@ -125,13 +108,23 @@ class Facebook {
             ];
 
             // Handle image upload if provided and enabled
-            // Handle image upload if provided and enabled
-            if ($include_images && !empty($image_url) && filter_var($image_url, FILTER_VALIDATE_URL)) {
-                $image_result = $this->upload_image_to_facebook($image_url, $page_access_token, $page_id);
-                if ($image_result && isset($image_result['id'])) {
-                    // Use the correct parameter name for Facebook API
-                    $post_data['attached_media'] = json_encode([['media_fbid' => $image_result['id']]]);
+            if ($include_images && !empty($image_file_path)) {
+                $validation = $this->validateImage($image_file_path);
+
+                if (!$validation['valid']) {
+                    return $this->errorResponse(
+                        implode(', ', $validation['errors']),
+                        ['file_path' => $image_file_path, 'errors' => $validation['errors']]
+                    );
                 }
+
+                $image_result = $this->upload_image_file_to_facebook($image_file_path, $page_access_token, $page_id);
+                if (!$image_result || !isset($image_result['id'])) {
+                    return $this->errorResponse('Failed to upload image');
+                }
+
+                // Use the correct parameter name for Facebook API
+                $post_data['attached_media'] = json_encode([['media_fbid' => $image_result['id']]]);
             }
 
             // Make API request to Facebook
@@ -142,14 +135,7 @@ class Facebook {
             ]);
 
             if (is_wp_error($response)) {
-                $error_msg = 'Facebook API request failed: ' . $response->get_error_message();
-                do_action('datamachine_log', 'error', $error_msg);
-                
-                return [
-                    'success' => false,
-                    'error' => $error_msg,
-                    'tool_name' => 'facebook_publish'
-                ];
+                return $this->errorResponse('Facebook API request failed: ' . $response->get_error_message());
             }
 
             $response_body = wp_remote_retrieve_body($response);
@@ -158,8 +144,8 @@ class Facebook {
             if (isset($response_data['id'])) {
                 $post_id = $response_data['id'];
                 $post_url = "https://www.facebook.com/{$page_id}/posts/{$post_id}";
-                
-                do_action('datamachine_log', 'debug', 'Facebook Tool: Post created successfully', [
+
+                $this->log('debug', 'Facebook Tool: Post created successfully', [
                     'post_id' => $post_id,
                     'post_url' => $post_url
                 ]);
@@ -169,7 +155,7 @@ class Facebook {
                 if ($link_handling === 'comment' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
                     // Check if we have comment permissions before attempting to post
                     if ($this->auth && $this->auth->has_comment_permission()) {
-                        do_action('datamachine_log', 'debug', 'Facebook Tool: Attempting to post link as comment', [
+                        $this->log('debug', 'Facebook Tool: Attempting to post link as comment', [
                             'post_id' => $post_id,
                             'source_url' => $source_url,
                             'link_handling' => $link_handling
@@ -181,8 +167,8 @@ class Facebook {
                             'error' => 'Facebook comment skipped: Missing pages_manage_engagement permission. Please re-authenticate your Facebook account to enable comment functionality.',
                             'requires_reauth' => true
                         ];
-                        
-                        do_action('datamachine_log', 'error', 'Facebook Tool: Comment skipped due to missing permissions', [
+
+                        $this->log('error', 'Facebook Tool: Comment skipped due to missing permissions', [
                             'post_id' => $post_id,
                             'source_url' => $source_url,
                             'link_handling' => $link_handling,
@@ -191,7 +177,7 @@ class Facebook {
                         ]);
                     }
                 } else {
-                    do_action('datamachine_log', 'debug', 'Facebook Tool: Comment conditions not met', [
+                    $this->log('debug', 'Facebook Tool: Comment conditions not met', [
                         'link_handling' => $link_handling,
                         'has_source_url' => !empty($source_url),
                         'source_url_valid' => !empty($source_url) ? filter_var($source_url, FILTER_VALIDATE_URL) : false,
@@ -211,7 +197,7 @@ class Facebook {
                     $result_data['comment_url'] = $comment_result['comment_url'];
                 } elseif ($comment_result && !$comment_result['success']) {
                     // Comment failed but main post succeeded - log error but don't fail the whole operation
-                    do_action('datamachine_log', 'error', 'Facebook Tool: Main post created but comment failed', [
+                    $this->log('error', 'Facebook Tool: Main post created but comment failed', [
                         'post_id' => $post_id,
                         'post_url' => $post_url,
                         'comment_error' => $comment_result['error'],
@@ -220,33 +206,15 @@ class Facebook {
                     ]);
                 }
 
-                return [
-                    'success' => true,
-                    'data' => $result_data,
-                    'tool_name' => 'facebook_publish'
-                ];
+                return $this->successResponse($result_data);
             } else {
-                $error_msg = 'Facebook API error: ' . ($response_data['error']['message'] ?? 'Unknown error');
-                do_action('datamachine_log', 'error', $error_msg, [
-                    'response_data' => $response_data
-                ]);
-
-                return [
-                    'success' => false,
-                    'error' => $error_msg,
-                    'tool_name' => 'facebook_publish'
-                ];
+                return $this->errorResponse(
+                    'Facebook API error: ' . ($response_data['error']['message'] ?? 'Unknown error'),
+                    ['response_data' => $response_data]
+                );
             }
         } catch (\Exception $e) {
-            do_action('datamachine_log', 'error', 'Facebook Tool: Exception during posting', [
-                'exception' => $e->getMessage()
-            ]);
-            
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-                'tool_name' => 'facebook_publish'
-            ];
+            return $this->errorResponse($e->getMessage());
         }
     }
 
@@ -254,7 +222,7 @@ class Facebook {
      * Requires pages_manage_engagement permission for comment posting.
      */
     private function post_comment(string $post_id, string $source_url, string $access_token): array {
-        do_action('datamachine_log', 'debug', 'Facebook Tool: Posting URL as comment', [
+        $this->log('debug', 'Facebook Tool: Posting URL as comment', [
             'post_id' => $post_id,
             'source_url' => $source_url
         ]);
@@ -274,10 +242,8 @@ class Facebook {
 
             if (is_wp_error($response)) {
                 $error_msg = 'Facebook comment API request failed: ' . $response->get_error_message();
-                do_action('datamachine_log', 'warning', $error_msg, [
-                    'post_id' => $post_id
-                ]);
-                
+                $this->log('warning', $error_msg, ['post_id' => $post_id]);
+
                 return [
                     'success' => false,
                     'error' => $error_msg
@@ -290,8 +256,8 @@ class Facebook {
             if (isset($response_data['id'])) {
                 $comment_id = $response_data['id'];
                 $comment_url = "https://www.facebook.com/{$post_id}/?comment_id={$comment_id}";
-                
-                do_action('datamachine_log', 'debug', 'Facebook Tool: Comment posted successfully', [
+
+                $this->log('debug', 'Facebook Tool: Comment posted successfully', [
                     'comment_id' => $comment_id,
                     'comment_url' => $comment_url,
                     'post_id' => $post_id
@@ -305,19 +271,19 @@ class Facebook {
             } else {
                 $error_msg = 'Facebook comment API error: ' . ($response_data['error']['message'] ?? 'Unknown error');
                 $error_code = $response_data['error']['code'] ?? null;
-                
+
                 // Check if this is a permissions error
                 if ($error_code === 200 && strpos($error_msg, 'sufficient permissions') !== false) {
                     $error_msg = 'Facebook comment failed: Missing pages_manage_engagement permission. Please re-authenticate your Facebook account to enable comment functionality.';
-                    
-                    do_action('datamachine_log', 'warning', 'Facebook Tool: Comment failed due to missing permissions', [
+
+                    $this->log('warning', 'Facebook Tool: Comment failed due to missing permissions', [
                         'error_code' => $error_code,
                         'error_message' => $response_data['error']['message'] ?? 'No message',
                         'post_id' => $post_id,
                         'requires_reauth' => true
                     ]);
                 } else {
-                    do_action('datamachine_log', 'warning', 'Facebook Tool: Comment posting failed', [
+                    $this->log('warning', 'Facebook Tool: Comment posting failed', [
                         'response_data' => $response_data,
                         'post_id' => $post_id,
                         'error_code' => $error_code
@@ -331,11 +297,11 @@ class Facebook {
                 ];
             }
         } catch (\Exception $e) {
-            do_action('datamachine_log', 'warning', 'Facebook Tool: Exception during comment posting', [
+            $this->log('warning', 'Facebook Tool: Exception during comment posting', [
                 'exception' => $e->getMessage(),
                 'post_id' => $post_id
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $e->getMessage()
@@ -346,61 +312,7 @@ class Facebook {
     /**
      * Uploads unpublished photo to Facebook, returns photo object for attachment to post.
      */
-    private function upload_image_to_facebook(string $image_url, string $access_token, string $page_id): ?array {
-        do_action('datamachine_log', 'debug', 'Attempting to upload image to Facebook.', ['image_url' => $image_url]);
-        
-        if (!function_exists('download_url')) {
-            require_once(ABSPATH . 'wp-admin/includes/file.php');
-        }
-        
-        $temp_image_path = download_url($image_url);
-        if (is_wp_error($temp_image_path)) {
-            do_action('datamachine_log', 'warning', 'Failed to download image for Facebook upload.', [
-                'url' => $image_url, 
-                'error' => $temp_image_path->get_error_message()
-            ]);
-            return null;
-        }
 
-        try {
-            // Try Facebook's URL-based upload first (simpler and often more reliable)
-            $api_url = "https://graph.facebook.com/" . self::FACEBOOK_API_VERSION . "/{$page_id}/photos";
-            $photo_data = [
-                'url' => $image_url,
-                'published' => 'false', // Upload but don't publish yet
-                'access_token' => $access_token
-            ];
-
-            $response = wp_remote_post($api_url, [
-                'body' => $photo_data,
-                'timeout' => 60
-            ]);
-
-            if (is_wp_error($response)) {
-                do_action('datamachine_log', 'error', 'Facebook image upload failed: ' . $response->get_error_message());
-                return null;
-            }
-
-            $response_body = wp_remote_retrieve_body($response);
-            $response_data = json_decode($response_body, true);
-
-            if (isset($response_data['id'])) {
-                do_action('datamachine_log', 'debug', 'Successfully uploaded image to Facebook.', ['photo_id' => $response_data['id']]);
-                return $response_data;
-            } else {
-                do_action('datamachine_log', 'error', 'Facebook image upload failed.', ['response' => $response_data]);
-                return null;
-            }
-        } catch (\Exception $e) {
-            do_action('datamachine_log', 'error', 'Facebook image upload exception: ' . $e->getMessage());
-            return null;
-        } finally {
-            if ($temp_image_path && file_exists($temp_image_path)) {
-                wp_delete_file($temp_image_path);
-                do_action('datamachine_log', 'debug', 'Temporary image file cleaned up.', ['image_url' => $image_url]);
-            }
-        }
-    }
 
     public static function get_label(): string {
         return __('Facebook', 'datamachine');
@@ -425,8 +337,8 @@ class Facebook {
         
         foreach ($problematic_patterns as $pattern) {
             if (strpos($image_url, $pattern) !== false) {
-                do_action('datamachine_log', 'warning', 'Facebook: Skipping problematic image URL pattern', [
-                    'url' => $image_url, 
+                $this->log('warning', 'Facebook: Skipping problematic image URL pattern', [
+                    'url' => $image_url,
                     'pattern' => $pattern
                 ]);
                 return false;
@@ -439,8 +351,8 @@ class Facebook {
         ]);
 
         if (is_wp_error($response)) {
-            do_action('datamachine_log', 'warning', 'Facebook: Image URL not accessible', [
-                'url' => $image_url, 
+            $this->log('warning', 'Facebook: Image URL not accessible', [
+                'url' => $image_url,
                 'error' => $response->get_error_message()
             ]);
             return false;
@@ -454,9 +366,9 @@ class Facebook {
             return true;
         }
 
-        do_action('datamachine_log', 'warning', 'Facebook: Image URL validation failed', [
-            'url' => $image_url, 
-            'http_code' => $http_code, 
+        $this->log('warning', 'Facebook: Image URL validation failed', [
+            'url' => $image_url,
+            'http_code' => $http_code,
             'content_type' => $content_type
         ]);
         return false;

@@ -14,10 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Rss {
 
-    /**
-     * Fetch RSS/Atom content with timeframe and keyword filtering.
-     * Engine data (source_url, image_url) stored via datamachine_engine_data filter.
-     */
+     /**
+      * Fetch RSS/Atom content with timeframe and keyword filtering.
+      * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
+      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
 
         $flow_step_id = $handler_config['flow_step_id'] ?? null;
@@ -215,10 +215,14 @@ class Rss {
             ];
 
             if ($job_id) {
-                apply_filters('datamachine_engine_data', null, $job_id, [
-                    'source_url' => $link ?: '',
-                    'image_url' => $enclosure_url ?: ''
-                ]);
+                $engine_data = ['source_url' => $link ?: ''];
+
+                // Store repository file path if image was downloaded
+                if (!empty($file_info) && isset($file_info['file_path'])) {
+                    $engine_data['image_file_path'] = $file_info['file_path'];
+                }
+
+                apply_filters('datamachine_engine_data', null, $job_id, $engine_data);
             }
 
             return ['processed_items' => [$input_data]];

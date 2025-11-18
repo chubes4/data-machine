@@ -12,12 +12,12 @@ if (!defined('ABSPATH')) {
 /**
  * Adds packet to front of data array with type and timestamp.
  */
-add_filter('datamachine_data_packet', function($data, $packet_data, $flow_step_id, $step_type) {
+add_filter('datamachine_data_packet', function($dataPackets, $packet_data, $flow_step_id, $step_type) {
     $packet = array_merge($packet_data, [
         'type' => $packet_data['type'] ?? $step_type,
         'timestamp' => $packet_data['timestamp'] ?? time()
     ]);
 
-    array_unshift($data, $packet);
-    return $data;
+    array_unshift($dataPackets, $packet);
+    return $dataPackets;
 }, 10, 4);

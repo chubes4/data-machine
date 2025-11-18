@@ -9,6 +9,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Register Facebook publishing handler and authentication filters.
+ *
+ * Registers Facebook as a publish handler with OAuth 2.0 authentication support.
+ * Includes handler metadata, authentication provider, and AI tool registration.
+ *
+ * @since 0.1.0
+ */
 function datamachine_register_facebook_filters() {
     add_filter('datamachine_handlers', function($handlers, $step_type = null) {
         if ($step_type === null || $step_type === 'publish') {

@@ -2,6 +2,7 @@
 
 namespace DataMachine\Core\Steps\Publish;
 
+use DataMachine\Core\Steps\Step;
 use DataMachine\Engine\AI\ToolResultFinder;
 
 if (!defined('ABSPATH')) {
@@ -13,76 +14,46 @@ if (!defined('ABSPATH')) {
  *
  * @package DataMachine
  */
-class PublishStep {
+class PublishStep extends Step {
 
     /**
-     * Execute data publishing for the current step.
-     *
-     * @param array $payload Unified step payload
-     * @return array Updated data packet array
+     * Initialize publish step.
      */
-    public function execute(array $payload): array {
-        $flow_step_id = $payload['flow_step_id'] ?? '';
-        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
-        $flow_step_config = $payload['flow_step_config'] ?? [];
-        
-        try {
-            do_action('datamachine_log', 'debug', 'Publish Step: Starting data publishing', ['flow_step_id' => $flow_step_id]);
-
-            if (empty($flow_step_config)) {
-                do_action('datamachine_log', 'error', 'Publish Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);
-                return [];
-            }
-
-            $handler = $flow_step_config['handler_slug'] ?? '';
-
-            if (empty($handler)) {
-                do_action('datamachine_log', 'error', 'Publish Step: Publish step requires handler configuration', [
-                    'flow_step_id' => $flow_step_id,
-                    'available_flow_step_config' => array_keys($flow_step_config)
-                ]);
-                return [];
-            }
-
-            $tool_result_entry = ToolResultFinder::findHandlerResult($data, $handler);
-            if ($tool_result_entry) {
-                do_action('datamachine_log', 'info', 'PublishStep: AI successfully used handler tool', [
-                    'handler' => $handler,
-                    'tool_result' => $tool_result_entry['metadata']['tool_name'] ?? 'unknown'
-                ]);
-                
-                return $this->create_publish_entry_from_tool_result($tool_result_entry, $data, $handler, $flow_step_id);
-            }
-
-            do_action('datamachine_log', 'error', 'PublishStep: AI did not execute handler tool - step failed', [
-                'flow_step_id' => $flow_step_id,
-                'expected_handler' => $handler,
-                'data_entries' => count($data),
-                'available_entry_types' => array_unique(array_column($data, 'type'))
-            ]);
-            
-            return [];
-
-        } catch (\Exception $e) {
-            do_action('datamachine_log', 'error', 'Publish Step: Exception during publishing', [
-                'flow_step_id' => $flow_step_id,
-                'exception' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return $data;
-        }
+    public function __construct() {
+        parent::__construct('publish');
     }
 
     /**
-     * Create publish data entry from AI tool execution result.
+     * Execute publish step logic.
      *
-     * @param array $tool_result_entry Tool execution result entry
-     * @param array $data Current data packet array
-     * @param string $handler Handler name
-     * @param string $flow_step_id Flow step identifier
-     * @return array Publish data entry
+     * @return array
      */
-    private function create_publish_entry_from_tool_result(array $tool_result_entry, array $data, string $handler, string $flow_step_id): array {
+    protected function executeStep(): array {
+        $handler = $this->getHandlerSlug();
+
+        $tool_result_entry = ToolResultFinder::findHandlerResult($this->dataPackets, $handler, $this->flow_step_id);
+        if ($tool_result_entry) {
+            $this->log('info', 'AI successfully used handler tool', [
+                'handler' => $handler,
+                'tool_result' => $tool_result_entry['metadata']['tool_name'] ?? 'unknown'
+            ]);
+
+            return $this->create_publish_entry_from_tool_result($tool_result_entry, $this->dataPackets, $handler, $this->flow_step_id);
+        }
+
+        return [];
+    }
+
+     /**
+      * Create publish data packet from AI tool execution result.
+      *
+      * @param array $tool_result_entry Tool execution result entry
+      * @param array $dataPackets Current data packet array
+      * @param string $handler Handler name
+      * @param string $flow_step_id Flow step identifier
+      * @return array Publish data packet
+      */
+    private function create_publish_entry_from_tool_result(array $tool_result_entry, array $dataPackets, string $handler, string $flow_step_id): array {
         $tool_result_data = $tool_result_entry['metadata']['tool_result'] ?? [];
         $entry_type = $tool_result_entry['type'] ?? '';
 
@@ -109,9 +80,9 @@ class PublishStep {
             'timestamp' => time()
         ];
 
-        $data = apply_filters('datamachine_data_packet', $data, $publish_entry, $flow_step_id, 'publish');
+        $dataPackets = apply_filters('datamachine_data_packet', $dataPackets, $publish_entry, $flow_step_id, 'publish');
 
-        return $data;
+        return $dataPackets;
     }
 
 }

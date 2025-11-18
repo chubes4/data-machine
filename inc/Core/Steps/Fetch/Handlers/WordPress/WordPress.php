@@ -16,10 +16,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPress {
 
-    /**
-     * Fetch local WordPress content with timeframe and keyword filtering.
-     * Engine data (source_url, image_url) stored via datamachine_engine_data filter.
-     */
+     /**
+      * Fetch WordPress posts with timeframe and keyword filtering.
+      * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
+      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
             do_action('datamachine_log', 'error', 'WordPress Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
@@ -220,11 +220,16 @@ class WordPress {
             'metadata' => $metadata
         ];
 
-        // Store URLs in engine_data via centralized filter
+        // Store URLs and file path in engine_data via centralized filter
+        $image_file_path = '';
+        if ($file_info) {
+            $image_file_path = $file_info['file_path'];
+        }
+
         if ($job_id) {
             apply_filters('datamachine_engine_data', null, $job_id, [
                 'source_url' => get_permalink($post_id) ?: '',
-                'image_url' => $image_url ?: ''
+                'image_file_path' => $image_file_path
             ]);
         }
 

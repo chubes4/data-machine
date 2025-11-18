@@ -2,6 +2,8 @@
 
 namespace DataMachine\Core\Steps\Fetch;
 
+use DataMachine\Core\Steps\Step;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -11,66 +13,47 @@ if (!defined('ABSPATH')) {
  *
  * @package DataMachine
  */
-class FetchStep {
+class FetchStep extends Step {
 
     /**
-     * Execute data fetching for the current step.
-     *
-     * @param array $payload Unified step payload (job_id, flow_step_id, data, flow_step_config, engine_data)
-     * @return array Updated data packet array
+     * Initialize fetch step.
      */
-    public function execute(array $payload): array {
-        $job_id = $payload['job_id'] ?? 0;
-        $flow_step_id = $payload['flow_step_id'] ?? '';
-        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
-        $flow_step_config = $payload['flow_step_config'] ?? [];
-        $engine_data = $payload['engine_data'] ?? [];
+    public function __construct() {
+        parent::__construct('fetch');
+    }
 
-        try {
-            do_action('datamachine_log', 'debug', 'Fetch Step: Starting data collection', [
-                'flow_step_id' => $flow_step_id,
-                'existing_items' => count($data)
-            ]);
+    /**
+     * Log step execution start with fetch-specific context.
+     *
+     * @return void
+     */
+    protected function logStart(): void {
+        $this->log('debug', 'Starting data collection', [
+            'existing_items' => count($this->dataPackets)
+        ]);
+    }
 
-            if (empty($flow_step_config)) {
-                do_action('datamachine_log', 'error', 'Fetch Step: No step configuration provided', ['flow_step_id' => $flow_step_id]);
-                return [];
-            }
+    /**
+     * Execute fetch step logic.
+     *
+     * @return array
+     */
+    protected function executeStep(): array {
+        $handler = $this->getHandlerSlug();
+        $handler_settings = $this->getHandlerConfig();
 
-            $handler = $flow_step_config['handler_slug'] ?? '';
+        $handler_settings['flow_step_id'] = $this->flow_step_config['flow_step_id'] ?? null;
+        $handler_settings['pipeline_id'] = $this->flow_step_config['pipeline_id'] ?? null;
+        $handler_settings['flow_id'] = $this->flow_step_config['flow_id'] ?? null;
 
-            if (empty($handler)) {
-                do_action('datamachine_log', 'error', 'Fetch Step: Fetch step requires handler configuration', [
-                    'flow_step_id' => $flow_step_id,
-                    'available_flow_step_config' => array_keys($flow_step_config)
-                ]);
-                return [];
-            }
+        $fetch_entry = $this->execute_handler($handler, $this->flow_step_config, $handler_settings, (string) $this->job_id);
 
-            $handler_settings = $flow_step_config['handler_config'] ?? [];
-            $handler_settings['flow_step_id'] = $flow_step_config['flow_step_id'] ?? null;
-            $handler_settings['pipeline_id'] = $flow_step_config['pipeline_id'] ?? null;
-            $handler_settings['flow_id'] = $flow_step_config['flow_id'] ?? null;
-
-            $fetch_entry = $this->execute_handler($handler, $flow_step_config, $handler_settings, (string) $job_id);
-
-            if (!$fetch_entry) {
-                do_action('datamachine_log', 'error', 'Fetch handler returned no content', ['flow_step_id' => $flow_step_id]);
-                return $data; // Return unchanged array
-            }
-
-            $data = apply_filters('datamachine_data_packet', $data, $fetch_entry, $flow_step_id, 'fetch');
-
-            return $data;
-
-        } catch (\Exception $e) {
-            do_action('datamachine_log', 'error', 'Fetch Step: Exception during data collection', [
-                'flow_step_id' => $flow_step_id,
-                'exception' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return $data;
+        if (!$fetch_entry) {
+            $this->log('error', 'Fetch handler returned no content');
+            return $this->dataPackets;
         }
+
+        return $this->addDataPacket($fetch_entry);
     }
 
     /**
@@ -211,7 +194,7 @@ class FetchStep {
                 ];
 
             } catch (\Exception $e) {
-                do_action('datamachine_log', 'error', 'Fetch Step: Failed to create data entry from handler output', [
+                do_action('datamachine_log', 'error', 'Fetch Step: Failed to create data packet from handler output', [
                     'handler' => $handler_name,
                     'pipeline_id' => $pipeline_id,
                     'flow_id' => $flow_id,

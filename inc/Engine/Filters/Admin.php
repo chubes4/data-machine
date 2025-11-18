@@ -7,9 +7,16 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+/**
+ * Register admin interface filters for Data Machine.
+ *
+ * Registers filters for admin page discovery, menu management, and UI components.
+ *
+ * @since 0.1.0
+ */
 function datamachine_register_admin_filters() {
-    
-    
+
+
     add_filter('datamachine_admin_pages', function($pages) {
         return $pages;
     }, 5, 1);
@@ -45,6 +52,14 @@ function datamachine_register_admin_filters() {
 
 
 
+/**
+ * Register admin menu and pages for Data Machine.
+ *
+ * Creates WordPress admin menu structure and registers pages based on enabled settings.
+ * Handles Engine Mode restrictions and page ordering.
+ *
+ * @since 0.1.0
+ */
 function datamachine_register_admin_menu() {
     // Get enabled admin pages based on settings (includes Engine Mode check)
     $registered_pages = datamachine_get_enabled_admin_pages();

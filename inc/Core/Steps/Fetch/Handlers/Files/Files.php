@@ -24,7 +24,7 @@ class Files {
 
 	/**
 	 * Process uploaded files with universal image handling.
-	 * For images: stores image_url via datamachine_engine_data filter.
+	 * For images: stores image_file_path via datamachine_engine_data filter.
 	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         $storage = $this->get_file_storage();
@@ -112,12 +112,13 @@ class Files {
             $file_url = str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $next_file['persistent_path']);
         }
 
-        // Store URLs in engine_data via centralized filter
+        // Store file path in engine_data via centralized filter
         if ($job_id) {
-            apply_filters('datamachine_engine_data', null, $job_id, [
-                'source_url' => '',
-                'image_url' => $file_url // Image URL for images only
-            ]);
+            $engine_data = ['source_url' => ''];
+            if (strpos($mime_type, 'image/') === 0) {
+                $engine_data['image_file_path'] = $next_file['persistent_path'];
+            }
+            apply_filters('datamachine_engine_data', null, $job_id, $engine_data);
         }
 
         do_action('datamachine_log', 'debug', 'Files Input: Found unprocessed file for processing.', [

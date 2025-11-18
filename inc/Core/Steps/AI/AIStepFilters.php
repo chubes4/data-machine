@@ -11,6 +11,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Register AI step type and configuration filters.
+ *
+ * Registers the AI step type for pipeline workflows and configures
+ * AI provider settings and directive management.
+ *
+ * @since 0.1.0
+ */
 function datamachine_register_ai_step_filters() {
 
     add_filter('datamachine_step_types', function($steps) {

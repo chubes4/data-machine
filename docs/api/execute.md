@@ -6,7 +6,7 @@
 
 ## Overview
 
-The Execute endpoint provides comprehensive workflow execution capabilities for both database flows and ephemeral workflows. Supports immediate execution, recurring schedules, and delayed (one-time) execution.
+The Execute endpoint provides workflow execution capabilities for both database flows and ephemeral workflows. Supports immediate execution and delayed (one-time) execution.
 
 ## Authentication
 
@@ -19,9 +19,9 @@ See [Authentication Guide](authentication.md) for setup instructions.
 
 ## Capabilities
 
-- **Database Flow Execution**: Trigger saved flows with immediate, recurring, or delayed execution
+- **Database Flow Execution**: Trigger saved flows with immediate or delayed execution
 - **Ephemeral Workflow Execution**: Execute temporary workflows without database persistence
-- **Scheduling**: Configure recurring schedules or one-time delayed execution
+- **Delayed Execution**: Schedule one-time future execution of flows
 - **Execution Context**: Track execution source via `'rest_api_trigger'` context identifier
 
 ## Request Format
@@ -60,15 +60,6 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
   -d '{"flow_id": 123}'
 ```
 
-### Recurring Schedule (Hourly)
-
-```bash
-curl -X POST https://example.com/wp-json/datamachine/v1/execute \
-  -H "Content-Type: application/json" \
-  -u username:application_password \
-  -d '{"flow_id": 123, "interval": "hourly"}'
-```
-
 ### Delayed Execution (One-Time)
 
 ```bash
@@ -76,15 +67,6 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{"flow_id": 123, "timestamp": 1704153600}'
-```
-
-### Clear Schedule (Set to Manual)
-
-```bash
-curl -X POST https://example.com/wp-json/datamachine/v1/execute \
-  -H "Content-Type: application/json" \
-  -u username:application_password \
-  -d '{"flow_id": 123, "interval": "manual"}'
 ```
 
 ### Ephemeral Workflow - Immediate

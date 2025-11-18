@@ -335,15 +335,23 @@ export const updateUserMessage = async ( flowStepId, message ) => {
  * @param {number} flowId - Flow ID
  * @param {Object} schedulingConfig - Scheduling configuration
  * @param {string} schedulingConfig.interval - Interval (hourly, daily, weekly, etc.)
- * @param {string} schedulingConfig.start_date - Start date (optional)
  * @returns {Promise<Object>} Updated flow data
  */
 export const updateFlowSchedule = async ( flowId, schedulingConfig ) => {
-	return await apiRequest( '/execute', {
+	const { interval } = schedulingConfig;
+
+	// Determine action based on interval
+	let action = 'schedule';
+	if (interval === 'manual') {
+		action = 'update'; // Setting to manual is an update action
+	}
+
+	return await apiRequest( '/schedule', {
 		method: 'POST',
 		data: {
 			flow_id: flowId,
-			interval: schedulingConfig.interval,
+			action: action,
+			interval: interval === 'manual' ? null : interval,
 		},
 	} );
 };

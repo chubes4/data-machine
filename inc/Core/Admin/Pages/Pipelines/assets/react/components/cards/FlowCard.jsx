@@ -299,7 +299,11 @@ function FlowCardInner() {
 					<CardDivider />
 
 					<FlowFooter
-						schedulingConfig={ flow.scheduling_config || {} }
+						schedulingConfig={{
+							...flow.scheduling_config,
+							last_run_at: flow.last_run,
+							next_run_time: flow.next_run
+						}}
 					/>
 				</CardBody>
 			</Card>

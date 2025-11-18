@@ -4,16 +4,7 @@
  * Centralized constant definitions for intervals and other shared values.
  */
 
-/**
- * Scheduling Intervals
- */
-export const SCHEDULING_INTERVALS = [
-	{ value: 'manual', label: 'Manual only' },
-	{ value: 'hourly', label: 'Every hour' },
-	{ value: 'twicedaily', label: 'Twice daily' },
-	{ value: 'daily', label: 'Daily' },
-	{ value: 'weekly', label: 'Weekly' },
-];
+
 
 /**
  * Modal Types

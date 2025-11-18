@@ -169,7 +169,7 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 $payload = [
     'job_id' => $job_id,
     'flow_step_id' => $flow_step_id,
-    'data' => $data,  // Data packet array
+    'data' => $dataPackets,  // Data packet array
     'flow_step_config' => $flow_step_config,
     'engine_data' => apply_filters('datamachine_engine_data', [], $job_id)
 ];
@@ -329,19 +329,19 @@ class MyStep {
     public function execute(array $payload): array {
         $job_id = $payload['job_id'];
         $flow_step_id = $payload['flow_step_id'];
-        $data = $payload['data'] ?? [];
+        $dataPackets = $payload['data'] ?? [];
         $flow_step_config = $payload['flow_step_config'] ?? [];
         $engine_data = $payload['engine_data'] ?? [];
 
         do_action('datamachine_mark_item_processed', $flow_step_id, 'my_step', $item_id, $job_id);
 
-        array_unshift($data, [
+        array_unshift($dataPackets, [
             'type' => 'my_step',
             'content' => ['title' => $title, 'body' => $content],
-            'metadata' => ['source_type' => $data[0]['metadata']['source_type'] ?? 'unknown'],
+            'metadata' => ['source_type' => $dataPackets[0]['metadata']['source_type'] ?? 'unknown'],
             'timestamp' => time()
         ]);
-        return $data;
+        return $dataPackets;
     }
 }
 

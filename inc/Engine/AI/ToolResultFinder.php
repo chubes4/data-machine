@@ -16,18 +16,19 @@ if (!defined('ABSPATH')) {
  */
 class ToolResultFinder {
 
-    /**
-     * Find AI tool execution result by exact handler match.
-     *
-     * Searches data packet for tool_result or ai_handler_complete entries
-     * matching the specified handler slug.
-     *
-     * @param array $data Data packet array from pipeline execution
-     * @param string $handler Handler slug to match
-     * @return array|null Tool result entry or null if no match found
-     */
-    public static function findHandlerResult(array $data, string $handler): ?array {
-        foreach ($data as $entry) {
+     /**
+      * Find AI tool execution result by exact handler match.
+      *
+      * Searches data packet for tool_result or ai_handler_complete entries
+      * matching the specified handler slug. Logs error when no match found.
+      *
+      * @param array $dataPackets Data packet array from pipeline execution
+      * @param string $handler Handler slug to match
+      * @param string $flow_step_id Flow step ID for error logging context
+      * @return array|null Tool result entry or null if no match found
+      */
+    public static function findHandlerResult(array $dataPackets, string $handler, string $flow_step_id): ?array {
+        foreach ($dataPackets as $entry) {
             $entry_type = $entry['type'] ?? '';
 
             if (in_array($entry_type, ['tool_result', 'ai_handler_complete'])) {
@@ -37,6 +38,13 @@ class ToolResultFinder {
                 }
             }
         }
+
+        // Log error when not found
+        do_action('datamachine_log', 'error', 'AI did not execute handler tool', [
+            'handler' => $handler,
+            'flow_step_id' => $flow_step_id
+        ]);
+
         return null;
     }
 }

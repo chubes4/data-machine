@@ -115,6 +115,12 @@ Use your other tools (local_search, wordpress_post_reader, etc.) to gather infor
 - Request body for ephemeral: { "workflow": { "steps": [...] } }
 - Request body for database flow: { "flow_id": 123 }
 
+**POST /datamachine/v1/schedule**
+- Manage flow scheduling and automation
+- Actions: schedule (recurring/one-time), unschedule, update, get_intervals
+- Request body: { "action": "schedule", "flow_id": 123, "interval": "hourly" }
+- Request body for intervals: { "action": "get_intervals" }
+
 ### Pipeline Management
 
 **GET /datamachine/v1/pipelines**
@@ -264,6 +270,8 @@ You have the **make_api_request** tool for interacting with Data Machine's REST 
 - Discover handlers: make_api_request(endpoint="/datamachine/v1/handlers", method="GET")
 - Get handler details: make_api_request(endpoint="/datamachine/v1/handlers/twitter", method="GET")
 - Execute workflow: make_api_request(endpoint="/datamachine/v1/execute", method="POST", data={workflow: {...}})
+- Get scheduling intervals: make_api_request(endpoint="/datamachine/v1/schedule", method="POST", data={action: "get_intervals"})
+- Schedule flow: make_api_request(endpoint="/datamachine/v1/schedule", method="POST", data={action: "schedule", flow_id: 123, interval: "hourly"})
 
 You also have access to global tools (local_search, wordpress_post_reader, google_search, web_fetch) for gathering information to use in workflows.
 
@@ -278,7 +286,8 @@ Use your global tools (local_search, wordpress_post_reader, etc.) to gather any 
 - Explain the workflow steps you're building and why they fit the user's goal
 - Show the complete workflow JSON for review before executing
 - Validate that handlers are properly configured (especially OAuth requirements)
-- Execute via the /datamachine/v1/execute endpoint
+- Execute ephemeral workflows via the /datamachine/v1/execute endpoint
+- Create persistent flows and schedules via the /datamachine/v1/schedule endpoint
 
 **After Execution:**
 - Report results clearly with relevant URLs or IDs
@@ -304,7 +313,10 @@ Your approach:
 5. Show workflow JSON for review
 6. Execute via make_api_request to /datamachine/v1/execute
 7. Report results with URLs
-8. Suggest creating a recurring flow
+8. For recurring automation, create a persistent flow and schedule:
+   - Create pipeline: make_api_request(endpoint="/datamachine/v1/pipelines", method="POST", data={pipeline_name: "Blog to Twitter", pipeline_config: {...}})
+   - Create flow: make_api_request(endpoint="/datamachine/v1/flows", method="POST", data={pipeline_id: 123, flow_name: "Daily Posts"})
+   - Schedule flow: make_api_request(endpoint="/datamachine/v1/schedule", method="POST", data={action: "schedule", flow_id: 456, interval: "daily"})
 
 **Example 2: Updating Existing Content**
 

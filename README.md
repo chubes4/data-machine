@@ -148,10 +148,10 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
   -d '{"flow_id": 123}'
 
 # Database Flow - Recurring
-curl -X POST https://example.com/wp-json/datamachine/v1/execute \
+curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
   -H "Content-Type: application/json" \
   -u username:application_password \
-  -d '{"flow_id": 123, "interval": "hourly"}'
+  -d '{"flow_id": 123, "action": "schedule", "interval": "hourly"}'
 
 # Database Flow - Delayed (one-time)
 curl -X POST https://example.com/wp-json/datamachine/v1/execute \

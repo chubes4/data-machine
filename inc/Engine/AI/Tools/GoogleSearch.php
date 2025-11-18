@@ -135,6 +135,12 @@ class GoogleSearch {
         ];
     }
 
+    /**
+     * Register Google Search tool with the global tools system.
+     *
+     * @param array $tools Existing tools array
+     * @return array Updated tools array with Google Search tool
+     */
     public function register_tool($tools) {
         $tools['google_search'] = [
             'class' => __CLASS__,
@@ -170,6 +176,13 @@ class GoogleSearch {
         return $config['google_search'] ?? [];
     }
 
+    /**
+     * Check if Google Search tool is properly configured.
+     *
+     * @param bool $configured Current configuration status
+     * @param string $tool_id Tool identifier to check
+     * @return bool True if configured, false otherwise
+     */
     public function check_configuration($configured, $tool_id) {
         if ($tool_id !== 'google_search') {
             return $configured;

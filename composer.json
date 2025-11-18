@@ -26,7 +26,6 @@
 			"inc/Engine/Filters/Database.php",
 			"inc/Engine/Filters/Admin.php",
 			"inc/Engine/Filters/Logger.php",
-			"inc/Engine/Filters/AI.php",
 			"inc/Engine/Filters/OAuth.php",
 			"inc/Core/OAuth/OAuthFilters.php",
 			"inc/Engine/Actions/DataMachineActions.php",

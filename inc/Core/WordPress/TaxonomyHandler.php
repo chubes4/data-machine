@@ -9,7 +9,7 @@
  * @subpackage Core\Steps\Publish\Handlers\WordPress
  */
 
-namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
+namespace DataMachine\Core\WordPress;
 
 if (!defined('ABSPATH')) {
     exit;

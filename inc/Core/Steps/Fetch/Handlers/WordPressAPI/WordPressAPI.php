@@ -21,19 +21,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class WordPressAPI {
 
-    /**
-     * Fetch WordPress REST API content with timeframe and keyword filtering.
-     *
-     * Retrieves posts/pages from external WordPress sites via REST API.
-     * Engine data (source_url, image_url) stored via datamachine_engine_data filter.
-     *
-     * @param int $pipeline_id Pipeline ID for context
-     * @param array $handler_config Handler configuration settings
-     * @param string|null $job_id Job ID for engine data storage
-     * @return array {
-     *     @type array[] $processed_items Array of processed content items
-     * }
-     */
+     /**
+      * Fetch WordPress posts via REST API with timeframe and keyword filtering.
+      * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
+      */
     public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
         if (empty($pipeline_id)) {
             do_action('datamachine_log', 'error', 'WordPress API Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
@@ -258,11 +249,16 @@ class WordPressAPI {
                 'metadata' => $metadata
             ];
 
-            // Store URLs in engine_data via centralized filter
+            // Store URLs and file path in engine_data via centralized filter
+            $image_file_path = '';
+            if ($download_result) {
+                $image_file_path = $download_result['path'];
+            }
+
             if ($job_id) {
                 apply_filters('datamachine_engine_data', null, $job_id, [
                     'source_url' => $source_link,
-                    'image_url' => $image_url ?: ''
+                    'image_file_path' => $image_file_path
                 ]);
             }
 

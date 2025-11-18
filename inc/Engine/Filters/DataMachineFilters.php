@@ -14,10 +14,17 @@ if (!defined('WPINC')) {
     die;
 }
 
+/**
+ * Register import/export filters for Data Machine.
+ *
+ * Registers filters for importer service discovery and initialization.
+ *
+ * @since 0.1.0
+ */
 function datamachine_register_importexport_filters() {
-    
 
-    
+
+
     add_filter('datamachine_importer', function($service) {
         if ($service === null) {
             require_once DATAMACHINE_PATH . 'inc/Engine/Actions/ImportExport.php';

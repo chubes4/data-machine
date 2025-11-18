@@ -14,6 +14,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Register chat API filters and tool enablement.
+ *
+ * Registers chat-specific tools, directive application, and session management
+ * for the conversational AI workflow builder.
+ *
+ * @since 0.2.0
+ */
 function datamachine_register_chat_filters() {
 
     // Register chat-specific tool enablement for universal Engine layer

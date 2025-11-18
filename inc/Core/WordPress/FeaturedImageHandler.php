@@ -8,7 +8,7 @@
  * @package DataMachine\Core\Steps\Publish\Handlers\WordPress
  */
 
-namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
+namespace DataMachine\Core\WordPress;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -24,29 +24,40 @@ class FeaturedImageHandler {
 
     /**
      * Process and attach featured image to post.
-     *
-     * Downloads image from URL in engine data, validates it, and attaches
-     * as featured image to the specified post.
-     *
-     * @param int $post_id WordPress post ID
-     * @param array $engine_data Engine data containing image_url
-     * @param array $handler_config Handler configuration settings
-     * @return array|null {
-     *     @type int $attachment_id WordPress attachment ID
-     *     @type string $url Image URL
-     * } or null if processing failed
+      *
+      * Uses repository image file from engine data, validates it, and attaches
+      * as featured image to the specified post.
+      *
+      * @param int $post_id WordPress post ID
+      * @param array $engine_data Engine data containing image_file_path
+      * @param array $handler_config Handler configuration settings
+      * @return array|null {
+      *     @type int $attachment_id WordPress attachment ID
+      *     @type string $url Image URL
+      * } or null if processing failed
      */
     public function processImage(int $post_id, array $engine_data, array $handler_config): ?array {
         if (!$this->isImageHandlingEnabled($handler_config)) {
             return null;
         }
 
-        $image_url = $engine_data['image_url'] ?? null;
-        if (empty($image_url) || !$this->validateImageUrl($image_url)) {
+        $image_file_path = $engine_data['image_file_path'] ?? null;
+        if (empty($image_file_path)) {
             return null;
         }
 
-        return $this->downloadAndAttach($post_id, $image_url);
+        $image_validator = apply_filters('datamachine_get_image_validator', null);
+        $validation = $image_validator->validate_repository_file($image_file_path);
+
+        if (!$validation['valid']) {
+            $this->logImageOperation('error', 'WordPress Featured Image: Repository image validation failed', [
+                'image_file_path' => $image_file_path,
+                'errors' => $validation['errors']
+            ]);
+            return ['success' => false, 'error' => implode(', ', $validation['errors'])];
+        }
+
+        return $this->attachRepositoryFile($post_id, $image_file_path);
     }
 
     /**
@@ -79,44 +90,34 @@ class FeaturedImageHandler {
     }
 
     /**
-     * Download image and attach as featured image to post.
+     * Attach repository image file as featured image to post.
      *
-     * Downloads image from URL, creates WordPress media attachment,
+     * Uses existing repository file, creates WordPress media attachment,
      * and sets it as the featured image for the post.
      *
      * @param int $post_id WordPress post ID
-     * @param string $image_url Image URL to download
+     * @param string $image_file_path Repository image file path
      * @return array {
      *     @type bool $success Whether operation succeeded
      *     @type string $error Error message if failed
      *     @type int $attachment_id Attachment ID if successful
      * }
      */
-    private function downloadAndAttach(int $post_id, string $image_url): array {
+    private function attachRepositoryFile(int $post_id, string $image_file_path): array {
         require_once(ABSPATH . 'wp-admin/includes/media.php');
         require_once(ABSPATH . 'wp-admin/includes/file.php');
         require_once(ABSPATH . 'wp-admin/includes/image.php');
 
-        $temp_file = download_url($image_url);
-        if (is_wp_error($temp_file)) {
-            $this->logImageOperation('warning', 'WordPress Featured Image: Failed to download image', [
-                'image_url' => $image_url,
-                'error' => $temp_file->get_error_message()
-            ]);
-            return ['success' => false, 'error' => 'Failed to download image'];
-        }
-
         $file_array = [
-            'name' => basename($image_url),
-            'tmp_name' => $temp_file
+            'name' => basename($image_file_path),
+            'tmp_name' => $image_file_path
         ];
 
         $attachment_id = media_handle_sideload($file_array, $post_id);
 
         if (is_wp_error($attachment_id)) {
-            $this->cleanupTempFiles($temp_file);
-            $this->logImageOperation('warning', 'WordPress Featured Image: Failed to create attachment', [
-                'image_url' => $image_url,
+            $this->logImageOperation('warning', 'WordPress Featured Image: Failed to create attachment from repository file', [
+                'image_file_path' => $image_file_path,
                 'error' => $attachment_id->get_error_message()
             ]);
             return ['success' => false, 'error' => 'Failed to create media attachment'];
@@ -132,10 +133,10 @@ class FeaturedImageHandler {
             return ['success' => false, 'error' => 'Failed to set featured image'];
         }
 
-        $this->logImageOperation('debug', 'WordPress Featured Image: Successfully set featured image', [
+        $this->logImageOperation('debug', 'WordPress Featured Image: Successfully set featured image from repository file', [
             'post_id' => $post_id,
             'attachment_id' => $attachment_id,
-            'image_url' => $image_url
+            'image_file_path' => $image_file_path
         ]);
 
         return [

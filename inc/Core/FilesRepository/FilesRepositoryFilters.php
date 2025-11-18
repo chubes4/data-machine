@@ -33,6 +33,11 @@ function datamachine_register_files_repository_filters() {
         return new RemoteFileDownloader();
     });
 
+    // Register ImageValidator
+    add_filter('datamachine_get_image_validator', function() {
+        return new ImageValidator();
+    });
+
     // Register FileCleanup
     add_filter('datamachine_get_file_cleanup', function() {
         return new FileCleanup();
