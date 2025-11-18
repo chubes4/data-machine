@@ -14,7 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPress {
 
+    private $taxonomy_handler;
+
     public function __construct() {
+        $this->taxonomy_handler = apply_filters('datamachine_get_taxonomy_handler', null);
     }
 
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
@@ -165,7 +168,10 @@ class WordPress {
             ];
         }
 
-        $taxonomy_results = $this->process_taxonomies_from_settings($post_id, $parameters, $handler_config);
+        $taxonomy_results = [];
+        if ($this->taxonomy_handler) {
+            $taxonomy_results = $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config);
+        }
 
         do_action('datamachine_log', 'debug', 'WordPress Update Tool: Post updated successfully', [
             'post_id' => $post_id,
@@ -192,137 +198,11 @@ class WordPress {
     }
 
     /**
-     * Process taxonomies with three modes: skip, AI-decided, or pre-selected term.
-     */
-    private function process_taxonomies_from_settings(int $post_id, array $parameters, array $handler_config): array {
-        $taxonomy_results = [];
-
-        $taxonomies = get_taxonomies(['public' => true], 'objects');
-
-        foreach ($taxonomies as $taxonomy) {
-            $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
-            if (in_array($taxonomy->name, $excluded)) {
-                continue;
-            }
-
-            $field_key = "taxonomy_{$taxonomy->name}_selection";
-            $selection = $handler_config[$field_key] ?? 'skip';
-
-            do_action('datamachine_log', 'debug', 'WordPress Update Tool: Processing taxonomy from settings', [
-                'taxonomy_name' => $taxonomy->name,
-                'field_key' => $field_key,
-                'selection_value' => $selection,
-                'selection_type' => gettype($selection)
-            ]);
-
-            if ($selection === 'skip') {
-                continue;
-
-            } elseif ($selection === 'ai_decides') {
-                $param_name = $taxonomy->name === 'category' ? 'category' :
-                             ($taxonomy->name === 'post_tag' ? 'tags' : $taxonomy->name);
-
-                if (!empty($parameters[$param_name])) {
-                    $taxonomy_result = $this->assign_taxonomy($post_id, $taxonomy->name, $parameters[$param_name]);
-                    $taxonomy_results[$taxonomy->name] = $taxonomy_result;
-
-                    do_action('datamachine_log', 'debug', 'WordPress Update Tool: Applied AI-decided taxonomy', [
-                        'taxonomy_name' => $taxonomy->name,
-                        'parameter_name' => $param_name,
-                        'parameter_value' => $parameters[$param_name],
-                        'result' => $taxonomy_result
-                    ]);
-                }
-
-            } elseif (is_numeric($selection)) {
-                $term_id = absint($selection);
-                $term_name = apply_filters('datamachine_wordpress_term_name', null, $term_id, $taxonomy->name);
-
-                if ($term_name !== null) {
-                    $result = wp_set_object_terms($post_id, [$term_id], $taxonomy->name);
-
-                    if (is_wp_error($result)) {
-                        $taxonomy_results[$taxonomy->name] = [
-                            'success' => false,
-                            'error' => $result->get_error_message()
-                        ];
-                    } else {
-                        $taxonomy_results[$taxonomy->name] = [
-                            'success' => true,
-                            'taxonomy' => $taxonomy->name,
-                            'term_count' => 1,
-                            'terms' => [$term_name]
-                        ];
-
-                        do_action('datamachine_log', 'debug', 'WordPress Update Tool: Applied pre-selected taxonomy', [
-                            'taxonomy_name' => $taxonomy->name,
-                            'term_id' => $term_id,
-                            'term_name' => $term_name
-                        ]);
-                    }
-                }
-            }
-        }
-
-        return $taxonomy_results;
-    }
-
-    /**
-     * Assign taxonomy terms with dynamic term creation.
-     */
-    private function assign_taxonomy(int $post_id, string $taxonomy_name, $taxonomy_value): array {
-        if (!taxonomy_exists($taxonomy_name)) {
-            return [
-                'success' => false,
-                'error' => "Taxonomy '{$taxonomy_name}' does not exist"
-            ];
-        }
-
-        $term_ids = [];
-
-        $terms = is_array($taxonomy_value) ? $taxonomy_value : [$taxonomy_value];
-
-        foreach ($terms as $term_name) {
-            $term_name = sanitize_text_field($term_name);
-            if (empty($term_name)) continue;
-
-            $term = get_term_by('name', $term_name, $taxonomy_name);
-            if (!$term) {
-                $term_result = wp_insert_term($term_name, $taxonomy_name);
-                if (is_wp_error($term_result)) {
-                    do_action('datamachine_log', 'warning', 'Failed to create taxonomy term', [
-                        'taxonomy' => $taxonomy_name,
-                        'term_name' => $term_name,
-                        'error' => $term_result->get_error_message()
-                    ]);
-                    continue;
-                }
-                $term_ids[] = $term_result['term_id'];
-            } else {
-                $term_ids[] = $term->term_id;
-            }
-        }
-
-        if (!empty($term_ids)) {
-            $result = wp_set_object_terms($post_id, $term_ids, $taxonomy_name);
-            if (is_wp_error($result)) {
-                return [
-                    'success' => false,
-                    'error' => $result->get_error_message()
-                ];
-            }
-        }
-
-        return [
-            'success' => true,
-            'taxonomy' => $taxonomy_name,
-            'term_count' => count($term_ids),
-            'terms' => $terms
-        ];
-    }
-
-    /**
      * Apply surgical find-and-replace updates with change tracking.
+     *
+     * @param string $original_content The original post content
+     * @param array $updates Array of update operations with 'find' and 'replace' keys
+     * @return array Array with 'content' (updated content) and 'changes' (change tracking)
      */
     private function apply_surgical_updates(string $original_content, array $updates): array {
         $working_content = $original_content;
@@ -378,6 +258,10 @@ class WordPress {
 
     /**
      * Apply targeted updates to specific Gutenberg blocks by index.
+     *
+     * @param string $original_content The original post content with blocks
+     * @param array $block_updates Array of block update operations with 'block_index', 'find', 'replace' keys
+     * @return array Array with 'content' (updated serialized blocks) and 'changes' (change tracking)
      */
     private function apply_block_updates(string $original_content, array $block_updates): array {
         $blocks = parse_blocks($original_content);
@@ -456,6 +340,9 @@ class WordPress {
 
     /**
      * Sanitize Gutenberg blocks with recursive innerHTML processing.
+     *
+     * @param string $content The block content to sanitize
+     * @return string Sanitized block content with safe HTML
      */
     private function sanitize_block_content(string $content): string {
         $blocks = parse_blocks($content);

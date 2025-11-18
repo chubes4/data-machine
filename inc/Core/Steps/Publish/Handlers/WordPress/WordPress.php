@@ -7,10 +7,6 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
 
-use DataMachine\Core\Steps\Publish\Handlers\WordPress\FeaturedImageHandler;
-use DataMachine\Core\Steps\Publish\Handlers\WordPress\SourceUrlHandler;
-use DataMachine\Core\Steps\Publish\Handlers\WordPress\TaxonomyHandler;
-
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
@@ -22,11 +18,22 @@ class WordPress {
     private $taxonomy_handler;
 
     public function __construct() {
-        $this->featured_image_handler = new FeaturedImageHandler();
-        $this->source_url_handler = new SourceUrlHandler();
-        $this->taxonomy_handler = new TaxonomyHandler();
+        $this->featured_image_handler = apply_filters('datamachine_get_featured_image_handler', null);
+        $this->source_url_handler = apply_filters('datamachine_get_source_url_handler', null);
+        $this->taxonomy_handler = apply_filters('datamachine_get_taxonomy_handler', null);
     }
 
+    /**
+     * Handle WordPress post publishing tool call.
+     *
+     * Creates a WordPress post with modular processing for taxonomies, featured images,
+     * and source URL attribution. Uses configuration hierarchy where system defaults
+     * override handler-specific settings.
+     *
+     * @param array $parameters Tool call parameters including title, content, job_id
+     * @param array $tool_def Tool definition with handler configuration
+     * @return array Success status with post data or error information
+     */
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         
         if (empty($parameters['title']) || empty($parameters['content'])) {
@@ -141,10 +148,23 @@ class WordPress {
     }
 
 
+    /**
+     * Get the display label for the WordPress handler.
+     *
+     * @return string Localized handler label
+     */
     public static function get_label(): string {
         return __('WordPress', 'datamachine');
     }
 
+    /**
+     * Get the effective post status using configuration hierarchy.
+     *
+     * System defaults override handler-specific settings.
+     *
+     * @param array $handler_config Handler configuration array
+     * @return string Post status (publish, draft, etc.)
+     */
     private function get_effective_post_status(array $handler_config): string {
         $all_settings = get_option('datamachine_settings', []);
         $wp_settings = $all_settings['wordpress_settings'] ?? [];
@@ -156,6 +176,14 @@ class WordPress {
         return $handler_config['post_status'] ?? 'draft';
     }
 
+    /**
+     * Get the effective post author using configuration hierarchy.
+     *
+     * System defaults override handler-specific settings.
+     *
+     * @param array $handler_config Handler configuration array
+     * @return int WordPress user ID for post author
+     */
     private function get_effective_post_author(array $handler_config): int {
         $all_settings = get_option('datamachine_settings', []);
         $wp_settings = $all_settings['wordpress_settings'] ?? [];

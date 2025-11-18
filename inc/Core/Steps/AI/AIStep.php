@@ -139,6 +139,15 @@ class AIStep {
      * @param array $available_tools Available tool definitions
      * @return array Updated data packet array
      */
+    /**
+     * Process AI conversation loop results into data packets.
+     *
+     * @param array $loop_result Results from AIConversationLoop
+     * @param array $data Current data packet array
+     * @param array $payload Step payload
+     * @param array $available_tools Tools available during conversation
+     * @return array Updated data packet array
+     */
     private static function processLoopResults(array $loop_result, array $data, array $payload, array $available_tools): array {
         $flow_step_id = $payload['flow_step_id'] ?? '';
         $messages = $loop_result['messages'] ?? [];

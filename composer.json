@@ -76,6 +76,7 @@
 			"inc/Core/Steps/Update/UpdateStepFilters.php",
 			"inc/Core/Steps/Update/Handlers/WordPress/WordPressFilters.php",
 			"inc/Core/FilesRepository/FilesRepositoryFilters.php",
+			"inc/Core/WordPress/WordPressFilters.php",
 			"inc/Api/StepTypes.php",
 			"inc/Api/Handlers.php",
 			"inc/Api/Providers.php",

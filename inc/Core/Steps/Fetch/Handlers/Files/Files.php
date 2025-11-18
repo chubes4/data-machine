@@ -169,10 +169,21 @@ class Files {
         return $file_info['type'] ?? 'application/octet-stream';
     }
     
+    /**
+     * Sanitize handler settings.
+     *
+     * @param array $raw_settings Raw settings from user input
+     * @return array Sanitized settings array
+     */
     public function sanitize_settings(array $raw_settings): array {
         return [];
     }
 
+    /**
+     * Get the display label for the Files handler.
+     *
+     * @return string Localized handler label
+     */
     public static function get_label(): string {
         return __('File Upload', 'datamachine');
     }

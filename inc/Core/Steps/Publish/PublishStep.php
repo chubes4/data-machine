@@ -73,6 +73,15 @@ class PublishStep {
         }
     }
 
+    /**
+     * Create publish data entry from AI tool execution result.
+     *
+     * @param array $tool_result_entry Tool execution result entry
+     * @param array $data Current data packet array
+     * @param string $handler Handler name
+     * @param string $flow_step_id Flow step identifier
+     * @return array Publish data entry
+     */
     private function create_publish_entry_from_tool_result(array $tool_result_entry, array $data, string $handler, string $flow_step_id): array {
         $tool_result_data = $tool_result_entry['metadata']['tool_result'] ?? [];
         $entry_type = $tool_result_entry['type'] ?? '';

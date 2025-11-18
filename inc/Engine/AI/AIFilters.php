@@ -5,7 +5,7 @@
  * Provides step-aware AI configuration from pipeline database with support
  * for multi-turn conversation management and 5-tier directive system.
  *
- * @package DataMachine\Engine\Filters
+ * @package DataMachine\Engine\AI
  */
 
 defined('WPINC') || exit;

@@ -96,7 +96,7 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 
 **AI Directive System**: Filter-based architecture with directive categories applied by `RequestBuilder`:
 - `datamachine_global_directives` - Applied to all AI agents (GlobalSystemPromptDirective, SiteContextDirective)
-- `datamachine_agent_directives` - Agent-specific directives (PipelineCoreDirective, ChatAgentDirective, PipelineSystemPromptDirective)
+- `datamachine_agent_directives` - Agent-specific directives (PipelineCoreDirective, ChatAgentDirective, PipelineSystemPromptDirective, PipelineContextDirective)
 
 **Universal Engine Architecture**: Shared AI infrastructure serving both Pipeline and Chat agents with centralized components in `/inc/Engine/AI/`:
 - **AIConversationLoop** - Multi-turn conversation execution with automatic tool calling

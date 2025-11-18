@@ -61,6 +61,11 @@ class Cache {
         add_action('chubes_ai_all_model_cache_cleared', [$instance, 'handle_ai_all_cache_cleared'], 10, 0);
     }
 
+    /**
+     * Handle datamachine_clear_pipeline_cache action.
+     *
+     * @param int $pipeline_id Pipeline ID to clear cache for
+     */
     public function handle_clear_pipeline_cache($pipeline_id) {
         if (empty($pipeline_id)) {
             do_action('datamachine_log', 'warning', 'Cache clear requested with empty pipeline ID');
@@ -76,6 +81,11 @@ class Cache {
         }
     }
 
+    /**
+     * Handle datamachine_clear_flow_cache action.
+     *
+     * @param int $flow_id Flow ID to clear cache for
+     */
     public function handle_clear_flow_cache($flow_id) {
         if (empty($flow_id)) {
             do_action('datamachine_log', 'warning', 'Flow cache clear requested with empty flow ID');

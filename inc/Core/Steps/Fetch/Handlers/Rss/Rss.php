@@ -232,6 +232,12 @@ class Rss {
         return ['processed_items' => []];
     }
 
+    /**
+     * Extract title from RSS item.
+     *
+     * @param object $item SimpleXML item object
+     * @return string Item title or 'Untitled' if not found
+     */
     private function extract_item_title($item): string {
         if (isset($item->title)) {
             return (string) $item->title;
@@ -239,6 +245,14 @@ class Rss {
         return 'Untitled';
     }
 
+    /**
+     * Extract description/content from RSS item.
+     *
+     * Checks multiple possible fields: description, summary, content, encoded.
+     *
+     * @param object $item SimpleXML item object
+     * @return string Stripped content text
+     */
     private function extract_item_description($item): string {
         if (isset($item->description)) {
             return wp_strip_all_tags((string) $item->description);
@@ -256,6 +270,12 @@ class Rss {
         return '';
     }
 
+    /**
+     * Extract link URL from RSS item.
+     *
+     * @param object $item SimpleXML item object
+     * @return string Item link URL
+     */
     private function extract_item_link($item): string {
         if (isset($item->link)) {
             $link = $item->link;
@@ -267,6 +287,14 @@ class Rss {
         return '';
     }
 
+    /**
+     * Extract publication date from RSS item.
+     *
+     * Checks multiple date fields: pubDate, published, updated, dc:date.
+     *
+     * @param object $item SimpleXML item object
+     * @return string|null Publication date string or null if not found
+     */
     private function extract_item_date($item): ?string {
         if (isset($item->pubDate)) {
             return (string) $item->pubDate;
@@ -284,6 +312,15 @@ class Rss {
         return null;
     }
 
+    /**
+     * Extract GUID/unique identifier from RSS item.
+     *
+     * Falls back to item link if no GUID found.
+     *
+     * @param object $item SimpleXML item object
+     * @param string $item_link Fallback link if no GUID
+     * @return string Unique identifier for the item
+     */
     private function extract_item_guid($item, string $item_link): string {
         if (isset($item->guid)) {
             return (string) $item->guid;
@@ -294,6 +331,14 @@ class Rss {
         return $item_link;
     }
 
+    /**
+     * Extract author name from RSS item.
+     *
+     * Checks author field and dc:creator namespace.
+     *
+     * @param object $item SimpleXML item object
+     * @return string|null Author name or null if not found
+     */
     private function extract_item_author($item): ?string {
         if (isset($item->author)) {
             $author = $item->author;
@@ -309,6 +354,12 @@ class Rss {
         return null;
     }
 
+    /**
+     * Extract categories/tags from RSS item.
+     *
+     * @param object $item SimpleXML item object
+     * @return array Array of category names
+     */
     private function extract_item_categories($item): array {
         $categories = [];
 
@@ -325,6 +376,12 @@ class Rss {
         return $categories;
     }
 
+    /**
+     * Extract enclosure URL from RSS item.
+     *
+     * @param object $item SimpleXML item object
+     * @return string|null Enclosure URL or null if not found
+     */
     private function extract_item_enclosure($item): ?string {
         if (isset($item->enclosure) && isset($item->enclosure['url'])) {
             return (string) $item->enclosure['url'];
@@ -332,6 +389,11 @@ class Rss {
         return null;
     }
 
+    /**
+     * Get the display label for the RSS handler.
+     *
+     * @return string Localized handler label
+     */
     public static function get_label(): string {
         return __('RSS/Atom Feed', 'datamachine');
     }

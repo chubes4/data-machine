@@ -37,18 +37,7 @@ function datamachine_register_files_fetch_filters() {
         return $all_settings;
     }, 10, 2);
 
-    add_filter('datamachine_render_template', function($content, $template_name, $data = []) {
-        if ($template_name === 'modal/handler-settings/files') {
-            $template_path = dirname(__DIR__, 4) . '/admin/pages/pipelines/templates/modal/handler-settings/files.php';
-            if (file_exists($template_path)) {
-                $context = $data;
-                ob_start();
-                include $template_path;
-                return ob_get_clean();
-            }
-        }
-        return $content;
-    }, 10, 3);
+
 }
 
 datamachine_register_files_fetch_filters();

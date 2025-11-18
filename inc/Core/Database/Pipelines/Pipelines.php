@@ -21,12 +21,21 @@ class Pipelines {
 	/** @var \wpdb WordPress database instance */
 	private $wpdb;
 
+	/**
+	 * Constructor - initialize database connection.
+	 */
 	public function __construct() {
 		global $wpdb;
 		$this->wpdb = $wpdb;
 		$this->table_name = $wpdb->prefix . 'datamachine_pipelines';
 	}
 
+	/**
+	 * Create a new pipeline in the database.
+	 *
+	 * @param array $pipeline_data Pipeline data including name and config
+	 * @return int|false Pipeline ID on success, false on failure
+	 */
 	public function create_pipeline( array $pipeline_data ): int|false {
 		$pipeline_name = sanitize_text_field( $pipeline_data['pipeline_name'] ?? '' );
 		$pipeline_config = $pipeline_data['pipeline_config'] ?? [];
@@ -75,6 +84,12 @@ class Pipelines {
 		return $pipeline_id;
 	}
 
+	/**
+	 * Get a pipeline by ID.
+	 *
+	 * @param int $pipeline_id Pipeline ID to retrieve
+	 * @return array|null Pipeline data or null if not found
+	 */
 	public function get_pipeline( int $pipeline_id ): ?array {
 
 		if ( empty( $pipeline_id ) ) {
@@ -102,6 +117,11 @@ class Pipelines {
 
 	/**
 	 * Get all pipelines with decoded configuration.
+	 */
+	/**
+	 * Get all pipelines from the database.
+	 *
+	 * @return array Array of all pipeline records
 	 */
 	public function get_all_pipelines(): array {
 
@@ -148,6 +168,13 @@ class Pipelines {
 
 	/**
 	 * Update pipeline with validation and caching.
+	 */
+	/**
+	 * Update an existing pipeline.
+	 *
+	 * @param int $pipeline_id Pipeline ID to update
+	 * @param array $pipeline_data Updated pipeline data
+	 * @return bool True on success, false on failure
 	 */
 	public function update_pipeline( int $pipeline_id, array $pipeline_data ): bool {
 
@@ -218,6 +245,12 @@ class Pipelines {
 
 	/**
 	 * Delete pipeline with logging.
+	 */
+	/**
+	 * Delete a pipeline from the database.
+	 *
+	 * @param int $pipeline_id Pipeline ID to delete
+	 * @return bool True on success, false on failure
 	 */
 	public function delete_pipeline( int $pipeline_id ): bool {
 

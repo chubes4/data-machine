@@ -234,6 +234,12 @@ class FetchStep {
         }
     }
 
+    /**
+     * Get handler object instance by name.
+     *
+     * @param string $handler_name Handler identifier
+     * @return object|null Handler instance or null if not found
+     */
     private function get_handler_object(string $handler_name): ?object {
         $all_handlers = apply_filters('datamachine_handlers', [], 'fetch');
         $handler_info = $all_handlers[$handler_name] ?? null;

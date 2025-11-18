@@ -20,6 +20,13 @@ class Create {
     }
 
 
+    /**
+     * Handle pipeline creation via datamachine_create_pipeline filter.
+     *
+     * @param mixed $default Default return value
+     * @param array $data Pipeline creation data
+     * @return int|false Pipeline ID on success, false on failure
+     */
     public function handle_create_pipeline($default, $data = []) {
         if (!current_user_can('manage_options')) {
             do_action('datamachine_log', 'error', 'Insufficient permissions for pipeline creation');
@@ -54,6 +61,14 @@ class Create {
         }
     }
 
+    /**
+     * Create pipeline in simple mode (no steps provided).
+     *
+     * @param array $data Pipeline data
+     * @param object $db_pipelines Pipelines database handler
+     * @param object $db_flows Flows database handler
+     * @return int|false Pipeline ID on success, false on failure
+     */
     private function create_simple_pipeline($data, $db_pipelines, $db_flows) {
         $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : 'Pipeline';
 
@@ -87,6 +102,14 @@ class Create {
         return $this->finalize_pipeline_creation($pipeline_id, $pipeline_name, $flow_id, $db_pipelines, $db_flows);
     }
 
+    /**
+     * Create pipeline in complete mode (with steps provided).
+     *
+     * @param array $data Pipeline data including steps
+     * @param object $db_pipelines Pipelines database handler
+     * @param object $db_flows Flows database handler
+     * @return int|false Pipeline ID on success, false on failure
+     */
     private function create_complete_pipeline($data, $db_pipelines, $db_flows) {
         $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : 'Pipeline';
         $steps = $data['steps'];
