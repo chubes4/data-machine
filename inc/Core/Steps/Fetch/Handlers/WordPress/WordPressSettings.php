@@ -12,14 +12,14 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPress;
 
+use DataMachine\Core\Steps\Fetch\Handlers\FetchHandlerSettings;
+use DataMachine\Core\WordPress\WordPressSettingsHandler;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-class WordPressSettings {
-
-    public function __construct() {
-    }
+class WordPressSettings extends FetchHandlerSettings {
 
     /**
      * Get settings fields for WordPress fetch handler.
@@ -30,8 +30,11 @@ class WordPressSettings {
         // WordPress fetch settings for local WordPress installation only
         $fields = self::get_local_fields();
 
-        // Add common fields for all source types
-        $fields = array_merge($fields, self::get_common_fields());
+        // Add common fetch handler fields (timeframe_limit, search)
+        $fields = array_merge($fields, parent::get_common_fields());
+
+        // Add WordPress-specific common fields (randomize_selection)
+        $fields = array_merge($fields, self::get_wordpress_common_fields());
 
         return $fields;
     }
@@ -42,21 +45,15 @@ class WordPressSettings {
      * @return array Settings fields.
      */
     private static function get_local_fields(): array {
-        // Get available post types
-        $post_types = get_post_types(['public' => true], 'objects');
-        $post_type_options = [
-            'any' => __('Any', 'datamachine'),
-        ];
-        foreach ($post_types as $post_type) {
-            if (is_object($post_type)) {
-                $post_type_options[$post_type->name] = $post_type->label;
-            } elseif (is_string($post_type)) {
-                $post_type_options[$post_type] = $post_type;
-            }
-        }
+        // Get post type options with "Any" option
+        $post_type_options = WordPressSettingsHandler::get_post_type_options(true);
 
-        // Get dynamic taxonomy filter fields for all available taxonomies
-        $taxonomy_fields = self::get_taxonomy_filter_fields();
+        // Get dynamic taxonomy filter fields
+        $taxonomy_fields = WordPressSettingsHandler::get_taxonomy_fields([
+            'field_suffix' => '_filter',
+            'first_options' => [0 => __('All %s', 'datamachine')],
+            'description_template' => __('Filter by specific %1$s or fetch from all %2$s.', 'datamachine')
+        ]);
 
         $fields = [
             'source_url' => [
@@ -89,84 +86,14 @@ class WordPressSettings {
         return array_merge($fields, $taxonomy_fields);
     }
 
-    /**
-     * Get dynamic taxonomy filter fields for all available public taxonomies.
-     *
-     * @return array Taxonomy filter field definitions.
-     */
-    private static function get_taxonomy_filter_fields(): array {
-        $taxonomy_fields = [];
-        
-        // Get all public taxonomies
-        $taxonomies = get_taxonomies(['public' => true], 'objects');
-        
-        foreach ($taxonomies as $taxonomy) {
-            // Ensure $taxonomy is an object before accessing its properties
-            if (!is_object($taxonomy)) {
-                continue;
-            }
-            // Skip built-in formats and other non-content taxonomies using centralized filter
-            $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
-            if (in_array($taxonomy->name, $excluded)) {
-                continue;
-            }
-            
-            $taxonomy_slug = $taxonomy->name;
-            $taxonomy_label = (is_object($taxonomy->labels) && isset($taxonomy->labels->name))
-                ? $taxonomy->labels->name
-                : $taxonomy->label;
-            
-            // Build filter options with "All" as default
-            $options = [
-                /* translators: %s: Taxonomy name (e.g., Categories, Tags) */
-                0 => sprintf(__('All %s', 'datamachine'), $taxonomy_label)
-            ];
-            
-            // Get terms for this taxonomy
-            $terms = get_terms(['taxonomy' => $taxonomy_slug, 'hide_empty' => false]);
-            if (!is_wp_error($terms) && !empty($terms)) {
-                foreach ($terms as $term) {
-                    $options[$term->term_id] = $term->name;
-                }
-            }
-            
-            // Generate field definition
-            $field_key = "taxonomy_{$taxonomy_slug}_filter";
-            $taxonomy_fields[$field_key] = [
-                'type' => 'select',
-                'label' => $taxonomy_label,
-                'description' => sprintf(
-                    /* translators: %1$s: Taxonomy name (lowercase), %2$s: Taxonomy name (lowercase) */
-                    __('Filter by specific %1$s or fetch from all %2$s.', 'datamachine'),
-                    strtolower($taxonomy_label),
-                    strtolower($taxonomy_label)
-                ),
-                'options' => $options,
-            ];
-        }
-        
-        return $taxonomy_fields;
-    }
-
 
     /**
-     * Get common settings fields for all source types.
+     * Get WordPress-specific common fields beyond base fetch fields.
      *
      * @return array Settings fields.
      */
-    private static function get_common_fields(): array {
+    private static function get_wordpress_common_fields(): array {
         return [
-            'timeframe_limit' => [
-                'type' => 'select',
-                'label' => __('Process Items Within', 'datamachine'),
-                'description' => __('Only consider items published within this timeframe.', 'datamachine'),
-                'options' => apply_filters('datamachine_timeframe_limit', [], null),
-            ],
-            'search' => [
-                'type' => 'text',
-                'label' => __('Search Term Filter', 'datamachine'),
-                'description' => __('Filter items by keywords (comma-separated). Items containing any keyword in their title or content will be included.', 'datamachine'),
-            ],
             'randomize_selection' => [
                 'type' => 'checkbox',
                 'label' => __('Randomize selection', 'datamachine'),
@@ -207,87 +134,12 @@ class WordPressSettings {
         ];
 
         // Sanitize dynamic taxonomy filter selections
-        $taxonomy_filters = self::sanitize_taxonomy_filters($raw_settings);
+        $taxonomy_filters = WordPressSettingsHandler::sanitize_taxonomy_fields($raw_settings, [
+            'field_suffix' => '_filter',
+            'allowed_values' => [0],
+            'default_value' => 0
+        ]);
         return array_merge($sanitized, $taxonomy_filters);
-    }
-
-    /**
-     * Sanitize dynamic taxonomy filter settings.
-     *
-     * @param array $raw_settings Raw settings array.
-     * @return array Sanitized taxonomy filter selections.
-     */
-    private static function sanitize_taxonomy_filters(array $raw_settings): array {
-        $sanitized = [];
-        
-        // Get all public taxonomies to validate against
-        $taxonomies = get_taxonomies(['public' => true], 'objects');
-        
-        foreach ($taxonomies as $taxonomy) {
-            // Ensure $taxonomy is an object before accessing its properties
-            if (!is_object($taxonomy)) {
-                continue;
-            }
-            // Skip built-in formats and other non-content taxonomies using centralized filter
-            $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
-            if (in_array($taxonomy->name, $excluded)) {
-                continue;
-            }
-            
-            $field_key = "taxonomy_{$taxonomy->name}_filter";
-            $raw_value = $raw_settings[$field_key] ?? 0;
-            
-            // Sanitize taxonomy filter value (0 = all, or specific term ID)
-            if ($raw_value == 0) {
-                $sanitized[$field_key] = 0; // All terms
-            } else {
-                // Must be a term ID - validate it exists in this taxonomy
-                $term_id = intval($raw_value);
-                if ($term_id <= 0) {
-                    // Invalid numeric value - default to all
-                    $sanitized[$field_key] = 0;
-                } else {
-                    $term_name = apply_filters('datamachine_wordpress_term_name', null, $term_id, $taxonomy->name);
-                    if ($term_name !== null) {
-                        $sanitized[$field_key] = $term_id;
-                    } else {
-                        // Invalid term ID - default to all
-                        $sanitized[$field_key] = 0;
-                    }
-                }
-            }
-        }
-        
-        return $sanitized;
-    }
-
-    /**
-     * Get default values for all available taxonomy filters.
-     *
-     * @return array Default taxonomy filter selections (all set to 0 = "All").
-     */
-    private static function get_taxonomy_filter_defaults(): array {
-        $defaults = [];
-        
-        // Get all public taxonomies
-        $taxonomies = get_taxonomies(['public' => true], 'objects');
-        
-        foreach ($taxonomies as $taxonomy) {
-            // Ensure $taxonomy is an object before accessing its properties
-            if (!is_object($taxonomy)) {
-                continue;
-            }
-            // Skip built-in formats and other non-content taxonomies using centralized filter
-            $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
-            if (in_array($taxonomy->name, $excluded)) {
-                continue;
-            }
-            
-            $field_key = "taxonomy_{$taxonomy->name}_filter";
-            $defaults[$field_key] = 0; // Default to "All" for all taxonomy filters
-        }
-        
-        return $defaults;
     }
 
     /**

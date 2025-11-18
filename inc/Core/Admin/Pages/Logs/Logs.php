@@ -40,9 +40,6 @@ class Logs
      */
     private $log_file_path;
 
-    /**
-     * Constructor - Registers the admin page via filter system.
-     */
     public function __construct()
     {
         // Set log file path

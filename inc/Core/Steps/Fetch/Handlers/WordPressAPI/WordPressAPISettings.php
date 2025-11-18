@@ -12,14 +12,13 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPressAPI;
 
+use DataMachine\Core\Steps\Fetch\Handlers\FetchHandlerSettings;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-class WordPressAPISettings {
-
-    public function __construct() {
-    }
+class WordPressAPISettings extends FetchHandlerSettings {
 
     /**
      * Get settings fields for WordPress REST API fetch handler.
@@ -27,6 +26,7 @@ class WordPressAPISettings {
      * @return array Associative array defining the settings fields.
      */
     public static function get_fields(): array {
+        // Handler-specific fields
         $fields = [
             'endpoint_url' => [
                 'type' => 'text',
@@ -35,21 +35,10 @@ class WordPressAPISettings {
                 'placeholder' => __('https://example.com/wp-json/wp/v2/posts', 'datamachine'),
                 'required' => true,
             ],
-            'timeframe_limit' => [
-                'type' => 'select',
-                'label' => __('Process Items Within', 'datamachine'),
-                'description' => __('Only consider items published within this timeframe.', 'datamachine'),
-                'options' => apply_filters('datamachine_timeframe_limit', [], null),
-            ],
-            'search' => [
-                'type' => 'text',
-                'label' => __('Search Term Filter', 'datamachine'),
-                'description' => __('Filter items by keywords (comma-separated). Items containing any keyword in their title or content will be included.', 'datamachine'),
-                'placeholder' => __('Optional search term', 'datamachine'),
-            ],
         ];
 
-        return $fields;
+        // Merge with common fetch handler fields
+        return array_merge($fields, parent::get_common_fields());
     }
 
     /**

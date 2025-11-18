@@ -62,36 +62,28 @@ CREATE TABLE wp_datamachine_flows (
 
 ```sql
 CREATE TABLE wp_datamachine_jobs (
-    job_id varchar(36) NOT NULL,
-    flow_id bigint(20) unsigned NOT NULL,
+    job_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
     pipeline_id bigint(20) unsigned NOT NULL,
-    status enum('pending','running','completed','failed','completed_no_items') NOT NULL DEFAULT 'pending',
-    job_data_json longtext NULL,
+    flow_id bigint(20) unsigned NOT NULL,
+    status varchar(20) NOT NULL,
     engine_data longtext NULL,
-    started_at datetime NULL,
-    completed_at datetime NULL,
-    error_message text NULL,
     created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at datetime NULL DEFAULT NULL,
     PRIMARY KEY (job_id),
-    KEY flow_id (flow_id),
-    KEY pipeline_id (pipeline_id),
     KEY status (status),
-    KEY started_at (started_at),
-    KEY completed_at (completed_at),
-    FOREIGN KEY (flow_id) REFERENCES wp_datamachine_flows(flow_id) ON DELETE CASCADE
+    KEY pipeline_id (pipeline_id),
+    KEY flow_id (flow_id)
 );
 ```
 
 **Fields**:
-- `job_id` - UUID4 string primary key
-- `flow_id` - Reference to flow that created this job
+- `job_id` - Auto-increment primary key
 - `pipeline_id` - Reference to source pipeline
+- `flow_id` - Reference to flow that created this job
 - `status` - Current execution status
-- `job_data_json` - Execution data and results
 - `engine_data` - Engine parameters (source_url, image_url) stored by fetch handlers for downstream use
-- `started_at` - Execution start timestamp
+- `created_at` - Job creation timestamp
 - `completed_at` - Completion timestamp
-- `error_message` - Error details if failed
 
 ### `wp_datamachine_processed_items`
 
@@ -99,28 +91,27 @@ CREATE TABLE wp_datamachine_jobs (
 
 ```sql
 CREATE TABLE wp_datamachine_processed_items (
-    item_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-    flow_step_id varchar(255) NOT NULL,
-    source_type varchar(50) NOT NULL,
-    item_identifier varchar(255) NOT NULL,
-    job_id varchar(36) NULL,
-    processed_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (item_id),
-    UNIQUE KEY unique_item (flow_step_id, source_type, item_identifier),
-    KEY flow_step_id (flow_step_id),
-    KEY source_type (source_type),
-    KEY processed_at (processed_at),
-    FOREIGN KEY (job_id) REFERENCES wp_datamachine_jobs(job_id) ON DELETE SET NULL
+    id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+    flow_step_id VARCHAR(255) NOT NULL,
+    source_type VARCHAR(50) NOT NULL,
+    item_identifier VARCHAR(255) NOT NULL,
+    job_id BIGINT(20) UNSIGNED NOT NULL,
+    processed_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY `flow_source_item` (flow_step_id, source_type, item_identifier(191)),
+    KEY `flow_step_id` (flow_step_id),
+    KEY `source_type` (source_type),
+    KEY `job_id` (job_id)
 );
 ```
 
 **Fields**:
-- `item_id` - Auto-increment primary key
+- `id` - Auto-increment primary key
 - `flow_step_id` - Composite identifier: `{pipeline_step_id}_{flow_id}`
 - `source_type` - Handler type (rss, wordpress_local, reddit, etc.)
 - `item_identifier` - Unique identifier within source type
 - `job_id` - Job that processed this item
-- `processed_at` - Processing timestamp
+- `processed_timestamp` - Processing timestamp
 
 ### `wp_datamachine_chat_sessions`
 

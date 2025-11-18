@@ -30,7 +30,7 @@
 			"inc/Core/OAuth/OAuthFilters.php",
 			"inc/Engine/Actions/DataMachineActions.php",
 			"inc/Engine/Filters/EngineData.php",
-			"inc/Engine/Filters/DataPacket.php",
+
 			"inc/Engine/Filters/WordPress.php",
 			"inc/Engine/AI/ConversationManager.php",
 			"inc/Core/Database/ProcessedItems/ProcessedItemsFilters.php",

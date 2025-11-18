@@ -177,24 +177,7 @@ abstract class Step {
         $this->log('error', $this->step_type . ': ' . $message, $additional_context);
     }
 
-    /**
-     * Add data packet entry using standardized filter.
-     *
-     * @param array $packet_data Packet data to add
-     * @param string|null $custom_step_type Optional custom step type override
-     * @return array Updated data packet array
-     */
-    protected function addDataPacket(array $packet_data, ?string $custom_step_type = null): array {
-        $this->dataPackets = apply_filters(
-            'datamachine_data_packet',
-            $this->dataPackets,
-            $packet_data,
-            $this->flow_step_id,
-            $custom_step_type ?? $this->step_type
-        );
 
-        return $this->dataPackets;
-    }
 
     /**
      * Get handler slug from flow step configuration.

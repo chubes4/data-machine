@@ -28,9 +28,6 @@ class ThreadsAuth {
      */
     private $oauth2;
 
-    /**
-     * Constructor - Gets OAuth2Handler via filter
-     */
     public function __construct() {
         $this->oauth2 = apply_filters('datamachine_get_oauth2_handler', null);
     }

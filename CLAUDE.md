@@ -67,10 +67,10 @@ wp_datamachine_pipelines: pipeline_id, pipeline_name, pipeline_config, created_a
 wp_datamachine_flows: flow_id, pipeline_id, flow_name, flow_config, scheduling_config
 
 -- Job executions
-wp_datamachine_jobs: job_id, flow_id, pipeline_id, status, job_data_json, engine_data, started_at, completed_at, error_message
+wp_datamachine_jobs: job_id, pipeline_id, flow_id, status, engine_data, created_at, completed_at
 
 -- Deduplication tracking
-wp_datamachine_processed_items: item_id, flow_step_id, source_type, item_id, job_id, processed_at
+wp_datamachine_processed_items: id, flow_step_id, source_type, item_identifier, job_id, processed_timestamp
 
 -- Chat sessions (conversation persistence)
 wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider, model, created_at, updated_at, expires_at
@@ -324,24 +324,26 @@ apply_filters('datamachine_apply_global_defaults', $current_settings, $handler_s
 **Standard Implementation Patterns**:
 
 ```php
-// Step Pattern
-class MyStep {
-    public function execute(array $payload): array {
-        $job_id = $payload['job_id'];
-        $flow_step_id = $payload['flow_step_id'];
-        $dataPackets = $payload['data'] ?? [];
-        $flow_step_config = $payload['flow_step_config'] ?? [];
-        $engine_data = $payload['engine_data'] ?? [];
+// Step Pattern - Extends base Step class
+class MyStep extends Step {
+    public function __construct() {
+        parent::__construct('my_step');
+    }
 
-        do_action('datamachine_mark_item_processed', $flow_step_id, 'my_step', $item_id, $job_id);
+    protected function executeStep(): array {
+        // Properties available from base class:
+        // $this->job_id, $this->flow_step_id, $this->dataPackets,
+        // $this->flow_step_config, $this->engine_data
 
-        array_unshift($dataPackets, [
+        do_action('datamachine_mark_item_processed', $this->flow_step_id, 'my_step', $item_id, $this->job_id);
+
+        array_unshift($this->dataPackets, [
             'type' => 'my_step',
             'content' => ['title' => $title, 'body' => $content],
-            'metadata' => ['source_type' => $dataPackets[0]['metadata']['source_type'] ?? 'unknown'],
+            'metadata' => ['source_type' => $this->dataPackets[0]['metadata']['source_type'] ?? 'unknown'],
             'timestamp' => time()
         ]);
-        return $dataPackets;
+        return $this->dataPackets;
     }
 }
 

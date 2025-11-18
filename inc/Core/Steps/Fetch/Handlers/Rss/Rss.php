@@ -7,28 +7,33 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Rss;
 
+use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class Rss {
+class Rss extends FetchHandler {
 
-     /**
-      * Fetch RSS/Atom content with timeframe and keyword filtering.
-      * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
-      */
-    public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
+	public function __construct() {
+		parent::__construct( 'rss' );
+	}
 
-        $flow_step_id = $handler_config['flow_step_id'] ?? null;
-        $flow_id = $handler_config['flow_id'] ?? 0;
-        $config = $handler_config['rss'] ?? [];
-        $feed_url = trim($config['feed_url'] ?? '');
+	/**
+	 * Fetch RSS/Atom content with timeframe and keyword filtering.
+	 * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
+	 */
+	protected function executeFetch(
+		int $pipeline_id,
+		array $config,
+		?string $flow_step_id,
+		int $flow_id,
+		?string $job_id
+	): array {
+		$feed_url = trim($config['feed_url'] ?? '');
 
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
         $search = trim($config['search'] ?? '');
-
-        $cutoff_timestamp = apply_filters('datamachine_timeframe_limit', null, $timeframe_limit);
 
         $args = [
             'user-agent' => 'DataMachine WordPress Plugin/' . DATAMACHINE_VERSION
@@ -37,18 +42,18 @@ class Rss {
         $result = apply_filters('datamachine_request', null, 'GET', $feed_url, $args, 'RSS Feed');
 
         if (!$result['success']) {
-            do_action('datamachine_log', 'error', 'RSS Input: Failed to fetch RSS feed.', [
+            $this->log('error', 'Failed to fetch RSS feed.', [
                 'pipeline_id' => $pipeline_id,
                 'error' => $result['error'],
                 'feed_url' => $feed_url
             ]);
-            return ['processed_items' => []];
+            return $this->emptyResponse();
         }
 
         $feed_content = $result['data'];
         if (empty($feed_content)) {
-            do_action('datamachine_log', 'error', 'RSS Input: RSS feed content is empty.', ['pipeline_id' => $pipeline_id, 'feed_url' => $feed_url]);
-            return ['processed_items' => []];
+            $this->log('error', 'RSS feed content is empty.', ['pipeline_id' => $pipeline_id, 'feed_url' => $feed_url]);
+            return $this->emptyResponse();
         }
 
         libxml_use_internal_errors(true);
@@ -58,13 +63,13 @@ class Rss {
             $error_messages = array_map(function($error) {
                 return trim($error->message);
             }, $errors);
-            
-            do_action('datamachine_log', 'error', 'RSS Input: Failed to parse RSS feed XML.', [
+
+            $this->log('error', 'Failed to parse RSS feed XML.', [
                 'pipeline_id' => $pipeline_id,
                 'feed_url' => $feed_url,
                 'xml_errors' => implode(', ', $error_messages)
             ]);
-            return ['processed_items' => []];
+            return $this->emptyResponse();
         }
 
         $items = [];
@@ -76,12 +81,12 @@ class Rss {
         } elseif (isset($xml->entry)) {
             $items = $xml->entry;
         } else {
-            do_action('datamachine_log', 'error', 'RSS Input: Unsupported feed format or no items found in feed.', ['pipeline_id' => $pipeline_id, 'feed_url' => $feed_url]);
-            return ['processed_items' => []];
+            $this->log('error', 'Unsupported feed format or no items found in feed.', ['pipeline_id' => $pipeline_id, 'feed_url' => $feed_url]);
+            return $this->emptyResponse();
         }
 
         if (empty($items)) {
-            return ['processed_items' => []];
+            return $this->emptyResponse();
         }
 
         $total_checked = 0;
@@ -96,22 +101,20 @@ class Rss {
             $guid = $this->extract_item_guid($item, $link);
             
             if (empty($guid)) {
-                do_action('datamachine_log', 'warning', 'RSS Input: Skipping item without GUID.', ['title' => $title, 'pipeline_id' => $pipeline_id]);
+                $this->log('warning', 'Skipping item without GUID.', ['title' => $title, 'pipeline_id' => $pipeline_id]);
                 continue;
             }
 
-            $is_processed = apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'rss', $guid);
-            if ($is_processed) {
+            if ($this->isItemProcessed($guid, $flow_step_id)) {
                 continue;
             }
 
-            if ($cutoff_timestamp !== null && $pub_date) {
+            if ($pub_date) {
                 $item_timestamp = strtotime($pub_date);
-                if ($item_timestamp !== false && $item_timestamp < $cutoff_timestamp) {
-                    do_action('datamachine_log', 'debug', 'RSS Input: Skipping item outside timeframe.', [
+                if ($item_timestamp !== false && !$this->applyTimeframeFilter($item_timestamp, $timeframe_limit)) {
+                    $this->log('debug', 'Skipping item outside timeframe.', [
                         'guid' => $guid,
                         'pub_date' => $pub_date,
-                        'cutoff' => gmdate('Y-m-d H:i:s', $cutoff_timestamp),
                         'pipeline_id' => $pipeline_id
                     ]);
                     continue;
@@ -119,14 +122,11 @@ class Rss {
             }
 
             $search_text = $title . ' ' . wp_strip_all_tags($description);
-            $matches = apply_filters('datamachine_keyword_search_match', false, $search_text, $search);
-            if (!$matches) {
+            if (!$this->applyKeywordSearch($search_text, $search)) {
                 continue;
             }
 
-            if ($flow_step_id) {
-                do_action('datamachine_mark_item_processed', $flow_step_id, 'rss', $guid, $job_id);
-            }
+            $this->markItemProcessed($guid, $flow_step_id, $job_id);
 
             $author = $this->extract_item_author($item);
             $categories = $this->extract_item_categories($item);
@@ -153,20 +153,10 @@ class Rss {
                 $mime_type = $file_check['type'] ?: 'application/octet-stream';
 
                 if (strpos($mime_type, 'image/') === 0 && in_array($mime_type, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
-                    $downloader = apply_filters('datamachine_get_remote_downloader', null);
-
-                    if ($downloader && $flow_step_id) {
+                    if ($flow_step_id) {
                         $filename = 'rss_image_' . time() . '_' . sanitize_file_name(basename(wp_parse_url($enclosure_url, PHP_URL_PATH)));
 
-                        // Build context with fallback names (no database queries)
-                        $context = [
-                            'pipeline_id' => $pipeline_id,
-                            'pipeline_name' => "pipeline-{$pipeline_id}",
-                            'flow_id' => $flow_id,
-                            'flow_name' => "flow-{$flow_id}"
-                        ];
-
-                        $download_result = $downloader->download_remote_file($enclosure_url, $filename, $context);
+                        $download_result = $this->downloadRemoteFile($enclosure_url, $filename, $pipeline_id, $flow_id);
 
                         if ($download_result) {
                             $file_info = [
@@ -175,14 +165,14 @@ class Rss {
                                 'file_size' => $download_result['size']
                             ];
 
-                            do_action('datamachine_log', 'debug', 'RSS Input: Downloaded remote image for AI processing', [
+                            $this->log('debug', 'Downloaded remote image for AI processing', [
                                 'guid' => $guid,
                                 'source_url' => $enclosure_url,
                                 'local_path' => $download_result['path'],
                                 'file_size' => $download_result['size']
                             ]);
                         } else {
-                            do_action('datamachine_log', 'warning', 'RSS Input: Failed to download remote image', [
+                            $this->log('warning', 'Failed to download remote image', [
                                 'guid' => $guid,
                                 'enclosure_url' => $enclosure_url
                             ]);
@@ -193,7 +183,7 @@ class Rss {
                             ];
                         }
                     } else {
-                        // Fall back to type info only if no repository or flow_step_id
+                        // Fall back to type info only if no flow_step_id
                         $file_info = [
                             'type' => $mime_type,
                             'mime_type' => $mime_type
@@ -208,32 +198,36 @@ class Rss {
                 }
             }
 
-            // Create clean data packet for AI processing
-            $input_data = [
-                'data' => array_merge($content_data, ['file_info' => $file_info]),
+            // Prepare raw data for DataPacket creation
+            $raw_data = [
+                'title' => $content_data['title'],
+                'content' => $content_data['content'],
                 'metadata' => $metadata
             ];
 
-            if ($job_id) {
-                $engine_data = ['source_url' => $link ?: ''];
-
-                // Store repository file path if image was downloaded
-                if (!empty($file_info) && isset($file_info['file_path'])) {
-                    $engine_data['image_file_path'] = $file_info['file_path'];
-                }
-
-                apply_filters('datamachine_engine_data', null, $job_id, $engine_data);
+            // Add file_info if present
+            if ($file_info) {
+                $raw_data['file_info'] = $file_info;
             }
 
-            return ['processed_items' => [$input_data]];
+            $engine_data = ['source_url' => $link ?: ''];
+
+            // Store repository file path if image was downloaded
+            if (!empty($file_info) && isset($file_info['file_path'])) {
+                $engine_data['image_file_path'] = $file_info['file_path'];
+            }
+
+            $this->storeEngineData($job_id, $engine_data);
+
+            return $raw_data;
         }
 
-        do_action('datamachine_log', 'debug', 'RSS Input: No eligible items found in RSS feed.', [
+        $this->log('debug', 'No eligible items found in RSS feed.', [
             'total_checked' => $total_checked,
             'pipeline_id' => $pipeline_id
         ]);
 
-        return ['processed_items' => []];
+        return $this->emptyResponse();
     }
 
     /**

@@ -12,13 +12,13 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;
 
-use DataMachine\Core\Steps\SettingsHandler;
+use DataMachine\Core\Steps\Fetch\Handlers\FetchHandlerSettings;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-class RedditSettings extends SettingsHandler {
+class RedditSettings extends FetchHandlerSettings {
 
     /**
      * Get settings fields for Reddit fetch handler.
@@ -26,7 +26,8 @@ class RedditSettings extends SettingsHandler {
     * @return array Associative array defining the settings fields.
     */
     public static function get_fields(): array {
-        return [
+        // Handler-specific fields
+        $fields = [
             'subreddit' => [
                 'type' => 'text',
                 'label' => __('Subreddit Name', 'datamachine'),
@@ -44,12 +45,6 @@ class RedditSettings extends SettingsHandler {
                     'rising' => 'Rising',
                     'controversial' => 'Controversial',
                 ],
-            ],
-            'timeframe_limit' => [
-                'type' => 'select',
-                'label' => __('Process Posts Within', 'datamachine'),
-                'description' => __('Only consider posts created within this timeframe.', 'datamachine'),
-                'options' => apply_filters('datamachine_timeframe_limit', [], null),
             ],
             'min_upvotes' => [
                 'type' => 'number',
@@ -72,12 +67,10 @@ class RedditSettings extends SettingsHandler {
                 'min' => 0,
                 'max' => 100,
             ],
-            'search' => [
-                'type' => 'text',
-                'label' => __('Search Term Filter', 'datamachine'),
-                'description' => __('Filter posts locally by keywords (comma-separated). Only posts containing at least one keyword in their title or content (selftext) will be considered.', 'datamachine'),
-            ],
         ];
+
+        // Merge with common fetch handler fields
+        return array_merge($fields, parent::get_common_fields());
     }
 
     /**

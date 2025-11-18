@@ -8,33 +8,33 @@
  */
 namespace DataMachine\Core\Steps\Fetch\Handlers\Files;
 
+use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
-class Files {
+class Files extends FetchHandler {
 
-    /**
-     * Get file storage instance via filter discovery
-     */
-	private function get_file_storage(): ?\DataMachine\Core\FilesRepository\FileStorage {
-		return apply_filters('datamachine_get_file_storage', null);
+	public function __construct() {
+		parent::__construct( 'files' );
 	}
 
 	/**
 	 * Process uploaded files with universal image handling.
 	 * For images: stores image_file_path via datamachine_engine_data filter.
 	 */
-	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
-        $storage = $this->get_file_storage();
-        $flow_step_id = $handler_config['flow_step_id'] ?? null;
-        $config = $handler_config['files'] ?? [];
-        $uploaded_files = $config['uploaded_files'] ?? [];
+	protected function executeFetch(
+		int $pipeline_id,
+		array $config,
+		?string $flow_step_id,
+		int $flow_id,
+		?string $job_id
+	): array {
+		$storage = $this->getFileStorage();
+		$uploaded_files = $config['uploaded_files'] ?? [];
 
         if (empty($uploaded_files)) {
-            $flow_id = $handler_config['flow_id'] ?? 0;
-
             // Build context with fallback names (no database queries)
             $context = [
                 'pipeline_id' => $pipeline_id,
@@ -45,11 +45,11 @@ class Files {
 
             $repo_files = $storage->get_all_files($context);
             if (empty($repo_files)) {
-                do_action('datamachine_log', 'debug', 'Files Input: No files available in repository.', [
+                $this->log('debug', 'No files available in repository.', [
                     'pipeline_id' => $pipeline_id,
                     'flow_step_id' => $flow_step_id
                 ]);
-                return ['processed_items' => []];
+                return $this->emptyResponse();
             }
 
             $uploaded_files = array_map(function($file) {
@@ -66,13 +66,13 @@ class Files {
         $next_file = $this->find_next_unprocessed_file($flow_step_id, ['uploaded_files' => $uploaded_files], $job_id);
 
         if (!$next_file) {
-            do_action('datamachine_log', 'debug', 'Files Input: No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
-            return ['processed_items' => []];
+            $this->log('debug', 'No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
+            return $this->emptyResponse();
         }
 
         if (!file_exists($next_file['persistent_path'])) {
-            do_action('datamachine_log', 'error', 'Files Input: File not found.', ['pipeline_id' => $pipeline_id, 'file_path' => $next_file['persistent_path']]);
-            return ['processed_items' => []];
+            $this->log('error', 'File not found.', ['pipeline_id' => $pipeline_id, 'file_path' => $next_file['persistent_path']]);
+            return $this->emptyResponse();
         }
 
         $file_identifier = $next_file['persistent_path'];
@@ -98,10 +98,12 @@ class Files {
             'original_date_gmt' => $next_file['uploaded_at'] ?? gmdate('Y-m-d H:i:s')
         ];
 
-        // Create clean data packet for AI processing
-        $item_data = [
-            'data' => array_merge($content_data, ['file_info' => $file_info]),
-            'metadata' => $metadata
+        // Prepare raw data for DataPacket creation
+        $raw_data = [
+            'title' => $content_data['title'],
+            'content' => $content_data['content'],
+            'metadata' => $metadata,
+            'file_info' => $file_info
         ];
 
         // Generate public URL for image files (for WordPress featured images, etc.)
@@ -113,15 +115,13 @@ class Files {
         }
 
         // Store file path in engine_data via centralized filter
-        if ($job_id) {
-            $engine_data = ['source_url' => ''];
-            if (strpos($mime_type, 'image/') === 0) {
-                $engine_data['image_file_path'] = $next_file['persistent_path'];
-            }
-            apply_filters('datamachine_engine_data', null, $job_id, $engine_data);
+        $engine_data = ['source_url' => ''];
+        if (strpos($mime_type, 'image/') === 0) {
+            $engine_data['image_file_path'] = $next_file['persistent_path'];
         }
+        $this->storeEngineData($job_id, $engine_data);
 
-        do_action('datamachine_log', 'debug', 'Files Input: Found unprocessed file for processing.', [
+        $this->log('debug', 'Found unprocessed file for processing.', [
             'pipeline_id' => $pipeline_id,
             'flow_step_id' => $flow_step_id,
             'file_path' => $file_identifier,
@@ -129,9 +129,7 @@ class Files {
             'public_url' => $file_url
         ]);
 
-        return [
-            'processed_items' => [$item_data]
-        ];
+        return $raw_data;
 	}
 
     /**
@@ -139,24 +137,24 @@ class Files {
      */
     private function find_next_unprocessed_file(?string $flow_step_id, array $config, ?string $job_id = null): ?array {
         $uploaded_files = $config['uploaded_files'] ?? [];
-        
+
         if (empty($uploaded_files)) {
             return null;
         }
 
         foreach ($uploaded_files as $file) {
             $file_identifier = $file['persistent_path'];
-            
-            $is_processed = apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'files', $file_identifier);
-            
-            do_action('datamachine_log', 'debug', 'Files Input: Checking file processed status', [
+
+            $is_processed = $this->isItemProcessed($file_identifier, $flow_step_id);
+
+            $this->log('debug', 'Checking file processed status', [
                 'flow_step_id' => $flow_step_id,
                 'file_identifier' => basename($file_identifier),
                 'is_processed' => $is_processed
             ]);
-            
+
             if (!$is_processed) {
-                do_action('datamachine_mark_item_processed', $flow_step_id, 'files', $file_identifier, $job_id);
+                $this->markItemProcessed($file_identifier, $flow_step_id, $job_id);
                 return $file;
             }
         }

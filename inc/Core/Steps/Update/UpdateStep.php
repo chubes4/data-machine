@@ -7,6 +7,7 @@
 
 namespace DataMachine\Core\Steps\Update;
 
+use DataMachine\Core\DataPacket;
 use DataMachine\Core\Steps\Step;
 use DataMachine\Engine\AI\ToolResultFinder;
 
@@ -72,13 +73,13 @@ class UpdateStep extends Step {
       */
     private function create_update_entry_from_tool_result(array $tool_result_entry, array $dataPackets, string $handler, string $flow_step_id): array {
         $tool_result_data = $tool_result_entry['metadata']['tool_result'] ?? [];
-        
-        $update_entry = [
-            'content' => [
+
+        $packet = new DataPacket(
+            [
                 'update_result' => $tool_result_data,
                 'updated_at' => current_time('mysql')
             ],
-            'metadata' => [
+            [
                 'step_type' => 'update',
                 'handler' => $handler,
                 'flow_step_id' => $flow_step_id,
@@ -86,11 +87,9 @@ class UpdateStep extends Step {
                 'executed_via' => 'ai_tool_call',
                 'tool_execution_data' => $tool_result_data
             ],
-            'attachments' => []
-        ];
-        
-        $dataPackets = apply_filters('datamachine_data_packet', $dataPackets, $update_entry, $flow_step_id, 'update');
+            'update'
+        );
 
-        return $dataPackets;
+        return $packet->addTo($dataPackets);
     }
 }

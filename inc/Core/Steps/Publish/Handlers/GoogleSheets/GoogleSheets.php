@@ -26,9 +26,6 @@ class GoogleSheets extends PublishHandler {
      */
     private $auth;
 
-    /**
-     * Constructor - direct auth initialization for security
-     */
     public function __construct() {
         parent::__construct('googlesheets');
         // Use filter-based auth access following pure discovery architectural standards

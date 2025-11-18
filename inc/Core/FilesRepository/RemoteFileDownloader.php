@@ -30,9 +30,6 @@ class RemoteFileDownloader {
      */
     private $file_storage;
 
-    /**
-     * Constructor
-     */
     public function __construct() {
         $this->directory_manager = new DirectoryManager();
         $this->file_storage = new FileStorage();

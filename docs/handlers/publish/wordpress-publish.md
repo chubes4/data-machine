@@ -2,16 +2,17 @@
 
 Creates posts in the local WordPress installation using a modular handler architecture with specialized processing components for featured images, taxonomies, and source URLs.
 
-## Modular Handler Architecture
+## Base Class Architecture
 
-The WordPress publish handler is refactored into specialized components for maintainability, extensibility, and clean separation of concerns.
+The WordPress publish handler extends the `PublishHandler` base class, which provides common functionality for all publish handlers including engine data retrieval, standardized response formatting, and centralized logging.
 
-### Core Handler Components
+### Handler Components
 
 **Main Handler** (`WordPress.php`):
-- Orchestrates post creation workflow
+- Extends `PublishHandler` base class
+- Implements `executePublish()` method for WordPress-specific logic
 - Coordinates specialized component processing
-- Handles tool call interface and response formatting
+- Uses configuration hierarchy (system defaults override handler settings)
 
 **Specialized Components**:
 - **`FeaturedImageHandler`**: Featured image processing and media library integration
@@ -193,45 +194,65 @@ $source_url = $engine_data['source_url'] ?? null;
 
 ### Tool Call Workflow
 
+The WordPress handler extends `PublishHandler` and implements the `executePublish()` method:
+
 ```php
-class WordPress {
+class WordPress extends PublishHandler {
     private $featured_image_handler;
-    private $taxonomy_handler;
     private $source_url_handler;
+    private $taxonomy_handler;
 
-    public function handle_tool_call(array $parameters, array $tool_def = []): array {
-        // 1. Extract handler configuration
-        $handler_config = $tool_def['handler_config'] ?? [];
+    public function __construct() {
+        parent::__construct('wordpress');
+        $this->featured_image_handler = apply_filters('datamachine_get_featured_image_handler', null);
+        $this->source_url_handler = apply_filters('datamachine_get_source_url_handler', null);
+        $this->taxonomy_handler = apply_filters('datamachine_get_taxonomy_handler', null);
+    }
 
-        // 2. Process source URL in content first
+    protected function executePublish(array $parameters, array $handler_config): array {
+        // 1. Validate required parameters
+        if (empty($parameters['title']) || empty($parameters['content'])) {
+            return $this->errorResponse('Missing required parameters');
+        }
+
+        // 2. Get engine data via base class method
+        $job_id = $parameters['job_id'] ?? null;
+        $engine_data = $this->getEngineData($job_id);
+
+        // 3. Process source URL in content
         $content = $this->source_url_handler->processSourceUrl(
             $parameters['content'],
-            $parameters,
+            $engine_data,
             $handler_config
         );
 
-        // 3. Create WordPress post
-        $post_id = $this->create_wordpress_post($content, $handler_config);
+        // 4. Create WordPress post with configuration hierarchy
+        $post_data = [
+            'post_title' => sanitize_text_field($parameters['title']),
+            'post_content' => $content,
+            'post_status' => $this->get_effective_post_status($handler_config),
+            'post_type' => $handler_config['post_type'],
+            'post_author' => $this->get_effective_post_author($handler_config)
+        ];
 
-        // 4. Process featured image
-        $image_result = $this->featured_image_handler->processImage(
-            $post_id,
-            $parameters,
-            $handler_config
-        );
+        $post_id = wp_insert_post($post_data);
 
-        // 5. Process taxonomies
-        $taxonomy_results = $this->taxonomy_handler->processTaxonomies(
-            $post_id,
-            $parameters,
-            $handler_config
-        );
+        // 5. Process taxonomies and featured image
+        $taxonomy_results = $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config);
+        $featured_image_result = $this->featured_image_handler->processImage($post_id, $engine_data, $handler_config);
 
-        // 6. Build comprehensive response
-        return $this->buildToolResponse($post_id, $image_result, $taxonomy_results);
+        // 6. Return standardized success response
+        return $this->successResponse([
+            'post_id' => $post_id,
+            'post_url' => get_permalink($post_id),
+            'taxonomy_results' => $taxonomy_results,
+            'featured_image_result' => $featured_image_result
+        ]);
     }
 }
 ```
+
+The `handle_tool_call()` method is implemented in the base `PublishHandler` class and calls `executePublish()`.
 
 ## Required Configuration
 
@@ -299,12 +320,8 @@ $handler_config = [
     'success' => true,
     'data' => [
         'post_id' => 123,
+        'post_title' => 'Original post title',
         'post_url' => 'https://site.com/post-permalink',
-        'featured_image' => [
-            'success' => true,
-            'attachment_id' => 456,
-            'attachment_url' => 'https://site.com/wp-content/uploads/image.jpg'
-        ],
         'taxonomy_results' => [
             'category' => [
                 'success' => true,
@@ -318,6 +335,11 @@ $handler_config = [
                 'term_count' => 2,
                 'terms' => ['AI', 'Machine Learning']
             ]
+        ],
+        'featured_image_result' => [
+            'success' => true,
+            'attachment_id' => 456,
+            'attachment_url' => 'https://site.com/wp-content/uploads/image.jpg'
         ]
     ],
     'tool_name' => 'wordpress_publish'

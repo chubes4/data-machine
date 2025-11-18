@@ -12,13 +12,13 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Rss;
 
-use DataMachine\Core\Steps\SettingsHandler;
+use DataMachine\Core\Steps\Fetch\Handlers\FetchHandlerSettings;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-class RssSettings extends SettingsHandler {
+class RssSettings extends FetchHandlerSettings {
 
     /**
      * Get settings fields for RSS fetch handler.
@@ -26,25 +26,17 @@ class RssSettings extends SettingsHandler {
      * @return array Associative array defining the settings fields.
      */
     public static function get_fields(): array {
-        return [
+        // Handler-specific fields
+        $fields = [
             'feed_url' => [
                 'type' => 'url',
                 'label' => __('RSS Feed URL', 'datamachine'),
                 'description' => __('Enter the full URL of the RSS or Atom feed (e.g., https://example.com/feed).', 'datamachine'),
                 'required' => true,
             ],
-            'timeframe_limit' => [
-                'type' => 'select',
-                'label' => __('Process Items Within', 'datamachine'),
-                'description' => __('Only consider RSS items published within this timeframe.', 'datamachine'),
-                'options' => apply_filters('datamachine_timeframe_limit', [], null),
-            ],
-            'search' => [
-                'type' => 'text',
-                'label' => __('Search Term Filter', 'datamachine'),
-                'description' => __('Filter items by keywords (comma-separated). Items containing any keyword in their title or content will be included.', 'datamachine'),
-                'placeholder' => __('Optional search term', 'datamachine'),
-            ],
         ];
+
+        // Merge with common fetch handler fields
+        return array_merge($fields, parent::get_common_fields());
     }
 }

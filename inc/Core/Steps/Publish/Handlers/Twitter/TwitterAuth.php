@@ -24,9 +24,6 @@ class TwitterAuth {
      */
     private $oauth1;
 
-    /**
-     * Constructor - Gets OAuth1Handler via filter
-     */
     public function __construct() {
         $this->oauth1 = apply_filters('datamachine_get_oauth1_handler', null);
     }

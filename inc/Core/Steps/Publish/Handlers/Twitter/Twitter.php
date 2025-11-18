@@ -28,9 +28,6 @@ class Twitter extends PublishHandler {
     /** @var TwitterAuth OAuth authentication handler */
     private $auth;
 
-    /**
-     * Constructor - Initialize Twitter authentication.
-     */
     public function __construct() {
         parent::__construct('twitter');
         $all_auth = apply_filters('datamachine_auth_providers', []);

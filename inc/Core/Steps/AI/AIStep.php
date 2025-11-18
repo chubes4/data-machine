@@ -2,6 +2,7 @@
 
 namespace DataMachine\Core\Steps\AI;
 
+use DataMachine\Core\DataPacket;
 use DataMachine\Core\Steps\Step;
 use DataMachine\Engine\AI\AIConversationLoop;
 use DataMachine\Engine\AI\ConversationManager;
@@ -76,7 +77,7 @@ class AIStep extends Step {
         $mime_type = null;
         if (!empty($this->dataPackets)) {
             $first_item = $this->dataPackets[0] ?? [];
-            $file_info = $first_item['content']['file_info'] ?? null;
+            $file_info = $first_item['data']['file_info'] ?? null;
 
             if ($file_info && isset($file_info['file_path']) && file_exists($file_info['file_path'])) {
                 $file_path = $file_info['file_path'];
@@ -209,20 +210,21 @@ class AIStep extends Step {
                         $response_body = "AI executed " . count($tool_calls) . " tool(s): " . implode(', ', $tool_names);
                     }
 
-                    $dataPackets = apply_filters('datamachine_data_packet', $dataPackets, [
-                        'type' => 'ai_response',
-                        'content' => [
+                    $packet = new DataPacket(
+                        [
                             'title' => $ai_title,
                             'body' => $response_body
                         ],
-                        'metadata' => [
+                        [
                             'source_type' => 'ai_response',
                             'flow_step_id' => $flow_step_id,
                             'conversation_turn' => $turn_count,
                             'has_tool_calls' => !empty($tool_calls),
                             'tool_count' => count($tool_calls)
-                        ]
-                    ], $flow_step_id, 'ai');
+                        ],
+                        'ai_response'
+                    );
+                    $dataPackets = $packet->addTo($dataPackets);
                 }
             }
 
@@ -249,13 +251,12 @@ class AIStep extends Step {
                         unset($clean_tool_parameters[$handler_key]);
                     }
 
-                    $dataPackets = apply_filters('datamachine_data_packet', $dataPackets, [
-                        'type' => 'ai_handler_complete',
-                        'content' => [
+                    $packet = new DataPacket(
+                        [
                             'title' => 'Handler Tool Executed: ' . $tool_name,
                             'body' => 'Tool executed successfully by AI agent in ' . $turn_count . ' conversation turns'
                         ],
-                        'metadata' => [
+                        [
                             'tool_name' => $tool_name,
                             'handler_tool' => $tool_def['handler'] ?? null,
                             'tool_parameters' => $clean_tool_parameters,
@@ -264,30 +265,31 @@ class AIStep extends Step {
                             'flow_step_id' => $flow_step_id,
                             'conversation_turn' => $turn_count
                         ],
-                        'timestamp' => time()
-                    ], $flow_step_id, 'ai');
+                        'ai_handler_complete'
+                    );
+                    $dataPackets = $packet->addTo($dataPackets);
 
                     $handler_completed = true;
                 } else {
                     // Non-handler tool or failed tool - add tool result data packet
                     $success_message = ConversationManager::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
 
-                    $dataPackets = apply_filters('datamachine_data_packet', $dataPackets, [
-                        'type' => 'tool_result',
-                        'tool_name' => $tool_name,
-                        'content' => [
+                    $packet = new DataPacket(
+                        [
                             'title' => ucwords(str_replace('_', ' ', $tool_name)) . ' Result',
                             'body' => $success_message
                         ],
-                        'metadata' => [
+                        [
                             'tool_name' => $tool_name,
                             'handler_tool' => $tool_def['handler'] ?? null,
                             'tool_parameters' => $tool_parameters,
                             'tool_success' => $tool_result['success'] ?? false,
                             'tool_result' => $tool_result['data'] ?? [],
                             'source_type' => $dataPackets[0]['metadata']['source_type'] ?? 'unknown'
-                        ]
-                    ], $flow_step_id, 'ai');
+                        ],
+                        'tool_result'
+                    );
+                    $dataPackets = $packet->addTo($dataPackets);
                 }
             }
         }

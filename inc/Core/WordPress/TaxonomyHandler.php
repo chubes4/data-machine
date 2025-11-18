@@ -27,10 +27,10 @@ class TaxonomyHandler {
      */
     public function processTaxonomies(int $post_id, array $parameters, array $handler_config): array {
         $taxonomy_results = [];
-        $taxonomies = $this->getPublicTaxonomies();
+        $taxonomies = self::getPublicTaxonomies();
 
         foreach ($taxonomies as $taxonomy) {
-            if ($this->shouldSkipTaxonomy($taxonomy->name)) {
+            if (self::shouldSkipTaxonomy($taxonomy->name)) {
                 continue;
             }
 
@@ -62,11 +62,11 @@ class TaxonomyHandler {
         return $taxonomy_results;
     }
 
-    private function getPublicTaxonomies(): array {
+    public static function getPublicTaxonomies(): array {
         return get_taxonomies(['public' => true], 'objects');
     }
 
-    private function shouldSkipTaxonomy(string $taxonomy_name): bool {
+    public static function shouldSkipTaxonomy(string $taxonomy_name): bool {
         $excluded_taxonomies = apply_filters('datamachine_wordpress_system_taxonomies', []);
         return in_array($taxonomy_name, $excluded_taxonomies);
     }

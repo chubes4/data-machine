@@ -266,7 +266,7 @@ AI with Google Search and Local Search tools for comprehensive content analysis
 ## Integration Notes
 
 ### WordPress Compatibility
-- Requires PHP 8.0+, WordPress 6.2+
+- Requires PHP 8.0+, WordPress 6.0+
 - Uses WordPress core functions and standards  
 - Integrates with WordPress admin, users, and permissions
 - Compatible with multisite installations

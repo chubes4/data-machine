@@ -8,39 +8,43 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPressMedia;
 
+use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
 use WP_Query;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
-class WordPressMedia {
+class WordPressMedia extends FetchHandler {
 
-     /**
-      * Fetch WordPress media attachments with parent content integration.
-      * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
-      */
-    public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
-        if (empty($pipeline_id)) {
-            do_action('datamachine_log', 'error', 'WordPress Media: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-            return ['processed_items' => []];
-        }
-        
-        // Extract flow_step_id from handler config for processed items tracking
-        $flow_step_id = $handler_config['flow_step_id'] ?? null;
-        
-        // Handle null flow_step_id gracefully - skip processed items tracking when flow context missing
-        if ($flow_step_id === null) {
-            do_action('datamachine_log', 'debug', 'WordPress Media fetch called without flow_step_id - processed items tracking disabled');
-        }
-        
-        $user_id = get_current_user_id();
+	public function __construct() {
+		parent::__construct( 'wordpress_media' );
+	}
 
-        // Access config from handler config structure
-        $config = $handler_config['wordpress_media'] ?? [];
+	/**
+	 * Fetch WordPress media attachments with parent content integration.
+	 * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
+	 */
+	protected function executeFetch(
+		int $pipeline_id,
+		array $config,
+		?string $flow_step_id,
+		int $flow_id,
+		?string $job_id
+	): array {
+		if (empty($pipeline_id)) {
+			$this->log('error', 'Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
+			return $this->emptyResponse();
+		}
 
-        return $this->fetch_media_data($pipeline_id, $config, $user_id, $flow_step_id, $job_id);
-    }
+		// Handle null flow_step_id gracefully - skip processed items tracking when flow context missing
+		if ($flow_step_id === null) {
+			$this->log('debug', 'WordPress Media fetch called without flow_step_id - processed items tracking disabled');
+		}
+
+		$user_id = get_current_user_id();
+		return $this->fetch_media_data($pipeline_id, $config, $user_id, $flow_step_id, $job_id);
+	}
 
     /**
      * Fetch media data from local WordPress installation.
@@ -122,30 +126,26 @@ class WordPressMedia {
         $posts = $wp_query->posts;
 
         if (empty($posts)) {
-            return [];
+            return $this->emptyResponse();
         }
 
         // Find first unprocessed media item
         foreach ($posts as $post) {
             $post_id = $post->ID;
-            $is_processed = ($flow_step_id !== null) ? apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'wordpress_media', $post_id) : false;
-            if ($is_processed) {
+            if ($this->isItemProcessed((string) $post_id, $flow_step_id)) {
                 continue;
             }
 
             // Apply client-side keyword search filter if needed
             if ($use_client_side_search && !empty($search)) {
                 $search_text = $post->post_title . ' ' . wp_strip_all_tags($post->post_content . ' ' . $post->post_excerpt);
-                $matches = apply_filters('datamachine_keyword_search_match', false, $search_text, $search);
-                if (!$matches) {
+                if (!$this->applyKeywordSearch($search_text, $search)) {
                     continue; // Skip media that don't match search keywords
                 }
             }
 
             // Found first eligible item - mark as processed and return
-            if ($flow_step_id) {
-                do_action('datamachine_mark_item_processed', $flow_step_id, 'wordpress_media', $post_id, $job_id);
-            }
+            $this->markItemProcessed((string) $post_id, $flow_step_id, $job_id);
 
             // Extract media data using universal pattern (identical to all other handlers)
             $post_id = $post->ID;
@@ -198,36 +198,34 @@ class WordPressMedia {
                 'site_name' => $site_name
             ];
 
-            // Create clean data packet for AI processing (matches datamachine_create_data_packet action output)
-            $input_data = [
-                'data' => array_merge($content_data, ['file_info' => $file_info]),
-                'metadata' => $metadata
+            // Prepare raw data for DataPacket creation
+            $raw_data = [
+                'title' => $content_data['title'],
+                'content' => $content_data['content'],
+                'metadata' => $metadata,
+                'file_info' => $file_info
             ];
 
             // Store URLs in engine_data via centralized filter
-            if ($job_id) {
-                $image_url = wp_get_attachment_url($post_id);
-                $source_url = '';
-                if ($include_parent_content && $post->post_parent > 0) {
-                    $source_url = get_permalink($post->post_parent) ?: '';
-                }
-                // Store URLs and file path in engine_data via centralized filter
-                $image_file_path = '';
-                if ($file_info) {
-                    $image_file_path = $file_info['file_path'];
-                }
-
-                apply_filters('datamachine_engine_data', null, $job_id, [
-                    'source_url' => $source_url,
-                    'image_file_path' => $image_file_path
-                ]);
+            $source_url = '';
+            if ($include_parent_content && $post->post_parent > 0) {
+                $source_url = get_permalink($post->post_parent) ?: '';
+            }
+            $image_file_path = '';
+            if ($file_info) {
+                $image_file_path = $file_info['file_path'];
             }
 
-            return ['processed_items' => [$input_data]];
+            $this->storeEngineData($job_id, [
+                'source_url' => $source_url,
+                'image_file_path' => $image_file_path
+            ]);
+
+            return $raw_data;
         }
 
         // No eligible items found
-        return ['processed_items' => []];
+        return $this->emptyResponse();
     }
 
 

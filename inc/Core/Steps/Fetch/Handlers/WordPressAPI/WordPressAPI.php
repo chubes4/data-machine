@@ -8,6 +8,8 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPressAPI;
 
+use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
@@ -19,48 +21,53 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Supports timeframe filtering, keyword search, and structured data extraction.
  * Stores source URLs and image URLs in engine data for downstream handlers.
  */
-class WordPressAPI {
+class WordPressAPI extends FetchHandler {
 
-     /**
-      * Fetch WordPress posts via REST API with timeframe and keyword filtering.
-      * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
-      */
-    public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
-        if (empty($pipeline_id)) {
-            do_action('datamachine_log', 'error', 'WordPress API Input: Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-            return ['processed_items' => []];
-        }
-        
-        $flow_step_id = $handler_config['flow_step_id'] ?? null;
-        $flow_id = $handler_config['flow_id'] ?? 0;
+	public function __construct() {
+		parent::__construct( 'rest_api' );
+	}
 
-        if ($flow_step_id === null) {
-            do_action('datamachine_log', 'debug', 'WordPress API fetch called without flow_step_id - processed items tracking disabled');
-        }
+	/**
+	 * Fetch WordPress posts via REST API with timeframe and keyword filtering.
+	 * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
+	 */
+	protected function executeFetch(
+		int $pipeline_id,
+		array $config,
+		?string $flow_step_id,
+		int $flow_id,
+		?string $job_id
+	): array {
+		if (empty($pipeline_id)) {
+			$this->log('error', 'Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
+			return $this->emptyResponse();
+		}
 
-        $config = $handler_config['wordpress_api'] ?? [];
+		if ($flow_step_id === null) {
+			$this->log('debug', 'WordPress API fetch called without flow_step_id - processed items tracking disabled');
+		}
 
-        // Configuration validation
-        $endpoint_url = trim($config['endpoint_url'] ?? '');
-        if (empty($endpoint_url)) {
-            do_action('datamachine_log', 'error', 'WordPress API Input: Endpoint URL is required.', ['pipeline_id' => $pipeline_id]);
-            return ['processed_items' => []];
-        }
+		// Configuration validation
+		$endpoint_url = trim($config['endpoint_url'] ?? '');
+		if (empty($endpoint_url)) {
+			$this->log('error', 'Endpoint URL is required.', ['pipeline_id' => $pipeline_id]);
+			return $this->emptyResponse();
+		}
 
-        if (!filter_var($endpoint_url, FILTER_VALIDATE_URL)) {
-            do_action('datamachine_log', 'error', 'WordPress API Input: Invalid endpoint URL format.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
-            return ['processed_items' => []];
-        }
+		if (!filter_var($endpoint_url, FILTER_VALIDATE_URL)) {
+			$this->log('error', 'Invalid endpoint URL format.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
+			return $this->emptyResponse();
+		}
 
-        // Get filtering settings
-        $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
-        $search = trim($config['search'] ?? '');
+		// Get filtering settings
+		$timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
+		$search = trim($config['search'] ?? '');
 
-        // Fetch from API endpoint
-        $items = $this->fetch_from_endpoint($pipeline_id, $endpoint_url, $timeframe_limit, $search, $flow_step_id, $job_id);
-        
-        return ['processed_items' => $items];
-    }
+		// Fetch from API endpoint
+		$item = $this->fetch_from_endpoint($pipeline_id, $endpoint_url, $timeframe_limit, $search, $flow_step_id, $flow_id, $job_id);
+
+		return $item ?: $this->emptyResponse();
+	}
 
     /**
      * Fetch data from API endpoint
@@ -73,14 +80,15 @@ class WordPressAPI {
      * @param string $timeframe_limit Timeframe filter setting
      * @param string $search Search term filter
      * @param string|null $flow_step_id Flow step ID for deduplication tracking
+     * @param int $flow_id Flow ID for remote file download context
      * @param string|null $job_id Job ID for item tracking
      * @return array Array containing single eligible item data packet or empty array
      */
-    private function fetch_from_endpoint(int $pipeline_id, string $endpoint_url, string $timeframe_limit, string $search, ?string $flow_step_id = null, ?string $job_id = null): array {
+    private function fetch_from_endpoint(int $pipeline_id, string $endpoint_url, string $timeframe_limit, string $search, ?string $flow_step_id = null, int $flow_id = 0, ?string $job_id = null): array {
         // WordPress REST APIs - try server-side search, fallback to client-side
         if (strpos($endpoint_url, '/wp-json/') !== false && !empty($search)) {
             $endpoint_url = add_query_arg('search', $search, $endpoint_url);
-            do_action('datamachine_log', 'debug', 'REST API: Added server-side search parameter to WordPress endpoint', [
+            $this->log('debug', 'Added server-side search parameter to WordPress endpoint', [
                 'search_term' => $search,
                 'modified_url' => $endpoint_url
             ]);
@@ -94,33 +102,33 @@ class WordPressAPI {
         $result = apply_filters('datamachine_request', null, 'GET', $endpoint_url, $args, 'REST API');
 
         if (!$result['success']) {
-            do_action('datamachine_log', 'error', 'REST API Input: Failed to fetch from endpoint.', [
+            $this->log('error', 'Failed to fetch from endpoint.', [
                 'pipeline_id' => $pipeline_id,
                 'error' => $result['error'],
                 'endpoint_url' => $endpoint_url
             ]);
-            return [];
+            return null;
         }
 
         $response_data = $result['data'];
         if (empty($response_data)) {
-            do_action('datamachine_log', 'error', 'REST API Input: Empty response from endpoint.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
-            return [];
+            $this->log('error', 'Empty response from endpoint.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
+            return null;
         }
 
         // Parse JSON response
         $items = json_decode($response_data, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            do_action('datamachine_log', 'error', 'REST API Input: Invalid JSON response.', [
+            $this->log('error', 'Invalid JSON response.', [
                 'pipeline_id' => $pipeline_id,
                 'json_error' => json_last_error_msg(),
                 'endpoint_url' => $endpoint_url
             ]);
-            return [];
+            return null;
         }
 
         if (!is_array($items) || empty($items)) {
-            return [];
+            return null;
         }
 
         // Find first unprocessed item
@@ -132,15 +140,12 @@ class WordPressAPI {
 
             $unique_id = md5($endpoint_url . '_' . $item_id);
 
-            $is_processed = ($flow_step_id !== null) ? apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'rest_api', $unique_id) : false;
-            if ($is_processed) {
+            if ($this->isItemProcessed($unique_id, $flow_step_id)) {
                 continue;
             }
 
-            // Found first eligible item - mark as processed and return
-            if ($flow_step_id) {
-                do_action('datamachine_mark_item_processed', $flow_step_id, 'rest_api', $unique_id, $job_id);
-            }
+            // Found first eligible item - mark as processed
+            $this->markItemProcessed($unique_id, $flow_step_id, $job_id);
 
             // Extract item data flexibly
             $title = $this->extract_title($item);
@@ -150,20 +155,16 @@ class WordPressAPI {
             $item_date = $this->extract_date($item);
 
             // Apply timeframe filtering
-            if ($timeframe_limit !== 'all_time' && $item_date) {
-                $cutoff_timestamp = apply_filters('datamachine_timeframe_limit', null, $timeframe_limit);
-                if ($cutoff_timestamp !== null) {
-                    $item_timestamp = strtotime($item_date);
-                    if ($item_timestamp && $item_timestamp < $cutoff_timestamp) {
-                        continue; // Skip items outside timeframe
-                    }
+            if ($item_date) {
+                $item_timestamp = strtotime($item_date);
+                if ($item_timestamp && !$this->applyTimeframeFilter($item_timestamp, $timeframe_limit)) {
+                    continue; // Skip items outside timeframe
                 }
             }
 
             // Apply keyword search filter
             $search_text = $title . ' ' . wp_strip_all_tags($content . ' ' . $excerpt);
-            $matches = apply_filters('datamachine_keyword_search_match', false, $search_text, $search);
-            if (!$matches) {
+            if (!$this->applyKeywordSearch($search_text, $search)) {
                 continue; // Skip items that don't match search keywords
             }
 
@@ -172,82 +173,67 @@ class WordPressAPI {
 
             // Download remote image if present
             $file_info = null;
+            $download_result = null;
             if (!empty($image_url) && $flow_step_id) {
-                $downloader = apply_filters('datamachine_get_remote_downloader', null);
+                // Generate filename from URL
+                $url_path = wp_parse_url($image_url, PHP_URL_PATH);
+                $extension = $url_path ? pathinfo($url_path, PATHINFO_EXTENSION) : 'jpg';
+                if (empty($extension)) {
+                    $extension = 'jpg';
+                }
+                $filename = 'wp_api_image_' . time() . '_' . sanitize_file_name(basename($url_path ?: 'image')) . '.' . $extension;
 
-                if ($downloader) {
-                    // Generate filename from URL
-                    $url_path = wp_parse_url($image_url, PHP_URL_PATH);
-                    $extension = $url_path ? pathinfo($url_path, PATHINFO_EXTENSION) : 'jpg';
-                    if (empty($extension)) {
-                        $extension = 'jpg';
-                    }
-                    $filename = 'wp_api_image_' . time() . '_' . sanitize_file_name(basename($url_path ?: 'image')) . '.' . $extension;
+                $download_result = $this->downloadRemoteFile($image_url, $filename, $pipeline_id, $flow_id);
 
-                    // Build context with fallback names (no database queries)
-                    $context = [
-                        'pipeline_id' => $pipeline_id,
-                        'pipeline_name' => "pipeline-{$pipeline_id}",
-                        'flow_id' => $flow_id,
-                        'flow_name' => "flow-{$flow_id}"
+                if ($download_result) {
+                    $file_check = wp_check_filetype($filename);
+                    $mime_type = $file_check['type'] ?: 'image/jpeg';
+
+                    $file_info = [
+                        'file_path' => $download_result['path'],
+                        'mime_type' => $mime_type,
+                        'file_size' => $download_result['size']
                     ];
 
-                    $download_result = $downloader->download_remote_file($image_url, $filename, $context);
-
-                    if ($download_result) {
-                        $file_check = wp_check_filetype($filename);
-                        $mime_type = $file_check['type'] ?: 'image/jpeg';
-
-                        $file_info = [
-                            'file_path' => $download_result['path'],
-                            'mime_type' => $mime_type,
-                            'file_size' => $download_result['size']
-                        ];
-
-                        do_action('datamachine_log', 'debug', 'WordPress API Input: Downloaded remote image for AI processing', [
-                            'item_id' => $unique_id,
-                            'source_url' => $image_url,
-                            'local_path' => $download_result['path'],
-                            'file_size' => $download_result['size']
-                        ]);
-                    } else {
-                        do_action('datamachine_log', 'warning', 'WordPress API Input: Failed to download remote image', [
-                            'item_id' => $unique_id,
-                            'image_url' => $image_url
-                        ]);
-                    }
+                    $this->log('debug', 'Downloaded remote image for AI processing', [
+                        'item_id' => $unique_id,
+                        'source_url' => $image_url,
+                        'local_path' => $download_result['path'],
+                        'file_size' => $download_result['size']
+                    ]);
+                } else {
+                    $this->log('warning', 'Failed to download remote image', [
+                        'item_id' => $unique_id,
+                        'image_url' => $image_url
+                    ]);
                 }
             }
 
             $site_name = $this->extract_site_name_from_url($endpoint_url);
 
-            // Create structured content data for AI processing
-            $content_data = [
+            // Prepare raw data for DataPacket creation
+            $raw_data = [
                 'title' => $title,
                 'content' => wp_strip_all_tags($content),
-                'excerpt' => wp_strip_all_tags($excerpt)
+                'metadata' => [
+                    'source_type' => 'rest_api',
+                    'item_identifier_to_log' => $unique_id,
+                    'original_id' => $item_id,
+                    'original_title' => $title,
+                    'original_date_gmt' => $item_date,
+                    'site_name' => $site_name
+                ]
             ];
+
+            // Add excerpt if present
+            if (!empty($excerpt)) {
+                $raw_data['content'] .= "\n\nExcerpt: " . wp_strip_all_tags($excerpt);
+            }
 
             // Add file_info if image was downloaded
             if ($file_info) {
-                $content_data['file_info'] = $file_info;
+                $raw_data['file_info'] = $file_info;
             }
-
-            // Create standardized packet and return immediately
-            $metadata = [
-                'source_type' => 'rest_api',
-                'item_identifier_to_log' => $unique_id,
-                'original_id' => $item_id,
-                'original_title' => $title,
-                'original_date_gmt' => $item_date,
-                'site_name' => $site_name
-            ];
-
-            // Create clean data packet for AI processing
-            $input_data = [
-                'data' => $content_data,
-                'metadata' => $metadata
-            ];
 
             // Store URLs and file path in engine_data via centralized filter
             $image_file_path = '';
@@ -255,19 +241,17 @@ class WordPressAPI {
                 $image_file_path = $download_result['path'];
             }
 
-            if ($job_id) {
-                apply_filters('datamachine_engine_data', null, $job_id, [
-                    'source_url' => $source_link,
-                    'image_file_path' => $image_file_path
-                ]);
-            }
+            $this->storeEngineData($job_id, [
+                'source_url' => $source_link,
+                'image_file_path' => $image_file_path
+            ]);
 
-            // Return clean data packet (no URLs in metadata for AI)
-            return [$input_data];
+            // Return raw data for DataPacket creation
+            return $raw_data;
         }
 
         // No eligible items found
-        return [];
+        return null;
     }
 
     /**

@@ -1,7 +1,7 @@
 === Data Machine ===
 Contributors: extrachill
 Tags: ai, automation, content, workflow, pipeline, chat
-Requires at least: 6.2
+Requires at least: 6.0
 Tested up to: 6.8
 Requires PHP: 8.0
 Stable tag: 0.2.0
@@ -12,7 +12,7 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 
 ## Architecture
 
-[![WordPress](https://img.shields.io/badge/WordPress-6.2%2B-blue)](https://wordpress.org/)
+[![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue)](https://wordpress.org/)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-purple)](https://php.net/)
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
 
@@ -31,7 +31,7 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 - **Performance Optimizations**: 50% query reduction in handler settings operations with metadata-based auth detection
 - **Advanced Cache Management**: Granular WordPress action-based clearing with pattern-based invalidation
 
-**Requirements**: WordPress 6.2+, PHP 8.0+, Action Scheduler (woocommerce/action-scheduler), Composer (for development)
+**Requirements**: WordPress 6.0+, PHP 8.0+, Action Scheduler (woocommerce/action-scheduler), Composer (for development)
 
 **Pipeline+Flow**: Pipelines are reusable templates, Flows are configured instances
 

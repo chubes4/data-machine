@@ -230,7 +230,6 @@ try {
 
 ### Memory Management
 
-- **Lightweight Step Instances** - Parameter-less constructors
 - **Minimal Data Retention** - Only current step data in memory
 - **Garbage Collection** - Automatic cleanup after completion
 

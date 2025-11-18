@@ -2,6 +2,7 @@
 
 namespace DataMachine\Core\Steps\Publish;
 
+use DataMachine\Core\DataPacket;
 use DataMachine\Core\Steps\Step;
 use DataMachine\Engine\AI\ToolResultFinder;
 
@@ -60,29 +61,25 @@ class PublishStep extends Step {
         $executed_via = ($entry_type === 'ai_handler_complete') ? 'ai_conversation_tool' : 'ai_tool_call';
         $title_suffix = ($entry_type === 'ai_handler_complete') ? '(via AI Conversation)' : '(via AI Tool)';
 
-        $publish_entry = [
-            'type' => 'publish',
-            'handler' => $handler,
-            'content' => [
+        $packet = new DataPacket(
+            [
                 'title' => 'Publish Complete ' . $title_suffix,
                 'body' => json_encode($tool_result_data, JSON_PRETTY_PRINT)
             ],
-            'metadata' => [
+            [
                 'handler_used' => $handler,
                 'publish_success' => true,
                 'executed_via' => $executed_via,
                 'flow_step_id' => $flow_step_id,
                 'source_type' => $tool_result_entry['metadata']['source_type'] ?? 'unknown',
                 'tool_execution_data' => $tool_result_data,
-                'original_entry_type' => $entry_type
+                'original_entry_type' => $entry_type,
+                'result' => $tool_result_data
             ],
-            'result' => $tool_result_data,
-            'timestamp' => time()
-        ];
+            'publish'
+        );
 
-        $dataPackets = apply_filters('datamachine_data_packet', $dataPackets, $publish_entry, $flow_step_id, 'publish');
-
-        return $dataPackets;
+        return $packet->addTo($dataPackets);
     }
 
 }

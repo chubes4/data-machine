@@ -21,9 +21,6 @@ class Pipelines {
 	/** @var \wpdb WordPress database instance */
 	private $wpdb;
 
-	/**
-	 * Constructor - initialize database connection.
-	 */
 	public function __construct() {
 		global $wpdb;
 		$this->wpdb = $wpdb;

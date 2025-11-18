@@ -20,11 +20,6 @@ abstract class PublishHandler {
     /** @var string Handler type for logging and responses */
     protected string $handler_type;
 
-    /**
-     * Constructor.
-     *
-     * @param string $handler_type Handler identifier (e.g., 'twitter', 'bluesky')
-     */
     public function __construct(string $handler_type) {
         $this->handler_type = $handler_type;
     }

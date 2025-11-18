@@ -2,6 +2,7 @@
 
 namespace DataMachine\Core\Steps\Fetch;
 
+use DataMachine\Core\DataPacket;
 use DataMachine\Core\Steps\Step;
 
 if (!defined('ABSPATH')) {
@@ -35,20 +36,20 @@ class FetchStep extends Step {
         $handler_settings['pipeline_id'] = $this->flow_step_config['pipeline_id'] ?? null;
         $handler_settings['flow_id'] = $this->flow_step_config['flow_id'] ?? null;
 
-        $fetch_entry = $this->execute_handler($handler, $this->flow_step_config, $handler_settings, (string) $this->job_id);
+        $packet = $this->execute_handler($handler, $this->flow_step_config, $handler_settings, (string) $this->job_id);
 
-        if (!$fetch_entry) {
+        if (!$packet) {
             $this->log('error', 'Fetch handler returned no content');
             return $this->dataPackets;
         }
 
-        return $this->addDataPacket($fetch_entry);
+        return $packet->addTo($this->dataPackets);
     }
 
     /**
      * Executes handler and builds standardized fetch entry with content extraction.
      */
-    private function execute_handler(string $handler_name, array $flow_step_config, array $handler_settings, string $job_id): ?array {
+    private function execute_handler(string $handler_name, array $flow_step_config, array $handler_settings, string $job_id): ?DataPacket {
         $handler = $this->get_handler_object($handler_name);
         if (!$handler) {
             do_action('datamachine_log', 'error', 'Fetch Step: Handler not found or invalid', [
@@ -71,6 +72,11 @@ class FetchStep extends Step {
 
             $result = $handler->get_fetch_data($pipeline_id, $handler_settings, $job_id);
 
+            // Handler returned no data
+            if ($result === null) {
+                return null;
+            }
+
             $context = [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id
@@ -78,80 +84,26 @@ class FetchStep extends Step {
 
             try {
                 if (!is_array($result)) {
-                    throw new \InvalidArgumentException('Handler output must be an array');
+                    throw new \InvalidArgumentException('Handler output must be an array or null');
                 }
 
-                $has_data_title_key = null;
-                $has_data_content_key = null;
-                $attachments_count = is_array($result['attachments'] ?? null) ? count($result['attachments']) : 0;
-                $metadata_keys = array_keys($result['metadata'] ?? []);
+                // Extract data from standardized handler response
+                $title = $result['title'] ?? '';
+                $content = $result['content'] ?? '';
+                $file_info = $result['file_info'] ?? null;
+                $metadata = $result['metadata'] ?? [];
 
-                // Normalize handler output: accept wrapped or flat item lists
-                $items = [];
-                $has_processed_items_key = isset($result['processed_items']);
-                if ($has_processed_items_key && is_array($result['processed_items'])) {
-                    $items = $result['processed_items'];
-                } elseif (is_array($result) && isset($result[0]) && is_array($result[0]) && (isset($result[0]['data']) || isset($result[0]['metadata']))) {
-                    $items = $result; // flat list form
-                }
-
-                do_action('datamachine_log', 'debug', 'FetchStep: Handler output shape', [
-                    'flow_step_id' => $flow_step_config['flow_step_id'] ?? null,
-                    'handler' => $handler_name,
-                    'has_processed_items_key' => $has_processed_items_key,
-                    'processed_items_count' => is_array($items) ? count($items) : 0,
-                ]);
-
-                // Handle accidental double-wrapping: [ 'processed_items' => [ [ 'processed_items' => [ ... ] ] ] ]
-                if (!empty($items) && isset($items[0]['processed_items']) && is_array($items[0]['processed_items'])) {
-                    $items = $items[0]['processed_items'];
-                }
-
-                if (!empty($items)) {
-                    $item_data = $items[0];
-
-                    // Universal data extraction using standardized structure
-                    $title = $item_data['data']['title'] ?? $item_data['metadata']['original_title'] ?? '';
-                    $body = $item_data['data']['content'] ?? '';
-
-                    $has_data_title_key = array_key_exists('title', $item_data['data'] ?? []);
-                    $has_data_content_key = array_key_exists('content', $item_data['data'] ?? []);
-
-                    $file_info = $item_data['data']['file_info'] ?? null;
-                    if ($file_info) {
-                        $file_path_meta = $item_data['file_path'] ?? null;
-                        $file_name_meta = $item_data['file_name'] ?? null;
-                        $result['metadata'] = array_merge($result['metadata'] ?? [], [
-                            'file_path' => $file_path_meta,
-                            'file_name' => $file_name_meta,
-                            'mime_type' => $file_info['mime_type'] ?? '',
-                            'file_size' => $file_info['file_size'] ?? 0
-                        ], $item_data['metadata'] ?? []);
-                    } else {
-                        $result['metadata'] = array_merge($result['metadata'] ?? [], $item_data['metadata'] ?? []);
-                    }
-                } else {
-                    $title = $result['title'] ?? '';
-                    $body = $result['body'] ?? '';
-
-                    $has_data_title_key = array_key_exists('title', $result);
-                    $has_data_content_key = array_key_exists('body', $result);
-                }
-
-                do_action('datamachine_log', 'debug', 'FetchStep: Content presence check', [
+                do_action('datamachine_log', 'debug', 'FetchStep: Content extraction', [
                     'flow_step_id' => $flow_step_config['flow_step_id'] ?? null,
                     'handler' => $handler_name,
                     'has_title' => !empty($title),
-                    'has_body' => !empty($body),
-                    'has_data_title_key' => $has_data_title_key,
-                    'has_data_content_key' => $has_data_content_key,
-                    'metadata_keys' => array_keys($result['metadata'] ?? []),
-                    'attachments_count' => is_array($result['attachments'] ?? null) ? count($result['attachments']) : 0,
+                    'has_content' => !empty($content),
                     'has_file_info' => !empty($file_info),
-                    'file_info_path' => $file_info['file_path'] ?? null
+                    'file_info_path' => $file_info['file_path'] ?? null,
+                    'metadata_keys' => array_keys($metadata)
                 ]);
 
-                if (empty($title) && empty($body)) {
+                if (empty($title) && empty($content)) {
                     do_action('datamachine_log', 'error', 'Fetch handler returned no content after extraction', [
                         'handler' => $handler_name,
                         'pipeline_id' => $context['pipeline_id'],
@@ -160,46 +112,44 @@ class FetchStep extends Step {
                     return null;
                 }
 
+                // Create content array for DataPacket
                 $content_array = [
                     'title' => $title,
-                    'body' => $body
+                    'body' => $content
                 ];
 
                 if ($file_info) {
                     $content_array['file_info'] = $file_info;
                 }
 
-                $fetch_entry = [
-                    'type' => 'fetch',
-                    'handler' => $handler_name,
-                    'content' => $content_array,
-                    'metadata' => array_merge([
-                        'source_type' => $handler_name,
-                        'pipeline_id' => $context['pipeline_id'],
-                        'flow_id' => $context['flow_id']
-                    ], $result['metadata'] ?? []),
-                    'attachments' => $result['attachments'] ?? [],
-                    'timestamp' => time()
-                ];
+                // Merge handler metadata with standard metadata
+                $packet_metadata = array_merge([
+                    'source_type' => $handler_name,
+                    'pipeline_id' => $context['pipeline_id'],
+                    'flow_id' => $context['flow_id'],
+                    'handler' => $handler_name
+                ], $metadata);
+
+                $packet = new DataPacket($content_array, $packet_metadata, 'fetch');
+
+                return $packet;
 
             } catch (\Exception $e) {
                 do_action('datamachine_log', 'error', 'Fetch Step: Failed to create data packet from handler output', [
                     'handler' => $handler_name,
-                    'pipeline_id' => $pipeline_id,
-                    'flow_id' => $flow_id,
+                    'pipeline_id' => $context['pipeline_id'],
+                    'flow_id' => $context['flow_id'],
                     'result_type' => gettype($result),
                     'error' => $e->getMessage()
                 ]);
                 return null;
             }
 
-            return $fetch_entry;
-
         } catch (\Exception $e) {
             do_action('datamachine_log', 'error', 'Fetch Step: Handler execution failed', [
                 'handler' => $handler_name,
-                'pipeline_id' => $pipeline_id ?? 'unknown',
-                'flow_id' => $flow_id ?? 'unknown',
+                'pipeline_id' => $flow_step_config['pipeline_id'] ?? 'unknown',
+                'flow_id' => $flow_step_config['flow_id'] ?? 'unknown',
                 'exception' => $e->getMessage()
             ]);
             return null;

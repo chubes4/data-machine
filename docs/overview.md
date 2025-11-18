@@ -114,7 +114,7 @@ $image_url = $engine_data['image_url'] ?? null;
 
 ## Quick Start
 
-1. **Install Requirements** - PHP 8.0+, WordPress 6.2+
+1. **Install Requirements** - PHP 8.0+, WordPress 6.0+
 2. **Configure AI Provider** - Add API keys in WordPress Settings → Data Machine
 3. **Create Pipeline** - Use visual builder with drag-and-drop steps
 4. **Configure Authentication** - Set up OAuth for external services
@@ -162,6 +162,6 @@ docs/
 ## Requirements
 
 - **PHP** 8.0 or higher
-- **WordPress** 6.2 or higher
+- **WordPress** 6.0 or higher
 - **Composer Dependencies** - Automatically managed including ai-http-client
 - **Admin Capabilities** - `manage_options` required for all operations

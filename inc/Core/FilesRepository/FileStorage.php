@@ -28,9 +28,6 @@ class FileStorage {
      */
     private $directory_manager;
 
-    /**
-     * Constructor
-     */
     public function __construct() {
         $this->directory_manager = new DirectoryManager();
     }

@@ -6,33 +6,22 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;
 
+use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
 }
 
-class Reddit {
+class Reddit extends FetchHandler {
 
 	private $oauth_reddit;
 
 	public function __construct() {
-		$all_auth = apply_filters('datamachine_auth_providers', []);
-		$this->oauth_reddit = $all_auth['reddit'] ?? null;
-	}
-
-	private function get_remote_downloader(): ?\DataMachine\Core\FilesRepository\RemoteFileDownloader {
-		return apply_filters('datamachine_get_remote_downloader', null);
+		parent::__construct( 'reddit' );
+		$this->oauth_reddit = $this->getAuthProvider('reddit');
 	}
 
 	private function store_reddit_image(string $image_url, int $pipeline_id, int $flow_id, string $item_id): ?array {
-		$downloader = $this->get_remote_downloader();
-		if (!$downloader) {
-			do_action('datamachine_log', 'error', 'Reddit: RemoteFileDownloader not available for image storage', [
-				'image_url' => $image_url,
-				'item_id' => $item_id
-			]);
-			return null;
-		}
-
 		$url_path = wp_parse_url($image_url, PHP_URL_PATH);
 		$extension = $url_path ? pathinfo($url_path, PATHINFO_EXTENSION) : 'jpg';
 		if (empty($extension)) {
@@ -40,26 +29,21 @@ class Reddit {
 		}
 		$filename = "reddit_image_{$item_id}.{$extension}";
 
-		// Build context with fallback names (no database queries)
-		$context = [
-			'pipeline_id' => $pipeline_id,
-			'pipeline_name' => "pipeline-{$pipeline_id}",
-			'flow_id' => $flow_id,
-			'flow_name' => "flow-{$flow_id}"
-		];
-
 		$options = [
 			'timeout' => 30,
 			'user_agent' => 'php:DataMachineWPPlugin:v' . DATAMACHINE_VERSION
 		];
 
-		return $downloader->download_remote_file($image_url, $filename, $context, $options);
+		return $this->downloadRemoteFile($image_url, $filename, $pipeline_id, $flow_id, $options);
 	}
 
-	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
-
-		$flow_step_id = $handler_config['flow_step_id'] ?? null;
-		$flow_id = $handler_config['flow_id'] ?? 0;
+	protected function executeFetch(
+		int $pipeline_id,
+		array $config,
+		?string $flow_step_id,
+		int $flow_id,
+		?string $job_id
+	): array {
 		$oauth_reddit = $this->oauth_reddit;
 
 		$reddit_account = apply_filters('datamachine_retrieve_oauth_account', [], 'reddit');
@@ -68,39 +52,38 @@ class Reddit {
 		$needs_refresh = empty($access_token) || time() >= ($token_expires_at - 300);
 
 		if ($needs_refresh && empty($reddit_account['refresh_token'])) {
-			do_action('datamachine_log', 'error', 'Reddit: No refresh token available');
-			return ['processed_items' => []];
+			$this->log('error', 'No refresh token available');
+			return $this->emptyResponse();
 		}
 
 		if ($needs_refresh) {
-			do_action('datamachine_log', 'debug', 'Reddit Input: Attempting token refresh.', ['pipeline_id' => $pipeline_id]);
+			$this->log('debug', 'Attempting token refresh.', ['pipeline_id' => $pipeline_id]);
 			$refreshed = $oauth_reddit->refresh_token();
 
 			if (!$refreshed) {
-				do_action('datamachine_log', 'error', 'Reddit Input: Token refresh failed.', ['pipeline_id' => $pipeline_id]);
-				return ['processed_items' => []];
+				$this->log('error', 'Token refresh failed.', ['pipeline_id' => $pipeline_id]);
+				return $this->emptyResponse();
 			}
 
 			$reddit_account = apply_filters('datamachine_retrieve_oauth_account', [], 'reddit');
 			if (empty($reddit_account['access_token'])) {
-				do_action('datamachine_log', 'error', 'Reddit Input: Token refresh successful, but failed to retrieve new token data.', ['pipeline_id' => $pipeline_id]);
-				return ['processed_items' => []];
+				$this->log('error', 'Token refresh successful, but failed to retrieve new token data.', ['pipeline_id' => $pipeline_id]);
+				return $this->emptyResponse();
 			}
-			do_action('datamachine_log', 'debug', 'Reddit Input: Token refresh successful.', ['pipeline_id' => $pipeline_id]);
+			$this->log('debug', 'Token refresh successful.', ['pipeline_id' => $pipeline_id]);
 		}
 
 		$access_token = $reddit_account['access_token'] ?? null;
 		if (empty($access_token)) {
-			do_action('datamachine_log', 'error', 'Reddit Input: Access token is still empty after checks/refresh.', ['pipeline_id' => $pipeline_id]);
-			return ['processed_items' => []];
+			$this->log('error', 'Access token is still empty after checks/refresh.', ['pipeline_id' => $pipeline_id]);
+			return $this->emptyResponse();
 		}
 
-		do_action('datamachine_log', 'debug', 'Reddit Input: Token check complete.', [
+		$this->log('debug', 'Token check complete.', [
 			'pipeline_id' => $pipeline_id,
 			'token_present' => !empty($access_token),
 			'token_expiry_ts' => $reddit_account['token_expires_at'] ?? 'N/A'
 		]);
-		$config = $handler_config['reddit'] ?? [];
 		$subreddit = trim( $config['subreddit'] ?? '' );
 		$sort = $config['sort_by'] ?? 'hot';
 		$timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
@@ -111,20 +94,18 @@ class Reddit {
 		$search_term = trim( $config['search'] ?? '' );
 
 		if ( empty( $subreddit ) ) {
-			do_action('datamachine_log', 'error', 'Reddit Input: Subreddit name not configured.', ['pipeline_id' => $pipeline_id]);
-			return ['processed_items' => []];
+			$this->log('error', 'Subreddit name not configured.', ['pipeline_id' => $pipeline_id]);
+			return $this->emptyResponse();
 		}
 		if (!preg_match('/^[a-zA-Z0-9_]+$/', $subreddit)) {
-			do_action('datamachine_log', 'error', 'Reddit Input: Invalid subreddit name format.', ['pipeline_id' => $pipeline_id, 'subreddit' => $subreddit]);
-			return ['processed_items' => []];
+			$this->log('error', 'Invalid subreddit name format.', ['pipeline_id' => $pipeline_id, 'subreddit' => $subreddit]);
+			return $this->emptyResponse();
 		}
 		$valid_sorts = ['hot', 'new', 'top', 'rising', 'controversial'];
 		if (!in_array($sort, $valid_sorts)) {
-			do_action('datamachine_log', 'error', 'Reddit Input: Invalid sort parameter.', ['pipeline_id' => $pipeline_id, 'invalid_sort' => $sort, 'valid_sorts' => $valid_sorts]);
-			return ['processed_items' => []];
+			$this->log('error', 'Invalid sort parameter.', ['pipeline_id' => $pipeline_id, 'invalid_sort' => $sort, 'valid_sorts' => $valid_sorts]);
+			return $this->emptyResponse();
 		}
-
-		$cutoff_timestamp = apply_filters('datamachine_timeframe_limit', null, $timeframe_limit);
 
 		$after_param = null;
 		$total_checked = 0;
@@ -144,7 +125,7 @@ class Reddit {
 				];
 				if (isset($reddit_time_map[$timeframe_limit])) {
 					$time_param = '&t=' . $reddit_time_map[$timeframe_limit];
-					do_action('datamachine_log', 'debug', 'Reddit Input: Using native API time filtering.', [
+					$this->log('debug', 'Using native API time filtering.', [
 						'sort' => $sort,
 						'timeframe_limit' => $timeframe_limit,
 						'reddit_time_param' => $reddit_time_map[$timeframe_limit],
@@ -172,7 +153,7 @@ class Reddit {
 			if (isset($log_headers['Authorization'])) {
 				$log_headers['Authorization'] = preg_replace('/(Bearer )(.{4}).+(.{4})/', '$1$2...$3', $log_headers['Authorization']);
 			}
-			do_action('datamachine_log', 'debug', 'Reddit Input: Making API call.', [
+			$this->log('debug', 'Making API call.', [
 				'pipeline_id' => $pipeline_id,
 				'page' => $pages_fetched,
 				'url' => $reddit_url,
@@ -180,75 +161,70 @@ class Reddit {
 			]);
 
 			$result = apply_filters('datamachine_request', null, 'GET', $reddit_url, $args, 'Reddit API');
-			
+
 			if (!$result['success']) {
 				if ($pages_fetched === 1) {
-					do_action('datamachine_log', 'error', 'Reddit Input: API request failed.', ['pipeline_id' => $pipeline_id, 'error' => $result['error']]);
-					return ['processed_items' => []];
+					$this->log('error', 'API request failed.', ['pipeline_id' => $pipeline_id, 'error' => $result['error']]);
+					return $this->emptyResponse();
 				}
 				else break;
 			}
 
 			$body = $result['data'];
-			do_action('datamachine_log', 'debug', 'Reddit Input: API Response Code', ['code' => $result['status_code'], 'url' => $reddit_url, 'pipeline_id' => $pipeline_id]);
+			$this->log('debug', 'API Response Code', ['code' => $result['status_code'], 'url' => $reddit_url, 'pipeline_id' => $pipeline_id]);
 
 			$response_data = json_decode($body, true);
 			if (json_last_error() !== JSON_ERROR_NONE) {
 				/* translators: %s: JSON error message */
 				$error_message = sprintf(__('Invalid JSON from Reddit API: %s', 'datamachine'), json_last_error_msg());
 				if ($pages_fetched === 1) {
-					do_action('datamachine_log', 'error', 'Reddit Input: Invalid JSON response.', ['pipeline_id' => $pipeline_id, 'error' => $error_message]);
-					return ['processed_items' => []];
+					$this->log('error', 'Invalid JSON response.', ['pipeline_id' => $pipeline_id, 'error' => $error_message]);
+					return $this->emptyResponse();
 				}
 				else break;
 			}
 			if ( empty( $response_data['data']['children'] ) || ! is_array( $response_data['data']['children'] ) ) {
-				do_action('datamachine_log', 'debug', 'Reddit Input: No more posts found or invalid data structure.', ['url' => $reddit_url, 'pipeline_id' => $pipeline_id]);
+				$this->log('debug', 'No more posts found or invalid data structure.', ['url' => $reddit_url, 'pipeline_id' => $pipeline_id]);
 				break; // Stop fetching
 			}
 			$batch_hit_time_limit = false;
 			foreach ($response_data['data']['children'] as $post_wrapper) {
 				$total_checked++;
 				if (empty($post_wrapper['data']) || empty($post_wrapper['data']['id']) || empty($post_wrapper['kind'])) {
-					do_action('datamachine_log', 'warning', 'Reddit Input: Skipping post with missing data.', ['subreddit' => $subreddit, 'pipeline_id' => $pipeline_id]);
+					$this->log('warning', 'Skipping post with missing data.', ['subreddit' => $subreddit, 'pipeline_id' => $pipeline_id]);
 					continue;
 				}
 				$item_data = $post_wrapper['data'];
 				$current_item_id = $item_data['id'];
 
 				if (($item_data['stickied'] ?? false) || ($item_data['pinned'] ?? false)) {
-					do_action('datamachine_log', 'debug', 'Reddit Input: Skipping pinned/stickied post.', [
+					$this->log('debug', 'Skipping pinned/stickied post.', [
 						'item_id' => $current_item_id,
 						'pipeline_id' => $pipeline_id
 					]);
 					continue;
 				}
 
-				if ($cutoff_timestamp !== null) {
-					$item_timestamp = (int) ($item_data['created_utc'] ?? 0);
-					if ($item_timestamp < $cutoff_timestamp) {
-						continue;
-					}
+				$item_timestamp = (int) ($item_data['created_utc'] ?? 0);
+				if (!$this->applyTimeframeFilter($item_timestamp, $timeframe_limit)) {
+					continue;
 				}
 
 				if ($min_upvotes > 0) {
 					if (!isset($item_data['score']) || $item_data['score'] < $min_upvotes) {
-						do_action('datamachine_log', 'debug', 'Reddit Input: Skipping item (min upvotes).', ['item_id' => $current_item_id, 'score' => $item_data['score'] ?? 'N/A', 'min_required' => $min_upvotes, 'pipeline_id' => $pipeline_id]);
+						$this->log('debug', 'Skipping item (min upvotes).', ['item_id' => $current_item_id, 'score' => $item_data['score'] ?? 'N/A', 'min_required' => $min_upvotes, 'pipeline_id' => $pipeline_id]);
 						continue;
 					}
 				}
 
-				if ($flow_step_id) {
-					$is_processed = apply_filters('datamachine_is_item_processed', false, $flow_step_id, 'reddit', $current_item_id);
-					if ($is_processed) {
-						do_action('datamachine_log', 'debug', 'Reddit Input: Skipping item (already processed).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
-						continue;
-					}
+				if ($this->isItemProcessed($current_item_id, $flow_step_id)) {
+					$this->log('debug', 'Skipping item (already processed).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
+					continue;
 				}
 
 				if ($min_comment_count > 0) {
 					if (!isset($item_data['num_comments']) || $item_data['num_comments'] < $min_comment_count) {
-						do_action('datamachine_log', 'debug', 'Reddit Input: Skipping item (min comment count).', [
+						$this->log('debug', 'Skipping item (min comment count).', [
 							'item_id' => $current_item_id,
 							'comments' => $item_data['num_comments'] ?? 'N/A',
 							'min_required' => $min_comment_count,
@@ -261,16 +237,12 @@ class Reddit {
 				$title_to_check = $item_data['title'] ?? '';
 				$selftext_to_check = $item_data['selftext'] ?? '';
 				$text_to_search = $title_to_check . ' ' . $selftext_to_check;
-				$matches = apply_filters('datamachine_keyword_search_match', false, $text_to_search, $search_term);
-				if (!$matches) {
-					do_action('datamachine_log', 'debug', 'Reddit Input: Skipping item (search filter).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
+				if (!$this->applyKeywordSearch($text_to_search, $search_term)) {
+					$this->log('debug', 'Skipping item (search filter).', ['item_id' => $current_item_id, 'pipeline_id' => $pipeline_id]);
 					continue;
 				}
 
-
-				if ($flow_step_id && $job_id) {
-					do_action('datamachine_mark_item_processed', $flow_step_id, 'reddit', $current_item_id, $job_id);
-				}
+				$this->markItemProcessed($current_item_id, $flow_step_id, $job_id);
 
 				$title = $item_data['title'] ?? '';
 				$selftext = $item_data['selftext'] ?? '';
@@ -312,7 +284,7 @@ class Reddit {
 							}
 						}
 						} else {
-							do_action('datamachine_log', 'warning', 'Reddit Input: Failed to parse comments JSON.', [
+							$this->log('warning', 'Failed to parse comments JSON.', [
 								'item_id' => $current_item_id,
 								'comments_url' => $comments_url,
 								'error' => json_last_error_msg(),
@@ -320,7 +292,7 @@ class Reddit {
 							]);
 						}
 					} else {
-						do_action('datamachine_log', 'warning', 'Reddit Input: Failed to fetch comments for post.', [
+						$this->log('warning', 'Failed to fetch comments for post.', [
 							'item_id' => $current_item_id,
 							'comments_url' => $comments_url,
 							'error' => $comments_result['error'],
@@ -402,6 +374,21 @@ class Reddit {
 					'item_identifier_to_log' => $current_item_id
 				]);
 
+				// Prepare raw data for DataPacket creation
+				$raw_data = [
+					'title' => $content_data['title'],
+					'content' => $content_data['content'],
+					'metadata' => $metadata
+				];
+
+				// Add comments to content if present
+				if (!empty($content_data['comments'])) {
+					$raw_data['content'] .= "\n\nComments:\n" . implode("\n", array_map(function($comment) {
+						return "- {$comment['author']}: {$comment['body']}";
+					}, $content_data['comments']));
+				}
+
+				// Add file_info if image was stored
 				if ($stored_image) {
 					$file_info = [
 						'file_path' => $stored_image['path'],
@@ -409,31 +396,18 @@ class Reddit {
 						'mime_type' => $image_info['mime_type'],
 						'file_size' => $stored_image['size']
 					];
-					$input_data = [
-						'data' => array_merge($content_data, ['file_info' => $file_info]),
-						'metadata' => $metadata
-					];
-				} else {
-					$input_data = [
-						'data' => $content_data,
-						'metadata' => $metadata
-					];
+					$raw_data['file_info'] = $file_info;
 				}
 
-				if ($job_id) {
-					$source_url = $item_data['permalink'] ? 'https://www.reddit.com' . $item_data['permalink'] : '';
+				$source_url = $item_data['permalink'] ? 'https://www.reddit.com' . $item_data['permalink'] : '';
+				$image_file_path = $stored_image['path'] ?? '';
 
-					// Use the URL already provided by store_remote_file()
-					$image_url = $stored_image['url'] ?? '';
-					$image_file_path = $stored_image['path'] ?? '';
+				$this->storeEngineData($job_id, [
+					'source_url' => $source_url,
+					'image_file_path' => $image_file_path
+				]);
 
-					apply_filters('datamachine_engine_data', null, $job_id, [
-						'source_url' => $source_url,
-						'image_file_path' => $image_file_path
-					]);
-				}
-
-				do_action('datamachine_log', 'debug', 'Reddit: Fetched data successfully', [
+				$this->log('debug', 'Fetched data successfully', [
 					'source_type' => 'reddit',
 					'item_id' => $current_item_id,
 					'has_image' => !empty($image_info),
@@ -442,31 +416,29 @@ class Reddit {
 					'file_info_status' => $stored_image ? 'downloaded' : 'none'
 				]);
 
-				return ['processed_items' => [$input_data]];
+				return $raw_data;
 			} // End foreach ($response_data...)
 
 			if ($batch_hit_time_limit) {
-				do_action('datamachine_log', 'debug', 'Reddit Input: Stopping pagination due to hitting time limit within batch.', ['pipeline_id' => $pipeline_id]);
+				$this->log('debug', 'Stopping pagination due to hitting time limit within batch.', ['pipeline_id' => $pipeline_id]);
 				break;
 			}
 
 			$after_param = $response_data['data']['after'] ?? null;
 			if (!$after_param) {
-				do_action('datamachine_log', 'debug', "Reddit Input: No 'after' parameter found, ending pagination.", ['pipeline_id' => $pipeline_id]);
+				$this->log('debug', "No 'after' parameter found, ending pagination.", ['pipeline_id' => $pipeline_id]);
 				break;
 			}
 
 		} // End while loop
 
-		do_action('datamachine_log', 'debug', 'Reddit Input: No eligible items found.', [
+		$this->log('debug', 'No eligible items found.', [
 			'total_checked' => $total_checked,
 			'pages_fetched' => $pages_fetched,
 			'pipeline_id' => $pipeline_id
 		]);
 
-		return [
-			'processed_items' => []
-		];
+		return $this->emptyResponse();
 	}
 
 	public static function get_label(): string {
