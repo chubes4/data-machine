@@ -179,7 +179,7 @@ add_filter('datamachine_agent_directives', function($request, $agent_type, $prov
             $provider,
             $tools,
             $context['step_id'] ?? null,
-            $context['payload'] ?? []
+            $context
         );
     }
     return $request;

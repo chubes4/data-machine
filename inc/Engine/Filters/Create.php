@@ -61,7 +61,11 @@ class Create {
      * @return int|false Pipeline ID on success, false on failure
      */
     private function create_simple_pipeline($data, $db_pipelines, $db_flows) {
-        $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : 'Pipeline';
+        if (!isset($data['pipeline_name']) || empty(trim($data['pipeline_name']))) {
+            do_action('datamachine_log', 'error', 'Cannot create pipeline - missing or empty pipeline name');
+            return false;
+        }
+        $pipeline_name = sanitize_text_field(wp_unslash($data['pipeline_name']));
 
         $pipeline_data = [
             'pipeline_name' => $pipeline_name,
@@ -75,7 +79,11 @@ class Create {
         }
 
         $flow_config = isset($data['flow_config']) ? $data['flow_config'] : [];
-        $flow_name = $flow_config['flow_name'] ?? 'Flow';
+        if (!isset($flow_config['flow_name']) || empty(trim($flow_config['flow_name']))) {
+            do_action('datamachine_log', 'error', 'Cannot create flow - missing or empty flow name');
+            return false;
+        }
+        $flow_name = $flow_config['flow_name'];
         $scheduling_config = $flow_config['scheduling_config'] ?? ['interval' => 'manual'];
 
         $flow_data = [
@@ -102,7 +110,11 @@ class Create {
      * @return int|false Pipeline ID on success, false on failure
      */
     private function create_complete_pipeline($data, $db_pipelines, $db_flows) {
-        $pipeline_name = isset($data['pipeline_name']) ? sanitize_text_field(wp_unslash($data['pipeline_name'])) : 'Pipeline';
+        if (!isset($data['pipeline_name']) || empty(trim($data['pipeline_name']))) {
+            do_action('datamachine_log', 'error', 'Cannot create pipeline - missing or empty pipeline name');
+            return false;
+        }
+        $pipeline_name = sanitize_text_field(wp_unslash($data['pipeline_name']));
         $steps = $data['steps'];
         $all_steps = apply_filters('datamachine_step_types', []);
         foreach ($steps as $step) {
@@ -169,7 +181,11 @@ class Create {
         }
 
         $flow_config_data = isset($data['flow_config']) ? $data['flow_config'] : [];
-        $flow_name = $flow_config_data['flow_name'] ?? 'Flow';
+        if (!isset($flow_config_data['flow_name']) || empty(trim($flow_config_data['flow_name']))) {
+            do_action('datamachine_log', 'error', 'Cannot create flow - missing or empty flow name');
+            return false;
+        }
+        $flow_name = $flow_config_data['flow_name'];
         $scheduling_config = $flow_config_data['scheduling_config'] ?? ['interval' => 'manual'];
 
         $flow_data = [

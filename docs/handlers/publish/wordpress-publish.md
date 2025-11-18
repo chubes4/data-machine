@@ -2,9 +2,17 @@
 
 Creates posts in the local WordPress installation using a modular handler architecture with specialized processing components for featured images, taxonomies, and source URLs.
 
-## Base Class Architecture
+## Architecture
 
-The WordPress publish handler extends the `PublishHandler` base class, which provides common functionality for all publish handlers including engine data retrieval, standardized response formatting, and centralized logging.
+**Base Class**: Extends [PublishHandler](../../core-system/publish-handler.md) (@since v0.2.1)
+
+**Inherited Functionality**:
+- Engine data retrieval via `getSourceUrl()` and `getImageFilePath()`
+- Image validation via `validateImage()` with comprehensive error checking
+- Standardized responses via `successResponse()` and `errorResponse()`
+- Centralized logging and error handling
+
+**Implementation**: Tool-first architecture via `handle_tool_call()` method for AI agents
 
 ### Handler Components
 

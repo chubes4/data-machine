@@ -2,6 +2,18 @@
 
 Retrieves WordPress post and page content from the local installation using WP_Query. For media files, use the separate WordPress Media handler.
 
+## Architecture
+
+**Base Class**: Extends [FetchHandler](../../core-system/fetch-handler.md) (@since v0.2.1)
+
+**Inherited Functionality**:
+- Automatic deduplication via `isItemProcessed()` and `markItemProcessed()`
+- Engine data storage via `storeEngineData()` for downstream handlers
+- Standardized responses via `successResponse()`, `emptyResponse()`, `errorResponse()`
+- Centralized logging and error handling
+
+**Implementation**: Uses [DataPacket](../../core-system/data-packet.md) class for consistent packet structure
+
 ## Configuration Options
 
 ### Basic Settings

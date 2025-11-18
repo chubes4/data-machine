@@ -11,12 +11,12 @@ if (!defined('ABSPATH')) {
 
 function datamachine_register_engine_data_filter() {
 
-    /**
-     * Array-based storage for engine data.
-     *
-     * Storage mode: apply_filters('datamachine_engine_data', null, $job_id, ['source_url' => $url, 'image_url' => $img])
-     * Retrieval mode: apply_filters('datamachine_engine_data', [], $job_id)
-     */
+     /**
+      * Array-based storage for engine data with extensibility for custom data types.
+      *
+      * Allows extensions to modify/add data before storage via filter.
+      * Retrieval should use direct database access: $db_jobs->retrieve_engine_data($job_id)
+      */
     add_filter('datamachine_engine_data', function($default, $job_id, $data = null) {
         if ($job_id === null || $job_id === '') {
             return $default;
@@ -24,7 +24,7 @@ function datamachine_register_engine_data_filter() {
 
         $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
 
-        // Storage mode: when data array is provided
+        // Only storage mode: when data array is provided, allow extensions to modify
         if ($data !== null && is_array($data)) {
             $current_data = $db_jobs->retrieve_engine_data($job_id);
             $merged_data = array_merge($current_data ?: [], $data);
@@ -39,25 +39,26 @@ function datamachine_register_engine_data_filter() {
             return null;
         }
 
-        // Retrieval mode: return all engine data
-        $retrieved_data = $db_jobs->retrieve_engine_data($job_id);
-
-        if (empty($retrieved_data)) {
-            do_action('datamachine_log', 'debug', 'Engine Data: No data found for job', [
-                'job_id' => $job_id
-            ]);
-            return [];
-        }
-
-        do_action('datamachine_log', 'debug', 'Engine Data: Retrieved all data', [
-            'job_id' => $job_id,
-            'data_keys' => array_keys($retrieved_data)
-        ]);
-
-        return $retrieved_data;
+        // No retrieval mode - use direct database access instead
+        return $default;
 
     }, 10, 3);
 
+}
+
+/**
+ * Get engine data directly from database.
+ *
+ * @param int $job_id Job ID
+ * @return array Engine data or empty array
+ */
+function datamachine_get_engine_data(int $job_id): array {
+    if ($job_id <= 0) {
+        return [];
+    }
+
+    $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
+    return $db_jobs->retrieve_engine_data($job_id);
 }
 
 datamachine_register_engine_data_filter();

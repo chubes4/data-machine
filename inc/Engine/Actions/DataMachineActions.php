@@ -126,7 +126,7 @@ function datamachine_register_core_actions() {
 
         $context = $param3 ?? [];
 
-        $valid_levels = ['debug', 'error', 'warning', 'info', 'critical'];
+        $valid_levels = datamachine_get_valid_log_levels();
         if (!in_array($operation, $valid_levels)) {
             return false;
         }
@@ -145,5 +145,6 @@ function datamachine_register_core_actions() {
     \DataMachine\Engine\Actions\AutoSave::register();
     \DataMachine\Engine\Actions\ImportExport::register();
     \DataMachine\Engine\Actions\Cache::register();
-    
+    datamachine_register_execution_engine();
+
 }

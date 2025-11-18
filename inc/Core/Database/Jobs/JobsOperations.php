@@ -87,10 +87,25 @@ class JobsOperations {
         if ( false === $cached_result ) {
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             $job = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE job_id = %d", $this->table_name, $job_id ), OBJECT );
+            
+            // Standardize payload: Decode engine_data if present
+            if ( $job && isset( $job->engine_data ) && is_string( $job->engine_data ) ) {
+                $decoded = json_decode( $job->engine_data, true );
+                if ( json_last_error() === JSON_ERROR_NONE ) {
+                    $job->engine_data = $decoded;
+                }
+            }
+
             do_action('datamachine_cache_set', $cache_key, $job, 300, 'jobs'); // 5 min cache for job data
             $cached_result = $job;
         } else {
             $job = $cached_result;
+            if ( $job && isset( $job->engine_data ) && is_string( $job->engine_data ) ) {
+                $decoded = json_decode( $job->engine_data, true );
+                if ( json_last_error() === JSON_ERROR_NONE ) {
+                    $job->engine_data = $decoded;
+                }
+            }
         }
         return $job;
     }
@@ -247,8 +262,8 @@ class JobsOperations {
             return false;
         }
 
-        // Serialize data for database storage
-        $encoded = maybe_serialize($data);
+        // Encode data as JSON for database storage
+        $encoded = wp_json_encode($data);
         $result = $this->wpdb->update(
             $this->table_name,
             ['engine_data' => $encoded],
@@ -281,31 +296,12 @@ class JobsOperations {
      * Retrieve stored engine data for datamachine_engine_data filter access.
      */
     public function retrieve_engine_data(int $job_id): array {
-        if ($job_id <= 0) {
-            return [];
+        $job = $this->get_job($job_id);
+
+        if ( $job && isset( $job->engine_data ) && is_array( $job->engine_data ) ) {
+            return $job->engine_data;
         }
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-        $result = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT engine_data FROM %i WHERE job_id = %d", $this->table_name, $job_id ) );
-
-        if (null === $result) {
-            return [];
-        }
-
-        // Try JSON decode first
-        $json = json_decode($result, true);
-        if (json_last_error() === JSON_ERROR_NONE && is_array($json)) {
-            return $json;
-        }
-
-        // Fallback to WordPress unserialize
-        $engine_data = maybe_unserialize($result);
-
-        // Ensure array return type
-        if (!is_array($engine_data)) {
-            return [];
-        }
-
-        return $engine_data;
+        return [];
     }
 }

@@ -3,7 +3,7 @@
  * WordPress Local Search AI Tool - Site content discovery for AI agents
  */
 
-namespace DataMachine\Engine\AI\Tools;
+namespace DataMachine\Engine\AI\Tools\Global;
 
 defined('ABSPATH') || exit;
 

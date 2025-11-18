@@ -70,20 +70,28 @@ abstract class FetchHandler {
 	 * Extract flow step ID from handler config
 	 *
 	 * @param array $handler_config Handler configuration
-	 * @return string|null Flow step ID or null
+	 * @return string Flow step ID
+	 * @throws \InvalidArgumentException If flow_step_id is missing
 	 */
-	protected function getFlowStepId( array $handler_config ): ?string {
-		return $handler_config['flow_step_id'] ?? null;
+	protected function getFlowStepId( array $handler_config ): string {
+		if (!isset($handler_config['flow_step_id']) || empty($handler_config['flow_step_id'])) {
+			throw new \InvalidArgumentException('Flow step ID is required in handler configuration');
+		}
+		return $handler_config['flow_step_id'];
 	}
 
 	/**
 	 * Extract flow ID from handler config
 	 *
 	 * @param array $handler_config Handler configuration
-	 * @return int Flow ID (0 if not set)
+	 * @return int Flow ID
+	 * @throws \InvalidArgumentException If flow_id is missing
 	 */
 	protected function getFlowId( array $handler_config ): int {
-		return $handler_config['flow_id'] ?? 0;
+		if (!isset($handler_config['flow_id']) || empty($handler_config['flow_id'])) {
+			throw new \InvalidArgumentException('Flow ID is required in handler configuration');
+		}
+		return (int) $handler_config['flow_id'];
 	}
 
 	/**
@@ -93,7 +101,8 @@ abstract class FetchHandler {
 	 * @return array Handler-specific configuration array
 	 */
 	protected function extractConfig( array $handler_config ): array {
-		return $handler_config[ $this->handler_type ] ?? [];
+		// handler_config is ALWAYS flat structure - no nesting
+		return $handler_config;
 	}
 
 	/**

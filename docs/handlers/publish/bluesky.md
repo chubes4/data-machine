@@ -2,6 +2,18 @@
 
 Posts content to Bluesky using app passwords and AT Protocol integration with media upload support and automatic link detection.
 
+## Architecture
+
+**Base Class**: Extends [PublishHandler](../../core-system/publish-handler.md) (@since v0.2.1)
+
+**Inherited Functionality**:
+- Engine data retrieval via `getSourceUrl()` and `getImageFilePath()`
+- Image validation via `validateImage()` with comprehensive error checking
+- Standardized responses via `successResponse()` and `errorResponse()`
+- Centralized logging and error handling
+
+**Implementation**: Tool-first architecture via `handle_tool_call()` method for AI agents
+
 ## Authentication
 
 **App Password Required**: Uses Bluesky app passwords for authentication (username + app password).

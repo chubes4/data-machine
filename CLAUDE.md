@@ -199,7 +199,7 @@ $payload = [
     'flow_step_id' => $flow_step_id,
     'data' => $dataPackets,  // Data packet array
     'flow_step_config' => $flow_step_config,
-    'engine_data' => apply_filters('datamachine_engine_data', [], $job_id)
+    'engine_data' => datamachine_get_engine_data($job_id)
 ];
 ```
 
@@ -231,8 +231,8 @@ if ($job_id) {
     ]);
 }
 
-// Retrieve engine data
-$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+// Retrieve engine data (direct database access - no filter needed)
+$engine_data = datamachine_get_engine_data($job_id);
 $source_url = $engine_data['source_url'] ?? null;
 $image_url = $engine_data['image_url'] ?? null;
 ```
@@ -601,6 +601,10 @@ $providers = apply_filters('datamachine_auth_providers', []);
 ## Core Rules
 - Engine agnostic (no hardcoded step types in `/inc/Engine/`)
 - Filter-based service discovery only
+- **Filter Usage Criteria**:
+  - ✅ **Use filters for**: Service discovery, data modification by extensions, complex business logic
+  - ❌ **Avoid filters for**: Simple data retrieval, basic CRUD operations without extensibility
+   - **Examples**: `datamachine_handlers` (service discovery) vs `datamachine_log_file` (removed - redundant core functionality)
 - Security: `wp_unslash()` BEFORE `sanitize_text_field()`
 - CSS namespace: `datamachine-` prefix (explicit clarity, no abbreviations)
 - Auth: `manage_options` only

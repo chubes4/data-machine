@@ -2,6 +2,18 @@
 
 Appends structured data to Google Sheets spreadsheets using OAuth2 authentication with configurable column mapping for data collection and reporting workflows.
 
+## Architecture
+
+**Base Class**: Extends [PublishHandler](../../core-system/publish-handler.md) (@since v0.2.1)
+
+**Inherited Functionality**:
+- Engine data retrieval via `getSourceUrl()` and `getImageFilePath()`
+- Image validation via `validateImage()` with comprehensive error checking
+- Standardized responses via `successResponse()` and `errorResponse()`
+- Centralized logging and error handling
+
+**Implementation**: Tool-first architecture via `handle_tool_call()` method for AI agents
+
 ## Authentication
 
 **OAuth2 Required**: Uses Google Sheets API v4 with client_id/client_secret authentication.

@@ -150,5 +150,18 @@ $stored_path = $file_storage->store_file($file_content, $filename, $job_id);
 - **Consistency**: Standardized response patterns across all fetch handlers
 - **Engine Integration**: Seamless data flow to downstream handlers
 - **Error Handling**: Centralized error response formatting
-- **Maintainability**: Reduced code duplication and consistent patterns</content>
+- **Maintainability**: Reduced code duplication and consistent patterns
+
+## Implementations
+
+All fetch handlers extend this base class:
+- [RSS Handler](../handlers/fetch/rss.md)
+- [Reddit Handler](../handlers/fetch/reddit.md)
+- [WordPress Local Handler](../handlers/fetch/wordpress-local.md)
+- [WordPress Media Handler](../handlers/fetch/wordpress-media.md)
+- [WordPress API Handler](../handlers/fetch/wordpress-api.md)
+- [Google Sheets Handler](../handlers/fetch/google-sheets-fetch.md)
+- [Files Handler](../handlers/fetch/files.md)
+
+See [Fetch Handlers Overview](../handlers/fetch/README.md) for comparison.</content>
 </xai:function_call">The FetchHandler base class provides standardized functionality for data fetching operations, including deduplication, engine data storage, and consistent response patterns.

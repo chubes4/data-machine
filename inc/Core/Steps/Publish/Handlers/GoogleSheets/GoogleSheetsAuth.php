@@ -35,7 +35,7 @@ class GoogleSheetsAuth {
      * @return bool True if authenticated
      */
     public function is_authenticated(): bool {
-        $account = apply_filters('datamachine_retrieve_oauth_account', [], 'googlesheets');
+        $account = datamachine_get_oauth_account('googlesheets');
         return !empty($account) &&
                is_array($account) &&
                !empty($account['access_token']) &&
@@ -70,7 +70,7 @@ class GoogleSheetsAuth {
      * @return bool True if OAuth credentials are configured
      */
     public function is_configured(): bool {
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'googlesheets');
+        $config = datamachine_get_oauth_keys('googlesheets');
         return !empty($config['client_id']) && !empty($config['client_secret']);
     }
 
@@ -82,7 +82,7 @@ class GoogleSheetsAuth {
     public function get_service() {
         do_action('datamachine_log', 'debug', 'Attempting to get authenticated Google Sheets access token.');
 
-        $credentials = apply_filters('datamachine_retrieve_oauth_account', [], 'googlesheets');
+        $credentials = datamachine_get_oauth_account('googlesheets');
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['refresh_token'])) {
             do_action('datamachine_log', 'error', 'Missing Google Sheets credentials in options.');
             return new \WP_Error('googlesheets_missing_credentials', __('Google Sheets credentials not found. Please authenticate.', 'datamachine'));
@@ -115,7 +115,7 @@ class GoogleSheetsAuth {
      * @return string|\WP_Error New access token or error
      */
     private function refresh_access_token(string $refresh_token) {
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'googlesheets');
+        $config = datamachine_get_oauth_keys('googlesheets');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
 
@@ -188,7 +188,7 @@ class GoogleSheetsAuth {
      * @return string Authorization URL
      */
     public function get_authorization_url(): string {
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'googlesheets');
+        $config = datamachine_get_oauth_keys('googlesheets');
         $client_id = $config['client_id'] ?? '';
 
         if (empty($client_id)) {
@@ -236,7 +236,7 @@ class GoogleSheetsAuth {
         }
 
         // Get configuration
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'googlesheets');
+        $config = datamachine_get_oauth_keys('googlesheets');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
 
@@ -283,7 +283,7 @@ class GoogleSheetsAuth {
      * @return array|null Account details or null
      */
     public function get_account_details(): ?array {
-        $account = apply_filters('datamachine_retrieve_oauth_account', [], 'googlesheets');
+        $account = datamachine_get_oauth_account('googlesheets');
         if (empty($account) || !is_array($account) || empty($account['access_token']) || empty($account['refresh_token'])) {
             return null;
         }

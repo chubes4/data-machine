@@ -34,15 +34,6 @@ use Monolog\Level;
  * @since 0.1.0
  */
 function datamachine_register_logger_filters() {
-    add_filter('datamachine_log_file', function($result, $operation, $param1 = null) {
-        switch ($operation) {
-            case 'get_level':
-                return datamachine_get_log_level();
-            case 'get_available_levels':
-                return datamachine_get_available_log_levels();
-        }
-        return $result;
-    }, 10, 3);
 }
 
 
@@ -280,6 +271,20 @@ function datamachine_set_log_level(string $level): bool {
     return update_option('datamachine_log_level', $level);
 }
 
+/**
+ * Get all valid log levels that can be used for logging operations.
+ *
+ * @return array Array of valid log level strings
+ */
+function datamachine_get_valid_log_levels(): array {
+    return ['debug', 'info', 'warning', 'error', 'critical'];
+}
+
+/**
+ * Get user-configurable log levels for admin interface.
+ *
+ * @return array Array of log levels with descriptions for user selection
+ */
 function datamachine_get_available_log_levels(): array {
     return [
         'debug' => 'Debug (full logging)',

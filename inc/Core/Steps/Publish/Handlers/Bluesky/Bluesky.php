@@ -50,11 +50,11 @@ class Bluesky extends PublishHandler {
             );
         }
 
-        $bluesky_config = $handler_config['bluesky'] ?? $handler_config;
+        // handler_config is ALWAYS flat structure - no nesting
 
         $this->log('debug', 'Bluesky Tool: Using handler configuration', [
-            'include_images' => $bluesky_config['include_images'] ?? true,
-            'link_handling' => $bluesky_config['link_handling'] ?? 'append'
+            'include_images' => $handler_config['include_images'] ?? true,
+            'link_handling' => $handler_config['link_handling'] ?? 'append'
         ]);
 
         $job_id = $parameters['job_id'] ?? null;
@@ -64,9 +64,9 @@ class Bluesky extends PublishHandler {
         $content = $parameters['content'] ?? '';
         $source_url = $engine_data['source_url'] ?? null;
         $image_file_path = $engine_data['image_file_path'] ?? null;
-        
-        $include_images = $bluesky_config['include_images'] ?? true;
-        $link_handling = $bluesky_config['link_handling'] ?? 'append';
+
+        $include_images = $handler_config['include_images'] ?? true;
+        $link_handling = $handler_config['link_handling'] ?? 'append';
 
         $session = $this->auth->get_session();
         if (is_wp_error($session)) {

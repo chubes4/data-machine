@@ -50,8 +50,7 @@ class Facebook extends PublishHandler {
             );
         }
 
-        // Extract Facebook-specific configuration (it's nested under 'facebook' key)
-        $facebook_config = $handler_config['facebook'] ?? $handler_config;
+        // handler_config is ALWAYS flat structure - no nesting
 
         $job_id = $parameters['job_id'] ?? null;
         $engine_data = $this->getEngineData($job_id);
@@ -61,16 +60,16 @@ class Facebook extends PublishHandler {
         $content = $parameters['content'] ?? '';
         $source_url = $engine_data['source_url'] ?? null;
         $image_file_path = $engine_data['image_file_path'] ?? null;
-        
-        // Get config from Facebook-specific settings
-        $include_images = $facebook_config['include_images'] ?? false;
-        $link_handling = $facebook_config['link_handling'] ?? 'append'; // 'none', 'append', or 'comment'
-        
+
+        // Get config from handler configuration
+        $include_images = $handler_config['include_images'] ?? false;
+        $link_handling = $handler_config['link_handling'] ?? 'append'; // 'none', 'append', or 'comment'
+
         // Debug logging to verify parameter flow
         $this->log('debug', 'Facebook Handler: Parameter extraction complete', [
             'source_url' => $source_url,
             'include_images' => $include_images,
-            'facebook_config_keys' => array_keys($facebook_config)
+            'handler_config_keys' => array_keys($handler_config)
         ]);
 
         // Get authenticated credentials

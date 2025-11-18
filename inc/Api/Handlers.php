@@ -131,6 +131,16 @@ class Handlers {
 			// Call get_fields() if method exists
 			if (method_exists($settings_class, 'get_fields')) {
 				$settings_schema = $settings_class::get_fields();
+
+				// Apply datamachine_enabled_settings filter for modal display
+				// This filter adds global default indicators and disables fields when global defaults are set
+				$settings_schema = apply_filters(
+					'datamachine_enabled_settings',
+					$settings_schema,
+					$handler_slug,
+					$handler_info['type'] ?? '',
+					'modal'
+				);
 			}
 		}
 

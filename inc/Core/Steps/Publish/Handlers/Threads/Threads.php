@@ -58,11 +58,11 @@ class Threads extends PublishHandler {
             );
         }
 
-        $threads_config = $handler_config['threads'] ?? $handler_config;
+        // handler_config is ALWAYS flat structure - no nesting
 
         $this->log('debug', 'Threads Tool: Using handler configuration', [
-            'include_images' => $threads_config['include_images'] ?? true,
-            'link_handling' => $threads_config['link_handling'] ?? 'append'
+            'include_images' => $handler_config['include_images'] ?? true,
+            'link_handling' => $handler_config['link_handling'] ?? 'append'
         ]);
 
         $job_id = $parameters['job_id'] ?? null;
@@ -72,9 +72,9 @@ class Threads extends PublishHandler {
         $content = $parameters['content'] ?? '';
         $source_url = $engine_data['source_url'] ?? null;
         $image_file_path = $engine_data['image_file_path'] ?? null;
-        
-        $include_images = $threads_config['include_images'] ?? true;
-        $link_handling = $threads_config['link_handling'] ?? 'append';
+
+        $include_images = $handler_config['include_images'] ?? true;
+        $link_handling = $handler_config['link_handling'] ?? 'append';
 
         $access_token = $this->auth->get_access_token();
         if (empty($access_token)) {

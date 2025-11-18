@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from '@wordpress/element';
 import { fetchPipelines } from '../utils/api';
+import { usePipelineContext } from '../context/PipelineContext';
 
 /**
  * Fetch selected pipeline with complete details
@@ -15,6 +16,7 @@ import { fetchPipelines } from '../utils/api';
  * @returns {Object} Hook state
  */
 export default function useSelectedPipeline( pipelineId ) {
+	const { refreshTrigger } = usePipelineContext();
 	const [ pipeline, setPipeline ] = useState( null );
 	const [ loading, setLoading ] = useState( false );
 	const [ error, setError ] = useState( null );
@@ -54,11 +56,11 @@ export default function useSelectedPipeline( pipelineId ) {
 	}, [ pipelineId ] );
 
 	/**
-	 * Fetch on mount and when pipelineId changes
+	 * Fetch on mount and when pipelineId or refreshTrigger changes
 	 */
 	useEffect( () => {
 		fetchPipeline();
-	}, [ fetchPipeline ] );
+	}, [ fetchPipeline, refreshTrigger ] );
 
 	return {
 		pipeline,

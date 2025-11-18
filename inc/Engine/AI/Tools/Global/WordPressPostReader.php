@@ -5,7 +5,7 @@
  * @package DataMachine
  */
 
-namespace DataMachine\Engine\AI\Tools;
+namespace DataMachine\Engine\AI\Tools\Global;
 
 defined('ABSPATH') || exit;
 

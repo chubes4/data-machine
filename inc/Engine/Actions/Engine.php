@@ -21,6 +21,17 @@ function datamachine_get_file_context(int $flow_id): array {
 }
 
 /**
+ * Register execution engine action hooks.
+ *
+ * Registers the four core execution actions:
+ * - datamachine_run_flow_now
+ * - datamachine_execute_step
+ * - datamachine_schedule_next_step
+ * - datamachine_run_flow_later
+ */
+function datamachine_register_execution_engine() {
+
+/**
  * Execute flow immediately.
  *
  * Creates a job record, loads flow/pipeline configurations,
@@ -105,11 +116,35 @@ add_action('datamachine_run_flow_now', function($flow_id) {
 add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step_id, ?array $dataPackets = null ) {
 
         try {
+            do_action('datamachine_log', 'debug', 'EXECUTE STEP START', [
+                'job_id' => $job_id,
+                'job_id_type' => gettype($job_id),
+                'flow_step_id' => $flow_step_id,
+                'flow_step_id_type' => gettype($flow_step_id),
+                'dataPackets_type' => gettype($dataPackets)
+            ]);
+
             // Retrieve data by job_id
             $db_flows = new \DataMachine\Core\Database\Flows\Flows();
             /** @var array $flow_step_config */
             $flow_step_config = $db_flows->get_flow_step_config( $flow_step_id, $job_id, true );
-            $flow_id = $flow_step_config['flow_id'] ?? 0;
+
+            if (!isset($flow_step_config['flow_id']) || empty($flow_step_config['flow_id'])) {
+                do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
+                    'flow_step_id' => $flow_step_id,
+                    'reason' => 'missing_flow_id_in_step_config'
+                ]);
+                return false;
+            }
+
+            $flow_id = $flow_step_config['flow_id'];
+
+            do_action('datamachine_log', 'debug', 'FLOW STEP CONFIG RETRIEVED', [
+                'flow_step_config_type' => gettype($flow_step_config),
+                'is_array' => is_array($flow_step_config),
+                'is_object' => is_object($flow_step_config),
+                'flow_id' => $flow_id
+            ]);
             /** @var array $context */
             $context = datamachine_get_file_context($flow_id);
 
@@ -125,10 +160,18 @@ add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step
                 return false;
             }
 
-            $step_type = $flow_step_config['step_type'] ?? '';
+            if (!isset($flow_step_config['step_type']) || empty($flow_step_config['step_type'])) {
+                do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
+                    'flow_step_id' => $flow_step_id,
+                    'reason' => 'missing_step_type_in_flow_step_config'
+                ]);
+                return false;
+            }
+
+            $step_type = $flow_step_config['step_type'];
             $all_steps = apply_filters('datamachine_step_types', []);
             $step_definition = $all_steps[$step_type] ?? null;
-            
+
             if ( ! $step_definition ) {
                 do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
                     'flow_step_id' => $flow_step_id,
@@ -142,7 +185,14 @@ add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step
             $flow_step = new $step_class();
 
             // Get engine data for step execution
-            $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+            $engine_data = datamachine_get_engine_data($job_id);
+
+            do_action('datamachine_log', 'debug', 'ENGINE DATA RETRIEVED', [
+                'engine_data_type' => gettype($engine_data),
+                'is_array' => is_array($engine_data),
+                'is_object' => is_object($engine_data),
+                'keys' => is_array($engine_data) ? array_keys($engine_data) : 'NOT ARRAY'
+            ]);
 
             $payload = [
                 'job_id' => $job_id,
@@ -152,7 +202,18 @@ add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step
                 'engine_data' => is_array($engine_data) ? $engine_data : [],
             ];
 
+            do_action('datamachine_log', 'debug', 'PAYLOAD CONSTRUCTED', [
+                'payload_keys' => array_keys($payload),
+                'engine_data_in_payload_type' => gettype($payload['engine_data']),
+                'engine_data_is_array' => is_array($payload['engine_data'])
+            ]);
+
             $dataPackets = $flow_step->execute($payload);
+
+            do_action('datamachine_log', 'debug', 'STEP EXECUTED', [
+                'dataPackets_returned_type' => gettype($dataPackets),
+                'is_array' => is_array($dataPackets)
+            ]);
 
             if (!is_array($dataPackets)) {
                 do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
@@ -176,7 +237,14 @@ add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step
                 } else {
                     do_action('datamachine_update_job_status', $job_id, 'completed', 'complete');
                     $cleanup = new \DataMachine\Core\FilesRepository\FileCleanup();
-                    $flow_id = $flow_step_config['flow_id'] ?? 0;
+                    if (!isset($flow_step_config['flow_id']) || empty($flow_step_config['flow_id'])) {
+                        do_action('datamachine_log', 'error', 'Flow ID missing during cleanup', [
+                            'job_id' => $job_id,
+                            'flow_step_id' => $flow_step_id
+                        ]);
+                        return false;
+                    }
+                    $flow_id = $flow_step_config['flow_id'];
                     $context = datamachine_get_file_context($flow_id);
                     $cleanup->cleanup_job_data_packets($job_id, $context);
                     do_action('datamachine_log', 'info', 'Pipeline execution completed successfully', [
@@ -231,7 +299,14 @@ add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step
         if (!empty($dataPackets)) {
             $db_flows = new \DataMachine\Core\Database\Flows\Flows();
             $flow_step_config = $db_flows->get_flow_step_config( $flow_step_id, $job_id, true );
-            $flow_id = $flow_step_config['flow_id'] ?? 0;
+            if (!isset($flow_step_config['flow_id']) || empty($flow_step_config['flow_id'])) {
+                do_action('datamachine_log', 'error', 'Flow ID missing during data storage', [
+                    'job_id' => $job_id,
+                    'flow_step_id' => $flow_step_id
+                ]);
+                return false;
+            }
+            $flow_id = $flow_step_config['flow_id'];
             $context = datamachine_get_file_context($flow_id);
 
             $storage = new \DataMachine\Core\FilesRepository\FileStorage();
@@ -338,3 +413,5 @@ add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step
             }
         }
     }, 10, 2);
+
+} // End datamachine_register_execution_engine()

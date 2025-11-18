@@ -44,13 +44,11 @@ export default function FlowStepHandler( {
 		);
 	}
 
-	// Pattern-based check: all WordPress handlers follow wordpress_* naming convention
-	const isWordPressHandler = handlerSlug.startsWith( 'wordpress' );
-
-	// Build unified display settings
+	// Build unified display settings from handler configuration
+	// Global defaults are now merged server-side via datamachine_apply_global_defaults filter
 	const displaySettings = {};
 
-	// Add handler-configured settings
+	// Add handler-configured settings (includes merged global defaults)
 	if ( handlerConfig ) {
 		Object.entries( handlerConfig ).forEach( ( [ key, value ] ) => {
 			displaySettings[ key ] = {
@@ -61,46 +59,6 @@ export default function FlowStepHandler( {
 						: String( value ),
 			};
 		} );
-	}
-
-	// Add global WordPress settings (only for WordPress handlers)
-	if ( isWordPressHandler && globalSettings ) {
-		if (
-			globalSettings.default_author_id &&
-			! handlerConfig?.post_author
-		) {
-			displaySettings.author = {
-				label: __( 'Author', 'datamachine' ),
-				value: `${ globalSettings.default_author_name || globalSettings.default_author_id } (${ __( 'global default', 'datamachine' ) })`,
-			};
-		}
-		if (
-			globalSettings.default_post_status &&
-			! handlerConfig?.post_status
-		) {
-			displaySettings.status = {
-				label: __( 'Status', 'datamachine' ),
-				value: `${ globalSettings.default_post_status } (${ __( 'global default', 'datamachine' ) })`,
-			};
-		}
-		if (
-			globalSettings.default_include_source !== undefined &&
-			! handlerConfig?.include_source
-		) {
-			displaySettings.include_source = {
-				label: __( 'Include Source', 'datamachine' ),
-				value: `${ globalSettings.default_include_source ? __( 'Yes', 'datamachine' ) : __( 'No', 'datamachine' ) } (${ __( 'global default', 'datamachine' ) })`,
-			};
-		}
-		if (
-			globalSettings.default_enable_images !== undefined &&
-			! handlerConfig?.enable_images
-		) {
-			displaySettings.enable_images = {
-				label: __( 'Enable Images', 'datamachine' ),
-				value: `${ globalSettings.default_enable_images ? __( 'Yes', 'datamachine' ) : __( 'No', 'datamachine' ) } (${ __( 'global default', 'datamachine' ) })`,
-			};
-		}
 	}
 
 	const hasSettings = Object.keys( displaySettings ).length > 0;

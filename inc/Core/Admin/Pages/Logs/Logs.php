@@ -45,12 +45,6 @@ class Logs
         // Set log file path
         $upload_dir = wp_upload_dir();
         $this->log_file_path = $upload_dir['basedir'] . DATAMACHINE_LOG_FILE;
-
-        // Admin page registration now handled by LogsFilters.php
-
-        // Form handling moved to template - admin_init timing issues
-
-        // AJAX replaced by REST API - see /inc/Api/Logs.php
     }
 
 
@@ -153,7 +147,7 @@ class Logs
      */
     private function get_current_log_level()
     {
-        return apply_filters('datamachine_log_file', 'error', 'get_level');
+        return datamachine_get_log_level();
     }
 
 

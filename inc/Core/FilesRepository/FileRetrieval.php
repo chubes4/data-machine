@@ -33,9 +33,7 @@ class FileRetrieval {
     public function retrieve_data_by_job_id(int $job_id, array $context): array {
         $directory = $this->directory_manager->get_job_directory(
             $context['pipeline_id'],
-            $context['pipeline_name'],
             $context['flow_id'],
-            $context['flow_name'],
             $job_id
         );
 

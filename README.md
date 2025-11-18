@@ -266,18 +266,18 @@ Complete extension framework supporting Fetch, Publish, Update handlers, AI tool
 - WordPress Post Reader
 
 **Architecture Highlights**:
-- **Base Class Architecture** (@since v0.2.0):
+- **Base Class Architecture** (@since v0.2.1) - Major Architectural Refactoring:
   - **Step** base class for unified payload handling across all step types
-  - **FetchHandler** base class with deduplication, engine data storage, filtering
+  - **FetchHandler** base class with deduplication, engine data storage, filtering, logging
   - **PublishHandler** base class with engine data retrieval, image validation, response formatting
   - **SettingsHandler** base classes with auto-sanitization for all handler settings
-  - **DataPacket** class for standardized data packet creation
+  - **DataPacket** class for standardized data packet creation replacing scattered array construction
   - Eliminates code duplication through inheritance and shared functionality
-- **Modular Component Architecture** (@since v0.2.1):
+- **Modular Component Architecture** (@since v0.2.1) - Major Architectural Refactoring:
   - **FilesRepository**: 6 specialized components (DirectoryManager, FileStorage, FileCleanup, ImageValidator, RemoteFileDownloader, FileRetrieval)
   - **WordPress Shared Components**: Centralized functionality (FeaturedImageHandler, TaxonomyHandler, SourceUrlHandler, WordPressSettingsHandler)
   - **StepNavigator**: Centralized step navigation logic for execution flow
-  - Reduces duplication across handlers and step types
+  - Reduces duplication across handlers and step types through composition
 - **Centralized OAuth Handlers**:
   - `OAuth1Handler` and `OAuth2Handler` classes at `/inc/Core/OAuth/` eliminate duplication
   - Service discovery via `datamachine_get_oauth1_handler` and `datamachine_get_oauth2_handler` filters

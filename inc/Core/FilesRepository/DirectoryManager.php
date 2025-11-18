@@ -27,35 +27,49 @@ class DirectoryManager {
      * Get pipeline directory path
      *
      * @param int $pipeline_id Pipeline ID
-     * @param string $pipeline_name Pipeline name
      * @return string Full path to pipeline directory
      */
-    public function get_pipeline_directory(int $pipeline_id, string $pipeline_name): string {
+    public function get_pipeline_directory(int $pipeline_id): string {
         $upload_dir = wp_upload_dir();
         $base = trailingslashit($upload_dir['basedir']) . self::REPOSITORY_DIR;
-        $safe_name = $this->sanitize_directory_name($pipeline_name);
-        return "{$base}/pipeline-{$pipeline_id}-{$safe_name}";
+        return "{$base}/pipeline-{$pipeline_id}";
+    }
+
+    /**
+     * Get flow directory path
+     *
+     * @param int $pipeline_id Pipeline ID
+     * @param int $flow_id Flow ID
+     * @return string Full path to flow directory
+     */
+    public function get_flow_directory(int $pipeline_id, int $flow_id): string {
+        $pipeline_dir = $this->get_pipeline_directory($pipeline_id);
+        return "{$pipeline_dir}/flow-{$flow_id}";
+    }
+
+    /**
+     * Get job directory path
+     *
+     * @param int $pipeline_id Pipeline ID
+     * @param int $flow_id Flow ID
+     * @param int $job_id Job ID
+     * @return string Full path to job directory
+     */
+    public function get_job_directory(int $pipeline_id, int $flow_id, int $job_id): string {
+        $flow_dir = $this->get_flow_directory($pipeline_id, $flow_id);
+        return "{$flow_dir}/jobs/job-{$job_id}";
     }
 
     /**
      * Get flow files directory path
      *
      * @param int $pipeline_id Pipeline ID
-     * @param string $pipeline_name Pipeline name
-     * @param int|string $flow_id Flow ID or 'ephemeral' sentinel
-     * @param string $flow_name Flow name
+     * @param int $flow_id Flow ID
      * @return string Full path to flow files directory
      */
-    public function get_flow_files_directory(int $pipeline_id, string $pipeline_name, int|string $flow_id, string $flow_name): string {
-        // Handle ephemeral workflows with temp directory
-        if ($pipeline_id === 0 || $flow_id === 0) {
-            $temp_dir = sys_get_temp_dir();
-            $ephemeral_id = uniqid('datamachine-ephemeral-', true);
-            return "{$temp_dir}/{$ephemeral_id}/files";
-        }
-
-        $flow_dir = $this->get_flow_directory($pipeline_id, $pipeline_name, $flow_id, $flow_name);
-        return "{$flow_dir}/files";
+    public function get_flow_files_directory(int $pipeline_id, int $flow_id): string {
+        $flow_dir = $this->get_flow_directory($pipeline_id, $flow_id);
+        return "{$flow_dir}/flow-{$flow_id}-files";
     }
 
     /**
@@ -77,17 +91,4 @@ class DirectoryManager {
         return true;
     }
 
-    /**
-     * Sanitize directory name for filesystem
-     *
-     * @param string $name Original name
-     * @return string Sanitized name
-     */
-    private function sanitize_directory_name(string $name): string {
-        $name = strtolower($name);
-        $name = preg_replace('/[^a-z0-9-_]/', '-', $name);
-        $name = preg_replace('/-+/', '-', $name);
-        $name = trim($name, '-');
-        return substr($name, 0, 50);
-    }
 }

@@ -8,6 +8,7 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 - [**Overview**](overview.md) - System architecture and core concepts
 - [Core System Overview](core-system/engine-execution.md) - Engine execution cycle
 - [Database Schema](core-system/database-schema.md) - Data storage and relationships
+- [Changelog](CHANGELOG.md) - Version history and changes
 
 ### Universal Engine (v0.2.0)
 - [Universal Engine Architecture](core-system/universal-engine.md) - Shared AI infrastructure layer
@@ -18,7 +19,7 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 - [ToolParameters](core-system/tool-parameters.md) - Unified parameter building for AI tools
 - [ToolResultFinder](core-system/tool-result-finder.md) - Universal tool result search utility
 - [Chat Database](core-system/chat-database.md) - Session management and CRUD operations
-- [OAuth Handlers](core-system/oauth-handlers.md) - Centralized OAuth 1.0a and OAuth 2.0 flow handlers
+- [OAuth Handlers](core-system/oauth-handlers.md) - Centralized OAuth 1.0a and 2.0 flow handlers
 
 ### Handler Documentation
 
@@ -68,6 +69,14 @@ docs/
 ├── core-system/
 │   ├── engine-execution.md             # Three-action execution cycle
 │   ├── database-schema.md              # Database tables and relationships
+│   ├── step.md                         # Step base class (v0.2.1)
+│   ├── fetch-handler.md                # FetchHandler base class (v0.2.1)
+│   ├── publish-handler.md              # PublishHandler base class (v0.2.1)
+│   ├── settings-handler.md             # SettingsHandler base classes (v0.2.1)
+│   ├── data-packet.md                  # DataPacket class (v0.2.1)
+│   ├── files-repository.md             # FilesRepository components (v0.2.1)
+│   ├── wordpress-components.md         # WordPress shared components (v0.2.1)
+│   ├── step-navigator.md               # StepNavigator component (v0.2.1)
 │   ├── universal-engine.md             # Universal Engine architecture (v0.2.0)
 │   ├── ai-conversation-loop.md         # Multi-turn conversation execution (v0.2.0)
 │   ├── tool-execution.md               # Tool discovery and execution (v0.2.0)
@@ -116,17 +125,17 @@ docs/
 
 ### ✅ Core System Components
 
-**Base Class Architecture** (@since v0.2.1)
-- Step base class - Unified payload handling for all step types
-- FetchHandler base class - Deduplication, engine data storage, filtering, logging
-- PublishHandler base class - Engine data retrieval, image validation, response formatting
-- SettingsHandler base classes - Auto-sanitization for all handler settings
-- DataPacket class - Standardized data packet creation
+**Base Class Architecture** (@since v0.2.1) - NEW ARCHITECTURE
+- [Step Base Class](core-system/step.md) - Unified payload handling for all step types
+- [FetchHandler Base Class](core-system/fetch-handler.md) - Deduplication, engine data storage, filtering, logging
+- [PublishHandler Base Class](core-system/publish-handler.md) - Engine data retrieval, image validation, response formatting
+- [SettingsHandler Base Classes](core-system/settings-handler.md) - Auto-sanitization for all handler settings
+- [DataPacket Class](core-system/data-packet.md) - Standardized data packet creation
 
-**Modular Components** (@since v0.2.1)
-- FilesRepository - 6 specialized components (DirectoryManager, FileStorage, FileCleanup, ImageValidator, RemoteFileDownloader, FileRetrieval)
-- WordPress shared components - Centralized functionality (FeaturedImageHandler, TaxonomyHandler, SourceUrlHandler, WordPressSettingsHandler)
-- StepNavigator - Centralized step navigation logic for pipeline execution
+**Modular Components** (@since v0.2.1) - NEW ARCHITECTURE
+- [FilesRepository Components](core-system/files-repository.md) - 6 specialized components for file management
+- [WordPress Shared Components](core-system/wordpress-components.md) - Centralized WordPress functionality
+- [StepNavigator](core-system/step-navigator.md) - Centralized step navigation logic
 
 **Engine Execution**
 - Three-action cycle (datamachine_run_flow_now → datamachine_execute_step → datamachine_schedule_next_step)

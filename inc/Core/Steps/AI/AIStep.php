@@ -6,13 +6,12 @@ use DataMachine\Core\DataPacket;
 use DataMachine\Core\Steps\Step;
 use DataMachine\Engine\AI\AIConversationLoop;
 use DataMachine\Engine\AI\ConversationManager;
-use DataMachine\Engine\AI\ToolExecutor;
+use DataMachine\Engine\AI\Tools\ToolExecutor;
+use DataMachine\Engine\AI\Tools\ToolManager;
 
 if (!defined('ABSPATH')) {
     exit;
 }
-
-require_once __DIR__ . '/AIStepTools.php';
 
 /**
  * Multi-turn conversational AI agent with tool execution and completion detection.
@@ -34,14 +33,14 @@ class AIStep extends Step {
      * @return bool
      */
     protected function validateStepConfiguration(): bool {
-        $pipeline_step_id = $this->flow_step_config['pipeline_step_id'] ?? '';
-
-        if (empty($pipeline_step_id)) {
-            $this->log('warning', 'Missing pipeline_step_id, skipping AI processing', [
+        if (!isset($this->flow_step_config['pipeline_step_id']) || empty($this->flow_step_config['pipeline_step_id'])) {
+            $this->log('error', 'Missing pipeline_step_id in AI step configuration', [
                 'flow_step_config' => $this->flow_step_config
             ]);
             return false;
         }
+
+        $pipeline_step_id = $this->flow_step_config['pipeline_step_id'];
 
         $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, [
             'job_id' => $this->job_id,
@@ -119,6 +118,7 @@ class AIStep extends Step {
         $payload = [
             'job_id' => $this->job_id,
             'flow_step_id' => $this->flow_step_id,
+            'step_id' => $pipeline_step_id,
             'data' => $this->dataPackets,
             'flow_step_config' => $this->flow_step_config,
             'engine_data' => $this->engine_data
@@ -183,7 +183,11 @@ class AIStep extends Step {
      * @return array Updated data packet array
      */
     private static function processLoopResults(array $loop_result, array $dataPackets, array $payload, array $available_tools): array {
-        $flow_step_id = $payload['flow_step_id'] ?? '';
+        if (!isset($payload['flow_step_id']) || empty($payload['flow_step_id'])) {
+            throw new \InvalidArgumentException('Flow step ID is required in AI step payload');
+        }
+
+        $flow_step_id = $payload['flow_step_id'];
         $messages = $loop_result['messages'] ?? [];
         $turn_count = 0;
         $handler_completed = false;
@@ -266,7 +270,8 @@ class AIStep extends Step {
                             'handler_config' => $handler_config,
                             'source_type' => $dataPackets[0]['metadata']['source_type'] ?? 'unknown',
                             'flow_step_id' => $flow_step_id,
-                            'conversation_turn' => $turn_count
+                            'conversation_turn' => $turn_count,
+                            'tool_result' => $tool_result
                         ],
                         'ai_handler_complete'
                     );

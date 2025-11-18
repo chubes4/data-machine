@@ -34,15 +34,15 @@ class Pipelines {
 	 * @return int|false Pipeline ID on success, false on failure
 	 */
 	public function create_pipeline( array $pipeline_data ): int|false {
-		$pipeline_name = sanitize_text_field( $pipeline_data['pipeline_name'] ?? '' );
-		$pipeline_config = $pipeline_data['pipeline_config'] ?? [];
-
-		if ( empty( $pipeline_name ) ) {
-			do_action( 'datamachine_log', 'error', 'Cannot create pipeline - missing pipeline name', [
+		if ( !isset( $pipeline_data['pipeline_name'] ) || empty( trim( $pipeline_data['pipeline_name'] ) ) ) {
+			do_action( 'datamachine_log', 'error', 'Cannot create pipeline - missing or empty pipeline name', [
 				'pipeline_data' => $pipeline_data
 			] );
 			return false;
 		}
+
+		$pipeline_name = sanitize_text_field( $pipeline_data['pipeline_name'] );
+		$pipeline_config = $pipeline_data['pipeline_config'] ?? [];
 
 		if ( is_array( $pipeline_config ) ) {
 			$pipeline_config_json = wp_json_encode( $pipeline_config );
@@ -290,7 +290,7 @@ class Pipelines {
 
 		// Delete pipeline filesystem directory (cascade deletion)
 		$dir_manager = new \DataMachine\Core\FilesRepository\DirectoryManager();
-		$pipeline_dir = $dir_manager->get_pipeline_directory($pipeline_id, $pipeline_name);
+		$pipeline_dir = $dir_manager->get_pipeline_directory($pipeline_id);
 
 		if (is_dir($pipeline_dir)) {
 			if (!function_exists('WP_Filesystem')) {

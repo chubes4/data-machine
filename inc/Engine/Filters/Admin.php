@@ -416,13 +416,6 @@ function datamachine_enqueue_page_assets($assets, $page_slug) {
     }
 }
 
-
-// Settings page rendering and callbacks moved to /inc/Core/Admin/Settings/SettingsFilters.php
-
-
-// Settings page styles moved to /inc/Core/Admin/Settings/assets/css/settings-page.css
-
-
 /**
  * Global system prompt injection moved to modular directive system
  * 

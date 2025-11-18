@@ -40,11 +40,10 @@ class FileCleanup {
      * and all nested job data. Uses WordPress filesystem API for safe deletion.
      *
      * @param int $pipeline_id Pipeline ID
-     * @param string $pipeline_name Pipeline name
      * @return bool True if directory deleted or doesn't exist, false on failure
      */
-    public function delete_pipeline_directory(int $pipeline_id, string $pipeline_name): bool {
-        $pipeline_dir = $this->directory_manager->get_pipeline_directory($pipeline_id, $pipeline_name);
+    public function delete_pipeline_directory(int $pipeline_id): bool {
+        $pipeline_dir = $this->directory_manager->get_pipeline_directory($pipeline_id);
 
         if (!is_dir($pipeline_dir)) {
             return true;
@@ -90,9 +89,7 @@ class FileCleanup {
     public function cleanup_job_data_packets(int $job_id, array $context): int {
         $job_dir = $this->directory_manager->get_job_directory(
             $context['pipeline_id'],
-            $context['pipeline_name'],
             $context['flow_id'],
-            $context['flow_name'],
             $job_id
         );
 

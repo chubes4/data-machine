@@ -46,7 +46,7 @@ class Reddit extends FetchHandler {
 	): array {
 		$oauth_reddit = $this->oauth_reddit;
 
-		$reddit_account = apply_filters('datamachine_retrieve_oauth_account', [], 'reddit');
+		$reddit_account = datamachine_get_oauth_account('reddit');
 		$access_token = $reddit_account['access_token'] ?? null;
 		$token_expires_at = $reddit_account['token_expires_at'] ?? 0;
 		$needs_refresh = empty($access_token) || time() >= ($token_expires_at - 300);
@@ -65,7 +65,7 @@ class Reddit extends FetchHandler {
 				return $this->emptyResponse();
 			}
 
-			$reddit_account = apply_filters('datamachine_retrieve_oauth_account', [], 'reddit');
+		$reddit_account = datamachine_get_oauth_account('reddit');
 			if (empty($reddit_account['access_token'])) {
 				$this->log('error', 'Token refresh successful, but failed to retrieve new token data.', ['pipeline_id' => $pipeline_id]);
 				return $this->emptyResponse();
@@ -84,7 +84,12 @@ class Reddit extends FetchHandler {
 			'token_present' => !empty($access_token),
 			'token_expiry_ts' => $reddit_account['token_expires_at'] ?? 'N/A'
 		]);
-		$subreddit = trim( $config['subreddit'] ?? '' );
+		if ( !isset( $config['subreddit'] ) || empty( trim( $config['subreddit'] ) ) ) {
+			$this->log('error', 'Subreddit name not configured.', ['pipeline_id' => $pipeline_id]);
+			return $this->emptyResponse();
+		}
+
+		$subreddit = trim( $config['subreddit'] );
 		$sort = $config['sort_by'] ?? 'hot';
 		$timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
 		$min_upvotes = isset($config['min_upvotes']) ? absint($config['min_upvotes']) : 0;
@@ -92,11 +97,6 @@ class Reddit extends FetchHandler {
 		$min_comment_count = isset($config['min_comment_count']) ? absint($config['min_comment_count']) : 0;
 		$comment_count_setting = isset($config['comment_count']) ? absint($config['comment_count']) : 0;
 		$search_term = trim( $config['search'] ?? '' );
-
-		if ( empty( $subreddit ) ) {
-			$this->log('error', 'Subreddit name not configured.', ['pipeline_id' => $pipeline_id]);
-			return $this->emptyResponse();
-		}
 		if (!preg_match('/^[a-zA-Z0-9_]+$/', $subreddit)) {
 			$this->log('error', 'Invalid subreddit name format.', ['pipeline_id' => $pipeline_id, 'subreddit' => $subreddit]);
 			return $this->emptyResponse();

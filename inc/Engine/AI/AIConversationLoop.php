@@ -11,7 +11,7 @@
 
 namespace DataMachine\Engine\AI;
 
-use DataMachine\Engine\AI\ToolExecutor;
+use DataMachine\Engine\AI\Tools\ToolExecutor;
 
 if (!defined('ABSPATH')) {
 	exit;

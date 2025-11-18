@@ -2,6 +2,18 @@
 
 Posts content to Twitter with media support, authentication via OAuth 1.0a, and comprehensive formatting features.
 
+## Architecture
+
+**Base Class**: Extends [PublishHandler](../../core-system/publish-handler.md) (@since v0.2.1)
+
+**Inherited Functionality**:
+- Engine data retrieval via `getSourceUrl()` and `getImageFilePath()`
+- Image validation via `validateImage()` with comprehensive error checking
+- Standardized responses via `successResponse()` and `errorResponse()`
+- Centralized logging and error handling
+
+**Implementation**: Tool-first architecture via `handle_tool_call()` method for AI agents
+
 ## Authentication
 
 ### OAuth 1.0a Configuration

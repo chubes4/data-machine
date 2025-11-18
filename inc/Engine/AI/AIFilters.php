@@ -17,6 +17,7 @@ function datamachine_register_ai_filters() {
 
     add_filter('datamachine_ai_config', function($default, $pipeline_step_id = null, array $context = []) {
         if (!$pipeline_step_id) {
+            do_action('datamachine_log', 'debug', 'AI Config: No pipeline_step_id provided');
             return [];
         }
 
@@ -33,10 +34,18 @@ function datamachine_register_ai_filters() {
             ];
         }
 
-        $engine_data = $context['engine_data'] ?? apply_filters('datamachine_engine_data', [], $job_id);
+        $engine_data = $context['engine_data'] ?? datamachine_get_engine_data($job_id);
         $pipeline_config = $engine_data['pipeline_config'] ?? [];
 
         $step_config = $pipeline_config[$pipeline_step_id] ?? [];
+
+        do_action('datamachine_log', 'debug', 'AI Config: Step config lookup', [
+            'pipeline_step_id' => $pipeline_step_id,
+            'pipeline_config_keys' => array_keys($pipeline_config),
+            'step_config_found' => !empty($step_config),
+            'step_config_keys' => !empty($step_config) ? array_keys($step_config) : [],
+            'provider_value' => $step_config['provider'] ?? 'NOT SET'
+        ]);
 
         if (empty($step_config)) {
             do_action('datamachine_log', 'debug', 'AI Config: No step configuration found in engine data', [

@@ -61,7 +61,7 @@ class RedditAuth {
      * @return bool True if OAuth credentials are configured
      */
     public function is_configured(): bool {
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'reddit');
+        $config = datamachine_get_oauth_keys('reddit');
         return !empty($config['client_id']) && !empty($config['client_secret']);
     }
 
@@ -71,7 +71,7 @@ class RedditAuth {
      * @return string Authorization URL
      */
     public function get_authorization_url(): string {
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'reddit');
+        $config = datamachine_get_oauth_keys('reddit');
         $client_id = $config['client_id'] ?? '';
 
         if (empty($client_id)) {
@@ -118,7 +118,7 @@ class RedditAuth {
         }
 
         // Get configuration
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'reddit');
+        $config = datamachine_get_oauth_keys('reddit');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
         $developer_username = $config['developer_username'] ?? '';
@@ -213,13 +213,13 @@ class RedditAuth {
     public function refresh_token(): bool {
         do_action('datamachine_log', 'debug', 'Attempting Reddit token refresh');
 
-        $reddit_account = apply_filters('datamachine_retrieve_oauth_account', [], 'reddit');
+        $reddit_account = datamachine_get_oauth_account('reddit');
         if (empty($reddit_account['refresh_token'])) {
             do_action('datamachine_log', 'error', 'Reddit Token Refresh Error: Refresh token not found');
             return false;
         }
 
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'reddit');
+        $config = datamachine_get_oauth_keys('reddit');
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
         $developer_username = $config['developer_username'] ?? '';
@@ -281,7 +281,7 @@ class RedditAuth {
      * @return bool True if authenticated
      */
     public function is_authenticated(): bool {
-        $account = apply_filters('datamachine_retrieve_oauth_account', [], 'reddit');
+        $account = datamachine_get_oauth_account('reddit');
         return !empty($account) &&
                is_array($account) &&
                !empty($account['access_token']) &&
@@ -294,7 +294,7 @@ class RedditAuth {
      * @return array|null Account details or null if not authenticated
      */
     public function get_account_details(): ?array {
-        $account = apply_filters('datamachine_retrieve_oauth_account', [], 'reddit');
+        $account = datamachine_get_oauth_account('reddit');
         if (empty($account) || !is_array($account) || empty($account['access_token'])) {
             return null;
         }

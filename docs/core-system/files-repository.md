@@ -205,5 +205,14 @@ if (!as_next_scheduled_action('datamachine_cleanup_old_files')) {
 - **Isolation**: Flow-specific directories prevent conflicts
 - **Validation**: Built-in image and file validation
 - **Cleanup**: Automatic retention policy enforcement
-- **Consistency**: Standardized file handling across all handlers</content>
+- **Consistency**: Standardized file handling across all handlers
+
+## Used By
+
+The FilesRepository modular components are used by:
+- [Files Handler](../handlers/fetch/files.md) - Primary consumer of all components
+- [PublishHandler Base Class](publish-handler.md) - Uses ImageValidator for validation
+- [Engine Actions](../engine/actions.md) - Uses FileCleanup for retention policy
+
+The modular architecture allows individual components to be used independently throughout the system.</content>
 </xai:function_call">The FilesRepository provides modular file handling components for the Data Machine system, including storage, validation, cleanup, and remote downloading capabilities.

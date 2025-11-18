@@ -392,7 +392,15 @@ class PipelineSteps {
 
 			// Update only execution_order in flow steps
 			foreach ($flow_config as $flow_step_id => &$flow_step) {
-				$pipeline_step_id = $flow_step['pipeline_step_id'] ?? null;
+				if (!isset($flow_step['pipeline_step_id']) || empty($flow_step['pipeline_step_id'])) {
+					do_action('datamachine_log', 'error', 'Flow step missing pipeline_step_id during step update sync', [
+						'flow_id' => $flow_id,
+						'flow_step_id' => $flow_step_id,
+						'flow_step' => $flow_step
+					]);
+					continue;
+				}
+				$pipeline_step_id = $flow_step['pipeline_step_id'];
 
 				// Find matching updated step and sync execution_order
 				foreach ($updated_steps as $updated_step) {
@@ -480,6 +488,12 @@ class PipelineSteps {
 			);
 		}
 
+		// Extract pipeline_step_id from URL parameter
+		$pipeline_step_id = sanitize_text_field($request->get_param('pipeline_step_id'));
+
+		// Extract pipeline_id from request body
+		$pipeline_id = (int) $request->get_param('pipeline_id');
+
 		// Get pipeline and merge configuration
 		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 
@@ -528,20 +542,20 @@ class PipelineSteps {
 		}
 
 		// Save tool selections
-		$tools_manager = new \DataMachine\Core\Steps\AI\AIStepTools();
+		$tools_manager = new \DataMachine\Engine\AI\Tools\ToolManager();
 
-		// Build request params array for tool manager (expects $_POST-like structure)
-		$tool_params = [];
+		// Sanitize tool selections
+		$sanitized_tool_ids = [];
 		if (is_array($enabled_tools_raw)) {
-			$tool_params['enabled_tools'] = array_map('sanitize_text_field', $enabled_tools_raw);
+			$sanitized_tool_ids = array_map('sanitize_text_field', $enabled_tools_raw);
 		}
 
 		do_action('datamachine_log', 'debug', 'PipelineStepConfig: Before saving tool selections', [
 			'pipeline_step_id' => $pipeline_step_id,
-			'enabled_tools_count' => count($tool_params['enabled_tools'] ?? [])
+			'enabled_tools_count' => count($sanitized_tool_ids)
 		]);
 
-		$step_config_data['enabled_tools'] = $tools_manager->save_tool_selections($pipeline_step_id, $tool_params);
+		$step_config_data['enabled_tools'] = $tools_manager->save_step_tool_selections($pipeline_step_id, $sanitized_tool_ids);
 
 		do_action('datamachine_log', 'debug', 'PipelineStepConfig: After saving tool selections', [
 			'pipeline_step_id' => $pipeline_step_id,

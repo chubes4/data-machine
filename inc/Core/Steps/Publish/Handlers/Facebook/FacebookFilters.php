@@ -91,7 +91,7 @@ function datamachine_register_facebook_filters() {
  * Generate Facebook tool definition with dynamic description based on handler settings.
  */
 function datamachine_get_facebook_tool(array $handler_config = []): array {
-    $facebook_config = $handler_config['facebook'] ?? $handler_config;
+    // handler_config is ALWAYS flat structure - no nesting
 
     $tool = [
         'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Facebook\\Facebook',
@@ -111,8 +111,8 @@ function datamachine_get_facebook_tool(array $handler_config = []): array {
         $tool['handler_config'] = $handler_config;
     }
 
-    $include_images = $facebook_config['include_images'] ?? true;
-    $link_handling = $facebook_config['link_handling'] ?? 'append';
+    $include_images = $handler_config['include_images'] ?? true;
+    $link_handling = $handler_config['link_handling'] ?? 'append';
 
     $description_parts = ['Post content to Facebook'];
     if ($link_handling !== 'none') {

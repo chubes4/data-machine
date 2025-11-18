@@ -159,5 +159,20 @@ Data packets contain **clean data** for AI processing, while **engine parameters
 - **Type Safety**: Defined packet types and data structure
 - **Workflow Clarity**: Clear separation of data and metadata
 - **Maintainability**: Centralized packet creation logic
-- **Debugging**: Structured data for logging and inspection</content>
+- **Debugging**: Structured data for logging and inspection
+
+## Usage Examples
+
+DataPacket is used throughout the codebase for standardized packet creation:
+
+**Fetch Handlers**: See [FetchHandler](fetch-handler.md) implementations:
+- [RSS Handler](../handlers/fetch/rss.md)
+- [Reddit Handler](../handlers/fetch/reddit.md)
+- [Files Handler](../handlers/fetch/files.md)
+
+**AI Steps**: For conversation result packaging
+
+**Any Step**: Any component creating or modifying data packets
+
+All handlers extending [FetchHandler](fetch-handler.md) automatically use DataPacket for packet creation.</content>
 </xai:function_call">The DataPacket class provides standardized data packet creation and management, ensuring consistent data structure and workflow processing across all pipeline components.

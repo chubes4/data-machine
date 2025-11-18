@@ -84,25 +84,9 @@ function datamachine_get_wordpress_update_base_tool(array $handler_config = []):
  * Generate dynamic WordPress update tool with taxonomy parameters based on AI Decides selections.
  */
 function datamachine_get_dynamic_wordpress_update_tool(array $handler_config): array {
-    $wordpress_config = $handler_config['wordpress_update'] ?? $handler_config;
-
-    $tool = datamachine_get_wordpress_update_base_tool($wordpress_config);
-    $tool['handler_config'] = $wordpress_config;
-
-    if (!is_array($handler_config)) {
-        return $tool;
-    }
-
-    $sanitized_config = [];
-    foreach ($wordpress_config as $key => $value) {
-        if (is_string($key) && (is_string($value) || is_array($value))) {
-            $sanitized_config[sanitize_key($key)] = is_string($value) ? sanitize_text_field($value) : $value;
-        }
-    }
-
-    if (empty($sanitized_config)) {
-        return $tool;
-    }
+    // handler_config is ALWAYS flat structure - no nesting
+    $tool = datamachine_get_wordpress_update_base_tool($handler_config);
+    $tool['handler_config'] = $handler_config;
 
     $taxonomies = get_taxonomies(['public' => true], 'objects');
 
@@ -113,7 +97,7 @@ function datamachine_get_dynamic_wordpress_update_tool(array $handler_config): a
         }
 
         $field_key = "taxonomy_{$taxonomy->name}_selection";
-        $selection = $sanitized_config[$field_key] ?? 'skip';
+        $selection = $handler_config[$field_key] ?? 'skip';
 
         if ($selection === 'ai_decides') {
             $parameter_name = $taxonomy->name === 'category' ? 'category' :

@@ -34,7 +34,7 @@ class TwitterAuth {
      * @return bool True if authenticated
      */
     public function is_authenticated(): bool {
-        $account = apply_filters('datamachine_retrieve_oauth_account', [], 'twitter');
+        $account = datamachine_get_oauth_account('twitter');
         return !empty($account) &&
                is_array($account) &&
                !empty($account['access_token']) &&
@@ -69,7 +69,7 @@ class TwitterAuth {
      * @return bool True if configured
      */
     public function is_configured(): bool {
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'twitter');
+        $config = datamachine_get_oauth_keys('twitter');
         return !empty($config['api_key']) && !empty($config['api_secret']);
     }
 
@@ -79,7 +79,7 @@ class TwitterAuth {
      * @return TwitterOAuth|\WP_Error Connection or error
      */
     public function get_connection() {
-        $credentials = apply_filters('datamachine_retrieve_oauth_account', [], 'twitter');
+        $credentials = datamachine_get_oauth_account('twitter');
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['access_token_secret'])) {
             do_action('datamachine_log', 'error', 'Missing Twitter credentials in options.');
             return new \WP_Error('twitter_missing_credentials', __('Twitter credentials not found. Please authenticate.', 'datamachine'));
@@ -88,7 +88,7 @@ class TwitterAuth {
         $access_token = $credentials['access_token'];
         $access_token_secret = $credentials['access_token_secret'];
 
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'twitter');
+        $config = datamachine_get_oauth_keys('twitter');
         $consumer_key = $config['api_key'] ?? '';
         $consumer_secret = $config['api_secret'] ?? '';
 
@@ -112,7 +112,7 @@ class TwitterAuth {
      * @return string Authorization URL
      */
     public function get_authorization_url(): string {
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'twitter');
+        $config = datamachine_get_oauth_keys('twitter');
         $api_key = $config['api_key'] ?? '';
         $api_secret = $config['api_secret'] ?? '';
 
@@ -160,7 +160,7 @@ class TwitterAuth {
             exit;
         }
 
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'twitter');
+        $config = datamachine_get_oauth_keys('twitter');
         $api_key = $config['api_key'] ?? '';
         $api_secret = $config['api_secret'] ?? '';
 
@@ -195,7 +195,7 @@ class TwitterAuth {
      * @return array|null Account details or null
      */
     public function get_account_details(): ?array {
-        $account = apply_filters('datamachine_retrieve_oauth_account', [], 'twitter');
+        $account = datamachine_get_oauth_account('twitter');
         if (empty($account) || !is_array($account) || empty($account['access_token']) || empty($account['access_token_secret'])) {
             return null;
         }

@@ -188,9 +188,21 @@ class Flows {
 		$flow = $db_flows->get_flow($flow_id);
 		$pipeline_steps = $db_pipelines->get_pipeline_config($params['pipeline_id']);
 
+		if (!isset($flow['flow_name']) || empty(trim($flow['flow_name']))) {
+			do_action('datamachine_log', 'error', 'Flow created but missing name in database', [
+				'flow_id' => $flow_id,
+				'params' => $params
+			]);
+			return new \WP_Error(
+				'data_integrity_error',
+				__('Flow data is corrupted - missing name.', 'datamachine'),
+				['status' => 500]
+			);
+		}
+
 		do_action('datamachine_log', 'info', 'Flow created via REST API', [
 			'flow_id' => $flow_id,
-			'flow_name' => $params['flow_name'] ?? 'Flow',
+			'flow_name' => $flow['flow_name'],
 			'pipeline_id' => $params['pipeline_id'],
 			'synced_steps' => count($pipeline_steps),
 			'user_id' => get_current_user_id(),
@@ -200,7 +212,7 @@ class Flows {
 		return [
 			'success' => true,
 			'flow_id' => $flow_id,
-			'flow_name' => $params['flow_name'] ?? 'Flow',
+			'flow_name' => $flow['flow_name'],
 			'pipeline_id' => $params['pipeline_id'],
 			'synced_steps' => count($pipeline_steps),
 			'flow_data' => $flow
@@ -249,12 +261,19 @@ class Flows {
 		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 		$flow = $db_flows->get_flow($new_flow_id);
 		$source_flow = $db_flows->get_flow($source_flow_id);
-		$pipeline_steps = $db_pipelines->get_pipeline_config($source_flow['pipeline_id'] ?? 0);
+		if (!isset($source_flow['pipeline_id']) || empty($source_flow['pipeline_id'])) {
+			return new \WP_Error(
+				'rest_invalid_flow_data',
+				__('Source flow is missing required pipeline_id.', 'datamachine'),
+				['status' => 400]
+			);
+		}
+		$pipeline_steps = $db_pipelines->get_pipeline_config($source_flow['pipeline_id']);
 
 		do_action('datamachine_log', 'info', 'Flow duplicated via REST API', [
 			'source_flow_id' => $source_flow_id,
 			'new_flow_id' => $new_flow_id,
-			'pipeline_id' => $source_flow['pipeline_id'] ?? 0,
+			'pipeline_id' => $source_flow['pipeline_id'],
 			'flow_name' => $flow['flow_name'] ?? '',
 			'user_id' => get_current_user_id(),
 			'user_login' => wp_get_current_user()->user_login
@@ -265,7 +284,7 @@ class Flows {
 			'source_flow_id' => $source_flow_id,
 			'new_flow_id' => $new_flow_id,
 			'flow_name' => $flow['flow_name'] ?? '',
-			'pipeline_id' => $source_flow['pipeline_id'] ?? 0,
+			'pipeline_id' => $source_flow['pipeline_id'],
 			'flow_data' => $flow,
 			'pipeline_steps' => $pipeline_steps
 		];
@@ -346,6 +365,18 @@ class Flows {
 		foreach ($flow_config as $flow_step_id => &$step_data) {
 			if (isset($step_data['handler_slug'])) {
 				$step_type = $step_data['step_type'] ?? '';
+
+				// Merge global defaults into handler_config for display
+				// This ensures the handler card shows complete configuration including global defaults
+				if (!empty($step_data['handler_config'])) {
+					$step_data['handler_config'] = apply_filters(
+						'datamachine_apply_global_defaults',
+						$step_data['handler_config'],
+						$step_data['handler_slug'],
+						$step_type
+					);
+				}
+
 				$step_data['settings_display'] = apply_filters(
 					'datamachine_get_handler_settings_display',
 					[],

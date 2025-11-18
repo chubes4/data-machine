@@ -129,7 +129,14 @@ class Update {
         
         // Initialize step configuration if it doesn't exist
         if (!isset($flow_config[$flow_step_id])) {
-            $pipeline_step_id = $parts['pipeline_step_id'] ?? null; // Use parsed pipeline_step_id
+            if (!isset($parts['pipeline_step_id']) || empty($parts['pipeline_step_id'])) {
+                do_action('datamachine_log', 'error', 'Pipeline step ID is required for flow handler update', [
+                    'flow_step_id' => $flow_step_id,
+                    'parts' => $parts
+                ]);
+                return false;
+            }
+            $pipeline_step_id = $parts['pipeline_step_id'];
             $flow_config[$flow_step_id] = [
                 'flow_step_id' => $flow_step_id,
                 'pipeline_step_id' => $pipeline_step_id,
@@ -193,8 +200,16 @@ class Update {
         
         // Process each step
         foreach ($steps as $step) {
-            $pipeline_step_id = $step['pipeline_step_id'] ?? null;
-            
+            if (!isset($step['pipeline_step_id']) || empty($step['pipeline_step_id'])) {
+                do_action('datamachine_log', 'error', 'Pipeline step ID is required for flow steps sync', [
+                    'flow_id' => $flow_id,
+                    'step' => $step
+                ]);
+                return false;
+            }
+
+            $pipeline_step_id = $step['pipeline_step_id'];
+
             if (!$pipeline_step_id) {
                 do_action('datamachine_log', 'warning', 'Skipping step sync - missing pipeline_step_id', [
                     'flow_id' => $flow_id,
@@ -428,7 +443,7 @@ class Update {
             // Get flow_id from job to build file context
             $job = $db_jobs->get_job($job_id);
             if ($job && function_exists('datamachine_get_file_context')) {
-                $context = datamachine_get_file_context($job['flow_id']);
+                $context = datamachine_get_file_context($job->flow_id);
                 $deleted_count = $cleanup->cleanup_job_data_packets($job_id, $context);
                 $files_cleaned = $deleted_count > 0;
             }

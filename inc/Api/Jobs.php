@@ -184,8 +184,9 @@ class Jobs {
 	public static function handle_get_job_by_id($request) {
 		$job_id = $request->get_param('id');
 
-		// Get job from database via filter
-		$job = apply_filters('datamachine_get_job_by_id', null, $job_id);
+		// Get job from database directly
+		$db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
+		$job = $db_jobs->get_job($job_id);
 
 		if (!$job) {
 			return new \WP_Error(

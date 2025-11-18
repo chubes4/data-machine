@@ -92,7 +92,7 @@ class Logs {
 					'type' => 'string',
 					'description' => __('Log level to set', 'datamachine'),
 					'validate_callback' => function($param) {
-						$available_levels = apply_filters('datamachine_log_file', [], 'get_available_levels');
+						$available_levels = datamachine_get_available_log_levels();
 						return array_key_exists($param, $available_levels);
 					}
 				]
@@ -264,10 +264,10 @@ class Logs {
 			: '0 bytes';
 
 		// Get current log level
-		$current_level = apply_filters('datamachine_log_file', null, 'get_level');
+		$current_level = datamachine_get_log_level();
 
 		// Get available log levels
-		$available_levels = apply_filters('datamachine_log_file', [], 'get_available_levels');
+		$available_levels = datamachine_get_available_log_levels();
 
 		return [
 			'success' => true,
@@ -296,7 +296,7 @@ class Logs {
 		do_action('datamachine_log', 'set_level', $new_level);
 
 		// Get available levels for display name
-		$available_levels = apply_filters('datamachine_log_file', [], 'get_available_levels');
+		$available_levels = datamachine_get_available_log_levels();
 		$level_display = $available_levels[$new_level] ?? ucfirst($new_level);
 
 		// Log operation

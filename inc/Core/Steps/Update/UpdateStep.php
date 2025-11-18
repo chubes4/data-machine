@@ -9,7 +9,7 @@ namespace DataMachine\Core\Steps\Update;
 
 use DataMachine\Core\DataPacket;
 use DataMachine\Core\Steps\Step;
-use DataMachine\Engine\AI\ToolResultFinder;
+use DataMachine\Engine\AI\Tools\ToolResultFinder;
 
 if (!defined('ABSPATH')) {
     exit;

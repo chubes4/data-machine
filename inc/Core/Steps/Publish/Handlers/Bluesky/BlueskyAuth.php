@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class BlueskyAuth {
 
     public function is_authenticated(): bool {
-        $auth_data = apply_filters('datamachine_retrieve_oauth_account', [], 'bluesky');
+        $auth_data = datamachine_get_oauth_account('bluesky');
         return !empty($auth_data) &&
                !empty($auth_data['username']) &&
                !empty($auth_data['app_password']);
@@ -51,7 +51,7 @@ class BlueskyAuth {
      * Gets authenticated Bluesky session with access token and DID.
      */
     public function get_session() {
-        $auth_data = apply_filters('datamachine_retrieve_oauth_account', [], 'bluesky');
+        $auth_data = datamachine_get_oauth_account('bluesky');
         $handle = $auth_data['username'] ?? '';
         $password = $auth_data['app_password'] ?? '';
 
@@ -190,7 +190,7 @@ class BlueskyAuth {
     }
 
     public function get_account_details(): ?array {
-        $auth_data = apply_filters('datamachine_retrieve_oauth_account', [], 'bluesky');
+        $auth_data = datamachine_get_oauth_account('bluesky');
         $handle = $auth_data['username'] ?? '';
         $password = $auth_data['app_password'] ?? '';
 

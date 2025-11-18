@@ -5,11 +5,11 @@
  * Shared tool execution logic used by both Chat and Pipeline agents.
  * Handles tool discovery, validation, execution, and parameter building.
  *
- * @package DataMachine\Engine\AI
+ * @package DataMachine\Engine\AI\Tools
  * @since 0.2.0
  */
 
-namespace DataMachine\Engine\AI;
+namespace DataMachine\Engine\AI\Tools;
 
 defined('ABSPATH') || exit;
 
@@ -67,6 +67,7 @@ class ToolExecutor {
      */
     private static function getAllowedTools(array $all_tools, ?string $handler_slug, ?string $pipeline_step_id = null): array {
         $allowed_tools = [];
+        $tool_manager = new ToolManager();
 
         foreach ($all_tools as $tool_name => $tool_config) {
             if (isset($tool_config['handler'])) {
@@ -76,19 +77,8 @@ class ToolExecutor {
                 continue;
             }
 
-            // Universal tool enablement check - agents implement via filter
-            $step_enabled = apply_filters(
-                'datamachine_tool_enabled',
-                false,
-                $tool_name,
-                $tool_config,
-                $pipeline_step_id
-            );
-
-            $tool_configured = apply_filters('datamachine_tool_configured', false, $tool_name);
-            $requires_config = !empty($tool_config['requires_config']);
-
-            if ($step_enabled && (!$requires_config || $tool_configured)) {
+            // Direct ToolManager call replaces filter
+            if ($tool_manager->is_tool_available($tool_name, $pipeline_step_id)) {
                 $allowed_tools[$tool_name] = $tool_config;
             }
         }

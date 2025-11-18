@@ -2,10 +2,10 @@
 /**
  * Google Custom Search API integration with site restrictions and result limits.
  *
- * @package DataMachine\Engine\AI\Tools
+ * @package DataMachine\Engine\AI\Tools\Global
  */
 
-namespace DataMachine\Engine\AI\Tools;
+namespace DataMachine\Engine\AI\Tools\Global;
 
 defined('ABSPATH') || exit;
 

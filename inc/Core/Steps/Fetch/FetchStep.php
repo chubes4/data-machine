@@ -32,9 +32,22 @@ class FetchStep extends Step {
         $handler = $this->getHandlerSlug();
         $handler_settings = $this->getHandlerConfig();
 
-        $handler_settings['flow_step_id'] = $this->flow_step_config['flow_step_id'] ?? null;
-        $handler_settings['pipeline_id'] = $this->flow_step_config['pipeline_id'] ?? null;
-        $handler_settings['flow_id'] = $this->flow_step_config['flow_id'] ?? null;
+        if (!isset($this->flow_step_config['flow_step_id']) || empty($this->flow_step_config['flow_step_id'])) {
+            $this->log('error', 'Fetch Step: Missing flow_step_id in step config');
+            return $this->dataPackets;
+        }
+        if (!isset($this->flow_step_config['pipeline_id']) || empty($this->flow_step_config['pipeline_id'])) {
+            $this->log('error', 'Fetch Step: Missing pipeline_id in step config');
+            return $this->dataPackets;
+        }
+        if (!isset($this->flow_step_config['flow_id']) || empty($this->flow_step_config['flow_id'])) {
+            $this->log('error', 'Fetch Step: Missing flow_id in step config');
+            return $this->dataPackets;
+        }
+
+        $handler_settings['flow_step_id'] = $this->flow_step_config['flow_step_id'];
+        $handler_settings['pipeline_id'] = $this->flow_step_config['pipeline_id'];
+        $handler_settings['flow_id'] = $this->flow_step_config['flow_id'];
 
         $packet = $this->execute_handler($handler, $this->flow_step_config, $handler_settings, (string) $this->job_id);
 
@@ -60,15 +73,21 @@ class FetchStep extends Step {
         }
 
         try {
-            $pipeline_id = $flow_step_config['pipeline_id'] ?? null;
-            $flow_id = $flow_step_config['flow_id'] ?? null;
-
-            if ($pipeline_id === null) {
+            if (!isset($flow_step_config['pipeline_id']) || empty($flow_step_config['pipeline_id'])) {
                 do_action('datamachine_log', 'error', 'Fetch Step: Pipeline ID not found in step config', [
                     'flow_step_config_keys' => array_keys($flow_step_config)
                 ]);
                 return null;
             }
+            if (!isset($flow_step_config['flow_id']) || empty($flow_step_config['flow_id'])) {
+                do_action('datamachine_log', 'error', 'Fetch Step: Flow ID not found in step config', [
+                    'flow_step_config_keys' => array_keys($flow_step_config)
+                ]);
+                return null;
+            }
+
+            $pipeline_id = $flow_step_config['pipeline_id'];
+            $flow_id = $flow_step_config['flow_id'];
 
             $result = $handler->get_fetch_data($pipeline_id, $handler_settings, $job_id);
 
@@ -94,7 +113,7 @@ class FetchStep extends Step {
                 $metadata = $result['metadata'] ?? [];
 
                 do_action('datamachine_log', 'debug', 'FetchStep: Content extraction', [
-                    'flow_step_id' => $flow_step_config['flow_step_id'] ?? null,
+                    'flow_step_id' => $flow_step_config['flow_step_id'],
                     'handler' => $handler_name,
                     'has_title' => !empty($title),
                     'has_content' => !empty($content),
@@ -103,7 +122,7 @@ class FetchStep extends Step {
                     'metadata_keys' => array_keys($metadata)
                 ]);
 
-                if (empty($title) && empty($content)) {
+                if (empty($title) && empty($content) && empty($file_info)) {
                     do_action('datamachine_log', 'error', 'Fetch handler returned no content after extraction', [
                         'handler' => $handler_name,
                         'pipeline_id' => $context['pipeline_id'],
@@ -148,8 +167,8 @@ class FetchStep extends Step {
         } catch (\Exception $e) {
             do_action('datamachine_log', 'error', 'Fetch Step: Handler execution failed', [
                 'handler' => $handler_name,
-                'pipeline_id' => $flow_step_config['pipeline_id'] ?? 'unknown',
-                'flow_id' => $flow_step_config['flow_id'] ?? 'unknown',
+                'pipeline_id' => $flow_step_config['pipeline_id'],
+                'flow_id' => $flow_step_config['flow_id'],
                 'exception' => $e->getMessage()
             ]);
             return null;

@@ -161,26 +161,41 @@ class Delete {
             );
         }
 
-        $pipeline_name = $pipeline['pipeline_name'] ?? '';
+        if (!isset($pipeline['pipeline_name']) || empty(trim($pipeline['pipeline_name']))) {
+            do_action('datamachine_log', 'error', 'Cannot delete pipeline - missing or empty pipeline name', [
+                'pipeline_id' => $pipeline_id
+            ]);
+            return new WP_Error(
+                'data_integrity_error',
+                __('Pipeline data is corrupted - missing name.', 'datamachine'),
+                ['status' => 500]
+            );
+        }
+        $pipeline_name = $pipeline['pipeline_name'];
         $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
         $flow_count = count($affected_flows);
 
         foreach ($affected_flows as $flow) {
-            $flow_id = (int) ($flow['flow_id'] ?? 0);
-            if ($flow_id > 0) {
-                $success = $db_flows->delete_flow($flow_id);
-                if (!$success) {
-                    return new WP_Error(
-                        'flow_deletion_failed',
-                        __('Failed to delete associated flows.', 'datamachine'),
-                        ['status' => 500]
-                    );
-                }
+            if (!isset($flow['flow_id']) || empty($flow['flow_id'])) {
+                do_action('datamachine_log', 'error', 'Flow data missing flow_id during pipeline deletion', [
+                    'pipeline_id' => $pipeline_id,
+                    'flow' => $flow
+                ]);
+                continue;
+            }
+            $flow_id = (int) $flow['flow_id'];
+            $success = $db_flows->delete_flow($flow_id);
+            if (!$success) {
+                return new WP_Error(
+                    'flow_deletion_failed',
+                    __('Failed to delete associated flows.', 'datamachine'),
+                    ['status' => 500]
+                );
             }
         }
 
         $cleanup = new \DataMachine\Core\FilesRepository\FileCleanup();
-        $filesystem_deleted = $cleanup->delete_pipeline_directory($pipeline_id, $pipeline_name);
+        $filesystem_deleted = $cleanup->delete_pipeline_directory($pipeline_id);
 
         if (!$filesystem_deleted) {
             do_action('datamachine_log', 'warning', 'Pipeline filesystem cleanup failed, but continuing with database deletion.', [
@@ -245,8 +260,25 @@ class Delete {
             );
         }
 
-        $flow_name = $flow['flow_name'] ?? '';
-        $pipeline_id = (int) ($flow['pipeline_id'] ?? 0);
+        if (!isset($flow['flow_name']) || empty(trim($flow['flow_name']))) {
+            do_action('datamachine_log', 'error', 'Cannot delete flow - missing or empty flow name', [
+                'flow_id' => $flow_id
+            ]);
+            return new WP_Error(
+                'data_integrity_error',
+                __('Flow data is corrupted - missing name.', 'datamachine'),
+                ['status' => 500]
+            );
+        }
+        $flow_name = $flow['flow_name'];
+        if (!isset($flow['pipeline_id']) || empty($flow['pipeline_id'])) {
+            return new WP_Error(
+                'invalid_flow_data',
+                __('Flow data is missing required pipeline_id.', 'datamachine'),
+                ['status' => 400]
+            );
+        }
+        $pipeline_id = (int) $flow['pipeline_id'];
 
         $success = $db_flows->delete_flow($flow_id);
         if (!$success) {
@@ -309,7 +341,18 @@ class Delete {
             );
         }
 
-        $pipeline_name = $pipeline['pipeline_name'] ?? '';
+        if (!isset($pipeline['pipeline_name']) || empty(trim($pipeline['pipeline_name']))) {
+            do_action('datamachine_log', 'error', 'Cannot delete pipeline step - pipeline missing or empty name', [
+                'pipeline_id' => $pipeline_id,
+                'pipeline_step_id' => $pipeline_step_id
+            ]);
+            return new WP_Error(
+                'data_integrity_error',
+                __('Pipeline data is corrupted - missing name.', 'datamachine'),
+                ['status' => 500]
+            );
+        }
+        $pipeline_name = $pipeline['pipeline_name'];
         $affected_flows = $db_flows->get_flows_for_pipeline($pipeline_id);
         $flow_count = count($affected_flows);
 
@@ -352,10 +395,14 @@ class Delete {
         }
 
         foreach ($affected_flows as $flow) {
-            $flow_id = (int) ($flow['flow_id'] ?? 0);
-            if ($flow_id <= 0) {
+            if (!isset($flow['flow_id']) || empty($flow['flow_id'])) {
+                do_action('datamachine_log', 'error', 'Flow data missing flow_id during step deletion', [
+                    'pipeline_id' => $pipeline_id,
+                    'flow' => $flow
+                ]);
                 continue;
             }
+            $flow_id = (int) $flow['flow_id'];
 
             $flow_config = $flow['flow_config'] ?? [];
 

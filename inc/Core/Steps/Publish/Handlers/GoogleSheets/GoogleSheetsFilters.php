@@ -46,7 +46,7 @@ function datamachine_register_googlesheets_filters() {
 }
 
 function datamachine_get_googlesheets_tool(array $handler_config = []): array {
-    $googlesheets_config = $handler_config['googlesheets_output'] ?? $handler_config;
+    // handler_config is ALWAYS flat structure - no nesting
 
     $tool = [
         'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\GoogleSheets\\GoogleSheets',
@@ -86,8 +86,8 @@ function datamachine_get_googlesheets_tool(array $handler_config = []): array {
         $tool['handler_config'] = $handler_config;
     }
 
-    $spreadsheet_id = $googlesheets_config['googlesheets_spreadsheet_id'] ?? '';
-    $worksheet_name = $googlesheets_config['googlesheets_worksheet_name'] ?? 'Data Machine Output';
+    $spreadsheet_id = $handler_config['googlesheets_spreadsheet_id'] ?? '';
+    $worksheet_name = $handler_config['googlesheets_worksheet_name'] ?? 'Data Machine Output';
 
     if (!empty($spreadsheet_id)) {
         $tool['description'] = "Append data to Google Sheets worksheet '{$worksheet_name}'";

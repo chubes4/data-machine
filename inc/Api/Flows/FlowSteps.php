@@ -246,8 +246,15 @@ class FlowSteps {
 
 			// Split flow step ID
 			$parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
-			$flow_id = $parts['flow_id'] ?? null;
-			$pipeline_step_id = $parts['pipeline_step_id'] ?? null;
+			if (!isset($parts['flow_id']) || !isset($parts['pipeline_step_id'])) {
+				do_action('datamachine_log', 'error', 'Invalid flow_step_id format - missing required parts', [
+					'flow_step_id' => $flow_step_id,
+					'parts' => $parts
+				]);
+				continue;
+			}
+			$flow_id = $parts['flow_id'];
+			$pipeline_step_id = $parts['pipeline_step_id'];
 
 			// Build config from memory (performance optimization)
 			$step_config = [

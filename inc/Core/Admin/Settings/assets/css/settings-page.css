@@ -240,3 +240,30 @@
 .datamachine-hidden {
     display: none !important;
 }
+
+/* ========================================================================
+   TOOL ENABLEMENT STATES
+   ======================================================================== */
+
+/* Disabled tool styling */
+.datamachine-tool-disabled {
+    opacity: 0.6;
+}
+
+.datamachine-tool-disabled input[type="checkbox"] {
+    cursor: not-allowed;
+}
+
+.datamachine-tool-disabled .description {
+    font-size: 12px;
+    font-style: italic;
+    color: #646970;
+    margin-left: 4px;
+}
+
+/* Tool enabled toggle */
+.datamachine-tool-enabled-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}

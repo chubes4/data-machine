@@ -30,7 +30,7 @@ class StepNavigator {
         $engine_data = $context['engine_data'] ?? [];
 
         if (empty($engine_data) && !empty($context['job_id'])) {
-            $engine_data = apply_filters('datamachine_engine_data', [], $context['job_id']);
+            $engine_data = datamachine_get_engine_data($context['job_id']);
         }
 
         $flow_config = $engine_data['flow_config'] ?? [];
@@ -65,7 +65,7 @@ class StepNavigator {
         $engine_data = $context['engine_data'] ?? [];
 
         if (empty($engine_data) && !empty($context['job_id'])) {
-            $engine_data = apply_filters('datamachine_engine_data', [], $context['job_id']);
+            $engine_data = datamachine_get_engine_data($context['job_id']);
         }
 
         $flow_config = $engine_data['flow_config'] ?? [];

@@ -1,6 +1,6 @@
 <?php
 
-namespace DataMachine\Engine\AI;
+namespace DataMachine\Engine\AI\Tools;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
  * Part of the engine infrastructure, providing reusable data packet interpretation
  * for all step types that participate in AI tool calling.
  *
- * @package DataMachine\Engine\AI
+ * @package DataMachine\Engine\AI\Tools
  * @since 0.2.1
  */
 class ToolResultFinder {

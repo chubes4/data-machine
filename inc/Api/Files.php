@@ -326,16 +326,16 @@ class Files {
     public static function get_file_context(int $flow_id): array {
         $db_flows = new \DataMachine\Core\Database\Flows\Flows();
         $flow_data = $db_flows->get_flow($flow_id);
-        $flow = $flow_data ? $flow_data['flow_config'] : [];
-        $pipeline_id = $flow['pipeline_id'] ?? 0;
-        $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
-        $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+
+        if (!isset($flow_data['pipeline_id']) || empty($flow_data['pipeline_id'])) {
+            throw new \InvalidArgumentException('Flow data missing required pipeline_id');
+        }
+
+        $pipeline_id = $flow_data['pipeline_id'];
 
         return [
             'pipeline_id' => $pipeline_id,
-            'pipeline_name' => $pipeline['pipeline_name'] ?? "pipeline-{$pipeline_id}",
-            'flow_id' => $flow_id,
-            'flow_name' => $flow['flow_name'] ?? "flow-{$flow_id}"
+            'flow_id' => $flow_id
         ];
     }
 

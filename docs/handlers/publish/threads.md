@@ -2,6 +2,18 @@
 
 Posts content to Meta's Threads platform using OAuth2 authentication with two-step publishing process and media support.
 
+## Architecture
+
+**Base Class**: Extends [PublishHandler](../../core-system/publish-handler.md) (@since v0.2.1)
+
+**Inherited Functionality**:
+- Engine data retrieval via `getSourceUrl()` and `getImageFilePath()`
+- Image validation via `validateImage()` with comprehensive error checking
+- Standardized responses via `successResponse()` and `errorResponse()`
+- Centralized logging and error handling
+
+**Implementation**: Tool-first architecture via `handle_tool_call()` method for AI agents
+
 ## Authentication
 
 **OAuth2 Required**: Uses Threads API with OAuth2 authentication (same credentials as Facebook).

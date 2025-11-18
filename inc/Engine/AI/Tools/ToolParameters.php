@@ -4,11 +4,11 @@
  *
  * Universal parameter building infrastructure shared by Chat and Pipeline agents.
  *
- * @package DataMachine\Engine\AI
+ * @package DataMachine\Engine\AI\Tools
  * @since 0.2.0
  */
 
-namespace DataMachine\Engine\AI;
+namespace DataMachine\Engine\AI\Tools;
 
 defined('ABSPATH') || exit;
 

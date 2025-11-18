@@ -22,7 +22,7 @@ class WordPress {
 
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = apply_filters('datamachine_engine_data', [], $job_id);
+        $engine_data = datamachine_get_engine_data($job_id);
         $source_url = $engine_data['source_url'] ?? null;
 
         do_action('datamachine_log', 'debug', 'WordPress Update Tool: Handling tool call', [

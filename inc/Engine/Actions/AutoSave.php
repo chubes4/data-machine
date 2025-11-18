@@ -75,8 +75,17 @@ class AutoSave
             $flow_config = $flow['flow_config'] ?? [];
 
             foreach ($flow_config as $flow_step_id => $flow_step) {
-                $pipeline_step_id = $flow_step['pipeline_step_id'] ?? null;
-                if ($pipeline_step_id && isset($pipeline_config[$pipeline_step_id])) {
+                if (!isset($flow_step['pipeline_step_id']) || empty($flow_step['pipeline_step_id'])) {
+                    do_action('datamachine_log', 'error', 'Pipeline step ID missing in flow step during auto save', [
+                        'flow_id' => $flow_id,
+                        'flow_step_id' => $flow_step_id,
+                        'flow_step' => $flow_step
+                    ]);
+                    continue;
+                }
+
+                $pipeline_step_id = $flow_step['pipeline_step_id'];
+                if (isset($pipeline_config[$pipeline_step_id])) {
                         $flow_config[$flow_step_id]['execution_order'] = $pipeline_config[$pipeline_step_id]['execution_order'];
                 }
             }

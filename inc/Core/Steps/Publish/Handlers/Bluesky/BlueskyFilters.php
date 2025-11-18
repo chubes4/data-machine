@@ -54,7 +54,7 @@ function datamachine_register_bluesky_filters() {
 }
 
 function datamachine_get_bluesky_tool(array $handler_config = []): array {
-    $bluesky_config = $handler_config['bluesky'] ?? $handler_config;
+    // handler_config is ALWAYS flat structure - no nesting
 
     $tool = [
         'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Bluesky\\Bluesky',
@@ -74,8 +74,8 @@ function datamachine_get_bluesky_tool(array $handler_config = []): array {
         $tool['handler_config'] = $handler_config;
     }
 
-    $include_images = $bluesky_config['include_images'] ?? true;
-    $link_handling = $bluesky_config['link_handling'] ?? 'append';
+    $include_images = $handler_config['include_images'] ?? true;
+    $link_handling = $handler_config['link_handling'] ?? 'append';
 
     $description_parts = ['Post content to Bluesky (300 character limit)'];
     if ($link_handling === 'append') {

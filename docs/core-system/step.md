@@ -110,5 +110,15 @@ do_action('datamachine_log', 'debug', 'Step processing started', [
 - **Code Deduplication**: Eliminates repetitive payload handling code
 - **Consistency**: Standardized access to pipeline data
 - **Maintainability**: Centralized validation and logging
-- **Extensibility**: Easy to add new step types following established patterns</content>
+- **Extensibility**: Easy to add new step types following established patterns
+
+## Used By
+
+All step types extend this base class:
+- **Fetch Steps**: See [FetchHandler](fetch-handler.md) for fetch-specific base class
+- **AI Steps**: Direct Step extension with conversation loop integration
+- **Publish Steps**: See [PublishHandler](publish-handler.md) for publish-specific base class
+- **Update Steps**: Currently extends PublishHandler base class
+
+See [Handler Documentation](../handlers/README.md) for specific implementations.</content>
 </xai:function_call">The Step base class provides standardized inheritance patterns for all step types, ensuring consistent functionality and reducing code duplication across the pipeline system.

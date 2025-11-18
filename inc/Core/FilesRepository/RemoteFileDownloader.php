@@ -59,9 +59,7 @@ class RemoteFileDownloader {
         // Ensure directory exists
         $directory = $this->directory_manager->get_flow_files_directory(
             $context['pipeline_id'],
-            $context['pipeline_name'],
-            $context['flow_id'],
-            $context['flow_name']
+            $context['flow_id']
         );
 
         if (!$this->directory_manager->ensure_directory_exists($directory)) {

@@ -48,7 +48,7 @@ class Twitter extends PublishHandler {
      * }
      */
     protected function executePublish(array $parameters, array $handler_config): array {
-        $twitter_config = $handler_config['twitter'] ?? $handler_config;
+        // handler_config is ALWAYS flat structure - no nesting
         $content = $parameters['content'] ?? '';
 
         $job_id = $parameters['job_id'] ?? null;
@@ -56,8 +56,8 @@ class Twitter extends PublishHandler {
         $source_url = $engine_data['source_url'] ?? null;
         $image_file_path = $engine_data['image_file_path'] ?? null;
 
-        $include_images = $twitter_config['include_images'] ?? true;
-        $link_handling = $twitter_config['link_handling'] ?? 'append';
+        $include_images = $handler_config['include_images'] ?? true;
+        $link_handling = $handler_config['link_handling'] ?? 'append';
 
         $connection = $this->auth->get_connection();
         if (is_wp_error($connection)) {

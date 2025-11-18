@@ -60,7 +60,7 @@ abstract class PublishHandler {
                 'image_url' => null
             ];
         }
-        return apply_filters('datamachine_engine_data', [], $job_id);
+        return datamachine_get_engine_data($job_id);
     }
 
     /**

@@ -4,7 +4,7 @@ namespace DataMachine\Core\Steps\Publish;
 
 use DataMachine\Core\DataPacket;
 use DataMachine\Core\Steps\Step;
-use DataMachine\Engine\AI\ToolResultFinder;
+use DataMachine\Engine\AI\Tools\ToolResultFinder;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -57,6 +57,14 @@ class PublishStep extends Step {
     private function create_publish_entry_from_tool_result(array $tool_result_entry, array $dataPackets, string $handler, string $flow_step_id): array {
         $tool_result_data = $tool_result_entry['metadata']['tool_result'] ?? [];
         $entry_type = $tool_result_entry['type'] ?? '';
+
+        if (empty($tool_result_data)) {
+            $this->log('warning', 'Tool result entry found but tool_result_data is empty', [
+                'handler' => $handler,
+                'entry_type' => $entry_type,
+                'metadata_keys' => array_keys($tool_result_entry['metadata'] ?? [])
+            ]);
+        }
 
         $executed_via = ($entry_type === 'ai_handler_complete') ? 'ai_conversation_tool' : 'ai_tool_call';
         $title_suffix = ($entry_type === 'ai_handler_complete') ? '(via AI Conversation)' : '(via AI Tool)';

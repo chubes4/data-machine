@@ -444,20 +444,19 @@ class Flows {
 	public function get_flow_step_config( string $flow_step_id, ?int $job_id = null, bool $require_engine_data = false ): array {
 		// Try engine_data first (during execution context)
 		if ( $job_id ) {
-			$engine_data = apply_filters( 'datamachine_engine_data', [], $job_id );
+			$engine_data = datamachine_get_engine_data($job_id);
 			$flow_config = $engine_data['flow_config'] ?? [];
 			$step_config = $flow_config[ $flow_step_id ] ?? [];
 			if ( ! empty( $step_config ) ) {
 				return $step_config;
 			}
 
-			// If execution context requires engine_data, fail fast instead of fallback
 			if ( $require_engine_data ) {
 				do_action( 'datamachine_log', 'error', 'Flow step config not found in engine_data during execution', [
 					'flow_step_id' => $flow_step_id,
 					'job_id'        => $job_id
 				] );
-				return []; // Fail fast instead of database fallback
+				return [];
 			}
 		}
 

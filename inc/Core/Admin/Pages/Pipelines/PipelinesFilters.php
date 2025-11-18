@@ -80,9 +80,6 @@ function datamachine_register_pipelines_admin_page_filters() {
         return $pages;
     });
 
-    // Pipeline auto-save hook moved to DataMachineActions.php for architectural consistency
-
-
 }
 
 /**

@@ -272,8 +272,8 @@ class Auth {
 		$uses_oauth = method_exists($auth_instance, 'get_authorization_url') || method_exists($auth_instance, 'handle_oauth_callback');
 
 		$existing_config = $uses_oauth
-			? apply_filters('datamachine_retrieve_oauth_keys', [], $handler_slug)
-			: apply_filters('datamachine_retrieve_oauth_account', [], $handler_slug);
+			? datamachine_get_oauth_keys($handler_slug)
+			: datamachine_get_oauth_account($handler_slug);
 
 		// Get all request parameters
 		$request_params = $request->get_params();

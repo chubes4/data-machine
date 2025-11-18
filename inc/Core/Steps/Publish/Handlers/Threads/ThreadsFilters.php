@@ -49,7 +49,7 @@ function datamachine_register_threads_filters() {
  * Generate Threads tool definition with dynamic description based on handler settings.
  */
 function datamachine_get_threads_tool(array $handler_config = []): array {
-    $threads_config = $handler_config['threads'] ?? $handler_config;
+    // handler_config is ALWAYS flat structure - no nesting
 
     $tool = [
         'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Threads\\Threads',
@@ -69,8 +69,8 @@ function datamachine_get_threads_tool(array $handler_config = []): array {
         $tool['handler_config'] = $handler_config;
     }
 
-    $include_images = $threads_config['include_images'] ?? true;
-    $link_handling = $threads_config['link_handling'] ?? 'append';
+    $include_images = $handler_config['include_images'] ?? true;
+    $link_handling = $handler_config['link_handling'] ?? 'append';
 
     $description_parts = ['Post content to Threads (500 character limit)'];
     if ($link_handling === 'append') {

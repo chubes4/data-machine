@@ -11,12 +11,48 @@ Data Machine uses a Pipeline+Flow architecture with standardized base classes fo
 - **Jobs** are individual executions of flows
 - **Steps** process data sequentially: Fetch → AI → Publish/Update
 
-**Base Class Architecture** (@since v0.2.1):
-- All steps extend `Step` base class for unified payload handling
-- Fetch handlers extend `FetchHandler` base class for shared functionality
-- Publish handlers extend `PublishHandler` base class for consistent behavior
-- Handler settings extend `SettingsHandler` base classes for auto-sanitization
-- `DataPacket` class provides standardized data packet creation
+**Base Class Architecture** (@since v0.2.1) - Major Refactoring:
+
+Data Machine underwent a comprehensive OOP refactoring introducing standardized inheritance patterns that dramatically reduce code duplication:
+
+**Step Hierarchy**:
+- **Step** (`/inc/Core/Steps/Step.php`) - Abstract base for all step types
+  - Unified payload handling across Fetch, AI, Publish, Update steps
+  - Automatic validation and logging
+  - Exception handling and error management
+
+**Handler Base Classes**:
+- **FetchHandler** (`/inc/Core/Steps/Fetch/Handlers/FetchHandler.php`)
+  - Deduplication tracking (`isItemProcessed`, `markItemProcessed`)
+  - Engine data storage for downstream handlers
+  - Common filtering logic (timeframe, keywords)
+  - Standardized response methods
+
+- **PublishHandler** (`/inc/Core/Steps/Publish/Handlers/PublishHandler.php`)
+  - Engine data retrieval (`getSourceUrl`, `getImageFilePath`)
+  - Image validation and metadata extraction
+  - Standardized response formatting
+
+**Settings Architecture**:
+- **SettingsHandler** (`/inc/Core/Steps/SettingsHandler.php`) - Base for all settings
+  - Auto-sanitization based on field schema
+  - Validation and error handling
+
+- **FetchHandlerSettings** - Common fetch fields (timeframe_limit, search)
+- **PublishHandlerSettings** - Common publish fields (status, author)
+
+**Data Standardization**:
+- **DataPacket** (`/inc/Core/DataPacket.php`) - Replaces scattered array construction
+  - Consistent packet structure across entire system
+  - Chronological ordering (newest first)
+  - Type and timestamp enforcement
+
+For implementation details, see:
+- [Step Base Class](core-system/step.md)
+- [FetchHandler Base Class](core-system/fetch-handler.md)
+- [PublishHandler Base Class](core-system/publish-handler.md)
+- [SettingsHandler Classes](core-system/settings-handler.md)
+- [DataPacket Class](core-system/data-packet.md)
 
 ## Core Concepts
 

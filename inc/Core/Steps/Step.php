@@ -134,8 +134,15 @@ abstract class Step {
      * @return void
      */
     protected function destructurePayload(array $payload): void {
-        $this->job_id = $payload['job_id'] ?? 0;
-        $this->flow_step_id = $payload['flow_step_id'] ?? '';
+        if (!isset($payload['job_id']) || empty($payload['job_id'])) {
+            throw new \InvalidArgumentException('Job ID is required in step payload');
+        }
+        if (!isset($payload['flow_step_id']) || empty($payload['flow_step_id'])) {
+            throw new \InvalidArgumentException('Flow step ID is required in step payload');
+        }
+
+        $this->job_id = $payload['job_id'];
+        $this->flow_step_id = $payload['flow_step_id'];
         $this->dataPackets = is_array($payload['data'] ?? null) ? $payload['data'] : [];
         $this->flow_step_config = $payload['flow_step_config'] ?? [];
         $this->engine_data = $payload['engine_data'] ?? [];

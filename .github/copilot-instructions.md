@@ -1,24 +1,26 @@
-## Data Machine Copilot Guide
-- **Orientation** Start with `docs/overview.md`, `docs/architecture.md`, and `CLAUDE.md`; `datamachine.php` bootstraps Composer autoloaders, validates WP/PHP, and hooks `run_datamachine()` on `plugins_loaded` so every `*Filters.php` from `composer.json` self-registers.
-- **Pipeline Stack** Pipelines → Flows → Jobs with repositories in `inc/Core/Database/{Pipelines,Flows,Jobs,ProcessedItems}` instantiated directly as `new \DataMachine\Core\Database\Pipelines\Pipelines()`; never touch `wp_datamachine_*` tables directly.
-- **Execution Loop** `inc/Engine/Actions/DataMachineActions.php` runs `datamachine_run_flow_now` → `datamachine_execute_step` → `datamachine_schedule_next_step`; Action Scheduler (`vendor/woocommerce/action-scheduler`) must be available before queueing work.
-- **Step Base Classes** All step/handler code extends the v0.2.1 base classes in `inc/Core/Steps/**`; reuse helper methods for validation, deduping, logging, and config access rather than re-implementing arrays.
-- **IDs & Ordering** Treat `pipeline_step_id` UUIDs as immutable; derive flow IDs with `datamachine_generate_flow_step_id()` and let `datamachine_auto_save` keep execution_order synced across pipeline + flows.
-- **Data Packets** Produce AI-visible payloads via `apply_filters('datamachine_data_packet', ...)` and keep URLs/media in engine data; the centralized `datamachine_engine_data` filter (`inc/Engine/Filters/EngineData.php`) stores and retrieves job-scoped metadata.
-- **Update Preconditions** WordPress Update handlers (`inc/Core/Steps/Update/Handlers/WordPress`) refuse to run without `source_url` in engine data—fetch handlers or AI tools like Local Search / WordPress Post Reader must supply it.
-- **Fetch Consistency** When pulling items ensure dedup + filtering use `datamachine_timeframe_limit`, `datamachine_keyword_search_match`, and `datamachine_mark_item_processed`; custom logic should live beside peers in `inc/Engine/Filters/Handlers.php`.
-- **File Handling** Flow files are isolated via `inc/Core/FilesRepository/*`; always save through repository helpers so retention + cleanup (triggered after jobs) remain automatic.
-- **Handler Contracts** Register fetch/publish/update handlers through `datamachine_handlers` and `datamachine_auth_providers` filters, include `type`, `label`, `description`, `requires_auth`, and surface AI tools via `chubes_ai_tools` with a `handle_tool_call` implementation similar to `inc/Core/Steps/Publish/Handlers/*`.
-- **WordPress Publisher** The modular WP handler chains `FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler` (`inc/Core/WordPress/`); system-level defaults from Settings → Data Machine override handler config, so read them before persisting posts.
-- **AI Engine** Shared engine pieces in `inc/Engine/AI/` (AIConversationLoop, ToolExecutor, ToolParameters, ConversationManager, RequestBuilder, ToolResultFinder) power both pipelines and chat; extend these layers rather than bypassing them.
-- **Directive Order** RequestBuilder applies directives in this order: Global System Prompt → Site Context → Pipeline Core → Pipeline System Prompt → Pipeline Context → Tool Definitions → agent-specific extras; chat-only directives live under `inc/Api/Chat`.
-- **Tool Parameters & Gating** Use `ToolParameters::buildParameters()` for global tools and `buildForHandlerTool()` when passing handler configs/engine data; tools are only executable when globally enabled, allowed in the step modal, and `datamachine_tool_configured` returns truthy.
-- **REST Surface** Admin+React apps at `inc/Core/Admin/Pages/**` only call `inc/Api/` REST classes (17+ endpoints); the pipelines UI in `inc/Core/Admin/Pages/Pipelines/assets/react` must keep using the nonce-aware `assets/react/utils/api.js` wrapper + hooks such as `usePipelines`.
-- **Caching** Clear data through `inc/Engine/Actions/Cache.php` actions (`datamachine_clear_pipeline_cache`, `datamachine_clear_flow_steps_cache`, `datamachine_clear_all_cache`) instead of deleting transients manually—auto-save and flow mutations rely on these events.
-- **Logging** Route diagnostics through `do_action('datamachine_log', $level, $message, $context)`; Monolog wiring and log-level filters sit in `inc/Engine/Filters/Logger.php`, writing to `/wp-content/uploads/datamachine-logs`.
-- **React Dev Workflow** Run `npm run start` (wp-scripts) from plugin root for the pipelines SPA; `npm run build` compiles production assets consumed by `build.sh`.
-- **PHP Tooling** `composer install` pulls deps (Yoast polyfills enabled); run `composer test`, `test:unit`, `test:integration`, or `test:coverage` for PHPUnit targets defined in `composer.json`.
-- **Release Flow** `./build.sh` enforces `.buildignore`, installs prod Composer deps, executes `npm run build`, validates required paths (`datamachine.php`, `vendor/autoload.php`, etc.), zips to `dist/datamachine.zip`, then reinstalls dev deps—run it before shipping.
-- **Action Scheduler Jobs** `datamachine.php` loads Action Scheduler when WordPress hasn’t already; scheduled flows, cleanup jobs, and async retries assume this bootstrap occurred.
-- **Prefixes & Hooks** Keep `datamachine_` / `datamachine-` prefixes (see `MIGRATION-PLAN.md`) and prefer filters/actions over globals; never resurrect legacy `dm_` identifiers.
-- **Ext Integration** Sibling repos under `/Users/chubes/Developer/Data Machine Ecosystem/*` consume the same hooks, so document breaking filter signature changes inside `MIGRATION-PLAN.md` before merging.
+# Data Machine Copilot Instructions
+
+## Architecture & Core Concepts
+- **Pipeline Stack**: Pipelines (templates) → Flows (instances) → Jobs (executions). Use repositories in `inc/Core/Database/`; never access `wp_datamachine_*` tables directly.
+- **Execution Loop**: `inc/Engine/Actions/DataMachineActions.php` drives `datamachine_run_flow_now` → `datamachine_execute_step` → `datamachine_schedule_next_step`. Requires Action Scheduler.
+- **Base Classes**: Extend `Step`, `FetchHandler`, `PublishHandler` in `inc/Core/Steps/` for unified validation, deduplication, and logging.
+- **Universal AI Engine**: `inc/Engine/AI/` (`AIConversationLoop`, `ToolExecutor`, `RequestBuilder`) powers both Pipelines and Chat. Extend these, don't bypass.
+
+## Data & State Management
+- **Data Packets**: Use `DataPacket` class for AI payloads. Keep URLs/media separate in engine data.
+- **Engine Data**: Store/retrieve job metadata (`source_url`, `image_url`) via `datamachine_engine_data` filter (`inc/Engine/Filters/EngineData.php`).
+- **File Handling**: Use `inc/Core/FilesRepository/` for flow-isolated storage and automatic cleanup.
+- **IDs**: `pipeline_step_id` is immutable. `flow_step_id` is derived. Sync order via `datamachine_auto_save`.
+
+## Integration & Extension
+- **Service Discovery**: Register via filters: `datamachine_handlers`, `chubes_ai_tools`, `datamachine_auth_providers`.
+- **Handler Contracts**: AI tools must implement `handle_tool_call`. Use `ToolParameters::buildForHandlerTool()` for config.
+- **WordPress Publisher**: Modular components in `inc/Core/WordPress/` (`FeaturedImageHandler`, etc.). System settings override handler config.
+- **Update Handlers**: Require `source_url` in engine data (supplied by fetch handlers or search tools).
+
+## Development Workflows
+- **React Admin**: `inc/Core/Admin/Pages/Pipelines` is a React SPA consuming `inc/Api/` REST endpoints. No `admin-ajax.php`.
+- **Build & Test**: `./build.sh` for prod zip. `npm run start` for React dev. `composer test` for PHPUnit.
+- **Logging**: `do_action('datamachine_log', $level, $message, $context)`. Writes to `/wp-content/uploads/datamachine-logs`.
+- **Conventions**: Prefix PHP/Hooks with `datamachine_`, CSS with `datamachine-`. No `dm_`.
+

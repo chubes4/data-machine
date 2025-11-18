@@ -133,6 +133,39 @@ All components self-register via WordPress filters:
 - `datamachine_get_oauth1_handler` - OAuth 1.0a handler service discovery
 - `datamachine_get_oauth2_handler` - OAuth 2.0 handler service discovery
 
+### Modular Component Architecture (@since v0.2.1)
+
+Data Machine v0.2.1 introduced modular component systems for enhanced code organization and maintainability:
+
+**FilesRepository Components** (`/inc/Core/FilesRepository/`):
+- **DirectoryManager** - Directory creation and path management
+- **FileStorage** - File operations and flow-isolated storage
+- **FileCleanup** - Retention policy enforcement and cleanup
+- **ImageValidator** - Image validation and metadata extraction
+- **RemoteFileDownloader** - Remote file downloading with validation
+- **FileRetrieval** - Data retrieval from file storage
+
+**WordPress Shared Components** (`/inc/Core/WordPress/`):
+- **FeaturedImageHandler** - Image processing and media library integration
+- **TaxonomyHandler** - Taxonomy selection and term creation (skip, AI-decided, pre-selected modes)
+- **SourceUrlHandler** - URL attribution with Gutenberg blocks
+- **WordPressSettingsHandler** - Shared WordPress settings fields
+- **WordPressFilters** - Service discovery registration
+
+**Engine Components** (`/inc/Engine/`):
+- **StepNavigator** - Centralized step navigation logic for execution flow
+
+**Benefits**:
+- **Code Deduplication**: Eliminates repetitive functionality across handlers
+- **Single Responsibility**: Each component has focused purpose
+- **Maintainability**: Centralized logic simplifies updates
+- **Extensibility**: Easy to add new functionality via composition
+
+For detailed documentation:
+- [FilesRepository Components](core-system/files-repository.md)
+- [WordPress Shared Components](core-system/wordpress-components.md)
+- [StepNavigator](core-system/step-navigator.md)
+
 ### Centralized Handler Filter System
 
 **Unified Cross-Cutting Functionality**: The engine provides centralized filters for shared functionality across multiple handlers, eliminating code duplication and ensuring consistency.

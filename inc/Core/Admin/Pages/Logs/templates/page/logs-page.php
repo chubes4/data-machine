@@ -35,7 +35,7 @@ if (!defined('WPINC')) {
                 </label>
                 <select id="log_level" name="log_level" class="datamachine-log-level-select">
                     <?php 
-                    $available_levels = apply_filters('datamachine_log_file', [], 'get_available_levels');
+                    $available_levels = datamachine_get_available_log_levels();
                     foreach ($available_levels as $level => $description): ?>
                         <option value="<?php echo esc_attr($level); ?>" <?php selected($current_log_level, $level); ?>>
                             <?php echo esc_html($description); ?>

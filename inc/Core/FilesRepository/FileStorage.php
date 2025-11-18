@@ -44,9 +44,7 @@ class FileStorage {
     public function store_file(string $source_path, string $filename, array $context): string|false {
         $directory = $this->directory_manager->get_flow_files_directory(
             $context['pipeline_id'],
-            $context['pipeline_name'],
-            $context['flow_id'],
-            $context['flow_name']
+            $context['flow_id']
         );
 
         if (!$this->directory_manager->ensure_directory_exists($directory)) {
@@ -135,9 +133,7 @@ class FileStorage {
     public function get_all_files(array $context): array {
         $directory = $this->directory_manager->get_flow_files_directory(
             $context['pipeline_id'],
-            $context['pipeline_name'],
-            $context['flow_id'],
-            $context['flow_name']
+            $context['flow_id']
         );
 
         if (!is_dir($directory)) {
@@ -177,9 +173,7 @@ class FileStorage {
     public function delete_file(string $filename, array $context): bool {
         $directory = $this->directory_manager->get_flow_files_directory(
             $context['pipeline_id'],
-            $context['pipeline_name'],
-            $context['flow_id'],
-            $context['flow_name']
+            $context['flow_id']
         );
 
         $safe_filename = sanitize_file_name($filename);
@@ -220,9 +214,7 @@ class FileStorage {
     public function store_data_packet(array $data, int $job_id, array $context): array|false {
         $directory = $this->directory_manager->get_job_directory(
             $context['pipeline_id'],
-            $context['pipeline_name'],
             $context['flow_id'],
-            $context['flow_name'],
             $job_id
         );
 

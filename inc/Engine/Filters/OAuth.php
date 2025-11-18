@@ -8,6 +8,28 @@ if (!defined('WPINC')) {
     die;
 }
 
+/**
+ * Get OAuth account data directly from options.
+ *
+ * @param string $provider OAuth provider slug
+ * @return array Account data or empty array
+ */
+function datamachine_get_oauth_account(string $provider): array {
+    $all_auth_data = get_option('datamachine_auth_data', []);
+    return $all_auth_data[$provider]['account'] ?? [];
+}
+
+/**
+ * Get OAuth configuration keys directly from options.
+ *
+ * @param string $provider OAuth provider slug
+ * @return array Configuration data or empty array
+ */
+function datamachine_get_oauth_keys(string $provider): array {
+    $all_auth_data = get_option('datamachine_auth_data', []);
+    return $all_auth_data[$provider]['config'] ?? [];
+}
+
 function datamachine_register_oauth_system() {
 
     add_action('init', function() {
@@ -55,10 +77,7 @@ function datamachine_register_oauth_system() {
         return update_option('datamachine_auth_data', $all_auth_data);
     }, 10, 2);
 
-    add_filter('datamachine_retrieve_oauth_account', function($result, $provider) {
-        $all_auth_data = get_option('datamachine_auth_data', []);
-        return $all_auth_data[$provider]['account'] ?? [];
-    }, 10, 2);
+
 
     add_filter('datamachine_clear_oauth_account', function($result, $provider) {
         $all_auth_data = get_option('datamachine_auth_data', []);
@@ -78,10 +97,7 @@ function datamachine_register_oauth_system() {
         return update_option('datamachine_auth_data', $all_auth_data);
     }, 10, 2);
 
-    add_filter('datamachine_retrieve_oauth_keys', function($result, $provider) {
-        $all_auth_data = get_option('datamachine_auth_data', []);
-        return $all_auth_data[$provider]['config'] ?? [];
-    }, 10, 2);
+
 
     add_filter('datamachine_oauth_callback', function($url, $provider) {
         if (empty($url)) {

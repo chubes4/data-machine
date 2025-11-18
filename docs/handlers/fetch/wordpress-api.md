@@ -2,6 +2,18 @@
 
 Fetches content from public WordPress sites via REST API endpoints, providing structured data access as a modern alternative to RSS feeds.
 
+## Architecture
+
+**Base Class**: Extends [FetchHandler](../../core-system/fetch-handler.md) (@since v0.2.1)
+
+**Inherited Functionality**:
+- Automatic deduplication via `isItemProcessed()` and `markItemProcessed()`
+- Engine data storage via `storeEngineData()` for downstream handlers
+- Standardized responses via `successResponse()`, `emptyResponse()`, `errorResponse()`
+- Centralized logging and error handling
+
+**Implementation**: Uses [DataPacket](../../core-system/data-packet.md) class for consistent packet structure
+
 ## API Integration
 
 **REST API v2**: Uses WordPress REST API v2 endpoints (`/wp-json/wp/v2/`) for standardized data access.

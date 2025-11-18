@@ -2,6 +2,17 @@
 
 Updates existing WordPress posts and pages in the local installation using native WordPress functions with selective field updates and taxonomy management.
 
+## Architecture
+
+**Base Class**: Extends [PublishHandler](../../core-system/publish-handler.md) (@since v0.2.1)
+
+**Inherited Functionality**:
+- Engine data retrieval for source_url matching
+- Standardized response formatting
+- Centralized logging and error handling
+
+**Requirements**: Requires `source_url` from engine data (provided by fetch handlers or AI tools)
+
 ## Local WordPress Integration
 
 **wp_update_post**: Uses WordPress's native `wp_update_post()` function for content modification.

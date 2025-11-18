@@ -160,5 +160,20 @@ return $this->errorResponse('Authentication failed', [
 - **Image Support**: Built-in validation and processing
 - **Consistency**: Standardized response patterns across all publish handlers
 - **Error Handling**: Centralized error response formatting
-- **Tool-First Architecture**: Native support for AI agent integration</content>
+- **Tool-First Architecture**: Native support for AI agent integration
+
+## Implementations
+
+All publish handlers extend this base class:
+- [Twitter Handler](../handlers/publish/twitter.md)
+- [Bluesky Handler](../handlers/publish/bluesky.md)
+- [Threads Handler](../handlers/publish/threads.md)
+- [Facebook Handler](../handlers/publish/facebook.md)
+- [WordPress Handler](../handlers/publish/wordpress-publish.md)
+- [Google Sheets Handler](../handlers/publish/google-sheets-output.md)
+
+Update handlers also extend this base:
+- [WordPress Update Handler](../handlers/update/wordpress-update.md)
+
+See [Publish Handlers Overview](../handlers/publish/README.md) for comparison.</content>
 </xai:function_call">The PublishHandler base class provides standardized functionality for content publishing operations, including engine data retrieval, image validation, and consistent response patterns.

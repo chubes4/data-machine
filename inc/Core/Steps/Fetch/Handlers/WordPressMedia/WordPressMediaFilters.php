@@ -52,8 +52,6 @@ function datamachine_register_wordpress_media_fetch_filters() {
         return $all_settings;
     }, 10, 2);
 
-    // Modal registrations removed - now handled by generic modal system via pure discovery
-    
 }
 
 // Auto-register when file loads - achieving complete self-containment

@@ -60,7 +60,7 @@ class ThreadsAuth {
      * @return bool True if OAuth credentials are configured
      */
     public function is_configured(): bool {
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'threads');
+        $config = datamachine_get_oauth_keys('threads');
         return !empty($config['app_id']) && !empty($config['app_secret']);
     }
 
@@ -70,7 +70,7 @@ class ThreadsAuth {
      * @return bool True if authenticated
      */
     public function is_authenticated(): bool {
-        $account = apply_filters('datamachine_retrieve_oauth_account', [], 'threads');
+        $account = datamachine_get_oauth_account('threads');
         if (empty($account) || !is_array($account)) {
             return false;
         }
@@ -92,7 +92,7 @@ class ThreadsAuth {
      * @return string|null Access token or null
      */
     public function get_access_token(): ?string {
-        $account = apply_filters('datamachine_retrieve_oauth_account', [], 'threads');
+        $account = datamachine_get_oauth_account('threads');
         if (empty($account) || !is_array($account) || empty($account['access_token'])) {
             return null;
         }
@@ -135,7 +135,7 @@ class ThreadsAuth {
      * @return string|null Page ID or null
      */
     public function get_page_id(): ?string {
-        $account = apply_filters('datamachine_retrieve_oauth_account', [], 'threads');
+        $account = datamachine_get_oauth_account('threads');
         if (empty($account) || !is_array($account) || empty($account['page_id'])) {
             return null;
         }
@@ -150,7 +150,7 @@ class ThreadsAuth {
     public function get_authorization_url(): string {
         $state = $this->oauth2->create_state('threads');
 
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'threads');
+        $config = datamachine_get_oauth_keys('threads');
         $params = [
             'client_id' => $config['app_id'] ?? '',
             'redirect_uri' => apply_filters('datamachine_oauth_callback', '', 'threads'),
@@ -166,7 +166,7 @@ class ThreadsAuth {
      * Handle OAuth callback from Threads
      */
     public function handle_oauth_callback() {
-        $config = apply_filters('datamachine_retrieve_oauth_keys', [], 'threads');
+        $config = datamachine_get_oauth_keys('threads');
 
         $this->oauth2->handle_callback(
             'threads',
@@ -336,7 +336,7 @@ class ThreadsAuth {
      * @return array|null Account details or null
      */
     public function get_account_details(): ?array {
-        $account = apply_filters('datamachine_retrieve_oauth_account', [], 'threads');
+        $account = datamachine_get_oauth_account('threads');
         if (empty($account) || !is_array($account)) {
             return null;
         }
@@ -349,7 +349,7 @@ class ThreadsAuth {
      * @return bool Success status
      */
     public function remove_account(): bool {
-        $account = apply_filters('datamachine_retrieve_oauth_account', [], 'threads');
+        $account = datamachine_get_oauth_account('threads');
         $token = null;
 
         if (!empty($account) && is_array($account) && !empty($account['access_token'])) {

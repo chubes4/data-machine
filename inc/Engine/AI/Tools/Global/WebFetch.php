@@ -2,7 +2,7 @@
 /**
  * Web page content retrieval with HTML processing and 50K character limit.
  */
-namespace DataMachine\Engine\AI\Tools;
+namespace DataMachine\Engine\AI\Tools\Global;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
