@@ -1,17 +1,16 @@
 <?php
 /**
- * Data Machine Logger Functions and Filter Registration
+ * Data Machine Logger Functions
  *
- * Pure function implementation of the Data Machine logging system.
- * Eliminates singleton pattern and class-based architecture in favor of
- * WordPress-native actions and filters.
+ * Core logging implementation for the Data Machine system.
+ * Provides centralized logging utilities using Monolog with WordPress integration.
  *
  * ARCHITECTURE:
  * - datamachine_log action (DataMachineActions.php): Operations that modify state (write, clear, cleanup, set_level)
- * - datamachine_log_file filter: Operations that get configuration information (get_level, get_available_levels)
+ * - Logger utilities (this file): Core logging implementation and utilities
  *
  * @package DataMachine
- * @subpackage Engine\Filters
+ * @subpackage Engine
  * @since 0.1.0
  */
 
@@ -26,20 +25,8 @@ use Monolog\Formatter\LineFormatter;
 use Monolog\Level;
 
 /**
- * Register logger-related filters.
- * 
- * Registers datamachine_log_file filter for configuration retrieval operations.
- * Action operations (write, clear, cleanup, set_level) handled in DataMachineActions.php.
- *
- * @since 0.1.0
- */
-function datamachine_register_logger_filters() {
-}
-
-
-/**
  * Get Monolog instance with request-level caching.
- * 
+ *
  * Replaces singleton pattern with static variable for performance
  * while maintaining pure function architecture.
  *
@@ -267,7 +254,7 @@ function datamachine_set_log_level(string $level): bool {
     if (!in_array($level, $available_levels)) {
         return false;
     }
-    
+
     return update_option('datamachine_log_level', $level);
 }
 

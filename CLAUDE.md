@@ -146,7 +146,7 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 **Implementation**: Directory-based structure at `/inc/Api/Chat/` (@since v0.2.0):
 - `Chat.php` - Main endpoint handler (`POST /datamachine/v1/chat`, namespace `DataMachine\Api\Chat`)
 - `ChatAgentDirective.php` - Chat-specific AI directive implementing filter-based directive registration
-- `ChatFilters.php` - Self-registration filters loaded via composer.json for tool enablement (`datamachine_tool_enabled`) and directive application (`datamachine_agent_directives`)
+- `ChatFilters.php` - Self-registration filters loaded via composer.json for directive application (`datamachine_agent_directives`)
 - `Tools/MakeAPIRequest.php` - Chat-only tool for REST API operations (registered via `datamachine_chat_tools` filter)
 
 **Session Management**: Persistent sessions via `wp_datamachine_chat_sessions` table with user isolation, 24-hour expiration
@@ -477,11 +477,11 @@ do_action('datamachine_log', 'debug', 'AI Step Directive: Injected system direct
     'directive_length' => strlen($directive)
 ]);
 
-do_action('datamachine_log', 'debug', 'AIStepTools: Generated HTML attributes', [
-    'pipeline_step_id' => $pipeline_step_id,
+do_action('datamachine_log', 'debug', 'ToolManager: Validated tool selection', [
     'tool_id' => $tool_id,
-    'checked_attr_output' => $checked_attr,
-    'disabled_attr_output' => $disabled_attr
+    'configured' => $is_configured,
+    'globally_enabled' => $is_globally_enabled,
+    'validation_result' => $is_valid
 ]);
 ```
 

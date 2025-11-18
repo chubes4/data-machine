@@ -115,16 +115,13 @@ $image_url = $engine_data['image_url'] ?? null;
   - **Priority 20**: Global System Prompt - User-configured foundational AI behavior
   - **Priority 50**: WordPress Site Context - WordPress environment info (toggleable)
 
-  **Pipeline-Specific Directives** (apply ONLY to pipeline AI steps):
-  - `datamachine_pipeline_directives` filter for pipeline-only directive registration
-  - **Priority 10**: Pipeline Core Directive - Foundational pipeline agent identity
-  - **Priority 30**: Pipeline System Prompt - Workflow structure visualization
-  - **Priority 40**: Pipeline Context Directive - Workflow context and execution state
-  - **Priority 40**: Tool Definitions Directive - Usage instructions and workflow context
-
-  **Chat-Specific Directives** (apply ONLY to chat AI agents):
-  - `datamachine_chat_directives` filter for chat-only directive registration
-  - **Priority 15**: Chat Agent Directive - Chat agent identity, REST API documentation, conversation guidelines
+  **Agent-Specific Directives** (apply to pipeline or chat AI agents based on agent type):
+  - `datamachine_agent_directives` filter for agent-specific directive registration
+  - **Priority 10**: Pipeline Core Directive - Foundational pipeline agent identity (pipeline agents only)
+  - **Priority 15**: Chat Agent Directive - Chat agent identity, REST API documentation, conversation guidelines (chat agents only)
+  - **Priority 30**: Pipeline System Prompt - Workflow structure visualization (pipeline agents only)
+  - **Priority 40**: Pipeline Context Directive - Workflow context and execution state (pipeline agents only)
+  - **Priority 40**: Tool Definitions Directive - Usage instructions and workflow context (pipeline agents only)
 
 - **Universal Engine Architecture** - Shared AI infrastructure serving Pipeline and Chat agents:
   - **AIConversationLoop** - Multi-turn conversation execution with automatic tool calling

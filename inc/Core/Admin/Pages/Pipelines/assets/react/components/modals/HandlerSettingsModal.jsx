@@ -164,9 +164,7 @@ export default function HandlerSettingsModal( {
 	 */
 	const renderField = ( fieldKey, fieldConfig ) => {
 		const isDisabled = !! fieldConfig.disabled;
-		const displayValue = isDisabled && fieldConfig.global_value_label
-			? fieldConfig.global_value_label
-			: isDisabled && fieldConfig.global_value !== undefined
+		const displayValue = isDisabled && fieldConfig.global_value !== undefined
 			? fieldConfig.global_value
 			: settings[ fieldKey ] || fieldConfig.default || '';
 

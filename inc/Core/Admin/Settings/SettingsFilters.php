@@ -306,33 +306,13 @@ add_filter('datamachine_enabled_settings', function($fields, $handler_slug, $ste
                 }
             }
         }
-        
-        if ($field_name === 'post_author' && $default_author_id) {
-            $author = get_userdata($default_author_id);
-            $field_config['disabled'] = true;
-            $field_config['global_indicator'] = __('Set Globally in Settings > WordPress', 'datamachine');
-            $field_config['global_value'] = $default_author_id;
-            $field_config['global_value_label'] = $author ? $author->display_name : '';
-        }
 
-        if ($field_name === 'post_status' && $default_post_status) {
-            $field_config['disabled'] = true;
-            $field_config['global_indicator'] = __('Set Globally in Settings > WordPress', 'datamachine');
-            $field_config['global_value'] = $default_post_status;
-        }
-
-        // Global boolean settings - mark as disabled when globally controlled
-        if ($field_name === 'include_source' && isset($wp_settings['default_include_source'])) {
-            $field_config['disabled'] = true;
-            $field_config['global_indicator'] = __('Set Globally in Settings > WordPress', 'datamachine');
-            $field_config['global_value'] = (bool) $wp_settings['default_include_source'];
-        }
-
-        if ($field_name === 'enable_images' && isset($wp_settings['default_enable_images'])) {
-            $field_config['disabled'] = true;
-            $field_config['global_indicator'] = __('Set Globally in Settings > WordPress', 'datamachine');
-            $field_config['global_value'] = (bool) $wp_settings['default_enable_images'];
-        }
+        // Apply global defaults using centralized OOP method
+        $field_config = \DataMachine\Core\WordPress\WordPressSettingsHandler::apply_global_default(
+            $field_name,
+            $field_config,
+            $wp_settings
+        );
 
         if (!$include_field) {
             unset($fields[$field_name]);

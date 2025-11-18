@@ -24,7 +24,7 @@
 			"inc/Engine/Filters/DataMachineFilters.php",
 			"inc/Engine/Filters/Handlers.php",
 			"inc/Engine/Filters/Admin.php",
-			"inc/Engine/Filters/Logger.php",
+			"inc/Engine/Logger.php",
 			"inc/Engine/Filters/OAuth.php",
 			"inc/Core/OAuth/OAuthFilters.php",
 			"inc/Engine/Actions/DataMachineActions.php",

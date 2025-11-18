@@ -131,10 +131,6 @@ The RequestBuilder applies directives in a specific hierarchical order to ensure
 
 2. Agent Directives (datamachine_agent_directives)
    ↓ Pipeline-specific OR Chat-specific
-
-3. Type-Specific Directives (legacy compatibility)
-   • datamachine_pipeline_directives (pipeline only)
-   • datamachine_chat_directives (chat only)
 ```
 
 ### Global Directives

@@ -364,17 +364,17 @@ add_filter('datamachine_agent_directives', function($request, $agent_type, $prov
     return $request;
 }, 10, 5);
 
-// Pipeline-only directives (legacy compatibility)
-add_filter('datamachine_pipeline_directives', function($request, $provider, $tools, $step_id, $payload) {
-    // Inject pipeline-specific directives
+// Agent-specific directives (recommended approach)
+add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
+    if ($agent_type === 'pipeline') {
+        // Inject pipeline-specific directives
+        return $request;
+    } elseif ($agent_type === 'chat') {
+        // Inject chat-specific directives
+        return $request;
+    }
     return $request;
 }, 10, 5);
-
-// Chat-only directives (legacy compatibility)
-add_filter('datamachine_chat_directives', function($request, $provider, $tools, $context) {
-    // Inject chat-specific directives
-    return $request;
-}, 10, 4);
 ```
 
 ### Tool Enablement Filters

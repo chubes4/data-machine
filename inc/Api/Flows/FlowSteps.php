@@ -251,7 +251,11 @@ class FlowSteps {
 					'flow_step_id' => $flow_step_id,
 					'parts' => $parts
 				]);
-				continue;
+				return new \WP_Error(
+					'invalid_flow_step_id',
+					__('Invalid flow step ID format.', 'datamachine'),
+					['status' => 400]
+				);
 			}
 			$flow_id = $parts['flow_id'];
 			$pipeline_step_id = $parts['pipeline_step_id'];

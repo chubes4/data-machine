@@ -280,11 +280,9 @@ Complete extension system for custom handlers and tools:
 
 ### AI Integration
 - Multiple provider support (200+ models via OpenRouter)
-- **Filter-Based Directive System**: Four directive categories applied by RequestBuilder:
+- **Filter-Based Directive System**: Two directive categories applied by RequestBuilder:
   - `datamachine_global_directives` - Applied to all AI agents (Pipeline and Chat)
-  - `datamachine_agent_directives` - Agent-specific directives differentiated by type
-  - `datamachine_pipeline_directives` - Pipeline-only directives (PipelineCoreDirective, PipelineSystemPromptDirective, PipelineContextDirective)
-  - `datamachine_chat_directives` - Chat-only directives
+  - `datamachine_agent_directives` - Agent-specific directives differentiated by type (pipeline vs chat)
 - **Universal Engine Architecture**: Shared AI infrastructure via `/inc/Engine/AI/` components:
   - AIConversationLoop for multi-turn conversation execution with automatic tool calling
   - ToolExecutor for universal tool discovery and execution

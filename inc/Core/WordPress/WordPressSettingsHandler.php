@@ -181,4 +181,53 @@ class WordPressSettingsHandler {
 
         return $user_options;
     }
+
+    /**
+     * Apply global default to a field configuration.
+     *
+     * Centralized OOP method for applying global WordPress defaults to field configs.
+     * Ensures consistent behavior across all fields by preserving options arrays,
+     * setting disabled state, and adding global indicators.
+     *
+     * @param string $field_name   The field name to check
+     * @param array  $field_config The field configuration array
+     * @param array  $wp_settings  WordPress settings from datamachine_settings option
+     * @return array Modified field configuration
+     */
+    public static function apply_global_default(string $field_name, array $field_config, array $wp_settings): array {
+        $default_author_id = $wp_settings['default_author_id'] ?? 0;
+        $default_post_status = $wp_settings['default_post_status'] ?? '';
+
+        // Post Author - preserve options array for select field
+        if ($field_name === 'post_author' && $default_author_id) {
+            $field_config['disabled'] = true;
+            $field_config['global_indicator'] = __('Set Globally in Settings > WordPress', 'datamachine');
+            $field_config['global_value'] = $default_author_id;
+            $field_config['options'] = self::get_user_options();
+        }
+
+        // Post Status - preserve options array for select field
+        if ($field_name === 'post_status' && $default_post_status) {
+            $field_config['disabled'] = true;
+            $field_config['global_indicator'] = __('Set Globally in Settings > WordPress', 'datamachine');
+            $field_config['global_value'] = $default_post_status;
+            $field_config['options'] = get_post_statuses();
+        }
+
+        // Include Source (boolean checkbox)
+        if ($field_name === 'include_source' && isset($wp_settings['default_include_source'])) {
+            $field_config['disabled'] = true;
+            $field_config['global_indicator'] = __('Set Globally in Settings > WordPress', 'datamachine');
+            $field_config['global_value'] = (bool) $wp_settings['default_include_source'];
+        }
+
+        // Enable Images (boolean checkbox)
+        if ($field_name === 'enable_images' && isset($wp_settings['default_enable_images'])) {
+            $field_config['disabled'] = true;
+            $field_config['global_indicator'] = __('Set Globally in Settings > WordPress', 'datamachine');
+            $field_config['global_value'] = (bool) $wp_settings['default_enable_images'];
+        }
+
+        return $field_config;
+    }
 }

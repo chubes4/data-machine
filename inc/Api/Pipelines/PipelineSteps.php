@@ -550,17 +550,7 @@ class PipelineSteps {
 			$sanitized_tool_ids = array_map('sanitize_text_field', $enabled_tools_raw);
 		}
 
-		do_action('datamachine_log', 'debug', 'PipelineStepConfig: Before saving tool selections', [
-			'pipeline_step_id' => $pipeline_step_id,
-			'enabled_tools_count' => count($sanitized_tool_ids)
-		]);
-
 		$step_config_data['enabled_tools'] = $tools_manager->save_step_tool_selections($pipeline_step_id, $sanitized_tool_ids);
-
-		do_action('datamachine_log', 'debug', 'PipelineStepConfig: After saving tool selections', [
-			'pipeline_step_id' => $pipeline_step_id,
-			'saved_enabled_tools' => $step_config_data['enabled_tools']
-		]);
 
 		// Store API key if provided
 		if (!empty($ai_api_key) && !empty($ai_provider)) {

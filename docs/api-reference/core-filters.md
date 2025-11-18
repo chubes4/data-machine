@@ -573,46 +573,35 @@ add_filter('datamachine_global_directives', function($directives) {
 });
 ```
 
-### `datamachine_pipeline_directives`
+### `datamachine_agent_directives`
 
-**Purpose**: Modify AI system directives for pipeline execution only
+**Purpose**: Modify AI system directives for specific agent types (pipeline or chat)
 
 **Parameters**:
-- `$directives` (array) - Current pipeline directives
-- `$pipeline_id` (int) - Pipeline ID for context
+- `$request` (array) - Current AI request being built
+- `$agent_type` (string) - Agent type ('pipeline' or 'chat')
+- `$provider` (string) - AI provider (openai, anthropic, etc.)
+- `$tools` (array) - Available tools for the agent
+- `$context` (array) - Agent-specific context data
 
-**Return**: Modified directives array
+**Return**: Modified request array
 
 **Usage Example**:
 ```php
-add_filter('datamachine_pipeline_directives', function($directives, $pipeline_id) {
-    $directives[] = [
-        'priority' => 35,
-        'content' => "Pipeline-specific directive for pipeline {$pipeline_id}"
-    ];
-    return $directives;
-}, 10, 2);
-```
-
-### `datamachine_chat_directives`
-
-**Purpose**: Modify AI system directives for chat conversations only
-
-**Parameters**:
-- `$directives` (array) - Current chat directives
-- `$session_id` (string) - Chat session ID for context
-
-**Return**: Modified directives array
-
-**Usage Example**:
-```php
-add_filter('datamachine_chat_directives', function($directives, $session_id) {
-    $directives[] = [
-        'priority' => 18,
-        'content' => 'Chat-specific directive for conversational interface'
-    ];
-    return $directives;
-}, 10, 2);
+add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
+    if ($agent_type === 'pipeline') {
+        $request['messages'][] = [
+            'role' => 'system',
+            'content' => 'Pipeline-specific directive content'
+        ];
+    } elseif ($agent_type === 'chat') {
+        $request['messages'][] = [
+            'role' => 'system',
+            'content' => 'Chat-specific directive content'
+        ];
+    }
+    return $request;
+}, 10, 5);
 ```
 
 ## Navigation Filters

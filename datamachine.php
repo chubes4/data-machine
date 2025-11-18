@@ -41,7 +41,6 @@ function run_datamachine() {
 
 	datamachine_register_utility_filters();
 	datamachine_register_admin_filters();
-	datamachine_register_logger_filters();
 	datamachine_register_oauth_system();
 	datamachine_register_core_actions();
     

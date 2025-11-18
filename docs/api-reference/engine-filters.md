@@ -212,82 +212,11 @@ add_filter('datamachine_agent_directives', function($request, $agent_type, $prov
 }, 10, 5);
 ```
 
-### datamachine_pipeline_directives
+### Legacy Directive Filters (Deprecated)
 
-**Status**: Legacy compatibility filter. Use `datamachine_agent_directives` for new implementations.
+**Status**: `datamachine_pipeline_directives` and `datamachine_chat_directives` are deprecated legacy filters.
 
-Applies directives exclusively to pipeline agents.
-
-**Hook Usage**:
-```php
-apply_filters(
-    'datamachine_pipeline_directives',
-    $request,
-    $provider,
-    $tools,
-    $step_id,
-    $payload
-);
-```
-
-**Parameters**: Same as `datamachine_global_directives`
-
-**Migration Path**: Update custom directives to use `datamachine_agent_directives` with agent type check:
-
-```php
-// Old (legacy)
-add_filter('datamachine_pipeline_directives', function($request, $provider, $tools, $step_id, $payload) {
-    // Pipeline directive logic
-    return $request;
-}, 10, 5);
-
-// New (recommended)
-add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
-    if ($agent_type === 'pipeline') {
-        // Pipeline directive logic
-        $step_id = $context['step_id'] ?? null;
-        $payload = $context['payload'] ?? [];
-    }
-    return $request;
-}, 10, 5);
-```
-
-### datamachine_chat_directives
-
-**Status**: Legacy compatibility filter. Use `datamachine_agent_directives` for new implementations.
-
-Applies directives exclusively to chat agents.
-
-**Hook Usage**:
-```php
-apply_filters(
-    'datamachine_chat_directives',
-    $request,
-    $provider,
-    $tools,
-    $context
-);
-```
-
-**Parameters**:
-- `$request` (array) - AI request array
-- `$provider` (string) - AI provider name
-- `$tools` (array) - Structured tools array
-- `$context` (array) - Chat context (session_id)
-
-**Migration Path**: Update custom directives to use `datamachine_agent_directives` with agent type check:
-
-```php
-// Old (legacy)
-add_filter('datamachine_chat_directives', function($request, $provider, $tools, $context) {
-    // Chat directive logic
-    return $request;
-}, 10, 4);
-
-// New (recommended)
-add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
-    if ($agent_type === 'chat') {
-        // Chat directive logic
+**Migration Required**: All custom directives should be migrated to use `datamachine_agent_directives` with agent type checking. See the `datamachine_agent_directives` filter documentation above for the recommended implementation pattern.
     }
     return $request;
 }, 10, 5);
@@ -504,9 +433,7 @@ Directives are applied in hierarchical order by RequestBuilder:
    Chat:
    └── ChatAgentDirective
 
-3. Legacy Type-Specific (compatibility only)
-   ├── datamachine_pipeline_directives
-   └── datamachine_chat_directives
+
 ```
 
 ## Best Practices
