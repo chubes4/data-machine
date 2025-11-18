@@ -1,0 +1,198 @@
+<?php
+/**
+ * File cleanup and retention policy management.
+ *
+ * Handles deletion operations using WordPress Filesystem API (wp_delete_file, WP_Filesystem).
+ * Manages retention policies, job cleanup, and pipeline directory removal.
+ *
+ * @package DataMachine\Core\FilesRepository
+ */
+
+namespace DataMachine\Core\FilesRepository;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class FileCleanup {
+
+    /**
+     * Repository directory name
+     */
+    private const REPOSITORY_DIR = 'datamachine-files';
+
+    /**
+     * Directory manager instance
+     *
+     * @var DirectoryManager
+     */
+    private $directory_manager;
+
+    /**
+     * Constructor
+     */
+    public function __construct() {
+        $this->directory_manager = new DirectoryManager();
+    }
+
+    /**
+     * Delete entire pipeline directory and all contents
+     *
+     * Removes pipeline directory including context files, flow directories,
+     * and all nested job data. Uses WordPress filesystem API for safe deletion.
+     *
+     * @param int $pipeline_id Pipeline ID
+     * @param string $pipeline_name Pipeline name
+     * @return bool True if directory deleted or doesn't exist, false on failure
+     */
+    public function delete_pipeline_directory(int $pipeline_id, string $pipeline_name): bool {
+        $pipeline_dir = $this->directory_manager->get_pipeline_directory($pipeline_id, $pipeline_name);
+
+        if (!is_dir($pipeline_dir)) {
+            return true;
+        }
+
+        if (!function_exists('WP_Filesystem')) {
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
+        }
+
+        if (WP_Filesystem()) {
+            global $wp_filesystem;
+            $deleted = $wp_filesystem->rmdir($pipeline_dir, true);
+
+            if ($deleted) {
+                do_action('datamachine_log', 'info', 'Pipeline directory deleted successfully.', [
+                    'pipeline_id' => $pipeline_id,
+                    'directory_path' => $pipeline_dir
+                ]);
+            } else {
+                do_action('datamachine_log', 'error', 'Failed to delete pipeline directory.', [
+                    'pipeline_id' => $pipeline_id,
+                    'directory_path' => $pipeline_dir
+                ]);
+            }
+
+            return $deleted;
+        }
+
+        do_action('datamachine_log', 'error', 'WP_Filesystem unavailable for pipeline directory deletion.', [
+            'pipeline_id' => $pipeline_id
+        ]);
+
+        return false;
+    }
+
+    /**
+     * Clean up job data packets for a specific job
+     *
+     * @param int $job_id Job ID
+     * @param array $context Context array with pipeline/flow metadata
+     * @return int Number of directories deleted (0 or 1)
+     */
+    public function cleanup_job_data_packets(int $job_id, array $context): int {
+        $job_dir = $this->directory_manager->get_job_directory(
+            $context['pipeline_id'],
+            $context['pipeline_name'],
+            $context['flow_id'],
+            $context['flow_name'],
+            $job_id
+        );
+
+        if (!is_dir($job_dir)) {
+            return 0;
+        }
+
+        if (!function_exists('WP_Filesystem')) {
+            require_once(ABSPATH . 'wp-admin/includes/file.php');
+        }
+
+        if (WP_Filesystem()) {
+            global $wp_filesystem;
+            if ($wp_filesystem->rmdir($job_dir, true)) {
+                return 1;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Clean up old files (hierarchical traversal)
+     *
+     * @param int $retention_days Files older than this many days will be deleted
+     * @return int Number of files deleted
+     */
+    public function cleanup_old_files(int $retention_days = 7): int {
+        $upload_dir = wp_upload_dir();
+        $base = trailingslashit($upload_dir['basedir']) . self::REPOSITORY_DIR;
+        $cutoff_time = time() - ($retention_days * DAY_IN_SECONDS);
+        $deleted_count = 0;
+
+        if (!is_dir($base)) {
+            return 0;
+        }
+
+        // Traverse: pipeline → flow → files
+        $pipeline_dirs = glob("{$base}/pipeline-*", GLOB_ONLYDIR);
+
+        foreach ($pipeline_dirs as $pipeline_dir) {
+            $flow_dirs = glob("{$pipeline_dir}/flow-*", GLOB_ONLYDIR);
+
+            foreach ($flow_dirs as $flow_dir) {
+                // Clean up flow files (not context!)
+                $files_dir = "{$flow_dir}/files";
+
+                if (is_dir($files_dir)) {
+                    $files = glob("{$files_dir}/*");
+                    foreach ($files as $file) {
+                        if (is_file($file) && filemtime($file) < $cutoff_time) {
+                            if (wp_delete_file($file)) {
+                                $deleted_count++;
+                            }
+                        }
+                    }
+
+                    // Remove empty files directory
+                    if (empty(glob("{$files_dir}/*"))) {
+                        rmdir($files_dir);
+                    }
+                }
+
+                // Clean up old job directories
+                $jobs_dir = "{$flow_dir}/jobs";
+
+                if (is_dir($jobs_dir)) {
+                    $job_dirs = glob("{$jobs_dir}/job-*", GLOB_ONLYDIR);
+                    foreach ($job_dirs as $job_dir) {
+                        $files = glob("{$job_dir}/*");
+                        $all_old = true;
+
+                        foreach ($files as $file) {
+                            if (is_file($file) && filemtime($file) >= $cutoff_time) {
+                                $all_old = false;
+                                break;
+                            }
+                        }
+
+                        if ($all_old && !empty($files)) {
+                            if (!function_exists('WP_Filesystem')) {
+                                require_once(ABSPATH . 'wp-admin/includes/file.php');
+                            }
+                            if (WP_Filesystem()) {
+                                global $wp_filesystem;
+                                $wp_filesystem->rmdir($job_dir, true);
+                            }
+                        }
+                    }
+
+                    // Remove empty jobs directory
+                    if (empty(glob("{$jobs_dir}/*"))) {
+                        rmdir($jobs_dir);
+                    }
+                }
+            }
+        }
+
+        return $deleted_count;
+    }
+}

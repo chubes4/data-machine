@@ -259,9 +259,9 @@ class Pipelines {
 		] );
 
 		// Delete pipeline filesystem directory (cascade deletion)
-		$repository = apply_filters('datamachine_files_repository', [])['files'] ?? null;
-		if ($repository && method_exists($repository, 'get_pipeline_directory')) {
-			$pipeline_dir = $repository->get_pipeline_directory($pipeline_id, $pipeline_name);
+		$dir_manager = apply_filters('datamachine_get_directory_manager', null);
+		if ($dir_manager) {
+			$pipeline_dir = $dir_manager->get_pipeline_directory($pipeline_id, $pipeline_name);
 
 			if (is_dir($pipeline_dir)) {
 				if (!function_exists('WP_Filesystem')) {

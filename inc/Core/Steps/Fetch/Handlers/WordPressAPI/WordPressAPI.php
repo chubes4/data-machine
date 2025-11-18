@@ -182,10 +182,9 @@ class WordPressAPI {
             // Download remote image if present
             $file_info = null;
             if (!empty($image_url) && $flow_step_id) {
-                $repositories = apply_filters('datamachine_files_repository', []);
-                $files_repo = $repositories['files'] ?? null;
+                $downloader = apply_filters('datamachine_get_remote_downloader', null);
 
-                if ($files_repo) {
+                if ($downloader) {
                     // Generate filename from URL
                     $url_path = wp_parse_url($image_url, PHP_URL_PATH);
                     $extension = $url_path ? pathinfo($url_path, PATHINFO_EXTENSION) : 'jpg';
@@ -202,7 +201,7 @@ class WordPressAPI {
                         'flow_name' => "flow-{$flow_id}"
                     ];
 
-                    $download_result = $files_repo->store_remote_file($image_url, $filename, $context);
+                    $download_result = $downloader->download_remote_file($image_url, $filename, $context);
 
                     if ($download_result) {
                         $file_check = wp_check_filetype($filename);

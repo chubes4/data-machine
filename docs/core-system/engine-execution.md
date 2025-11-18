@@ -150,7 +150,6 @@ $payload = [
 - ✅ **Explicit Dependencies**: Steps read everything from a single payload without relying on shared globals
 - ✅ **Consistent Evolvability**: New metadata can be appended to the payload without changing method signatures
 - ✅ **Pure Testing**: Steps are testable via simple array fixtures, enabling isolated unit tests
-- ✅ **Unified Access**: `engine_data` travels with the payload, removing the need for `ExecutionContext`
 
 **Step Implementation Pattern** remains identical to the example above—extract what you need from `$payload`, process data, and return the updated packet.
 

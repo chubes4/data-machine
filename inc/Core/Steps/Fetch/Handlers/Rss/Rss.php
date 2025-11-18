@@ -153,10 +153,9 @@ class Rss {
                 $mime_type = $file_check['type'] ?: 'application/octet-stream';
 
                 if (strpos($mime_type, 'image/') === 0 && in_array($mime_type, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
-                    $repositories = apply_filters('datamachine_files_repository', []);
-                    $files_repo = $repositories['files'] ?? null;
+                    $downloader = apply_filters('datamachine_get_remote_downloader', null);
 
-                    if ($files_repo && $flow_step_id) {
+                    if ($downloader && $flow_step_id) {
                         $filename = 'rss_image_' . time() . '_' . sanitize_file_name(basename(wp_parse_url($enclosure_url, PHP_URL_PATH)));
 
                         // Build context with fallback names (no database queries)
@@ -167,7 +166,7 @@ class Rss {
                             'flow_name' => "flow-{$flow_id}"
                         ];
 
-                        $download_result = $files_repo->store_remote_file($enclosure_url, $filename, $context);
+                        $download_result = $downloader->download_remote_file($enclosure_url, $filename, $context);
 
                         if ($download_result) {
                             $file_info = [

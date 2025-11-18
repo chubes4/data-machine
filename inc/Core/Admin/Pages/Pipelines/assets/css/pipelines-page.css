@@ -345,10 +345,6 @@
 	flex: 1;
 }
 
-.datamachine-flow-header__title-section {
-	/* No flex property - let input width control the section size */
-}
-
 .datamachine-flow-header__title-input {
 	font-size: 16px;
 	font-weight: 500;

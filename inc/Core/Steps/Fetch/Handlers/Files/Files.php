@@ -16,11 +16,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Files {
 
     /**
-     * Get repository instance via filter discovery
+     * Get file storage instance via filter discovery
      */
-	private function get_repository(): ?\DataMachine\Engine\FilesRepository {
-		$repositories = apply_filters('datamachine_files_repository', []);
-		return $repositories['files'] ?? null;
+	private function get_file_storage(): ?\DataMachine\Core\FilesRepository\FileStorage {
+		return apply_filters('datamachine_get_file_storage', null);
 	}
 
 	/**
@@ -28,7 +27,7 @@ class Files {
 	 * For images: stores image_url via datamachine_engine_data filter.
 	 */
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {
-        $repository = $this->get_repository();
+        $storage = $this->get_file_storage();
         $flow_step_id = $handler_config['flow_step_id'] ?? null;
         $config = $handler_config['files'] ?? [];
         $uploaded_files = $config['uploaded_files'] ?? [];
@@ -44,7 +43,7 @@ class Files {
                 'flow_name' => "flow-{$flow_id}"
             ];
 
-            $repo_files = $repository->get_all_files($context);
+            $repo_files = $storage->get_all_files($context);
             if (empty($repo_files)) {
                 do_action('datamachine_log', 'debug', 'Files Input: No files available in repository.', [
                     'pipeline_id' => $pipeline_id,

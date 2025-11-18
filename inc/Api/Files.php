@@ -209,12 +209,11 @@ class Files {
             );
         }
 
-        $repositories = apply_filters('datamachine_files_repository', []);
-        $repository = $repositories['files'] ?? null;
-        if (!$repository) {
+        $storage = apply_filters('datamachine_get_file_storage', null);
+        if (!$storage) {
             return new WP_Error(
                 'files_repository_unavailable',
-                __('File repository service not available.', 'datamachine'),
+                __('File storage service not available.', 'datamachine'),
                 ['status' => 500]
             );
         }
@@ -232,7 +231,7 @@ class Files {
 
             $pipeline_name = $pipeline['pipeline_name'] ?? "pipeline-{$pipeline_id}";
 
-            $file_info = $repository->store_pipeline_file($pipeline_id, $pipeline_name, [
+            $file_info = $storage->store_pipeline_file($pipeline_id, $pipeline_name, [
                 'source_path' => $file['tmp_name'],
                 'original_name' => $file['name']
             ]);
@@ -279,7 +278,7 @@ class Files {
 
             $context = self::get_file_context($parts['flow_id']);
 
-            $stored_path = $repository->store_file($file['tmp_name'], $file['name'], $context);
+            $stored_path = $storage->store_file($file['tmp_name'], $file['name'], $context);
             if (!$stored_path) {
                 return new WP_Error(
                     'files_repository_store_failed',
@@ -327,8 +326,7 @@ class Files {
             );
         }
 
-        $repositories = apply_filters('datamachine_files_repository', []);
-        $repository = $repositories['files'] ?? null;
+        $storage = apply_filters('datamachine_get_file_storage', null);
 
         // PIPELINE CONTEXT
         if ($pipeline_id) {
@@ -353,7 +351,7 @@ class Files {
             }
 
             $context = self::get_file_context($parts['flow_id']);
-            $files = $repository ? $repository->get_all_files($context) : [];
+            $files = $storage ? $storage->get_all_files($context) : [];
 
             return rest_ensure_response([
                 'success' => true,
@@ -379,8 +377,7 @@ class Files {
             );
         }
 
-        $repositories = apply_filters('datamachine_files_repository', []);
-        $repository = $repositories['files'] ?? null;
+        $storage = apply_filters('datamachine_get_file_storage', null);
 
         // PIPELINE CONTEXT
         if ($pipeline_id) {
@@ -423,7 +420,7 @@ class Files {
             }
 
             $context = self::get_file_context($parts['flow_id']);
-            $deleted = $repository ? $repository->delete_file($filename, $context) : false;
+            $deleted = $storage ? $storage->delete_file($filename, $context) : false;
 
             do_action('datamachine_log', 'debug', 'Flow file deleted.', [
                 'filename' => $filename,

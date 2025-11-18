@@ -173,11 +173,10 @@ class Delete {
             }
         }
 
-        $repositories = apply_filters('datamachine_files_repository', []);
-        $repository = $repositories['files'] ?? null;
+        $cleanup = apply_filters('datamachine_get_file_cleanup', null);
 
-        if ($repository && method_exists($repository, 'delete_pipeline_directory')) {
-            $filesystem_deleted = $repository->delete_pipeline_directory($pipeline_id, $pipeline_name);
+        if ($cleanup) {
+            $filesystem_deleted = $cleanup->delete_pipeline_directory($pipeline_id, $pipeline_name);
 
             if (!$filesystem_deleted) {
                 do_action('datamachine_log', 'warning', 'Pipeline filesystem cleanup failed, but continuing with database deletion.', [

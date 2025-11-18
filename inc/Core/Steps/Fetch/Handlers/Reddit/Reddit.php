@@ -20,15 +20,14 @@ class Reddit {
 		$this->oauth_reddit = $all_auth['reddit'] ?? null;
 	}
 
-	private function get_repository(): ?\DataMachine\Engine\FilesRepository {
-		$repositories = apply_filters('datamachine_files_repository', []);
-		return $repositories['files'] ?? null;
+	private function get_remote_downloader(): ?\DataMachine\Core\FilesRepository\RemoteFileDownloader {
+		return apply_filters('datamachine_get_remote_downloader', null);
 	}
 
 	private function store_reddit_image(string $image_url, int $pipeline_id, int $flow_id, string $item_id): ?array {
-		$repository = $this->get_repository();
-		if (!$repository) {
-			do_action('datamachine_log', 'error', 'Reddit: FilesRepository not available for image storage', [
+		$downloader = $this->get_remote_downloader();
+		if (!$downloader) {
+			do_action('datamachine_log', 'error', 'Reddit: RemoteFileDownloader not available for image storage', [
 				'image_url' => $image_url,
 				'item_id' => $item_id
 			]);
@@ -55,7 +54,7 @@ class Reddit {
 			'user_agent' => 'php:DataMachineWPPlugin:v' . DATAMACHINE_VERSION
 		];
 
-		return $repository->store_remote_file($image_url, $filename, $context, $options);
+		return $downloader->download_remote_file($image_url, $filename, $context, $options);
 	}
 
 	public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array {

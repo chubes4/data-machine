@@ -137,11 +137,10 @@ function datamachine_register_execution_engine() {
     add_action( 'datamachine_execute_step', function( $job_id, $flow_step_id, $data = null ) {
 
         try {
-            $repositories = apply_filters('datamachine_files_repository', []);
-            $repository = $repositories['files'] ?? null;
-            
-            if ($repository && $repository->is_data_reference($data)) {
-                $data = $repository->retrieve_data_packet($data);
+            $storage = apply_filters('datamachine_get_file_storage', null);
+
+            if ($storage && is_array($data) && isset($data['is_data_reference']) && $data['is_data_reference']) {
+                $data = $storage->retrieve_data_packet($data);
                 if ($data === null) {
                     do_action('datamachine_fail_job', $job_id, 'data_retrieval_failure', [
                         'flow_step_id' => $flow_step_id
@@ -207,10 +206,11 @@ function datamachine_register_execution_engine() {
                     do_action('datamachine_schedule_next_step', $job_id, $next_flow_step_id, $data);
                 } else {
                     do_action('datamachine_update_job_status', $job_id, 'completed', 'complete');
-                    if ($repository) {
+                    $cleanup = apply_filters('datamachine_get_file_cleanup', null);
+                    if ($cleanup) {
                         $flow_id = $flow_step_config['flow_id'] ?? 0;
                         $context = datamachine_get_file_context($flow_id);
-                        $repository->cleanup_job_data_packets($job_id, $context);
+                        $cleanup->cleanup_job_data_packets($job_id, $context);
                     }
                     do_action('datamachine_log', 'info', 'Pipeline execution completed successfully', [
                         'job_id' => $job_id,
@@ -260,14 +260,13 @@ function datamachine_register_execution_engine() {
             return false;
         }
 
-        $repositories = apply_filters('datamachine_files_repository', []);
-        $repository = $repositories['files'] ?? null;
+        $storage = apply_filters('datamachine_get_file_storage', null);
 
-        if ($repository) {
+        if ($storage) {
             $flow_step_config = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
             $flow_id = $flow_step_config['flow_id'] ?? 0;
             $context = datamachine_get_file_context($flow_id);
-            $data_reference = $repository->store_data_packet($data, $job_id, $context);
+            $data_reference = $storage->store_data_packet($data, $job_id, $context);
         } else {
             $data_reference = ['data' => $data];
         }
