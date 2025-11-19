@@ -34,9 +34,12 @@ Data Machine underwent a comprehensive OOP refactoring introducing standardized 
   - Standardized response formatting
 
 **Settings Architecture**:
-- **SettingsHandler** (`/inc/Core/Steps/SettingsHandler.php`) - Base for all settings
+- **SettingsHandler** (`/inc/Core/Steps/Settings/SettingsHandler.php`) - Base for all settings
   - Auto-sanitization based on field schema
   - Validation and error handling
+- **SettingsDisplayService** (`/inc/Core/Steps/Settings/SettingsDisplayService.php`) - Settings display logic
+  - Processes settings for UI presentation
+  - Smart label generation and value formatting
 
 - **FetchHandlerSettings** - Common fetch fields (timeframe_limit, search)
 - **PublishHandlerSettings** - Common publish fields (status, author)

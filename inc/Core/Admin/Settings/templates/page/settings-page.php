@@ -2,7 +2,7 @@
 /**
  * Settings Page Template with Tabbed Interface
  *
- * Tabbed settings interface with Admin, Agent, and WordPress sections.
+ * Tabbed settings interface with Admin, Agent, and AI Providers sections.
  * Uses WordPress native nav-tab-wrapper pattern for consistency.
  *
  * @package DataMachine\Core\Admin\Settings\Templates
@@ -18,7 +18,7 @@ $active_tab = 'admin';
 if (isset($_GET['tab'])) {
     $active_tab = sanitize_key($_GET['tab']);
 }
-$valid_tabs = ['admin', 'agent', 'wordpress', 'ai-providers'];
+$valid_tabs = ['admin', 'agent', 'ai-providers'];
 if (!in_array($active_tab, $valid_tabs)) {
     $active_tab = 'admin';
 }
@@ -33,13 +33,9 @@ if (!in_array($active_tab, $valid_tabs)) {
            class="nav-tab <?php echo $active_tab === 'admin' ? 'nav-tab-active' : ''; ?>">
             <?php esc_html_e('Admin', 'datamachine'); ?>
         </a>
-        <a href="?page=datamachine-settings&tab=agent" 
+        <a href="?page=datamachine-settings&tab=agent"
            class="nav-tab <?php echo $active_tab === 'agent' ? 'nav-tab-active' : ''; ?>">
             <?php esc_html_e('Agent', 'datamachine'); ?>
-        </a>
-        <a href="?page=datamachine-settings&tab=wordpress"
-           class="nav-tab <?php echo $active_tab === 'wordpress' ? 'nav-tab-active' : ''; ?>">
-            <?php esc_html_e('WordPress', 'datamachine'); ?>
         </a>
         <a href="?page=datamachine-settings&tab=ai-providers"
            class="nav-tab <?php echo $active_tab === 'ai-providers' ? 'nav-tab-active' : ''; ?>">
@@ -58,10 +54,6 @@ if (!in_array($active_tab, $valid_tabs)) {
         <div id="datamachine-tab-agent" class="datamachine-tab-content <?php echo $active_tab === 'agent' ? 'active' : ''; ?>">
             <?php echo wp_kses(apply_filters('datamachine_render_template', '', 'page/agent-tab'), datamachine_allowed_html()); ?>
         </div>
-        
-        <div id="datamachine-tab-wordpress" class="datamachine-tab-content <?php echo $active_tab === 'wordpress' ? 'active' : ''; ?>">
-            <?php echo wp_kses(apply_filters('datamachine_render_template', '', 'page/wordpress-tab'), datamachine_allowed_html()); ?>
-        </div>
 
         <div id="datamachine-tab-ai-providers" class="datamachine-tab-content <?php echo $active_tab === 'ai-providers' ? 'active' : ''; ?>">
             <?php echo wp_kses(apply_filters('datamachine_render_template', '', 'page/ai-providers-tab'), datamachine_allowed_html()); ?>
@@ -75,7 +67,7 @@ if (!in_array($active_tab, $valid_tabs)) {
     <!-- Pre-rendered Tool Config Modals (no AJAX loading) -->
     <?php
     // Get all configurable tools
-    $all_tools = apply_filters('chubes_ai_tools', []);
+    $all_tools = apply_filters('datamachine_global_tools', []);
     $configurable_tools = [];
     foreach ($all_tools as $tool_name => $tool_config) {
         if (!isset($tool_config['handler']) && ($tool_config['requires_config'] ?? false)) {

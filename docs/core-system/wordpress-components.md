@@ -203,13 +203,4 @@ These components eliminate code duplication across WordPress-related handlers an
 
 - [WordPress Publish Handler](../handlers/publish/wordpress-publish.md)
 - [WordPress Update Handler](../handlers/update/wordpress-update.md)
-- [Base Class Architecture](step.md)</content>
-</xai:function_call">The WordPress Shared Components provide centralized WordPress functionality for publish and update handlers, reducing code duplication and ensuring consistent WordPress integration.
-</xai:function_call">Now let me check if there are any other documentation gaps. Let me look at the CHANGELOG.md to see if it needs updating. The version is 0.2.1, so let me check if the changelog reflects the current state. 
-
-Let me also check if there are any other missing docs by looking at the API reference files. Let me check if all the core filters and actions are documented. 
-
-Let me check the core-filters.md file. 
-
-<xai:function_call name="read">
-<parameter name="filePath">docs/api-reference/core-filters.md
+- [Base Class Architecture](step.md)

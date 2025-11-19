@@ -188,6 +188,7 @@ export default function FlowStepCard( {
 								handlerConfig={
 									flowStepConfig.handler_config || {}
 								}
+								settingsDisplay={ flowStepConfig.settings_display || [] }
 								stepType={ pipelineStep.step_type }
 								onConfigure={ () =>
 									onConfigure && onConfigure( flowStepId )

@@ -5,20 +5,14 @@
  */
 
 import { useState, useEffect } from '@wordpress/element';
-import {
-	Modal,
-	Button,
-	TextControl,
-	SelectControl,
-	TextareaControl,
-	CheckboxControl,
-} from '@wordpress/components';
+import { Modal, Button } from '@wordpress/components';
 import { sprintf, __ } from '@wordpress/i18n';
 import { updateFlowHandler, fetchHandlerDetails } from '../../utils/api';
-import { slugToLabel, formatSelectOptions } from '../../utils/formatters';
-import { MODAL_TYPES } from '../../utils/constants';
+import { slugToLabel } from '../../utils/formatters';
+import { sanitizeHandlerSettingsPayload } from '../../utils/handlerSettings';
 import { usePipelineContext } from '../../context/PipelineContext';
 import FilesHandlerSettings from './handler-settings/files/FilesHandlerSettings';
+import HandlerSettingField from './handler-settings/HandlerSettingField';
 
 /**
  * Handler Settings Modal Component
@@ -131,11 +125,16 @@ export default function HandlerSettingsModal( {
 		setIsSaving( true );
 		setError( null );
 
+		const payloadSettings = sanitizeHandlerSettingsPayload(
+			settings,
+			settingsFields
+		);
+
 		try {
 			const response = await updateFlowHandler(
 				flowStepId,
 				handlerSlug,
-				settings,
+				payloadSettings,
 				pipelineId,
 				stepType
 			);
@@ -156,101 +155,6 @@ export default function HandlerSettingsModal( {
 			setError( err.message || __( 'An error occurred', 'datamachine' ) );
 		} finally {
 			setIsSaving( false );
-		}
-	};
-
-	/**
-	 * Render form field based on type
-	 */
-	const renderField = ( fieldKey, fieldConfig ) => {
-		const isDisabled = !! fieldConfig.disabled;
-		const displayValue = isDisabled && fieldConfig.global_value !== undefined
-			? fieldConfig.global_value
-			: settings[ fieldKey ] || fieldConfig.default || '';
-
-		const helpText = isDisabled && fieldConfig.global_indicator
-			? fieldConfig.global_indicator
-			: fieldConfig.description;
-
-		switch ( fieldConfig.type ) {
-			case 'text':
-				return (
-					<div key={ fieldKey } className={ isDisabled ? 'datamachine-field-disabled' : '' }>
-						<TextControl
-							label={ fieldConfig.label || slugToLabel( fieldKey ) }
-							value={ displayValue }
-							onChange={ ( val ) =>
-								handleSettingChange( fieldKey, val )
-							}
-							help={ helpText }
-							disabled={ isDisabled }
-						/>
-					</div>
-				);
-
-			case 'textarea':
-				return (
-					<div key={ fieldKey } className={ isDisabled ? 'datamachine-field-disabled' : '' }>
-						<TextareaControl
-							label={ fieldConfig.label || slugToLabel( fieldKey ) }
-							value={ displayValue }
-							onChange={ ( val ) =>
-								handleSettingChange( fieldKey, val )
-							}
-							help={ helpText }
-							rows={ fieldConfig.rows || 4 }
-							disabled={ isDisabled }
-						/>
-					</div>
-				);
-
-			case 'select':
-				const rawOptions = fieldConfig.options || [];
-				const formattedOptions = formatSelectOptions( rawOptions );
-				return (
-					<div key={ fieldKey } className={ isDisabled ? 'datamachine-field-disabled' : '' }>
-						<SelectControl
-							label={ fieldConfig.label || slugToLabel( fieldKey ) }
-							value={ displayValue }
-							options={ formattedOptions }
-							onChange={ ( val ) =>
-								handleSettingChange( fieldKey, val )
-							}
-							help={ helpText }
-							disabled={ isDisabled }
-						/>
-					</div>
-				);
-
-			case 'checkbox':
-				return (
-					<div key={ fieldKey } className={ isDisabled ? 'datamachine-field-disabled' : '' }>
-						<CheckboxControl
-							label={ fieldConfig.label || slugToLabel( fieldKey ) }
-							checked={ !! displayValue }
-							onChange={ ( val ) =>
-								handleSettingChange( fieldKey, val )
-							}
-							help={ helpText }
-							disabled={ isDisabled }
-						/>
-					</div>
-				);
-
-			default:
-				return (
-					<div key={ fieldKey } className={ isDisabled ? 'datamachine-field-disabled' : '' }>
-						<TextControl
-							label={ fieldConfig.label || slugToLabel( fieldKey ) }
-							value={ displayValue }
-							onChange={ ( val ) =>
-								handleSettingChange( fieldKey, val )
-							}
-							help={ helpText }
-							disabled={ isDisabled }
-						/>
-					</div>
-				);
 		}
 	};
 
@@ -346,8 +250,15 @@ export default function HandlerSettingsModal( {
 							{ Object.keys( settingsFields ).length > 0 && (
 								<div className="datamachine-handler-settings-fields">
 									{ Object.entries( settingsFields ).map(
-										( [ key, config ] ) =>
-											renderField( key, config )
+										( [ key, config ] ) => (
+											<HandlerSettingField
+												key={ key }
+												fieldKey={ key }
+												fieldConfig={ config }
+												settings={ settings }
+												onChange={ handleSettingChange }
+											/>
+										)
 									) }
 								</div>
 							) }

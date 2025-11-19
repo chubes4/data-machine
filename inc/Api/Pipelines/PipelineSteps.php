@@ -113,59 +113,74 @@ class PipelineSteps {
 		]);
 
 		register_rest_route('datamachine/v1', '/pipelines/steps/(?P<pipeline_step_id>[A-Za-z0-9_\-]+)/config', [
-			'methods' => 'PUT',
-			'callback' => [self::class, 'handle_update_step_config'],
-			'permission_callback' => [self::class, 'check_permission'],
-			'args' => [
-				'pipeline_step_id' => [
-					'required' => true,
-					'type' => 'string',
-					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Pipeline step ID (UUID4)', 'datamachine'),
-				],
-				'step_type' => [
-					'required' => true,
-					'type' => 'string',
-					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Step type (must be "ai")', 'datamachine'),
-				],
-				'pipeline_id' => [
-					'required' => true,
-					'type' => 'integer',
-					'sanitize_callback' => 'absint',
-					'description' => __('Pipeline ID for context', 'datamachine'),
-				],
-				'provider' => [
-					'required' => false,
-					'type' => 'string',
-					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('AI provider slug', 'datamachine'),
-				],
-				'model' => [
-					'required' => false,
-					'type' => 'string',
-					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('AI model identifier', 'datamachine'),
-				],
-				'ai_api_key' => [
-					'required' => false,
-					'type' => 'string',
-					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('AI API key', 'datamachine'),
-				],
-				'enabled_tools' => [
-					'required' => false,
-					'type' => 'array',
-					'description' => __('Array of enabled tool IDs', 'datamachine'),
-				],
-				'system_prompt' => [
-					'required' => false,
-					'type' => 'string',
-					'sanitize_callback' => 'sanitize_textarea_field',
-					'description' => __('System prompt for AI processing', 'datamachine'),
-				]
+			[
+				'methods' => 'PUT',
+				'callback' => [self::class, 'handle_update_step_config'],
+				'permission_callback' => [self::class, 'check_permission'],
+				'args' => self::get_step_config_args(false)
+			],
+			[
+				'methods' => 'PATCH',
+				'callback' => [self::class, 'handle_update_step_config'],
+				'permission_callback' => [self::class, 'check_permission'],
+				'args' => self::get_step_config_args(true)
 			]
 		]);
+	}
+
+	/**
+	 * Shared REST arg definition for AI step configuration.
+	 */
+	private static function get_step_config_args(bool $is_patch = false): array {
+		return [
+			'pipeline_step_id' => [
+				'required' => true,
+				'type' => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'description' => __('Pipeline step ID (UUID4)', 'datamachine'),
+			],
+			'step_type' => [
+				'required' => !$is_patch,
+				'type' => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'description' => __('Step type (must be "ai")', 'datamachine'),
+			],
+			'pipeline_id' => [
+				'required' => !$is_patch,
+				'type' => 'integer',
+				'sanitize_callback' => 'absint',
+				'description' => __('Pipeline ID for context', 'datamachine'),
+			],
+			'provider' => [
+				'required' => false,
+				'type' => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'description' => __('AI provider slug', 'datamachine'),
+			],
+			'model' => [
+				'required' => false,
+				'type' => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'description' => __('AI model identifier', 'datamachine'),
+			],
+			'ai_api_key' => [
+				'required' => false,
+				'type' => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'description' => __('AI API key', 'datamachine'),
+			],
+			'enabled_tools' => [
+				'required' => false,
+				'type' => 'array',
+				'description' => __('Array of enabled tool IDs', 'datamachine'),
+			],
+			'system_prompt' => [
+				'required' => false,
+				'type' => 'string',
+				'sanitize_callback' => 'sanitize_textarea_field',
+				'description' => __('System prompt for AI processing', 'datamachine'),
+			]
+		];
 	}
 
 	/**
@@ -490,11 +505,8 @@ class PipelineSteps {
 
 		// Extract pipeline_step_id from URL parameter
 		$pipeline_step_id = sanitize_text_field($request->get_param('pipeline_step_id'));
+		$is_patch = strtoupper($request->get_method()) === 'PATCH';
 
-		// Extract pipeline_id from request body
-		$pipeline_id = (int) $request->get_param('pipeline_id');
-
-		// Get pipeline and merge configuration
 		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 
 		// Validate pipeline_step_id format
@@ -507,73 +519,31 @@ class PipelineSteps {
 			);
 		}
 
-		// Collect AI configuration parameters
-		$ai_provider = sanitize_text_field($request->get_param('provider'));
-		$ai_model = sanitize_text_field($request->get_param('model'));
-		$ai_api_key = sanitize_text_field($request->get_param('ai_api_key'));
-		$enabled_tools_raw = $request->get_param('enabled_tools');
-		$system_prompt = sanitize_textarea_field($request->get_param('system_prompt'));
-
-		// Build step configuration data
-		$step_config_data = [];
-
-		if (!empty($ai_provider)) {
-			$step_config_data['provider'] = $ai_provider;
+		$pipeline_id = (int) $request->get_param('pipeline_id');
+		if (empty($pipeline_id) && !empty($parsed_step_id['pipeline_id'])) {
+			$pipeline_id = (int) $parsed_step_id['pipeline_id'];
 		}
 
-		if (!empty($ai_model)) {
-			$step_config_data['model'] = $ai_model;
-
-			// Store provider-specific model
-			if (!empty($ai_provider) && !empty($ai_model)) {
-				if (!isset($step_config_data['providers'])) {
-					$step_config_data['providers'] = [];
-				}
-				if (!isset($step_config_data['providers'][$ai_provider])) {
-					$step_config_data['providers'][$ai_provider] = [];
-				}
-				$step_config_data['providers'][$ai_provider]['model'] = $ai_model;
-			}
+		if (empty($pipeline_id)) {
+			return new \WP_Error(
+				'missing_pipeline_id',
+				__('Pipeline ID is required for configuration updates.', 'datamachine'),
+				['status' => 400]
+			);
 		}
 
-		// Save system prompt if provided
-		if (!empty($system_prompt)) {
-			$step_config_data['system_prompt'] = $system_prompt;
+		$step_type = sanitize_text_field($request->get_param('step_type'));
+		if (empty($step_type)) {
+			$step_type = 'ai';
 		}
 
-		// Save tool selections
-		$tools_manager = new \DataMachine\Engine\AI\Tools\ToolManager();
-
-		// Sanitize tool selections
-		$sanitized_tool_ids = [];
-		if (is_array($enabled_tools_raw)) {
-			$sanitized_tool_ids = array_map('sanitize_text_field', $enabled_tools_raw);
+		if ($step_type !== 'ai') {
+			return new \WP_Error(
+				'invalid_step_type',
+				__('Only AI steps support configuration updates.', 'datamachine'),
+				['status' => 400]
+			);
 		}
-
-		$step_config_data['enabled_tools'] = $tools_manager->save_step_tool_selections($pipeline_step_id, $sanitized_tool_ids);
-
-		// Store API key if provided
-		if (!empty($ai_api_key) && !empty($ai_provider)) {
-			try {
-				// Use AI HTTP Client library's filters directly to save API key
-				$all_keys = apply_filters('chubes_ai_provider_api_keys', null);
-				$all_keys[$ai_provider] = $ai_api_key;
-				apply_filters('chubes_ai_provider_api_keys', $all_keys);
-
-				do_action('datamachine_log', 'debug', 'API key saved via AI HTTP Client filters', [
-					'provider' => $ai_provider,
-					'api_key_length' => strlen($ai_api_key)
-				]);
-			} catch (Exception $e) {
-				do_action('datamachine_log', 'error', 'Exception when saving API key', [
-					'provider' => $ai_provider,
-					'exception' => $e->getMessage()
-				]);
-			}
-		}
-
-		// Get pipeline and merge configuration
-		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 
 		$pipeline = $db_pipelines->get_pipeline($pipeline_id);
 		if (!$pipeline) {
@@ -585,18 +555,96 @@ class PipelineSteps {
 		}
 
 		$pipeline_config = $pipeline['pipeline_config'] ?? [];
+		$existing_config = $pipeline_config[$pipeline_step_id] ?? [];
+
+		// Collect AI configuration parameters (only when provided)
+		$has_provider = $request->has_param('provider');
+		$has_model = $request->has_param('model');
+		$has_system_prompt = $request->has_param('system_prompt');
+		$has_enabled_tools = $request->has_param('enabled_tools');
+		$has_api_key = $request->has_param('ai_api_key');
+		$api_key_saved = false;
+
+		$effective_provider = $has_provider
+			? sanitize_text_field($request->get_param('provider'))
+			: ($existing_config['provider'] ?? '');
+		$effective_model = $has_model
+			? sanitize_text_field($request->get_param('model'))
+			: ($existing_config['model'] ?? '');
+		$system_prompt = $has_system_prompt
+			? sanitize_textarea_field($request->get_param('system_prompt'))
+			: null;
+
+		// Build step configuration data
+		$step_config_data = [];
+
+		if ($has_provider) {
+			$step_config_data['provider'] = $effective_provider;
+		}
+
+		if ($has_model) {
+			$step_config_data['model'] = $effective_model;
+
+			$provider_for_model = $has_provider ? $effective_provider : ($existing_config['provider'] ?? '');
+
+			if (!empty($provider_for_model) && !empty($effective_model)) {
+				if (!isset($step_config_data['providers'])) {
+					$step_config_data['providers'] = [];
+				}
+				if (!isset($step_config_data['providers'][$provider_for_model])) {
+					$step_config_data['providers'][$provider_for_model] = [];
+				}
+				$step_config_data['providers'][$provider_for_model]['model'] = $effective_model;
+			}
+		}
+
+		if ($has_system_prompt) {
+			$step_config_data['system_prompt'] = $system_prompt;
+		}
+
+		if ($has_enabled_tools) {
+			$enabled_tools_raw = $request->get_param('enabled_tools');
+			$sanitized_tool_ids = [];
+			if (is_array($enabled_tools_raw)) {
+				$sanitized_tool_ids = array_map('sanitize_text_field', $enabled_tools_raw);
+			}
+
+			$tools_manager = new \DataMachine\Engine\AI\Tools\ToolManager();
+			$step_config_data['enabled_tools'] = $tools_manager->save_step_tool_selections($pipeline_step_id, $sanitized_tool_ids);
+		}
+
+		if (empty($step_config_data) && !$has_api_key) {
+			return new \WP_Error(
+				'no_config_values',
+				__('No configuration values were provided.', 'datamachine'),
+				['status' => 400]
+			);
+		}
+
+		// Store API key if provided
+		if ($has_api_key && !empty($effective_provider)) {
+			$ai_api_key = sanitize_text_field($request->get_param('ai_api_key'));
+			try {
+				// Use AI HTTP Client library's filters directly to save API key
+				$all_keys = apply_filters('chubes_ai_provider_api_keys', null);
+				$all_keys[$effective_provider] = $ai_api_key;
+				apply_filters('chubes_ai_provider_api_keys', $all_keys);
+				$api_key_saved = true;
+
+				do_action('datamachine_log', 'debug', 'API key saved via AI HTTP Client filters', [
+					'provider' => $effective_provider,
+					'api_key_length' => strlen($ai_api_key)
+				]);
+			} catch (\Exception $e) {
+				do_action('datamachine_log', 'error', 'Exception when saving API key', [
+					'provider' => $effective_provider,
+					'exception' => $e->getMessage()
+				]);
+			}
+		}
 
 		// Preserve provider-specific models by merging with existing config
-		if (isset($pipeline_config[$pipeline_step_id])) {
-			$existing_config = $pipeline_config[$pipeline_step_id];
-
-			do_action('datamachine_log', 'debug', 'PipelineStepConfig: Merging with existing config', [
-				'pipeline_step_id' => $pipeline_step_id,
-				'existing_enabled_tools' => $existing_config['enabled_tools'] ?? null,
-				'new_enabled_tools' => $step_config_data['enabled_tools'] ?? null
-			]);
-
-			// Merge provider configurations
+		if (!empty($existing_config)) {
 			if (isset($existing_config['providers']) && isset($step_config_data['providers'])) {
 				$step_config_data['providers'] = array_merge(
 					$existing_config['providers'],
@@ -606,20 +654,14 @@ class PipelineSteps {
 				$step_config_data['providers'] = $existing_config['providers'];
 			}
 
-			// Merge with existing configuration
 			$pipeline_config[$pipeline_step_id] = array_merge($existing_config, $step_config_data);
-
-			do_action('datamachine_log', 'debug', 'PipelineStepConfig: Config merged', [
-				'pipeline_step_id' => $pipeline_step_id,
-				'final_enabled_tools' => $pipeline_config[$pipeline_step_id]['enabled_tools'] ?? null
-			]);
 		} else {
 			$pipeline_config[$pipeline_step_id] = $step_config_data;
 		}
 
 		// Save updated pipeline configuration
 		$success = $db_pipelines->update_pipeline($pipeline_id, [
-			'pipeline_config' => json_encode($pipeline_config)
+			'pipeline_config' => $pipeline_config
 		]);
 
 		if (!$success) {
@@ -638,10 +680,12 @@ class PipelineSteps {
 		// Trigger auto-save
 		do_action('datamachine_auto_save', $pipeline_id);
 
+		$provider_for_log = $step_config_data['provider'] ?? ($existing_config['provider'] ?? null);
+
 		do_action('datamachine_log', 'debug', 'AI step configuration saved successfully', [
 			'pipeline_step_id' => $pipeline_step_id,
 			'pipeline_id' => $pipeline_id,
-			'provider' => $ai_provider,
+			'provider' => $provider_for_log,
 			'config_keys' => array_keys($step_config_data)
 		]);
 
@@ -650,9 +694,9 @@ class PipelineSteps {
 			'message' => __('AI step configuration saved successfully', 'datamachine'),
 			'pipeline_step_id' => $pipeline_step_id,
 			'debug_info' => [
-				'api_key_saved' => !empty($ai_api_key),
+				'api_key_saved' => $api_key_saved,
 				'step_config_saved' => true,
-				'provider' => $ai_provider
+				'provider' => $provider_for_log
 			]
 		];
 	}

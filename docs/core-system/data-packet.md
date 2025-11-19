@@ -174,5 +174,4 @@ DataPacket is used throughout the codebase for standardized packet creation:
 
 **Any Step**: Any component creating or modifying data packets
 
-All handlers extending [FetchHandler](fetch-handler.md) automatically use DataPacket for packet creation.</content>
-</xai:function_call">The DataPacket class provides standardized data packet creation and management, ensuring consistent data structure and workflow processing across all pipeline components.
+All handlers extending [FetchHandler](fetch-handler.md) automatically use DataPacket for packet creation.

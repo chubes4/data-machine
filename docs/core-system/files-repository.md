@@ -214,5 +214,4 @@ The FilesRepository modular components are used by:
 - [PublishHandler Base Class](publish-handler.md) - Uses ImageValidator for validation
 - [Engine Actions](../engine/actions.md) - Uses FileCleanup for retention policy
 
-The modular architecture allows individual components to be used independently throughout the system.</content>
-</xai:function_call">The FilesRepository provides modular file handling components for the Data Machine system, including storage, validation, cleanup, and remote downloading capabilities.
+The modular architecture allows individual components to be used independently throughout the system.

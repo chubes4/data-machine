@@ -261,7 +261,7 @@ class ToolManager {
             $data[$tool_id] = [
                 'config' => $tool_config,
                 'configured' => $this->is_tool_configured($tool_id),
-                'enabled' => $this->is_globally_enabled($tool_id),
+                'globally_enabled' => $this->is_globally_enabled($tool_id),
                 'requires_config' => $this->requires_configuration($tool_id)
             ];
         }
@@ -279,12 +279,14 @@ class ToolManager {
         $formatted = [];
 
         foreach ($tools as $tool_id => $tool_config) {
+            $is_globally_enabled = $this->is_globally_enabled($tool_id);
+
             $formatted[$tool_id] = [
                 'label' => $tool_config['label'] ?? ucfirst(str_replace('_', ' ', $tool_id)),
                 'description' => $tool_config['description'] ?? '',
                 'requires_config' => $this->requires_configuration($tool_id),
                 'configured' => $this->is_tool_configured($tool_id),
-                'enabled' => $this->is_globally_enabled($tool_id)
+                'globally_enabled' => $is_globally_enabled
             ];
         }
 

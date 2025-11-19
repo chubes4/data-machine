@@ -6,7 +6,8 @@ The SettingsHandler classes provide auto-sanitization and standardized field man
 
 ## Architecture
 
-**Base Class**: `/inc/Core/Steps/SettingsHandler.php`
+**Base Class**: `/inc/Core/Steps/Settings/SettingsHandler.php`
+**Display Service**: `/inc/Core/Steps/Settings/SettingsDisplayService.php`
 **Fetch Settings**: `/inc/Core/Steps/Fetch/Handlers/FetchHandlerSettings.php`
 **Publish Settings**: `/inc/Core/Steps/Publish/Handlers/PublishHandlerSettings.php`
 **Since**: 0.2.1
@@ -238,5 +239,4 @@ $system_defaults = ['status' => 'publish'];
 - **Code Deduplication**: Common fields defined once, reused everywhere
 - **Consistency**: Standardized field definitions across all handlers
 - **Security**: Built-in sanitization prevents XSS and injection attacks
-- **Maintainability**: Centralized field management and validation</content>
-</xai:function_call">The SettingsHandler base classes provide auto-sanitization and standardized field management for all handler settings, eliminating code duplication and ensuring consistent field handling.
+- **Maintainability**: Centralized field management and validation

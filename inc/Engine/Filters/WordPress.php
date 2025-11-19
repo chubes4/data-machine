@@ -53,9 +53,9 @@ function datamachine_register_wordpress_filters() {
                 if ($display_name) {
                     $display_value = $display_name;
                 }
-            } elseif (strpos($setting_key, 'taxonomy_') === 0 && strpos($setting_key, '_filter') !== false && is_numeric($current_value) && $current_value > 0) {
-                // Convert taxonomy filter term IDs to names
-                $taxonomy_name = str_replace(['taxonomy_', '_filter'], '', $setting_key);
+            } elseif (strpos($setting_key, 'taxonomy_') === 0 && (strpos($setting_key, '_filter') !== false || strpos($setting_key, '_selection') !== false) && is_numeric($current_value) && $current_value > 0) {
+                // Convert taxonomy term IDs to names (both _filter and _selection fields)
+                $taxonomy_name = str_replace(['taxonomy_', '_filter', '_selection'], '', $setting_key);
                 $term_name = apply_filters('datamachine_wordpress_term_name', null, $current_value, $taxonomy_name);
                 if ($term_name) {
                     $display_value = $term_name;

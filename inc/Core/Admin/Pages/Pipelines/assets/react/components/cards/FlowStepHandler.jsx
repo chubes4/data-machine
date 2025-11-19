@@ -15,6 +15,7 @@ import { usePipelineContext } from '../../context/PipelineContext';
  * @param {Object} props - Component props
  * @param {string} props.handlerSlug - Handler slug
  * @param {Object} props.handlerConfig - Handler configuration settings
+ * @param {Array} props.settingsDisplay - Backend-generated display values
  * @param {string} props.stepType - Step type (fetch, ai, publish, update)
  * @param {Function} props.onConfigure - Configure handler callback
  * @returns {React.ReactElement} Flow step handler display
@@ -22,6 +23,7 @@ import { usePipelineContext } from '../../context/PipelineContext';
 export default function FlowStepHandler( {
 	handlerSlug,
 	handlerConfig,
+	settingsDisplay,
 	stepType,
 	onConfigure,
 } ) {
@@ -44,12 +46,19 @@ export default function FlowStepHandler( {
 		);
 	}
 
-	// Build unified display settings from handler configuration
-	// Global defaults are now merged server-side via datamachine_apply_global_defaults filter
+	// Build unified display settings from backend-generated display values
 	const displaySettings = {};
 
-	// Add handler-configured settings (includes merged global defaults)
-	if ( handlerConfig ) {
+	if ( settingsDisplay && settingsDisplay.length > 0 ) {
+		// Use backend-generated display values with proper formatting
+		settingsDisplay.forEach( ( setting ) => {
+			displaySettings[ setting.key ] = {
+				label: setting.label,
+				value: setting.display_value || setting.value,
+			};
+		} );
+	} else if ( handlerConfig ) {
+		// Fallback to raw values if no display data available
 		Object.entries( handlerConfig ).forEach( ( [ key, value ] ) => {
 			displaySettings[ key ] = {
 				label: slugToLabel( key ),

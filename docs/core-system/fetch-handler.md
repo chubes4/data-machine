@@ -163,5 +163,4 @@ All fetch handlers extend this base class:
 - [Google Sheets Handler](../handlers/fetch/google-sheets-fetch.md)
 - [Files Handler](../handlers/fetch/files.md)
 
-See [Fetch Handlers Overview](../handlers/fetch/README.md) for comparison.</content>
-</xai:function_call">The FetchHandler base class provides standardized functionality for data fetching operations, including deduplication, engine data storage, and consistent response patterns.
+See [Fetch Handlers Overview](../handlers/fetch/handlers-overview.md) for comparison.

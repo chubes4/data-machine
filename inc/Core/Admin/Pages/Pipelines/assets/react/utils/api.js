@@ -6,6 +6,7 @@
  */
 
 import apiFetch from '@wordpress/api-fetch';
+import { addQueryArgs } from '@wordpress/url';
 
 /**
  * Get REST API configuration from WordPress globals
@@ -19,23 +20,28 @@ const getConfig = () => {
 };
 
 /**
- * Make REST API request with error handling
+ * Core API Request Handler
  *
- * @param {string} path - API endpoint path
- * @param {Object} options - Request options (method, data, etc.)
- * @returns {Promise<Object>} Standardized response: {success, data, message}
+ * @param {string} path - Endpoint path (relative to namespace)
+ * @param {string} method - HTTP method
+ * @param {Object} data - Request body data (for JSON)
+ * @param {Object} params - Query parameters
+ * @param {Object} extraOptions - Additional fetch options (headers, body, etc.)
  */
-const apiRequest = async ( path, options = {} ) => {
+const request = async ( path, method = 'GET', data = undefined, params = {}, extraOptions = {} ) => {
 	const config = getConfig();
+	const endpoint = addQueryArgs( `/${ config.restNamespace }${ path }`, params );
 
 	try {
 		const response = await apiFetch( {
-			path: `/${ config.restNamespace }${ path }`,
-			method: options.method || 'GET',
-			data: options.data || undefined,
+			path: endpoint,
+			method,
+			data,
 			headers: {
 				'X-WP-Nonce': config.restNonce,
+				...extraOptions.headers,
 			},
+			...extraOptions,
 		} );
 
 		return {
@@ -44,7 +50,7 @@ const apiRequest = async ( path, options = {} ) => {
 			message: response.message || '',
 		};
 	} catch ( error ) {
-		console.error( 'API Request Error:', error );
+		console.error( `API Request Error [${ method } ${ path }]:`, error );
 
 		return {
 			success: false,
@@ -52,6 +58,28 @@ const apiRequest = async ( path, options = {} ) => {
 			message: error.message || 'An error occurred',
 		};
 	}
+};
+
+/**
+ * API Client Methods
+ */
+const client = {
+	get: ( path, params = {} ) => request( path, 'GET', undefined, params ),
+	post: ( path, data ) => request( path, 'POST', data ),
+	put: ( path, data ) => request( path, 'PUT', data ),
+	patch: ( path, data ) => request( path, 'PATCH', data ),
+	delete: ( path ) => request( path, 'DELETE' ),
+	upload: async ( path, file, additionalData = {} ) => {
+		const formData = new FormData();
+		formData.append( 'file', file );
+		Object.keys( additionalData ).forEach( ( key ) =>
+			formData.append( key, additionalData[ key ] )
+		);
+
+		return request( path, 'POST', undefined, {}, {
+			body: formData,
+		} );
+	},
 };
 
 /**
@@ -65,10 +93,7 @@ const apiRequest = async ( path, options = {} ) => {
  * @returns {Promise<Object>} Pipeline data
  */
 export const fetchPipelines = async ( pipelineId = null ) => {
-	const path = pipelineId
-		? `/pipelines?pipeline_id=${ pipelineId }`
-		: '/pipelines';
-	return await apiRequest( path );
+	return await client.get( '/pipelines', pipelineId ? { pipeline_id: pipelineId } : {} );
 };
 
 /**
@@ -78,10 +103,7 @@ export const fetchPipelines = async ( pipelineId = null ) => {
  * @returns {Promise<Object>} Created pipeline data
  */
 export const createPipeline = async ( name ) => {
-	return await apiRequest( '/pipelines', {
-		method: 'POST',
-		data: { pipeline_name: name },
-	} );
+	return await client.post( '/pipelines', { pipeline_name: name } );
 };
 
 /**
@@ -92,10 +114,7 @@ export const createPipeline = async ( name ) => {
  * @returns {Promise<Object>} Updated pipeline data
  */
 export const updatePipelineTitle = async ( pipelineId, name ) => {
-	return await apiRequest( `/pipelines/${ pipelineId }`, {
-		method: 'PATCH',
-		data: { pipeline_name: name },
-	} );
+	return await client.patch( `/pipelines/${ pipelineId }`, { pipeline_name: name } );
 };
 
 /**
@@ -105,9 +124,7 @@ export const updatePipelineTitle = async ( pipelineId, name ) => {
  * @returns {Promise<Object>} Deletion confirmation
  */
 export const deletePipeline = async ( pipelineId ) => {
-	return await apiRequest( `/pipelines/${ pipelineId }`, {
-		method: 'DELETE',
-	} );
+	return await client.delete( `/pipelines/${ pipelineId }` );
 };
 
 /**
@@ -123,15 +140,10 @@ export const addPipelineStep = async (
 	stepType,
 	executionOrder
 ) => {
-	return await apiRequest( `/pipelines/${ pipelineId }/steps`, {
-		method: 'POST',
-		data: {
-			step_type: stepType,
-			execution_order: executionOrder,
-			label: `${
-				stepType.charAt( 0 ).toUpperCase() + stepType.slice( 1 )
-			} Step`,
-		},
+	return await client.post( `/pipelines/${ pipelineId }/steps`, {
+		step_type: stepType,
+		execution_order: executionOrder,
+		label: `${ stepType.charAt( 0 ).toUpperCase() + stepType.slice( 1 ) } Step`,
 	} );
 };
 
@@ -143,9 +155,7 @@ export const addPipelineStep = async (
  * @returns {Promise<Object>} Deletion confirmation
  */
 export const deletePipelineStep = async ( pipelineId, stepId ) => {
-	return await apiRequest( `/pipelines/${ pipelineId }/steps/${ stepId }`, {
-		method: 'DELETE',
-	} );
+	return await client.delete( `/pipelines/${ pipelineId }/steps/${ stepId }` );
 };
 
 /**
@@ -161,10 +171,7 @@ export const reorderPipelineSteps = async ( pipelineId, steps ) => {
 		execution_order: index,
 	} ) );
 
-	return await apiRequest( `/pipelines/${ pipelineId }/steps/reorder`, {
-		method: 'PUT',
-		data: { step_order: stepOrder },
-	} );
+	return await client.put( `/pipelines/${ pipelineId }/steps/reorder`, { step_order: stepOrder } );
 };
 
 /**
@@ -188,16 +195,13 @@ export const updateSystemPrompt = async (
 	stepType = 'ai',
 	pipelineId = null
 ) => {
-	return await apiRequest( `/pipelines/steps/${ stepId }/config`, {
-		method: 'PUT',
-		data: {
-			step_type: stepType,
-			pipeline_id: pipelineId,
-			provider: provider,
-			model: model,
-			system_prompt: prompt,
-			enabled_tools: enabledTools,
-		},
+	return await client.put( `/pipelines/steps/${ stepId }/config`, {
+		step_type: stepType,
+		pipeline_id: pipelineId,
+		provider: provider,
+		model: model,
+		system_prompt: prompt,
+		enabled_tools: enabledTools,
 	} );
 };
 
@@ -212,7 +216,7 @@ export const updateSystemPrompt = async (
  * @returns {Promise<Object>} Array of flows
  */
 export const fetchFlows = async ( pipelineId ) => {
-	return await apiRequest( `/flows?pipeline_id=${ pipelineId }` );
+	return await client.get( '/flows', { pipeline_id: pipelineId } );
 };
 
 /**
@@ -222,7 +226,7 @@ export const fetchFlows = async ( pipelineId ) => {
  * @returns {Promise<Object>} Flow data
  */
 export const fetchFlow = async ( flowId ) => {
-	return await apiRequest( `/flows/${ flowId }` );
+	return await client.get( `/flows/${ flowId }` );
 };
 
 /**
@@ -233,12 +237,9 @@ export const fetchFlow = async ( flowId ) => {
  * @returns {Promise<Object>} Created flow data
  */
 export const createFlow = async ( pipelineId, flowName ) => {
-	return await apiRequest( '/flows', {
-		method: 'POST',
-		data: {
-			pipeline_id: pipelineId,
-			flow_name: flowName,
-		},
+	return await client.post( '/flows', {
+		pipeline_id: pipelineId,
+		flow_name: flowName,
 	} );
 };
 
@@ -250,10 +251,7 @@ export const createFlow = async ( pipelineId, flowName ) => {
  * @returns {Promise<Object>} Updated flow data
  */
 export const updateFlowTitle = async ( flowId, name ) => {
-	return await apiRequest( `/flows/${ flowId }`, {
-		method: 'PATCH',
-		data: { flow_name: name },
-	} );
+	return await client.patch( `/flows/${ flowId }`, { flow_name: name } );
 };
 
 /**
@@ -263,9 +261,7 @@ export const updateFlowTitle = async ( flowId, name ) => {
  * @returns {Promise<Object>} Deletion confirmation
  */
 export const deleteFlow = async ( flowId ) => {
-	return await apiRequest( `/flows/${ flowId }`, {
-		method: 'DELETE',
-	} );
+	return await client.delete( `/flows/${ flowId }` );
 };
 
 /**
@@ -275,9 +271,7 @@ export const deleteFlow = async ( flowId ) => {
  * @returns {Promise<Object>} Duplicated flow data
  */
 export const duplicateFlow = async ( flowId ) => {
-	return await apiRequest( `/flows/${ flowId }/duplicate`, {
-		method: 'POST',
-	} );
+	return await client.post( `/flows/${ flowId }/duplicate` );
 };
 
 /**
@@ -287,10 +281,7 @@ export const duplicateFlow = async ( flowId ) => {
  * @returns {Promise<Object>} Execution confirmation
  */
 export const runFlow = async ( flowId ) => {
-	return await apiRequest( '/execute', {
-		method: 'POST',
-		data: { flow_id: flowId },
-	} );
+	return await client.post( '/execute', { flow_id: flowId } );
 };
 
 /**
@@ -310,14 +301,11 @@ export const updateFlowHandler = async (
 	pipelineId,
 	stepType
 ) => {
-	return await apiRequest( `/flows/steps/${ flowStepId }/handler`, {
-		method: 'PUT',
-		data: {
-			handler_slug: handlerSlug,
-			settings: settings,
-			pipeline_id: pipelineId,
-			step_type: stepType,
-		},
+	return await client.put( `/flows/steps/${ flowStepId }/handler`, {
+		handler_slug: handlerSlug,
+		pipeline_id: pipelineId,
+		step_type: stepType,
+		...settings,
 	} );
 };
 
@@ -329,10 +317,7 @@ export const updateFlowHandler = async (
  * @returns {Promise<Object>} Updated flow step data
  */
 export const updateUserMessage = async ( flowStepId, message ) => {
-	return await apiRequest( `/flows/steps/${ flowStepId }/user-message`, {
-		method: 'PATCH',
-		data: { user_message: message },
-	} );
+	return await client.patch( `/flows/steps/${ flowStepId }/user-message`, { user_message: message } );
 };
 
 /**
@@ -352,13 +337,10 @@ export const updateFlowSchedule = async ( flowId, schedulingConfig ) => {
 		action = 'update'; // Setting to manual is an update action
 	}
 
-	return await apiRequest( '/schedule', {
-		method: 'POST',
-		data: {
-			flow_id: flowId,
-			action: action,
-			interval: interval === 'manual' ? null : interval,
-		},
+	return await client.post( '/schedule', {
+		flow_id: flowId,
+		action: action,
+		interval: interval === 'manual' ? null : interval,
 	} );
 };
 
@@ -373,8 +355,10 @@ export const updateFlowSchedule = async ( flowId, schedulingConfig ) => {
  * @returns {Promise<Object>} Export data with CSV content
  */
 export const exportPipelines = async ( pipelineIds ) => {
-	const ids = pipelineIds.join( ',' );
-	return await apiRequest( `/pipelines?format=csv&ids=${ ids }` );
+	return await client.get( '/pipelines', {
+		format: 'csv',
+		ids: pipelineIds.join( ',' )
+	} );
 };
 
 /**
@@ -384,13 +368,10 @@ export const exportPipelines = async ( pipelineIds ) => {
  * @returns {Promise<Object>} Import result with created pipeline IDs
  */
 export const importPipelines = async ( csvContent ) => {
-	return await apiRequest( '/pipelines', {
-		method: 'POST',
-		data: {
-			batch_import: true,
-			format: 'csv',
-			data: csvContent,
-		},
+	return await client.post( '/pipelines', {
+		batch_import: true,
+		format: 'csv',
+		data: csvContent,
 	} );
 };
 
@@ -405,7 +386,7 @@ export const importPipelines = async ( csvContent ) => {
  * @returns {Promise<Object>} Array of context files
  */
 export const fetchContextFiles = async ( pipelineId ) => {
-	return await apiRequest( `/files?pipeline_id=${ pipelineId }` );
+	return await client.get( '/files', { pipeline_id: pipelineId } );
 };
 
 /**
@@ -416,42 +397,7 @@ export const fetchContextFiles = async ( pipelineId ) => {
  * @returns {Promise<Object>} Upload confirmation
  */
 export const uploadContextFile = async ( pipelineId, file ) => {
-	const config = getConfig();
-	const formData = new FormData();
-	formData.append( 'file', file );
-	formData.append( 'pipeline_id', pipelineId );
-
-	try {
-		const response = await fetch(
-			`/wp-json/${ config.restNamespace }/files`,
-			{
-				method: 'POST',
-				headers: {
-					'X-WP-Nonce': config.restNonce,
-				},
-				body: formData,
-			}
-		);
-
-		const data = await response.json();
-
-		if ( ! response.ok ) {
-			throw new Error( data.message || 'Upload failed' );
-		}
-
-		return {
-			success: true,
-			data: data,
-			message: data.message || '',
-		};
-	} catch ( error ) {
-		console.error( 'Upload error:', error );
-		return {
-			success: false,
-			data: null,
-			message: error.message || 'An error occurred during upload',
-		};
-	}
+	return await client.upload( '/files', file, { pipeline_id: pipelineId } );
 };
 
 /**
@@ -461,9 +407,7 @@ export const uploadContextFile = async ( pipelineId, file ) => {
  * @returns {Promise<Object>} Deletion confirmation
  */
 export const deleteContextFile = async ( filename ) => {
-	return await apiRequest( `/files/${ filename }`, {
-		method: 'DELETE',
-	} );
+	return await client.delete( `/files/${ filename }` );
 };
 
 /**
@@ -473,7 +417,5 @@ export const deleteContextFile = async ( filename ) => {
  * @returns {Promise<Object>} Handler details including basic info, settings schema, and AI tool definition
  */
 export const fetchHandlerDetails = async ( handlerSlug ) => {
-	return await apiRequest( `/handlers/${ handlerSlug }`, {
-		method: 'GET',
-	} );
+	return await client.get( `/handlers/${ handlerSlug }` );
 };

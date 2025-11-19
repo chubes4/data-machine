@@ -510,47 +510,6 @@ $data = apply_filters('datamachine_data_packet', $data, $packet_data, $flow_step
 
 **Return**: Array with 'files' key containing repository instance
 
-## Settings Filters
-
-### `datamachine_enabled_settings`
-
-**Purpose**: Control which admin settings tabs are displayed
-
-**Parameters**:
-- `$settings` (array) - Array of settings tabs
-
-**Return**: Modified array of enabled settings
-
-**Usage Example**:
-```php
-add_filter('datamachine_enabled_settings', function($settings) {
-    // Remove specific settings tabs
-    unset($settings['advanced']);
-    return $settings;
-});
-```
-
-### `datamachine_apply_global_defaults`
-
-**Purpose**: Determine whether global defaults apply to specific handlers
-
-**Parameters**:
-- `$apply` (bool) - Whether to apply defaults (default: true)
-- `$handler_slug` (string) - Handler identifier
-
-**Return**: Boolean indicating whether to apply global defaults
-
-**Usage Example**:
-```php
-add_filter('datamachine_apply_global_defaults', function($apply, $handler_slug) {
-    // Skip global defaults for specific handler
-    if ($handler_slug === 'custom_handler') {
-        return false;
-    }
-    return $apply;
-}, 10, 2);
-```
-
 ## Directive System Filters
 
 ### `datamachine_global_directives`

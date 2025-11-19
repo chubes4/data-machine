@@ -5,44 +5,53 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\GoogleSheets;
 
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Google Sheets handler registration and configuration.
+ *
+ * Uses HandlerRegistrationTrait to provide standardized handler registration
+ * with OAuth 2.0 authentication support and AI tool integration.
+ *
+ * @since 0.2.2
+ */
+class GoogleSheetsFilters {
+    use HandlerRegistrationTrait;
+
+    /**
+     * Register Google Sheets publishing handler with all required filters.
+     */
+    public static function register(): void {
+        self::registerHandler(
+            'googlesheets_output',
+            'publish',
+            GoogleSheets::class,
+            __('Google Sheets', 'datamachine'),
+            __('Append structured data to Google Sheets for analytics, reporting, and team collaboration', 'datamachine'),
+            true,
+            GoogleSheetsAuth::class,
+            GoogleSheetsSettings::class,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'googlesheets_output') {
+                    $tools['googlesheets_append'] = datamachine_get_googlesheets_tool($handler_config);
+                }
+                return $tools;
+            }
+        );
+    }
+}
+
+/**
+ * Register Google Sheets publishing handler and authentication filters.
+ *
+ * @since 0.1.0
+ */
 function datamachine_register_googlesheets_filters() {
-    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
-        if ($step_type === null || $step_type === 'publish') {
-            $handlers['googlesheets_output'] = [
-                'type' => 'publish',
-                'class' => GoogleSheets::class,
-                'label' => __('Google Sheets', 'datamachine'),
-                'description' => __('Append structured data to Google Sheets for analytics, reporting, and team collaboration', 'datamachine'),
-                'requires_auth' => true
-            ];
-        }
-        return $handlers;
-    }, 10, 2);
-
-    add_filter('datamachine_auth_providers', function($providers, $step_type = null) {
-        if ($step_type === null || $step_type === 'publish') {
-            $providers['googlesheets_output'] = new GoogleSheetsAuth();
-        }
-        return $providers;
-    }, 10, 2);
-
-    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
-        if ($handler_slug === null || $handler_slug === 'googlesheets_output') {
-            $all_settings['googlesheets_output'] = new GoogleSheetsSettings();
-        }
-        return $all_settings;
-    }, 10, 2);
-
-    add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
-        if ($handler_slug === 'googlesheets_output') {
-            $tools['googlesheets_append'] = datamachine_get_googlesheets_tool($handler_config);
-        }
-        return $tools;
-    }, 10, 3);
+    GoogleSheetsFilters::register();
 }
 
 function datamachine_get_googlesheets_tool(array $handler_config = []): array {

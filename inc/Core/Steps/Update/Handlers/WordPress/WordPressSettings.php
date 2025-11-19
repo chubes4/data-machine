@@ -11,7 +11,7 @@
 
 namespace DataMachine\Core\Steps\Update\Handlers\WordPress;
 
-use DataMachine\Core\Steps\SettingsHandler;
+use DataMachine\Core\Steps\Settings\SettingsHandler;
 use DataMachine\Core\WordPress\WordPressSettingsHandler;
 
 defined('ABSPATH') || exit;

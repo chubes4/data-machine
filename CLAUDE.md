@@ -16,7 +16,8 @@ Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and mult
 - **Step** (`/inc/Core/Steps/Step.php`) - Abstract base for all step types with unified payload handling, validation, logging
 - **FetchHandler** (`/inc/Core/Steps/Fetch/Handlers/FetchHandler.php`) - Base for fetch handlers with deduplication, engine data storage, filtering, logging
 - **PublishHandler** (`/inc/Core/Steps/Publish/Handlers/PublishHandler.php`) - Base for publish handlers with engine data retrieval, image validation, response formatting
-- **SettingsHandler** (`/inc/Core/Steps/SettingsHandler.php`) - Base for all handler settings with auto-sanitization based on field schema
+- **SettingsHandler** (`/inc/Core/Steps/Settings/SettingsHandler.php`) - Base for all handler settings with auto-sanitization based on field schema
+- **SettingsDisplayService** (`/inc/Core/Steps/Settings/SettingsDisplayService.php`) - Settings display logic with smart formatting
 - **PublishHandlerSettings** (`/inc/Core/Steps/Publish/Handlers/PublishHandlerSettings.php`) - Base settings for publish handlers with common fields
 - **FetchHandlerSettings** (`/inc/Core/Steps/Fetch/Handlers/FetchHandlerSettings.php`) - Base settings for fetch handlers with common fields
 - **DataPacket** (`/inc/Core/DataPacket.php`) - Standardized data packet creation replacing scattered array construction
@@ -36,35 +37,35 @@ Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and mult
 - **WordPressSettingsHandler** - Shared WordPress settings fields
 - **WordPressFilters** - Service discovery registration
 
-**Self-Registration**: Components auto-register via `*Filters.php` files loaded through composer.json:
+**Self-Registration**: Components auto-register via `*Filters.php` files loaded through composer.json using the HandlerRegistrationTrait:
 ```php
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
+class TwitterFilters {
+    use HandlerRegistrationTrait;
+
+    public static function register(): void {
+        self::registerHandler(
+            'twitter',
+            'publish',
+            Twitter::class,
+            __('Twitter', 'datamachine'),
+            __('Post content to Twitter with media support', 'datamachine'),
+            true,
+            TwitterAuth::class,
+            TwitterSettings::class,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'twitter') {
+                    $tools['twitter_publish'] = datamachine_get_twitter_tool($handler_config);
+                }
+                return $tools;
+            }
+        );
+    }
+}
+
 function datamachine_register_twitter_filters() {
-    add_filter('datamachine_handlers', function($handlers) {
-        $handlers['twitter'] = [
-            'type' => 'publish',
-            'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
-            'label' => __('Twitter', 'data-machine'),
-            'description' => __('Post content to Twitter with media support', 'data-machine')
-        ];
-        return $handlers;
-    });
-    add_filter('datamachine_auth_providers', function($providers) {
-        $providers['twitter'] = new TwitterAuth();
-        return $providers;
-    });
-    add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
-        if ($handler_slug === 'twitter') {
-            $tools['twitter_publish'] = [
-                'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter',
-                'method' => 'handle_tool_call',
-                'handler' => 'twitter',
-                'description' => 'Post content to Twitter (280 character limit)',
-                'parameters' => ['content' => ['type' => 'string', 'required' => true]],
-                'handler_config' => $handler_config
-            ];
-        }
-        return $tools;
-    }, 10, 3);
+    TwitterFilters::register();
 }
 datamachine_register_twitter_filters(); // Auto-execute at file load
 ```
@@ -173,7 +174,7 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 | Bluesky | App Password | 300 chars | Media upload, AT Protocol integration |
 | Threads | OAuth2 | 500 chars | Media upload |
 | Facebook | OAuth2 | No limit | Comment mode, link handling |
-| WordPress | Required Config | No limit | Modular post creation with `FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`, Gutenberg blocks, configuration hierarchy (system defaults override handler config) |
+| WordPress | Required Config | No limit | Modular post creation with `FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`, Gutenberg blocks |
 | Google Sheets | OAuth2 | No limit | Row insertion |
 
 | **Update** | **Auth** | **Features** |
@@ -251,7 +252,7 @@ $image_url = $engine_data['image_url'] ?? null;
 
 ## WordPress Publish Handler Architecture
 
-**Modular Components**: Specialized processing modules with configuration hierarchy (system defaults override handler config):
+**Modular Components**: Specialized processing modules:
 
 ### Core Components
 - **FeaturedImageHandler**: Image processing, validation, media library integration
@@ -327,7 +328,6 @@ $handler_settings = $flow_step_config['handler_config'];
 ## Settings
 
 **Controls**: Engine Mode (headless - disables admin pages only), admin page toggles, tool toggles, site context toggle, global system prompt, job data cleanup on failure
-**WordPress Defaults**: Site-wide post type, taxonomy, author, status defaults
 **Tool Configuration**: Modal setup for API keys and service configurations
 **Site Context**: Automatic WordPress context injection (enabled by default)
 **Job Data Cleanup**: Clean up job data files on failure (enabled by default, disable for debugging failed jobs)
@@ -337,10 +337,6 @@ $handler_settings = $flow_step_config['handler_config'];
 $settings = datamachine_get_data_machine_settings();
 $enabled_pages = datamachine_get_enabled_admin_pages();
 $enabled_tools = datamachine_get_enabled_general_tools();
-
-// Filter-based configuration handling
-apply_filters('datamachine_enabled_settings', $fields, $handler_slug, $step_type, $context);
-apply_filters('datamachine_apply_global_defaults', $current_settings, $handler_slug, $step_type);
 ```
 
 

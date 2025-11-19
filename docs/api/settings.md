@@ -193,7 +193,6 @@ add_action('datamachine_save_tool_config', function($tool_id, $config_data) {
 **Settings**:
 - Tool configurations
 - Global settings
-- WordPress defaults
 
 **All**:
 - Complete cache reset including:

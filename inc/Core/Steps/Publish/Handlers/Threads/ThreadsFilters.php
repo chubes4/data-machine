@@ -5,44 +5,53 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Threads;
 
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Threads handler registration and configuration.
+ *
+ * Uses HandlerRegistrationTrait to provide standardized handler registration
+ * with OAuth 2.0 authentication support and AI tool integration.
+ *
+ * @since 0.2.2
+ */
+class ThreadsFilters {
+    use HandlerRegistrationTrait;
+
+    /**
+     * Register Threads publishing handler with all required filters.
+     */
+    public static function register(): void {
+        self::registerHandler(
+            'threads',
+            'publish',
+            Threads::class,
+            __('Threads', 'datamachine'),
+            __('Publish content to Threads (Meta\'s Twitter alternative)', 'datamachine'),
+            true,
+            ThreadsAuth::class,
+            'DataMachine\\Core\\Steps\\Publish\\Handlers\\PublishHandlerSettings',
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'threads') {
+                    $tools['threads_publish'] = datamachine_get_threads_tool($handler_config);
+                }
+                return $tools;
+            }
+        );
+    }
+}
+
+/**
+ * Register Threads publishing handler and authentication filters.
+ *
+ * @since 0.1.0
+ */
 function datamachine_register_threads_filters() {
-    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
-        if ($step_type === null || $step_type === 'publish') {
-            $handlers['threads'] = [
-                'type' => 'publish',
-                'class' => Threads::class,
-                'label' => __('Threads', 'datamachine'),
-                'description' => __('Publish content to Threads (Meta\'s Twitter alternative)', 'datamachine'),
-                'requires_auth' => true
-            ];
-        }
-        return $handlers;
-    }, 10, 2);
-
-    add_filter('datamachine_auth_providers', function($providers, $step_type = null) {
-        if ($step_type === null || $step_type === 'publish') {
-            $providers['threads'] = new ThreadsAuth();
-        }
-        return $providers;
-    }, 10, 2);
-
-    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
-        if ($handler_slug === null || $handler_slug === 'threads') {
-            $all_settings['threads'] = 'DataMachine\\Core\\Steps\\Publish\\Handlers\\PublishHandlerSettings';
-        }
-        return $all_settings;
-    }, 10, 2);
-
-    add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
-        if ($handler_slug === 'threads') {
-            $tools['threads_publish'] = datamachine_get_threads_tool($handler_config);
-        }
-        return $tools;
-    }, 10, 3);
+    ThreadsFilters::register();
 }
 
 /**

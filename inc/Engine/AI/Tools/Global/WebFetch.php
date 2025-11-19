@@ -8,16 +8,13 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+use \DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+
 class WebFetch {
 
     public function __construct() {
-        add_filter('datamachine_tool_success_message', [$this, 'format_success_message'], 10, 4);
-        $this->register_configuration();
-    }
-
-    private function register_configuration() {
-        add_filter('datamachine_global_tools', [$this, 'register_tool'], 10, 1);
-        add_filter('datamachine_tool_configured', [$this, 'check_configuration'], 10, 2);
+        $this->registerSuccessMessageHandler('web_fetch');
+        $this->registerGlobalTool('web_fetch', $this->getToolDefinition());
     }
 
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
@@ -106,8 +103,13 @@ class WebFetch {
         ];
     }
 
-    public function register_tool($tools) {
-        $tools['web_fetch'] = [
+    /**
+     * Get Web Fetch tool definition.
+     *
+     * @return array Tool definition array
+     */
+    private function getToolDefinition(): array {
+        return [
             'class' => __CLASS__,
             'method' => 'handle_tool_call',
             'description' => 'Fetch and extract readable content from any HTTP/HTTPS web page URL (50K character limit). Use when you have a specific URL to retrieve full article content. Automatically converts HTML to readable text. Best for single-page content analysis after discovery via Google Search.',
@@ -120,8 +122,6 @@ class WebFetch {
                 ]
             ]
         ];
-
-        return $tools;
     }
 
     public static function is_configured(): bool {

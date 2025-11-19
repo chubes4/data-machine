@@ -1,0 +1,88 @@
+<?php
+/**
+ * Handler Registration Trait
+ *
+ * Provides standardized handler registration functionality to eliminate
+ * boilerplate code across all handler filter registration files.
+ *
+ * @package DataMachine\Core\Steps
+ * @since 0.2.2
+ */
+
+namespace DataMachine\Core\Steps;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+trait HandlerRegistrationTrait {
+    /**
+     * Register a handler with all required filters.
+     *
+     * Provides a standardized way to register handlers, eliminating
+     * repetitive filter registration code across all handlers.
+     *
+     * @param string $slug Handler slug identifier
+     * @param string $type Handler type (publish, fetch, update)
+     * @param string $class Handler class name
+     * @param string $label Display label
+     * @param string $description Handler description
+     * @param bool $requiresAuth Whether handler requires authentication
+     * @param string|null $authClass Authentication class name
+     * @param string|null $settingsClass Settings class name
+     * @param callable|null $aiToolCallback AI tool registration callback
+     */
+    protected static function registerHandler(
+        string $slug,
+        string $type,
+        string $class,
+        string $label,
+        string $description,
+        bool $requiresAuth = false,
+        ?string $authClass = null,
+        ?string $settingsClass = null,
+        ?callable $aiToolCallback = null
+    ): void {
+        // Handler registration
+        add_filter('datamachine_handlers', function($handlers, $step_type = null)
+            use ($slug, $type, $class, $label, $description, $requiresAuth) {
+            if ($step_type === null || $step_type === $type) {
+                $handlers[$slug] = [
+                    'type' => $type,
+                    'class' => $class,
+                    'label' => $label,
+                    'description' => $description,
+                    'requires_auth' => $requiresAuth
+                ];
+            }
+            return $handlers;
+        }, 10, 2);
+
+        // Auth provider registration
+        if ($authClass && $requiresAuth) {
+            add_filter('datamachine_auth_providers', function($providers, $step_type = null)
+                use ($slug, $authClass, $type) {
+                if ($step_type === null || $step_type === $type) {
+                    $providers[$slug] = new $authClass();
+                }
+                return $providers;
+            }, 10, 2);
+        }
+
+        // Settings registration
+        if ($settingsClass) {
+            add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null)
+                use ($slug, $settingsClass) {
+                if ($handler_slug === null || $handler_slug === $slug) {
+                    $all_settings[$slug] = new $settingsClass();
+                }
+                return $all_settings;
+            }, 10, 2);
+        }
+
+        // AI tools registration
+        if ($aiToolCallback) {
+            add_filter('chubes_ai_tools', $aiToolCallback, 10, 3);
+        }
+    }
+}

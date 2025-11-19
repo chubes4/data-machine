@@ -15,9 +15,40 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPressMedia;
 
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
+}
+
+/**
+ * WordPress Media handler registration and configuration.
+ *
+ * Uses HandlerRegistrationTrait to provide standardized handler registration
+ * for sourcing attached images and media from WordPress media library.
+ *
+ * @since 0.2.2
+ */
+class WordPressMediaFilters {
+    use HandlerRegistrationTrait;
+
+    /**
+     * Register WordPress Media fetch handler with all required filters.
+     */
+    public static function register(): void {
+        self::registerHandler(
+            'wordpress_media',
+            'fetch',
+            WordPressMedia::class,
+            __('WordPress Media', 'datamachine'),
+            __('Source attached images and media from WordPress media library', 'datamachine'),
+            false,
+            null,
+            WordPressMediaSettings::class,
+            null
+        );
+    }
 }
 
 /**
@@ -29,29 +60,7 @@ if (!defined('ABSPATH')) {
  * @since 1.0.0
  */
 function datamachine_register_wordpress_media_fetch_filters() {
-
-    // Handler registration - WordPress Media declares itself as fetch handler (pure discovery mode)
-    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
-        if ($step_type === null || $step_type === 'fetch') {
-            $handlers['wordpress_media'] = [
-                'type' => 'fetch',
-                'class' => WordPressMedia::class,
-                'label' => __('WordPress Media', 'datamachine'),
-                'description' => __('Source attached images and media from WordPress media library', 'datamachine')
-            ];
-        }
-        return $handlers;
-    }, 10, 2);
-
-
-    // Settings registration - pure discovery mode
-    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
-        if ($handler_slug === null || $handler_slug === 'wordpress_media') {
-            $all_settings['wordpress_media'] = new WordPressMediaSettings();
-        }
-        return $all_settings;
-    }, 10, 2);
-
+    WordPressMediaFilters::register();
 }
 
 // Auto-register when file loads - achieving complete self-containment

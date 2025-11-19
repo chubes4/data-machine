@@ -51,10 +51,11 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 - [WordPress Post Reader](ai-tools/wordpress-post-reader.md) - Single WordPress post content retrieval by URL
 
 ### API Reference
+- [**API Overview**](api/index.md) - Complete endpoint catalog and getting started guide
 - [**Core Filters**](api-reference/core-filters.md) - All WordPress filters
 - [**Core Actions**](api-reference/core-actions.md) - All WordPress actions
 - [**Universal Engine Filters**](api-reference/engine-filters.md) - Directive and tool filters (v0.2.0)
-- [**REST API**](api-reference/rest-api.md) - Flow trigger endpoint with authentication
+- [**REST API Reference**](api-reference/rest-api.md) - Redirects to modular API documentation
 
 ### Admin Interface
 - [Pipeline Builder](admin-interface/pipeline-builder.md) - Visual drag-and-drop interface

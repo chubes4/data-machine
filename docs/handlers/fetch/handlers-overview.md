@@ -52,7 +52,7 @@ Fetch handlers retrieve content from various sources and convert it into standar
 
 ## Common Interface
 
-**Base Class Architecture** (@since v0.2.0):
+**Base Class Architecture** (@since v0.2.1):
 
 All fetch handlers extend `FetchHandler` base class (`/inc/Core/Steps/Fetch/Handlers/FetchHandler.php`) which provides:
 - Deduplication checking via `isItemProcessed()` and `markItemProcessed()`

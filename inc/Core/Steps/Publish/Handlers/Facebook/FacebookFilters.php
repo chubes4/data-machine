@@ -5,86 +5,89 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Facebook;
 
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
 /**
- * Register Facebook publishing handler and authentication filters.
+ * Facebook handler registration and configuration.
  *
- * Registers Facebook as a publish handler with OAuth 2.0 authentication support.
- * Includes handler metadata, authentication provider, and AI tool registration.
+ * Uses HandlerRegistrationTrait to provide standardized handler registration
+ * with OAuth 2.0 authentication support and AI tool integration.
+ * Preserves custom settings display filtering for OAuth fields.
+ *
+ * @since 0.2.2
+ */
+class FacebookFilters {
+    use HandlerRegistrationTrait;
+
+    /**
+     * Register Facebook publishing handler with all required filters.
+     */
+    public static function register(): void {
+        self::registerHandler(
+            'facebook',
+            'publish',
+            Facebook::class,
+            __('Facebook', 'datamachine'),
+            __('Post content to Facebook pages and profiles', 'datamachine'),
+            true,
+            FacebookAuth::class,
+            FacebookSettings::class,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'facebook') {
+                    $tools['facebook_publish'] = datamachine_get_facebook_tool($handler_config);
+                }
+                return $tools;
+            }
+        );
+
+        // Custom settings display filtering (preserved)
+        add_filter('datamachine_get_handler_settings_display', function($settings_display, $flow_step_id, $step_type) {
+            // Get flow step config to identify handler
+            $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+            $flow_step_config = $db_flows->get_flow_step_config( $flow_step_id );
+            $handler_slug = $flow_step_config['handler_slug'] ?? '';
+
+            if ($handler_slug !== 'facebook') {
+                return $settings_display;
+            }
+
+            $customized_display = [];
+
+            // Facebook internal OAuth fields to hide from display
+            $facebook_internal_fields = [
+                'page_id', 'page_name', 'user_id', 'user_name',
+                'access_token', 'page_access_token', 'user_access_token',
+                'token_type', 'authenticated_at', 'token_expires_at', 'target_id'
+            ];
+
+            foreach ($settings_display as $setting) {
+                $setting_key = $setting['key'] ?? '';
+
+                // Hide internal OAuth authentication fields
+                if (in_array($setting_key, $facebook_internal_fields)) {
+                    continue;
+                }
+
+                // Keep all other settings
+                $customized_display[] = $setting;
+            }
+
+            return $customized_display;
+        }, 20, 3);
+    }
+}
+
+/**
+ * Register Facebook publishing handler and authentication filters.
  *
  * @since 0.1.0
  */
 function datamachine_register_facebook_filters() {
-    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
-        if ($step_type === null || $step_type === 'publish') {
-            $handlers['facebook'] = [
-                'type' => 'publish',
-                'class' => Facebook::class,
-                'label' => __('Facebook', 'datamachine'),
-                'description' => __('Post content to Facebook pages and profiles', 'datamachine'),
-                'requires_auth' => true
-            ];
-        }
-        return $handlers;
-    }, 10, 2);
-
-    add_filter('datamachine_auth_providers', function($providers, $step_type = null) {
-        if ($step_type === null || $step_type === 'publish') {
-            $providers['facebook'] = new FacebookAuth();
-        }
-        return $providers;
-    }, 10, 2);
-
-    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
-        if ($handler_slug === null || $handler_slug === 'facebook') {
-            $all_settings['facebook'] = new FacebookSettings();
-        }
-        return $all_settings;
-    }, 10, 2);
-
-    add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
-        if ($handler_slug === 'facebook') {
-            $tools['facebook_publish'] = datamachine_get_facebook_tool($handler_config);
-        }
-        return $tools;
-    }, 10, 3);
-
-    add_filter('datamachine_get_handler_settings_display', function($settings_display, $flow_step_id, $step_type) {
-        // Get flow step config to identify handler
-        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
-        $flow_step_config = $db_flows->get_flow_step_config( $flow_step_id );
-        $handler_slug = $flow_step_config['handler_slug'] ?? '';
-
-        if ($handler_slug !== 'facebook') {
-            return $settings_display;
-        }
-
-        $customized_display = [];
-
-        // Facebook internal OAuth fields to hide from display
-        $facebook_internal_fields = [
-            'page_id', 'page_name', 'user_id', 'user_name',
-            'access_token', 'page_access_token', 'user_access_token',
-            'token_type', 'authenticated_at', 'token_expires_at', 'target_id'
-        ];
-
-        foreach ($settings_display as $setting) {
-            $setting_key = $setting['key'] ?? '';
-
-            // Hide internal OAuth authentication fields
-            if (in_array($setting_key, $facebook_internal_fields)) {
-                continue;
-            }
-
-            // Keep all other settings
-            $customized_display[] = $setting;
-        }
-
-        return $customized_display;
-    }, 20, 3);
+    FacebookFilters::register();
 }
 
 /**

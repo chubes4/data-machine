@@ -5,52 +5,53 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Bluesky;
 
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
 /**
- * Register Bluesky publishing handler and authentication filters.
+ * Bluesky handler registration and configuration.
  *
- * Registers Bluesky as a publish handler with app password authentication support.
- * Includes handler metadata, authentication provider, and AI tool registration.
+ * Uses HandlerRegistrationTrait to provide standardized handler registration
+ * with app password authentication support and AI tool integration.
+ *
+ * @since 0.2.2
+ */
+class BlueskyFilters {
+    use HandlerRegistrationTrait;
+
+    /**
+     * Register Bluesky publishing handler with all required filters.
+     */
+    public static function register(): void {
+        self::registerHandler(
+            'bluesky',
+            'publish',
+            Bluesky::class,
+            __('Bluesky', 'datamachine'),
+            __('Post content to Bluesky with media support and AT Protocol integration', 'datamachine'),
+            true,
+            BlueskyAuth::class,
+            'DataMachine\\Core\\Steps\\Publish\\Handlers\\PublishHandlerSettings',
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'bluesky') {
+                    $tools['bluesky_publish'] = datamachine_get_bluesky_tool($handler_config);
+                }
+                return $tools;
+            }
+        );
+    }
+}
+
+/**
+ * Register Bluesky publishing handler and authentication filters.
  *
  * @since 0.1.0
  */
 function datamachine_register_bluesky_filters() {
-    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
-        if ($step_type === null || $step_type === 'publish') {
-            $handlers['bluesky'] = [
-                'type' => 'publish',
-                'class' => Bluesky::class,
-                'label' => __('Bluesky', 'datamachine'),
-                'description' => __('Post content to Bluesky with media support and AT Protocol integration', 'datamachine'),
-                'requires_auth' => true
-            ];
-        }
-        return $handlers;
-    }, 10, 2);
-
-    add_filter('datamachine_auth_providers', function($providers, $step_type = null) {
-        if ($step_type === null || $step_type === 'publish') {
-            $providers['bluesky'] = new BlueskyAuth();
-        }
-        return $providers;
-    }, 10, 2);
-
-    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
-        if ($handler_slug === null || $handler_slug === 'bluesky') {
-            $all_settings['bluesky'] = 'DataMachine\\Core\\Steps\\Publish\\Handlers\\PublishHandlerSettings';
-        }
-        return $all_settings;
-    }, 10, 2);
-
-    add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
-        if ($handler_slug === 'bluesky') {
-            $tools['bluesky_publish'] = datamachine_get_bluesky_tool($handler_config);
-        }
-        return $tools;
-    }, 10, 3);
+    BlueskyFilters::register();
 }
 
 function datamachine_get_bluesky_tool(array $handler_config = []): array {

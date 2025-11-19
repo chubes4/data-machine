@@ -9,18 +9,14 @@ namespace DataMachine\Engine\AI\Tools\Global;
 
 defined('ABSPATH') || exit;
 
+use \DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+
 class GoogleSearch {
 
     public function __construct() {
-        add_filter('datamachine_tool_success_message', [$this, 'format_success_message'], 10, 4);
-        $this->register_configuration();
-    }
-
-    private function register_configuration() {
-        add_filter('datamachine_global_tools', [$this, 'register_tool'], 10, 1);
-        add_filter('datamachine_tool_configured', [$this, 'check_configuration'], 10, 2);
-        add_filter('datamachine_get_tool_config', [$this, 'get_configuration'], 10, 2);
-        add_action('datamachine_save_tool_config', [$this, 'save_configuration'], 10, 2);
+        $this->registerConfigurationHandlers('google_search');
+        $this->registerSuccessMessageHandler('google_search');
+        $this->registerGlobalTool('google_search', $this->getToolDefinition());
     }
 
     /**
@@ -136,13 +132,12 @@ class GoogleSearch {
     }
 
     /**
-     * Register Google Search tool with the global tools system.
+     * Get Google Search tool definition.
      *
-     * @param array $tools Existing tools array
-     * @return array Updated tools array with Google Search tool
+     * @return array Tool definition array
      */
-    public function register_tool($tools) {
-        $tools['google_search'] = [
+    private function getToolDefinition(): array {
+        return [
             'class' => __CLASS__,
             'method' => 'handle_tool_call',
             'description' => 'Search the web using Google Custom Search and return 1-10 structured JSON results with titles, links, and snippets. Best for discovering external information when you don\'t have specific URLs. Use for current events, factual verification, or broad topic research. Returns complete web search data in JSON format with title, link, snippet for each result.',
@@ -160,8 +155,6 @@ class GoogleSearch {
                 ]
             ]
         ];
-
-        return $tools;
     }
 
     public static function is_configured(): bool {

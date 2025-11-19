@@ -5,53 +5,53 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
 
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
 /**
- * Register Twitter publishing handler and authentication filters.
+ * Twitter handler registration and configuration.
  *
- * Registers Twitter as a publish handler with OAuth 1.0a authentication support.
- * Includes handler metadata, authentication provider, and AI tool registration.
+ * Uses HandlerRegistration to provide standardized handler registration
+ * with OAuth 1.0a authentication support and AI tool integration.
+ *
+ * @since 0.2.2
+ */
+class TwitterFilters {
+    use HandlerRegistrationTrait;
+
+    /**
+     * Register Twitter publishing handler with all required filters.
+     */
+    public static function register(): void {
+        self::registerHandler(
+            'twitter',
+            'publish',
+            Twitter::class,
+            __('Twitter', 'datamachine'),
+            __('Post content to Twitter with media support', 'datamachine'),
+            true,
+            TwitterAuth::class,
+            TwitterSettings::class,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'twitter') {
+                    $tools['twitter_publish'] = datamachine_get_twitter_tool($handler_config);
+                }
+                return $tools;
+            }
+        );
+    }
+}
+
+/**
+ * Register Twitter publishing handler and authentication filters.
  *
  * @since 0.1.0
  */
 function datamachine_register_twitter_filters() {
-    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
-        if ($step_type === null || $step_type === 'publish') {
-            $handlers['twitter'] = [
-                'type' => 'publish',
-                'class' => Twitter::class,
-                'label' => __('Twitter', 'datamachine'),
-                'description' => __('Post content to Twitter with media support', 'datamachine'),
-                'requires_auth' => true
-            ];
-        }
-        return $handlers;
-    }, 10, 2);
-
-    add_filter('datamachine_auth_providers', function($providers, $step_type = null) {
-        if ($step_type === null || $step_type === 'publish') {
-            $providers['twitter'] = new TwitterAuth();
-        }
-        return $providers;
-    }, 10, 2);
-
-    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
-        if ($handler_slug === null || $handler_slug === 'twitter') {
-            $all_settings['twitter'] = new TwitterSettings();
-        }
-        return $all_settings;
-    }, 10, 2);
-
-    add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
-        if ($handler_slug === 'twitter') {
-            $tools['twitter_publish'] = datamachine_get_twitter_tool($handler_config);
-        }
-        return $tools;
-    }, 10, 3);
-
+    TwitterFilters::register();
 }
 
 function datamachine_get_twitter_tool(array $handler_config = []): array {

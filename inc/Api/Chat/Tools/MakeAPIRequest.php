@@ -15,41 +15,46 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+use \DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+
 /**
  * Make API Request Tool
  */
 class MakeAPIRequest {
+    use ToolRegistrationTrait;
 
-	/**
-	 * Register tool with chubes_ai_tools filter
-	 *
-	 * @param array $tools Existing tools array
-	 * @return array Modified tools array
-	 */
-	public static function register_tool($tools) {
-		$tools['make_api_request'] = [
-			'class' => self::class,
-			'method' => 'handle_tool_call',
-			'description' => 'Make internal REST API calls to Data Machine endpoints. Use this to discover handlers, tools, providers, create pipelines, or execute workflows.',
-			'parameters' => [
-				'endpoint' => [
-					'type' => 'string',
-					'required' => true,
-					'description' => 'REST API endpoint path (e.g., /datamachine/v1/handlers or /datamachine/v1/execute)'
-				],
-				'method' => [
-					'type' => 'string',
-					'required' => true,
-					'description' => 'HTTP method: GET, POST, PUT, or DELETE'
-				],
-				'data' => [
-					'type' => 'object',
-					'required' => false,
-					'description' => 'Request body data for POST/PUT requests (optional)'
-				]
-			],
-		];
-		return $tools;
+    public function __construct() {
+        $this->registerTool('chat', 'make_api_request', $this->getToolDefinition());
+    }
+
+    /**
+     * Get Make API Request tool definition.
+     *
+     * @return array Tool definition array
+     */
+    private function getToolDefinition(): array {
+        return [
+            'class' => self::class,
+            'method' => 'handle_tool_call',
+            'description' => 'Make internal REST API calls to Data Machine endpoints. Use this to discover handlers, tools, providers, create pipelines, or execute workflows.',
+            'parameters' => [
+                'endpoint' => [
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'REST API endpoint path (e.g., /datamachine/v1/handlers or /datamachine/v1/execute)'
+                ],
+                'method' => [
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'HTTP method: GET, POST, PUT, or DELETE'
+                ],
+                'data' => [
+                    'type' => 'object',
+                    'required' => false,
+                    'description' => 'Request body data for POST/PUT requests (optional)'
+                ]
+            ]
+        ];
 	}
 
 	/**
@@ -142,4 +147,4 @@ class MakeAPIRequest {
 }
 
 // Self-register for chat tools
-add_filter('datamachine_chat_tools', [MakeAPIRequest::class, 'register_tool']);
+new MakeAPIRequest();

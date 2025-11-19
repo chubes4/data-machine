@@ -7,19 +7,16 @@ namespace DataMachine\Engine\AI\Tools\Global;
 
 defined('ABSPATH') || exit;
 
+use \DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+
 /**
  * WordPress site search for AI context gathering.
  */
 class LocalSearch {
 
     public function __construct() {
-        add_filter('datamachine_tool_success_message', [$this, 'format_success_message'], 10, 4);
-        $this->register_configuration();
-    }
-
-    private function register_configuration() {
-        add_filter('datamachine_global_tools', [$this, 'register_tool'], 10, 1);
-        add_filter('datamachine_tool_configured', [$this, 'check_configuration'], 10, 2);
+        $this->registerSuccessMessageHandler('local_search');
+        $this->registerGlobalTool('local_search', $this->getToolDefinition());
     }
 
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
@@ -108,13 +105,12 @@ class LocalSearch {
     }
 
     /**
-     * Register Local Search tool with the global tools system.
+     * Get Local Search tool definition.
      *
-     * @param array $tools Existing tools array
-     * @return array Updated tools array with Local Search tool
+     * @return array Tool definition array
      */
-    public function register_tool($tools) {
-        $tools['local_search'] = [
+    private function getToolDefinition(): array {
+        return [
             'class' => __CLASS__,
             'method' => 'handle_tool_call',
             'description' => 'Search this WordPress site and return up to 10 structured JSON results with post titles, excerpts, permalinks, and metadata. Prefer this over external search tools for site-specific content discovery. Use ONCE to find existing content before creating new content. Returns complete search data in JSON format - avoid calling multiple times for the same query.',
@@ -132,8 +128,6 @@ class LocalSearch {
                 ]
             ]
         ];
-
-        return $tools;
     }
 
     public static function is_configured(): bool {

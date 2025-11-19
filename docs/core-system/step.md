@@ -120,5 +120,4 @@ All step types extend this base class:
 - **Publish Steps**: See [PublishHandler](publish-handler.md) for publish-specific base class
 - **Update Steps**: Currently extends PublishHandler base class
 
-See [Handler Documentation](../handlers/README.md) for specific implementations.</content>
-</xai:function_call">The Step base class provides standardized inheritance patterns for all step types, ensuring consistent functionality and reducing code duplication across the pipeline system.
+See [Handler Documentation](../handlers/README.md) for specific implementations.

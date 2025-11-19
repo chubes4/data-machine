@@ -12,7 +12,7 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
 
-use DataMachine\Core\Steps\SettingsHandler;
+use DataMachine\Core\Steps\Settings\SettingsHandler;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly

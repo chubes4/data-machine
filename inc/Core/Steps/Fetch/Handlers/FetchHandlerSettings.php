@@ -12,7 +12,7 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers;
 
-use DataMachine\Core\Steps\SettingsHandler;
+use DataMachine\Core\Steps\Settings\SettingsHandler;
 
 defined('ABSPATH') || exit;
 

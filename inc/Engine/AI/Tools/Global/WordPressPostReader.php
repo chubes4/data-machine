@@ -9,16 +9,13 @@ namespace DataMachine\Engine\AI\Tools\Global;
 
 defined('ABSPATH') || exit;
 
+use \DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+
 class WordPressPostReader {
 
     public function __construct() {
-        add_filter('datamachine_tool_success_message', [$this, 'format_success_message'], 10, 4);
-        $this->register_configuration();
-    }
-
-    private function register_configuration() {
-        add_filter('datamachine_global_tools', [$this, 'register_tool'], 10, 1);
-        add_filter('datamachine_tool_configured', [$this, 'check_configuration'], 10, 2);
+        $this->registerSuccessMessageHandler('wordpress_post_reader');
+        $this->registerGlobalTool('wordpress_post_reader', $this->getToolDefinition());
     }
 
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
@@ -105,8 +102,13 @@ class WordPressPostReader {
         ];
     }
 
-    public function register_tool($tools) {
-        $tools['wordpress_post_reader'] = [
+    /**
+     * Get WordPress Post Reader tool definition.
+     *
+     * @return array Tool definition array
+     */
+    private function getToolDefinition(): array {
+        return [
             'class' => __CLASS__,
             'method' => 'handle_tool_call',
             'name' => 'WordPress Post Reader',
@@ -125,8 +127,6 @@ class WordPressPostReader {
                 ]
             ]
         ];
-
-        return $tools;
     }
 
     public static function is_configured(): bool {

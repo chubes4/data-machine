@@ -5,38 +5,48 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
 
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Google Sheets fetch handler registration and configuration.
+ *
+ * Uses HandlerRegistrationTrait to provide standardized handler registration
+ * for reading data from Google Sheets spreadsheets.
+ *
+ * @since 0.2.2
+ */
+class GoogleSheetsFetchFilters {
+    use HandlerRegistrationTrait;
+
+    /**
+     * Register Google Sheets fetch handler with all required filters.
+     */
+    public static function register(): void {
+        self::registerHandler(
+            'googlesheets_fetch',
+            'fetch',
+            GoogleSheetsFetch::class,
+            __('Google Sheets', 'datamachine'),
+            __('Read data from Google Sheets spreadsheets', 'datamachine'),
+            true,
+            \DataMachine\Core\Steps\Publish\Handlers\GoogleSheets\GoogleSheetsAuth::class,
+            GoogleSheetsFetchSettings::class,
+            null
+        );
+    }
+}
+
+/**
+ * Register Google Sheets fetch handler filters.
+ *
+ * @since 0.1.0
+ */
 function datamachine_register_googlesheets_fetch_filters() {
-    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
-        if ($step_type === null || $step_type === 'fetch') {
-            $handlers['googlesheets_fetch'] = [
-                'type' => 'fetch',
-                'class' => GoogleSheetsFetch::class,
-                'label' => __('Google Sheets', 'datamachine'),
-                'description' => __('Read data from Google Sheets spreadsheets', 'datamachine'),
-                'requires_auth' => true
-            ];
-        }
-        return $handlers;
-    }, 10, 2);
-
-    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
-        if ($handler_slug === null || $handler_slug === 'googlesheets_fetch') {
-            $all_settings['googlesheets_fetch'] = new GoogleSheetsFetchSettings();
-        }
-        return $all_settings;
-    }, 10, 2);
-
-    add_filter('datamachine_auth_providers', function($providers, $step_type = null) {
-        if ($step_type === null || $step_type === 'fetch') {
-            $providers['googlesheets'] = new \DataMachine\Core\Steps\Publish\Handlers\GoogleSheets\GoogleSheetsAuth();
-        }
-        return $providers;
-    }, 10, 2);
-
+    GoogleSheetsFetchFilters::register();
 }
 
 datamachine_register_googlesheets_fetch_filters();

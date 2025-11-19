@@ -55,6 +55,7 @@
 			"inc/Core/Steps/Publish/Handlers/Bluesky/BlueskyFilters.php",
 			"inc/Core/Steps/AI/AIStepFilters.php",
 			"inc/Engine/AI/AIFilters.php",
+			"inc/Engine/AI/Tools/ToolRegistrationTrait.php",
 			"inc/Engine/AI/Tools/Global/GoogleSearch.php",
 			"inc/Engine/AI/Tools/Global/LocalSearch.php",
 			"inc/Engine/AI/Tools/Global/WebFetch.php",

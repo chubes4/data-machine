@@ -41,6 +41,7 @@ export default function AIToolsSelector( {
 							label: toolData.label || toolId,
 							description: toolData.description || '',
 							configured: toolData.configured || false,
+							globallyEnabled: toolData.globally_enabled !== false,
 						} )
 					);
 					setTools( toolsArray );

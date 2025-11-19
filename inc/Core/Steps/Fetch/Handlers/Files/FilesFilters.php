@@ -9,35 +9,48 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Files;
 
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Files handler registration and configuration.
+ *
+ * Uses HandlerRegistrationTrait to provide standardized handler registration
+ * for processing local files and uploads.
+ *
+ * @since 0.2.2
+ */
+class FilesFilters {
+    use HandlerRegistrationTrait;
+
+    /**
+     * Register Files fetch handler with all required filters.
+     */
+    public static function register(): void {
+        self::registerHandler(
+            'files',
+            'fetch',
+            Files::class,
+            __('Files', 'datamachine'),
+            __('Process local files and uploads', 'datamachine'),
+            false,
+            null,
+            FilesSettings::class,
+            null
+        );
+    }
+}
 
 /**
  * Register files fetch handler filters.
+ *
+ * @since 0.1.0
  */
 function datamachine_register_files_fetch_filters() {
-    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
-        if ($step_type === null || $step_type === 'fetch') {
-            $handlers['files'] = [
-                'type' => 'fetch',
-                'class' => Files::class,
-                'label' => __('Files', 'datamachine'),
-                'description' => __('Process local files and uploads', 'datamachine')
-            ];
-        }
-        return $handlers;
-    }, 10, 2);
-
-    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
-        if ($handler_slug === null || $handler_slug === 'files') {
-            $all_settings['files'] = new FilesSettings();
-        }
-        return $all_settings;
-    }, 10, 2);
-
-
+    FilesFilters::register();
 }
 
 datamachine_register_files_fetch_filters();

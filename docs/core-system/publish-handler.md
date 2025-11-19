@@ -175,5 +175,4 @@ All publish handlers extend this base class:
 Update handlers also extend this base:
 - [WordPress Update Handler](../handlers/update/wordpress-update.md)
 
-See [Publish Handlers Overview](../handlers/publish/README.md) for comparison.</content>
-</xai:function_call">The PublishHandler base class provides standardized functionality for content publishing operations, including engine data retrieval, image validation, and consistent response patterns.
+See [Publish Handlers Overview](../handlers/publish/handlers-overview.md) for comparison.

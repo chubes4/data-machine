@@ -15,9 +15,40 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPressAPI;
 
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
 // Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
+}
+
+/**
+ * WordPress API handler registration and configuration.
+ *
+ * Uses HandlerRegistrationTrait to provide standardized handler registration
+ * for fetching content from public WordPress sites via REST API.
+ *
+ * @since 0.2.2
+ */
+class WordPressAPIFilters {
+    use HandlerRegistrationTrait;
+
+    /**
+     * Register WordPress API fetch handler with all required filters.
+     */
+    public static function register(): void {
+        self::registerHandler(
+            'wordpress_api',
+            'fetch',
+            WordPressAPI::class,
+            __('WordPress REST API', 'datamachine'),
+            __('Fetch content from public WordPress sites via REST API', 'datamachine'),
+            false,
+            null,
+            WordPressAPISettings::class,
+            null
+        );
+    }
 }
 
 /**
@@ -29,28 +60,7 @@ if (!defined('ABSPATH')) {
  * @since 1.0.0
  */
 function datamachine_register_wordpress_api_fetch_filters() {
-
-    // Handler registration - WordPress REST API declares itself as fetch handler (pure discovery mode)
-    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
-        if ($step_type === null || $step_type === 'fetch') {
-            $handlers['wordpress_api'] = [
-                'type' => 'fetch',
-                'class' => WordPressAPI::class,
-                'label' => __('WordPress REST API', 'datamachine'),
-                'description' => __('Fetch content from public WordPress sites via REST API', 'datamachine')
-            ];
-        }
-        return $handlers;
-    }, 10, 2);
-
-    // Settings registration - pure discovery mode
-    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
-        if ($handler_slug === null || $handler_slug === 'wordpress_api') {
-            $all_settings['wordpress_api'] = new WordPressAPISettings();
-        }
-        return $all_settings;
-    }, 10, 2);
-
+    WordPressAPIFilters::register();
 }
 
 // Auto-register when file loads - achieving complete self-containment

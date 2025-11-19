@@ -9,51 +9,70 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
 
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
-function datamachine_register_wordpress_publish_filters() {
-    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
-        if ($step_type === null || $step_type === 'publish') {
-            $handlers['wordpress_publish'] = [
-                'type' => 'publish',
-                'class' => WordPress::class,
-                'label' => __('WordPress', 'datamachine'),
-                'description' => __('Create WordPress posts and pages', 'datamachine')
-            ];
-        }
-        return $handlers;
-    }, 10, 2);
+/**
+ * WordPress publish handler registration and configuration.
+ *
+ * Uses HandlerRegistrationTrait to provide standardized handler registration
+ * for creating WordPress posts and pages.
+ * Preserves custom success message logic.
+ *
+ * @since 0.2.2
+ */
+class WordPressFilters {
+    use HandlerRegistrationTrait;
 
-    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
-        if ($handler_slug === null || $handler_slug === 'wordpress_publish') {
-            $all_settings['wordpress_publish'] = new WordPressSettings();
-        }
-        return $all_settings;
-    }, 10, 2);
-
-    add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
-        if ($handler_slug === 'wordpress_publish') {
-            $tools['wordpress_publish'] = datamachine_get_dynamic_wordpress_tool($handler_config);
-        }
-        return $tools;
-    }, 10, 3);
-
-    add_filter('datamachine_tool_success_message', function($default_message, $tool_name, $tool_result) {
-        if ($tool_name === 'wordpress_publish' && !empty($tool_result['data']['post_title'])) {
-            $title = $tool_result['data']['post_title'];
-            $url = $tool_result['data']['post_url'] ?? '';
-            $post_id = $tool_result['data']['post_id'] ?? '';
-
-            if (!empty($url)) {
-                return "WordPress post published successfully. Title: '{$title}' at {$url} (ID: {$post_id}).";
-            } else {
-                return "WordPress post created successfully. Title: '{$title}' (ID: {$post_id}).";
+    /**
+     * Register WordPress publish handler with all required filters.
+     */
+    public static function register(): void {
+        self::registerHandler(
+            'wordpress_publish',
+            'publish',
+            WordPress::class,
+            __('WordPress', 'datamachine'),
+            __('Create WordPress posts and pages', 'datamachine'),
+            false,
+            null,
+            WordPressSettings::class,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'wordpress_publish') {
+                    $tools['wordpress_publish'] = datamachine_get_dynamic_wordpress_tool($handler_config);
+                }
+                return $tools;
             }
-        }
-        return $default_message;
-    }, 10, 4);
+        );
+
+        // Custom success message logic (preserved)
+        add_filter('datamachine_tool_success_message', function($default_message, $tool_name, $tool_result) {
+            if ($tool_name === 'wordpress_publish' && !empty($tool_result['data']['post_title'])) {
+                $title = $tool_result['data']['post_title'];
+                $url = $tool_result['data']['post_url'] ?? '';
+                $post_id = $tool_result['data']['post_id'] ?? '';
+
+                if (!empty($url)) {
+                    return "WordPress post published successfully. Title: '{$title}' at {$url} (ID: {$post_id}).";
+                } else {
+                    return "WordPress post created successfully. Title: '{$title}' (ID: {$post_id}).";
+                }
+            }
+            return $default_message;
+        }, 10, 4);
+    }
+}
+
+/**
+ * Register WordPress publish handler filters.
+ *
+ * @since 0.1.0
+ */
+function datamachine_register_wordpress_publish_filters() {
+    WordPressFilters::register();
 }
 
 /**
@@ -116,14 +135,13 @@ VALIDATION CHECKLIST:
  * @return array Dynamic tool configuration with taxonomy parameters.
  */
 function datamachine_get_dynamic_wordpress_tool(array $handler_config): array {
-    // Apply global WordPress defaults from settings page before processing
     // handler_config is ALWAYS flat structure - no nesting
-    $wordpress_config = apply_filters('datamachine_apply_global_defaults', $handler_config, 'wordpress_publish', 'publish');
+    $wordpress_config = $handler_config;
 
     // Start with base tool
     $tool = datamachine_get_wordpress_base_tool();
 
-    // Store resolved configuration for execution with defaults applied
+    // Store handler configuration for execution
     $tool['handler_config'] = $wordpress_config;
 
     // Get all public taxonomies

@@ -9,7 +9,7 @@
  * @since 0.2.1
  */
 
-namespace DataMachine\Core\Steps;
+namespace DataMachine\Core\Steps\Settings;
 
 if (!defined('ABSPATH')) {
     exit;

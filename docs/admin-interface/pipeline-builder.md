@@ -34,6 +34,16 @@ Modern React-based interface for creating and managing Pipeline+Flow configurati
 
 **Settings Validation**: Real-time validation of handler configurations with visual status indicators and error messaging.
 
+### Handler Settings Data Contract
+
+Handler configuration follows a strict request/response contract shared by all handler modals:
+
+- **Schema Source**: `GET /datamachine/v1/handlers/{slug}` returns `handler.settings` where each field contains `type`, `label`, `default`, `description`, and optionally `options`, `global_value`, `global_indicator`, and `disabled`.
+- **Global Overrides**: When a setting is enforced globally via the WordPress Data Machine Settings page, the API injects `global_value`, sets `disabled: true`, and provides a `global_indicator` message. The UI must display the global value, show the indicator, and prevent edits.
+- **Flow Scope Values**: Flow-level overrides are stored as flat key/value pairs. The frontend should only send fields that are not globally enforced to `PUT /flows/steps/{id}/handler`.
+- **Helper Utilities**: React components use `utils/handlerSettings.js` for resolving display values (`global > flow > default`), deriving help text, and sanitizing payloads before save. Any new component rendering handler fields must reuse these helpers to stay consistent.
+- **Post-Save Refresh**: After saving, flows are re-fetched so the UI always reflects the backend-resolved values, ensuring global overrides remain the source of truth without mutating stored flow configs.
+
 ## Flow Management
 
 **Flow Creation**: Converts pipeline templates into configured flow instances with:

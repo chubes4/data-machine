@@ -5,29 +5,48 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPress;
 
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
-function datamachine_register_wordpress_fetch_filters() {
-    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
-        if ($step_type === null || $step_type === 'fetch') {
-            $handlers['wordpress_posts'] = [
-                'type' => 'fetch',
-                'class' => WordPress::class,
-                'label' => __('Local WordPress Posts', 'datamachine'),
-                'description' => __('Fetch posts and pages from this WordPress installation', 'datamachine')
-            ];
-        }
-        return $handlers;
-    }, 10, 2);
+/**
+ * WordPress fetch handler registration and configuration.
+ *
+ * Uses HandlerRegistrationTrait to provide standardized handler registration
+ * for fetching posts and pages from this WordPress installation.
+ *
+ * @since 0.2.2
+ */
+class WordPressFilters {
+    use HandlerRegistrationTrait;
 
-    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
-        if ($handler_slug === null || $handler_slug === 'wordpress_posts') {
-            $all_settings['wordpress_posts'] = new WordPressSettings();
-        }
-        return $all_settings;
-    }, 10, 2);
+    /**
+     * Register WordPress fetch handler with all required filters.
+     */
+    public static function register(): void {
+        self::registerHandler(
+            'wordpress_posts',
+            'fetch',
+            WordPress::class,
+            __('Local WordPress Posts', 'datamachine'),
+            __('Fetch posts and pages from this WordPress installation', 'datamachine'),
+            false,
+            null,
+            WordPressSettings::class,
+            null
+        );
+    }
+}
+
+/**
+ * Register WordPress fetch handler filters.
+ *
+ * @since 0.1.0
+ */
+function datamachine_register_wordpress_fetch_filters() {
+    WordPressFilters::register();
 }
 
 datamachine_register_wordpress_fetch_filters();

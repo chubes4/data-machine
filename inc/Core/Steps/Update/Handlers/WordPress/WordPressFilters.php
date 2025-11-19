@@ -5,36 +5,53 @@
 
 namespace DataMachine\Core\Steps\Update\Handlers\WordPress;
 
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * WordPress Update handler registration and configuration.
+ *
+ * Uses HandlerRegistrationTrait to provide standardized handler registration
+ * for updating existing WordPress posts and pages.
+ *
+ * @since 0.2.2
+ */
+class WordPressFilters {
+    use HandlerRegistrationTrait;
+
+    /**
+     * Register WordPress Update handler with all required filters.
+     */
+    public static function register(): void {
+        self::registerHandler(
+            'wordpress_update',
+            'update',
+            WordPress::class,
+            __('WordPress Update', 'datamachine'),
+            __('Update existing WordPress posts and pages', 'datamachine'),
+            false,
+            null,
+            WordPressSettings::class,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'wordpress_update') {
+                    $tools['wordpress_update'] = datamachine_get_dynamic_wordpress_update_tool($handler_config);
+                }
+                return $tools;
+            }
+        );
+    }
+}
+
+/**
+ * Register WordPress Update handler filters.
+ *
+ * @since 0.1.0
+ */
 function datamachine_register_wordpress_update_filters() {
-    add_filter('datamachine_handlers', function($handlers, $step_type = null) {
-        if ($step_type === null || $step_type === 'update') {
-            $handlers['wordpress_update'] = [
-                'type' => 'update',
-                'class' => WordPress::class,
-                'label' => __('WordPress Update', 'datamachine'),
-                'description' => __('Update existing WordPress posts and pages', 'datamachine')
-            ];
-        }
-        return $handlers;
-    }, 10, 2);
-
-    add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null) {
-        if ($handler_slug === null || $handler_slug === 'wordpress_update') {
-            $all_settings['wordpress_update'] = new WordPressSettings();
-        }
-        return $all_settings;
-    }, 10, 2);
-
-    add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_config = []) {
-        if ($handler_slug === 'wordpress_update') {
-            $tools['wordpress_update'] = datamachine_get_dynamic_wordpress_update_tool($handler_config);
-        }
-        return $tools;
-    }, 10, 3);
+    WordPressFilters::register();
 }
 
 /**

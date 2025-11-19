@@ -42,10 +42,6 @@ class Settings {
 			'callback' => [self::class, 'handle_update_settings'],
 			'permission_callback' => [self::class, 'check_permission'],
 			'args' => [
-				'wordpress_settings' => [
-					'type' => 'object',
-					'description' => __('WordPress-specific settings', 'datamachine'),
-				],
 				'ai_settings' => [
 					'type' => 'object',
 					'description' => __('AI-specific settings', 'datamachine'),
@@ -174,14 +170,7 @@ class Settings {
 	 */
 	public static function handle_get_settings($request) {
 		$all_settings = get_option('datamachine_settings', []);
-		$wp_settings = $all_settings['wordpress_settings'] ?? [];
 		$ai_settings = $all_settings['ai_settings'] ?? [];
-
-		// Enrich author ID with author name
-		if (!empty($wp_settings['default_author_id'])) {
-			$author = get_userdata($wp_settings['default_author_id']);
-			$wp_settings['default_author_name'] = $author ? $author->display_name : '';
-		}
 
 		do_action('datamachine_log', 'debug', 'Settings fetched via REST API', [
 			'user_id' => get_current_user_id()
@@ -190,7 +179,6 @@ class Settings {
 		return [
 			'success' => true,
 			'settings' => [
-				'wordpress_settings' => $wp_settings,
 				'ai_settings' => $ai_settings
 			]
 		];
@@ -206,17 +194,9 @@ class Settings {
 		$all_settings = get_option('datamachine_settings', []);
 
 		// Get incoming updates
-		$wp_settings_update = $request->get_param('wordpress_settings');
 		$ai_settings_update = $request->get_param('ai_settings');
 
 		// Merge updates with existing settings (partial update)
-		if (is_array($wp_settings_update)) {
-			$all_settings['wordpress_settings'] = array_merge(
-				$all_settings['wordpress_settings'] ?? [],
-				self::sanitize_settings_array($wp_settings_update)
-			);
-		}
-
 		if (is_array($ai_settings_update)) {
 			$all_settings['ai_settings'] = array_merge(
 				$all_settings['ai_settings'] ?? [],
@@ -241,7 +221,7 @@ class Settings {
 		do_action('datamachine_log', 'info', 'Settings updated via REST API', [
 			'user_id' => get_current_user_id(),
 			'user_login' => wp_get_current_user()->user_login,
-			'updated_keys' => array_keys($wp_settings_update ?? []) + array_keys($ai_settings_update ?? [])
+			'updated_keys' => array_keys($ai_settings_update ?? [])
 		]);
 
 		// Return updated settings
