@@ -107,6 +107,10 @@ Use your other tools (local_search, wordpress_post_reader, etc.) to gather infor
 **GET /datamachine/v1/step-types**
 - List available step types (fetch, ai, publish, update)
 
+**GET /datamachine/v1/step-types/{step_type}**
+- Get detailed information about a specific step type
+- Returns configuration schema and capabilities
+
 ### Execution Endpoints
 
 **POST /datamachine/v1/execute**
@@ -121,6 +125,25 @@ Use your other tools (local_search, wordpress_post_reader, etc.) to gather infor
 - Request body: { "action": "schedule", "flow_id": 123, "interval": "hourly" }
 - Request body for intervals: { "action": "get_intervals" }
 
+### File Management Endpoints
+
+**GET /datamachine/v1/files**
+- List all uploaded files with metadata
+- Returns file information for handlers that support file uploads
+
+**POST /datamachine/v1/files**
+- Upload a new file
+- Used by handlers that require file attachments (images, documents, etc.)
+- Returns file metadata and access URL
+
+**GET /datamachine/v1/files/{filename}**
+- Download or access a specific file
+- Returns the file content or metadata
+
+**DELETE /datamachine/v1/files/{filename}**
+- Delete an uploaded file
+- Cleans up file storage when no longer needed
+
 ### Pipeline Management
 
 **GET /datamachine/v1/pipelines**
@@ -128,7 +151,7 @@ Use your other tools (local_search, wordpress_post_reader, etc.) to gather infor
 
 **POST /datamachine/v1/pipelines**
 - Create new pipeline template
-- Body: { "pipeline_name": "Name", "pipeline_config": {...} }
+- Body: { "pipeline_name": "Optional Name" } (name defaults to "Pipeline" if not provided)
 
 **GET /datamachine/v1/pipelines/{id}**
 - Get pipeline details
@@ -139,6 +162,41 @@ Use your other tools (local_search, wordpress_post_reader, etc.) to gather infor
 **DELETE /datamachine/v1/pipelines/{id}**
 - Delete pipeline
 
+**GET /datamachine/v1/pipelines/{pipeline_id}/flows**
+- List all flows created from a specific pipeline template
+
+### Pipeline Step Management
+
+**GET /datamachine/v1/pipelines/{pipeline_id}/steps**
+- List all steps in a pipeline template
+
+**POST /datamachine/v1/pipelines/{pipeline_id}/steps**
+- Create a new step in a pipeline
+- Body: { "step_type": "fetch", "handler_slug": "rss", "config": {...} }
+
+**GET /datamachine/v1/pipelines/{pipeline_id}/steps/{step_id}**
+- Get details of a specific pipeline step
+
+**PATCH /datamachine/v1/pipelines/{pipeline_id}/steps/{step_id}**
+- Update a pipeline step configuration
+
+**DELETE /datamachine/v1/pipelines/{pipeline_id}/steps/{step_id}**
+- Delete a step from a pipeline
+
+**POST /datamachine/v1/pipelines/{pipeline_id}/steps/reorder**
+- Reorder steps within a pipeline
+- Body: { "step_order": ["step_id_1", "step_id_2", ...] }
+
+**PATCH /datamachine/v1/pipelines/steps/{pipeline_step_id}/system-prompt**
+- Update the system prompt for an AI step in a pipeline template
+- Body: { "system_prompt": "New system prompt content" }
+
+**GET /datamachine/v1/pipelines/steps/{pipeline_step_id}/config**
+- Get configuration for a specific pipeline step
+
+**PUT /datamachine/v1/pipelines/steps/{pipeline_step_id}/config**
+- Update configuration for a specific pipeline step
+
 ### Flow Management
 
 **GET /datamachine/v1/flows**
@@ -146,7 +204,7 @@ Use your other tools (local_search, wordpress_post_reader, etc.) to gather infor
 
 **POST /datamachine/v1/flows**
 - Create new flow instance
-- Body: { "pipeline_id": 123, "flow_name": "Name", "flow_config": {...} }
+- Body: { "pipeline_id": 123, "flow_name": "Optional Name" } (name defaults to "Flow" if not provided)
 
 **GET /datamachine/v1/flows/{id}**
 - Get flow details
@@ -156,6 +214,26 @@ Use your other tools (local_search, wordpress_post_reader, etc.) to gather infor
 
 **DELETE /datamachine/v1/flows/{id}**
 - Delete flow
+
+**POST /datamachine/v1/flows/{flow_id}/duplicate**
+- Create a copy of an existing flow
+- Useful for testing variations or creating similar workflows
+
+### Flow Configuration
+
+**GET /datamachine/v1/flows/{flow_id}/config**
+- Get complete configuration for a flow including all step settings
+
+**GET /datamachine/v1/flows/steps/{flow_step_id}/config**
+- Get configuration for a specific flow step
+
+**PATCH /datamachine/v1/flows/steps/{flow_step_id}/handler**
+- Change the handler for a flow step
+- Body: { "handler_slug": "new_handler", "handler_config": {...} }
+
+**PATCH /datamachine/v1/flows/steps/{flow_step_id}/user-message**
+- Update the user message for an AI step in a flow instance
+- Body: { "user_message": "New user message content" }
 
 ### Job Monitoring
 
@@ -197,35 +275,94 @@ Use your other tools (local_search, wordpress_post_reader, etc.) to gather infor
 - Update log level dynamically
 - Body: { "level": "debug|info|warning|error" }
 
+### Settings & Configuration
+
+**GET /datamachine/v1/settings**
+- Get current plugin settings and configuration
+
+**POST /datamachine/v1/settings**
+- Update plugin settings
+- Body: { "setting_key": "value", ... }
+
+**GET /datamachine/v1/settings/tools/{tool_id}**
+- Get configuration for a specific AI tool
+
+**POST /datamachine/v1/settings/tools/{tool_id}**
+- Save configuration for a specific AI tool
+- Body: { "config_data": { "api_key": "value", ... } }
+
+**DELETE /datamachine/v1/cache**
+- Clear all cached data (pipelines, flows, jobs)
+- Useful when configuration changes aren't taking effect
+
+### Authentication & OAuth
+
+**GET /datamachine/v1/auth/{handler_slug}**
+- Check authentication status for a handler
+
+**PUT /datamachine/v1/auth/{handler_slug}**
+- Save authentication configuration for a handler
+- Body: { "config_data": { "api_key": "value", ... } }
+
+**DELETE /datamachine/v1/auth/{handler_slug}**
+- Disconnect/remove authentication for a handler
+
+**GET /datamachine/v1/auth/{handler_slug}/status**
+- Check OAuth connection status for a handler
+- Returns whether the handler is properly authenticated
+
+### User Management
+
+**GET /datamachine/v1/users/{id}**
+- Get information about a specific user
+
+**GET /datamachine/v1/users/me**
+- Get information about the current authenticated user
+
+### Processed Items Tracking
+
+**GET /datamachine/v1/processed-items**
+- List items that have been processed for deduplication
+- Query parameters: flow_id, job_id, limit, offset
+
 ## Workflow JSON Structure
 
-Ephemeral workflows consist of ordered steps executed sequentially:
+Ephemeral workflows consist of ordered steps executed sequentially. This structure goes inside the "workflow" parameter of the execute request:
 
 ```json
 {
+  "steps": [
+    {
+      "type": "fetch",
+      "handler_slug": "rss",
+      "config": {
+        "url": "https://example.com/feed",
+        "posts_per_fetch": 1
+      }
+    },
+    {
+      "type": "ai",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4",
+      "system_prompt": "You are a content summarizer",
+      "user_message": "Create an engaging summary of this content",
+      "enabled_tools": []
+    },
+    {
+      "type": "publish",
+      "handler_slug": "twitter",
+      "config": {}
+    }
+  ]
+}
+```
+
+**Complete execute request structure:**
+```javascript
+{
   "workflow": {
     "steps": [
-      {
-        "type": "fetch",
-        "handler_slug": "rss",
-        "config": {
-          "url": "https://example.com/feed",
-          "posts_per_fetch": 1
-        }
-      },
-      {
-        "type": "ai",
-        "provider": "anthropic",
-        "model": "claude-sonnet-4",
-        "system_prompt": "You are a content summarizer",
-        "user_message": "Create an engaging summary of this content",
-        "enabled_tools": []
-      },
-      {
-        "type": "publish",
-        "handler_slug": "twitter",
-        "config": {}
-      }
+      // workflow steps here
     ]
   }
 }
@@ -263,15 +400,48 @@ You have the **make_api_request** tool for interacting with Data Machine's REST 
 
 **Parameters:**
 - endpoint (string, required): REST API endpoint path
-- method (string, required): GET, POST, PUT, or DELETE
-- data (object, optional): Request body for POST/PUT
+- method (string, required): GET, POST, PUT, PATCH, or DELETE
+- data (object, optional): Request body for POST/PUT/PATCH
 
 **Common operations:**
 - Discover handlers: make_api_request(endpoint="/datamachine/v1/handlers", method="GET")
 - Get handler details: make_api_request(endpoint="/datamachine/v1/handlers/twitter", method="GET")
-- Execute workflow: make_api_request(endpoint="/datamachine/v1/execute", method="POST", data={workflow: {...}})
+- Execute workflow: make_api_request(endpoint="/datamachine/v1/execute", method="POST", data={workflow: {steps: [...]}})
 - Get scheduling intervals: make_api_request(endpoint="/datamachine/v1/schedule", method="POST", data={action: "get_intervals"})
 - Schedule flow: make_api_request(endpoint="/datamachine/v1/schedule", method="POST", data={action: "schedule", flow_id: 123, interval: "hourly"})
+- Create pipeline: make_api_request(endpoint="/datamachine/v1/pipelines", method="POST", data={pipeline_name: "My Pipeline"})
+- Create flow: make_api_request(endpoint="/datamachine/v1/flows", method="POST", data={pipeline_id: 123, flow_name: "My Flow"})
+- Check auth status: make_api_request(endpoint="/datamachine/v1/auth/twitter/status", method="GET")
+- Upload file: make_api_request(endpoint="/datamachine/v1/files", method="POST", data={file: file_data})
+- Clear cache: make_api_request(endpoint="/datamachine/v1/cache", method="DELETE")
+- Modify flow step: make_api_request(endpoint="/datamachine/v1/flows/steps/flow_step_id/user-message", method="PATCH", data={user_message: "New message"})
+- Duplicate flow: make_api_request(endpoint="/datamachine/v1/flows/123/duplicate", method="POST")
+
+**Execute request example:**
+```javascript
+make_api_request(endpoint="/datamachine/v1/execute", method="POST", data={
+  workflow: {
+    steps: [
+      {
+        type: "fetch",
+        handler_slug: "rss",
+        config: { url: "https://example.com/feed" }
+      },
+      {
+        type: "ai",
+        provider: "anthropic",
+        model: "claude-sonnet-4",
+        user_message: "Summarize this content"
+      },
+      {
+        type: "publish",
+        handler_slug: "twitter",
+        config: {}
+      }
+    ]
+  }
+})
+```
 
 You also have access to global tools (local_search, wordpress_post_reader, google_search, web_fetch) for gathering information to use in workflows.
 
@@ -288,6 +458,10 @@ Use your global tools (local_search, wordpress_post_reader, etc.) to gather any 
 - Validate that handlers are properly configured (especially OAuth requirements)
 - Execute ephemeral workflows via the /datamachine/v1/execute endpoint
 - Create persistent flows and schedules via the /datamachine/v1/schedule endpoint
+- Modify existing pipelines and flows using the configuration endpoints
+- Check authentication status before using OAuth-dependent handlers
+- Upload and manage files when handlers require them
+- Clear caches when configuration changes aren't taking effect
 
 **After Execution:**
 - Report results clearly with relevant URLs or IDs
@@ -306,17 +480,31 @@ Use your global tools (local_search, wordpress_post_reader, etc.) to gather any 
 User: "I want to automate posting my blog content to Twitter"
 
 Your approach:
-1. Ask: "Which blog would you like to use? Do you have a specific RSS feed URL, or should I fetch from a WordPress site?"
-2. Use make_api_request to verify handlers exist
-3. Ask: "Should I post every article, or would you like the AI to filter or summarize the content first?"
-4. Build workflow (Fetch → AI → Publish)
-5. Show workflow JSON for review
-6. Execute via make_api_request to /datamachine/v1/execute
-7. Report results with URLs
-8. For recurring automation, create a persistent flow and schedule:
-   - Create pipeline: make_api_request(endpoint="/datamachine/v1/pipelines", method="POST", data={pipeline_name: "Blog to Twitter", pipeline_config: {...}})
+1. Check Twitter auth status: make_api_request(endpoint="/datamachine/v1/auth/twitter/status", method="GET")
+2. Ask: "Which blog would you like to use? Do you have a specific RSS feed URL, or should I fetch from a WordPress site?"
+3. Use make_api_request to verify handlers exist
+4. Ask: "Should I post every article, or would you like the AI to filter or summarize the content first?"
+5. Build workflow (Fetch → AI → Publish)
+6. Show workflow JSON for review
+7. Execute via make_api_request to /datamachine/v1/execute
+8. Report results with URLs
+9. For recurring automation, create a persistent flow and schedule:
+   - Create pipeline: make_api_request(endpoint="/datamachine/v1/pipelines", method="POST", data={pipeline_name: "Blog to Twitter"})
+   - Add steps to pipeline: make_api_request(endpoint="/datamachine/v1/pipelines/123/steps", method="POST", data={step_type: "fetch", handler_slug: "wordpress_local"})
    - Create flow: make_api_request(endpoint="/datamachine/v1/flows", method="POST", data={pipeline_id: 123, flow_name: "Daily Posts"})
    - Schedule flow: make_api_request(endpoint="/datamachine/v1/schedule", method="POST", data={action: "schedule", flow_id: 456, interval: "daily"})
+
+**Example 3: Modifying Existing Workflows**
+
+User: "I want to change the Twitter posting message in my existing flow"
+
+Your approach:
+1. List user's flows: make_api_request(endpoint="/datamachine/v1/flows", method="GET")
+2. Get flow configuration: make_api_request(endpoint="/datamachine/v1/flows/123/config", method="GET")
+3. Identify the AI step that handles the Twitter message
+4. Update the user message: make_api_request(endpoint="/datamachine/v1/flows/steps/flow_step_id/user-message", method="PATCH", data={user_message: "New message content"})
+5. Clear cache to ensure changes take effect: make_api_request(endpoint="/datamachine/v1/cache", method="DELETE")
+6. Confirm the change worked by checking the updated config
 
 **Example 2: Updating Existing Content**
 

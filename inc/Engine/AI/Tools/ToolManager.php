@@ -315,4 +315,32 @@ class ToolManager {
 
         return $defaults;
     }
+
+    /**
+     * Get all available tools for chat context.
+     * Filters out unconfigured and disabled tools.
+     *
+     * @return array Available tools for chat agents
+     */
+    public function getAvailableToolsForChat(): array {
+        $available_tools = [];
+
+        // Get global tools and filter for availability
+        $global_tools = $this->get_global_tools();
+        foreach ($global_tools as $tool_id => $tool_config) {
+            if ($this->is_tool_available($tool_id, null)) { // null = chat context
+                $available_tools[$tool_id] = $tool_config;
+            }
+        }
+
+        // Get chat-specific tools (these are always available if registered)
+        $chat_tools = apply_filters('datamachine_chat_tools', []);
+        foreach ($chat_tools as $tool_id => $tool_config) {
+            if (is_array($tool_config) && !empty($tool_config)) {
+                $available_tools[$tool_id] = $tool_config;
+            }
+        }
+
+        return $available_tools;
+    }
 }

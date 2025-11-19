@@ -350,7 +350,7 @@ class Files {
             throw new \Exception(__('Cannot determine file size.', 'datamachine'));
         }
 
-        $max_file_size = 32 * 1024 * 1024; // 32MB
+        $max_file_size = wp_max_upload_size();
         if ($file_size > $max_file_size) {
             throw new \Exception(sprintf(
                 /* translators: %1$s: Current file size, %2$s: Maximum allowed file size */

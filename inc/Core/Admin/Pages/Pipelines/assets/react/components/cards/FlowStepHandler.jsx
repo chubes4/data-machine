@@ -6,7 +6,6 @@
 
 import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { slugToLabel } from '../../utils/formatters';
 import { usePipelineContext } from '../../context/PipelineContext';
 
 /**
@@ -27,7 +26,7 @@ export default function FlowStepHandler( {
 	stepType,
 	onConfigure,
 } ) {
-	const { globalSettings } = usePipelineContext();
+	const { globalSettings, handlers } = usePipelineContext();
 
 	if ( ! handlerSlug ) {
 		return (
@@ -57,17 +56,6 @@ export default function FlowStepHandler( {
 				value: setting.display_value || setting.value,
 			};
 		} );
-	} else if ( handlerConfig ) {
-		// Fallback to raw values if no display data available
-		Object.entries( handlerConfig ).forEach( ( [ key, value ] ) => {
-			displaySettings[ key ] = {
-				label: slugToLabel( key ),
-				value:
-					typeof value === 'object'
-						? JSON.stringify( value )
-						: String( value ),
-			};
-		} );
 	}
 
 	const hasSettings = Object.keys( displaySettings ).length > 0;
@@ -75,7 +63,7 @@ export default function FlowStepHandler( {
 	return (
 		<div className="datamachine-flow-step-handler datamachine-handler-container">
 			<div className="datamachine-handler-tag datamachine-handler-badge">
-				{ slugToLabel( handlerSlug ) }
+				{ handlers[handlerSlug]?.label || handlerSlug }
 			</div>
 
 			{ hasSettings && (

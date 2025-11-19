@@ -88,7 +88,7 @@ export default function FileUploadInterface( { onFileUploaded } ) {
 					'png',
 					'gif',
 				] }
-				maxSizeMB={ 10 }
+				maxSizeMB={ Math.round((window.dataMachineConfig?.maxUploadSize || 10485760) / (1024 * 1024)) }
 				disabled={ uploading }
 				uploadText={
 					uploading ? __( 'Uploading...', 'datamachine' ) : null

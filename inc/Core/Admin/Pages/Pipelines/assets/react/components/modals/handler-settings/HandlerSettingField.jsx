@@ -4,31 +4,26 @@ import {
 	SelectControl,
 	CheckboxControl,
 } from '@wordpress/components';
-import { slugToLabel, formatSelectOptions } from '../../../utils/formatters';
-import {
-	resolveFieldValue,
-	getFieldHelpText,
-} from '../../../utils/handlerSettings';
 
 /**
  * Shared renderer for handler schema-driven fields.
  *
+ * Uses resolved field state from API (backend single source of truth).
+ *
  * @param {Object} props Component props
  * @param {string} props.fieldKey Schema field key
- * @param {Object} props.fieldConfig Schema configuration
- * @param {Object} props.settings Current handler settings
+ * @param {Object} props.fieldConfig Resolved field configuration from API
  * @param {Function} props.onChange Change handler
  * @returns {React.ReactElement} Field control
  */
 export default function HandlerSettingField( {
 	fieldKey,
 	fieldConfig = {},
-	settings = {},
 	onChange,
 } ) {
-	const label = fieldConfig.label || slugToLabel( fieldKey );
-	const value = resolveFieldValue( fieldKey, fieldConfig, settings );
-	const help = getFieldHelpText( fieldConfig );
+	const label = fieldConfig.label || fieldKey;
+	const value = fieldConfig.current_value || '';
+	const help = fieldConfig.description || '';
 
 	const handleChange = ( nextValue ) => {
 		if ( typeof onChange === 'function' ) {
@@ -59,7 +54,7 @@ export default function HandlerSettingField( {
 					<SelectControl
 						label={ label }
 						value={ value }
-						options={ formatSelectOptions( fieldConfig.options || [] ).map( ( option ) =>
+						options={ ( fieldConfig.options || [] ).map( ( option ) =>
 							option.value === 'separator'
 								? { ...option, disabled: true }
 								: option

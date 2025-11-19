@@ -126,6 +126,10 @@ class AIStep extends Step {
 
         $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, $payload);
 
+        // Get max turns from settings
+        $settings = datamachine_get_datamachine_settings();
+        $max_turns = $settings['max_turns'] ?? 12;
+
         $navigator = new \DataMachine\Engine\StepNavigator();
         $previous_flow_step_id = $navigator->get_previous_flow_step_id($this->flow_step_id, $payload);
 
@@ -147,7 +151,8 @@ class AIStep extends Step {
             $provider_name,
             $step_ai_config['model'] ?? '',
             'pipeline',
-            $payload
+            $payload,
+            $max_turns
         );
 
         // Check for errors

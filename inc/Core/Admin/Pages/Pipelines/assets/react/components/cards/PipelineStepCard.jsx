@@ -15,7 +15,6 @@ import {
 import { __ } from '@wordpress/i18n';
 import { updateSystemPrompt } from '../../utils/api';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
-import { slugToLabel } from '../../utils/formatters';
 import { usePipelineContext } from '../../context/PipelineContext';
 
 /**
@@ -36,7 +35,7 @@ export default function PipelineStepCard( {
 	onDelete,
 	onConfigure,
 } ) {
-	const { stepTypeSettings } = usePipelineContext();
+	const { stepTypeSettings, stepTypes } = usePipelineContext();
 	const stepConfigMeta = stepTypeSettings?.[ step.step_type ];
 	const canConfigure = !! stepConfigMeta;
 	const aiConfig =
@@ -166,7 +165,7 @@ export default function PipelineStepCard( {
 
 				<div className="datamachine-step-card-wrapper">
 					<div className="datamachine-step-card-header">
-						<strong>{ slugToLabel( step.step_type ) }</strong>
+						<strong>{ stepTypes[step.step_type]?.label || step.step_type }</strong>
 					</div>
 
 					{ /* AI Configuration Display */ }

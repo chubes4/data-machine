@@ -154,6 +154,7 @@ function datamachine_get_datamachine_settings() {
         'file_retention_days' => 7,
         'default_provider' => '',
         'default_model' => '',
+        'max_turns' => 12,
         'wordpress_settings' => []
     ]);
 }

@@ -32,7 +32,8 @@ class WordPressSettingsHandler {
                 'skip' => __('Skip', 'datamachine'),
                 'ai_decides' => __('AI Decides', 'datamachine')
             ],
-            'description_template' => __('Configure %1$s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'datamachine')
+            'description_template' => __('Configure %1$s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'datamachine'),
+            'default' => 'skip'
         ];
         $config = array_merge($defaults, $config);
 
@@ -74,6 +75,7 @@ class WordPressSettingsHandler {
                     $taxonomy->hierarchical ? __('category', 'datamachine') : __('term', 'datamachine')
                 ),
                 'options' => $options,
+                'default' => $config['default'] ?? 'skip',
             ];
         }
 

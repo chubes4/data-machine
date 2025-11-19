@@ -10,7 +10,7 @@ import { __ } from '@wordpress/i18n';
 import FlowStepHandler from './FlowStepHandler';
 import { updateUserMessage } from '../../utils/api';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
-import { slugToLabel } from '../../utils/formatters';
+
 import { usePipelineContext } from '../../context/PipelineContext';
 
 /**
@@ -34,6 +34,7 @@ export default function FlowStepCard( {
 	onConfigure,
 } ) {
 	const { stepTypes } = usePipelineContext();
+	const stepTypeInfo = stepTypes[pipelineStep.step_type] || {};
 	const isAiStep = pipelineStep.step_type === 'ai';
 	const aiConfig = isAiStep
 		? pipelineConfig[ pipelineStep.pipeline_step_id ]
@@ -139,7 +140,7 @@ export default function FlowStepCard( {
 				<div className="datamachine-step-content">
 					<div className="datamachine-step-header-row">
 						<strong>
-							{ slugToLabel( pipelineStep.step_type ) }
+							{ stepTypeInfo.label || pipelineStep.step_type }
 						</strong>
 					</div>
 

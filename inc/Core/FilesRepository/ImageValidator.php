@@ -28,9 +28,9 @@ class ImageValidator {
     ];
 
     /**
-     * Maximum file size (5MB)
+     * Maximum file size (uses WordPress upload limit)
      */
-    private const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    private const MAX_FILE_SIZE = null; // Will be set dynamically
 
     /**
      * Validate repository image file
@@ -58,7 +58,8 @@ class ImageValidator {
 
         // Check file size
         $file_size = filesize($file_path);
-        if ($file_size > self::MAX_FILE_SIZE) {
+        $max_file_size = wp_max_upload_size();
+        if ($file_size > $max_file_size) {
             $result['errors'][] = 'Image file too large';
             return $result;
         }

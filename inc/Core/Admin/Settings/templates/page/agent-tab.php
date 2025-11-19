@@ -14,6 +14,7 @@ $site_context_enabled = $settings['site_context_enabled'];
 $default_provider = $settings['default_provider'] ?? '';
 $default_model = $settings['default_model'] ?? '';
 $enabled_tools = $settings['enabled_tools'] ?? [];
+$max_turns = $settings['max_turns'] ?? 12;
 
 $disabled_attr = $engine_mode ? 'disabled' : '';
 
@@ -151,10 +152,10 @@ if (empty($enabled_tools)) {
         <td>
             <fieldset <?php echo esc_attr($disabled_attr); ?>>
                 <label for="site_context_enabled">
-                    <input type="checkbox" 
+                    <input type="checkbox"
                            id="site_context_enabled"
-                           name="datamachine_settings[site_context_enabled]" 
-                           value="1" 
+                           name="datamachine_settings[site_context_enabled]"
+                           value="1"
                            <?php checked($site_context_enabled, true); ?>
                            <?php echo esc_attr($disabled_attr); ?>>
                     <?php esc_html_e('Include WordPress site context in AI requests', 'datamachine'); ?>
@@ -168,6 +169,27 @@ if (empty($enabled_tools)) {
                     </p>
                 <?php endif; ?>
             </fieldset>
+        </td>
+    </tr>
+
+    <tr>
+        <th scope="row"><?php esc_html_e('Maximum conversation turns', 'datamachine'); ?></th>
+        <td>
+            <input type="number"
+                   name="datamachine_settings[max_turns]"
+                   value="<?php echo esc_attr($max_turns); ?>"
+                   min="1"
+                   max="50"
+                   class="small-text"
+                   <?php echo esc_attr($disabled_attr); ?>>
+            <p class="description">
+                <?php esc_html_e('Maximum number of conversation turns allowed for AI agents (1-50). Applies to both pipeline and chat conversations.', 'datamachine'); ?>
+            </p>
+            <?php if ($engine_mode): ?>
+                <p class="description">
+                    <?php esc_html_e('Maximum turns setting is disabled when Engine Mode is active.', 'datamachine'); ?>
+                </p>
+            <?php endif; ?>
         </td>
     </tr>
 </table>

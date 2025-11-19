@@ -54,7 +54,7 @@ class SettingsDisplayService {
         }
 
         // Get field definitions
-        $fields = $handler_settings::get_fields($current_settings);
+        $fields = $handler_settings::get_fields();
 
         return $this->buildDisplayArray($fields, $current_settings);
     }
@@ -143,7 +143,77 @@ class SettingsDisplayService {
     }
 
     /**
+     * Get field state for API consumption.
+     *
+     * Provides field schema with current values and formatted options.
+     * Frontend looks up display labels from options as needed.
+     *
+     * @param string $handler_slug Handler slug to get fields for
+     * @param array $current_settings Current saved settings (optional)
+     * @return array Field state array
+     */
+    public function getFieldState(string $handler_slug, array $current_settings = []): array {
+        // Get handler Settings class
+        $all_handler_settings = apply_filters('datamachine_handler_settings', [], $handler_slug);
+        $handler_settings = $all_handler_settings[$handler_slug] ?? null;
+
+        if (!$handler_settings || !method_exists($handler_settings, 'get_fields')) {
+            return [];
+        }
+
+        // Get field definitions
+        $fields = $handler_settings::get_fields();
+
+        $field_state = [];
+        foreach ($fields as $key => $field_config) {
+            // Get current value (saved setting or default)
+            $current_value = $current_settings[$key] ?? $field_config['default'] ?? '';
+
+            // Ensure select field values are strings for frontend compatibility
+            if (($field_config['type'] ?? 'text') === 'select') {
+                $current_value = (string) $current_value;
+            }
+
+            // Format options for frontend consumption
+            $formatted_options = $this->formatOptionsForFrontend($field_config['options'] ?? []);
+
+            $field_state[$key] = [
+                'type' => $field_config['type'] ?? 'text',
+                'label' => $field_config['label'] ?? $this->generateFieldLabel($key, $field_config, $this->getAcronymMappings()),
+                'description' => $field_config['description'] ?? '',
+                'options' => $formatted_options,
+                'default' => $field_config['default'] ?? '',
+                'current_value' => $current_value
+            ];
+        }
+
+        return $field_state;
+    }
+
+    /**
+     * Format options array for frontend consumption.
+     *
+     * Converts associative array ['value' => 'label'] to [{'value': 'value', 'label': 'label'}]
+     * Ensures all values are strings for consistent frontend handling.
+     *
+     * @param array $options Raw options array
+     * @return array Formatted options array
+     */
+    private function formatOptionsForFrontend(array $options): array {
+        $formatted = [];
+        foreach ($options as $value => $label) {
+            $formatted[] = [
+                'value' => (string) $value,
+                'label' => (string) $label
+            ];
+        }
+        return $formatted;
+    }
+
+    /**
      * Format display value based on field configuration.
+     *
+     * Handles type-flexible matching for option labels (e.g., integer 1 vs string "1").
      *
      * @param mixed $value Raw value
      * @param array $field_config Field configuration
@@ -153,6 +223,21 @@ class SettingsDisplayService {
         // Use option label if available
         if (isset($field_config['options'][$value])) {
             return $field_config['options'][$value];
+        }
+
+        // Try type coercion for numeric values (handles int/string mismatch)
+        if (is_numeric($value)) {
+            // Try as integer
+            $int_value = (int) $value;
+            if (isset($field_config['options'][$int_value])) {
+                return $field_config['options'][$int_value];
+            }
+
+            // Try as string
+            $string_value = (string) $value;
+            if (isset($field_config['options'][$string_value])) {
+                return $field_config['options'][$string_value];
+            }
         }
 
         return $value;

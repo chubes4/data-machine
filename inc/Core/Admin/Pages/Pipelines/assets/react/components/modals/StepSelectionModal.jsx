@@ -8,7 +8,6 @@ import { useState } from '@wordpress/element';
 import { Modal, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { addPipelineStep } from '../../utils/api';
-import { slugToLabel } from '../../utils/formatters';
 import { usePipelineContext } from '../../context/PipelineContext';
 
 /**
@@ -115,7 +114,7 @@ export default function StepSelectionModal( {
 									disabled={ isAdding }
 								>
 									<strong>
-										{ slugToLabel( stepType ) }
+										{ stepTypes[stepType]?.label || stepType }
 									</strong>
 
 									<p>

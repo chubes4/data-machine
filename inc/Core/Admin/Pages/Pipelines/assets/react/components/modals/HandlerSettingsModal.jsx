@@ -2,13 +2,14 @@
  * Handler Settings Modal Component
  *
  * Modal for configuring handler-specific settings for flow steps.
+ * Receives complete handler configuration from API with defaults pre-merged.
  */
 
 import { useState, useEffect } from '@wordpress/element';
 import { Modal, Button } from '@wordpress/components';
 import { sprintf, __ } from '@wordpress/i18n';
 import { updateFlowHandler, fetchHandlerDetails } from '../../utils/api';
-import { slugToLabel } from '../../utils/formatters';
+
 import { sanitizeHandlerSettingsPayload } from '../../utils/handlerSettings';
 import { usePipelineContext } from '../../context/PipelineContext';
 import FilesHandlerSettings from './handler-settings/files/FilesHandlerSettings';
@@ -91,11 +92,12 @@ export default function HandlerSettingsModal( {
 	}, [ isOpen, handlerSlug ] );
 
 	/**
-	 * Reset form when modal opens with new settings
+	 * Reset form when modal opens with current settings.
+	 * API provides complete config with defaults already merged.
 	 */
 	useEffect( () => {
-		if ( isOpen ) {
-			setSettings( currentSettings || {} );
+		if ( isOpen && currentSettings ) {
+			setSettings( currentSettings );
 		}
 	}, [ isOpen, currentSettings ] );
 
@@ -180,7 +182,7 @@ export default function HandlerSettingsModal( {
 					<div className="datamachine-modal-header-section">
 						<div>
 							<strong>{ __( 'Handler:', 'datamachine' ) }</strong>{ ' ' }
-							{ handlerInfo.label || slugToLabel( handlerSlug ) }
+							{ handlerInfo.label || handlerSlug }
 						</div>
 						<Button
 							variant="secondary"

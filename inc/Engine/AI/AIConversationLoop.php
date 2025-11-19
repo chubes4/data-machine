@@ -34,7 +34,7 @@ class AIConversationLoop {
 	 * @param string $model          AI model identifier
 	 * @param string $agent_type     Agent type: 'pipeline' or 'chat'
 	 * @param array  $payload        Step payload (job_id, flow_step_id, data, flow_step_config, engine_data)
-	 * @param int    $max_turns      Maximum conversation turns (default 8)
+	 * @param int    $max_turns      Maximum conversation turns (default 12)
 	 * @return array {
 	 *     @type array  $messages        Final conversation state
 	 *     @type string $final_content   Last AI text response
@@ -52,6 +52,8 @@ class AIConversationLoop {
 		array $payload = [],
 		int $max_turns = 12
 	): array {
+		// Ensure max_turns is within reasonable bounds
+		$max_turns = max(1, min(50, $max_turns));
 		$conversation_complete = false;
 		$turn_count = 0;
 		$final_content = '';

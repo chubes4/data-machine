@@ -6,7 +6,7 @@
 
 import { Modal, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { slugToLabel } from '../../utils/formatters';
+
 import { usePipelineContext } from '../../context/PipelineContext';
 
 /**
@@ -80,7 +80,7 @@ export default function HandlerSelectionModal( {
 								onClick={ () => handleSelect( slug ) }
 							>
 								<strong>
-									{ handler.label || slugToLabel( slug ) }
+									{ handler.label || slug }
 								</strong>
 
 								<p>

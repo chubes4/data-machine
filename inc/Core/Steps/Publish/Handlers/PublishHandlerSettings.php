@@ -38,7 +38,8 @@ abstract class PublishHandlerSettings extends SettingsHandler {
             'include_images' => [
                 'type' => 'checkbox',
                 'label' => __('Enable Image Posting', 'datamachine'),
-                'description' => __('Include images when available in source data.', 'datamachine')
+                'description' => __('Include images when available in source data.', 'datamachine'),
+                'default' => false
             ]
         ];
     }

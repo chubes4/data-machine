@@ -121,18 +121,9 @@ class Handlers {
 			);
 		}
 
-		// Get settings schema
-		$settings_schema = [];
-		$all_settings = apply_filters('datamachine_handler_settings', [], $handler_slug);
-
-		if (isset($all_settings[$handler_slug])) {
-			$settings_class = $all_settings[$handler_slug];
-
-			// Call get_fields() if method exists
-			if (method_exists($settings_class, 'get_fields')) {
-				$settings_schema = $settings_class::get_fields();
-			}
-		}
+		// Get field state from backend (single source of truth)
+		$settings_display_service = new \DataMachine\Core\Steps\Settings\SettingsDisplayService();
+		$field_state = $settings_display_service->getFieldState($handler_slug);
 
 		// Get AI tool definition
 		$ai_tool = null;
@@ -155,7 +146,7 @@ class Handlers {
 			'handler' => [
 				'slug' => $handler_slug,
 				'info' => $handler_info,
-				'settings' => $settings_schema,
+				'settings' => $field_state,
 				'ai_tool' => $ai_tool
 			]
 		]);

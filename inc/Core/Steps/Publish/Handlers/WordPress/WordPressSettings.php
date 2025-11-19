@@ -61,18 +61,21 @@ class WordPressSettings extends PublishHandlerSettings {
                 'label' => __('Post Type', 'datamachine'),
                 'description' => __('Select the post type for published content.', 'datamachine'),
                 'options' => $post_type_options,
+                'default' => 'post',
             ],
             'post_status' => [
                 'type' => 'select',
                 'label' => __('Post Status', 'datamachine'),
                 'description' => __('Select the status for the newly created post.', 'datamachine'),
                 'options' => get_post_statuses(),
+                'default' => 'draft',
             ],
             'post_author' => [
                 'type' => 'select',
                 'label' => __('Post Author', 'datamachine'),
                 'description' => __('Select which WordPress user to publish posts under.', 'datamachine'),
                 'options' => $user_options,
+                'default' => !empty($user_options) ? array_key_first($user_options) : '',
             ],
         ];
 
@@ -99,6 +102,7 @@ class WordPressSettings extends PublishHandlerSettings {
                     'current_date' => __('Use Current Date', 'datamachine'),
                     'source_date' => __('Use Source Date (if available)', 'datamachine'),
                 ],
+                'default' => 'current_date',
             ],
         ]);
     }

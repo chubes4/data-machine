@@ -14,6 +14,7 @@ namespace DataMachine\Api\Chat;
 use DataMachine\Core\Database\Chat\Chat as ChatDatabase;
 use DataMachine\Engine\AI\ConversationManager;
 use DataMachine\Engine\AI\AIConversationLoop;
+use DataMachine\Engine\AI\Tools\ToolManager;
 use WP_REST_Server;
 use WP_REST_Request;
 use WP_Error;
@@ -88,6 +89,7 @@ class Chat {
 		$settings = get_option('datamachine_settings', []);
 		$provider = $request->get_param('provider');
 		$model = $request->get_param('model');
+		$max_turns = $settings['max_turns'] ?? 12;
 
 		if (empty($provider)) {
 			$provider = $settings['default_provider'] ?? '';
@@ -158,14 +160,9 @@ class Chat {
 
 		$messages[] = ConversationManager::buildConversationMessage('user', $message);
 
-		// Load global tools (available to all AI agents)
-		$global_tools = apply_filters('datamachine_global_tools', []);
-
-		// Load chat-specific tools
-		$chat_specific_tools = apply_filters('datamachine_chat_tools', []);
-
-		// Merge both
-		$all_tools = array_merge($global_tools, $chat_specific_tools);
+		// Load available tools using ToolManager (filters out unconfigured/disabled tools)
+		$tool_manager = new ToolManager();
+		$all_tools = $tool_manager->getAvailableToolsForChat();
 
 		do_action('datamachine_log', 'debug', 'Chat endpoint processing message', [
 			'session_id' => $session_id,
@@ -184,7 +181,8 @@ class Chat {
 			$provider,
 			$model,
 			'chat',
-			['session_id' => $session_id]
+			['session_id' => $session_id],
+			$max_turns
 		);
 
 		// Check for errors

@@ -36,9 +36,11 @@ export default function CSVDropzone( {
 			return;
 		}
 
-		// Validate file size (10MB limit)
-		if ( file.size > 10485760 ) {
-			setError( __( 'File size exceeds 10MB limit.', 'datamachine' ) );
+		// Validate file size (dynamic limit)
+		const maxSize = window.dataMachineConfig?.maxUploadSize || 10485760; // fallback to 10MB
+		if ( file.size > maxSize ) {
+			const maxSizeMB = Math.round(maxSize / (1024 * 1024));
+			setError( __( `File size exceeds ${maxSizeMB}MB limit.`, 'datamachine' ) );
 			return;
 		}
 

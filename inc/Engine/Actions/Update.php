@@ -168,6 +168,9 @@ class Update {
              return false;
          }
 
+         // Clear flow cache to ensure fresh data on next fetch
+         do_action('datamachine_clear_flow_cache', $flow_id);
+
          return true;
     }
 

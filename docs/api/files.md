@@ -25,7 +25,7 @@ Upload a file for pipeline processing.
 - `file` (file, required): File to upload (multipart/form-data)
 
 **File Restrictions**:
-- **Maximum size**: 32MB
+- **Maximum size**: Determined by WordPress `wp_max_upload_size()` setting (typically 2MB-128MB)
 - **Blocked extensions**: php, exe, bat, js, sh, and other executable types
 - **Security**: Path traversal protection and MIME type validation
 

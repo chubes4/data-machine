@@ -214,6 +214,15 @@ function datamachine_sanitize_settings($input) {
         }
     }
 
+    // Sanitize max turns (1-50 turns range)
+    $sanitized['max_turns'] = 12; // default
+    if (isset($input['max_turns'])) {
+        $max_turns = absint($input['max_turns']);
+        if ($max_turns >= 1 && $max_turns <= 50) {
+            $sanitized['max_turns'] = $max_turns;
+        }
+    }
+
     return $sanitized;
 }
 

@@ -317,7 +317,7 @@ Server-side operation failure.
 ```
 
 **Solution**:
-- Reduce file size below 32MB
+- Reduce file size below WordPress upload limit (check `wp_max_upload_size()`)
 - Use allowed file types (not php, exe, bat, js, sh)
 - Check MIME type is valid
 

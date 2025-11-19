@@ -178,7 +178,7 @@ export default function PipelineContextFiles( { pipelineId } ) {
 				<FileUploadDropzone
 					onFileSelected={ handleFileSelected }
 					allowedTypes={ [ 'pdf', 'csv', 'txt', 'json' ] }
-					maxSizeMB={ 10 }
+					maxSizeMB={ Math.round((window.dataMachineConfig?.maxUploadSize || 10485760) / (1024 * 1024)) }
 					disabled={ uploading || loading }
 					uploadText={
 						uploading ? __( 'Uploading...', 'datamachine' ) : null
