@@ -1,13 +1,13 @@
 # Settings Configuration Interface
 
-Tabbed settings interface providing centralized control over Data Machine system behavior, integrations, and WordPress defaults.
+Tabbed settings interface providing centralized control over Data Machine system behavior, integrations, and AI provider configuration.
 
 ## Interface Structure
 
 **Tabbed Navigation**: WordPress native nav-tab-wrapper pattern with three main sections:
-- **Admin**: System behavior and administrative controls
-- **Agent**: AI system configuration and tool management  
-- **WordPress**: Content creation defaults and site integration
+- **Admin Tab**: System behavior and administrative controls
+- **Agent Tab**: AI system configuration and tool management
+- **AI Providers Tab**: API key entry for AI providers (OpenAI, Anthropic, Google, Grok, OpenRouter)
 
 **Form Integration**: Standard WordPress settings API integration with automatic option persistence and validation.
 
@@ -19,15 +19,9 @@ Tabbed settings interface providing centralized control over Data Machine system
 - Access control and capability management
 
 **System Behavior**:
-- Job data cleanup on failure (debugging vs. production modes)
-- File retention settings (1-90 days for flow-isolated file storage)
+- Job data cleanup on failure toggle (enable for production, disable for debugging failed jobs)
 - Logging level configuration and output management
 - Performance optimization settings
-
-**Site Context Integration**:
-- WordPress site context injection toggle
-- Context data scope configuration (posts, taxonomies, users, theme)
-- Cache management and invalidation settings
 
 ## Agent Tab
 
@@ -36,6 +30,11 @@ Tabbed settings interface providing centralized control over Data Machine system
 - Inheritance and override behavior for pipeline-specific prompts
 - Template variables and dynamic content injection
 
+**Site Context Integration**:
+- WordPress site context injection toggle
+- Automatic context data injection (posts, taxonomies, users, theme) for AI awareness
+- Cache management and invalidation settings
+
 **Global Tools Management**:
 - Global enablement toggles for universal AI tools
 - Tool-specific configuration requirements and status
@@ -43,20 +42,24 @@ Tabbed settings interface providing centralized control over Data Machine system
 
 **Tool Configuration Interface**:
 - Google Search: API key and Custom Search Engine ID setup
-- Local Search: Always enabled, no configuration required
+- Local Search: WordPress-native, always enabled (no configuration required)
+- WebFetch: Web page content retrieval (no configuration required)
+- WordPress Post Reader: Single post analysis (no configuration required)
 
-## WordPress Tab
+## AI Providers Tab
 
-**Content Creation Defaults**:
-- Default post type for WordPress publish handlers
-- Default taxonomy assignments (categories, tags)
-- Default author assignment for automated content
-- Default post status (draft, publish, private)
+**Supported Providers**:
+- OpenAI (GPT models)
+- Anthropic (Claude models)
+- Google (Gemini models)
+- Grok (xAI models)
+- OpenRouter (200+ models from multiple providers)
 
-**Site Integration**:
-- WordPress-specific behavior configuration
-- Content formatting and sanitization rules
-- Media handling and file processing defaults
+**Configuration Requirements**:
+- API key entry for each provider
+- Model selection and availability
+- Rate limiting and usage monitoring
+- Provider-specific settings and parameters
 
 ## Configuration Management
 

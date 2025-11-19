@@ -277,7 +277,7 @@ Major update with REST API, Chat interface, and performance improvements. Includ
 
 For technical specifications, architecture details, and development guides, see the CLAUDE.md file included with the plugin or visit the GitHub repository.
 
-**REST API Documentation:** Available in docs/api-reference/rest-api.md
+**REST API Documentation:** Available in docs/api/index.md
 
 **Extension Development:** Complete framework supporting custom handlers, AI tools, and database services with filter-based auto-discovery.
 

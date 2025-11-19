@@ -572,12 +572,3 @@ $pipeline_name = sanitize_text_field($data['pipeline_name'] ?? '');
 $config_json = wp_json_encode($config_data);
 ```
 
-### Nonce Validation
-
-AJAX actions require nonce validation:
-
-```php
-if (!wp_verify_nonce($_POST['nonce'], 'datamachine_ajax_actions')) {
-    wp_die(__('Security check failed'));
-}
-```

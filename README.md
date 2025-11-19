@@ -230,7 +230,7 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 
 **Frontend Integration**: React architecture with REST API integration across all admin pages.
 
-*For complete REST API documentation, see `docs/api-reference/rest-api.md` | For technical specifications, see `CLAUDE.md`*
+*For complete REST API documentation, see `docs/api/index.md` | For technical specifications, see `CLAUDE.md`*
 
 ### Extension Development
 

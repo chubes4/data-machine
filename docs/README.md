@@ -16,7 +16,7 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 - [Tool Execution Architecture](core-system/tool-execution.md) - Tool discovery and execution
 - [RequestBuilder Pattern](core-system/request-builder.md) - Centralized AI request construction
 - [ConversationManager](core-system/conversation-manager.md) - Message formatting and conversation utilities
-- [ToolParameters](core-system/tool-parameters.md) - Unified parameter building for AI tools
+- [Parameter Systems](api/parameter-systems.md) - Unified parameter architecture and tool building
 - [ToolResultFinder](core-system/tool-result-finder.md) - Universal tool result search utility
 - [Chat Database](core-system/chat-database.md) - Session management and CRUD operations
 - [OAuth Handlers](core-system/oauth-handlers.md) - Centralized OAuth 1.0a and 2.0 flow handlers
@@ -51,11 +51,10 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 - [WordPress Post Reader](ai-tools/wordpress-post-reader.md) - Single WordPress post content retrieval by URL
 
 ### API Reference
-- [**API Overview**](api/index.md) - Complete endpoint catalog and getting started guide
+- [**API Overview**](api/index.md) - Complete endpoint catalog with modular documentation structure
 - [**Core Filters**](api-reference/core-filters.md) - All WordPress filters
 - [**Core Actions**](api-reference/core-actions.md) - All WordPress actions
 - [**Universal Engine Filters**](api-reference/engine-filters.md) - Directive and tool filters (v0.2.0)
-- [**REST API Reference**](api-reference/rest-api.md) - Redirects to modular API documentation
 
 ### Admin Interface
 - [Pipeline Builder](admin-interface/pipeline-builder.md) - Visual drag-and-drop interface
@@ -83,7 +82,7 @@ docs/
 │   ├── tool-execution.md               # Tool discovery and execution (v0.2.0)
 │   ├── request-builder.md              # Centralized AI request construction (v0.2.0)
 │   ├── conversation-manager.md         # Message formatting and conversation utilities (v0.2.1)
-│   ├── tool-parameters.md              # Unified parameter building for AI tools (v0.2.0)
+│   ├── parameter-systems.md            # Unified parameter architecture (API docs)
 │   ├── tool-result-finder.md           # Universal tool result search utility (v0.2.1)
 │   ├── chat-database.md                # Session management and CRUD operations (v0.2.0)
 │   └── oauth-handlers.md               # Centralized OAuth 1.0a and OAuth 2.0 handlers (v0.2.0)

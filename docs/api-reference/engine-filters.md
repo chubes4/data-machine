@@ -212,15 +212,7 @@ add_filter('datamachine_agent_directives', function($request, $agent_type, $prov
 }, 10, 5);
 ```
 
-### Legacy Directive Filters (Deprecated)
 
-**Status**: `datamachine_pipeline_directives` and `datamachine_chat_directives` are deprecated legacy filters.
-
-**Migration Required**: All custom directives should be migrated to use `datamachine_agent_directives` with agent type checking. See the `datamachine_agent_directives` filter documentation above for the recommended implementation pattern.
-    }
-    return $request;
-}, 10, 5);
-```
 
 ## Tool Filters
 

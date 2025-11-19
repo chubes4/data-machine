@@ -512,7 +512,7 @@ if ($validation['is_duplicate']) {
 - [AIConversationLoop](ai-conversation-loop.md) - Multi-turn conversation execution using ConversationManager
 - [ToolExecutor](tool-execution.md) - Tool discovery and execution
 - [RequestBuilder](request-builder.md) - AI request construction
-- [ToolParameters](tool-parameters.md) - Tool parameter building
+- [Parameter Systems](../../api/parameter-systems.md) - Tool parameter building and architecture
 - [Universal Engine Architecture](universal-engine.md) - Shared AI infrastructure
 
 ---

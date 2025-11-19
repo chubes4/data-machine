@@ -357,7 +357,7 @@ add_filter('datamachine_agent_directives', function($request, $agent_type, $prov
 }, 10, 5);
 ```
 
-**Note**: Legacy `datamachine_pipeline_directives` and `datamachine_chat_directives` filters are deprecated. Use `datamachine_agent_directives` for all new implementations.
+
 
 ## Integration Examples
 

@@ -168,7 +168,7 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 
 **Database Component**: `ChatDatabase` class at `/inc/Core/Database/Chat/Chat.php` handles CRUD operations for chat sessions
 
-**Key Integration**: Uses Universal Engine architecture (AIConversationLoop, RequestBuilder, ToolExecutor, ToolParameters, ConversationManager) - see `/docs/api-reference/rest-api.md` for complete API documentation
+**Key Integration**: Uses Universal Engine architecture (AIConversationLoop, RequestBuilder, ToolExecutor, ToolParameters, ConversationManager) - see `/docs/api/index.md` for complete API documentation
 
 ## Handler Matrix
 
