@@ -366,17 +366,6 @@ class Flows {
 			if (isset($step_data['handler_slug'])) {
 				$step_type = $step_data['step_type'] ?? '';
 
-				// Merge global defaults into handler_config for display
-				// This ensures the handler card shows complete configuration including global defaults
-				if (!empty($step_data['handler_config'])) {
-					$step_data['handler_config'] = apply_filters(
-						'datamachine_apply_global_defaults',
-						$step_data['handler_config'],
-						$step_data['handler_slug'],
-						$step_type
-					);
-				}
-
 				$step_data['settings_display'] = apply_filters(
 					'datamachine_get_handler_settings_display',
 					[],

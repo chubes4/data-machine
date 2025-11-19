@@ -37,6 +37,14 @@ Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and mult
 - **WordPressSettingsHandler** - Shared WordPress settings fields
 - **WordPressFilters** - Service discovery registration
 
+**HandlerRegistrationTrait** (@since v0.2.1): Standardized trait that eliminates boilerplate code for handler registration across all fetch, publish, and update handlers. Provides a single `registerHandler()` method that automatically registers handlers with all required WordPress filters (`datamachine_handlers`, `datamachine_auth_providers`, `datamachine_handler_settings`, `chubes_ai_tools`).
+
+**Benefits**:
+- Reduces code duplication by ~70% across handler registration files
+- Ensures consistent registration patterns across all handlers
+- Centralizes filter registration logic for maintainability
+- Auto-handles conditional registration based on handler type and requirements
+
 **Self-Registration**: Components auto-register via `*Filters.php` files loaded through composer.json using the HandlerRegistrationTrait:
 ```php
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
@@ -68,6 +76,12 @@ function datamachine_register_twitter_filters() {
     TwitterFilters::register();
 }
 datamachine_register_twitter_filters(); // Auto-execute at file load
+
+// The trait handles all filter registrations automatically:
+// - datamachine_handlers: Registers handler metadata
+// - datamachine_auth_providers: Registers auth class (if requires_auth=true)
+// - datamachine_handler_settings: Registers settings class
+// - chubes_ai_tools: Registers AI tools via callback
 ```
 
 **Engine Components** (@since v0.2.1):

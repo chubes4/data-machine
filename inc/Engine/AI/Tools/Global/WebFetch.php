@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 use \DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class WebFetch {
+    use ToolRegistrationTrait;
 
     public function __construct() {
         $this->registerSuccessMessageHandler('web_fetch');

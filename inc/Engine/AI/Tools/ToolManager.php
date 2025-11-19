@@ -49,6 +49,10 @@ class ToolManager {
      * @return bool True if configured
      */
     public function is_tool_configured(string $tool_id): bool {
+        // If tool doesn't require configuration, it's always configured
+        if (!$this->requires_configuration($tool_id)) {
+            return true;
+        }
         return apply_filters('datamachine_tool_configured', false, $tool_id);
     }
 

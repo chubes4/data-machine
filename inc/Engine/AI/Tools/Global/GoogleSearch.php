@@ -12,6 +12,7 @@ defined('ABSPATH') || exit;
 use \DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class GoogleSearch {
+    use ToolRegistrationTrait;
 
     public function __construct() {
         $this->registerConfigurationHandlers('google_search');

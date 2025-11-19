@@ -151,20 +151,13 @@
 				datamachineSettings.strings.saving || 'Saving...';
 			button.disabled = true;
 
-			// Use REST API endpoint
-			const restUrl =
-				wpApiSettings.root + 'datamachine/v1/settings/tools/' + toolId;
-
-			// Send REST request
-			fetch( restUrl, {
+			// Send REST request using wp.apiFetch
+			wp.apiFetch( {
+				path: '/datamachine/v1/settings/tools/' + toolId,
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'X-WP-Nonce': wpApiSettings.nonce,
-				},
-				body: JSON.stringify( {
+				data: {
 					config_data: configData,
-				} ),
+				},
 			} )
 				.then( ( response ) => response.json() )
 				.then( ( response ) => {
@@ -228,15 +221,10 @@
 			);
 			result.textContent = '';
 
-			// Use REST API endpoint
-			const restUrl = wpApiSettings.root + 'datamachine/v1/cache';
-
-			// Send REST request
-			fetch( restUrl, {
+			// Send REST request using wp.apiFetch
+			wp.apiFetch( {
+				path: '/datamachine/v1/cache',
 				method: 'DELETE',
-				headers: {
-					'X-WP-Nonce': wpApiSettings.nonce,
-				},
 			} )
 				.then( ( response ) => response.json() )
 				.then( ( response ) => {

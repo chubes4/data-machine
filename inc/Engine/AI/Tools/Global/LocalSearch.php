@@ -13,6 +13,7 @@ use \DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
  * WordPress site search for AI context gathering.
  */
 class LocalSearch {
+    use ToolRegistrationTrait;
 
     public function __construct() {
         $this->registerSuccessMessageHandler('local_search');

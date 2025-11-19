@@ -12,6 +12,7 @@ defined('ABSPATH') || exit;
 use \DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class WordPressPostReader {
+    use ToolRegistrationTrait;
 
     public function __construct() {
         $this->registerSuccessMessageHandler('wordpress_post_reader');
