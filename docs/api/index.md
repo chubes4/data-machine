@@ -1,6 +1,6 @@
 # Data Machine REST API
 
-Complete REST API reference for Data Machine v0.2.1
+Complete REST API reference for Data Machine
 
 ## Quick Start
 
@@ -96,5 +96,4 @@ For detailed implementation patterns, see:
 ---
 
 **API Version**: v1
-**Data Machine Version**: 0.2.1
-**Last Updated**: 2025-11-15
+**Last Updated**: 2025-11-19

@@ -195,7 +195,7 @@ class Files {
         ];
 
         try {
-            self::validate_file($file);
+            self::validate_file_with_wordpress($file);
         } catch (\Exception $e) {
             do_action('datamachine_log', 'error', 'File upload failed validation.', [
                 'filename' => $file['name'],
@@ -340,11 +340,11 @@ class Files {
     }
 
     /**
-     * Validate uploaded file
+     * Validate uploaded file using WordPress native security functions
      *
      * @throws \Exception When validation fails
      */
-    private static function validate_file(array $file): void {
+    private static function validate_file_with_wordpress(array $file): void {
         $file_size = filesize($file['tmp_name']);
         if ($file_size === false) {
             throw new \Exception(__('Cannot determine file size.', 'datamachine'));
@@ -360,32 +360,42 @@ class Files {
             ));
         }
 
-        $dangerous_extensions = ['php', 'phtml', 'php3', 'php4', 'php5', 'php7', 'phps', 'pht', 'phar', 'exe', 'bat', 'cmd', 'scr', 'com', 'pif', 'vbs', 'js', 'jar', 'msi', 'dll', 'sh', 'pl', 'py', 'rb', 'asp', 'aspx', 'jsp', 'htaccess'];
-        $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        if (in_array($file_extension, $dangerous_extensions, true)) {
-            throw new \Exception(__('File type not allowed for security reasons.', 'datamachine'));
+        // Use WordPress's native file type validation
+        $wp_filetype = wp_check_filetype($file['name']);
+        if (!$wp_filetype['type']) {
+            throw new \Exception(__('File type not allowed.', 'datamachine'));
         }
 
+        // Additional path traversal protection (WordPress style)
+        $filename = sanitize_file_name($file['name']);
+        if ($filename !== $file['name']) {
+            throw new \Exception(__('Invalid file name detected.', 'datamachine'));
+        }
+
+        // Check for path traversal attempts
         if (strpos($file['name'], '..') !== false || strpos($file['name'], '/') !== false || strpos($file['name'], '\\') !== false) {
             throw new \Exception(__('Invalid file name detected.', 'datamachine'));
         }
 
+        // Verify MIME type matches file extension (additional security layer)
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         if ($finfo) {
             $detected_mime = finfo_file($finfo, $file['tmp_name']);
             finfo_close($finfo);
 
-            $dangerous_mimes = [
-                'application/x-executable',
-                'application/x-dosexec',
-                'application/x-msdownload',
-                'application/x-php',
-                'text/x-php',
-                'application/php',
-            ];
+            if ($detected_mime && $wp_filetype['type'] && $detected_mime !== $wp_filetype['type']) {
+                // Allow some common variations but block obvious mismatches
+                $allowed_mime_variations = [
+                    'text/plain' => ['text/csv', 'text/tab-separated-values'],
+                    'application/octet-stream' => ['application/zip', 'application/x-zip-compressed'],
+                ];
 
-            if ($detected_mime && in_array($detected_mime, $dangerous_mimes, true)) {
-                throw new \Exception(__('File content type not allowed for security reasons.', 'datamachine'));
+                $is_allowed_variation = isset($allowed_mime_variations[$wp_filetype['type']]) &&
+                                       in_array($detected_mime, $allowed_mime_variations[$wp_filetype['type']], true);
+
+                if (!$is_allowed_variation) {
+                    throw new \Exception(__('File content does not match file type.', 'datamachine'));
+                }
             }
         }
     }

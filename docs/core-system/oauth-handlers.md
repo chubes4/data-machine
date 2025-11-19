@@ -2,8 +2,6 @@
 
 **Location**: `/inc/Core/OAuth/`
 
-**Version**: 0.2.1
-
 ## Overview
 
 Centralized OAuth flow handlers eliminating code duplication across all authentication providers. Data Machine uses a unified service discovery pattern for OAuth 1.0a and OAuth 2.0 implementations.
@@ -518,4 +516,3 @@ $result = apply_filters('datamachine_request', null, 'POST', $token_url, [
 
 **Implementation**: `/inc/Core/OAuth/` directory with OAuth1Handler, OAuth2Handler, OAuthFilters components
 **Service Discovery**: `datamachine_get_oauth1_handler` and `datamachine_get_oauth2_handler` filters
-**Version**: 0.2.1

@@ -5,6 +5,33 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2025-11-19
+
+### Added
+- **HandlerRegistrationTrait** (`/inc/Core/Steps/HandlerRegistrationTrait.php`) - Eliminates ~70% of boilerplate code across all handler registration files
+  - Standardized `registerHandler()` method for consistent registration patterns
+  - Automatic filter registration for handlers, auth providers, settings, and AI tools
+  - Refactored all 14 handler filter files to use the trait
+- **ToolRegistrationTrait** (`/inc/Engine/AI/Tools/ToolRegistrationTrait.php`) - Standardized AI tool registration functionality
+  - Agent-agnostic tool registration with dynamic filter creation
+  - Helper methods for global tools, chat tools, and configuration handlers
+  - Extensible architecture for future agent types
+
+### Improved
+- **Server-Side Single Source of Truth** - Enhanced API as access layer for pipeline builder operations
+- **Centralized ToolManager** - Consolidated tool management to reduce execution errors
+- **Simplified WordPress Settings** - Removed overengineered global defaults logic from WordPress handlers
+- **Directive System Cleanup** - Removed legacy compatibility code for cleaner architecture
+
+### Removed
+- **Overengineered WordPress Settings Tab** - Eliminated confusing global default functionality
+- **Legacy Directive Compatibility** - Cleaned up deprecated directive system code
+
+### Technical Details
+- **Handler Registration Standardization**: All handler filter files now use HandlerRegistrationTrait, reducing code duplication by ~70%
+- **Tool Registration Extensibility**: ToolRegistrationTrait enables unlimited agent specialization while maintaining consistent patterns
+- **Architecture Simplification**: Removed complex WordPress settings logic in favor of programmatic workflow creation via chat endpoint
+
 ## [0.2.1] - 2025-11-18
 
 ### Added

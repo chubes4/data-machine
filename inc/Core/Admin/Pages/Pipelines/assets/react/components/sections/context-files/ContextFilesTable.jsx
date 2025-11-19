@@ -25,23 +25,6 @@ export default function ContextFilesTable( {
 	const [ deletingId, setDeletingId ] = useState( null );
 
 	/**
-	 * Format file size for display
-	 */
-	const formatFileSize = ( bytes ) => {
-		if ( bytes === 0 ) return '0 Bytes';
-
-		const k = 1024;
-		const sizes = [ 'Bytes', 'KB', 'MB', 'GB' ];
-		const i = Math.floor( Math.log( bytes ) / Math.log( k ) );
-
-		return (
-			Math.round( ( bytes / Math.pow( k, i ) ) * 100 ) / 100 +
-			' ' +
-			sizes[ i ]
-		);
-	};
-
-	/**
 	 * Format date for display
 	 */
 	const formatDate = ( dateString ) => {
@@ -76,9 +59,6 @@ export default function ContextFilesTable( {
 				<thead>
 					<tr className="datamachine-table-sticky-header">
 						<th>{ __( 'File Name', 'datamachine' ) }</th>
-						<th className="datamachine-table-col--compact">
-							{ __( 'Size', 'datamachine' ) }
-						</th>
 						<th className="datamachine-table-col--date">
 							{ __( 'Uploaded', 'datamachine' ) }
 						</th>
@@ -95,9 +75,6 @@ export default function ContextFilesTable( {
 							<tr key={ file.file_id }>
 								<td className="datamachine-table-cell--medium">
 									{ file.file_name }
-								</td>
-								<td className="datamachine-table-cell--muted">
-									{ formatFileSize( file.file_size ) }
 								</td>
 								<td className="datamachine-table-cell--muted datamachine-table-cell--small">
 									{ formatDate( file.uploaded_at ) }

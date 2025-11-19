@@ -2,7 +2,7 @@
 
 Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and multi-provider AI integration.
 
-**Version**: 0.2.1
+**Version**: 0.2.2
 
 *For user documentation, see `docs/README.md` | For GitHub overview, see `README.md`*
 

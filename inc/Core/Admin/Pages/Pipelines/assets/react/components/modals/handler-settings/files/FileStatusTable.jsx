@@ -15,23 +15,6 @@ import { __ } from '@wordpress/i18n';
  */
 export default function FileStatusTable( { files = [] } ) {
 	/**
-	 * Format file size for display
-	 */
-	const formatFileSize = ( bytes ) => {
-		if ( bytes === 0 ) return '0 Bytes';
-
-		const k = 1024;
-		const sizes = [ 'Bytes', 'KB', 'MB', 'GB' ];
-		const i = Math.floor( Math.log( bytes ) / Math.log( k ) );
-
-		return (
-			Math.round( ( bytes / Math.pow( k, i ) ) * 100 ) / 100 +
-			' ' +
-			sizes[ i ]
-		);
-	};
-
-	/**
 	 * Get status badge
 	 */
 	const getStatusBadge = ( status ) => {
@@ -73,9 +56,6 @@ export default function FileStatusTable( { files = [] } ) {
 				<thead>
 					<tr className="datamachine-table-sticky-header">
 						<th>{ __( 'File Name', 'datamachine' ) }</th>
-						<th className="datamachine-table-col--compact">
-							{ __( 'Size', 'datamachine' ) }
-						</th>
 						<th className="datamachine-table-cell--center datamachine-table-col--compact">
 							{ __( 'Status', 'datamachine' ) }
 						</th>
@@ -86,9 +66,6 @@ export default function FileStatusTable( { files = [] } ) {
 						<tr key={ index }>
 							<td className="datamachine-table-cell--medium">
 								{ file.file_name }
-							</td>
-							<td className="datamachine-table-cell--muted">
-								{ formatFileSize( file.file_size ) }
 							</td>
 							<td className="datamachine-table-cell--center">
 								{ getStatusBadge( file.status ) }

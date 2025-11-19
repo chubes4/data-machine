@@ -87,8 +87,6 @@ $result = $oauth1->handle_callback('twitter', $access_url, $key, $secret, $accou
 
 **Providers**: Twitter
 
-**Version**: 0.2.1
-
 ### `datamachine_get_oauth2_handler`
 
 **Purpose**: Service discovery for OAuth 2.0 handler
@@ -115,8 +113,6 @@ $result = $oauth2->handle_callback($provider_key, $token_url, $token_params, $ac
 - `handle_callback()` - Complete OAuth flow with token exchange
 
 **Providers**: Reddit, Facebook, Threads, Google Sheets
-
-**Version**: 0.2.1
 
 ## AI Integration Filters
 

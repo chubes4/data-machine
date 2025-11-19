@@ -53,22 +53,16 @@ export default function FlowScheduleModal( {
 					if ( data.success && data.intervals ) {
 						setIntervals( data.intervals );
 					} else {
-						// Fallback to basic intervals if API fails
-						setIntervals( [
-							{ value: 'manual', label: 'Manual only' },
-							{ value: 'hourly', label: 'Every hour' },
-							{ value: 'daily', label: 'Daily' },
-						] );
+						// Show error when API fails to provide intervals
+						setError( __( 'Failed to load scheduling intervals. Please refresh the page and try again.', 'datamachine' ) );
+						setIntervals( [] );
 					}
 				} )
 				.catch( error => {
 					console.error( 'Failed to fetch intervals:', error );
-					// Fallback to basic intervals
-					setIntervals( [
-						{ value: 'manual', label: 'Manual only' },
-						{ value: 'hourly', label: 'Every hour' },
-						{ value: 'daily', label: 'Daily' },
-					] );
+					// Show error when API request fails
+					setError( __( 'Failed to load scheduling intervals. Please check your connection and try again.', 'datamachine' ) );
+					setIntervals( [] );
 				} )
 				.finally( () => {
 					setIsLoadingIntervals( false );
@@ -141,7 +135,7 @@ export default function FlowScheduleModal( {
 					value={ selectedInterval }
 					options={ intervals }
 					onChange={ ( value ) => setSelectedInterval( value ) }
-					disabled={ isLoadingIntervals }
+					disabled={ isLoadingIntervals || intervals.length === 0 }
 					help={ __(
 						'Choose how often this flow should run automatically.',
 						'datamachine'
@@ -188,7 +182,7 @@ export default function FlowScheduleModal( {
 					<Button
 						variant="primary"
 						onClick={ handleSave }
-						disabled={ isSaving || ! hasChanged }
+						disabled={ isSaving || ! hasChanged || intervals.length === 0 }
 						isBusy={ isSaving }
 					>
 						{ isSaving
