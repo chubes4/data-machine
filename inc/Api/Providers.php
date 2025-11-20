@@ -84,11 +84,6 @@ class Providers {
 			]);
 
 		} catch (\Exception $e) {
-			do_action('datamachine_log', 'error', 'Failed to fetch AI providers from library', [
-				'error' => $e->getMessage(),
-				'exception' => $e
-			]);
-
 			return new \WP_Error(
 				'providers_api_error',
 				__('Failed to communicate with AI HTTP Client library.', 'datamachine'),

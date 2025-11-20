@@ -147,11 +147,6 @@ function datamachine_get_dynamic_wordpress_tool(array $handler_config): array {
     // Get all public taxonomies
     $taxonomies = get_taxonomies(['public' => true], 'objects');
 
-    do_action('datamachine_log', 'debug', 'WordPress Tool: Taxonomies found', [
-        'taxonomy_count' => count($taxonomies),
-        'taxonomy_names' => array_keys($taxonomies)
-    ]);
-
     foreach ($taxonomies as $taxonomy) {
         // Skip built-in formats and other non-content taxonomies using centralized filter
         $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
@@ -162,16 +157,6 @@ function datamachine_get_dynamic_wordpress_tool(array $handler_config): array {
         $field_key = "taxonomy_{$taxonomy->name}_selection";
         $selection = $wordpress_config[$field_key] ?? 'skip';
 
-        do_action('datamachine_log', 'debug', 'WordPress Tool: Processing taxonomy', [
-            'taxonomy_name' => $taxonomy->name,
-            'field_key' => $field_key,
-            'selection' => $selection,
-            'hierarchical' => $taxonomy->hierarchical,
-            'selection_equals_ai_decides' => ($selection === 'ai_decides'),
-            'raw_config_value' => $wordpress_config[$field_key] ?? 'NOT_FOUND'
-        ]);
-
-        // Only include taxonomies for "ai_decides" (AI Decides) - others handled via publish_config
         if ($selection === 'ai_decides') {
             $parameter_name = $taxonomy->name === 'category' ? 'category' :
                              ($taxonomy->name === 'post_tag' ? 'tags' : $taxonomy->name);
@@ -191,26 +176,11 @@ function datamachine_get_dynamic_wordpress_tool(array $handler_config): array {
                 ];
             }
 
-            do_action('datamachine_log', 'debug', 'WordPress Tool: Added ai_decides taxonomy parameter', [
-                'taxonomy_name' => $taxonomy->name,
-                'parameter_name' => $parameter_name,
-                'required' => true
-            ]);
         } else {
             // Skip and Specific Selection: NOT included in tool parameters
             // These are handled automatically during publishing via publish_config
-            do_action('datamachine_log', 'debug', 'WordPress Tool: Taxonomy excluded from AI tool', [
-                'taxonomy_name' => $taxonomy->name,
-                'selection_type' => $selection,
-                'reason' => $selection === 'skip' ? 'skipped by config' : 'pre-selected via config'
-            ]);
         }
     }
-
-    do_action('datamachine_log', 'debug', 'WordPress Tool: Generation complete', [
-        'parameter_count' => count($tool['parameters']),
-        'parameter_names' => array_keys($tool['parameters'])
-    ]);
 
     return $tool;
 }

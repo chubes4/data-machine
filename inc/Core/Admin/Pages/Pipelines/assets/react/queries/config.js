@@ -5,14 +5,14 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import apiFetch from '@wordpress/api-fetch';
+import { getStepTypes, getProviders, getTools } from '../utils/api';
 
 export const useStepTypes = () =>
   useQuery({
     queryKey: ['config', 'step-types'],
     queryFn: async () => {
-      const response = await apiFetch({ path: '/datamachine/v1/step-types' });
-      return response.success ? response.data : {};
+      const result = await getStepTypes();
+      return result.success ? result.data : {};
     },
     staleTime: Infinity, // Never refetch - step types don't change
   });
@@ -31,18 +31,18 @@ export const useProviders = () =>
   useQuery({
     queryKey: ['config', 'providers'],
     queryFn: async () => {
-      const response = await apiFetch({ path: '/datamachine/v1/providers' });
-      return response.success ? response.data : { providers: {}, defaults: { provider: '', model: '' } };
+      const result = await getProviders();
+      return result.success ? result.data : {};
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes - providers don't change often
+    staleTime: 30 * 60 * 1000, // 30 minutes - providers don't change often
   });
 
 export const useTools = () =>
   useQuery({
     queryKey: ['config', 'tools'],
     queryFn: async () => {
-      const response = await apiFetch({ path: '/datamachine/v1/tools' });
-      return response.success ? response.data : {};
+      const result = await getTools();
+      return result.success ? result.data : {};
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes - tools config doesn't change often
+    staleTime: 30 * 60 * 1000, // 30 minutes - tools don't change often
   });

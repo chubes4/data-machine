@@ -58,24 +58,10 @@ class AIConversationLoop {
 		$turn_count = 0;
 		$final_content = '';
 		$last_tool_calls = [];
-
-		do_action('datamachine_log', 'debug', 'AIConversationLoop: Starting conversation loop', [
-			'agent_type' => $agent_type,
-			'provider' => $provider,
-			'model' => $model,
-			'initial_message_count' => count($messages),
-			'tool_count' => count($tools),
-			'max_turns' => $max_turns
-		]);
+		$tool_execution_results = [];
 
 		do {
 			$turn_count++;
-
-			do_action('datamachine_log', 'debug', 'AIConversationLoop: Turn started', [
-				'agent_type' => $agent_type,
-				'turn_count' => $turn_count,
-				'message_count' => count($messages)
-			]);
 
 			// Build AI request using centralized RequestBuilder
 			$ai_response = RequestBuilder::build(
@@ -118,25 +104,11 @@ class AIConversationLoop {
 			if (!empty($ai_content)) {
 				$ai_message = ConversationManager::buildConversationMessage('assistant', $ai_content);
 				$messages[] = $ai_message;
-
-				do_action('datamachine_log', 'debug', 'AIConversationLoop: AI returned content', [
-					'agent_type' => $agent_type,
-					'turn_count' => $turn_count,
-					'content_length' => strlen($ai_content),
-					'has_tool_calls' => !empty($tool_calls)
-				]);
 			}
 
 			// Process tool calls
 			if (!empty($tool_calls)) {
 				$last_tool_calls = $tool_calls;
-
-				do_action('datamachine_log', 'debug', 'AIConversationLoop: Processing tool calls', [
-					'agent_type' => $agent_type,
-					'turn_count' => $turn_count,
-					'tool_call_count' => count($tool_calls),
-					'tools' => array_column($tool_calls, 'name')
-				]);
 
 				foreach ($tool_calls as $tool_call) {
 					$tool_name = $tool_call['name'] ?? '';
@@ -187,18 +159,30 @@ class AIConversationLoop {
 						$payload
 					);
 
-					do_action('datamachine_log', 'debug', 'AIConversationLoop: Tool executed', [
-						'agent_type' => $agent_type,
-						'turn_count' => $turn_count,
-						'tool_name' => $tool_name,
-						'success' => $tool_result['success'] ?? false
-					]);
-
 					// Determine if this is a handler tool
 					$tool_def = $tools[$tool_name] ?? null;
 					$is_handler_tool = $tool_def && isset($tool_def['handler']);
 
-					// Add tool result message to conversation
+					// Force conversation completion if a handler tool was successfully executed in pipeline mode
+					if ($agent_type === 'pipeline' && $is_handler_tool && ($tool_result['success'] ?? false)) {
+						$conversation_complete = true;
+						do_action('datamachine_log', 'debug', 'AIConversationLoop: Handler tool executed successfully, ending conversation', [
+							'agent_type' => $agent_type,
+							'tool_name' => $tool_name,
+							'turn_count' => $turn_count
+						]);
+					}
+
+					// Store tool execution result separately for data packet processing
+					$tool_execution_results[] = [
+						'tool_name' => $tool_name,
+						'result' => $tool_result,
+						'parameters' => $tool_parameters,
+						'is_handler_tool' => $is_handler_tool,
+						'turn_count' => $turn_count
+					];
+
+					// Add tool result message to conversation (properly formatted for AI)
 					$tool_result_message = ConversationManager::formatToolResultMessage(
 						$tool_name,
 						$tool_result,
@@ -211,12 +195,6 @@ class AIConversationLoop {
 			} else {
 				// No tool calls = conversation complete
 				$conversation_complete = true;
-
-				do_action('datamachine_log', 'debug', 'AIConversationLoop: Conversation complete', [
-					'agent_type' => $agent_type,
-					'turn_count' => $turn_count,
-					'final_message_count' => count($messages)
-				]);
 			}
 
 		} while (!$conversation_complete && $turn_count < $max_turns);
@@ -236,7 +214,8 @@ class AIConversationLoop {
 			'final_content' => $final_content,
 			'turn_count' => $turn_count,
 			'completed' => $conversation_complete,
-			'last_tool_calls' => $last_tool_calls
+			'last_tool_calls' => $last_tool_calls,
+			'tool_execution_results' => $tool_execution_results
 		];
 	}
 }

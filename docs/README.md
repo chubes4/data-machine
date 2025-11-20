@@ -225,9 +225,9 @@ docs/
 - Publishing tools for each platform (twitter_publish, facebook_publish, etc.)
 - Update tools for content modification
 
-**REST API Architecture**: 17 REST API endpoints implemented
+**REST API Architecture**: 16 REST API endpoints implemented
 - Core endpoints: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Schedule, Settings, StepTypes, Tools, Users (individual files at `inc/Api/*.php`)
-- Directory-based endpoints: Chat (`inc/Api/Chat/`), Schedule (`inc/Api/Schedule/`)
+- Directory-based endpoints: Chat (`inc/Api/Chat/`)
 - Admin interface: React 18 with complete REST API integration, zero AJAX dependencies
 
 ### ✅ Authentication Systems

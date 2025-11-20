@@ -185,16 +185,6 @@ class Logs {
 		// Join lines with newlines
 		$content = implode("\n", $file_content);
 
-		// Log operation
-		do_action('datamachine_log', 'debug', 'Log content retrieved via REST API', [
-			'mode' => $mode,
-			'job_id' => $job_id,
-			'lines_returned' => count($file_content),
-			'filtered_lines' => $filtered_lines,
-			'total_lines' => $total_lines,
-			'user_id' => get_current_user_id()
-		]);
-
 		// Build response
 		$response = [
 			'success' => true,
@@ -299,13 +289,6 @@ class Logs {
 		// Get available levels for display name
 		$available_levels = datamachine_get_available_log_levels();
 		$level_display = $available_levels[$new_level] ?? ucfirst($new_level);
-
-		// Log operation
-		do_action('datamachine_log', 'info', 'Log level updated via REST API', [
-			'new_level' => $new_level,
-			'user_id' => get_current_user_id(),
-			'user_login' => wp_get_current_user()->user_login
-		]);
 
 		return rest_ensure_response([
 			'success' => true,

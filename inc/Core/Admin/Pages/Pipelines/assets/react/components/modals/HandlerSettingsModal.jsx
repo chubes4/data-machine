@@ -6,11 +6,11 @@
  */
 
 import { useState, useEffect } from '@wordpress/element';
-import { Modal, Button } from '@wordpress/components';
-import { sprintf, __ } from '@wordpress/i18n';
-import { sanitizeHandlerSettingsPayload } from '../../utils/handlerSettings';
-import { useHandlerDetails } from '../../queries/handlers';
+import { Modal, Button, Notice, Spinner } from '@wordpress/components';
+import { __, sprintf } from '@wordpress/i18n';
+
 import { useUpdateFlowHandler } from '../../queries/flows';
+import { sanitizeHandlerSettingsPayload } from '../../utils/handlerSettings';
 import FilesHandlerSettings from './handler-settings/files/FilesHandlerSettings';
 import HandlerSettingField from './handler-settings/HandlerSettingField';
 
@@ -29,6 +29,7 @@ import HandlerSettingField from './handler-settings/HandlerSettingField';
  * @param {Function} props.onChangeHandler - Change handler callback
  * @param {Function} props.onOAuthConnect - OAuth connect callback
  * @param {Object} props.handlers - Global handlers metadata from PipelineContext
+ * @param {Object} props.handlerDetails - Detailed configuration for the selected handler
  * @returns {React.ReactElement|null} Handler settings modal
  */
 export default function HandlerSettingsModal( {
@@ -43,9 +44,11 @@ export default function HandlerSettingsModal( {
 	onChangeHandler,
 	onOAuthConnect,
 	handlers,
+	handlerDetails,
 } ) {
-	// Use TanStack Query for handler details
-	const { data: handlerDetails, isLoading: isLoadingSettings, error: handlerDetailsError } = useHandlerDetails(handlerSlug);
+	// Presentational: Receive handler details as props
+	const isLoadingSettings = !handlerDetails;
+	const handlerDetailsError = null;
 	const updateHandlerMutation = useUpdateFlowHandler();
 
 	const [ settings, setSettings ] = useState( currentSettings || {} );

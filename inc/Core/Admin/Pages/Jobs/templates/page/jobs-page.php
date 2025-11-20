@@ -25,19 +25,19 @@ if (!defined('WPINC')) {
     </div>
 
     <!-- Loading indicator -->
-    <div class="datamachine-jobs-loading" style="display: none;">
+    <div class="datamachine-jobs-loading">
         <p><?php esc_html_e('Loading jobs...', 'datamachine'); ?></p>
     </div>
 
     <!-- Empty state (shown by JavaScript if no jobs) -->
-    <div class="datamachine-jobs-empty-state" style="display: none;">
+    <div class="datamachine-jobs-empty-state">
         <p class="datamachine-jobs-empty-message">
             <?php esc_html_e('No jobs found. Jobs will appear here when Data Machine processes data.', 'datamachine'); ?>
         </p>
     </div>
 
     <!-- Jobs table container (populated by JavaScript) -->
-    <div class="datamachine-jobs-table-container" style="display: none;">
+    <div class="datamachine-jobs-table-container">
         <table class="wp-list-table widefat fixed striped">
             <thead>
                 <tr>
@@ -57,8 +57,7 @@ if (!defined('WPINC')) {
     <!-- Pre-rendered Jobs Admin Modal (no AJAX loading) -->
     <div id="datamachine-modal-jobs-admin"
          class="datamachine-modal"
-         aria-hidden="true"
-         style="display: none;">
+         aria-hidden="true">
         <div class="datamachine-modal-overlay"></div>
         <div class="datamachine-modal-container">
             <div class="datamachine-modal-header">

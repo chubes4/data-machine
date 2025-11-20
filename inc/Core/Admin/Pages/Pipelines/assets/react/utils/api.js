@@ -432,3 +432,41 @@ export const deleteContextFile = async ( filename ) => {
 export const fetchHandlerDetails = async ( handlerSlug ) => {
 	return await client.get( `/handlers/${ handlerSlug }` );
 };
+
+/**
+ * Get available step types
+ *
+ * @returns {Promise<Object>} Step types configuration
+ */
+export const getStepTypes = async () => {
+	return await client.get( '/step-types' );
+};
+
+/**
+ * Get available providers
+ *
+ * @returns {Promise<Object>} Providers configuration
+ */
+export const getProviders = async () => {
+	return await client.get( '/providers' );
+};
+
+/**
+ * Get available tools
+ *
+ * @returns {Promise<Object>} Tools configuration
+ */
+export const getTools = async () => {
+	return await client.get( '/tools' );
+};
+
+/**
+ * Get all handlers
+ *
+ * @param {string} stepType - Optional step type filter
+ * @returns {Promise<Object>} Handlers configuration
+ */
+export const getHandlers = async ( stepType = null ) => {
+	const params = stepType ? { step_type: stepType } : {};
+	return await client.get( '/handlers', params );
+};

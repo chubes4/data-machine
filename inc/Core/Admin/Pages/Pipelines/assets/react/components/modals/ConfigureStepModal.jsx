@@ -12,8 +12,7 @@ import {
 	TextareaControl,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import apiFetch from '@wordpress/api-fetch';
-import { updateSystemPrompt } from '../../utils/api';
+import { updateSystemPrompt, getTools } from '../../utils/api';
 import { useProviders } from '../../queries/config';
 import AIToolsSelector from './configure-step/AIToolsSelector';
 
@@ -65,10 +64,10 @@ export default function ConfigureStepModal( {
 
 		// Pre-populate with all globally enabled tools for new AI steps
 		if ( ! currentConfig?.enabled_tools ) {
-			apiFetch( { path: '/datamachine/v1/tools' } )
-				.then( ( response ) => {
-					if ( response.success ) {
-						const tools = response.data || {};
+			getTools()
+				.then( ( result ) => {
+					if ( result.success ) {
+						const tools = result.data || {};
 						const availableTools = Object.entries( tools )
 							.filter(
 								( [ id, tool ] ) =>
@@ -78,9 +77,9 @@ export default function ConfigureStepModal( {
 						setSelectedTools( availableTools );
 					}
 				} )
-				.catch( ( err ) =>
-					console.error( 'Failed to load default tools:', err )
-				);
+				.catch( ( error ) => {
+					console.error( 'Failed to load default tools:', error );
+				} );
 		} else {
 			setSelectedTools( currentConfig.enabled_tools );
 		}

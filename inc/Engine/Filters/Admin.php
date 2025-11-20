@@ -143,27 +143,13 @@ add_action('init', function() {
 /**
  * Get Data Machine settings with defaults.
  */
-function datamachine_get_datamachine_settings() {
-    return get_option('datamachine_settings', [
-        'engine_mode' => false,
-        'enabled_pages' => [],
-        'enabled_tools' => [],
-        'global_system_prompt' => '',
-        'site_context_enabled' => true,
-        'cleanup_job_data_on_failure' => true,
-        'file_retention_days' => 7,
-        'default_provider' => '',
-        'default_model' => '',
-        'max_turns' => 12,
-        'wordpress_settings' => []
-    ]);
-}
+
 
 /**
  * Get enabled admin pages based on settings.
  */
 function datamachine_get_enabled_admin_pages() {
-    $settings = datamachine_get_datamachine_settings();
+    $settings = get_option('datamachine_settings', []);
 
     if ($settings['engine_mode']) {
         return [];
@@ -183,7 +169,7 @@ function datamachine_get_enabled_admin_pages() {
  * Get enabled general AI tools (non-handler-specific).
  */
 function datamachine_get_enabled_global_tools() {
-    $settings = datamachine_get_datamachine_settings();
+    $settings = get_option('datamachine_settings', []);
     $all_tools = apply_filters('chubes_ai_tools', []);
 
     $global_tools = array_filter($all_tools, function($tool_config) {

@@ -1,7 +1,8 @@
 /**
  * Pipelines App Root Component
  *
- * Main React application component for Data Machine pipelines interface.
+ * Container component that manages the entire pipeline interface state and data.
+ * @pattern Container - Fetches all pipeline-related data and manages global state
  */
 
 import { useEffect, useCallback, useState } from '@wordpress/element';
@@ -9,7 +10,7 @@ import { __ } from '@wordpress/i18n';
 import { Spinner, Notice, Button } from '@wordpress/components';
 import { usePipelines, useCreatePipeline } from './queries/pipelines';
 import { useFlows } from './queries/flows';
-import { useHandlers } from './queries/handlers';
+import { useHandlers, useHandlerDetails } from './queries/handlers';
 import { useUIStore } from './stores/uiStore';
 import PipelineCard from './components/pipelines/PipelineCard';
 import PipelineSelector from './components/pipelines/PipelineSelector';
@@ -45,6 +46,10 @@ export default function PipelinesApp() {
 	const { data: pipelines = [], isLoading: pipelinesLoading, error: pipelinesError } = usePipelines();
 	const { data: flows = [], isLoading: flowsLoading, error: flowsError } = useFlows(selectedPipelineId);
 	const { data: handlers = {} } = useHandlers();
+
+	// Fetch handler details for settings modal
+	const handlerSlug = activeModal === MODAL_TYPES.HANDLER_SETTINGS ? modalData?.handlerSlug : null;
+	const { data: handlerDetails } = useHandlerDetails(handlerSlug);
 	const createPipelineMutation = useCreatePipeline();
 
 	// Find selected pipeline from pipelines array
@@ -248,6 +253,7 @@ export default function PipelinesApp() {
 					onClose={ closeModal }
 					{ ...modalData }
 					onSelectHandler={ handleHandlerSelected }
+					handlers={ handlers }
 				/>
 			) }
 
@@ -256,6 +262,7 @@ export default function PipelinesApp() {
 					onClose={ closeModal }
 					{ ...modalData }
 					handlers={ handlers }
+					handlerDetails={ handlerDetails }
 					onSuccess={ handleModalSuccess }
 					onChangeHandler={ handleChangeHandler }
 					onOAuthConnect={ handleOAuthConnect }

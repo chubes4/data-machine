@@ -1,7 +1,8 @@
 /**
  * Flows Section Component
  *
- * Container for all flows in a pipeline with empty state.
+ * Container component that manages flow list display and creation.
+ * @pattern Container - Fetches flows data and manages flow operations
  */
 
 import { useCallback } from '@wordpress/element';

@@ -726,45 +726,45 @@
 
 /* Delete button styling - WordPress standard */
 .button-link-delete {
-    color: #d63638 !important;
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
+    color: #d63638;
+    border: none;
+    background: transparent;
+    box-shadow: none;
     text-decoration: none;
 }
 
 .button-link-delete:hover {
-    color: #d63638 !important;
-    background: transparent !important;
+    color: #d63638;
+    background: transparent;
     text-decoration: underline;
 }
 
 /* Red delete button styling - secondary style with red border and text */
 .button-delete {
-    background: #fff !important;
-    border-color: #d63638 !important;
-    color: #d63638 !important;
+    background: #fff;
+    border-color: #d63638;
+    color: #d63638;
 }
 
 .button-delete:hover,
 .button-delete:focus {
-    background: #f8f9fa !important;
-    border-color: #b32d2e !important;
-    color: #b32d2e !important;
+    background: #f8f9fa;
+    border-color: #b32d2e;
+    color: #b32d2e;
 }
 
 /* Configure button styling - WordPress admin blue */
 .button-link-configure {
-    color: #0073aa !important;
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
+    color: #0073aa;
+    border: none;
+    background: transparent;
+    box-shadow: none;
     text-decoration: none;
 }
 
 .button-link-configure:hover {
-    color: #0073aa !important;
-    background: transparent !important;
+    color: #0073aa;
+    background: transparent;
     text-decoration: underline;
 }
 
@@ -885,8 +885,8 @@
 
 /* Drag placeholder styling */
 .datamachine-step-drag-placeholder {
-    border: 2px dashed #0073aa !important;
-    background: rgba(0, 115, 170, 0.1) !important;
+    border: 2px dashed #0073aa;
+    background: rgba(0, 115, 170, 0.1);
     border-radius: var(--datamachine-border-radius);
     opacity: 0.7;
     width: 150px;
@@ -906,7 +906,7 @@
 
 /* Sortable UI adjustments */
 .ui-sortable-helper {
-    box-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
 }
 
 /* Prevent text selection during drag */
@@ -1008,32 +1008,32 @@
 
 /* Duplicate flow button styling - neutral gray style */
 .datamachine-duplicate-flow-btn {
-    background: #fff !important;
-    border-color: #7e8993 !important;
-    color: #7e8993 !important;
+    background: #fff;
+    border-color: #7e8993;
+    color: #7e8993;
     position: relative;
     font-size: 12px;
 }
 
 .datamachine-duplicate-flow-btn:hover,
 .datamachine-duplicate-flow-btn:focus {
-    background: #f8f9fa !important;
-    border-color: #646970 !important;
-    color: #646970 !important;
+    background: #f8f9fa;
+    border-color: #646970;
+    color: #646970;
     box-shadow: 0 0 0 1px #646970;
 }
 
 .datamachine-duplicate-flow-btn:disabled {
-    background: #f0f0f1 !important;
-    border-color: var(--datamachine-border-1) !important;
-    color: #a7aaad !important;
+    background: #f0f0f1;
+    border-color: var(--datamachine-border-1);
+    color: #a7aaad;
     cursor: not-allowed;
 }
 
 /* Duplicated flow highlight animation */
 .datamachine-flow-duplicated {
-    border-color: #00a32a !important;
-    background: #f0f8f1 !important;
+    border-color: #00a32a;
+    background: #f0f8f1;
     box-shadow: 0 2px 8px rgba(0, 163, 42, 0.15);
     animation: datamachine-duplicate-highlight 2s ease-in-out;
 }

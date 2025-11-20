@@ -164,15 +164,6 @@ class Chat {
 		$tool_manager = new ToolManager();
 		$all_tools = $tool_manager->getAvailableToolsForChat();
 
-		do_action('datamachine_log', 'debug', 'Chat endpoint processing message', [
-			'session_id' => $session_id,
-			'user_id' => $user_id,
-			'provider' => $provider,
-			'model' => $model,
-			'message_length' => strlen($message),
-			'available_tools' => array_keys($all_tools)
-		]);
-
 		// Execute conversation loop with tool execution
 		$loop = new AIConversationLoop();
 		$loop_result = $loop->execute(
@@ -187,13 +178,6 @@ class Chat {
 
 		// Check for errors
 		if (isset($loop_result['error'])) {
-			do_action('datamachine_log', 'error', 'Chat conversation loop failed', [
-				'session_id' => $session_id,
-				'provider' => $provider,
-				'error' => $loop_result['error'],
-				'turn_count' => $loop_result['turn_count'] ?? 0
-			]);
-
 			return new WP_Error(
 				'chubes_ai_request_failed',
 				$loop_result['error'],
@@ -219,12 +203,9 @@ class Chat {
 		);
 
 		if (!$update_success) {
-			do_action('datamachine_log', 'warning', 'Failed to update chat session', [
-				'session_id' => $session_id
-			]);
 		}
 
-		do_action('datamachine_log', 'info', 'Chat message processed successfully', [
+		return rest_ensure_response([
 			'session_id' => $session_id,
 			'message_count' => count($messages),
 			'turn_count' => $loop_result['turn_count'],

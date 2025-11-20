@@ -78,7 +78,7 @@ class Threads extends PublishHandler {
 
         $access_token = $this->auth->get_access_token();
         if (empty($access_token)) {
-            return $this->errorResponse('Threads authentication failed - no access token');
+            return $this->errorResponse('Threads authentication failed - no access token', [], 'critical');
         }
 
         // Get page ID for posting

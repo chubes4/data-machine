@@ -4,7 +4,7 @@
  * Checkbox list for selecting AI tools with configuration status indicators.
  */
 
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { useTools } from '../../../queries/config';
 import ToolCheckbox from './ToolCheckbox';
@@ -22,7 +22,7 @@ export default function AIToolsSelector( {
 	selectedTools = [],
 	onSelectionChange,
 } ) {
-	const [ unconfiguredTools, setUnconfiguredTools ] = useState( [] );
+
 
 	// Use TanStack Query for tools data
 	const { data: toolsData, isLoading: isLoadingTools } = useTools();
@@ -37,17 +37,15 @@ export default function AIToolsSelector( {
 	);
 
 	/**
-	 * Update unconfigured tools list when selection changes
+	 * Compute unconfigured tools list from selection
 	 */
-	useEffect( () => {
-		const unconfigured = tools
+	const unconfiguredTools = useMemo( () => {
+		return tools
 			.filter(
 				( tool ) =>
 					selectedTools.includes( tool.toolId ) && ! tool.configured
 			)
 			.map( ( tool ) => tool.label );
-
-		setUnconfiguredTools( unconfigured );
 	}, [ selectedTools, tools ] );
 
 	/**

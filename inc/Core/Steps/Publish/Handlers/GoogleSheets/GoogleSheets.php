@@ -95,7 +95,8 @@ class GoogleSheets extends PublishHandler {
         if (is_wp_error($sheets_service)) {
             return $this->errorResponse(
                 'Google Sheets authentication failed: ' . $sheets_service->get_error_message(),
-                ['error_code' => $sheets_service->get_error_code()]
+                ['error_code' => $sheets_service->get_error_code()],
+                'critical'
             );
         }
 

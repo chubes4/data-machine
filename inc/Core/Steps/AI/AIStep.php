@@ -127,7 +127,7 @@ class AIStep extends Step {
         $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, $payload);
 
         // Get max turns from settings
-        $settings = datamachine_get_datamachine_settings();
+        $settings = get_option('datamachine_settings', []);
         $max_turns = $settings['max_turns'] ?? 12;
 
         $navigator = new \DataMachine\Engine\StepNavigator();
@@ -194,6 +194,7 @@ class AIStep extends Step {
 
         $flow_step_id = $payload['flow_step_id'];
         $messages = $loop_result['messages'] ?? [];
+        $tool_execution_results = $loop_result['tool_execution_results'] ?? [];
         $turn_count = 0;
         $handler_completed = false;
 
@@ -240,70 +241,72 @@ class AIStep extends Step {
                 }
             }
 
-            // Process tool result messages
-            if ($role === 'tool_result') {
-                $tool_name = $message['tool_name'] ?? '';
-                $tool_result = $message['result'] ?? [];
-                $tool_parameters = $message['parameters'] ?? [];
+        }
 
-                if (empty($tool_name)) {
-                    continue;
+        // Process tool execution results into data packets
+        foreach ($tool_execution_results as $tool_result_data) {
+            $tool_name = $tool_result_data['tool_name'] ?? '';
+            $tool_result = $tool_result_data['result'] ?? [];
+            $tool_parameters = $tool_result_data['parameters'] ?? [];
+            $is_handler_tool = $tool_result_data['is_handler_tool'] ?? false;
+            $result_turn_count = $tool_result_data['turn_count'] ?? $turn_count;
+
+            if (empty($tool_name)) {
+                continue;
+            }
+
+            $tool_def = $available_tools[$tool_name] ?? null;
+
+            if ($is_handler_tool && ($tool_result['success'] ?? false)) {
+                // Handler tool succeeded - mark completion
+                $clean_tool_parameters = $tool_parameters;
+                $handler_config = $tool_def['handler_config'] ?? [];
+
+                $handler_key = $tool_def['handler'] ?? $tool_name;
+                if (isset($clean_tool_parameters[$handler_key])) {
+                    unset($clean_tool_parameters[$handler_key]);
                 }
 
-                $tool_def = $available_tools[$tool_name] ?? null;
-                $is_handler_tool = $tool_def && isset($tool_def['handler']);
+                $packet = new DataPacket(
+                    [
+                        'title' => 'Handler Tool Executed: ' . $tool_name,
+                        'body' => 'Tool executed successfully by AI agent in ' . $result_turn_count . ' conversation turns'
+                    ],
+                    [
+                        'tool_name' => $tool_name,
+                        'handler_tool' => $tool_def['handler'] ?? null,
+                        'tool_parameters' => $clean_tool_parameters,
+                        'handler_config' => $handler_config,
+                        'source_type' => $dataPackets[0]['metadata']['source_type'] ?? 'unknown',
+                        'flow_step_id' => $flow_step_id,
+                        'conversation_turn' => $result_turn_count,
+                        'tool_result' => $tool_result
+                    ],
+                    'ai_handler_complete'
+                );
+                $dataPackets = $packet->addTo($dataPackets);
 
-                if ($is_handler_tool && ($tool_result['success'] ?? false)) {
-                    // Handler tool succeeded - mark completion
-                    $clean_tool_parameters = $tool_parameters;
-                    $handler_config = $tool_def['handler_config'] ?? [];
+                $handler_completed = true;
+            } else {
+                // Non-handler tool or failed tool - add tool result data packet
+                $success_message = ConversationManager::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
 
-                    $handler_key = $tool_def['handler'] ?? $tool_name;
-                    if (isset($clean_tool_parameters[$handler_key])) {
-                        unset($clean_tool_parameters[$handler_key]);
-                    }
-
-                    $packet = new DataPacket(
-                        [
-                            'title' => 'Handler Tool Executed: ' . $tool_name,
-                            'body' => 'Tool executed successfully by AI agent in ' . $turn_count . ' conversation turns'
-                        ],
-                        [
-                            'tool_name' => $tool_name,
-                            'handler_tool' => $tool_def['handler'] ?? null,
-                            'tool_parameters' => $clean_tool_parameters,
-                            'handler_config' => $handler_config,
-                            'source_type' => $dataPackets[0]['metadata']['source_type'] ?? 'unknown',
-                            'flow_step_id' => $flow_step_id,
-                            'conversation_turn' => $turn_count,
-                            'tool_result' => $tool_result
-                        ],
-                        'ai_handler_complete'
-                    );
-                    $dataPackets = $packet->addTo($dataPackets);
-
-                    $handler_completed = true;
-                } else {
-                    // Non-handler tool or failed tool - add tool result data packet
-                    $success_message = ConversationManager::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
-
-                    $packet = new DataPacket(
-                        [
-                            'title' => ucwords(str_replace('_', ' ', $tool_name)) . ' Result',
-                            'body' => $success_message
-                        ],
-                        [
-                            'tool_name' => $tool_name,
-                            'handler_tool' => $tool_def['handler'] ?? null,
-                            'tool_parameters' => $tool_parameters,
-                            'tool_success' => $tool_result['success'] ?? false,
-                            'tool_result' => $tool_result['data'] ?? [],
-                            'source_type' => $dataPackets[0]['metadata']['source_type'] ?? 'unknown'
-                        ],
-                        'tool_result'
-                    );
-                    $dataPackets = $packet->addTo($dataPackets);
-                }
+                $packet = new DataPacket(
+                    [
+                        'title' => ucwords(str_replace('_', ' ', $tool_name)) . ' Result',
+                        'body' => $success_message
+                    ],
+                    [
+                        'tool_name' => $tool_name,
+                        'handler_tool' => $tool_def['handler'] ?? null,
+                        'tool_parameters' => $tool_parameters,
+                        'tool_success' => $tool_result['success'] ?? false,
+                        'tool_result' => $tool_result['data'] ?? [],
+                        'source_type' => $dataPackets[0]['metadata']['source_type'] ?? 'unknown'
+                    ],
+                    'tool_result'
+                );
+                $dataPackets = $packet->addTo($dataPackets);
             }
         }
 

@@ -15,12 +15,9 @@ export const useUIStore = create((set, get) => ({
   activeModal: null,
   modalData: null,
   openModal: (modalType, data = null) => {
-    console.log('[Zustand] openModal called:', { modalType, data });
     set({ activeModal: modalType, modalData: data });
-    console.log('[Zustand] State after openModal:', { activeModal: modalType, modalData: data });
   },
   closeModal: () => {
-    console.log('[Zustand] closeModal called');
     set({ activeModal: null, modalData: null });
   },
 

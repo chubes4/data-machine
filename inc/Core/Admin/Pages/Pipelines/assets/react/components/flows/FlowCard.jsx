@@ -1,7 +1,8 @@
 /**
  * Flow Card Component
  *
- * Main flow container integrating header, steps, and footer.
+ * Container component that fetches complete flow data and renders flow content.
+ * @pattern Container - Fetches complete flow data with useFlow hook
  */
 
 import { useCallback } from '@wordpress/element';
@@ -12,28 +13,83 @@ import FlowSteps from './FlowSteps';
 import FlowFooter from './FlowFooter';
 
 import { useFlow, useDeleteFlow, useDuplicateFlow, useRunFlow } from '../../queries/flows';
-import { useHandlers } from '../../queries/handlers';
 
 import { MODAL_TYPES } from '../../utils/constants';
 
 /**
- * Flow Card Content Component (has access to FlowContext)
+ * Flow Card Component (Container)
  *
+ * @param {Object} props.flow - Basic flow data from flows list
+ * @param {Object} props.pipelineConfig - Pipeline configuration
+ * @param {Function} props.onFlowDeleted - Callback when flow is deleted
+ * @param {Function} props.onFlowDuplicated - Callback when flow is duplicated
+ * @param {function} props.openModal - Function to open modals, passed from parent for centralized state management.
+ * @returns {React.ReactElement} Flow card
+ */
+export default function FlowCard( {
+	flow,
+	pipelineConfig,
+	onFlowDeleted,
+	onFlowDuplicated,
+	openModal,
+} ) {
+	// Container: Fetch complete flow data
+	const { data: completeFlowData, isLoading, error } = useFlow(flow.flow_id);
+
+	// Show loading state while fetching complete flow data
+	if (isLoading) {
+		return (
+			<div className="datamachine-flow-card datamachine-flow-card--loading">
+				<div className="datamachine-loading-spinner" />
+				<span>Loading flow details...</span>
+			</div>
+		);
+	}
+
+	// Show error state if flow data failed to load
+	if (error) {
+		return (
+			<div className="datamachine-flow-card datamachine-flow-card--error">
+				<span>Error loading flow: {error.message}</span>
+			</div>
+		);
+	}
+
+	// Use complete flow data, fallback to basic flow data
+	const flowData = completeFlowData || flow;
+
+	return (
+		<FlowCardContent
+			flow={ flowData }
+			pipelineConfig={ pipelineConfig }
+			onFlowDeleted={ onFlowDeleted }
+			onFlowDuplicated={ onFlowDuplicated }
+			openModal={ openModal }
+		/>
+	);
+}
+
+/**
+ * Flow Card Content Component (Presentational)
+ *
+ * @param {Object} props.flow - Complete flow data
+ * @param {Object} props.pipelineConfig - Pipeline configuration
+ * @param {Function} props.onFlowDeleted - Callback when flow is deleted
+ * @param {Function} props.onFlowDuplicated - Callback when flow is duplicated
+ * @param {function} props.openModal - Function to open modals, passed from parent for centralized state management.
  * @returns {React.ReactElement} Flow card content
+ * @pattern Presentational - Receives data as props, no data fetching hooks
  */
 function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated, openModal }) {
-	// Use TanStack Query for data
-	const { data: flowData } = useFlow(flow.flow_id);
+	// Presentational: No data fetching hooks - receives complete flow data as props
 
 	// Use mutations
 	const deleteFlowMutation = useDeleteFlow();
 	const duplicateFlowMutation = useDuplicateFlow();
 	const runFlowMutation = useRunFlow();
 
-
-
-	// Use the passed flow data if query hasn't loaded yet
-	const currentFlowData = flowData || flow;
+	// Presentational: Use flow data passed as prop
+	const currentFlowData = flow;
 
 	/**
 	 * Handle flow name change
@@ -223,31 +279,4 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 	);
 }
 
-/**
- * Flow Card Component
- *
- * @param {Object} props - Component props
- * @param {Object} props.flow - Flow data
- * @param {Object} props.pipelineConfig - Pipeline configuration
- * @param {Function} props.onFlowDeleted - Callback when flow is deleted
- * @param {Function} props.onFlowDuplicated - Callback when flow is duplicated
- * @param {function} openModal - Function to open modals, passed from parent for centralized state management.
- * @returns {React.ReactElement} Flow card
- */
-export default function FlowCard( {
-	flow,
-	pipelineConfig,
-	onFlowDeleted,
-	onFlowDuplicated,
-	openModal,
-} ) {
-	return (
-		<FlowCardContent
-			flow={ flow }
-			pipelineConfig={ pipelineConfig }
-			onFlowDeleted={ onFlowDeleted }
-			onFlowDuplicated={ onFlowDuplicated }
-			openModal={ openModal }
-		/>
-	);
-}
+

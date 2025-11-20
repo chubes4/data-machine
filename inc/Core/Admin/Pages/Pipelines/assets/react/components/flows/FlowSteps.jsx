@@ -17,6 +17,7 @@ import DataFlowArrow from '../shared/DataFlowArrow';
  * @param {Object} props.flowConfig - Flow configuration (keyed by flow_step_id)
  * @param {Object} props.pipelineConfig - Pipeline configuration (keyed by pipeline_step_id)
  * @param {Function} props.onStepConfigured - Configure step handler
+ * @param {Object} props.stepTypes - Step types configuration
  * @returns {React.ReactElement} Flow steps container
  */
 export default function FlowSteps( {

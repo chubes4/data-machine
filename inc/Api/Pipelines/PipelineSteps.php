@@ -212,12 +212,6 @@ class PipelineSteps {
 		]);
 
 		if (!$step_id) {
-			do_action('datamachine_log', 'error', 'Failed to create step via REST API', [
-				'pipeline_id' => $pipeline_id,
-				'step_type' => $step_type,
-				'user_id' => get_current_user_id()
-			]);
-
 			return new \WP_Error(
 				'step_creation_failed',
 				__('Failed to create step.', 'datamachine'),
@@ -239,14 +233,6 @@ class PipelineSteps {
 				break;
 			}
 		}
-
-		do_action('datamachine_log', 'info', 'Step created via REST API', [
-			'pipeline_id' => $pipeline_id,
-			'step_type' => $step_type,
-			'pipeline_step_id' => $step_id,
-			'user_id' => get_current_user_id(),
-			'user_login' => wp_get_current_user()->user_login
-		]);
 
 		return rest_ensure_response([
 			'success' => true,
@@ -386,12 +372,6 @@ class PipelineSteps {
 		]);
 
 		if (!$success) {
-			do_action('datamachine_log', 'error', 'Failed to save step order via REST API', [
-				'pipeline_id' => $pipeline_id,
-				'step_count' => count($updated_steps),
-				'user_id' => get_current_user_id()
-			]);
-
 			return new \WP_Error(
 				'save_failed',
 				__('Failed to save step order', 'datamachine'),
@@ -413,11 +393,6 @@ class PipelineSteps {
 			// Update only execution_order in flow steps
 			foreach ($flow_config as $flow_step_id => &$flow_step) {
 				if (!isset($flow_step['pipeline_step_id']) || empty($flow_step['pipeline_step_id'])) {
-					do_action('datamachine_log', 'error', 'Flow step missing pipeline_step_id during step update sync', [
-						'flow_id' => $flow_id,
-						'flow_step_id' => $flow_step_id,
-						'flow_step' => $flow_step
-					]);
 					continue;
 				}
 				$pipeline_step_id = $flow_step['pipeline_step_id'];
@@ -441,14 +416,6 @@ class PipelineSteps {
 			// Clear only flow config cache
 			do_action('datamachine_clear_flow_config_cache', $flow_id);
 		}
-
-		do_action('datamachine_log', 'info', 'Pipeline steps reordered via REST API', [
-			'pipeline_id' => $pipeline_id,
-			'step_count' => count($updated_steps),
-			'flow_count' => count($flows),
-			'user_id' => get_current_user_id(),
-			'user_login' => wp_get_current_user()->user_login
-		]);
 
 		return rest_ensure_response([
 			'success' => true,
@@ -638,16 +605,7 @@ class PipelineSteps {
 				$all_keys[$effective_provider] = $ai_api_key;
 				apply_filters('chubes_ai_provider_api_keys', $all_keys);
 				$api_key_saved = true;
-
-				do_action('datamachine_log', 'debug', 'API key saved via AI HTTP Client filters', [
-					'provider' => $effective_provider,
-					'api_key_length' => strlen($ai_api_key)
-				]);
 			} catch (\Exception $e) {
-				do_action('datamachine_log', 'error', 'Exception when saving API key', [
-					'provider' => $effective_provider,
-					'exception' => $e->getMessage()
-				]);
 			}
 		}
 
@@ -673,11 +631,6 @@ class PipelineSteps {
 		]);
 
 		if (!$success) {
-			do_action('datamachine_log', 'error', 'Failed to save pipeline step configuration', [
-				'pipeline_step_id' => $pipeline_step_id,
-				'pipeline_id' => $pipeline_id
-			]);
-
 			return new \WP_Error(
 				'save_failed',
 				__('Error saving AI configuration', 'datamachine'),
@@ -689,13 +642,6 @@ class PipelineSteps {
 		do_action('datamachine_auto_save', $pipeline_id);
 
 		$provider_for_log = $step_config_data['provider'] ?? ($existing_config['provider'] ?? null);
-
-		do_action('datamachine_log', 'debug', 'AI step configuration saved successfully', [
-			'pipeline_step_id' => $pipeline_step_id,
-			'pipeline_id' => $pipeline_id,
-			'provider' => $provider_for_log,
-			'config_keys' => array_keys($step_config_data)
-		]);
 
 		return rest_ensure_response([
 			'success' => true,

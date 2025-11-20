@@ -63,7 +63,8 @@ class Twitter extends PublishHandler {
         if (is_wp_error($connection)) {
             return $this->errorResponse(
                 'Twitter authentication failed: ' . $connection->get_error_message(),
-                ['error_code' => $connection->get_error_code()]
+                ['error_code' => $connection->get_error_code()],
+                'critical'
             );
         }
 

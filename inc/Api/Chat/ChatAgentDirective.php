@@ -37,11 +37,6 @@ class ChatAgentDirective {
 			'content' => $directive
 		]);
 
-		do_action('datamachine_log', 'debug', 'Chat agent directive injected', [
-			'session_id' => $session_id,
-			'directive_length' => strlen($directive)
-		]);
-
 		return $request;
 	}
 

@@ -267,11 +267,6 @@ class Files {
         try {
             self::validate_file_with_wordpress($file);
         } catch (\Exception $e) {
-            do_action('datamachine_log', 'error', 'File upload failed validation.', [
-                'filename' => $file['name'],
-                'error' => $e->getMessage(),
-            ]);
-
             return new WP_Error(
                 'file_validation_failed',
                 $e->getMessage(),
@@ -356,11 +351,6 @@ class Files {
             $context_files['uploaded_files'] = array_values($uploaded_files);
             $db_pipelines->update_pipeline_context_files($pipeline_id, $context_files);
 
-            do_action('datamachine_log', 'debug', 'Pipeline context file deleted.', [
-                'filename' => $filename,
-                'pipeline_id' => $pipeline_id
-            ]);
-
             return rest_ensure_response([
                 'success' => true,
                 'data' => [
@@ -382,12 +372,6 @@ class Files {
 
             $context = self::get_file_context($parts['flow_id']);
             $deleted = $storage ? $storage->delete_file($filename, $context) : false;
-
-            do_action('datamachine_log', 'debug', 'Flow file deleted.', [
-                'filename' => $filename,
-                'flow_step_id' => $flow_step_id,
-                'success' => $deleted
-            ]);
 
             return rest_ensure_response([
                 'success' => $deleted,

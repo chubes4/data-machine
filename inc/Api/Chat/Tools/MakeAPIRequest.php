@@ -86,12 +86,6 @@ class MakeAPIRequest {
 			];
 		}
 
-		do_action('datamachine_log', 'debug', 'Chat agent making API request', [
-			'endpoint' => $endpoint,
-			'method' => $method,
-			'request_data' => $data
-		]);
-
 		// Parse endpoint and query string
 		$parsed = parse_url($endpoint);
 		$path = $parsed['path'] ?? $endpoint;
@@ -114,12 +108,6 @@ class MakeAPIRequest {
 		$response = rest_do_request($request);
 
 		if (is_wp_error($response)) {
-			do_action('datamachine_log', 'error', 'Chat agent API request failed', [
-				'endpoint' => $endpoint,
-				'method' => $method,
-				'error' => $response->get_error_message()
-			]);
-
 			return [
 				'success' => false,
 				'error' => $response->get_error_message(),
@@ -129,13 +117,6 @@ class MakeAPIRequest {
 
 		$response_data = $response->get_data();
 		$status_code = $response->get_status();
-
-		do_action('datamachine_log', 'debug', 'Chat agent API request completed', [
-			'endpoint' => $endpoint,
-			'method' => $method,
-			'status' => $status_code,
-			'response_data' => $response_data
-		]);
 
 		return [
 			'success' => true,

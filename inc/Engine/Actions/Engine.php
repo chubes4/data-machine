@@ -116,14 +116,6 @@ add_action('datamachine_run_flow_now', function($flow_id) {
 add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step_id, ?array $dataPackets = null ) {
 
         try {
-            do_action('datamachine_log', 'debug', 'EXECUTE STEP START', [
-                'job_id' => $job_id,
-                'job_id_type' => gettype($job_id),
-                'flow_step_id' => $flow_step_id,
-                'flow_step_id_type' => gettype($flow_step_id),
-                'dataPackets_type' => gettype($dataPackets)
-            ]);
-
             // Retrieve data by job_id
             $db_flows = new \DataMachine\Core\Database\Flows\Flows();
             /** @var array $flow_step_config */
@@ -139,12 +131,6 @@ add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step
 
             $flow_id = $flow_step_config['flow_id'];
 
-            do_action('datamachine_log', 'debug', 'FLOW STEP CONFIG RETRIEVED', [
-                'flow_step_config_type' => gettype($flow_step_config),
-                'is_array' => is_array($flow_step_config),
-                'is_object' => is_object($flow_step_config),
-                'flow_id' => $flow_id
-            ]);
             /** @var array $context */
             $context = datamachine_get_file_context($flow_id);
 
@@ -187,13 +173,6 @@ add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step
             // Get engine data for step execution
             $engine_data = datamachine_get_engine_data($job_id);
 
-            do_action('datamachine_log', 'debug', 'ENGINE DATA RETRIEVED', [
-                'engine_data_type' => gettype($engine_data),
-                'is_array' => is_array($engine_data),
-                'is_object' => is_object($engine_data),
-                'keys' => is_array($engine_data) ? array_keys($engine_data) : 'NOT ARRAY'
-            ]);
-
             $payload = [
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id,
@@ -202,18 +181,7 @@ add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step
                 'engine_data' => is_array($engine_data) ? $engine_data : [],
             ];
 
-            do_action('datamachine_log', 'debug', 'PAYLOAD CONSTRUCTED', [
-                'payload_keys' => array_keys($payload),
-                'engine_data_in_payload_type' => gettype($payload['engine_data']),
-                'engine_data_is_array' => is_array($payload['engine_data'])
-            ]);
-
             $dataPackets = $flow_step->execute($payload);
-
-            do_action('datamachine_log', 'debug', 'STEP EXECUTED', [
-                'dataPackets_returned_type' => gettype($dataPackets),
-                'is_array' => is_array($dataPackets)
-            ]);
 
             if (!is_array($dataPackets)) {
                 do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [

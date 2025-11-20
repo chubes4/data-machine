@@ -81,8 +81,7 @@ if (!in_array($active_tab, $valid_tabs)) {
         ?>
         <div id="datamachine-modal-tool-config-<?php echo esc_attr($tool_id); ?>"
              class="datamachine-modal"
-             aria-hidden="true"
-             style="display: none;">
+             aria-hidden="true">
             <div class="datamachine-modal-overlay"></div>
             <div class="datamachine-modal-container">
                 <div class="datamachine-modal-header">

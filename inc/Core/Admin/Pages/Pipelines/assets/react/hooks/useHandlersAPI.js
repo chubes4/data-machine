@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from '@wordpress/element';
-import apiFetch from '@wordpress/api-fetch';
+import { getHandlers } from '../utils/api';
 
 /**
  * Fetch handlers from REST API
@@ -25,11 +25,7 @@ export const useHandlersAPI = ( stepType = null ) => {
 			setError( null );
 
 			try {
-				const endpoint = stepType
-					? `/datamachine/v1/handlers?step_type=${ stepType }`
-					: '/datamachine/v1/handlers';
-
-				const response = await apiFetch( { path: endpoint } );
+				const response = await getHandlers( stepType );
 
 				if ( response.success ) {
 					// API returns handlers array directly in response.data

@@ -66,14 +66,6 @@ class PipelineSystemPromptDirective {
             'content' => $content
         ]);
 
-        do_action('datamachine_log', 'debug', 'Pipeline System Prompt: Injected user configuration with workflow', [
-            'pipeline_step_id' => $pipeline_step_id,
-            'prompt_length' => strlen($system_prompt),
-            'workflow_visualization' => $workflow_visualization,
-            'provider' => $provider_name,
-            'total_messages' => count($request['messages'])
-        ]);
-
         return $request;
     }
 
@@ -93,7 +85,6 @@ class PipelineSystemPromptDirective {
         // Get flow_id from current execution context
         $current_flow_step_id = $payload['flow_step_id'] ?? null;
         if (!$current_flow_step_id) {
-            do_action('datamachine_log', 'debug', 'Workflow visualization: No flow context available');
             return '';
         }
 
@@ -101,7 +92,6 @@ class PipelineSystemPromptDirective {
         $flow_id = $flow_parts['flow_id'] ?? null;
 
         if (!$flow_id) {
-            do_action('datamachine_log', 'debug', 'Workflow visualization: Could not extract flow_id');
             return '';
         }
 
@@ -111,9 +101,6 @@ class PipelineSystemPromptDirective {
         $flow_config = $flow['flow_config'] ?? [];
 
         if ( empty( $flow_config ) ) {
-            do_action('datamachine_log', 'debug', 'Workflow visualization: No flow config found', [
-                'flow_id' => $flow_id
-            ]);
             return '';
         }
 
@@ -157,13 +144,6 @@ class PipelineSystemPromptDirective {
         }
 
         $workflow_string = implode(' → ', $workflow_parts);
-
-        do_action('datamachine_log', 'debug', 'Workflow visualization: Built from flow config', [
-            'flow_id' => $flow_id,
-            'steps_count' => count($sorted_steps),
-            'current_pipeline_step_id' => $current_pipeline_step_id,
-            'workflow_string' => $workflow_string
-        ]);
 
         return $workflow_string;
     }

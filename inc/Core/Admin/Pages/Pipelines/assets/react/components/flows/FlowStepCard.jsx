@@ -2,6 +2,7 @@
  * Flow Step Card Component
  *
  * Display individual flow step with handler configuration.
+ * @pattern Presentational - Receives stepTypes data as props
  */
 
 import { useState, useEffect, useCallback, useRef } from '@wordpress/element';
@@ -10,7 +11,6 @@ import { __ } from '@wordpress/i18n';
 import FlowStepHandler from './FlowStepHandler';
 import { updateUserMessage } from '../../utils/api';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
-
 import { useStepTypes } from '../../queries/config';
 
 /**
@@ -23,6 +23,7 @@ import { useStepTypes } from '../../queries/config';
  * @param {Object} props.pipelineStep - Pipeline step data
  * @param {Object} props.pipelineConfig - Pipeline AI configuration
  * @param {Function} props.onConfigure - Configure handler callback
+ * @param {Object} props.stepTypes - Step types configuration
  * @returns {React.ReactElement} Flow step card
  */
 export default function FlowStepCard( {
@@ -33,7 +34,7 @@ export default function FlowStepCard( {
 	pipelineConfig,
 	onConfigure,
 } ) {
-	// Use TanStack Query for data
+	// Global config: Use stepTypes hook directly (TanStack Query handles caching)
 	const { data: stepTypes = {} } = useStepTypes();
 	const stepTypeInfo = stepTypes[pipelineStep.step_type] || {};
 	const isAiStep = pipelineStep.step_type === 'ai';

@@ -2,12 +2,11 @@
  * Handler Selection Modal Component
  *
  * Modal for selecting handler type before configuring settings.
+ * @pattern Presentational - Receives handlers data as props
  */
 
 import { Modal, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-
-import { useHandlers } from '../../queries/handlers';
 
 /**
  * Handler Selection Modal Component
@@ -16,20 +15,21 @@ import { useHandlers } from '../../queries/handlers';
  * @param {Function} props.onClose - Close handler
  * @param {string} props.stepType - Step type (fetch, publish, update)
  * @param {Function} props.onSelectHandler - Handler selection callback
+ * @param {Object} props.handlers - All available handlers
  * @returns {React.ReactElement|null} Handler selection modal
  */
 export default function HandlerSelectionModal( {
 	onClose,
 	stepType,
 	onSelectHandler,
+	handlers,
 } ) {
-	// Use TanStack Query for data
-	const { data: allHandlers = {} } = useHandlers();
+	// Presentational: Receive handlers data as props
 
 	/**
 	 * Filter handlers by step type
 	 */
-	const handlers = Object.entries( allHandlers ).filter(
+	const filteredHandlers = Object.entries( handlers ).filter(
 		( [ , handler ] ) => handler.type === stepType
 	);
 
@@ -54,7 +54,7 @@ export default function HandlerSelectionModal( {
 					{ __( 'Choose the handler for this step:', 'datamachine' ) }
 				</p>
 
-				{ handlers.length === 0 && (
+				{ filteredHandlers.length === 0 && (
 					<div className="datamachine-modal-empty-state datamachine-modal-empty-state--bordered">
 						<p className="datamachine-text--margin-reset">
 							{ __(
@@ -65,9 +65,9 @@ export default function HandlerSelectionModal( {
 					</div>
 				) }
 
-				{ handlers.length > 0 && (
+				{ filteredHandlers.length > 0 && (
 					<div className="datamachine-modal-grid-2col">
-						{ handlers.map( ( [ slug, handler ] ) => (
+						{ filteredHandlers.map( ( [ slug, handler ] ) => (
 							<button
 								key={ slug }
 								type="button"

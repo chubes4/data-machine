@@ -121,10 +121,6 @@ class Auth {
 		$cleared = apply_filters('datamachine_clear_oauth_account', false, $handler_slug);
 
 		if ($cleared) {
-			do_action('datamachine_log', 'debug', 'Account disconnected successfully', [
-				'handler_slug' => $handler_slug
-			]);
-
 			return rest_ensure_response([
 				'success' => true,
 				'data' => null,
@@ -132,10 +128,6 @@ class Auth {
 				'message' => sprintf(__('%s account disconnected successfully', 'datamachine'), ucfirst($handler_slug))
 			]);
 		} else {
-			do_action('datamachine_log', 'error', 'Failed to disconnect account', [
-				'handler_slug' => $handler_slug
-			]);
-
 			return new \WP_Error(
 				'disconnect_failed',
 				__('Failed to disconnect account', 'datamachine'),

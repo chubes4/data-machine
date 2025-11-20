@@ -114,7 +114,7 @@
 /* ===== ACCESSIBILITY ===== */
 
 .datamachine-modal[aria-hidden="true"] {
-    display: none !important;
+    display: none;
 }
 
 .datamachine-modal-container {
@@ -207,6 +207,6 @@
 
 /* Readonly field styling */
 .datamachine-readonly-field {
-    background-color: #f9f9f9 !important;
-    color: #666 !important;
+    background-color: #f9f9f9;
+    color: #666;
 }

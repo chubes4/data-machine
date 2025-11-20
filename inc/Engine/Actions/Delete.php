@@ -14,7 +14,7 @@ if (!defined('WPINC')) {
 }
 
 /**
- * Centralized deletion operations exposed for both REST and legacy hooks.
+ * Centralized deletion operations for REST endpoints and internal engine operations.
  */
 class Delete {
 

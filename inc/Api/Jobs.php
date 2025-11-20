@@ -196,11 +196,6 @@ class Jobs {
 			);
 		}
 
-		do_action('datamachine_log', 'debug', 'Job retrieved via REST API', [
-			'job_id' => $job_id,
-			'user_id' => get_current_user_id()
-		]);
-
 		return rest_ensure_response([
 			'success' => true,
 			'data' => $job
@@ -218,14 +213,6 @@ class Jobs {
 
 		// Delegate to centralized delete action
 		do_action('datamachine_delete_jobs', $type, $cleanup_processed);
-
-		// Log operation
-		do_action('datamachine_log', 'info', 'Jobs cleared via REST API', [
-			'type' => $type,
-			'cleanup_processed' => $cleanup_processed,
-			'user_id' => get_current_user_id(),
-			'user_login' => wp_get_current_user()->user_login
-		]);
 
 		return rest_ensure_response([
 			'success' => true,

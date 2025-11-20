@@ -78,11 +78,11 @@ class Facebook extends PublishHandler {
 
         // Validate auto-discovered page ID
         if (empty($page_id)) {
-            return $this->errorResponse('Facebook page not found. Please re-authenticate your Facebook account.');
+            return $this->errorResponse('Facebook page not found. Please re-authenticate your Facebook account.', [], 'critical');
         }
 
         if (empty($page_access_token)) {
-            return $this->errorResponse('Facebook authentication failed - no access token');
+            return $this->errorResponse('Facebook authentication failed - no access token', [], 'critical');
         }
 
         try {
@@ -175,7 +175,7 @@ class Facebook extends PublishHandler {
                         'link_handling' => $link_handling,
                         'has_source_url' => !empty($source_url),
                         'source_url_valid' => !empty($source_url) ? filter_var($source_url, FILTER_VALIDATE_URL) : false,
-                        'source_url' => $source_url ?? 'null'
+                        'source_url' => $source_url ?? null
                     ]);
                 }
 

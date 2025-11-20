@@ -122,14 +122,16 @@ abstract class PublishHandler {
      *
      * @param string $error_message Error message
      * @param array|null $context Optional context for logging
+     * @param string $severity Error severity: 'critical', 'warning', 'info' (default: 'warning')
      * @return array Error response
      */
-    protected function errorResponse(string $error_message, ?array $context = null): array {
+    protected function errorResponse(string $error_message, ?array $context = null, string $severity = 'warning'): array {
         $this->log('error', $error_message, $context ?? []);
 
         return [
             'success' => false,
             'error' => $error_message,
+            'severity' => $severity,
             'tool_name' => "{$this->handler_type}_publish"
         ];
     }

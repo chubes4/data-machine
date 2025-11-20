@@ -72,7 +72,8 @@ class Bluesky extends PublishHandler {
         if (is_wp_error($session)) {
             return $this->errorResponse(
                 'Bluesky authentication failed: ' . $session->get_error_message(),
-                ['error_code' => $session->get_error_code()]
+                ['error_code' => $session->get_error_code()],
+                'critical'
             );
         }
 

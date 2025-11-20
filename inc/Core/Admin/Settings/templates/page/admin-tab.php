@@ -7,7 +7,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
-$settings = datamachine_get_datamachine_settings();
+$settings = get_option('datamachine_settings', []);
 $engine_mode = $settings['engine_mode'];
 $enabled_pages = $settings['enabled_pages'];
 $cleanup_enabled = $settings['cleanup_job_data_on_failure'] ?? true;

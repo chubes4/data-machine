@@ -197,7 +197,7 @@ class FileCleanup {
  */
 add_action('datamachine_cleanup_old_files', function() {
     $file_cleanup = new FileCleanup();
-    $settings = datamachine_get_datamachine_settings();
+    $settings = get_option('datamachine_settings', []);
     $retention_days = $settings['file_retention_days'] ?? 7;
 
     $deleted_count = $file_cleanup->cleanup_old_files($retention_days);

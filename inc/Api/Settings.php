@@ -130,11 +130,6 @@ class Settings {
 		// Check if any tool handler responded
 		// Tool handlers should use wp_send_json_success/error which exits
 		// If we get here, no handler claimed responsibility
-		do_action('datamachine_log', 'warning', 'No handler for tool configuration', [
-			'tool_id' => $tool_id,
-			'user_id' => get_current_user_id()
-		]);
-
 		return new \WP_Error(
 			'no_tool_handler',
 			sprintf(
@@ -152,11 +147,6 @@ class Settings {
 		// Trigger cache clearing action
 		do_action('datamachine_clear_all_cache');
 
-		do_action('datamachine_log', 'info', 'Cache cleared via REST API', [
-			'user_id' => get_current_user_id(),
-			'user_login' => wp_get_current_user()->user_login
-		]);
-
 		return rest_ensure_response([
 			'success' => true,
 			'data' => null,
@@ -172,10 +162,6 @@ class Settings {
 	public static function handle_get_settings($request) {
 		$all_settings = get_option('datamachine_settings', []);
 		$ai_settings = $all_settings['ai_settings'] ?? [];
-
-		do_action('datamachine_log', 'debug', 'Settings fetched via REST API', [
-			'user_id' => get_current_user_id()
-		]);
 
 		return rest_ensure_response([
 			'success' => true,
@@ -220,12 +206,6 @@ class Settings {
 
 		// Clear relevant caches
 		do_action('datamachine_clear_flow_cache');
-
-		do_action('datamachine_log', 'info', 'Settings updated via REST API', [
-			'user_id' => get_current_user_id(),
-			'user_login' => wp_get_current_user()->user_login,
-			'updated_keys' => array_keys($ai_settings_update ?? [])
-		]);
 
 		// Return updated settings
 		return self::handle_get_settings($request);

@@ -41,9 +41,7 @@ function datamachine_register_ai_filters() {
 
         do_action('datamachine_log', 'debug', 'AI Config: Step config lookup', [
             'pipeline_step_id' => $pipeline_step_id,
-            'pipeline_config_keys' => array_keys($pipeline_config),
             'step_config_found' => !empty($step_config),
-            'step_config_keys' => !empty($step_config) ? array_keys($step_config) : [],
             'provider_value' => $step_config['provider'] ?? 'NOT SET'
         ]);
 

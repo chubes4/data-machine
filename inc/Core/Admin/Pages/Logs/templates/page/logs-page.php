@@ -90,7 +90,7 @@ if (!defined('WPINC')) {
     <div class="datamachine-recent-logs">
         <h2 class="datamachine-log-section-title"><?php esc_html_e('Recent Log Entries (Last 200)', 'datamachine'); ?></h2>
 
-        <div class="datamachine-log-status-message" style="display: none;"></div>
+        <div class="datamachine-log-status-message"></div>
 
         <?php if (empty($recent_logs)): ?>
             <p class="datamachine-no-logs-message">

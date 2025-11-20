@@ -200,13 +200,6 @@ class FlowSteps {
 		$step_type = sanitize_text_field($request->get_param('step_type'));
 		$pipeline_id = (int) $request->get_param('pipeline_id');
 
-		do_action('datamachine_log', 'debug', 'Handler settings update via REST API', [
-			'flow_step_id' => $flow_step_id,
-			'handler_slug' => $handler_slug,
-			'step_type' => $step_type,
-			'pipeline_id' => $pipeline_id
-		]);
-
 		// Validate required fields
 		if (empty($handler_slug) || empty($flow_step_id)) {
 			return new \WP_Error(
@@ -238,12 +231,6 @@ class FlowSteps {
 		// Process handler settings
 		$handler_settings = self::process_handler_settings($handler_slug, $request->get_params());
 
-		do_action('datamachine_log', 'debug', 'Handler settings processed', [
-			'handler_slug' => $handler_slug,
-			'flow_step_id' => $flow_step_id,
-			'settings_count' => count($handler_settings)
-		]);
-
 		try {
 			// Update flow handler via centralized action
 			do_action('datamachine_update_flow_handler', $flow_step_id, $handler_slug, $handler_settings);
@@ -251,10 +238,6 @@ class FlowSteps {
 			// Split flow step ID
 			$parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
 			if (!isset($parts['flow_id']) || !isset($parts['pipeline_step_id'])) {
-				do_action('datamachine_log', 'error', 'Invalid flow_step_id format - missing required parts', [
-					'flow_step_id' => $flow_step_id,
-					'parts' => $parts
-				]);
 				return new \WP_Error(
 					'invalid_flow_step_id',
 					__('Invalid flow step ID format.', 'datamachine'),
@@ -306,18 +289,9 @@ class FlowSteps {
 				'message' => $message
 			]);
 
-		} catch (\Exception $e) {
-			do_action('datamachine_log', 'error', 'Handler settings save failed: ' . $e->getMessage(), [
-				'handler_slug' => $handler_slug,
-				'flow_step_id' => $flow_step_id
-			]);
-
-			return new \WP_Error(
-				'save_failed',
-				__('Failed to save handler settings.', 'datamachine'),
-				['status' => 500]
-			);
-		}
+        } catch (\Exception $e) {
+            return [];
+        }
 	}
 
 	/**
@@ -376,24 +350,21 @@ class FlowSteps {
 			return [];
 		}
 
-		$raw_settings = [];
-		foreach ($params as $key => $value) {
-			// Sanitize key
-			$safe_key = sanitize_key($key);
+		// Extract settings from the nested 'settings' parameter
+		$raw_settings = $params['settings'] ?? null;
 
-			// Skip REST API meta parameters
-			if (in_array($safe_key, ['flow_step_id', 'handler_slug', 'pipeline_id', 'step_type'], true) || empty($safe_key)) {
-				continue;
-			}
-
-			// Sanitize values
-			if (is_array($value)) {
-				$raw_settings[$safe_key] = array_map('sanitize_text_field', $value);
-			} else {
-				$raw_settings[$safe_key] = sanitize_text_field($value);
-			}
+		if ($raw_settings === null) {
+			return [];
 		}
 
-		return $handler_settings->sanitize($raw_settings);
+		if (!is_array($raw_settings)) {
+			return [];
+		}
+
+		try {
+			return $handler_settings->sanitize($raw_settings);
+		} catch (\Exception $e) {
+			return [];
+		}
 	}
 }

@@ -84,14 +84,6 @@ class ProcessedItems {
 		// Delegate to centralized delete action
 		do_action('datamachine_delete_processed_items', $criteria);
 
-		// Log operation
-		do_action('datamachine_log', 'info', 'Processed items cleared via REST API', [
-			'clear_type' => $clear_type,
-			'target_id' => $target_id,
-			'user_id' => get_current_user_id(),
-			'user_login' => wp_get_current_user()->user_login
-		]);
-
 		return rest_ensure_response([
 			'success' => true,
 			'data' => null,

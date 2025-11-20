@@ -7,7 +7,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
-$settings = datamachine_get_datamachine_settings();
+$settings = get_option('datamachine_settings', []);
 $engine_mode = $settings['engine_mode'];
 $global_prompt = $settings['global_system_prompt'];
 $site_context_enabled = $settings['site_context_enabled'];

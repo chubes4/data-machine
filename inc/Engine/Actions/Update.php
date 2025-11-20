@@ -42,13 +42,6 @@ class Update {
 
         // Pipeline system prompt management action hook - enables AI step template updates
         add_action('datamachine_update_system_prompt', [$instance, 'handle_system_prompt_update'], 10, 2);
-
-        // Filter-based versions for AJAX validation
-        add_filter('datamachine_update_flow_user_message_result', [$instance, 'handle_flow_user_message_update'], 10, 3);
-        add_filter('datamachine_update_system_prompt_result', [$instance, 'handle_system_prompt_update'], 10, 3);
-        
-        // Explicit job failure action hook - simplified job failure interface
-        add_action('datamachine_fail_job', [$instance, 'handle_job_failure'], 10, 3);
     }
 
     /**
@@ -266,23 +259,16 @@ class Update {
      *
      * Enables AI steps to run standalone by providing user message content
      * that gets converted to data packets when no fetch step precedes them.
-     * 
+     *
      * Flow-scoped user messages allow different content per flow instance
      * while maintaining pipeline-level system prompt templates.
      *
-     * @param string|bool $result Previous filter result (when used as filter)
      * @param string $flow_step_id Flow step ID (format: pipeline_step_id_flow_id)
      * @param string $user_message User message content
      * @return bool Success status
      * @since 1.0.0
      */
-    public function handle_flow_user_message_update($result, $flow_step_id, $user_message = null) {
-        // Handle both action and filter usage
-        if (is_string($result) && $user_message === null) {
-            // Called as action - $result is actually $flow_step_id
-            $user_message = $flow_step_id;
-            $flow_step_id = $result;
-        }
+    public function handle_flow_user_message_update($flow_step_id, $user_message) {
         $parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
         if (!$parts) {
             do_action('datamachine_log', 'error', 'Invalid flow_step_id format for user message update', ['flow_step_id' => $flow_step_id]);
@@ -309,8 +295,7 @@ class Update {
         if (!isset($flow_config[$flow_step_id])) {
             do_action('datamachine_log', 'error', 'Flow user message update failed - flow step not found', [
                 'flow_id' => $flow_id,
-                'flow_step_id' => $flow_step_id,
-                'existing_steps' => array_keys($flow_config)
+                'flow_step_id' => $flow_step_id
             ]);
             return false;
         }
@@ -339,23 +324,16 @@ class Update {
      *
      * Updates the system_prompt field in pipeline step configuration
      * while preserving all other step configuration data.
-     * 
+     *
      * Pipeline-scoped system prompts serve as templates that can be
      * inherited by flow instances while maintaining flow-specific customization.
      *
-     * @param string|bool $result Previous filter result (when used as filter)
      * @param string $pipeline_step_id Pipeline step ID (UUID4)
      * @param string $system_prompt System prompt content
      * @return bool Success status
      * @since 1.0.0
      */
-    public function handle_system_prompt_update($result, $pipeline_step_id, $system_prompt = null) {
-        // Handle both action and filter usage
-        if (is_string($result) && $system_prompt === null) {
-            // Called as action - $result is actually $pipeline_step_id
-            $system_prompt = $pipeline_step_id;
-            $pipeline_step_id = $result;
-        }
+    public function handle_system_prompt_update($pipeline_step_id, $system_prompt) {
         // Get database services
         $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 
@@ -407,62 +385,5 @@ class Update {
         return true;
     }
 
-    /**
-     * Handle explicit job failure with cleanup and logging.
-     * 
-     * Simplified interface for failing jobs from any component.
-     * Always marks job as failed, cleans up processed items, and logs failure details.
-     *
-     * @param int $job_id Job ID to mark as failed
-     * @param string $reason Failure reason for logging
-     * @param array $context_data Additional context data for debugging
-     * @return bool Success status
-     * @since 1.0.0
-     */
-    public function handle_job_failure($job_id, $reason, $context_data = []) {
-        $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
 
-        // Always use complete_job method for failed status (sets completion timestamp)
-        $success = $db_jobs->complete_job($job_id, 'failed');
-        
-        if (!$success) {
-            do_action('datamachine_log', 'error', 'Failed to mark job as failed in database', [
-                'job_id' => $job_id,
-                'reason' => $reason
-            ]);
-            return false;
-        }
-        
-        // Clean up processed items to allow retry (existing logic from handle_job_status_update)
-        do_action('datamachine_delete_processed_items', ['job_id' => (int)$job_id]);
-        
-        // Conditional file cleanup based on settings
-        $settings = datamachine_get_datamachine_settings();
-        $cleanup_files = $settings['cleanup_job_data_on_failure'] ?? true;
-        $files_cleaned = false;
-
-        if ($cleanup_files) {
-            $cleanup = new \DataMachine\Core\FilesRepository\FileCleanup();
-            // Get flow_id from job to build file context
-            $job = $db_jobs->get_job($job_id);
-            if ($job && function_exists('datamachine_get_file_context')) {
-                $context = datamachine_get_file_context($job->flow_id);
-                $deleted_count = $cleanup->cleanup_job_data_packets($job_id, $context);
-                $files_cleaned = $deleted_count > 0;
-            }
-        }
-        
-        // Enhanced logging with failure details
-        do_action('datamachine_log', 'error', 'Job marked as failed', [
-            'job_id' => $job_id,
-            'failure_reason' => $reason,
-            'triggered_by' => 'datamachine_fail_job_action',
-            'context_data' => $context_data,
-            'processed_items_cleaned' => true,
-            'files_cleanup_enabled' => $cleanup_files,
-            'files_cleaned' => $files_cleaned
-        ]);
-        
-        return true;
-    }
 }

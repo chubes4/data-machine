@@ -1,7 +1,8 @@
 /**
  * Pipeline Card Component
  *
- * Main pipeline container integrating header, steps, and flows.
+ * Presentational component that displays pipeline data and renders child components.
+ * @pattern Presentational - Receives pipeline and flows data as props
  */
 
 import { useCallback } from '@wordpress/element';

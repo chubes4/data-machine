@@ -140,13 +140,6 @@ class Schedule {
                 'datamachine'
             );
 
-            do_action('datamachine_log', 'info', 'Flow scheduled for one-time execution via Schedule API', [
-                'flow_id' => $flow_id,
-                'timestamp' => $timestamp,
-                'scheduled_time' => wp_date('c', $timestamp),
-                'action_id' => $action_id
-            ]);
-
             return rest_ensure_response([
                 'success' => true,
                 'data' => [
@@ -196,14 +189,6 @@ class Schedule {
                 'datamachine'
             );
 
-            do_action('datamachine_log', 'info', 'Flow scheduled for recurring execution via Schedule API', [
-                'flow_id' => $flow_id,
-                'interval' => $interval,
-                'interval_seconds' => $interval_seconds,
-                'first_run' => wp_date('c', time() + $interval_seconds),
-                'action_id' => $action_id
-            ]);
-
             return rest_ensure_response([
                 'success' => true,
                 'data' => [
@@ -240,10 +225,6 @@ class Schedule {
 
         as_unschedule_action('datamachine_run_flow_now', [$flow_id], 'datamachine');
 
-        do_action('datamachine_log', 'info', 'Flow schedule cleared via Schedule API', [
-            'flow_id' => $flow_id
-        ]);
-
         return rest_ensure_response([
             'success' => true,
             'data' => [
@@ -265,10 +246,6 @@ class Schedule {
 
         // If setting to manual, just unschedule
         if ($interval === 'manual' || (!$interval && !$timestamp)) {
-            do_action('datamachine_log', 'info', 'Flow schedule set to manual via Schedule API', [
-                'flow_id' => $flow_id
-            ]);
-
             return rest_ensure_response([
                 'success' => true,
                 'data' => [

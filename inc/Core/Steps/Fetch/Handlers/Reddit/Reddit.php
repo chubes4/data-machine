@@ -367,13 +367,6 @@ class Reddit extends FetchHandler {
 					$content_data['comments'] = $comments_array;
 				}
 
-				$metadata = array_merge($metadata, [
-					'original_title' => $title,
-					'original_id' => $current_item_id,
-					'original_date_gmt' => gmdate('Y-m-d H:i:s', (int)($item_data['created_utc'] ?? time())),
-					'item_identifier_to_log' => $current_item_id
-				]);
-
 				// Prepare raw data for DataPacket creation
 				$raw_data = [
 					'title' => $content_data['title'],

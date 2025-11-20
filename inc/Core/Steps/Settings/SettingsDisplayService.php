@@ -240,6 +240,11 @@ class SettingsDisplayService {
             }
         }
 
+        // Handle boolean values for checkbox fields
+        if (is_bool($value)) {
+            return $value ? __('True', 'datamachine') : __('False', 'datamachine');
+        }
+
         return $value;
     }
 }

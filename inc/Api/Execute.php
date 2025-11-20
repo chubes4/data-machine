@@ -106,11 +106,6 @@ class Execute {
         if (!$timestamp) {
             do_action('datamachine_run_flow_now', $flow_id);
 
-            do_action('datamachine_log', 'info', 'Database flow executed via REST API', [
-                'flow_id' => $flow_id,
-                'execution_type' => 'immediate'
-            ]);
-
             return rest_ensure_response([
                 'success' => true,
                 'data' => [
@@ -137,13 +132,6 @@ class Execute {
             [$flow_id],
             'datamachine'
         );
-
-        do_action('datamachine_log', 'info', 'Database flow scheduled for delayed execution via REST API', [
-            'flow_id' => $flow_id,
-            'timestamp' => $timestamp,
-            'scheduled_time' => wp_date('c', $timestamp),
-            'action_id' => $action_id
-        ]);
 
         return rest_ensure_response([
             'success' => true,
@@ -214,12 +202,6 @@ class Execute {
         if (!$timestamp) {
             do_action('datamachine_schedule_next_step', $job_id, $first_step_id, []);
 
-            do_action('datamachine_log', 'info', 'Ephemeral workflow executed via REST API', [
-                'job_id' => $job_id,
-                'execution_type' => 'immediate',
-                'step_count' => count($workflow['steps'] ?? [])
-            ]);
-
             return rest_ensure_response([
                 'success' => true,
                 'data' => [
@@ -247,13 +229,6 @@ class Execute {
                     ['status' => 500]
                 );
             }
-
-            do_action('datamachine_log', 'info', 'Ephemeral workflow scheduled for delayed execution via REST API', [
-                'job_id' => $job_id,
-                'timestamp' => $timestamp,
-                'scheduled_time' => wp_date('c', $timestamp),
-                'action_id' => $action_id
-            ]);
 
             return rest_ensure_response([
                 'success' => true,

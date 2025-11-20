@@ -68,7 +68,7 @@ class SiteContextDirective {
      * @return bool True if enabled, false otherwise
      */
     public static function is_site_context_enabled(): bool {
-        $settings = datamachine_get_datamachine_settings();
+        $settings = get_option('datamachine_settings', []);
 
         return $settings['site_context_enabled'] ?? true;
     }

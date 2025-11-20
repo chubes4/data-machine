@@ -170,11 +170,6 @@ class Flows {
 		$flow_id = apply_filters('datamachine_create_flow', false, $params);
 
 		if (!$flow_id) {
-			do_action('datamachine_log', 'error', 'Failed to create flow via REST API', [
-				'params' => $params,
-				'user_id' => get_current_user_id()
-			]);
-
 			return new \WP_Error(
 				'flow_creation_failed',
 				__('Failed to create flow.', 'datamachine'),
@@ -189,25 +184,12 @@ class Flows {
 		$pipeline_steps = $db_pipelines->get_pipeline_config($params['pipeline_id']);
 
 		if (!isset($flow['flow_name']) || empty(trim($flow['flow_name']))) {
-			do_action('datamachine_log', 'error', 'Flow created but missing name in database', [
-				'flow_id' => $flow_id,
-				'params' => $params
-			]);
 			return new \WP_Error(
 				'data_integrity_error',
 				__('Flow data is corrupted - missing name.', 'datamachine'),
 				['status' => 500]
 			);
 		}
-
-		do_action('datamachine_log', 'info', 'Flow created via REST API', [
-			'flow_id' => $flow_id,
-			'flow_name' => $flow['flow_name'],
-			'pipeline_id' => $params['pipeline_id'],
-			'synced_steps' => count($pipeline_steps),
-			'user_id' => get_current_user_id(),
-			'user_login' => wp_get_current_user()->user_login
-		]);
 
 		return rest_ensure_response([
 			'success' => true,
@@ -249,11 +231,6 @@ class Flows {
 		$new_flow_id = apply_filters('datamachine_duplicate_flow', false, $source_flow_id);
 
 		if (!$new_flow_id) {
-			do_action('datamachine_log', 'error', 'Failed to duplicate flow via REST API', [
-				'source_flow_id' => $source_flow_id,
-				'user_id' => get_current_user_id()
-			]);
-
 			return new \WP_Error(
 				'flow_duplication_failed',
 				__('Failed to duplicate flow.', 'datamachine'),
@@ -274,15 +251,6 @@ class Flows {
 			);
 		}
 		$pipeline_steps = $db_pipelines->get_pipeline_config($source_flow['pipeline_id']);
-
-		do_action('datamachine_log', 'info', 'Flow duplicated via REST API', [
-			'source_flow_id' => $source_flow_id,
-			'new_flow_id' => $new_flow_id,
-			'pipeline_id' => $source_flow['pipeline_id'],
-			'flow_name' => $flow['flow_name'] ?? '',
-			'user_id' => get_current_user_id(),
-			'user_login' => wp_get_current_user()->user_login
-		]);
 
 		return rest_ensure_response([
 			'success' => true,

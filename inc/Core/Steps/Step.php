@@ -79,8 +79,7 @@ abstract class Step {
             // Destructure payload to properties
             $this->destructurePayload($payload);
 
-            // Log execution start
-            $this->logStart();
+
 
             // Validate common configuration
             if (!$this->validateCommonConfiguration()) {
@@ -165,14 +164,7 @@ abstract class Step {
         do_action('datamachine_log', $level, $message, $full_context);
     }
 
-    /**
-     * Log step execution start with standard context.
-     *
-     * @return void
-     */
-    protected function logStart(): void {
-        $this->log('debug', $this->step_type . ': Starting execution');
-    }
+
 
     /**
      * Log configuration errors with consistent formatting.

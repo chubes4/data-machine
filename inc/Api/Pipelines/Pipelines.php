@@ -211,12 +211,6 @@ class Pipelines {
 				'Content-Disposition' => 'attachment; filename="pipelines-export-' . gmdate('Y-m-d-H-i-s') . '.csv"',
 			]);
 
-			do_action('datamachine_log', 'info', 'Pipelines exported via REST API (CSV)', [
-				'pipeline_count' => count($export_ids),
-				'user_id' => get_current_user_id(),
-				'user_login' => wp_get_current_user()->user_login
-			]);
-
 			return $response;
 		}
 
@@ -319,14 +313,6 @@ class Pipelines {
 		$existing_flows = $db_flows ? $db_flows->get_flows_for_pipeline($pipeline_id) : [];
 
 		$creation_mode = isset($params['steps']) && is_array($params['steps']) ? 'complete' : 'simple';
-
-		do_action('datamachine_log', 'info', 'Pipeline created via REST API', [
-			'pipeline_id' => $pipeline_id,
-			'pipeline_name' => $params['pipeline_name'] ?? 'Pipeline',
-			'creation_mode' => $creation_mode,
-			'user_id' => get_current_user_id(),
-			'user_login' => wp_get_current_user()->user_login
-		]);
 
 		return rest_ensure_response([
 			'success' => true,
