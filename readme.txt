@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline, chat
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 0.2.3
+Stable tag: 0.2.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -246,6 +246,19 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 5. Chat Interface - Build workflows through conversational AI
 
 == Changelog ==
+
+= 0.2.4 =
+* Complete v0.2.3 feature release with TanStack Query + Zustand architecture
+* Modernized React state management with server/client state separation
+* Performance improvements: eliminated global re-renders, intelligent caching
+* Enhanced user experience: optimistic updates, better error handling
+* Architecture cleanup: removed legacy context system, streamlined components
+* Code standardization: fixed React bugs, improved maintainability
+* API layer enhancements: server-side single source of truth
+* Handler registration standardization using traits
+* Tool management centralization for extensible agent support
+* Directive system cleanup and legacy compatibility removal
+* WordPress integration simplification
 
 = 0.2.3 =
 * Major React architecture modernization: TanStack Query + Zustand state management

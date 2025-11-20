@@ -2,7 +2,7 @@
 
 Data Machine: WordPress plugin for automating content workflows with AI. Visual pipeline builder, chat agent, full REST API, and total extensibility.
 
-**Version**: 0.2.3
+**Version**: 0.2.4
 
 *For user documentation, see `docs/README.md` | For GitHub overview, see `README.md`*
 
