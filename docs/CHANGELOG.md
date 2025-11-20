@@ -5,6 +5,40 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2025-11-20
+
+### Added
+- **FlowScheduling.php**: New dedicated API endpoint for advanced flow scheduling operations
+- **ModalManager.jsx**: Centralized modal rendering system for improved UI consistency
+- **useFormState.js**: Generic form state management hook for React components
+- **FailJob.php**: Dedicated action class for handling job failure scenarios
+
+### Changed
+- **Handler Architecture Refactoring**: Consolidated handler registration by removing individual filter files
+  - Eliminated 14 separate filter files (FilesFilters.php, GoogleSheetsFetchFilters.php, RedditFilters.php, etc.)
+  - Integrated filter logic directly into handler classes for cleaner architecture
+  - Reduced code duplication and improved maintainability
+- **Schedule API Consolidation**: Removed standalone Schedule.php endpoint, integrated scheduling into Flows API
+- **React Component Updates**: Enhanced modal components with improved state management and error handling
+- **OAuth System Cleanup**: Removed OAuthFilters.php, consolidated OAuth functionality
+- **Engine Actions Optimization**: Streamlined Engine.php and improved job execution flow
+
+### Removed
+- **Schedule.php API Endpoint**: Eliminated redundant scheduling endpoint (292 lines removed)
+- **Handler Filter Files**: Removed 14 individual filter files (~800 lines) in favor of direct integration
+- **OAuthFilters.php**: Consolidated OAuth filter logic into core handlers
+- **Redundant API Methods**: Cleaned up duplicate functionality in various API endpoints
+
+### Fixed
+- **React Component Bugs**: Fixed various issues in modal components and form handling
+- **API Consistency**: Improved endpoint standardization and error handling
+- **State Management**: Enhanced React component state synchronization
+
+### Technical Details
+- **Architecture Simplification**: Reduced codebase by ~500 lines through consolidation
+- **Performance Improvements**: Streamlined API calls and reduced handler registration overhead
+- **Code Quality**: Improved maintainability through centralized functionality
+
 ## [0.2.3] - 2025-11-20
 
 ### Added
