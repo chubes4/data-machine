@@ -8,35 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.4] - 2025-11-20
 
 ### Added
-- **Modernized React State Management**: Complete migration from context-based state to TanStack Query (server state) + Zustand (UI state)
-- **Performance Improvements**: Eliminated global re-renders, implemented granular component updates with intelligent caching
-- **Enhanced User Experience**: Optimistic UI updates, better error handling, and cleaner state separation
-- **Architecture Cleanup**: Removed legacy context system, streamlined component architecture, and improved maintainability
-- **Code Standardization**: Fixed React bugs, standardized patterns across components, and improved code quality
-- **API Layer Enhancements**: Server-side single source of truth with improved API access patterns
-- **Handler Registration**: Standardized handler registration using HandlerRegistrationTrait across all handlers
-- **Tool Management**: Centralized tool management with ToolRegistrationTrait for extensible agent support
-- **Directive System**: Cleaned up legacy compatibility code and simplified directive architecture
-- **WordPress Integration**: Simplified WordPress settings and removed overengineered global defaults logic
-- **New Files**: Added .eslintrc.js for React code linting, FailJob.php for job failure handling
+- **FlowScheduling.php**: New dedicated API endpoint for advanced flow scheduling operations
+- **ModalManager.jsx**: Centralized modal rendering system for improved UI consistency
+- **useFormState.js**: Generic form state management hook for React components
+- **FailJob.php**: Dedicated action class for handling job failure scenarios
+- **Comprehensive CHANGELOG.md**: Complete project changelog with detailed release notes
 
 ### Changed
-- **React Components**: Updated 50+ React components for new state management architecture
-- **API Endpoints**: Streamlined API layer with improved access patterns
-- **Handler Architecture**: Migrated all handlers to use standardized registration traits
-- **Directive System**: Simplified and cleaned up legacy compatibility code
-- **WordPress Settings**: Removed overengineered global defaults logic
+- **Handler Architecture Refactoring**: Consolidated handler registration by removing individual filter files
+  - Eliminated 14 separate filter files (FilesFilters.php, GoogleSheetsFetchFilters.php, RedditFilters.php, etc.)
+  - Integrated filter logic directly into handler classes for cleaner architecture
+  - Reduced code duplication and improved maintainability
+- **Schedule API Consolidation**: Removed standalone Schedule.php endpoint, integrated scheduling into Flows API
+- **React Component Updates**: Enhanced modal components with improved state management and error handling
+- **OAuth System Cleanup**: Removed OAuthFilters.php, consolidated OAuth functionality
+- **Engine Actions Optimization**: Streamlined Engine.php and improved job execution flow
 
 ### Removed
-- **Legacy Context System**: Removed old React context-based state management
-- **Redundant API Code**: Cleaned up duplicate API endpoint implementations
-- **Legacy Compatibility**: Removed backward compatibility code from directive system
-- **Overengineered Settings**: Simplified WordPress handler settings logic
+- **Schedule.php API Endpoint**: Eliminated redundant scheduling endpoint (292 lines removed)
+- **Handler Filter Files**: Removed 14 individual filter files (~800 lines) in favor of direct integration
+- **OAuthFilters.php**: Consolidated OAuth filter logic into core handlers
+- **Redundant API Methods**: Cleaned up duplicate functionality in various API endpoints
 
 ### Fixed
-- **React Bugs**: Fixed various React component bugs and standardized patterns
-- **State Management**: Resolved issues with global re-renders and state synchronization
-- **API Access**: Improved server-side single source of truth implementation
+- **React Component Bugs**: Fixed various issues in modal components and form handling
+- **API Consistency**: Improved endpoint standardization and error handling
+- **State Management**: Enhanced React component state synchronization
+
+### Technical Details
+- **Architecture Simplification**: Reduced codebase by ~500 lines through consolidation
+- **Performance Improvements**: Streamlined API calls and reduced handler registration overhead
+- **Code Quality**: Improved maintainability through centralized functionality
 
 ## [0.2.3] - 2025-11-19
 

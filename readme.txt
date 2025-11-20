@@ -248,17 +248,16 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 == Changelog ==
 
 = 0.2.4 =
-* Complete v0.2.3 feature release with TanStack Query + Zustand architecture
-* Modernized React state management with server/client state separation
-* Performance improvements: eliminated global re-renders, intelligent caching
-* Enhanced user experience: optimistic updates, better error handling
-* Architecture cleanup: removed legacy context system, streamlined components
-* Code standardization: fixed React bugs, improved maintainability
-* API layer enhancements: server-side single source of truth
-* Handler registration standardization using traits
-* Tool management centralization for extensible agent support
-* Directive system cleanup and legacy compatibility removal
-* WordPress integration simplification
+* Handler architecture refactoring: consolidated registration by removing individual filter files
+* Schedule API consolidation: removed standalone endpoint, integrated into Flows API
+* Added FlowScheduling.php for advanced flow scheduling operations
+* Added ModalManager.jsx for centralized modal rendering
+* Added useFormState.js hook for generic form state management
+* Added FailJob.php for dedicated job failure handling
+* Removed 14 redundant handler filter files (~800 lines)
+* Removed Schedule.php API endpoint (292 lines)
+* Improved React component state management and error handling
+* Architecture simplification: reduced codebase by ~500 lines
 
 = 0.2.3 =
 * Major React architecture modernization: TanStack Query + Zustand state management
