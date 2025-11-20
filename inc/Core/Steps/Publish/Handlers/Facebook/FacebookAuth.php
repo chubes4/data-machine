@@ -30,7 +30,7 @@ class FacebookAuth {
     private $oauth2;
 
     public function __construct() {
-        $this->oauth2 = apply_filters('datamachine_get_oauth2_handler', null);
+        $this->oauth2 = new \DataMachine\Core\OAuth\OAuth2Handler();
     }
 
     /**

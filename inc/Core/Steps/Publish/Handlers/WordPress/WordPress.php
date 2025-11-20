@@ -8,6 +8,7 @@
 namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
 
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -15,12 +16,55 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPress extends PublishHandler {
 
+    use HandlerRegistrationTrait;
+
     private $featured_image_handler;
     private $source_url_handler;
     private $taxonomy_handler;
 
     public function __construct() {
         parent::__construct('wordpress');
+
+        // Self-register with filters
+        self::registerHandler(
+            'wordpress_publish',
+            'publish',
+            self::class,
+            __('WordPress', 'datamachine'),
+            __('Create WordPress posts and pages', 'datamachine'),
+            false,
+            null,
+            WordPressSettings::class,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'wordpress_publish') {
+                    $tools['wordpress_publish'] = [
+                        'class' => self::class,
+                        'method' => 'handle_tool_call',
+                        'handler' => 'wordpress_publish',
+                        'description' => 'Create WordPress posts and pages with automatic taxonomy assignment, featured image processing, and source URL attribution.',
+                        'parameters' => [
+                            'title' => [
+                                'type' => 'string',
+                                'required' => true,
+                                'description' => 'The title of the WordPress post or page'
+                            ],
+                            'content' => [
+                                'type' => 'string',
+                                'required' => true,
+                                'description' => 'The main content of the post in HTML format'
+                            ],
+                            'job_id' => [
+                                'type' => 'string',
+                                'description' => 'Optional job ID for tracking workflow execution'
+                            ]
+                        ],
+                        'handler_config' => $handler_config
+                    ];
+                }
+                return $tools;
+            }
+        );
+
         $this->featured_image_handler = apply_filters('datamachine_get_featured_image_handler', null);
         $this->source_url_handler = apply_filters('datamachine_get_source_url_handler', null);
         $this->taxonomy_handler = apply_filters('datamachine_get_taxonomy_handler', null);
@@ -178,5 +222,6 @@ class WordPress extends PublishHandler {
         }
         return $handler_config['post_author'] ?? get_current_user_id();
     }
+
 
 }

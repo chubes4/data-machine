@@ -7,6 +7,7 @@
 
 namespace DataMachine\Core\Steps\Update\Handlers\WordPress;
 
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -14,9 +15,48 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPress {
 
+    use HandlerRegistrationTrait;
+
     private $taxonomy_handler;
 
     public function __construct() {
+        // Self-register with filters
+        self::registerHandler(
+            'wordpress_update',
+            'update',
+            self::class,
+            __('WordPress Update', 'datamachine'),
+            __('Update existing WordPress posts and pages', 'datamachine'),
+            false,
+            null,
+            null,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'wordpress_update') {
+                    $tools['wordpress_update'] = [
+                        'class' => self::class,
+                        'method' => 'handle_tool_call',
+                        'handler' => 'wordpress_update',
+                        'description' => 'Update an existing WordPress post. Requires source_url from previous fetch step.',
+                        'parameters' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'content' => [
+                                    'type' => 'string',
+                                    'description' => 'The new content to update the post with'
+                                ],
+                                'job_id' => [
+                                    'type' => 'string',
+                                    'description' => 'Job ID for tracking'
+                                ]
+                            ],
+                            'required' => ['content']
+                        ]
+                    ];
+                }
+                return $tools;
+            }
+        );
+
         $this->taxonomy_handler = apply_filters('datamachine_get_taxonomy_handler', null);
     }
 

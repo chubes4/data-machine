@@ -7,6 +7,7 @@
 import { useState, useEffect } from '@wordpress/element';
 import { Modal, Button, Notice } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
+import { useFormState, useAsyncOperation } from '../../hooks/useFormState';
 import ConnectionStatus from './oauth/ConnectionStatus';
 import AccountDetails from './oauth/AccountDetails';
 import APIConfigForm from './oauth/APIConfigForm';
@@ -30,10 +31,28 @@ export default function OAuthAuthenticationModal( {
 } ) {
 	const [ connected, setConnected ] = useState( false );
 	const [ accountData, setAccountData ] = useState( null );
-	const [ apiConfig, setApiConfig ] = useState( {} );
-	const [ isSaving, setIsSaving ] = useState( false );
 	const [ error, setError ] = useState( null );
 	const [ success, setSuccess ] = useState( null );
+
+	const apiConfigForm = useFormState({
+		initialData: {},
+		onSubmit: async (config) => {
+			// In production, this would save to REST API
+			await new Promise( ( resolve ) => setTimeout( resolve, 1000 ) );
+
+			setConnected( true );
+			setAccountData( { api_key: config.api_key } );
+			setSuccess(
+				__( 'Credentials saved successfully!', 'datamachine' )
+			);
+
+			if ( onSuccess ) {
+				onSuccess();
+			}
+		}
+	});
+
+	const disconnectOperation = useAsyncOperation();
 
 	// Determine auth type from handler info
 	const authType = handlerInfo.auth_type || 'oauth2'; // oauth2 or simple
@@ -78,38 +97,14 @@ export default function OAuthAuthenticationModal( {
 	/**
 	 * Handle simple auth save
 	 */
-	const handleSimpleAuthSave = async () => {
-		setIsSaving( true );
-		setError( null );
-		setSuccess( null );
-
-		try {
-			// In production, this would save to REST API
-			await new Promise( ( resolve ) => setTimeout( resolve, 1000 ) );
-
-			setConnected( true );
-			setAccountData( { api_key: apiConfig.api_key } );
-			setSuccess(
-				__( 'Credentials saved successfully!', 'datamachine' )
-			);
-
-			if ( onSuccess ) {
-				onSuccess();
-			}
-		} catch ( err ) {
-			console.error( 'Save error:', err );
-			setError(
-				err.message || __( 'Failed to save credentials', 'datamachine' )
-			);
-		} finally {
-			setIsSaving( false );
-		}
+	const handleSimpleAuthSave = () => {
+		apiConfigForm.submit();
 	};
 
 	/**
 	 * Handle disconnect
 	 */
-	const handleDisconnect = async () => {
+	const handleDisconnect = () => {
 		if (
 			! confirm(
 				__(
@@ -121,29 +116,17 @@ export default function OAuthAuthenticationModal( {
 			return;
 		}
 
-		setIsSaving( true );
-		setError( null );
-		setSuccess( null );
-
-		try {
+		disconnectOperation.execute(async () => {
 			// In production, this would call REST API to clear credentials
 			await new Promise( ( resolve ) => setTimeout( resolve, 1000 ) );
 
 			setConnected( false );
 			setAccountData( null );
-			setApiConfig( {} );
+			apiConfigForm.reset();
 			setSuccess(
 				__( 'Account disconnected successfully!', 'datamachine' )
 			);
-		} catch ( err ) {
-			console.error( 'Disconnect error:', err );
-			setError(
-				err.message ||
-					__( 'Failed to disconnect account', 'datamachine' )
-			);
-		} finally {
-			setIsSaving( false );
-		}
+		});
 	};
 
 	return (
@@ -156,19 +139,23 @@ export default function OAuthAuthenticationModal( {
 			className="datamachine-oauth-modal"
 		>
 		<div className="datamachine-modal-content">
-			{ error && (
+			{ (error || apiConfigForm.error || disconnectOperation.error) && (
 				<div className="datamachine-modal-error notice notice-error">
-					<p>{ error }</p>
+					<p>{ error || apiConfigForm.error || disconnectOperation.error }</p>
 				</div>
 			) }
 
-				{ success && (
+				{ (success || apiConfigForm.success || disconnectOperation.success) && (
 					<Notice
 						status="success"
 						isDismissible
-						onRemove={ () => setSuccess( null ) }
+						onRemove={ () => {
+							setSuccess( null );
+							apiConfigForm.setSuccess( null );
+							disconnectOperation.reset();
+						} }
 					>
-						<p>{ success }</p>
+						<p>{ success || apiConfigForm.success || disconnectOperation.success }</p>
 					</Notice>
 				) }
 
@@ -202,24 +189,24 @@ export default function OAuthAuthenticationModal( {
 									oauthUrl={ oauthUrl }
 									onSuccess={ handleOAuthSuccess }
 									onError={ handleOAuthError }
-									disabled={ isSaving }
+									disabled={ apiConfigForm.isSubmitting || disconnectOperation.isLoading }
 								/>
 							</div>
 						) : (
 							<>
 								<APIConfigForm
-									config={ apiConfig }
-									onChange={ setApiConfig }
+									config={ apiConfigForm.data }
+									onChange={ apiConfigForm.updateField }
 									fields={ handlerInfo.auth_fields || [] }
 								/>
 								<div className="datamachine-modal-spacing--mt-16">
 									<Button
 										variant="primary"
 										onClick={ handleSimpleAuthSave }
-										disabled={ isSaving }
-										isBusy={ isSaving }
+										disabled={ apiConfigForm.isSubmitting }
+										isBusy={ apiConfigForm.isSubmitting }
 									>
-										{ isSaving
+										{ apiConfigForm.isSubmitting
 											? __( 'Saving...', 'datamachine' )
 											: __(
 													'Save Credentials',
@@ -240,11 +227,11 @@ export default function OAuthAuthenticationModal( {
 							<Button
 								variant="secondary"
 								onClick={ handleDisconnect }
-								disabled={ isSaving }
-								isBusy={ isSaving }
+								disabled={ disconnectOperation.isLoading }
+								isBusy={ disconnectOperation.isLoading }
 								className="datamachine-button--destructive"
 							>
-								{ isSaving
+								{ disconnectOperation.isLoading
 									? __( 'Disconnecting...', 'datamachine' )
 									: __(
 											'Disconnect Account',
@@ -259,7 +246,7 @@ export default function OAuthAuthenticationModal( {
 					<Button
 						variant="secondary"
 						onClick={ onClose }
-						disabled={ isSaving }
+						disabled={ apiConfigForm.isSubmitting || disconnectOperation.isLoading }
 					>
 						{ __( 'Close', 'datamachine' ) }
 					</Button>

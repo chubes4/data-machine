@@ -9,6 +9,7 @@
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPressAPI;
 
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -23,8 +24,23 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class WordPressAPI extends FetchHandler {
 
+	use HandlerRegistrationTrait;
+
 	public function __construct() {
 		parent::__construct( 'rest_api' );
+
+		// Self-register with filters
+		self::registerHandler(
+			'wordpress_api',
+			'fetch',
+			self::class,
+			__('WordPress REST API', 'datamachine'),
+			__('Fetch posts from external WordPress sites via REST API', 'datamachine'),
+			false,
+			null,
+			WordPressAPISettings::class,
+			null
+		);
 	}
 
 	/**

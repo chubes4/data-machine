@@ -4,9 +4,9 @@
  * Wrapper around reusable FileUploadDropzone for Files handler.
  */
 
-import { useState } from '@wordpress/element';
 import { Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { useFileUpload } from '../../../../hooks/useFormState';
 import FileUploadDropzone from '../../../shared/FileUploadDropzone';
 
 /**
@@ -17,19 +17,13 @@ import FileUploadDropzone from '../../../shared/FileUploadDropzone';
  * @returns {React.ReactElement} File upload interface
  */
 export default function FileUploadInterface( { onFileUploaded } ) {
-	const [ uploading, setUploading ] = useState( false );
-	const [ error, setError ] = useState( null );
-	const [ success, setSuccess ] = useState( null );
+	const fileUpload = useFileUpload();
 
 	/**
 	 * Handle file selection
 	 */
-	const handleFileSelected = async ( file ) => {
-		setUploading( true );
-		setError( null );
-		setSuccess( null );
-
-		try {
+	const handleFileSelected = ( file ) => {
+		fileUpload.upload(async () => {
 			// In production, this would upload to handler-specific storage
 			// For now, we'll simulate the upload
 			await new Promise( ( resolve ) => setTimeout( resolve, 1000 ) );
@@ -42,37 +36,29 @@ export default function FileUploadInterface( { onFileUploaded } ) {
 				} );
 			}
 
-			setSuccess( __( 'File uploaded successfully!', 'datamachine' ) );
-		} catch ( err ) {
-			console.error( 'Upload error:', err );
-			setError(
-				err.message ||
-					__( 'An error occurred during upload', 'datamachine' )
-			);
-		} finally {
-			setUploading( false );
-		}
+			return __( 'File uploaded successfully!', 'datamachine' );
+		});
 	};
 
 	return (
 		<div>
-			{ error && (
+			{ fileUpload.error && (
 				<Notice
 					status="error"
 					isDismissible
-					onRemove={ () => setError( null ) }
+					onRemove={ () => fileUpload.setError( null ) }
 				>
-					<p>{ error }</p>
+					<p>{ fileUpload.error }</p>
 				</Notice>
 			) }
 
-			{ success && (
+			{ fileUpload.success && (
 				<Notice
 					status="success"
 					isDismissible
-					onRemove={ () => setSuccess( null ) }
+					onRemove={ () => fileUpload.reset() }
 				>
-					<p>{ success }</p>
+					<p>{ fileUpload.success }</p>
 				</Notice>
 			) }
 
@@ -89,9 +75,9 @@ export default function FileUploadInterface( { onFileUploaded } ) {
 					'gif',
 				] }
 				maxSizeMB={ Math.round((window.dataMachineConfig?.maxUploadSize || 10485760) / (1024 * 1024)) }
-				disabled={ uploading }
+				disabled={ fileUpload.isUploading }
 				uploadText={
-					uploading ? __( 'Uploading...', 'datamachine' ) : null
+					fileUpload.isUploading ? __( 'Uploading...', 'datamachine' ) : null
 				}
 			/>
 		</div>

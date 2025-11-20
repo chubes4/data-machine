@@ -8,6 +8,7 @@
 namespace DataMachine\Core\Steps\Fetch\Handlers\Rss;
 
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -15,8 +16,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Rss extends FetchHandler {
 
+	use HandlerRegistrationTrait;
+
 	public function __construct() {
 		parent::__construct( 'rss' );
+
+		// Self-register with filters
+		self::registerHandler(
+			'rss',
+			'fetch',
+			self::class,
+			__('RSS Feed', 'datamachine'),
+			__('Fetch content from RSS and Atom feeds', 'datamachine'),
+			false,
+			null,
+			RssSettings::class,
+			null
+		);
 	}
 
 	/**

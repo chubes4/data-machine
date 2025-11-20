@@ -14,16 +14,7 @@ import { useHandlers, useHandlerDetails } from './queries/handlers';
 import { useUIStore } from './stores/uiStore';
 import PipelineCard from './components/pipelines/PipelineCard';
 import PipelineSelector from './components/pipelines/PipelineSelector';
-import {
-	ImportExportModal,
-	StepSelectionModal,
-	ConfigureStepModal,
-	ContextFilesModal,
-	FlowScheduleModal,
-	HandlerSelectionModal,
-	HandlerSettingsModal,
-	OAuthAuthenticationModal,
-} from './components/modals';
+import ModalManager from './components/shared/ModalManager';
 import { MODAL_TYPES } from './utils/constants';
 
 /**
@@ -147,16 +138,28 @@ export default function PipelinesApp() {
 	/**
 	 * Empty state
 	 */
-	if ( pipelines.length === 0 ) {
+	if (pipelines.length === 0) {
 		return (
-			<Notice status="info" isDismissible={ false }>
-				<p>
-					{ __(
-						'No pipelines found. Create a pipeline to get started.',
-						'datamachine'
-					) }
-				</p>
-			</Notice>
+			<div className="datamachine-empty-state">
+				<Notice status="info" isDismissible={ false }>
+					<p>
+						{ __(
+							'No pipelines found. Create your first pipeline to get started.',
+							'datamachine'
+						) }
+					</p>
+				</Notice>
+				<div style={{ marginTop: '20px', textAlign: 'center' }}>
+					<Button
+						variant="primary"
+						onClick={ handleAddNewPipeline }
+						disabled={ isCreatingPipeline }
+						isBusy={ isCreatingPipeline }
+					>
+						{ __( 'Create First Pipeline', 'datamachine' ) }
+					</Button>
+				</div>
+			</div>
 		);
 	}
 
@@ -210,72 +213,17 @@ export default function PipelinesApp() {
 			/>
 
 			{ /* Centralized Modal Management */ }
-			{ activeModal === MODAL_TYPES.IMPORT_EXPORT && (
-				<ImportExportModal
-					onClose={ closeModal }
-					pipelines={ pipelines }
-					onSuccess={ handleModalSuccess }
-				/>
-			) }
-
-			{ activeModal === MODAL_TYPES.STEP_SELECTION && (
-				<StepSelectionModal
-					onClose={ closeModal }
-					{ ...modalData }
-					onSuccess={ handleModalSuccess }
-				/>
-			) }
-
-			{ activeModal === MODAL_TYPES.CONFIGURE_STEP && (
-				<ConfigureStepModal
-					onClose={ closeModal }
-					{ ...modalData }
-					onSuccess={ handleModalSuccess }
-				/>
-			) }
-
-			{ activeModal === MODAL_TYPES.CONTEXT_FILES && (
-				<ContextFilesModal
-					onClose={ closeModal }
-					{ ...modalData }
-				/>
-			) }
-
-			{ activeModal === MODAL_TYPES.FLOW_SCHEDULE && (
-				<FlowScheduleModal
-					onClose={ closeModal }
-					{ ...modalData }
-				/>
-			) }
-
-			{ activeModal === MODAL_TYPES.HANDLER_SELECTION && (
-				<HandlerSelectionModal
-					onClose={ closeModal }
-					{ ...modalData }
-					onSelectHandler={ handleHandlerSelected }
-					handlers={ handlers }
-				/>
-			) }
-
-			{ activeModal === MODAL_TYPES.HANDLER_SETTINGS && (
-				<HandlerSettingsModal
-					onClose={ closeModal }
-					{ ...modalData }
-					handlers={ handlers }
-					handlerDetails={ handlerDetails }
-					onSuccess={ handleModalSuccess }
-					onChangeHandler={ handleChangeHandler }
-					onOAuthConnect={ handleOAuthConnect }
-				/>
-			) }
-
-			{ activeModal === MODAL_TYPES.OAUTH && (
-				<OAuthAuthenticationModal
-					onClose={ closeModal }
-					{ ...modalData }
-					onSuccess={ handleModalSuccess }
-				/>
-			) }
+			<ModalManager
+				pipelines={ pipelines }
+				handlers={ handlers }
+				handlerDetails={ handlerDetails }
+				pipelineConfig={ selectedPipeline?.pipeline_config || {} }
+				flows={ flows }
+				onModalSuccess={ handleModalSuccess }
+				onHandlerSelected={ handleHandlerSelected }
+				onChangeHandler={ handleChangeHandler }
+				onOAuthConnect={ handleOAuthConnect }
+			/>
 		</div>
 	);
 }

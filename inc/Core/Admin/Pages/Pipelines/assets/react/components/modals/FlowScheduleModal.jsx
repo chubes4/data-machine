@@ -9,6 +9,7 @@ import { Modal, Button, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { getSchedulingIntervals } from '../../utils/api';
 import { updateFlowSchedule } from '../../utils/api';
+import { useFormState, useAsyncOperation } from '../../hooks/useFormState';
 
 /**
  * Flow Schedule Modal Component
@@ -28,75 +29,53 @@ export default function FlowScheduleModal( {
 	currentInterval,
 	onSuccess,
 } ) {
-	const [ selectedInterval, setSelectedInterval ] = useState(
-		currentInterval || 'manual'
-	);
-	const [ isSaving, setIsSaving ] = useState( false );
-	const [ error, setError ] = useState( null );
+	// Form state for interval selection
+	const formState = useFormState({
+		initialData: { selectedInterval: currentInterval || 'manual' },
+		onSubmit: async (data) => {
+			const result = await updateFlowSchedule(flowId, {
+				interval: data.selectedInterval
+			});
+			if (result.success) {
+				if (onSuccess) onSuccess();
+				onClose();
+			} else {
+				throw new Error(result.message || 'Failed to update schedule');
+			}
+		}
+	});
+
+	// Async operation for loading intervals
+	const intervalsOperation = useAsyncOperation();
+
 	const [ intervals, setIntervals ] = useState( [] );
-	const [ isLoadingIntervals, setIsLoadingIntervals ] = useState( false );
 
 	// Fetch intervals when modal opens
 	useEffect( () => {
 		if ( intervals.length === 0 ) {
-			setIsLoadingIntervals( true );
-			getSchedulingIntervals()
-				.then( result => {
-					if ( result.success && result.data ) {
-						setIntervals( result.data );
-					} else {
-						// Show error when API fails to provide intervals
-						setError( __( 'Failed to load scheduling intervals. Please refresh the page and try again.', 'datamachine' ) );
-						setIntervals( [] );
-					}
-				} )
-				.catch( error => {
-					console.error( 'Failed to fetch intervals:', error );
-					// Show error when API request fails
-					setError( __( 'Failed to load scheduling intervals. Please check your connection and try again.', 'datamachine' ) );
+			intervalsOperation.execute(async () => {
+				const result = await getSchedulingIntervals();
+				if ( result.success && result.data ) {
+					setIntervals( result.data );
+				} else {
 					setIntervals( [] );
-				} )
-				.finally( () => {
-					setIsLoadingIntervals( false );
-				} );
+					throw new Error( __( 'Failed to load scheduling intervals. Please refresh the page and try again.', 'datamachine' ) );
+				}
+			});
 		}
-	}, [ intervals.length ] );
+	}, [ intervals.length, intervalsOperation ] );
 
 	/**
 	 * Handle schedule save
 	 */
-	const handleSave = async () => {
-		setIsSaving( true );
-		setError( null );
-
-		try {
-			const response = await updateFlowSchedule( flowId, {
-				interval: selectedInterval,
-			} );
-
-			if ( response.success ) {
-				if ( onSuccess ) {
-					onSuccess();
-				}
-				onClose();
-			} else {
-				setError(
-					response.message ||
-						__( 'Failed to update schedule', 'datamachine' )
-				);
-			}
-		} catch ( err ) {
-			console.error( 'Schedule update error:', err );
-			setError( err.message || __( 'An error occurred', 'datamachine' ) );
-		} finally {
-			setIsSaving( false );
-		}
+	const handleSave = () => {
+		formState.submit();
 	};
 
 	/**
 	 * Check if schedule changed
 	 */
-	const hasChanged = selectedInterval !== ( currentInterval || 'manual' );
+	const hasChanged = formState.data.selectedInterval !== ( currentInterval || 'manual' );
 
 	return (
 		<Modal
@@ -105,9 +84,9 @@ export default function FlowScheduleModal( {
 			className="datamachine-flow-schedule-modal"
 		>
 			<div className="datamachine-modal-content">
-				{ error && (
+				{ (formState.error || intervalsOperation.error) && (
 					<div className="datamachine-modal-error notice notice-error">
-						<p>{ error }</p>
+						<p>{ formState.error || intervalsOperation.error }</p>
 					</div>
 				) }
 
@@ -118,17 +97,17 @@ export default function FlowScheduleModal( {
 
 				<SelectControl
 					label={ __( 'Schedule Interval', 'datamachine' ) }
-					value={ selectedInterval }
+					value={ formState.data.selectedInterval }
 					options={ intervals }
-					onChange={ ( value ) => setSelectedInterval( value ) }
-					disabled={ isLoadingIntervals || intervals.length === 0 }
+					onChange={ ( value ) => formState.updateField( 'selectedInterval', value ) }
+					disabled={ intervalsOperation.isLoading || intervals.length === 0 }
 					help={ __(
 						'Choose how often this flow should run automatically.',
 						'datamachine'
 					) }
 				/>
 
-				{ selectedInterval === 'manual' && (
+				{ formState.data.selectedInterval === 'manual' && (
 					<div className="datamachine-modal-info-box datamachine-modal-info-box--highlight">
 						<p>
 							<strong>
@@ -142,7 +121,7 @@ export default function FlowScheduleModal( {
 					</div>
 				) }
 
-				{ selectedInterval !== 'manual' && (
+				{ formState.data.selectedInterval !== 'manual' && (
 					<div className="datamachine-modal-info-box datamachine-modal-info-box--note">
 						<p>
 							<strong>
@@ -160,7 +139,7 @@ export default function FlowScheduleModal( {
 					<Button
 						variant="secondary"
 						onClick={ onClose }
-						disabled={ isSaving }
+						disabled={ formState.isSubmitting }
 					>
 						{ __( 'Cancel', 'datamachine' ) }
 					</Button>
@@ -168,10 +147,10 @@ export default function FlowScheduleModal( {
 					<Button
 						variant="primary"
 						onClick={ handleSave }
-						disabled={ isSaving || ! hasChanged || intervals.length === 0 }
-						isBusy={ isSaving }
+						disabled={ formState.isSubmitting || ! hasChanged || intervals.length === 0 }
+						isBusy={ formState.isSubmitting }
 					>
-						{ isSaving
+						{ formState.isSubmitting
 							? __( 'Saving...', 'datamachine' )
 							: __( 'Save Schedule', 'datamachine' ) }
 					</Button>

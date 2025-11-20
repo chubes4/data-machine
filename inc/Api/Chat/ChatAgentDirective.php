@@ -131,10 +131,6 @@ Use your other tools (local_search, wordpress_post_reader, etc.) to gather infor
 - Used by handlers that require file attachments (images, documents, etc.)
 - Returns file metadata and access URL
 
-**GET /datamachine/v1/files/{filename}**
-- Download or access a specific file
-- Returns the file content or metadata
-
 **DELETE /datamachine/v1/files/{filename}**
 - Delete an uploaded file
 - Cleans up file storage when no longer needed
@@ -279,9 +275,6 @@ Use your other tools (local_search, wordpress_post_reader, etc.) to gather infor
 - Update plugin settings
 - Body: { "setting_key": "value", ... }
 
-**GET /datamachine/v1/settings/tools/{tool_id}**
-- Get configuration for a specific AI tool
-
 **POST /datamachine/v1/settings/tools/{tool_id}**
 - Save configuration for a specific AI tool
 - Body: { "config_data": { "api_key": "value", ... } }
@@ -291,9 +284,6 @@ Use your other tools (local_search, wordpress_post_reader, etc.) to gather infor
 - Useful when configuration changes aren't taking effect
 
 ### Authentication & OAuth
-
-**GET /datamachine/v1/auth/{handler_slug}**
-- Check authentication status for a handler
 
 **PUT /datamachine/v1/auth/{handler_slug}**
 - Save authentication configuration for a handler
@@ -315,10 +305,6 @@ Use your other tools (local_search, wordpress_post_reader, etc.) to gather infor
 - Get information about the current authenticated user
 
 ### Processed Items Tracking
-
-**GET /datamachine/v1/processed-items**
-- List items that have been processed for deduplication
-- Query parameters: flow_id, job_id, limit, offset
 
 ## Workflow JSON Structure
 
@@ -402,8 +388,7 @@ You have the **make_api_request** tool for interacting with Data Machine's REST 
 - Discover handlers: make_api_request(endpoint="/datamachine/v1/handlers", method="GET")
 - Get handler details: make_api_request(endpoint="/datamachine/v1/handlers/twitter", method="GET")
 - Execute workflow: make_api_request(endpoint="/datamachine/v1/execute", method="POST", data={workflow: {steps: [...]}})
-- Get scheduling intervals: make_api_request(endpoint="/datamachine/v1/schedule", method="POST", data={action: "get_intervals"})
-- Schedule flow: make_api_request(endpoint="/datamachine/v1/schedule", method="POST", data={action: "schedule", flow_id: 123, interval: "hourly"})
+- Schedule flow: make_api_request(endpoint="/datamachine/v1/flows/123", method="PATCH", data={scheduling_config: {interval: "hourly"}})
 - Create pipeline: make_api_request(endpoint="/datamachine/v1/pipelines", method="POST", data={pipeline_name: "My Pipeline"})
 - Create flow: make_api_request(endpoint="/datamachine/v1/flows", method="POST", data={pipeline_id: 123, flow_name: "My Flow"})
 - Check auth status: make_api_request(endpoint="/datamachine/v1/auth/twitter/status", method="GET")
@@ -487,7 +472,7 @@ Your approach:
    - Create pipeline: make_api_request(endpoint="/datamachine/v1/pipelines", method="POST", data={pipeline_name: "Blog to Twitter"})
    - Add steps to pipeline: make_api_request(endpoint="/datamachine/v1/pipelines/123/steps", method="POST", data={step_type: "fetch", handler_slug: "wordpress_local"})
    - Create flow: make_api_request(endpoint="/datamachine/v1/flows", method="POST", data={pipeline_id: 123, flow_name: "Daily Posts"})
-   - Schedule flow: make_api_request(endpoint="/datamachine/v1/schedule", method="POST", data={action: "schedule", flow_id: 456, interval: "daily"})
+   - Schedule flow: make_api_request(endpoint="/datamachine/v1/flows/456", method="PATCH", data={scheduling_config: {interval: "daily"}})
 
 **Example 3: Modifying Existing Workflows**
 

@@ -45,19 +45,26 @@ Data Machine: WordPress plugin for automating content workflows with AI. Visual 
 - Centralizes filter registration logic for maintainability
 - Auto-handles conditional registration based on handler type and requirements
 
-**Self-Registration**: Components auto-register via `*Filters.php` files loaded through composer.json using the HandlerRegistrationTrait:
+**Self-Registration**: Components auto-register directly in their constructors using HandlerRegistrationTrait and ToolRegistrationTrait:
 ```php
-use DataMachine\Core\Steps\HandlerRegistrationTrait;
-
-class TwitterFilters {
+// Handler self-registration
+class WordPressPublish extends PublishHandler {
     use HandlerRegistrationTrait;
 
-    public static function register(): void {
+    public function __construct() {
+        parent::__construct('wordpress');
         self::registerHandler(
-            'twitter',
+            'wordpress_publish',
             'publish',
-            Twitter::class,
-            __('Twitter', 'datamachine'),
+            self::class,
+            __('WordPress', 'datamachine'),
+
+// Tool self-registration
+class GoogleSearch {
+    use ToolRegistrationTrait;
+
+    public function __construct() {
+        $this->registerGlobalTool('google_search', $this->getToolDefinition());
             __('Post content to Twitter with media support', 'datamachine'),
             true,
             TwitterAuth::class,
@@ -184,7 +191,7 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 **Implementation**: Directory-based structure at `/inc/Api/Chat/` (@since v0.2.0):
 - `Chat.php` - Main endpoint handler (`POST /datamachine/v1/chat`, namespace `DataMachine\Api\Chat`)
 - `ChatAgentDirective.php` - Chat-specific AI directive implementing filter-based directive registration
-- `ChatFilters.php` - Self-registration filters loaded via composer.json for directive application (`datamachine_agent_directives`)
+- `ChatAgentDirective.php` - Chat-specific AI directive with self-registration in constructor
 - `Tools/MakeAPIRequest.php` - Chat-only tool for REST API operations (registered via `datamachine_chat_tools` filter)
 
 **Session Management**: Persistent sessions via `wp_datamachine_chat_sessions` table with user isolation, 24-hour expiration

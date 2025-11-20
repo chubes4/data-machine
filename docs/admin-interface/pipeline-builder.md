@@ -209,6 +209,7 @@ The Pipelines page uses modern React architecture built with WordPress component
 - `StepTypeIcon` - Step type icons with consistent styling
 - `DataFlowArrow` - Visual data flow indicators between steps
 - `PipelineSelector` - Pipeline selection dropdown with preferences
+- `ModalManager` - Centralized modal rendering logic (@since v0.2.3)
 
 **Specialized Sub-Components:**
 
@@ -216,7 +217,7 @@ The Pipelines page uses modern React architecture built with WordPress component
 - Files handler components: `FilesHandlerSettings`, `FileUploadInterface`, `FileStatusTable`, `AutoCleanupOption`
 - Configure step components: `AIToolsSelector`, `ToolCheckbox`, `ConfigurationWarning`
 - Import/export components: `ImportTab`, `ExportTab`, `CSVDropzone`, `PipelineCheckboxTable`
-- Context files components: `PipelineContextFiles`, `FileUploadDropzone`, `ContextFilesTable`
+- File management components: `FileUploadDropzone`, `FileStatusTable`, `AutoCleanupOption`
 
 ### State Management
 
@@ -241,10 +242,24 @@ All data operations use custom hooks that provide:
 - Real-time updates
 - Optimistic UI updates
 
+**Available Hooks:**
+- `usePipelines` - Pipeline data and operations
+- `useFlows` - Flow instance management
+- `useStepTypes` - Available step types discovery
+- `useHandlers` - Handler discovery and configuration
+- `useStepSettings` - Step configuration management
+- `useModal` - Modal state and operations
+- `useFormState` - Generic form state management (@since v0.2.3)
+
 Example hook structure:
 ```javascript
 const { pipelines, loading, error, refetch } = usePipelines();
 const { flows, createFlow, deleteFlow, duplicateFlow } = useFlows(pipelineId);
+const { data, updateField, handleSubmit, isSubmitting } = useFormState({
+  initialData: {},
+  validate: validateForm,
+  onSubmit: submitForm
+});
 ```
 
 ### REST API Integration

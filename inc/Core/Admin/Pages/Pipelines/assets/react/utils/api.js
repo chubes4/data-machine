@@ -330,7 +330,7 @@ export const updateUserMessage = async ( flowStepId, message ) => {
  * @returns {Promise<Object>} Array of scheduling intervals
  */
 export const getSchedulingIntervals = async () => {
-	return await client.post( '/schedule', { action: 'get_intervals' } );
+	return await client.get( '/settings/scheduling-intervals' );
 };
 
 /**
@@ -342,18 +342,8 @@ export const getSchedulingIntervals = async () => {
  * @returns {Promise<Object>} Updated flow data
  */
 export const updateFlowSchedule = async ( flowId, schedulingConfig ) => {
-	const { interval } = schedulingConfig;
-
-	// Determine action based on interval
-	let action = 'schedule';
-	if (interval === 'manual') {
-		action = 'update'; // Setting to manual is an update action
-	}
-
-	return await client.post( '/schedule', {
-		flow_id: flowId,
-		action: action,
-		interval: interval === 'manual' ? null : interval,
+	return await client.patch( `/flows/${ flowId }`, {
+		scheduling_config: schedulingConfig
 	} );
 };
 

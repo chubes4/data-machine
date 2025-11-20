@@ -14,6 +14,7 @@ import {
 import { __ } from '@wordpress/i18n';
 import { updateSystemPrompt, getTools } from '../../utils/api';
 import { useProviders } from '../../queries/config';
+import { useFormState } from '../../hooks/useFormState';
 import AIToolsSelector from './configure-step/AIToolsSelector';
 
 /**
@@ -36,16 +37,49 @@ export default function ConfigureStepModal( {
 	currentConfig,
 	onSuccess,
 } ) {
-	const [ provider, setProvider ] = useState( currentConfig?.provider || '' );
-	const [ model, setModel ] = useState( currentConfig?.model || '' );
-	const [ systemPrompt, setSystemPrompt ] = useState(
-		currentConfig?.system_prompt || ''
-	);
 	const [ selectedTools, setSelectedTools ] = useState(
 		currentConfig?.enabled_tools || []
 	);
-	const [ isSaving, setIsSaving ] = useState( false );
-	const [ error, setError ] = useState( null );
+
+	const formState = useFormState({
+		initialData: {
+			provider: currentConfig?.provider || '',
+			model: currentConfig?.model || '',
+			systemPrompt: currentConfig?.system_prompt || ''
+		},
+		validate: (data) => {
+			if ( ! data.provider ) {
+				return __( 'Please select an AI provider', 'datamachine' );
+			}
+			if ( ! data.model ) {
+				return __( 'Please select an AI model', 'datamachine' );
+			}
+			return null;
+		},
+		onSubmit: async (data) => {
+			const response = await updateSystemPrompt(
+				pipelineStepId,
+				data.systemPrompt,
+				data.provider,
+				data.model,
+				selectedTools,
+				stepType,
+				pipelineId
+			);
+
+			if ( response.success ) {
+				if ( onSuccess ) {
+					onSuccess();
+				}
+				onClose();
+			} else {
+				throw new Error(
+					response.message ||
+						__( 'Failed to update configuration', 'datamachine' )
+				);
+			}
+		}
+	});
 
 	// Use TanStack Query for providers data
 	const { data: providersResponse, isLoading: isLoadingProviders } = useProviders();
@@ -58,9 +92,11 @@ export default function ConfigureStepModal( {
 	 * Reset form when modal opens with new config
 	 */
 	useEffect( () => {
-		setProvider( currentConfig?.provider || aiDefaults.provider );
-		setModel( currentConfig?.model || aiDefaults.model );
-		setSystemPrompt( currentConfig?.system_prompt || '' );
+		formState.updateData({
+			provider: currentConfig?.provider || aiDefaults.provider,
+			model: currentConfig?.model || aiDefaults.model,
+			systemPrompt: currentConfig?.system_prompt || ''
+		});
 
 		// Pre-populate with all globally enabled tools for new AI steps
 		if ( ! currentConfig?.enabled_tools ) {
@@ -84,8 +120,8 @@ export default function ConfigureStepModal( {
 			setSelectedTools( currentConfig.enabled_tools );
 		}
 
-		setError( null );
-	}, [ currentConfig, aiDefaults.provider, aiDefaults.model ] );
+		formState.setError( null );
+	}, [ currentConfig, aiDefaults.provider, aiDefaults.model, formState ] );
 
 	/**
 	 * Get provider options
@@ -109,7 +145,7 @@ export default function ConfigureStepModal( {
 	 * Get model options for selected provider
 	 */
 	const modelOptions = useMemo( () => {
-		if ( ! provider || ! aiProviders[ provider ] ) {
+		if ( ! formState.data.provider || ! aiProviders[ formState.data.provider ] ) {
 			return [
 				{
 					value: '',
@@ -121,7 +157,7 @@ export default function ConfigureStepModal( {
 		const options = [
 			{ value: '', label: __( 'Select Model...', 'datamachine' ) },
 		];
-		const providerData = aiProviders[ provider ];
+		const providerData = aiProviders[ formState.data.provider ];
 
 		if ( providerData.models ) {
 			// Support both array-of-objects and key/value maps to stay compatible with library output
@@ -143,70 +179,28 @@ export default function ConfigureStepModal( {
 		}
 
 		return options;
-	}, [ provider, aiProviders ] );
+	}, [ formState.data.provider, aiProviders ] );
 
 	/**
 	 * Handle provider change (reset model)
 	 */
 	const handleProviderChange = ( value ) => {
-		setProvider( value );
-		setModel( '' ); // Reset model when provider changes
+		formState.updateData({
+			...formState.data,
+			provider: value,
+			model: '' // Reset model when provider changes
+		});
 	};
 
-	/**
-	 * Handle save
-	 */
-	const handleSave = async () => {
-		if ( ! provider ) {
-			setError( __( 'Please select an AI provider', 'datamachine' ) );
-			return;
-		}
 
-		if ( ! model ) {
-			setError( __( 'Please select an AI model', 'datamachine' ) );
-			return;
-		}
-
-		setIsSaving( true );
-		setError( null );
-
-		try {
-			const response = await updateSystemPrompt(
-				pipelineStepId,
-				systemPrompt,
-				provider,
-				model,
-				selectedTools,
-				stepType,
-				pipelineId
-			);
-
-			if ( response.success ) {
-				if ( onSuccess ) {
-					onSuccess();
-				}
-				onClose();
-			} else {
-				setError(
-					response.message ||
-						__( 'Failed to update configuration', 'datamachine' )
-				);
-			}
-		} catch ( err ) {
-			console.error( 'Configuration update error:', err );
-			setError( err.message || __( 'An error occurred', 'datamachine' ) );
-		} finally {
-			setIsSaving( false );
-		}
-	};
 
 	/**
 	 * Check if config changed
 	 */
 	const hasChanged =
-		provider !== ( currentConfig?.provider || '' ) ||
-		model !== ( currentConfig?.model || '' ) ||
-		systemPrompt !== ( currentConfig?.system_prompt || '' ) ||
+		formState.data.provider !== ( currentConfig?.provider || '' ) ||
+		formState.data.model !== ( currentConfig?.model || '' ) ||
+		formState.data.systemPrompt !== ( currentConfig?.system_prompt || '' ) ||
 		JSON.stringify( selectedTools ) !==
 			JSON.stringify( currentConfig?.enabled_tools || [] );
 
@@ -217,15 +211,15 @@ export default function ConfigureStepModal( {
 				className="datamachine-configure-step-modal"
 			>
 			<div className="datamachine-modal-content">
-				{ error && (
+				{ formState.error && (
 					<div className="datamachine-modal-error notice notice-error">
-						<p>{ error }</p>
+						<p>{ formState.error }</p>
 					</div>
 				) }
 
 				<SelectControl
 					label={ __( 'AI Provider', 'datamachine' ) }
-					value={ provider }
+					value={ formState.data.provider }
 					options={ providerOptions }
 					onChange={ handleProviderChange }
 					disabled={ isLoadingProviders }
@@ -237,10 +231,10 @@ export default function ConfigureStepModal( {
 
 				<SelectControl
 					label={ __( 'AI Model', 'datamachine' ) }
-					value={ model }
+					value={ formState.data.model }
 					options={ modelOptions }
-					onChange={ setModel }
-					disabled={ ! provider }
+					onChange={ (value) => formState.updateField('model', value) }
+					disabled={ ! formState.data.provider }
 					help={ __( 'Choose the AI model to use.', 'datamachine' ) }
 				/>
 
@@ -251,8 +245,8 @@ export default function ConfigureStepModal( {
 
 				<TextareaControl
 					label={ __( 'System Prompt', 'datamachine' ) }
-					value={ systemPrompt }
-					onChange={ setSystemPrompt }
+					value={ formState.data.systemPrompt }
+					onChange={ (value) => formState.updateField('systemPrompt', value) }
 					placeholder={ __(
 						'Enter system prompt for AI processing...',
 						'datamachine'
@@ -278,20 +272,20 @@ export default function ConfigureStepModal( {
 					<Button
 						variant="secondary"
 						onClick={ onClose }
-						disabled={ isSaving }
+						disabled={ formState.isSubmitting }
 					>
 						{ __( 'Cancel', 'datamachine' ) }
 					</Button>
 
 					<Button
 						variant="primary"
-						onClick={ handleSave }
+						onClick={ formState.submit }
 						disabled={
-							isSaving || ! hasChanged || ! provider || ! model
+							formState.isSubmitting || ! hasChanged || ! formState.data.provider || ! formState.data.model
 						}
-						isBusy={ isSaving }
+						isBusy={ formState.isSubmitting }
 					>
-						{ isSaving
+						{ formState.isSubmitting
 							? __( 'Saving...', 'datamachine' )
 							: __( 'Save Configuration', 'datamachine' ) }
 					</Button>

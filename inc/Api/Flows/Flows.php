@@ -111,7 +111,7 @@ class Flows {
 			],
 			[
 				'methods' => 'PATCH',
-				'callback' => [self::class, 'handle_update_flow_title'],
+				'callback' => [self::class, 'handle_update_flow'],
 				'permission_callback' => [self::class, 'check_permission'],
 				'args' => [
 					'flow_id' => [
@@ -121,10 +121,15 @@ class Flows {
 						'description' => __('Flow ID to update', 'datamachine'),
 					],
 					'flow_name' => [
-						'required' => true,
+						'required' => false,
 						'type' => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
 						'description' => __('New flow title', 'datamachine'),
+					],
+					'scheduling_config' => [
+						'required' => false,
+						'type' => 'object',
+						'description' => __('Scheduling configuration', 'datamachine'),
 					],
 				]
 			]
@@ -396,35 +401,69 @@ class Flows {
 	}
 
 	/**
-	 * Handle flow title update request
+	 * Handle flow update request (title and/or scheduling)
 	 *
 	 * PATCH /datamachine/v1/flows/{id}
 	 */
-	public static function handle_update_flow_title($request) {
+	public static function handle_update_flow($request) {
 		$flow_id = (int) $request->get_param('flow_id');
-		$flow_name = sanitize_text_field($request->get_param('flow_name'));
+		$flow_name = $request->get_param('flow_name');
+		$scheduling_config = $request->get_param('scheduling_config');
 
-		if (empty($flow_name)) {
+		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+
+		// Validate that at least one update parameter is provided
+		if ($flow_name === null && $scheduling_config === null) {
 			return new \WP_Error(
-				'empty_title',
-				__('Flow title cannot be empty', 'datamachine'),
+				'no_updates',
+				__('Must provide flow_name or scheduling_config to update', 'datamachine'),
 				['status' => 400]
 			);
 		}
 
-		// Update flow title using centralized filter
-		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-		$success = $db_flows->update_flow($flow_id, [
-			'flow_name' => $flow_name
-		]);
+		// Handle title updates
+		if ($flow_name !== null) {
+			$flow_name = sanitize_text_field($flow_name);
+			if (empty($flow_name)) {
+				return new \WP_Error(
+					'empty_title',
+					__('Flow title cannot be empty', 'datamachine'),
+					['status' => 400]
+				);
+			}
 
-		if (!$success) {
+			$success = $db_flows->update_flow($flow_id, [
+				'flow_name' => $flow_name
+			]);
+
+			if (!$success) {
+				return new \WP_Error(
+					'update_failed',
+					__('Failed to save flow title', 'datamachine'),
+					['status' => 500]
+				);
+			}
+		}
+
+		// Handle scheduling updates
+		if ($scheduling_config !== null) {
+			$result = FlowScheduling::handle_scheduling_update($flow_id, $scheduling_config);
+			if (is_wp_error($result)) {
+				return $result;
+			}
+		}
+
+		// Get updated flow data for response
+		$flow = $db_flows->get_flow($flow_id);
+		if (!$flow) {
 			return new \WP_Error(
-				'update_failed',
-				__('Failed to save flow title', 'datamachine'),
-				['status' => 500]
+				'flow_not_found',
+				__('Flow not found after update', 'datamachine'),
+				['status' => 404]
 			);
 		}
+
+		$flow_payload = self::format_flow_for_response($flow);
 
 		// Clear caches
 		do_action('datamachine_clear_flow_cache', $flow_id);
@@ -432,10 +471,12 @@ class Flows {
 
 		return rest_ensure_response([
 			'success' => true,
-			'data' => [],
-			'message' => __('Flow title saved successfully', 'datamachine')
+			'data' => $flow_payload,
+			'message' => __('Flow updated successfully', 'datamachine')
 		]);
 	}
+
+
 
 	/**
 	 * Merge handler defaults with stored configuration.

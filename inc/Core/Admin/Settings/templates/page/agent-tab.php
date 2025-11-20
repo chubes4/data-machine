@@ -8,9 +8,9 @@
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 $settings = get_option('datamachine_settings', []);
-$engine_mode = $settings['engine_mode'];
-$global_prompt = $settings['global_system_prompt'];
-$site_context_enabled = $settings['site_context_enabled'];
+$engine_mode = $settings['engine_mode'] ?? false;
+$global_prompt = $settings['global_system_prompt'] ?? '';
+$site_context_enabled = $settings['site_context_enabled'] ?? false;
 $default_provider = $settings['default_provider'] ?? '';
 $default_model = $settings['default_model'] ?? '';
 $enabled_tools = $settings['enabled_tools'] ?? [];

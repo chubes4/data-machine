@@ -7,6 +7,7 @@
 namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;
 
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -14,10 +15,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Reddit extends FetchHandler {
 
+	use HandlerRegistrationTrait;
+
 	private $oauth_reddit;
 
 	public function __construct() {
 		parent::__construct( 'reddit' );
+
+		// Self-register with filters
+		self::registerHandler(
+			'reddit',
+			'fetch',
+			self::class,
+			__('Reddit', 'datamachine'),
+			__('Fetch posts from Reddit subreddits', 'datamachine'),
+			false,
+			null,
+			RedditSettings::class,
+			null
+		);
+
 		$this->oauth_reddit = $this->getAuthProvider('reddit');
 	}
 

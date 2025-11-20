@@ -9,6 +9,7 @@
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPress;
 
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 use WP_Query;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -17,8 +18,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPress extends FetchHandler {
 
+	use HandlerRegistrationTrait;
+
 	public function __construct() {
 		parent::__construct( 'wordpress_local' );
+
+		// Self-register with filters
+		self::registerHandler(
+			'wordpress_posts',
+			'fetch',
+			self::class,
+			__('Local WordPress Posts', 'datamachine'),
+			__('Fetch posts and pages from this WordPress installation', 'datamachine'),
+			false,
+			null,
+			WordPressSettings::class,
+			null
+		);
 	}
 
 	/**
@@ -34,7 +50,7 @@ class WordPress extends FetchHandler {
 	): array {
 		if (empty($pipeline_id)) {
 			$this->log('error', 'Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-			return $this->emptyResponse();
+			return [];
 		}
 
 		if ($flow_step_id === null) {
@@ -60,7 +76,7 @@ class WordPress extends FetchHandler {
                 $this->log('warning', 'Could not extract post ID from URL', [
                     'source_url' => $source_url
                 ]);
-                return $this->emptyResponse();
+                return [];
             }
         }
         $post_type = sanitize_text_field($config['post_type'] ?? 'post');
@@ -132,7 +148,7 @@ class WordPress extends FetchHandler {
         $posts = $wp_query->posts;
 
         if (empty($posts)) {
-            return $this->emptyResponse();
+            return [];
         }
         foreach ($posts as $post) {
             $post_id = $post->ID;
@@ -149,7 +165,7 @@ class WordPress extends FetchHandler {
 
             return $this->process_single_post($post_id, $flow_step_id, $job_id);
         }
-        return $this->emptyResponse();
+        return [];
     }
 
 
@@ -164,7 +180,7 @@ class WordPress extends FetchHandler {
                 'post_id' => $post_id,
                 'flow_step_id' => $flow_step_id
             ]);
-            return $this->emptyResponse();
+            return [];
         }
 
         $this->markItemProcessed((string) $post_id, $flow_step_id, $job_id);
@@ -264,3 +280,4 @@ class WordPress extends FetchHandler {
         return __('Local WordPress Posts', 'datamachine');
     }
 }
+

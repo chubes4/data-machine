@@ -118,8 +118,11 @@ export const useUpdateFlowSchedule = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ flowId, schedulingConfig }) => updateFlowSchedule(flowId, schedulingConfig),
-    onSuccess: (_, { flowId }) => {
-      queryClient.invalidateQueries(['flows', 'single', flowId]);
+    onSuccess: (response, { flowId }) => {
+      // Update cache with the full flow object returned by the API
+      if (response.success && response.data) {
+        queryClient.setQueryData(['flows', 'single', flowId], response.data);
+      }
     },
   });
 };

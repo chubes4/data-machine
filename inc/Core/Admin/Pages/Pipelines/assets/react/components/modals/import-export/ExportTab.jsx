@@ -8,6 +8,7 @@ import { useState } from '@wordpress/element';
 import { Button, Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { exportPipelines } from '../../../utils/api';
+import { useAsyncOperation } from '../../../hooks/useFormState';
 import PipelineCheckboxTable from './PipelineCheckboxTable';
 
 /**
@@ -20,16 +21,15 @@ import PipelineCheckboxTable from './PipelineCheckboxTable';
  */
 export default function ExportTab( { pipelines, onClose } ) {
 	const [ selectedIds, setSelectedIds ] = useState( [] );
-	const [ isExporting, setIsExporting ] = useState( false );
-	const [ error, setError ] = useState( null );
-	const [ success, setSuccess ] = useState( null );
+
+	const exportOperation = useAsyncOperation();
 
 	/**
 	 * Handle export action
 	 */
-	const handleExport = async () => {
+	const handleExport = () => {
 		if ( selectedIds.length === 0 ) {
-			setError(
+			exportOperation.setError(
 				__(
 					'Please select at least one pipeline to export.',
 					'datamachine'
@@ -38,11 +38,7 @@ export default function ExportTab( { pipelines, onClose } ) {
 			return;
 		}
 
-		setIsExporting( true );
-		setError( null );
-		setSuccess( null );
-
-		try {
+		exportOperation.execute(async () => {
 			const response = await exportPipelines( selectedIds );
 
 			if ( response.success && response.data.csv_content ) {
@@ -59,46 +55,36 @@ export default function ExportTab( { pipelines, onClose } ) {
 				document.body.removeChild( link );
 				URL.revokeObjectURL( url );
 
-				setSuccess(
-					__( 'Pipelines exported successfully!', 'datamachine' )
-				);
 				setSelectedIds( [] );
+				return __( 'Pipelines exported successfully!', 'datamachine' );
 			} else {
-				setError(
+				throw new Error(
 					response.message ||
 						__( 'Failed to export pipelines', 'datamachine' )
 				);
 			}
-		} catch ( err ) {
-			console.error( 'Export error:', err );
-			setError(
-				err.message ||
-					__( 'An error occurred during export', 'datamachine' )
-			);
-		} finally {
-			setIsExporting( false );
-		}
+		});
 	};
 
 	return (
 		<div className="datamachine-export-tab">
-			{ error && (
+			{ exportOperation.error && (
 				<Notice
 					status="error"
 					isDismissible
-					onRemove={ () => setError( null ) }
+					onRemove={ () => exportOperation.setError( null ) }
 				>
-					<p>{ error }</p>
+					<p>{ exportOperation.error }</p>
 				</Notice>
 			) }
 
-			{ success && (
+			{ exportOperation.success && (
 				<Notice
 					status="success"
 					isDismissible
-					onRemove={ () => setSuccess( null ) }
+					onRemove={ () => exportOperation.reset() }
 				>
-					<p>{ success }</p>
+					<p>{ exportOperation.success }</p>
 				</Notice>
 			) }
 
@@ -119,7 +105,7 @@ export default function ExportTab( { pipelines, onClose } ) {
 				<Button
 					variant="secondary"
 					onClick={ onClose }
-					disabled={ isExporting }
+					disabled={ exportOperation.isLoading }
 				>
 					{ __( 'Cancel', 'datamachine' ) }
 				</Button>
@@ -127,10 +113,10 @@ export default function ExportTab( { pipelines, onClose } ) {
 				<Button
 					variant="primary"
 					onClick={ handleExport }
-					disabled={ isExporting || selectedIds.length === 0 }
-					isBusy={ isExporting }
+					disabled={ exportOperation.isLoading || selectedIds.length === 0 }
+					isBusy={ exportOperation.isLoading }
 				>
-					{ isExporting
+					{ exportOperation.isLoading
 						? __( 'Exporting...', 'datamachine' )
 						: __( 'Export Selected', 'datamachine' ) }
 				</Button>

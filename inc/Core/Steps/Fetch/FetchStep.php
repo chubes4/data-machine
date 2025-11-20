@@ -92,7 +92,7 @@ class FetchStep extends Step {
             $result = $handler->get_fetch_data($pipeline_id, $handler_settings, $job_id);
 
             // Handler returned no data
-            if ($result === null) {
+            if (empty($result)) {
                 return null;
             }
 

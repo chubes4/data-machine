@@ -269,7 +269,6 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 					<FlowFooter
 						schedulingConfig={{
 							...currentFlowData.scheduling_config,
-							last_run_at: currentFlowData.last_run,
 							next_run_time: currentFlowData.next_run
 						}}
 					/>

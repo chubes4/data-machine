@@ -9,6 +9,7 @@
 namespace DataMachine\Core\Steps\Fetch\Handlers\Files;
 
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -16,8 +17,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Files extends FetchHandler {
 
+	use HandlerRegistrationTrait;
+
 	public function __construct() {
 		parent::__construct( 'files' );
+
+		// Self-register with filters
+		self::registerHandler(
+			'files',
+			'fetch',
+			self::class,
+			__('File Upload', 'datamachine'),
+			__('Process uploaded files and images', 'datamachine'),
+			false,
+			null,
+			FilesSettings::class,
+			null
+		);
 	}
 
 	/**
@@ -49,7 +65,7 @@ class Files extends FetchHandler {
                     'pipeline_id' => $pipeline_id,
                     'flow_step_id' => $flow_step_id
                 ]);
-                return $this->emptyResponse();
+                return [];
             }
 
             $uploaded_files = array_map(function($file) {
@@ -67,12 +83,12 @@ class Files extends FetchHandler {
 
         if (!$next_file) {
             $this->log('debug', 'No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
-            return $this->emptyResponse();
+            return [];
         }
 
         if (!file_exists($next_file['persistent_path'])) {
             $this->log('error', 'File not found.', ['pipeline_id' => $pipeline_id, 'file_path' => $next_file['persistent_path']]);
-            return $this->emptyResponse();
+            return [];
         }
 
         $file_identifier = $next_file['persistent_path'];

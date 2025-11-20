@@ -9,6 +9,7 @@
 namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
 
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -16,8 +17,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class GoogleSheetsFetch extends FetchHandler {
 
+	use HandlerRegistrationTrait;
+
 	public function __construct() {
 		parent::__construct( 'googlesheets_fetch' );
+
+        // Self-register with filters
+        self::registerHandler(
+            'googlesheets_fetch',
+            'fetch',
+            self::class,
+            __('Google Sheets', 'datamachine'),
+            __('Fetch data from Google Sheets spreadsheets', 'datamachine'),
+            true,
+            GoogleSheetsAuth::class,
+            GoogleSheetsFetchSettings::class,
+			null
+		);
 	}
 
 	/**

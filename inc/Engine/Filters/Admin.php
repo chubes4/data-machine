@@ -151,7 +151,7 @@ add_action('init', function() {
 function datamachine_get_enabled_admin_pages() {
     $settings = get_option('datamachine_settings', []);
 
-    if ($settings['engine_mode']) {
+    if (($settings['engine_mode'] ?? false)) {
         return [];
     }
 

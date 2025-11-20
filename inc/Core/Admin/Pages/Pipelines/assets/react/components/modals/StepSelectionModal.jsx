@@ -4,12 +4,12 @@
  * Modal for selecting step type to add to pipeline.
  */
 
-import { useState } from '@wordpress/element';
 import { Modal, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useStepTypes } from '../../queries/config';
 import { useHandlers } from '../../queries/handlers';
 import { useAddPipelineStep } from '../../queries/pipelines';
+import { useAsyncOperation } from '../../hooks/useFormState';
 
 /**
  * Step Selection Modal Component
@@ -34,7 +34,7 @@ export default function StepSelectionModal( {
 	// Use mutations
 	const addStepMutation = useAddPipelineStep();
 
-	const [ error, setError ] = useState( null );
+	const addStepOperation = useAsyncOperation();
 
 	/**
 	 * Count handlers for each step type
@@ -48,10 +48,8 @@ export default function StepSelectionModal( {
 	/**
 	 * Handle step type selection
 	 */
-	const handleSelectStep = async ( stepType ) => {
-		setError( null );
-
-		try {
+	const handleSelectStep = ( stepType ) => {
+		addStepOperation.execute(async () => {
 			await addStepMutation.mutateAsync({
 				pipelineId,
 				stepType,
@@ -62,10 +60,7 @@ export default function StepSelectionModal( {
 				onSuccess();
 			}
 			onClose();
-		} catch ( err ) {
-			console.error( 'Step addition error:', err );
-			setError( err.message || __( 'An error occurred', 'datamachine' ) );
-		}
+		});
 	};
 
 	return (
@@ -75,9 +70,9 @@ export default function StepSelectionModal( {
 			className="datamachine-step-selection-modal"
 		>
 			<div className="datamachine-modal-content">
-				{ error && (
+				{ addStepOperation.error && (
 					<div className="datamachine-modal-error notice notice-error">
-						<p>{ error }</p>
+						<p>{ addStepOperation.error }</p>
 					</div>
 				) }
 
@@ -101,7 +96,7 @@ export default function StepSelectionModal( {
 									onClick={ () =>
 										handleSelectStep( stepType )
 									}
-									disabled={ addStepMutation.isPending }
+									disabled={ addStepOperation.isLoading }
 								>
 									<strong>
 										{ stepTypes[stepType]?.label || stepType }
@@ -143,7 +138,7 @@ export default function StepSelectionModal( {
 					<Button
 						variant="secondary"
 						onClick={ onClose }
-						disabled={ addStepMutation.isPending }
+						disabled={ addStepOperation.isLoading }
 					>
 						{ __( 'Cancel', 'datamachine' ) }
 					</Button>

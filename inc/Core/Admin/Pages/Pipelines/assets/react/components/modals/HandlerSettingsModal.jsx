@@ -11,6 +11,7 @@ import { __, sprintf } from '@wordpress/i18n';
 
 import { useUpdateFlowHandler } from '../../queries/flows';
 import { sanitizeHandlerSettingsPayload } from '../../utils/handlerSettings';
+import { useFormState } from '../../hooks/useFormState';
 import FilesHandlerSettings from './handler-settings/files/FilesHandlerSettings';
 import HandlerSettingField from './handler-settings/HandlerSettingField';
 
@@ -51,63 +52,16 @@ export default function HandlerSettingsModal( {
 	const handlerDetailsError = null;
 	const updateHandlerMutation = useUpdateFlowHandler();
 
-	const [ settings, setSettings ] = useState( currentSettings || {} );
 	const [ settingsFields, setSettingsFields ] = useState( {} );
-	const [ isSaving, setIsSaving ] = useState( false );
-	const [ error, setError ] = useState( null );
 
-	// Update settings fields when handler details load
-	useEffect( () => {
-		if ( handlerDetails?.settings ) {
-			setSettingsFields( handlerDetails.settings );
-		}
-	}, [ handlerDetails ] );
+	const formState = useFormState({
+		initialData: currentSettings || {},
+		onSubmit: async (data) => {
+			const payloadSettings = sanitizeHandlerSettingsPayload(
+				data,
+				settingsFields
+			);
 
-	// Handle query errors
-	useEffect( () => {
-		if ( handlerDetailsError ) {
-			setError( __( 'Failed to load handler settings', 'datamachine' ) );
-		}
-	}, [ handlerDetailsError ] );
-
-	/**
-	 * Reset form when modal opens with current settings.
-	 * API provides complete config with defaults already merged.
-	 */
-	useEffect( () => {
-		if ( currentSettings ) {
-			setSettings( currentSettings );
-		}
-	}, [ currentSettings ] );
-
-	/**
-	 * Get handler info from props
-	 */
-	const handlerInfo = handlers[ handlerSlug ] || {};
-
-	/**
-	 * Handle setting change
-	 */
-	const handleSettingChange = ( key, value ) => {
-		setSettings( ( prev ) => ( {
-			...prev,
-			[ key ]: value,
-		} ) );
-	};
-
-	/**
-	 * Handle save
-	 */
-	const handleSave = async () => {
-		setIsSaving( true );
-		setError( null );
-
-		const payloadSettings = sanitizeHandlerSettingsPayload(
-			settings,
-			settingsFields
-		);
-
-		try {
 			await updateHandlerMutation.mutateAsync({
 				flowStepId,
 				handlerSlug,
@@ -120,13 +74,41 @@ export default function HandlerSettingsModal( {
 				onSuccess();
 			}
 			onClose();
-		} catch ( err ) {
-			console.error( 'Handler settings update error:', err );
-			setError( err.message || __( 'An error occurred', 'datamachine' ) );
-		} finally {
-			setIsSaving( false );
 		}
+	});
+
+	// Update settings fields when handler details load
+	useEffect( () => {
+		if ( handlerDetails?.settings ) {
+			setSettingsFields( handlerDetails.settings );
+		}
+	}, [ handlerDetails ] );
+
+
+
+	/**
+	 * Reset form when modal opens with current settings.
+	 * API provides complete config with defaults already merged.
+	 */
+	useEffect( () => {
+		if ( currentSettings ) {
+			formState.updateData( currentSettings );
+		}
+	}, [ currentSettings, formState ] );
+
+	/**
+	 * Get handler info from props
+	 */
+	const handlerInfo = handlers[ handlerSlug ] || {};
+
+	/**
+	 * Handle setting change
+	 */
+	const handleSettingChange = ( key, value ) => {
+		formState.updateField( key, value );
 	};
+
+
 
 		return (
 			<Modal
@@ -138,9 +120,9 @@ export default function HandlerSettingsModal( {
 				className="datamachine-handler-settings-modal"
 			>
 			<div className="datamachine-modal-content">
-				{ error && (
+				{ formState.error && (
 					<div className="datamachine-modal-error notice notice-error">
-						<p>{ error }</p>
+						<p>{ formState.error }</p>
 					</div>
 				) }
 
@@ -193,13 +175,8 @@ export default function HandlerSettingsModal( {
 				{ /* Files handler gets specialized UI */ }
 				{ ! isLoadingSettings && handlerSlug === 'files' ? (
 					<FilesHandlerSettings
-						currentSettings={ settings }
-						onSettingsChange={ ( newSettings ) =>
-							setSettings( ( prev ) => ( {
-								...prev,
-								...newSettings,
-							} ) )
-						}
+						currentSettings={ formState.data }
+						onSettingsChange={ formState.updateData }
 					/>
 				) : (
 					! isLoadingSettings && (
@@ -224,8 +201,8 @@ export default function HandlerSettingsModal( {
 												fieldKey={ key }
 												fieldConfig={ config }
 												value={
-													settings?.[ key ] !== undefined
-														? settings[ key ]
+													formState.data?.[ key ] !== undefined
+														? formState.data[ key ]
 														: config.default ?? config.current_value ?? ''
 												}
 												onChange={ handleSettingChange }
@@ -242,18 +219,18 @@ export default function HandlerSettingsModal( {
 					<Button
 						variant="secondary"
 						onClick={ onClose }
-						disabled={ isSaving }
+						disabled={ formState.isSubmitting }
 					>
 						{ __( 'Cancel', 'datamachine' ) }
 					</Button>
 
 					<Button
 						variant="primary"
-						onClick={ handleSave }
-						disabled={ isSaving }
-						isBusy={ isSaving }
+						onClick={ formState.submit }
+						disabled={ formState.isSubmitting }
+						isBusy={ formState.isSubmitting }
 					>
-						{ isSaving
+						{ formState.isSubmitting
 							? __( 'Saving...', 'datamachine' )
 							: __( 'Save Settings', 'datamachine' ) }
 					</Button>

@@ -14,12 +14,15 @@
 namespace DataMachine\Core\Steps\Publish\Handlers\GoogleSheets;
 
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
 class GoogleSheets extends PublishHandler {
+
+    use HandlerRegistrationTrait;
 
     /**
      * @var GoogleSheetsAuth Authentication handler instance
@@ -28,6 +31,44 @@ class GoogleSheets extends PublishHandler {
 
     public function __construct() {
         parent::__construct('googlesheets');
+
+        // Self-register with filters
+        self::registerHandler(
+            'googlesheets_publish',
+            'publish',
+            self::class,
+            __('Google Sheets', 'datamachine'),
+            __('Append data to Google Sheets for analytics and reporting', 'datamachine'),
+            true,
+            GoogleSheetsAuth::class,
+            GoogleSheetsSettings::class,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'googlesheets_publish') {
+                    $tools['googlesheets_publish'] = [
+                        'class' => self::class,
+                        'method' => 'handle_tool_call',
+                        'handler' => 'googlesheets_publish',
+                        'description' => 'Append structured data to a Google Sheet. Supports custom headers and data formatting.',
+                        'parameters' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'data' => [
+                                    'type' => 'array',
+                                    'description' => 'Array of data rows to append to the sheet'
+                                ],
+                                'job_id' => [
+                                    'type' => 'string',
+                                    'description' => 'Optional job ID for tracking'
+                                ]
+                            ],
+                            'required' => ['data']
+                        ]
+                    ];
+                }
+                return $tools;
+            }
+        );
+
         // Use filter-based auth access following pure discovery architectural standards
         $all_auth = apply_filters('datamachine_auth_providers', []);
         $this->auth = $all_auth['googlesheets_output'] ?? null;

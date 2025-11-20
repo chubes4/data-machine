@@ -6,6 +6,7 @@
 namespace DataMachine\Core\Steps\Publish\Handlers\Bluesky;
 
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -13,10 +14,50 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Bluesky extends PublishHandler {
 
+    use HandlerRegistrationTrait;
+
     private $auth;
 
     public function __construct() {
         parent::__construct('bluesky');
+
+        // Self-register with filters
+        self::registerHandler(
+            'bluesky_publish',
+            'publish',
+            self::class,
+            __('Bluesky', 'datamachine'),
+            __('Post content to Bluesky social network', 'datamachine'),
+            true,
+            BlueskyAuth::class,
+            null,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'bluesky_publish') {
+                    $tools['bluesky_publish'] = [
+                        'class' => self::class,
+                        'method' => 'handle_tool_call',
+                        'handler' => 'bluesky_publish',
+                        'description' => 'Post content to Bluesky. Supports text and images.',
+                        'parameters' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'content' => [
+                                    'type' => 'string',
+                                    'description' => 'The text content to post to Bluesky'
+                                ],
+                                'job_id' => [
+                                    'type' => 'string',
+                                    'description' => 'Optional job ID for tracking'
+                                ]
+                            ],
+                            'required' => ['content']
+                        ]
+                    ];
+                }
+                return $tools;
+            }
+        );
+
         $all_auth = apply_filters('datamachine_auth_providers', []);
         $this->auth = $all_auth['bluesky'] ?? null;
 

@@ -50,6 +50,14 @@ add_action('datamachine_run_flow_now', function($flow_id) {
         return false;
     }
 
+    // Update last_run_at timestamp in scheduling config
+    $scheduling_config = $flow['scheduling_config'] ?? [];
+    if (is_string($scheduling_config)) {
+        $scheduling_config = json_decode($scheduling_config, true) ?: [];
+    }
+    $scheduling_config['last_run_at'] = current_time('mysql');
+    $db_flows->update_flow_scheduling($flow_id, $scheduling_config);
+
     $job_id = $db_jobs->create_job([
         'pipeline_id' => (int)$flow['pipeline_id'],
         'flow_id' => $flow_id
@@ -317,13 +325,18 @@ add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step
      * @param string|int $interval_or_timestamp Either 'manual', numeric timestamp, or interval key
      */
     add_action('datamachine_run_flow_later', function($flow_id, $interval_or_timestamp) {
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+
         // 1. Always unschedule existing to prevent duplicates
         if (function_exists('as_unschedule_action')) {
             as_unschedule_action('datamachine_run_flow_now', [$flow_id], 'datamachine');
         }
 
-        // 2. Handle 'manual' case (just unscheduled, done)
+        // 2. Handle 'manual' case
         if ($interval_or_timestamp === 'manual') {
+            $scheduling_config = ['interval' => 'manual'];
+            $db_flows->update_flow_scheduling($flow_id, $scheduling_config);
+
             do_action('datamachine_log', 'info', 'Flow schedule cleared (set to manual)', [
                 'flow_id' => $flow_id
             ]);
@@ -340,6 +353,14 @@ add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step
                     [$flow_id],
                     'datamachine'
                 );
+
+                // Update database with scheduling configuration
+                $scheduling_config = [
+                    'interval' => 'one_time',
+                    'timestamp' => $interval_or_timestamp,
+                    'scheduled_time' => wp_date('c', $interval_or_timestamp)
+                ];
+                $db_flows->update_flow_scheduling($flow_id, $scheduling_config);
 
                 do_action('datamachine_log', 'info', 'Flow scheduled for one-time execution', [
                     'flow_id' => $flow_id,
@@ -370,6 +391,14 @@ add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step
                     [$flow_id],
                     'datamachine'
                 );
+
+                // Update database with scheduling configuration
+                $scheduling_config = [
+                    'interval' => $interval_or_timestamp,
+                    'interval_seconds' => $interval_seconds,
+                    'first_run' => wp_date('c', time() + $interval_seconds)
+                ];
+                $db_flows->update_flow_scheduling($flow_id, $scheduling_config);
 
                 do_action('datamachine_log', 'info', 'Flow scheduled for recurring execution', [
                     'flow_id' => $flow_id,

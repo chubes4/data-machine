@@ -3,7 +3,7 @@
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/datamachine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:         0.2.3
+ * Version:         0.2.4
  * Requires at least: 6.2
  * Requires PHP:     8.0
  * Author:          Chris Huber
@@ -21,7 +21,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.2.3' );
+define( 'DATAMACHINE_VERSION', '0.2.4' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -31,6 +31,8 @@ define( 'DATAMACHINE_LOG_DIR', '/datamachine-logs' );
 define( 'DATAMACHINE_LOG_FILE', '/datamachine-logs/datamachine.log' );
 
 require_once __DIR__ . '/vendor/autoload.php';
+
+require_once __DIR__ . '/inc/Engine/AI/Tools/ToolRegistrationTrait.php';
 
 if ( ! class_exists( 'ActionScheduler' ) ) {
     require_once __DIR__ . '/vendor/woocommerce/action-scheduler/action-scheduler.php';
@@ -43,11 +45,13 @@ function run_datamachine() {
 	datamachine_register_admin_filters();
 	datamachine_register_oauth_system();
 	datamachine_register_core_actions();
-    
+
+	// Load and instantiate all handlers - they self-register via constructors
+	datamachine_load_handlers();
+
     \DataMachine\Engine\Filters\Create::register();
 
     \DataMachine\Api\Execute::register();
-    \DataMachine\Api\Schedule\Schedule::register();
     \DataMachine\Api\Pipelines\Pipelines::register();
     \DataMachine\Api\Pipelines\PipelineSteps::register();
     \DataMachine\Api\Pipelines\PipelineFlows::register();
@@ -66,6 +70,54 @@ function run_datamachine() {
 
 add_action('plugins_loaded', 'run_datamachine', 20);
 
+/**
+ * Load and instantiate all handlers - they self-register via constructors.
+ * Clean, explicit approach using composer PSR-4 autoloading.
+ */
+function datamachine_load_handlers() {
+    // Publish Handlers
+    new \DataMachine\Core\Steps\Publish\Handlers\WordPress\WordPress();
+    new \DataMachine\Core\Steps\Publish\Handlers\Twitter\Twitter();
+    new \DataMachine\Core\Steps\Publish\Handlers\Facebook\Facebook();
+    new \DataMachine\Core\Steps\Publish\Handlers\GoogleSheets\GoogleSheets();
+    new \DataMachine\Core\Steps\Publish\Handlers\Threads\Threads();
+    new \DataMachine\Core\Steps\Publish\Handlers\Bluesky\Bluesky();
+
+    // Fetch Handlers
+    new \DataMachine\Core\Steps\Fetch\Handlers\WordPress\WordPress();
+    new \DataMachine\Core\Steps\Fetch\Handlers\WordPressAPI\WordPressAPI();
+    new \DataMachine\Core\Steps\Fetch\Handlers\WordPressMedia\WordPressMedia();
+    new \DataMachine\Core\Steps\Fetch\Handlers\Rss\Rss();
+    new \DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets\GoogleSheetsFetch();
+    new \DataMachine\Core\Steps\Fetch\Handlers\Reddit\Reddit();
+    new \DataMachine\Core\Steps\Fetch\Handlers\Files\Files();
+
+    // Update Handlers
+    new \DataMachine\Core\Steps\Update\Handlers\WordPress\WordPress();
+}
+
+/**
+ * Scan directory for PHP files and instantiate classes.
+ * Classes are expected to self-register in their constructors.
+ */
+function datamachine_scan_and_instantiate($directory) {
+    $files = glob($directory . '/*.php');
+
+    foreach ($files as $file) {
+        // Skip if it's a *Filters.php file (will be deleted)
+        if (strpos(basename($file), 'Filters.php') !== false) {
+            continue;
+        }
+
+        // Skip if it's a *Settings.php file
+        if (strpos(basename($file), 'Settings.php') !== false) {
+            continue;
+        }
+
+        // Include the file - classes will auto-instantiate
+        include_once $file;
+    }
+}
 
 function datamachine_allow_json_upload($mimes) {
     $mimes['json'] = 'application/json';

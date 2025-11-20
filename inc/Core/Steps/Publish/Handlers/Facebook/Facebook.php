@@ -14,12 +14,15 @@
 namespace DataMachine\Core\Steps\Publish\Handlers\Facebook;
 
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
 class Facebook extends PublishHandler {
+
+    use HandlerRegistrationTrait;
 
     /**
      * @var FacebookAuth Authentication handler instance
@@ -28,6 +31,44 @@ class Facebook extends PublishHandler {
 
     public function __construct() {
         parent::__construct('facebook');
+
+        // Self-register with filters
+        self::registerHandler(
+            'facebook_publish',
+            'publish',
+            self::class,
+            __('Facebook', 'datamachine'),
+            __('Post content to Facebook Pages', 'datamachine'),
+            true,
+            FacebookAuth::class,
+            FacebookSettings::class,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'facebook_publish') {
+                    $tools['facebook_publish'] = [
+                        'class' => self::class,
+                        'method' => 'handle_tool_call',
+                        'handler' => 'facebook_publish',
+                        'description' => 'Post content to a Facebook Page. Supports text and images.',
+                        'parameters' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'content' => [
+                                    'type' => 'string',
+                                    'description' => 'The text content to post to Facebook'
+                                ],
+                                'job_id' => [
+                                    'type' => 'string',
+                                    'description' => 'Optional job ID for tracking'
+                                ]
+                            ],
+                            'required' => ['content']
+                        ]
+                    ];
+                }
+                return $tools;
+            }
+        );
+
         $all_auth = apply_filters('datamachine_auth_providers', []);
         $this->auth = $all_auth['facebook'] ?? null;
 

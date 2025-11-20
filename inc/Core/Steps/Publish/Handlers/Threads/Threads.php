@@ -12,6 +12,7 @@
 namespace DataMachine\Core\Steps\Publish\Handlers\Threads;
 
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 use Exception;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -20,6 +21,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Threads extends PublishHandler {
 
+    use HandlerRegistrationTrait;
+
     /**
      * @var ThreadsAuth Authentication handler instance
      */
@@ -27,6 +30,44 @@ class Threads extends PublishHandler {
 
     public function __construct() {
         parent::__construct('threads');
+
+        // Self-register with filters
+        self::registerHandler(
+            'threads_publish',
+            'publish',
+            self::class,
+            __('Threads', 'datamachine'),
+            __('Post content to Meta Threads', 'datamachine'),
+            true,
+            ThreadsAuth::class,
+            ThreadsSettings::class,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'threads_publish') {
+                    $tools['threads_publish'] = [
+                        'class' => self::class,
+                        'method' => 'handle_tool_call',
+                        'handler' => 'threads_publish',
+                        'description' => 'Post content to Meta Threads. Supports text and images.',
+                        'parameters' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'content' => [
+                                    'type' => 'string',
+                                    'description' => 'The text content to post to Threads'
+                                ],
+                                'job_id' => [
+                                    'type' => 'string',
+                                    'description' => 'Optional job ID for tracking'
+                                ]
+                            ],
+                            'required' => ['content']
+                        ]
+                    ];
+                }
+                return $tools;
+            }
+        );
+
         // Use filter-based auth access following pure discovery architectural standards
         $all_auth = apply_filters('datamachine_auth_providers', []);
         $this->auth = $all_auth['threads'] ?? null;

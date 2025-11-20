@@ -96,4 +96,4 @@ For detailed implementation patterns, see:
 ---
 
 **API Version**: v1
-**Last Updated**: 2025-11-19
+**Last Updated**: 2025-11-20

@@ -25,7 +25,7 @@ class TwitterAuth {
     private $oauth1;
 
     public function __construct() {
-        $this->oauth1 = apply_filters('datamachine_get_oauth1_handler', null);
+        $this->oauth1 = new \DataMachine\Core\OAuth\OAuth1Handler();
     }
 
     /**

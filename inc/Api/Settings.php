@@ -49,6 +49,13 @@ class Settings {
 			],
 		]);
 
+		// Scheduling intervals endpoint
+		register_rest_route('datamachine/v1', '/settings/scheduling-intervals', [
+			'methods' => WP_REST_Server::READABLE,
+			'callback' => [self::class, 'handle_get_scheduling_intervals'],
+			'permission_callback' => [self::class, 'check_permission'],
+		]);
+
 		// Tool configuration endpoint
 		register_rest_route('datamachine/v1', '/settings/tools/(?P<tool_id>[a-zA-Z0-9_-]+)', [
 			'methods' => 'POST',
@@ -209,6 +216,35 @@ class Settings {
 
 		// Return updated settings
 		return self::handle_get_settings($request);
+	}
+
+	/**
+	 * Handle get scheduling intervals request
+	 */
+	public static function handle_get_scheduling_intervals($request) {
+		$intervals = apply_filters('datamachine_scheduler_intervals', []);
+
+		// Transform from PHP format to frontend format
+		$frontend_intervals = [];
+
+		// Add manual option first
+		$frontend_intervals[] = [
+			'value' => 'manual',
+			'label' => __('Manual only', 'datamachine')
+		];
+
+		// Add all PHP-defined intervals
+		foreach ($intervals as $key => $interval_data) {
+			$frontend_intervals[] = [
+				'value' => $key,
+				'label' => $interval_data['label']
+			];
+		}
+
+		return rest_ensure_response([
+			'success' => true,
+			'data' => $frontend_intervals
+		]);
 	}
 
 	/**

@@ -277,9 +277,9 @@ abstract class FetchHandler {
 	/**
 	 * Create empty response (no items found)
 	 *
-	 * @return null Indicates no data was found
+	 * @return array Empty array indicating no data was found
 	 */
-	protected function emptyResponse(): ?array {
-		return null;
+	protected function emptyResponse(): array {
+		return [];
 	}
 }

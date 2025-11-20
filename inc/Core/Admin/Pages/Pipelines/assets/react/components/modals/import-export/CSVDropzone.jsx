@@ -4,9 +4,10 @@
  * Drag-drop zone for CSV file uploads with browse button fallback.
  */
 
-import { useState, useRef } from '@wordpress/element';
+import { useRef } from '@wordpress/element';
 import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { useDragDrop } from '../../../hooks/useFormState';
 
 /**
  * CSV Dropzone Component
@@ -22,9 +23,9 @@ export default function CSVDropzone( {
 	fileName,
 	disabled = false,
 } ) {
-	const [ isDragging, setIsDragging ] = useState( false );
-	const [ error, setError ] = useState( null );
 	const fileInputRef = useRef( null );
+
+	const dragDrop = useDragDrop();
 
 	/**
 	 * Validate and read CSV file
@@ -32,7 +33,7 @@ export default function CSVDropzone( {
 	const processFile = ( file ) => {
 		// Validate file type
 		if ( ! file.name.endsWith( '.csv' ) && file.type !== 'text/csv' ) {
-			setError( __( 'Please select a valid CSV file.', 'datamachine' ) );
+			dragDrop.setError( __( 'Please select a valid CSV file.', 'datamachine' ) );
 			return;
 		}
 
@@ -40,7 +41,7 @@ export default function CSVDropzone( {
 		const maxSize = window.dataMachineConfig?.maxUploadSize || 10485760; // fallback to 10MB
 		if ( file.size > maxSize ) {
 			const maxSizeMB = Math.round(maxSize / (1024 * 1024));
-			setError( __( `File size exceeds ${maxSizeMB}MB limit.`, 'datamachine' ) );
+			dragDrop.setError( __( `File size exceeds ${maxSizeMB}MB limit.`, 'datamachine' ) );
 			return;
 		}
 
@@ -50,45 +51,19 @@ export default function CSVDropzone( {
 			const content = e.target.result;
 			if ( onFileSelected ) {
 				onFileSelected( content, file.name );
-				setError( null );
+				dragDrop.setError( null );
 			}
 		};
 		reader.onerror = () => {
-			setError( __( 'Failed to read file.', 'datamachine' ) );
+			dragDrop.setError( __( 'Failed to read file.', 'datamachine' ) );
 		};
 		reader.readAsText( file );
 	};
 
 	/**
-	 * Handle drag events
+	 * Handle file drop
 	 */
-	const handleDragEnter = ( e ) => {
-		e.preventDefault();
-		e.stopPropagation();
-		if ( ! disabled ) {
-			setIsDragging( true );
-		}
-	};
-
-	const handleDragLeave = ( e ) => {
-		e.preventDefault();
-		e.stopPropagation();
-		setIsDragging( false );
-	};
-
-	const handleDragOver = ( e ) => {
-		e.preventDefault();
-		e.stopPropagation();
-	};
-
-	const handleDrop = ( e ) => {
-		e.preventDefault();
-		e.stopPropagation();
-		setIsDragging( false );
-
-		if ( disabled ) return;
-
-		const files = e.dataTransfer.files;
+	const handleDrop = ( files ) => {
 		if ( files.length > 0 ) {
 			processFile( files[ 0 ] );
 		}
@@ -115,7 +90,7 @@ export default function CSVDropzone( {
 
 	const dropzoneClass = [
 		'datamachine-csv-dropzone',
-		isDragging && 'datamachine-csv-dropzone--dragging',
+		dragDrop.isDragging && 'datamachine-csv-dropzone--dragging',
 		disabled && 'datamachine-csv-dropzone--disabled',
 	]
 		.filter( Boolean )
@@ -125,10 +100,10 @@ export default function CSVDropzone( {
 		<div>
 			<div
 				className={ dropzoneClass }
-				onDragEnter={ handleDragEnter }
-				onDragLeave={ handleDragLeave }
-				onDragOver={ handleDragOver }
-				onDrop={ handleDrop }
+				onDragEnter={ dragDrop.handleDragEnter }
+				onDragLeave={ dragDrop.handleDragLeave }
+				onDragOver={ dragDrop.handleDragOver }
+				onDrop={ dragDrop.handleDrop.bind(null, handleDrop) }
 				onClick={ ! disabled ? handleBrowseClick : undefined }
 			>
 				<div className="datamachine-csv-dropzone__icon">📄</div>
@@ -161,9 +136,9 @@ export default function CSVDropzone( {
 				/>
 			</div>
 
-			{ error && (
+			{ dragDrop.error && (
 				<div className="datamachine-csv-dropzone__error">
-					{ error }
+					{ dragDrop.error }
 				</div>
 			) }
 		</div>

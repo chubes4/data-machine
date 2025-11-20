@@ -8,6 +8,7 @@ import { useState } from '@wordpress/element';
 import { Button, Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { importPipelines } from '../../../utils/api';
+import { useAsyncOperation } from '../../../hooks/useFormState';
 import CSVDropzone from './CSVDropzone';
 
 /**
@@ -21,9 +22,8 @@ import CSVDropzone from './CSVDropzone';
 export default function ImportTab( { onSuccess, onClose } ) {
 	const [ csvContent, setCsvContent ] = useState( null );
 	const [ fileName, setFileName ] = useState( '' );
-	const [ isImporting, setIsImporting ] = useState( false );
-	const [ error, setError ] = useState( null );
-	const [ success, setSuccess ] = useState( null );
+
+	const importOperation = useAsyncOperation();
 
 	/**
 	 * Handle file selection
@@ -31,38 +31,32 @@ export default function ImportTab( { onSuccess, onClose } ) {
 	const handleFileSelected = ( content, name ) => {
 		setCsvContent( content );
 		setFileName( name );
-		setError( null );
-		setSuccess( null );
+		importOperation.setError( null );
+		importOperation.reset();
 	};
 
 	/**
 	 * Handle import action
 	 */
-	const handleImport = async () => {
+	const handleImport = () => {
 		if ( ! csvContent ) {
-			setError(
+			importOperation.setError(
 				__( 'Please select a CSV file to import.', 'datamachine' )
 			);
 			return;
 		}
 
-		setIsImporting( true );
-		setError( null );
-		setSuccess( null );
-
-		try {
+		importOperation.execute(async () => {
 			const response = await importPipelines( csvContent );
 
 			if ( response.success ) {
 				const count = response.data.created_count || 0;
-				setSuccess(
-					count > 0
-						? __(
-								`Successfully imported ${ count } pipeline(s)!`,
-								'datamachine'
-						  )
-						: __( 'Import completed!', 'datamachine' )
-				);
+				const message = count > 0
+					? __(
+							`Successfully imported ${ count } pipeline(s)!`,
+							'datamachine'
+					  )
+					: __( 'Import completed!', 'datamachine' );
 
 				// Clear file after successful import
 				setCsvContent( null );
@@ -74,21 +68,15 @@ export default function ImportTab( { onSuccess, onClose } ) {
 						onSuccess();
 					}
 				}, 1500 );
+
+				return message;
 			} else {
-				setError(
+				throw new Error(
 					response.message ||
 						__( 'Failed to import pipelines', 'datamachine' )
 				);
 			}
-		} catch ( err ) {
-			console.error( 'Import error:', err );
-			setError(
-				err.message ||
-					__( 'An error occurred during import', 'datamachine' )
-			);
-		} finally {
-			setIsImporting( false );
-		}
+		});
 	};
 
 	/**
@@ -97,29 +85,29 @@ export default function ImportTab( { onSuccess, onClose } ) {
 	const handleClear = () => {
 		setCsvContent( null );
 		setFileName( '' );
-		setError( null );
-		setSuccess( null );
+		importOperation.setError( null );
+		importOperation.reset();
 	};
 
 	return (
 		<div className="datamachine-import-tab">
-			{ error && (
+			{ importOperation.error && (
 				<Notice
 					status="error"
 					isDismissible
-					onRemove={ () => setError( null ) }
+					onRemove={ () => importOperation.setError( null ) }
 				>
-					<p>{ error }</p>
+					<p>{ importOperation.error }</p>
 				</Notice>
 			) }
 
-			{ success && (
+			{ importOperation.success && (
 				<Notice
 					status="success"
 					isDismissible
-					onRemove={ () => setSuccess( null ) }
+					onRemove={ () => importOperation.reset() }
 				>
-					<p>{ success }</p>
+					<p>{ importOperation.success }</p>
 				</Notice>
 			) }
 
@@ -133,7 +121,7 @@ export default function ImportTab( { onSuccess, onClose } ) {
 			<CSVDropzone
 				onFileSelected={ handleFileSelected }
 				fileName={ fileName }
-				disabled={ isImporting }
+				disabled={ importOperation.isLoading }
 			/>
 
 			{ fileName && (
@@ -144,7 +132,7 @@ export default function ImportTab( { onSuccess, onClose } ) {
 					<Button
 						variant="link"
 						onClick={ handleClear }
-						disabled={ isImporting }
+						disabled={ importOperation.isLoading }
 						className="datamachine-button--destructive"
 					>
 						{ __( 'Clear', 'datamachine' ) }
@@ -156,7 +144,7 @@ export default function ImportTab( { onSuccess, onClose } ) {
 				<Button
 					variant="secondary"
 					onClick={ onClose }
-					disabled={ isImporting }
+					disabled={ importOperation.isLoading }
 				>
 					{ __( 'Cancel', 'datamachine' ) }
 				</Button>
@@ -164,10 +152,10 @@ export default function ImportTab( { onSuccess, onClose } ) {
 				<Button
 					variant="primary"
 					onClick={ handleImport }
-					disabled={ isImporting || ! csvContent }
-					isBusy={ isImporting }
+					disabled={ importOperation.isLoading || ! csvContent }
+					isBusy={ importOperation.isLoading }
 				>
-					{ isImporting
+					{ importOperation.isLoading
 						? __( 'Importing...', 'datamachine' )
 						: __( 'Import Pipelines', 'datamachine' ) }
 				</Button>

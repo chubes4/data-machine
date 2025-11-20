@@ -14,6 +14,7 @@
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
 
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
 defined('ABSPATH') || exit;
 
@@ -25,11 +26,51 @@ defined('ABSPATH') || exit;
  */
 class Twitter extends PublishHandler {
 
+    use HandlerRegistrationTrait;
+
     /** @var TwitterAuth OAuth authentication handler */
     private $auth;
 
     public function __construct() {
         parent::__construct('twitter');
+
+        // Self-register with filters
+        self::registerHandler(
+            'twitter_publish',
+            'publish',
+            self::class,
+            __('Twitter', 'datamachine'),
+            __('Post content to Twitter with media support', 'datamachine'),
+            true,
+            TwitterAuth::class,
+            TwitterSettings::class,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'twitter_publish') {
+                    $tools['twitter_publish'] = [
+                        'class' => self::class,
+                        'method' => 'handle_tool_call',
+                        'handler' => 'twitter_publish',
+                        'description' => 'Post content to Twitter. Supports text (280 chars), images, and URL handling.',
+                        'parameters' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'content' => [
+                                    'type' => 'string',
+                                    'description' => 'The text content to post to Twitter'
+                                ],
+                                'job_id' => [
+                                    'type' => 'string',
+                                    'description' => 'Optional job ID for tracking'
+                                ]
+                            ],
+                            'required' => ['content']
+                        ]
+                    ];
+                }
+                return $tools;
+            }
+        );
+
         $all_auth = apply_filters('datamachine_auth_providers', []);
         $this->auth = $all_auth['twitter'] ?? null;
     }

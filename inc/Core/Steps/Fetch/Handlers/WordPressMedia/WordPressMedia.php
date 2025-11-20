@@ -9,6 +9,7 @@
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPressMedia;
 
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
 use WP_Query;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -17,8 +18,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPressMedia extends FetchHandler {
 
+	use HandlerRegistrationTrait;
+
 	public function __construct() {
 		parent::__construct( 'wordpress_media' );
+
+		// Self-register with filters
+		self::registerHandler(
+			'wordpress_media',
+			'fetch',
+			self::class,
+			__('WordPress Media Library', 'datamachine'),
+			__('Fetch images and media from WordPress media library', 'datamachine'),
+			false,
+			null,
+			WordPressMediaSettings::class,
+			null
+		);
 	}
 
 	/**
