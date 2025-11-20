@@ -31,8 +31,9 @@ export const useHandlersAPI = ( stepType = null ) => {
 
 				const response = await apiFetch( { path: endpoint } );
 
-				if ( response.success && response.handlers ) {
-					setHandlers( response.handlers );
+				if ( response.success ) {
+					// API returns handlers array directly in response.data
+					setHandlers( response.data || {} );
 				} else {
 					throw new Error(
 						response.message || 'Failed to fetch handlers'

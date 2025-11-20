@@ -218,8 +218,10 @@ class Files {
 
             return rest_ensure_response([
                 'success' => true,
-                'files' => $context_files['uploaded_files'] ?? [],
-                'scope' => 'pipeline'
+                'data' => [
+                    'files' => $context_files['uploaded_files'] ?? [],
+                    'scope' => 'pipeline'
+                ]
             ]);
         }
 
@@ -239,8 +241,10 @@ class Files {
 
             return rest_ensure_response([
                 'success' => true,
-                'files' => $files,
-                'scope' => 'flow'
+                'data' => [
+                    'files' => $files,
+                    'scope' => 'flow'
+                ]
             ]);
         }
     }
@@ -289,7 +293,9 @@ class Files {
 
             return rest_ensure_response([
                 'success' => true,
-                'scope' => 'pipeline'
+                'data' => [
+                    'scope' => 'pipeline'
+                ]
             ]);
         }
 
@@ -315,7 +321,9 @@ class Files {
 
             return rest_ensure_response([
                 'success' => $deleted,
-                'scope' => 'flow'
+                'data' => [
+                    'scope' => 'flow'
+                ]
             ]);
         }
     }

@@ -125,11 +125,11 @@ class Auth {
 				'handler_slug' => $handler_slug
 			]);
 
-			return [
+			return rest_ensure_response([
 				'success' => true,
 				/* translators: %s: Service name (e.g., Twitter, Facebook) */
 				'message' => sprintf(__('%s account disconnected successfully', 'datamachine'), ucfirst($handler_slug))
-			];
+			]);
 		} else {
 			do_action('datamachine_log', 'error', 'Failed to disconnect account', [
 				'handler_slug' => $handler_slug
@@ -181,12 +181,12 @@ class Auth {
 				$account_details = $auth_instance->get_account_details();
 			}
 
-			return [
+			return rest_ensure_response([
 				'success' => true,
 				'authenticated' => true,
 				'account_details' => $account_details,
 				'handler_slug' => $handler_slug
-			];
+			]);
 		} else {
 			// Check for recent OAuth errors stored in transients
 			$error_transient = get_transient('datamachine_oauth_error_' . $handler_slug);
@@ -196,14 +196,14 @@ class Auth {
 				// Clear the error transient since we're handling it
 				delete_transient('datamachine_oauth_error_' . $handler_slug);
 
-				return [
+				return rest_ensure_response([
 					'success' => true,
 					'authenticated' => false,
 					'error' => true,
 					'error_code' => 'oauth_failed',
 					'error_message' => $error_transient,
 					'handler_slug' => $handler_slug
-				];
+				]);
 			} elseif ($success_transient) {
 				// Clear the success transient and re-check auth status
 				delete_transient('datamachine_oauth_success_' . $handler_slug);
@@ -217,22 +217,22 @@ class Auth {
 						$account_details = $auth_instance->get_account_details();
 					}
 
-					return [
+					return rest_ensure_response([
 						'success' => true,
 						'authenticated' => true,
 						'account_details' => $account_details,
 						'handler_slug' => $handler_slug
-					];
+					]);
 				}
 			}
 
 			// Still not authenticated, continue polling
-			return [
+			return rest_ensure_response([
 				'success' => true,
 				'authenticated' => false,
 				'error' => false,
 				'handler_slug' => $handler_slug
-			];
+			]);
 		}
 	}
 
@@ -313,10 +313,10 @@ class Auth {
 			}
 
 			if (!$data_changed) {
-				return [
+				return rest_ensure_response([
 					'success' => true,
 					'message' => __('Configuration is already up to date - no changes detected', 'datamachine')
-				];
+				]);
 			}
 		}
 
@@ -328,10 +328,10 @@ class Auth {
 		}
 
 		if ($saved) {
-			return [
+			return rest_ensure_response([
 				'success' => true,
 				'message' => __('Configuration saved successfully', 'datamachine')
-			];
+			]);
 		} else {
 			return new \WP_Error(
 				'save_failed',

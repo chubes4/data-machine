@@ -47,8 +47,8 @@
 			path: '/datamachine/v1/providers'
 		})
 			.then(data => {
-				if (data.success && data.providers) {
-					aiProviders = data.providers;
+				if (data.success && data.data) {
+					aiProviders = data.data;
 					populateProviderOptions();
 				}
 			})

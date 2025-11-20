@@ -157,16 +157,16 @@ class Settings {
 			'user_login' => wp_get_current_user()->user_login
 		]);
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
 			'message' => __('All cache has been cleared successfully.', 'datamachine')
-		];
+		]);
 	}
 
 	/**
 	 * Handle get settings request
 	 *
-	 * @return array Settings data
+	 * @return WP_REST_Response Settings data
 	 */
 	public static function handle_get_settings($request) {
 		$all_settings = get_option('datamachine_settings', []);
@@ -176,19 +176,19 @@ class Settings {
 			'user_id' => get_current_user_id()
 		]);
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
 			'settings' => [
 				'ai_settings' => $ai_settings
 			]
-		];
+		]);
 	}
 
 	/**
 	 * Handle update settings request (partial update)
 	 *
 	 * @param \WP_REST_Request $request
-	 * @return array|\WP_Error Updated settings or error
+	 * @return WP_REST_Response|\WP_Error Updated settings or error
 	 */
 	public static function handle_update_settings($request) {
 		$all_settings = get_option('datamachine_settings', []);

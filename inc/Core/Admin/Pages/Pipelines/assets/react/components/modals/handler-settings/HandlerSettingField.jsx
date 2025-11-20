@@ -19,11 +19,15 @@ import {
 export default function HandlerSettingField( {
 	fieldKey,
 	fieldConfig = {},
+	value,
 	onChange,
 } ) {
 	const label = fieldConfig.label || fieldKey;
-	const value = fieldConfig.current_value || '';
 	const help = fieldConfig.description || '';
+	const resolvedValue =
+		value !== undefined
+			? value
+			: fieldConfig.current_value ?? fieldConfig.default ?? '';
 
 	const handleChange = ( nextValue ) => {
 		if ( typeof onChange === 'function' ) {
@@ -39,7 +43,7 @@ export default function HandlerSettingField( {
 				<div className={ wrapperClassName }>
 					<TextareaControl
 						label={ label }
-						value={ value }
+							value={ resolvedValue }
 						onChange={ handleChange }
 						rows={ fieldConfig.rows || 4 }
 						help={ help }
@@ -53,7 +57,7 @@ export default function HandlerSettingField( {
 				<div className={ wrapperClassName }>
 					<SelectControl
 						label={ label }
-						value={ value }
+							value={ resolvedValue }
 						options={ ( fieldConfig.options || [] ).map( ( option ) =>
 							option.value === 'separator'
 								? { ...option, disabled: true }
@@ -70,7 +74,7 @@ export default function HandlerSettingField( {
 				<div className={ wrapperClassName }>
 					<CheckboxControl
 						label={ label }
-						checked={ !! value }
+							checked={ !! resolvedValue }
 						onChange={ handleChange }
 						help={ help }
 					/>
@@ -83,7 +87,7 @@ export default function HandlerSettingField( {
 				<div className={ wrapperClassName }>
 					<TextControl
 						label={ label }
-						value={ value }
+							value={ resolvedValue }
 						onChange={ handleChange }
 						help={ help }
 						placeholder={ fieldConfig.placeholder }

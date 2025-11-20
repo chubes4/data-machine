@@ -53,7 +53,7 @@ class Tools {
 
 		return rest_ensure_response([
 			'success' => true,
-			'tools' => $tools
+			'data' => $tools
 		]);
 	}
 }

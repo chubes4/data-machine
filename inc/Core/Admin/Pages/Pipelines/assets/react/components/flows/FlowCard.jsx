@@ -4,7 +4,7 @@
  * Main flow container integrating header, steps, and footer.
  */
 
-import { useCallback, useState } from '@wordpress/element';
+import { useCallback } from '@wordpress/element';
 import { Card, CardBody, CardDivider } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import FlowHeader from './FlowHeader';
@@ -16,37 +16,40 @@ import {
 	HandlerSettingsModal,
 	OAuthAuthenticationModal,
 } from '../modals';
-import { FlowProvider, useFlowContext } from '../../context/FlowContext';
-import { deleteFlow, duplicateFlow, runFlow, updateFlowHandler } from '../../utils/api';
+import { useFlow, useUpdateFlowHandler, useDeleteFlow, useDuplicateFlow, useRunFlow } from '../../queries/flows';
+import { useHandlers } from '../../queries/handlers';
+import { useUIStore } from '../../stores/uiStore';
 import { MODAL_TYPES } from '../../utils/constants';
 
 /**
- * Flow Card Inner Component (has access to FlowContext)
+ * Flow Card Content Component (has access to FlowContext)
+ *
+ * @returns {React.ReactElement} Flow card content
  */
-function FlowCardInner() {
-	const {
-		flow,
-		pipelineConfig,
-		refreshFlow,
-		openModal,
-		closeModal,
-		activeModal,
-		modalData,
-		onFlowDeleted,
-		onFlowDuplicated,
-	} = useFlowContext();
+function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated }) {
+	// Use TanStack Query for data
+	const { data: flowData } = useFlow(flow.flow_id);
+	const { data: handlers = {} } = useHandlers();
 
-	const [ handlerModalData, setHandlerModalData ] = useState( null );
-	const [ oauthModalData, setOauthModalData ] = useState( null );
+	// Use mutations
+	const updateHandlerMutation = useUpdateFlowHandler();
+	const deleteFlowMutation = useDeleteFlow();
+	const duplicateFlowMutation = useDuplicateFlow();
+	const runFlowMutation = useRunFlow();
+
+	// Use Zustand for UI state
+	const { openModal, closeModal, activeModal, modalData } = useUIStore();
+
+	// Use the passed flow data if query hasn't loaded yet
+	const currentFlowData = flowData || flow;
 
 	/**
 	 * Handle flow name change
 	 */
 	const handleNameChange = useCallback( () => {
 		// Name change already saved by FlowHeader
-		// Refresh only this flow
-		refreshFlow();
-	}, [ refreshFlow ] );
+		// Queries will automatically refetch
+	}, [ ] );
 
 	/**
 	 * Handle flow deletion
@@ -54,18 +57,10 @@ function FlowCardInner() {
 	const handleDelete = useCallback(
 		async ( flowId ) => {
 			try {
-				const response = await deleteFlow( flowId );
-
-				if ( response.success ) {
-					// Delete affects pipeline - trigger pipeline refresh
-					if ( onFlowDeleted ) {
-						onFlowDeleted( flowId );
-					}
-				} else {
-					alert(
-						response.message ||
-							__( 'Failed to delete flow', 'datamachine' )
-					);
+				await deleteFlowMutation.mutateAsync(flowId);
+				// Delete affects pipeline - trigger pipeline refresh
+				if ( onFlowDeleted ) {
+					onFlowDeleted( flowId );
 				}
 			} catch ( error ) {
 				console.error( 'Flow deletion error:', error );
@@ -77,7 +72,7 @@ function FlowCardInner() {
 				);
 			}
 		},
-		[ onFlowDeleted ]
+		[ deleteFlowMutation, onFlowDeleted ]
 	);
 
 	/**
@@ -86,18 +81,10 @@ function FlowCardInner() {
 	const handleDuplicate = useCallback(
 		async ( flowId ) => {
 			try {
-				const response = await duplicateFlow( flowId );
-
-				if ( response.success ) {
-					// Duplicate affects pipeline - trigger pipeline refresh
-					if ( onFlowDuplicated ) {
-						onFlowDuplicated( flowId );
-					}
-				} else {
-					alert(
-						response.message ||
-							__( 'Failed to duplicate flow', 'datamachine' )
-					);
+				await duplicateFlowMutation.mutateAsync(flowId);
+				// Duplicate affects pipeline - trigger pipeline refresh
+				if ( onFlowDuplicated ) {
+					onFlowDuplicated( flowId );
 				}
 			} catch ( error ) {
 				console.error( 'Flow duplication error:', error );
@@ -109,7 +96,7 @@ function FlowCardInner() {
 				);
 			}
 		},
-		[ onFlowDuplicated ]
+		[ duplicateFlowMutation, onFlowDuplicated ]
 	);
 
 	/**
@@ -118,18 +105,8 @@ function FlowCardInner() {
 	const handleRun = useCallback(
 		async ( flowId ) => {
 			try {
-				const response = await runFlow( flowId );
-
-				if ( response.success ) {
-					alert( __( 'Flow started successfully!', 'datamachine' ) );
-					// Run flow only affects this flow - refresh flow only
-					refreshFlow();
-				} else {
-					alert(
-						response.message ||
-							__( 'Failed to run flow', 'datamachine' )
-					);
-				}
+				await runFlowMutation.mutateAsync(flowId);
+				alert( __( 'Flow started successfully!', 'datamachine' ) );
 			} catch ( error ) {
 				console.error( 'Flow execution error:', error );
 				alert(
@@ -140,7 +117,7 @@ function FlowCardInner() {
 				);
 			}
 		},
-		[ refreshFlow ]
+		[ runFlowMutation ]
 	);
 
 	/**
@@ -150,11 +127,11 @@ function FlowCardInner() {
 		( flowId ) => {
 			openModal( MODAL_TYPES.FLOW_SCHEDULE, {
 				flowId,
-				flowName: flow.flow_name,
-				currentInterval: flow.scheduling_config?.interval || 'manual',
+				flowName: currentFlowData.flow_name,
+				currentInterval: currentFlowData.scheduling_config?.interval || 'manual',
 			} );
 		},
-		[ flow.flow_name, flow.scheduling_config, openModal ]
+		[ currentFlowData.flow_name, currentFlowData.scheduling_config, openModal ]
 	);
 
 	/**
@@ -162,28 +139,29 @@ function FlowCardInner() {
 	 */
 	const handleStepConfigured = useCallback(
 		( flowStepId ) => {
-			const flowStepConfig = flow.flow_config?.[ flowStepId ] || {};
+			const flowStepConfig = currentFlowData.flow_config?.[ flowStepId ] || {};
 			const pipelineStepId = flowStepConfig.pipeline_step_id;
 			const pipelineStep = Object.values( pipelineConfig ).find(
 				( s ) => s.pipeline_step_id === pipelineStepId
 			);
 
-			// Store data for handler settings modal
+			// Build data for handler modals
 			const data = {
 				flowStepId,
 				handlerSlug: flowStepConfig.handler_slug || '',
 				stepType: pipelineStep?.step_type || flowStepConfig.step_type,
-				pipelineId: flow.pipeline_id,
-				flowId: flow.flow_id,
+				pipelineId: currentFlowData.pipeline_id,
+				flowId: currentFlowData.flow_id,
 				currentSettings: flowStepConfig.handler_config || {},
 			};
-
-			setHandlerModalData( data );
 
 			// If no handler selected, open handler selection modal first
 			if ( ! flowStepConfig.handler_slug ) {
 				openModal( MODAL_TYPES.HANDLER_SELECTION, {
 					stepType: data.stepType,
+					flowStepId: data.flowStepId,
+					pipelineId: data.pipelineId,
+					flowId: data.flowId,
 				} );
 			} else {
 				// If handler already selected, open settings modal directly
@@ -191,9 +169,9 @@ function FlowCardInner() {
 			}
 		},
 		[
-			flow.flow_config,
-			flow.pipeline_id,
-			flow.flow_id,
+			currentFlowData.flow_config,
+			currentFlowData.pipeline_id,
+			currentFlowData.flow_id,
 			pipelineConfig,
 			openModal,
 		]
@@ -206,30 +184,19 @@ function FlowCardInner() {
 		async ( handlerSlug ) => {
 			try {
 				// Immediately save handler selection with empty settings
-				const response = await updateFlowHandler(
-					handlerModalData.flowStepId,
+				await updateHandlerMutation.mutateAsync({
+					flowStepId: modalData.flowStepId,
 					handlerSlug,
-					{}
-				);
+					settings: {}
+				});
 
-				if ( response.success ) {
-					// Handler update only affects this flow - refresh flow only
-					refreshFlow();
-
-					// Then open settings modal for configuration
-					const updatedData = {
-						...handlerModalData,
-						handlerSlug,
-						currentSettings: {}, // Reset settings when changing handler
-					};
-					setHandlerModalData( updatedData );
-					openModal( MODAL_TYPES.HANDLER_SETTINGS, updatedData );
-				} else {
-					alert(
-						response.message ||
-							__( 'Failed to select handler', 'datamachine' )
-					);
-				}
+				// Then open settings modal for configuration
+				const updatedData = {
+					...modalData,
+					handlerSlug,
+					currentSettings: {}, // Reset settings when changing handler
+				};
+				openModal( MODAL_TYPES.HANDLER_SETTINGS, updatedData );
 			} catch ( error ) {
 				console.error( 'Handler selection error:', error );
 				alert(
@@ -240,7 +207,7 @@ function FlowCardInner() {
 				);
 			}
 		},
-		[ handlerModalData, openModal, refreshFlow ]
+		[ modalData, openModal, updateHandlerMutation ]
 	);
 
 	/**
@@ -248,25 +215,27 @@ function FlowCardInner() {
 	 */
 	const handleChangeHandler = useCallback( () => {
 		openModal( MODAL_TYPES.HANDLER_SELECTION, {
-			...handlerModalData,
+			stepType: modalData.stepType,
+			flowStepId: modalData.flowStepId,
+			pipelineId: modalData.pipelineId,
+			flowId: modalData.flowId,
 		} );
-	}, [ handlerModalData, openModal ] );
+	}, [ modalData, openModal ] );
 
 	/**
 	 * Handle OAuth connect button
 	 */
 	const handleOAuthConnect = useCallback(
 		( handlerSlug, handlerInfo ) => {
-			setOauthModalData( {
+			openModal( MODAL_TYPES.OAUTH, {
 				handlerSlug,
 				handlerInfo,
 			} );
-			openModal( MODAL_TYPES.OAUTH );
 		},
 		[ openModal ]
 	);
 
-	if ( ! flow ) {
+	if ( ! currentFlowData ) {
 		return null;
 	}
 
@@ -278,8 +247,8 @@ function FlowCardInner() {
 			>
 				<CardBody>
 					<FlowHeader
-						flowId={ flow.flow_id }
-						flowName={ flow.flow_name }
+						flowId={ currentFlowData.flow_id }
+						flowName={ currentFlowData.flow_name }
 						onNameChange={ handleNameChange }
 						onDelete={ handleDelete }
 						onDuplicate={ handleDuplicate }
@@ -290,8 +259,8 @@ function FlowCardInner() {
 					<CardDivider />
 
 					<FlowSteps
-						flowId={ flow.flow_id }
-						flowConfig={ flow.flow_config || {} }
+						flowId={ currentFlowData.flow_id }
+						flowConfig={ currentFlowData.flow_config || {} }
 						pipelineConfig={ pipelineConfig }
 						onStepConfigured={ handleStepConfigured }
 					/>
@@ -300,9 +269,9 @@ function FlowCardInner() {
 
 					<FlowFooter
 						schedulingConfig={{
-							...flow.scheduling_config,
-							last_run_at: flow.last_run,
-							next_run_time: flow.next_run
+							...currentFlowData.scheduling_config,
+							last_run_at: currentFlowData.last_run,
+							next_run_time: currentFlowData.next_run
 						}}
 					/>
 				</CardBody>
@@ -316,7 +285,6 @@ function FlowCardInner() {
 					{ ...modalData }
 					onSuccess={ () => {
 						closeModal();
-						refreshFlow(); // Flow-level refresh
 					} }
 				/>
 			) }
@@ -335,11 +303,8 @@ function FlowCardInner() {
 					isOpen={ true }
 					onClose={ closeModal }
 					{ ...modalData }
-					onSuccess={ () => {
-						closeModal();
-						refreshFlow(); // Flow-level refresh
-						setHandlerModalData( null );
-					} }
+					handlers={ handlers }
+					onSuccess={ closeModal }
 					onChangeHandler={ handleChangeHandler }
 					onOAuthConnect={ handleOAuthConnect }
 				/>
@@ -349,13 +314,8 @@ function FlowCardInner() {
 				<OAuthAuthenticationModal
 					isOpen={ true }
 					onClose={ closeModal }
-					handlerSlug={ oauthModalData?.handlerSlug }
-					handlerInfo={ oauthModalData?.handlerInfo }
-					onSuccess={ () => {
-						closeModal();
-						refreshFlow(); // Flow-level refresh
-						setOauthModalData( null );
-					} }
+					{ ...modalData }
+					onSuccess={ closeModal }
 				/>
 			) }
 		</>
@@ -363,7 +323,7 @@ function FlowCardInner() {
 }
 
 /**
- * Flow Card Component (Outer wrapper with FlowProvider)
+ * Flow Card Component
  *
  * @param {Object} props - Component props
  * @param {Object} props.flow - Flow data
@@ -379,13 +339,11 @@ export default function FlowCard( {
 	onFlowDuplicated,
 } ) {
 	return (
-		<FlowProvider
-			initialFlow={ flow }
+		<FlowCardContent
+			flow={ flow }
 			pipelineConfig={ pipelineConfig }
 			onFlowDeleted={ onFlowDeleted }
 			onFlowDuplicated={ onFlowDuplicated }
-		>
-			<FlowCardInner />
-		</FlowProvider>
+		/>
 	);
 }

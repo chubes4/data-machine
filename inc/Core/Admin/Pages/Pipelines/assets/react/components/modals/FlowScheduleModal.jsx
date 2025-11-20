@@ -50,8 +50,8 @@ export default function FlowScheduleModal( {
 			} )
 				.then( response => response.json() )
 				.then( data => {
-					if ( data.success && data.intervals ) {
-						setIntervals( data.intervals );
+					if ( data.success && data.data ) {
+						setIntervals( data.data );
 					} else {
 						// Show error when API fails to provide intervals
 						setError( __( 'Failed to load scheduling intervals. Please refresh the page and try again.', 'datamachine' ) );

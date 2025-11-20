@@ -7,8 +7,9 @@
 import { useState } from '@wordpress/element';
 import { Modal, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { addPipelineStep } from '../../utils/api';
-import { usePipelineContext } from '../../context/PipelineContext';
+import { useStepTypes } from '../../queries/config';
+import { useHandlers } from '../../queries/handlers';
+import { useAddPipelineStep } from '../../queries/pipelines';
 
 /**
  * Step Selection Modal Component
@@ -28,8 +29,13 @@ export default function StepSelectionModal( {
 	nextExecutionOrder,
 	onSuccess,
 } ) {
-	const { stepTypes, handlers } = usePipelineContext();
-	const [ isAdding, setIsAdding ] = useState( false );
+	// Use TanStack Query for data
+	const { data: stepTypes = {} } = useStepTypes();
+	const { data: handlers = {} } = useHandlers();
+
+	// Use mutations
+	const addStepMutation = useAddPipelineStep();
+
 	const [ error, setError ] = useState( null );
 
 	if ( ! isOpen ) {
@@ -49,32 +55,22 @@ export default function StepSelectionModal( {
 	 * Handle step type selection
 	 */
 	const handleSelectStep = async ( stepType ) => {
-		setIsAdding( true );
 		setError( null );
 
 		try {
-			const response = await addPipelineStep(
+			await addStepMutation.mutateAsync({
 				pipelineId,
 				stepType,
-				nextExecutionOrder
-			);
+				executionOrder: nextExecutionOrder,
+			});
 
-			if ( response.success ) {
-				if ( onSuccess ) {
-					onSuccess();
-				}
-				onClose();
-			} else {
-				setError(
-					response.message ||
-						__( 'Failed to add step', 'datamachine' )
-				);
+			if ( onSuccess ) {
+				onSuccess();
 			}
+			onClose();
 		} catch ( err ) {
 			console.error( 'Step addition error:', err );
 			setError( err.message || __( 'An error occurred', 'datamachine' ) );
-		} finally {
-			setIsAdding( false );
 		}
 	};
 
@@ -111,7 +107,7 @@ export default function StepSelectionModal( {
 									onClick={ () =>
 										handleSelectStep( stepType )
 									}
-									disabled={ isAdding }
+									disabled={ addStepMutation.isPending }
 								>
 									<strong>
 										{ stepTypes[stepType]?.label || stepType }
@@ -153,7 +149,7 @@ export default function StepSelectionModal( {
 					<Button
 						variant="secondary"
 						onClick={ onClose }
-						disabled={ isAdding }
+						disabled={ addStepMutation.isPending }
 					>
 						{ __( 'Cancel', 'datamachine' ) }
 					</Button>

@@ -8,10 +8,9 @@
 import { useState, useEffect } from '@wordpress/element';
 import { Modal, Button } from '@wordpress/components';
 import { sprintf, __ } from '@wordpress/i18n';
-import { updateFlowHandler, fetchHandlerDetails } from '../../utils/api';
-
 import { sanitizeHandlerSettingsPayload } from '../../utils/handlerSettings';
-import { usePipelineContext } from '../../context/PipelineContext';
+import { useHandlerDetails } from '../../queries/handlers';
+import { useUpdateFlowHandler } from '../../queries/flows';
 import FilesHandlerSettings from './handler-settings/files/FilesHandlerSettings';
 import HandlerSettingField from './handler-settings/HandlerSettingField';
 
@@ -30,6 +29,7 @@ import HandlerSettingField from './handler-settings/HandlerSettingField';
  * @param {Function} props.onSuccess - Success callback
  * @param {Function} props.onChangeHandler - Change handler callback
  * @param {Function} props.onOAuthConnect - OAuth connect callback
+ * @param {Object} props.handlers - Global handlers metadata from PipelineContext
  * @returns {React.ReactElement|null} Handler settings modal
  */
 export default function HandlerSettingsModal( {
@@ -44,52 +44,30 @@ export default function HandlerSettingsModal( {
 	onSuccess,
 	onChangeHandler,
 	onOAuthConnect,
+	handlers,
 } ) {
-	const { handlers: allHandlers } = usePipelineContext();
+	// Use TanStack Query for handler details
+	const { data: handlerDetails, isLoading: isLoadingSettings, error: handlerDetailsError } = useHandlerDetails(handlerSlug);
+	const updateHandlerMutation = useUpdateFlowHandler();
+
 	const [ settings, setSettings ] = useState( currentSettings || {} );
 	const [ settingsFields, setSettingsFields ] = useState( {} );
-	const [ isLoadingSettings, setIsLoadingSettings ] = useState( false );
 	const [ isSaving, setIsSaving ] = useState( false );
 	const [ error, setError ] = useState( null );
 
-	/**
-	 * Fetch handler settings schema when modal opens
-	 */
+	// Update settings fields when handler details load
 	useEffect( () => {
-		if ( isOpen && handlerSlug ) {
-			setIsLoadingSettings( true );
-			setError( null );
-
-			fetchHandlerDetails( handlerSlug )
-				.then( ( response ) => {
-					if ( response.success && response.data.handler ) {
-						setSettingsFields(
-							response.data.handler.settings || {}
-						);
-					} else {
-						setError(
-							response.message ||
-								__(
-									'Failed to load handler settings',
-									'datamachine'
-								)
-						);
-					}
-				} )
-				.catch( ( err ) => {
-					console.error( 'Handler details fetch error:', err );
-					setError(
-						__(
-							'An error occurred while loading settings',
-							'datamachine'
-						)
-					);
-				} )
-				.finally( () => {
-					setIsLoadingSettings( false );
-				} );
+		if ( handlerDetails?.settings ) {
+			setSettingsFields( handlerDetails.settings );
 		}
-	}, [ isOpen, handlerSlug ] );
+	}, [ handlerDetails ] );
+
+	// Handle query errors
+	useEffect( () => {
+		if ( handlerDetailsError ) {
+			setError( __( 'Failed to load handler settings', 'datamachine' ) );
+		}
+	}, [ handlerDetailsError ] );
 
 	/**
 	 * Reset form when modal opens with current settings.
@@ -106,9 +84,9 @@ export default function HandlerSettingsModal( {
 	}
 
 	/**
-	 * Get handler info from context
+	 * Get handler info from props
 	 */
-	const handlerInfo = allHandlers[ handlerSlug ] || {};
+	const handlerInfo = handlers[ handlerSlug ] || {};
 
 	/**
 	 * Handle setting change
@@ -133,25 +111,18 @@ export default function HandlerSettingsModal( {
 		);
 
 		try {
-			const response = await updateFlowHandler(
+			await updateHandlerMutation.mutateAsync({
 				flowStepId,
 				handlerSlug,
-				payloadSettings,
+				settings: payloadSettings,
 				pipelineId,
 				stepType
-			);
+			});
 
-			if ( response.success ) {
-				if ( onSuccess ) {
-					onSuccess();
-				}
-				onClose();
-			} else {
-				setError(
-					response.message ||
-						__( 'Failed to update handler settings', 'datamachine' )
-				);
+			if ( onSuccess ) {
+				onSuccess();
 			}
+			onClose();
 		} catch ( err ) {
 			console.error( 'Handler settings update error:', err );
 			setError( err.message || __( 'An error occurred', 'datamachine' ) );
@@ -257,7 +228,11 @@ export default function HandlerSettingsModal( {
 												key={ key }
 												fieldKey={ key }
 												fieldConfig={ config }
-												settings={ settings }
+												value={
+													settings?.[ key ] !== undefined
+														? settings[ key ]
+														: config.default ?? config.current_value ?? ''
+												}
 												onChange={ handleSettingChange }
 											/>
 										)

@@ -149,12 +149,14 @@ class Schedule {
 
             return rest_ensure_response([
                 'success' => true,
-                'action' => 'schedule',
-                'type' => 'one_time',
-                'flow_id' => $flow_id,
-                'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}",
-                'timestamp' => $timestamp,
-                'scheduled_time' => wp_date('c', $timestamp),
+                'data' => [
+                    'action' => 'schedule',
+                    'type' => 'one_time',
+                    'flow_id' => $flow_id,
+                    'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}",
+                    'timestamp' => $timestamp,
+                    'scheduled_time' => wp_date('c', $timestamp)
+                ],
                 'message' => 'Flow scheduled for one-time execution'
             ]);
         }
@@ -204,13 +206,15 @@ class Schedule {
 
             return rest_ensure_response([
                 'success' => true,
-                'action' => 'schedule',
-                'type' => 'recurring',
-                'flow_id' => $flow_id,
-                'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}",
-                'interval' => $interval,
-                'interval_seconds' => $interval_seconds,
-                'first_run' => wp_date('c', time() + $interval_seconds),
+                'data' => [
+                    'action' => 'schedule',
+                    'type' => 'recurring',
+                    'flow_id' => $flow_id,
+                    'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}",
+                    'interval' => $interval,
+                    'interval_seconds' => $interval_seconds,
+                    'first_run' => wp_date('c', time() + $interval_seconds)
+                ],
                 'message' => "Flow scheduled to run {$interval}"
             ]);
         }
@@ -242,8 +246,10 @@ class Schedule {
 
         return rest_ensure_response([
             'success' => true,
-            'action' => 'unschedule',
-            'flow_id' => $flow_id,
+            'data' => [
+                'action' => 'unschedule',
+                'flow_id' => $flow_id
+            ],
             'message' => 'Flow schedule cleared'
         ]);
     }
@@ -265,9 +271,11 @@ class Schedule {
 
             return rest_ensure_response([
                 'success' => true,
-                'action' => 'update',
-                'type' => 'manual',
-                'flow_id' => $flow_id,
+                'data' => [
+                    'action' => 'update',
+                    'type' => 'manual',
+                    'flow_id' => $flow_id
+                ],
                 'message' => 'Flow schedule set to manual'
             ]);
         }
@@ -301,7 +309,7 @@ class Schedule {
 
         return rest_ensure_response([
             'success' => true,
-            'intervals' => $frontend_intervals
+            'data' => $frontend_intervals
         ]);
     }
 }

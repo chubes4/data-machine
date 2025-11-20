@@ -14,12 +14,13 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 - [Universal Engine Architecture](core-system/universal-engine.md) - Shared AI infrastructure layer
 - [AI Conversation Loop](core-system/ai-conversation-loop.md) - Multi-turn conversation execution
 - [Tool Execution Architecture](core-system/tool-execution.md) - Tool discovery and execution
+- [Tool Manager](core-system/tool-manager.md) - Centralized tool management (v0.2.1)
 - [RequestBuilder Pattern](core-system/request-builder.md) - Centralized AI request construction
 - [ConversationManager](core-system/conversation-manager.md) - Message formatting and conversation utilities
 - [Parameter Systems](api/parameter-systems.md) - Unified parameter architecture and tool building
 - [ToolResultFinder](core-system/tool-result-finder.md) - Universal tool result search utility
-- [Chat Database](core-system/chat-database.md) - Session management and CRUD operations
 - [OAuth Handlers](core-system/oauth-handlers.md) - Centralized OAuth 1.0a and 2.0 flow handlers
+- [Handler Registration Trait](core-system/handler-registration-trait.md) - Standardized handler registration (v0.2.2)
 
 ### Handler Documentation
 
@@ -218,8 +219,7 @@ docs/
 **Pipeline Builder (React)**
 - 6,591 lines of React code using @wordpress/element and @wordpress/components
 - 50+ specialized components (cards, modals, shared utilities)
-- Modern state management with custom hooks (usePipelines, useFlows, useStepTypes, useHandlers)
-- Context API for global state (PipelineContext)
+- Modern state management with TanStack Query (server state) + Zustand (client state)
 - Complete REST API integration for all data operations
 - Zero AJAX dependencies
 - Real-time updates without page reloads

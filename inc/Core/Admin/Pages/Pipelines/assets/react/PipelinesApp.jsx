@@ -7,15 +7,13 @@
 import { useEffect, useCallback, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Spinner, Notice, Button } from '@wordpress/components';
-import { usePipelines } from './hooks/usePipelines';
-import useSelectedPipeline from './hooks/useSelectedPipeline';
-import { useFlows } from './hooks/useFlows';
-import { usePipelineContext } from './context/PipelineContext';
-import PipelineCard from './components/cards/PipelineCard';
-import PipelineSelector from './components/shared/PipelineSelector';
+import { usePipelines, useCreatePipeline } from './queries/pipelines';
+import { useFlows } from './queries/flows';
+import { useUIStore } from './stores/uiStore';
+import PipelineCard from './components/pipelines/PipelineCard';
+import PipelineSelector from './components/pipelines/PipelineSelector';
 import { ImportExportModal } from './components/modals';
 import { MODAL_TYPES } from './utils/constants';
-import { createPipeline } from './utils/api';
 
 /**
  * Root application component
@@ -23,31 +21,26 @@ import { createPipeline } from './utils/api';
  * @returns {React.ReactElement} Application component
  */
 export default function PipelinesApp() {
+	// UI state from Zustand
 	const {
 		selectedPipelineId,
 		setSelectedPipelineId,
-		refreshTrigger,
 		openModal,
 		closeModal,
 		activeModal,
 		modalData,
-		refreshData,
-	} = usePipelineContext();
-	const {
-		pipelines,
-		loading: pipelinesLoading,
-		error: pipelinesError,
-	} = usePipelines();
-	const {
-		pipeline: selectedPipeline,
-		loading: selectedPipelineLoading,
-		error: selectedPipelineError,
-	} = useSelectedPipeline( selectedPipelineId );
-	const {
-		flows,
-		loading: flowsLoading,
-		error: flowsError,
-	} = useFlows( selectedPipelineId );
+	} = useUIStore();
+
+	// Data from TanStack Query
+	const { data: pipelines = [], isLoading: pipelinesLoading, error: pipelinesError } = usePipelines();
+	const { data: flows = [], isLoading: flowsLoading, error: flowsError } = useFlows(selectedPipelineId);
+	const createPipelineMutation = useCreatePipeline();
+
+	// Find selected pipeline from pipelines array
+	const selectedPipeline = pipelines?.find(p => p.pipeline_id === selectedPipelineId);
+	const selectedPipelineLoading = false; // No separate loading for selected pipeline
+	const selectedPipelineError = null; // No separate error for selected pipeline
+
 	const [ isCreatingPipeline, setIsCreatingPipeline ] = useState( false );
 
 	/**
@@ -65,17 +58,16 @@ export default function PipelinesApp() {
 	const handleAddNewPipeline = useCallback( async () => {
 		setIsCreatingPipeline( true );
 		try {
-			const result = await createPipeline( 'New Pipeline' );
+			const result = await createPipelineMutation.mutateAsync('New Pipeline');
 			if ( result.success && result.data.pipeline_id ) {
 				setSelectedPipelineId( result.data.pipeline_id );
-				refreshData();
 			}
 		} catch ( error ) {
 			console.error( 'Error creating pipeline:', error );
 		} finally {
 			setIsCreatingPipeline( false );
 		}
-	}, [ setSelectedPipelineId, refreshData ] );
+	}, [ createPipelineMutation, setSelectedPipelineId ] );
 
 	/**
 	 * Loading state
@@ -169,7 +161,6 @@ export default function PipelinesApp() {
 					pipelines={ pipelines }
 					onSuccess={ () => {
 						closeModal();
-						refreshData();
 					} }
 				/>
 			) }

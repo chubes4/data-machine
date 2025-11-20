@@ -6,7 +6,8 @@
 
 import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { usePipelineContext } from '../../context/PipelineContext';
+import { useGlobalSettings } from '../../queries/config';
+import { useHandlers } from '../../queries/handlers';
 
 /**
  * Flow Step Handler Component
@@ -26,7 +27,9 @@ export default function FlowStepHandler( {
 	stepType,
 	onConfigure,
 } ) {
-	const { globalSettings, handlers } = usePipelineContext();
+	// Use TanStack Query for data
+	const { data: globalSettings = {} } = useGlobalSettings();
+	const { data: handlers = {} } = useHandlers();
 
 	if ( ! handlerSlug ) {
 		return (

@@ -57,10 +57,10 @@ export default function ConfigureStepModal( {
   useEffect( () => {
     if ( isOpen ) {
       apiFetch( { path: '/datamachine/v1/providers' } )
-        .then( ( data ) => {
-          if ( data.success ) {
-            setAiProviders( data.providers );
-            setAiDefaults( data.defaults || { provider: '', model: '' } );
+        .then( ( response ) => {
+          if ( response.success ) {
+            setAiProviders( response.data?.providers || {} );
+            setAiDefaults( response.data?.defaults || { provider: '', model: '' } );
           }
         } )
         .catch( ( err ) =>
@@ -81,9 +81,10 @@ export default function ConfigureStepModal( {
 			// Pre-populate with all globally enabled tools for new AI steps
 			if ( ! currentConfig?.enabled_tools ) {
 				apiFetch( { path: '/datamachine/v1/tools' } )
-					.then( ( data ) => {
-						if ( data.success && data.tools ) {
-							const availableTools = Object.entries( data.tools )
+					.then( ( response ) => {
+						if ( response.success ) {
+							const tools = response.data?.tools || {};
+							const availableTools = Object.entries( tools )
 								.filter(
 									( [ id, tool ] ) =>
 										tool.configured && tool.globally_enabled

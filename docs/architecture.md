@@ -251,13 +251,13 @@ Centralized WordPress transient-based cache system:
 **React Implementation**:
 - 6,591 lines of React code built with @wordpress/element and @wordpress/components
 - 50+ specialized components organized by responsibility
-- Modern state management using Context API and custom hooks
+- Modern state management using TanStack Query + Zustand
 - Complete REST API integration for all data operations
 - Real-time updates without page reloads
 - Optimistic UI updates for instant feedback
 
 **Component Architecture**:
-- **Core**: PipelinesApp (root), PipelineContext (global state)
+- **Core**: PipelinesApp (root), Zustand stores for state management
 - **Cards**: PipelineCard, FlowCard, PipelineStepCard, FlowStepCard
 - **Modals**: ConfigureStepModal, HandlerSettingsModal, OAuthAuthenticationModal, StepSelectionModal, HandlerSelectionModal, FlowScheduleModal, ImportExportModal
 - **Hooks**: usePipelines, useFlows, useStepTypes, useHandlers, useStepSettings, useModal

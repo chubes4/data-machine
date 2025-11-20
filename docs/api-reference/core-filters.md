@@ -114,6 +114,117 @@ $result = $oauth2->handle_callback($provider_key, $token_url, $token_params, $ac
 
 **Providers**: Reddit, Facebook, Threads, Google Sheets
 
+## Handler Registration (via HandlerRegistrationTrait @since v0.2.2)
+
+Modern handler registration uses **HandlerRegistrationTrait** which automatically registers with all required filters.
+
+### Filters Registered by Trait
+
+The HandlerRegistrationTrait (`/inc/Core/Steps/HandlerRegistrationTrait.php`) automatically registers handlers with the following filters:
+
+#### datamachine_handlers
+Handler metadata registration (always registered)
+
+#### datamachine_auth_providers
+Authentication provider registration (conditional on `requires_auth=true`)
+
+#### datamachine_handler_settings
+Settings class registration (always registered if settings_class provided)
+
+#### chubes_ai_tools
+AI tool registration via callback (conditional on tools_callback provided)
+
+### Usage Pattern
+
+```php
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
+class MyHandlerFilters {
+    use HandlerRegistrationTrait;
+
+    public static function register(): void {
+        self::registerHandler(
+            $handler_slug,        // 'my_handler'
+            $handler_type,        // 'fetch', 'publish', or 'update'
+            $handler_class,       // MyHandler::class
+            $label,               // __('My Handler', 'textdomain')
+            $description,         // __('Handler description', 'textdomain')
+            $requires_auth,       // true or false
+            $auth_class,          // MyHandlerAuth::class or null
+            $settings_class,      // MyHandlerSettings::class
+            $tools_callback       // Callback function or null
+        );
+    }
+}
+
+function datamachine_register_my_handler_filters() {
+    MyHandlerFilters::register();
+}
+datamachine_register_my_handler_filters();
+```
+
+### Example Implementation
+
+**Publish Handler with OAuth**:
+```php
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
+class TwitterFilters {
+    use HandlerRegistrationTrait;
+
+    public static function register(): void {
+        self::registerHandler(
+            'twitter',
+            'publish',
+            Twitter::class,
+            __('Twitter', 'datamachine'),
+            __('Post content to Twitter with media support', 'datamachine'),
+            true,  // Requires OAuth
+            TwitterAuth::class,
+            TwitterSettings::class,
+            function($tools, $handler_slug, $handler_config) {
+                if ($handler_slug === 'twitter') {
+                    $tools['twitter_publish'] = datamachine_get_twitter_tool($handler_config);
+                }
+                return $tools;
+            }
+        );
+    }
+}
+```
+
+**Fetch Handler without Auth**:
+```php
+use DataMachine\Core\Steps\HandlerRegistrationTrait;
+
+class RSSFilters {
+    use HandlerRegistrationTrait;
+
+    public static function register(): void {
+        self::registerHandler(
+            'rss',
+            'fetch',
+            RSS::class,
+            __('RSS Feed', 'datamachine'),
+            __('Fetch content from RSS/Atom feeds', 'datamachine'),
+            false,  // No auth required
+            null,
+            RSSSettings::class,
+            null  // No AI tools for fetch handlers
+        );
+    }
+}
+```
+
+### Benefits
+
+- **Code Reduction**: Reduces handler registration code by ~70%
+- **Consistency**: Ensures uniform registration patterns across all handlers
+- **Maintainability**: Centralizes filter registration logic
+- **Type Safety**: Method signature provides clear parameter requirements
+
+See [Handler Registration Trait](../core-system/handler-registration-trait.md) for complete documentation.
+
 ## AI Integration Filters
 
 ### `chubes_ai_tools`

@@ -5,6 +5,29 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2025-11-19
+
+### Added
+- **TanStack Query + Zustand Architecture** - Complete modernization of React state management
+  - Replaced context-based state management with TanStack Query for server state
+  - Implemented Zustand for client-side UI state management
+  - Eliminated global refresh patterns for granular component updates
+  - Added intelligent caching with automatic background refetching
+  - Optimistic UI updates for improved user experience
+
+### Improved
+- **Performance Enhancements** - No more global component re-renders on data changes
+  - Granular updates: only affected components re-render when their data changes
+  - Intelligent caching prevents unnecessary API calls
+  - Better error handling and loading states throughout the UI
+  - Cleaner separation of server state (TanStack Query) and UI state (Zustand)
+
+### Removed
+- **Legacy Context System** - Complete removal of PipelineContext and FlowContext
+  - Eliminated context brittleness and complex provider hierarchies
+  - Removed old hook files that are no longer needed
+  - Streamlined component architecture for better maintainability
+
 ## [0.2.2] - 2025-11-19
 
 ### Added

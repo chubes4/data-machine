@@ -66,7 +66,7 @@ class StepTypes {
 
 		return rest_ensure_response([
 			'success' => true,
-			'step_types' => $step_types
+			'data' => $step_types
 		]);
 	}
 

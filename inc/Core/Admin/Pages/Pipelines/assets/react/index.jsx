@@ -6,7 +6,9 @@
 
 import { render } from '@wordpress/element';
 import domReady from '@wordpress/dom-ready';
-import { PipelineProvider } from './context/PipelineContext';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { queryClient } from './lib/queryClient';
 import PipelinesApp from './PipelinesApp';
 
 /**
@@ -28,9 +30,10 @@ domReady( () => {
 
 	// Render React app
 	render(
-		<PipelineProvider>
+		<QueryClientProvider client={queryClient}>
 			<PipelinesApp />
-		</PipelineProvider>,
+			<ReactQueryDevtools initialIsOpen={false} />
+		</QueryClientProvider>,
 		rootElement
 	);
 } );

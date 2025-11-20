@@ -167,13 +167,13 @@ class Jobs {
 		$jobs = $db_jobs->get_jobs_for_list_table($args);
 		$total_jobs = $db_jobs->get_jobs_count();
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
-			'jobs' => $jobs,
+			'data' => $jobs,
 			'total' => $total_jobs,
 			'per_page' => $args['per_page'],
 			'offset' => $args['offset']
-		];
+		]);
 	}
 
 	/**
@@ -201,10 +201,10 @@ class Jobs {
 			'user_id' => get_current_user_id()
 		]);
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
-			'job' => $job
-		];
+			'data' => $job
+		]);
 	}
 
 	/**
@@ -227,9 +227,9 @@ class Jobs {
 			'user_login' => wp_get_current_user()->user_login
 		]);
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
 			'message' => __('Jobs cleared successfully.', 'datamachine')
-		];
+		]);
 	}
 }

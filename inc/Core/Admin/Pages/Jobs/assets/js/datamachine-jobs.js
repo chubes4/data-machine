@@ -58,8 +58,8 @@
 				method: 'GET',
 			} )
 				.then( ( response ) => {
-					if ( response.success && response.jobs ) {
-						this.renderJobs( response.jobs );
+					if ( response.success && response.data ) {
+						this.renderJobs( response.data );
 					} else {
 						this.showEmptyState();
 					}

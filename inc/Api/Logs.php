@@ -127,10 +127,10 @@ class Logs {
  		// Delegate to centralized delete action
  		do_action('datamachine_delete_logs');
 
- 		return [
- 			'success' => true,
- 			'message' => __('Logs cleared successfully.', 'datamachine')
- 		];
+		return rest_ensure_response([
+			'success' => true,
+			'message' => __('Logs cleared successfully.', 'datamachine')
+		]);
  	}
 
 	/**
@@ -223,7 +223,7 @@ class Logs {
 			);
 		}
 
-		return $response;
+		return rest_ensure_response($response);
 	}
 
 	/**
@@ -269,7 +269,7 @@ class Logs {
 		// Get available log levels
 		$available_levels = datamachine_get_available_log_levels();
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
 			'log_file' => [
 				'path' => $log_file_path,
@@ -281,7 +281,7 @@ class Logs {
 				'current_level' => $current_level,
 				'available_levels' => $available_levels
 			]
-		];
+		]);
 	}
 
 	/**
@@ -306,13 +306,13 @@ class Logs {
 			'user_login' => wp_get_current_user()->user_login
 		]);
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
 			'level' => $new_level,
 			'message' => sprintf(
 				__('Log level updated to %s.', 'datamachine'),
 				$level_display
 			)
-		];
+		]);
 	}
 }

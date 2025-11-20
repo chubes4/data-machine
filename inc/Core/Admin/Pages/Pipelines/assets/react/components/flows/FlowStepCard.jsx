@@ -11,7 +11,7 @@ import FlowStepHandler from './FlowStepHandler';
 import { updateUserMessage } from '../../utils/api';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
 
-import { usePipelineContext } from '../../context/PipelineContext';
+import { useStepTypes } from '../../queries/config';
 
 /**
  * Flow Step Card Component
@@ -33,7 +33,8 @@ export default function FlowStepCard( {
 	pipelineConfig,
 	onConfigure,
 } ) {
-	const { stepTypes } = usePipelineContext();
+	// Use TanStack Query for data
+	const { data: stepTypes = {} } = useStepTypes();
 	const stepTypeInfo = stepTypes[pipelineStep.step_type] || {};
 	const isAiStep = pipelineStep.step_type === 'ai';
 	const aiConfig = isAiStep

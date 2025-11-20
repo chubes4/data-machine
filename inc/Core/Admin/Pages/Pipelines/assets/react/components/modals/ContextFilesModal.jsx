@@ -6,7 +6,7 @@
 
 import { Modal } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import PipelineContextFiles from '../sections/PipelineContextFiles';
+import PipelineContextFiles from '../pipelines/PipelineContextFiles';
 
 /**
  * Context Files Modal Component

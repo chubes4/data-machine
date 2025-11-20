@@ -82,7 +82,7 @@ class Handlers {
 
 		return rest_ensure_response([
 			'success' => true,
-			'handlers' => $handlers
+			'data' => $handlers
 		]);
 	}
 
@@ -143,7 +143,7 @@ class Handlers {
 
 		return rest_ensure_response([
 			'success' => true,
-			'handler' => [
+			'data' => [
 				'slug' => $handler_slug,
 				'info' => $handler_info,
 				'settings' => $field_state,

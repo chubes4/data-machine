@@ -7,7 +7,7 @@
 import { Modal, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
-import { usePipelineContext } from '../../context/PipelineContext';
+import { useHandlers } from '../../queries/handlers';
 
 /**
  * Handler Selection Modal Component
@@ -25,7 +25,8 @@ export default function HandlerSelectionModal( {
 	stepType,
 	onSelectHandler,
 } ) {
-	const { handlers: allHandlers } = usePipelineContext();
+	// Use TanStack Query for data
+	const { data: allHandlers = {} } = useHandlers();
 
 	if ( ! isOpen ) {
 		return null;

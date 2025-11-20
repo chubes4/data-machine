@@ -92,9 +92,9 @@ class ProcessedItems {
 			'user_login' => wp_get_current_user()->user_login
 		]);
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
 			'message' => __('Processed items cleared successfully.', 'datamachine')
-		];
+		]);
 	}
 }

@@ -249,11 +249,13 @@ class Pipelines {
 			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
 			$flows = $db_flows->get_flows_for_pipeline($pipeline_id);
 
-			return [
+			return rest_ensure_response([
 				'success' => true,
-				'pipeline' => $pipeline,
-				'flows' => $flows
-			];
+				'data' => [
+					'pipeline' => $pipeline,
+					'flows' => $flows
+				]
+			]);
 		} else {
 			// All pipelines retrieval
 			$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
@@ -266,11 +268,13 @@ class Pipelines {
 				}, $pipelines);
 			}
 
-			return [
+			return rest_ensure_response([
 				'success' => true,
-				'pipelines' => $pipelines,
-				'total' => count($pipelines)
-			];
+				'data' => [
+					'pipelines' => $pipelines,
+					'total' => count($pipelines)
+				]
+			]);
 		}
 	}
 
@@ -324,14 +328,16 @@ class Pipelines {
 			'user_login' => wp_get_current_user()->user_login
 		]);
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
-			'pipeline_id' => $pipeline_id,
-			'pipeline_name' => $params['pipeline_name'] ?? 'Pipeline',
-			'pipeline_data' => $pipeline,
-			'existing_flows' => $existing_flows,
-			'creation_mode' => $creation_mode
-		];
+			'data' => [
+				'pipeline_id' => $pipeline_id,
+				'pipeline_name' => $params['pipeline_name'] ?? 'Pipeline',
+				'pipeline_data' => $pipeline,
+				'existing_flows' => $existing_flows,
+				'creation_mode' => $creation_mode
+			]
+		]);
 	}
 
 	/**
@@ -396,11 +402,13 @@ class Pipelines {
 		do_action('datamachine_clear_pipeline_cache', $pipeline_id);
 		do_action('datamachine_clear_pipelines_list_cache');
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
-			'message' => __('Pipeline title saved successfully', 'datamachine'),
-			'pipeline_id' => $pipeline_id,
-			'pipeline_name' => sanitize_text_field(wp_unslash($params['pipeline_name']))
-		];
+			'data' => [
+				'pipeline_id' => $pipeline_id,
+				'pipeline_name' => sanitize_text_field(wp_unslash($params['pipeline_name']))
+			],
+			'message' => __('Pipeline title saved successfully', 'datamachine')
+		]);
 	}
 }

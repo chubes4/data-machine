@@ -1,6 +1,6 @@
 # Pipeline Builder Interface
 
-Modern React-based interface for creating and managing Pipeline+Flow configurations with real-time updates, zero page reloads, and complete REST API integration.
+Modern React-based interface for creating and managing Pipeline+Flow configurations with TanStack Query + Zustand architecture for optimal performance, real-time updates, zero page reloads, and complete REST API integration.
 
 ## Pipeline Management
 
@@ -9,6 +9,19 @@ Modern React-based interface for creating and managing Pipeline+Flow configurati
 **Add New Pipeline**: Creates new pipeline templates with configurable step sequences and handler assignments.
 
 **Import/Export**: Built-in pipeline configuration import/export functionality for sharing and backup workflows.
+
+## Architecture (@since v0.2.3)
+
+**TanStack Query + Zustand**: Modern state management architecture providing optimal performance and user experience:
+
+- **TanStack Query**: Server state management with intelligent caching, automatic background refetching, and optimistic updates
+- **Zustand**: Client-side UI state management for modals, selections, and form data
+- **Benefits**: Granular component updates, no global refreshes, better error handling, improved loading states
+
+**Query Patterns**:
+- Pipeline data: Cached queries with automatic invalidation on changes
+- Flow data: Optimistic updates for immediate UI feedback
+- Settings data: Background synchronization with conflict resolution
 
 ## Visual Interface Components
 
@@ -137,7 +150,7 @@ Handler configuration follows a simplified request/response contract:
 - Authentication flows
 - Import/export operations
 
-**State Management**: React Context API and custom hooks provide efficient state synchronization across components without prop drilling.
+**State Management**: TanStack Query for server state management and Zustand for client-side UI state provide efficient state synchronization across components.
 
 ## Error Handling
 
@@ -162,7 +175,7 @@ The Pipelines page uses modern React architecture built with WordPress component
 **Core Components:**
 
 - `PipelinesApp.jsx` - Root application component managing global application state
-- `PipelineContext.jsx` - Context provider for global state management and data synchronization
+- Zustand stores for client-side state management
 - Custom hooks for data fetching and state management:
   - `usePipelines` - Pipeline data and operations
   - `useFlows` - Flow instance management
@@ -207,12 +220,17 @@ The Pipelines page uses modern React architecture built with WordPress component
 
 ### State Management
 
-**Global State (PipelineContext):**
-- Selected pipeline tracking
+**Server State (TanStack Query):**
+- Automatic data fetching and caching
+- Background refetching for real-time updates
+- Optimistic updates for instant UI feedback
+- Intelligent cache invalidation
+
+**Client State (Zustand):**
 - Modal state management
-- Data refresh triggers
-- Loading states
-- Error handling
+- Selected pipeline tracking
+- UI interaction states
+- Form state management
 
 **Custom Hooks Pattern:**
 

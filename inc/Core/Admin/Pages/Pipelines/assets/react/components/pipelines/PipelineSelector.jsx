@@ -7,8 +7,8 @@
 
 import { SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { usePipelineContext } from '../../context/PipelineContext';
-import { usePipelines } from '../../hooks/usePipelines';
+import { usePipelines } from '../../queries/pipelines';
+import { useUIStore } from '../../stores/uiStore';
 
 /**
  * Pipeline dropdown selector
@@ -16,8 +16,11 @@ import { usePipelines } from '../../hooks/usePipelines';
  * @returns {React.ReactElement|null} Selector component or null if no pipelines
  */
 export default function PipelineSelector() {
-	const { selectedPipelineId, setSelectedPipelineId } = usePipelineContext();
-	const { pipelines, loading } = usePipelines();
+	// Use TanStack Query for data
+	const { data: pipelines = [], isLoading: loading } = usePipelines();
+
+	// Use Zustand for UI state
+	const { selectedPipelineId, setSelectedPipelineId } = useUIStore();
 
 	// Don't render if no pipelines or still loading
 	if ( loading || pipelines.length === 0 ) {

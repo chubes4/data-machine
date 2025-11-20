@@ -15,7 +15,7 @@ import {
 import { __ } from '@wordpress/i18n';
 import { updateSystemPrompt } from '../../utils/api';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
-import { usePipelineContext } from '../../context/PipelineContext';
+import { useStepTypes } from '../../queries/config';
 
 /**
  * Pipeline Step Card Component
@@ -35,8 +35,9 @@ export default function PipelineStepCard( {
 	onDelete,
 	onConfigure,
 } ) {
-	const { stepTypeSettings, stepTypes } = usePipelineContext();
-	const stepConfigMeta = stepTypeSettings?.[ step.step_type ];
+	// Use TanStack Query for data
+	const { data: stepTypes = {} } = useStepTypes();
+	const stepConfigMeta = stepTypes?.[ step.step_type ];
 	const canConfigure = !! stepConfigMeta;
 	const aiConfig =
 		step.step_type === 'ai'

@@ -248,16 +248,18 @@ class PipelineSteps {
 			'user_login' => wp_get_current_user()->user_login
 		]);
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
-			'message' => sprintf(__('Step "%s" added successfully', 'datamachine'), $step_config['label'] ?? $step_type),
-			'step_type' => $step_type,
-			'step_config' => $step_config,
-			'pipeline_id' => $pipeline_id,
-			'pipeline_step_id' => $step_id,
-			'step_data' => $step_data,
-			'created_type' => 'step'
-		];
+			'data' => [
+				'step_type' => $step_type,
+				'step_config' => $step_config,
+				'pipeline_id' => $pipeline_id,
+				'pipeline_step_id' => $step_id,
+				'step_data' => $step_data,
+				'created_type' => 'step'
+			],
+			'message' => sprintf(__('Step "%s" added successfully', 'datamachine'), $step_config['label'] ?? $step_type)
+		]);
 	}
 
 	/**
@@ -273,7 +275,10 @@ class PipelineSteps {
 			return $result;
 		}
 
-		return array_merge(['success' => true], $result);
+		return rest_ensure_response([
+			'success' => true,
+			'data' => $result
+		]);
 	}
 
 	/**
@@ -445,12 +450,14 @@ class PipelineSteps {
 			'user_login' => wp_get_current_user()->user_login
 		]);
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
-			'message' => __('Step order saved successfully', 'datamachine'),
-			'pipeline_id' => $pipeline_id,
-			'step_count' => count($updated_steps)
-		];
+			'data' => [
+				'pipeline_id' => $pipeline_id,
+				'step_count' => count($updated_steps)
+			],
+			'message' => __('Step order saved successfully', 'datamachine')
+		]);
 	}
 
 	/**
@@ -482,10 +489,11 @@ class PipelineSteps {
 			do_action('datamachine_clear_pipeline_cache', $pipeline_id);
 		}
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
+			'data' => [],
 			'message' => __('System prompt saved successfully', 'datamachine')
-		];
+		]);
 	}
 
 	/**
@@ -689,15 +697,17 @@ class PipelineSteps {
 			'config_keys' => array_keys($step_config_data)
 		]);
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
-			'message' => __('AI step configuration saved successfully', 'datamachine'),
-			'pipeline_step_id' => $pipeline_step_id,
-			'debug_info' => [
-				'api_key_saved' => $api_key_saved,
-				'step_config_saved' => true,
-				'provider' => $provider_for_log
-			]
-		];
+			'data' => [
+				'pipeline_step_id' => $pipeline_step_id,
+				'debug_info' => [
+					'api_key_saved' => $api_key_saved,
+					'step_config_saved' => true,
+					'provider' => $provider_for_log
+				]
+			],
+			'message' => __('AI step configuration saved successfully', 'datamachine')
+		]);
 	}
 }

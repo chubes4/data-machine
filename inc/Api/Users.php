@@ -98,11 +98,13 @@ class Users
 
         $preference = self::get_pipeline_preference($user_id);
 
-        return [
+        return rest_ensure_response([
             'success' => true,
-            'user_id' => $user_id,
-            'selected_pipeline_id' => $preference,
-        ];
+            'data' => [
+                'user_id' => $user_id,
+                'selected_pipeline_id' => $preference,
+            ]
+        ]);
     }
 
     /**
@@ -116,11 +118,13 @@ class Users
         if (null === $selected_pipeline_id) {
             delete_user_meta($user_id, 'datamachine_selected_pipeline_id');
 
-            return [
+            return rest_ensure_response([
                 'success' => true,
-                'user_id' => $user_id,
-                'selected_pipeline_id' => null,
-            ];
+                'data' => [
+                    'user_id' => $user_id,
+                    'selected_pipeline_id' => null,
+                ]
+            ]);
         }
 
         if ($selected_pipeline_id <= 0) {
@@ -141,11 +145,13 @@ class Users
 
         update_user_meta($user_id, 'datamachine_selected_pipeline_id', (string) $selected_pipeline_id);
 
-        return [
+        return rest_ensure_response([
             'success' => true,
-            'user_id' => $user_id,
-            'selected_pipeline_id' => (int) $selected_pipeline_id,
-        ];
+            'data' => [
+                'user_id' => $user_id,
+                'selected_pipeline_id' => (int) $selected_pipeline_id,
+            ]
+        ]);
     }
 
     /**

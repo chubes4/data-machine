@@ -1,6 +1,6 @@
 {
 	"name": "datamachine",
-	"version": "0.2.2",
+	"version": "0.2.3",
 	"description": "AI-first WordPress plugin with Pipeline+Flow architecture",
 	"private": true,
 	"scripts": {
@@ -19,12 +19,15 @@
 		"webpack-dev-server": "^5.2.1"
 	},
 	"dependencies": {
+		"@tanstack/react-query": "^5.90.10",
+		"@tanstack/react-query-devtools": "^5.90.2",
 		"@wordpress/api-fetch": "^7.35.0",
 		"@wordpress/components": "^30.8.0",
+		"@wordpress/data": "^10.35.0",
+		"@wordpress/dom-ready": "^4.35.0",
 		"@wordpress/element": "^6.35.0",
 		"@wordpress/i18n": "^6.8.0",
 		"@wordpress/notices": "^5.35.0",
-		"@wordpress/data": "^10.35.0",
-		"@wordpress/dom-ready": "^4.35.0"
+		"zustand": "^5.0.8"
 	}
 }

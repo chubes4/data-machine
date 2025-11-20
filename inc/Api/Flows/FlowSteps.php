@@ -145,11 +145,13 @@ class FlowSteps {
 
 		$flow_config = $flow['flow_config'] ?? [];
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
-			'flow_id' => $flow_id,
-			'flow_config' => $flow_config
-		];
+			'data' => [
+				'flow_id' => $flow_id,
+				'flow_config' => $flow_config
+			]
+		]);
 	}
 
 	/**
@@ -178,11 +180,13 @@ class FlowSteps {
 			);
 		}
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
-			'flow_step_id' => $flow_step_id,
-			'step_config' => $step_config
-		];
+			'data' => [
+				'flow_step_id' => $flow_step_id,
+				'step_config' => $step_config
+			]
+		]);
 	}
 
 	/**
@@ -288,17 +292,19 @@ class FlowSteps {
 			/* translators: %s: Handler name or label */
 			$message = sprintf(__('Handler "%s" settings saved successfully.', 'datamachine'), $handler_info['label'] ?? $handler_slug);
 
-			return [
+			return rest_ensure_response([
 				'success' => true,
-				'message' => $message,
-				'handler_slug' => $handler_slug,
-				'step_type' => $step_type,
-				'flow_step_id' => $flow_step_id,
-				'flow_id' => $flow_id,
-				'pipeline_step_id' => $pipeline_step_id,
-				'step_config' => $step_config,
-				'handler_settings_display' => $handler_settings_display
-			];
+				'data' => [
+					'handler_slug' => $handler_slug,
+					'step_type' => $step_type,
+					'flow_step_id' => $flow_step_id,
+					'flow_id' => $flow_id,
+					'pipeline_step_id' => $pipeline_step_id,
+					'step_config' => $step_config,
+					'handler_settings_display' => $handler_settings_display
+				],
+				'message' => $message
+			]);
 
 		} catch (\Exception $e) {
 			do_action('datamachine_log', 'error', 'Handler settings save failed: ' . $e->getMessage(), [
@@ -348,10 +354,11 @@ class FlowSteps {
 			}
 		}
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
+			'data' => [],
 			'message' => __('User message saved successfully', 'datamachine')
-		];
+		]);
 	}
 
 	/**

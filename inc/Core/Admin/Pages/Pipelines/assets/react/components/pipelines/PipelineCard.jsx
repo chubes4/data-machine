@@ -9,14 +9,15 @@ import { Card, CardBody, CardDivider } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import PipelineHeader from './PipelineHeader';
 import PipelineSteps from './PipelineSteps';
-import FlowsSection from '../sections/FlowsSection';
+import FlowsSection from '../flows/FlowsSection';
 import {
 	StepSelectionModal,
 	ConfigureStepModal,
 	ContextFilesModal,
 } from '../modals';
-import { usePipelineContext } from '../../context/PipelineContext';
-import { deletePipelineStep } from '../../utils/api';
+import { useStepTypes } from '../../queries/config';
+import { useDeletePipelineStep } from '../../queries/pipelines';
+import { useUIStore } from '../../stores/uiStore';
 import { MODAL_TYPES } from '../../utils/constants';
 
 /**
@@ -28,14 +29,14 @@ import { MODAL_TYPES } from '../../utils/constants';
  * @returns {React.ReactElement} Pipeline card
  */
 export default function PipelineCard( { pipeline, flows } ) {
-	const {
-		refreshData,
-		openModal,
-		closeModal,
-		activeModal,
-		modalData,
-		stepTypeSettings,
-	} = usePipelineContext();
+	// Use TanStack Query for data
+	const { data: stepTypeSettings = {} } = useStepTypes();
+
+	// Use mutations
+	const deleteStepMutation = useDeletePipelineStep();
+
+	// Use Zustand for UI state
+	const { openModal, closeModal, activeModal, modalData } = useUIStore();
 
 	if ( ! pipeline ) {
 		return null;
@@ -47,10 +48,9 @@ export default function PipelineCard( { pipeline, flows } ) {
 	const handleNameChange = useCallback(
 		( newName ) => {
 			// Name change already saved by PipelineHeader
-			// Just trigger refresh to update local state
-			refreshData();
+			// Queries will automatically refetch
 		},
-		[ refreshData ]
+		[]
 	);
 
 	/**
@@ -58,10 +58,9 @@ export default function PipelineCard( { pipeline, flows } ) {
 	 */
 	const handleDelete = useCallback(
 		( pipelineId ) => {
-			// Deletion already complete - just trigger refresh
-			refreshData();
+			// Deletion already complete - queries will automatically refetch
 		},
-		[ refreshData ]
+		[]
 	);
 
 	/**
@@ -84,19 +83,10 @@ export default function PipelineCard( { pipeline, flows } ) {
 	const handleStepRemoved = useCallback(
 		async ( stepId ) => {
 			try {
-				const response = await deletePipelineStep(
-					pipeline.pipeline_id,
-					stepId
-				);
-
-				if ( response.success ) {
-					refreshData();
-				} else {
-					alert(
-						response.message ||
-							__( 'Failed to delete step', 'datamachine' )
-					);
-				}
+				await deleteStepMutation.mutateAsync({
+					pipelineId: pipeline.pipeline_id,
+					stepId,
+				});
 			} catch ( error ) {
 				console.error( 'Step deletion error:', error );
 				alert(
@@ -107,7 +97,7 @@ export default function PipelineCard( { pipeline, flows } ) {
 				);
 			}
 		},
-		[ pipeline.pipeline_id, refreshData ]
+		[ pipeline.pipeline_id, deleteStepMutation ]
 	);
 
 	/**
@@ -187,7 +177,6 @@ export default function PipelineCard( { pipeline, flows } ) {
 					{ ...modalData }
 					onSuccess={ () => {
 						closeModal();
-						refreshData();
 					} }
 				/>
 			) }
@@ -199,7 +188,6 @@ export default function PipelineCard( { pipeline, flows } ) {
 					{ ...modalData }
 					onSuccess={ () => {
 						closeModal();
-						refreshData();
 					} }
 				/>
 			) }

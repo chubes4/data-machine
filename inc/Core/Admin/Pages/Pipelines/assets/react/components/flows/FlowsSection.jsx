@@ -6,10 +6,9 @@
 
 import { useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import FlowCard from '../cards/FlowCard';
-import EmptyFlowCard from '../cards/EmptyFlowCard';
-import { usePipelineContext } from '../../context/PipelineContext';
-import { createFlow } from '../../utils/api';
+import FlowCard from './FlowCard';
+import EmptyFlowCard from './EmptyFlowCard';
+import { useCreateFlow } from '../../queries/flows';
 
 /**
  * Flows Section Component
@@ -21,7 +20,8 @@ import { createFlow } from '../../utils/api';
  * @returns {React.ReactElement} Flows section
  */
 export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
-	const { refreshData } = usePipelineContext();
+	// Use mutations
+	const createFlowMutation = useCreateFlow();
 
 	/**
 	 * Handle flow creation
@@ -30,19 +30,10 @@ export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
 		async ( pipelineIdParam ) => {
 			try {
 				const defaultName = __( 'New Flow', 'datamachine' );
-				const response = await createFlow(
-					pipelineIdParam,
-					defaultName
-				);
-
-				if ( response.success ) {
-					refreshData(); // Pipeline-level refresh for new flow
-				} else {
-					alert(
-						response.message ||
-							__( 'Failed to create flow', 'datamachine' )
-					);
-				}
+				await createFlowMutation.mutateAsync({
+					pipelineId: pipelineIdParam,
+					name: defaultName,
+				});
 			} catch ( error ) {
 				console.error( 'Flow creation error:', error );
 				alert(
@@ -53,27 +44,27 @@ export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
 				);
 			}
 		},
-		[ refreshData ]
+		[ createFlowMutation ]
 	);
 
 	/**
-	 * Handle flow deletion (pipeline-level refresh needed)
+	 * Handle flow deletion (queries will automatically refetch)
 	 */
 	const handleFlowDeleted = useCallback(
 		( flowId ) => {
-			refreshData(); // Refresh entire pipeline when flow is deleted
+			// Queries will automatically refetch when flow is deleted
 		},
-		[ refreshData ]
+		[]
 	);
 
 	/**
-	 * Handle flow duplication (pipeline-level refresh needed)
+	 * Handle flow duplication (queries will automatically refetch)
 	 */
 	const handleFlowDuplicated = useCallback(
 		( flowId ) => {
-			refreshData(); // Refresh entire pipeline when flow is duplicated
+			// Queries will automatically refetch when flow is duplicated
 		},
-		[ refreshData ]
+		[]
 	);
 
 	/**

@@ -85,7 +85,7 @@ class Flows {
 		register_rest_route('datamachine/v1', '/flows/(?P<flow_id>\d+)', [
 			[
 				'methods' => WP_REST_Server::READABLE,
-				'callback' => [self::class, 'handle_get_flow'],
+				'callback' => [self::class, 'handle_get_single_flow'],
 				'permission_callback' => [self::class, 'check_permission'],
 				'args' => [
 					'flow_id' => [
@@ -209,14 +209,16 @@ class Flows {
 			'user_login' => wp_get_current_user()->user_login
 		]);
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
-			'flow_id' => $flow_id,
-			'flow_name' => $flow['flow_name'],
-			'pipeline_id' => $params['pipeline_id'],
-			'synced_steps' => count($pipeline_steps),
-			'flow_data' => $flow
-		];
+			'data' => [
+				'flow_id' => $flow_id,
+				'flow_name' => $flow['flow_name'],
+				'pipeline_id' => $params['pipeline_id'],
+				'synced_steps' => count($pipeline_steps),
+				'flow_data' => $flow
+			]
+		]);
 	}
 
 	/**
@@ -231,7 +233,10 @@ class Flows {
 			return $result;
 		}
 
-		return array_merge(['success' => true], $result);
+		return rest_ensure_response([
+			'success' => true,
+			'data' => $result
+		]);
 	}
 
 	/**
@@ -279,15 +284,17 @@ class Flows {
 			'user_login' => wp_get_current_user()->user_login
 		]);
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
-			'source_flow_id' => $source_flow_id,
-			'new_flow_id' => $new_flow_id,
-			'flow_name' => $flow['flow_name'] ?? '',
-			'pipeline_id' => $source_flow['pipeline_id'],
-			'flow_data' => $flow,
-			'pipeline_steps' => $pipeline_steps
-		];
+			'data' => [
+				'source_flow_id' => $source_flow_id,
+				'new_flow_id' => $new_flow_id,
+				'flow_name' => $flow['flow_name'] ?? '',
+				'pipeline_id' => $source_flow['pipeline_id'],
+				'flow_data' => $flow,
+				'pipeline_steps' => $pipeline_steps
+			]
+		]);
 	}
 
 	/**
@@ -300,12 +307,15 @@ class Flows {
 			// Get flows for specific pipeline
 			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
 			$flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+			$formatted_flows = array_map([self::class, 'format_flow_for_response'], $flows);
 
-			return [
+			return rest_ensure_response([
 				'success' => true,
-				'pipeline_id' => $pipeline_id,
-				'flows' => $flows
-			];
+				'data' => [
+					'pipeline_id' => $pipeline_id,
+					'flows' => $formatted_flows
+				]
+			]);
 		}
 
 		// Get all flows across all pipelines
@@ -316,19 +326,21 @@ class Flows {
 
 		foreach ($all_pipelines as $pipeline) {
 			$pipeline_flows = $db_flows->get_flows_for_pipeline($pipeline['pipeline_id']);
-			$all_flows = array_merge($all_flows, $pipeline_flows);
+			foreach ($pipeline_flows as $flow) {
+				$all_flows[] = self::format_flow_for_response($flow);
+			}
 		}
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
-			'flows' => $all_flows
-		];
+			'data' => $all_flows
+		]);
 	}
 
 	/**
 	 * Handle single flow retrieval request with scheduling metadata
 	 */
-	public static function handle_get_flow($request) {
+	public static function handle_get_single_flow($request) {
 		$flow_id = (int) $request->get_param('flow_id');
 
 		// Retrieve flow data via filter
@@ -343,56 +355,76 @@ class Flows {
 			);
 		}
 
-		// Parse scheduling config
-		$scheduling_config = is_array($flow['scheduling_config']) ?
-			$flow['scheduling_config'] :
-			json_decode($flow['scheduling_config'] ?? '{}', true);
+		$flow_payload = self::format_flow_for_response($flow);
 
-		// Calculate last_run
-		$last_run = $scheduling_config['last_run_at'] ?? null;
+		return rest_ensure_response([
+			'success' => true,
+			'data' => $flow_payload
+		]);
+	}
 
-		// Calculate next_run using Action Scheduler
-		$next_run = null;
-		if (function_exists('as_next_scheduled_action')) {
-			$next_timestamp = as_next_scheduled_action('datamachine_run_flow_now', [$flow_id]);
-			if ($next_timestamp) {
-				$next_run = gmdate('Y-m-d H:i:s', $next_timestamp);
-			}
-		}
-
-		// Enrich flow config with handler settings display and merge defaults
+	/**
+	 * Format a flow record with handler config and scheduling metadata
+	 */
+	private static function format_flow_for_response(array $flow): array {
 		$flow_config = $flow['flow_config'] ?? [];
+
 		foreach ($flow_config as $flow_step_id => &$step_data) {
-			if (isset($step_data['handler_slug'])) {
-				$step_type = $step_data['step_type'] ?? '';
-				$handler_slug = $step_data['handler_slug'];
+			if (!isset($step_data['handler_slug'])) {
+				continue;
+			}
 
-				// Get settings display for UI rendering
-				$step_data['settings_display'] = apply_filters(
-					'datamachine_get_handler_settings_display',
-					[],
-					$flow_step_id,
-					$step_type
-				);
+			$step_type = $step_data['step_type'] ?? '';
+			$handler_slug = $step_data['handler_slug'];
 
-				// Merge defaults with stored handler_config (API is single source of truth)
-				$step_data['handler_config'] = self::merge_handler_defaults(
-					$handler_slug,
-					$step_data['handler_config'] ?? []
-				);
+			$step_data['settings_display'] = apply_filters(
+				'datamachine_get_handler_settings_display',
+				[],
+				$flow_step_id,
+				$step_type
+			);
+
+			$step_data['handler_config'] = self::merge_handler_defaults(
+				$handler_slug,
+				$step_data['handler_config'] ?? []
+			);
+		}
+		unset($step_data);
+
+		$raw_scheduling = $flow['scheduling_config'] ?? [];
+		if (is_array($raw_scheduling)) {
+			$scheduling_config = $raw_scheduling;
+		} else {
+			$scheduling_config = json_decode($raw_scheduling ?: '{}', true);
+			if (!is_array($scheduling_config)) {
+				$scheduling_config = [];
 			}
 		}
+
+		$flow_id = $flow['flow_id'] ?? null;
 
 		return [
-			'success' => true,
 			'flow_id' => $flow_id,
 			'flow_name' => $flow['flow_name'] ?? '',
 			'pipeline_id' => $flow['pipeline_id'] ?? null,
 			'flow_config' => $flow_config,
 			'scheduling_config' => $scheduling_config,
-			'last_run' => $last_run,
-			'next_run' => $next_run
+			'last_run' => $scheduling_config['last_run_at'] ?? null,
+			'next_run' => self::get_next_run_time($flow_id),
 		];
+	}
+
+	/**
+	 * Determine next scheduled run time for a flow if Action Scheduler is available.
+	 */
+	private static function get_next_run_time(?int $flow_id): ?string {
+		if (!$flow_id || !function_exists('as_next_scheduled_action')) {
+			return null;
+		}
+
+		$next_timestamp = as_next_scheduled_action('datamachine_run_flow_now', [$flow_id]);
+
+		return $next_timestamp ? gmdate('Y-m-d H:i:s', $next_timestamp) : null;
 	}
 
 	/**
@@ -430,10 +462,11 @@ class Flows {
 		do_action('datamachine_clear_flow_cache', $flow_id);
 		do_action('datamachine_clear_pipelines_list_cache');
 
-		return [
+		return rest_ensure_response([
 			'success' => true,
+			'data' => [],
 			'message' => __('Flow title saved successfully', 'datamachine')
-		];
+		]);
 	}
 
 	/**

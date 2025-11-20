@@ -1,8 +1,8 @@
 # CLAUDE.md
 
-Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and multi-provider AI integration.
+Data Machine: WordPress plugin for automating content workflows with AI. Visual pipeline builder, chat agent, full REST API, and total extensibility.
 
-**Version**: 0.2.2
+**Version**: 0.2.3
 
 *For user documentation, see `docs/README.md` | For GitHub overview, see `README.md`*
 
@@ -37,7 +37,7 @@ Data Machine: AI-first WordPress plugin with Pipeline+Flow architecture and mult
 - **WordPressSettingsHandler** - Shared WordPress settings fields
 - **WordPressFilters** - Service discovery registration
 
-**HandlerRegistrationTrait** (@since v0.2.1): Standardized trait that eliminates boilerplate code for handler registration across all fetch, publish, and update handlers. Provides a single `registerHandler()` method that automatically registers handlers with all required WordPress filters (`datamachine_handlers`, `datamachine_auth_providers`, `datamachine_handler_settings`, `chubes_ai_tools`).
+**HandlerRegistrationTrait** (@since v0.2.2): Standardized trait that eliminates boilerplate code for handler registration across all fetch, publish, and update handlers. Provides a single `registerHandler()` method that automatically registers handlers with all required WordPress filters (`datamachine_handlers`, `datamachine_auth_providers`, `datamachine_handler_settings`, `chubes_ai_tools`).
 
 **Benefits**:
 - Reduces code duplication by ~70% across handler registration files
@@ -98,6 +98,19 @@ datamachine_register_twitter_filters(); // Auto-execute at file load
 
 **Filter-Based Architecture**: All functionality accessed via WordPress filters for service discovery, configuration, and cross-cutting concerns.
 
+**Standardized REST API Responses**: All API endpoints return consistent response structures:
+```php
+// Successful responses
+[
+    'success' => true,
+    'data' => $main_payload,  // Array, object, or primitive
+    // Optional metadata at top level
+    'total' => $count,        // For paginated collections
+    'message' => $message,    // For user feedback
+    // etc.
+]
+```
+
 ## Database Schema
 
 **Core Tables**:
@@ -144,6 +157,7 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 **Universal Engine Architecture**: Shared AI infrastructure serving both Pipeline and Chat agents with centralized components in `/inc/Engine/AI/`:
 - **AIConversationLoop** - Multi-turn conversation execution with automatic tool calling
 - **ToolExecutor** - Universal tool discovery and execution infrastructure
+- **ToolManager** - Centralized tool management replacing distributed validation logic (@since v0.2.1)
 - **ToolParameters** - Centralized parameter building for AI tools
 - **ConversationManager** - Message formatting and conversation utilities
 - **RequestBuilder** - Centralized AI request construction with directive application
@@ -151,8 +165,17 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 
 **Tool Categories**:
 - **Handler Tools**: Step-specific, registered via `chubes_ai_tools` filter
-- **Global Tools**: Universal, registered via `datamachine_global_tools` filter, located in `/inc/Engine/AI/Tools/` (GoogleSearch, LocalSearch, WebFetch, WordPressPostReader)
+- **Global Tools**: Universal, registered via `datamachine_global_tools` filter, located in `/inc/Engine/AI/Tools/Global/` (GoogleSearch, LocalSearch, WebFetch, WordPressPostReader)
 - **Chat Tools**: Chat-only, registered via `datamachine_chat_tools` filter (MakeAPIRequest)
+
+**ToolManager Architecture** (@since v0.2.1): Centralized tool management system providing:
+- `get_global_tools()` - Tool discovery for global tools
+- `is_tool_available()` - Three-layer validation (global settings → step configuration → runtime validation)
+- `is_tool_configured()` - Configuration requirement checks (API keys, OAuth credentials)
+- `get_opt_out_defaults()` - WordPress-native tools without configuration requirements (LocalSearch, WordPressPostReader, WebFetch)
+- `get_tools_for_settings_page()` - Tool metadata aggregation for admin interface
+
+**ToolRegistrationTrait** (@since v0.2.2): Agent-agnostic tool registration pattern for global tools providing standardized `registerTool()` method with dynamic filter creation supporting current and future agent types (pipeline, chat, frontend, supportbot).
 
 ## Chat API
 
@@ -331,9 +354,15 @@ $handler_settings = $flow_step_config['handler_config'];
 ## Admin Interface
 
 **Pages**: Pipelines (React), Jobs, Logs, Settings
-**Architecture**: React 18 with WordPress Components (zero jQuery/AJAX)
+**Architecture**: React 18 with WordPress Components (zero jQuery/AJAX), TanStack Query + Zustand
+**State Management**: TanStack Query for server state, Zustand for UI state (@since v0.2.3)
 **Features**: Drag & drop, silent auto-save, status indicators, modal configuration
 **OAuth**: `/datamachine-auth/{provider}/` URLs with popup flow
+
+**Query Architecture** (@since v0.2.3): Modern data fetching with intelligent caching and optimistic updates:
+- **TanStack Query**: Server state management with automatic cache invalidation
+- **Zustand**: Client-side UI state (modals, selections) with minimal re-renders
+- **Benefits**: No global refreshes, granular updates, better performance, optimistic UI
 
 **Universal Handler Settings Template**: Single template handles all handler types with dynamic field rendering and auth integration.
 

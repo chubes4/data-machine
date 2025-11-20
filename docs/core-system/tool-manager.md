@@ -19,64 +19,47 @@ ToolManager (`/inc/Engine/AI/Tools/ToolManager.php`) provides centralized method
 
 ## Key Methods
 
-### getAvailableTools()
+### get_global_tools()
 
-Discovers all tools available for a given agent type and execution context.
+Returns all global tools available system-wide.
 
 ```php
-public function getAvailableTools(
-    string $agent_type,
-    ?string $handler_slug = null,
-    array $enabled_tool_ids = []
-): array
+public function get_global_tools(): array
 ```
 
-**Parameters**:
-- `$agent_type`: Agent type ('pipeline', 'chat', etc.)
-- `$handler_slug`: Optional handler identifier for handler-specific tools
-- `$enabled_tool_ids`: Array of tool IDs enabled for specific step
-
-**Returns**: Array of available tool definitions
+**Returns**: Array of global tool definitions
 
 **Usage**:
 ```php
 $tool_manager = new ToolManager();
-$tools = $tool_manager->getAvailableTools('pipeline', 'twitter', ['google_search']);
+$global_tools = $tool_manager->get_global_tools();
 ```
 
-### isToolEnabled()
+### is_tool_available()
 
-Validates if a tool is globally enabled and optionally checks step-specific configuration.
+Validates if a tool is available for use based on global enablement, step configuration, and configuration status.
 
 ```php
-public function isToolEnabled(
-    string $tool_id,
-    array $enabled_tool_ids = []
-): bool
+public function is_tool_available(string $tool_id, ?string $context_id = null): bool
 ```
 
 **Parameters**:
 - `$tool_id`: Tool identifier to validate
-- `$enabled_tool_ids`: Optional array of step-specific enabled tools
+- `$context_id`: Optional step context ID for step-specific validation
 
 **Returns**: Boolean indicating tool availability
 
-**Usage**:
-```php
-$tool_manager = new ToolManager();
-$is_enabled = $tool_manager->isToolEnabled('google_search', ['google_search', 'web_fetch']);
-```
-
 **Validation Layers**:
 1. Global settings check (tool must be enabled system-wide)
-2. Step configuration check (tool must be selected for specific step, if provided)
+2. Step configuration check (tool must be selected for specific step, if context provided)
+3. Configuration check (tool must have required credentials/API keys)
 
-### isToolConfigured()
+### is_tool_configured()
 
 Checks if a tool has required configuration (API keys, OAuth, etc).
 
 ```php
-public function isToolConfigured(string $tool_id): bool
+public function is_tool_configured(string $tool_id): bool
 ```
 
 **Parameters**:
@@ -84,19 +67,13 @@ public function isToolConfigured(string $tool_id): bool
 
 **Returns**: Boolean indicating configuration status
 
-**Usage**:
-```php
-$tool_manager = new ToolManager();
-$is_configured = $tool_manager->isToolConfigured('google_search');
-```
-
 **Configuration Checks**:
 - API keys for third-party services
 - OAuth account credentials
 - Required settings validation
-- Auto-passes for WordPress-native tools (see getOptOutTools)
+- Auto-passes for WordPress-native tools
 
-### getOptOutTools()
+### get_opt_out_defaults()
 
 Returns tools that don't require configuration (WordPress-native functionality).
 
@@ -118,33 +95,20 @@ $opt_out_tools = $tool_manager->getOptOutTools();
 // Returns: ['local_search', 'wordpress_post_reader', 'web_fetch']
 ```
 
-### getToolsForUI()
+### get_tools_for_settings_page()
 
 Aggregates tool data for admin interface display.
 
 ```php
-public function getToolsForUI(): array
+public function get_tools_for_settings_page(): array
 ```
 
-**Returns**: Array of tool metadata for React components
+**Returns**: Array of tool metadata for settings page
 
 **Usage**:
 ```php
 $tool_manager = new ToolManager();
-$ui_data = $tool_manager->getToolsForUI();
-
-// Returns structured data:
-// [
-//     'google_search' => [
-//         'id' => 'google_search',
-//         'label' => 'Google Search',
-//         'description' => 'Web search with Custom Search API',
-//         'is_enabled' => true,
-//         'is_configured' => true,
-//         'requires_config' => true
-//     ],
-//     // ...
-// ]
+$settings_data = $tool_manager->get_tools_for_settings_page();
 ```
 
 ## Tool Enablement Architecture
@@ -180,14 +144,11 @@ ToolManager implements a three-layer validation system for tool availability:
 // Complete validation flow
 $tool_manager = new ToolManager();
 
-// 1. Check global enablement
-$is_globally_enabled = $tool_manager->isToolEnabled('google_search');
+// 1. Check tool availability (includes all validation layers)
+$is_available = $tool_manager->is_tool_available('google_search', $step_context_id);
 
-// 2. Check step-specific selection
-$is_step_enabled = $tool_manager->isToolEnabled('google_search', ['google_search']);
-
-// 3. Check configuration requirements
-$is_configured = $tool_manager->isToolConfigured('google_search');
+// 2. Check configuration requirements specifically
+$is_configured = $tool_manager->is_tool_configured('google_search');
 
 // 4. Final availability determination
 $is_available = $is_globally_enabled && $is_step_enabled && $is_configured;
@@ -200,13 +161,13 @@ WordPress-native tools use an "opt-out" pattern for configuration:
 ```php
 // Opt-out tools are always considered "configured"
 $tool_manager = new ToolManager();
-$opt_out_tools = $tool_manager->getOptOutTools();
+$opt_out_tools = $tool_manager->get_opt_out_defaults();
 
 // Configuration check auto-passes for these tools
-$is_configured = $tool_manager->isToolConfigured('local_search');
+$is_configured = $tool_manager->is_tool_configured('local_search');
 // Returns: true (WordPress-native, no configuration needed)
 
-$is_configured = $tool_manager->isToolConfigured('google_search');
+$is_configured = $tool_manager->is_tool_configured('google_search');
 // Returns: false (requires API key and Search Engine ID)
 ```
 
@@ -231,13 +192,9 @@ class ToolExecutor {
     }
 
     public function execute_tool(string $tool_id, array $parameters): array {
-        // Validate tool is enabled and configured
-        if (!$this->tool_manager->isToolEnabled($tool_id)) {
-            return $this->error_response('Tool not enabled');
-        }
-
-        if (!$this->tool_manager->isToolConfigured($tool_id)) {
-            return $this->error_response('Tool not configured');
+        // Validate tool is available (includes enablement and configuration)
+        if (!$this->tool_manager->is_tool_available($tool_id)) {
+            return $this->error_response('Tool not available');
         }
 
         // Execute tool...
@@ -253,7 +210,7 @@ use DataMachine\Engine\AI\Tools\ToolManager;
 class SettingsPage {
     public function render_tools_section(): void {
         $tool_manager = new ToolManager();
-        $tools = $tool_manager->getToolsForUI();
+        $tools = $tool_manager->get_tools_for_settings_page();
 
         foreach ($tools as $tool_id => $tool_data) {
             // Render UI with:
@@ -274,13 +231,12 @@ class AIStepModal {
     public function get_available_tools(string $handler_slug): array {
         $tool_manager = new ToolManager();
 
-        // Get all tools for this handler
-        $all_tools = $tool_manager->getAvailableTools('pipeline', $handler_slug);
+        // Get global tools
+        $global_tools = $tool_manager->get_global_tools();
 
-        // Filter to only enabled and configured tools
-        return array_filter($all_tools, function($tool) use ($tool_manager) {
-            return $tool_manager->isToolEnabled($tool['id'])
-                && $tool_manager->isToolConfigured($tool['id']);
+        // Filter to only available tools for this context
+        return array_filter($global_tools, function($tool_id) use ($tool_manager) {
+            return $tool_manager->is_tool_available($tool_id);
         });
     }
 }
@@ -305,8 +261,8 @@ add_filter('datamachine_global_tools', function($tools) {
 
 // ToolManager automatically discovers and validates
 $tool_manager = new ToolManager();
-$is_enabled = $tool_manager->isToolEnabled('my_custom_tool');
-$is_configured = $tool_manager->isToolConfigured('my_custom_tool');
+$is_available = $tool_manager->is_tool_available('my_custom_tool');
+$is_configured = $tool_manager->is_tool_configured('my_custom_tool');
 ```
 
 ## Performance Considerations

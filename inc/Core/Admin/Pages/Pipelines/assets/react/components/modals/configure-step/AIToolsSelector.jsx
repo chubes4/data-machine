@@ -32,10 +32,11 @@ export default function AIToolsSelector( {
 	useEffect( () => {
 		const loadTools = async () => {
 			try {
-				const data = await apiFetch( { path: '/datamachine/v1/tools' } );
+				const response = await apiFetch( { path: '/datamachine/v1/tools' } );
 
-				if ( data.success ) {
-					const toolsArray = Object.entries( data.tools ).map(
+				if ( response.success ) {
+					const tools = response.data?.tools || {};
+					const toolsArray = Object.entries( tools ).map(
 						( [ toolId, toolData ] ) => ( {
 							toolId,
 							label: toolData.label || toolId,

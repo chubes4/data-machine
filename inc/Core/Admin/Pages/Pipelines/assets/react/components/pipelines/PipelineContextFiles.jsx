@@ -12,7 +12,7 @@ import {
 	uploadContextFile,
 	deleteContextFile,
 } from '../../utils/api';
-import FileUploadDropzone from './context-files/FileUploadDropzone';
+import FileUploadDropzone from '../shared/FileUploadDropzone';
 import ContextFilesTable from './context-files/ContextFilesTable';
 
 /**

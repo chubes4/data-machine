@@ -80,11 +80,28 @@ add_filter('datamachine_global_tools', function($tools) {
 }, 10, 1);
 ```
 
-**File Locations**: Global tools are located in `inc/Engine/AI/Tools/`:
-- `GoogleSearch.php` - Web search with site restriction
-- `LocalSearch.php` - WordPress content search
+## Tool Directory Structure
+
+Global tools are located in `/inc/Engine/AI/Tools/Global/`:
+- `GoogleSearch.php` - Web search with Custom Search API
+- `LocalSearch.php` - WordPress internal search
 - `WebFetch.php` - Web page content retrieval
 - `WordPressPostReader.php` - Single post analysis
+
+Chat-specific tools at `/inc/Api/Chat/Tools/`:
+- `MakeAPIRequest.php` - REST API operations (chat only)
+
+Handler-specific tools registered via `chubes_ai_tools` filter in each handler's *Filters.php file.
+
+## Tool Management
+
+**ToolManager** (`/inc/Engine/AI/Tools/ToolManager.php`) centralizes tool discovery and validation:
+- `get_global_tools()` - Discover global tools
+- `is_tool_available()` - Validate global and step-specific enablement
+- `is_tool_configured()` - Check configuration requirements
+- `get_opt_out_defaults()` - WordPress-native tools (no config needed)
+
+**ToolRegistrationTrait** provides standardized registration for global tools with dynamic filter creation supporting current and future agent types.
 
 **Chat-Specific Tools** (available only to chat AI agents):
 ```php
@@ -120,14 +137,30 @@ add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_co
 
 ### Discovery Hierarchy
 
+**ToolManager** implements three-layer validation for tool availability:
+
 1. **Global Level**: Admin settings enable/disable tools site-wide
 2. **Modal Level**: Per-step tool selection in pipeline configuration
 3. **Runtime Level**: Configuration validation checks at execution
 
-**Configuration Check**:
+**Validation Flow**:
 ```php
-$tool_configured = apply_filters('datamachine_tool_configured', false, $tool_id);
+$tool_manager = new ToolManager();
+
+// Layer 1: Global enablement
+$is_globally_enabled = $tool_manager->isToolEnabled('google_search');
+
+// Layer 2: Step-specific selection
+$is_step_enabled = $tool_manager->isToolEnabled('google_search', ['google_search']);
+
+// Layer 3: Configuration requirements
+$is_configured = $tool_manager->isToolConfigured('google_search');
+
+// Final availability
+$is_available = $is_globally_enabled && $is_step_enabled && $is_configured;
 ```
+
+See [Tool Manager](../core-system/tool-manager.md) for complete documentation.
 
 ## Tool Execution Architecture
 

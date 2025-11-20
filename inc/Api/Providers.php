@@ -77,7 +77,7 @@ class Providers {
 
 			return rest_ensure_response([
 				'success' => true,
-				'providers' => $providers,
+				'data' => $providers,
 				'defaults' => $defaults
 			]);
 

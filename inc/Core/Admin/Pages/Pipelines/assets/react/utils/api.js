@@ -45,8 +45,8 @@ const request = async ( path, method = 'GET', data = undefined, params = {}, ext
 		} );
 
 		return {
-			success: true,
-			data: response,
+			success: response.success,
+			data: response.data,
 			message: response.message || '',
 		};
 	} catch ( error ) {
@@ -299,13 +299,17 @@ export const updateFlowHandler = async (
 	handlerSlug,
 	settings = {},
 	pipelineId,
-	stepType
+	stepType,
+	flowConfig = {},
+	pipelineStepConfig = {}
 ) => {
 	return await client.put( `/flows/steps/${ flowStepId }/handler`, {
 		handler_slug: handlerSlug,
 		pipeline_id: pipelineId,
 		step_type: stepType,
-		...settings,
+		flow_config: flowConfig,
+		pipeline_step: pipelineStepConfig,
+		settings,
 	} );
 };
 
