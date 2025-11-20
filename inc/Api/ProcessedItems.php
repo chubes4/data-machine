@@ -94,6 +94,7 @@ class ProcessedItems {
 
 		return rest_ensure_response([
 			'success' => true,
+			'data' => null,
 			'message' => __('Processed items cleared successfully.', 'datamachine')
 		]);
 	}

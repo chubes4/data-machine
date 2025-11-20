@@ -325,6 +325,15 @@ export const updateUserMessage = async ( flowStepId, message ) => {
 };
 
 /**
+ * Get available scheduling intervals
+ *
+ * @returns {Promise<Object>} Array of scheduling intervals
+ */
+export const getSchedulingIntervals = async () => {
+	return await client.post( '/schedule', { action: 'get_intervals' } );
+};
+
+/**
  * Update flow scheduling configuration
  *
  * @param {number} flowId - Flow ID

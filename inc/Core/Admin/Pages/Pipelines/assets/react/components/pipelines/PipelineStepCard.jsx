@@ -37,8 +37,8 @@ export default function PipelineStepCard( {
 } ) {
 	// Use TanStack Query for data
 	const { data: stepTypes = {} } = useStepTypes();
-	const stepConfigMeta = stepTypes?.[ step.step_type ];
-	const canConfigure = !! stepConfigMeta;
+	const stepTypeInfo = stepTypes?.[ step.step_type ] || {};
+	const canConfigure = stepTypeInfo.has_pipeline_config === true;
 	const aiConfig =
 		step.step_type === 'ai'
 			? pipelineConfig[ step.pipeline_step_id ]

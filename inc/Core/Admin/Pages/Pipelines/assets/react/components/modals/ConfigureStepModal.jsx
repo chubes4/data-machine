@@ -14,13 +14,13 @@ import {
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import { updateSystemPrompt } from '../../utils/api';
+import { useProviders } from '../../queries/config';
 import AIToolsSelector from './configure-step/AIToolsSelector';
 
 /**
  * Configure Step Modal Component
  *
  * @param {Object} props - Component props
- * @param {boolean} props.isOpen - Modal open state
  * @param {Function} props.onClose - Close handler
  * @param {number} props.pipelineId - Pipeline ID
  * @param {string} props.pipelineStepId - Pipeline step ID
@@ -30,7 +30,6 @@ import AIToolsSelector from './configure-step/AIToolsSelector';
  * @returns {React.ReactElement|null} Configure step modal
  */
 export default function ConfigureStepModal( {
-	isOpen,
 	onClose,
 	pipelineId,
 	pipelineStepId,
@@ -46,67 +45,48 @@ export default function ConfigureStepModal( {
 	const [ selectedTools, setSelectedTools ] = useState(
 		currentConfig?.enabled_tools || []
 	);
-  const [ aiProviders, setAiProviders ] = useState( {} );
-  const [ aiDefaults, setAiDefaults ] = useState( { provider: '', model: '' } );
 	const [ isSaving, setIsSaving ] = useState( false );
 	const [ error, setError ] = useState( null );
 
-	/**
-	 * Fetch AI providers when modal opens
-	 */
-  useEffect( () => {
-    if ( isOpen ) {
-      apiFetch( { path: '/datamachine/v1/providers' } )
-        .then( ( response ) => {
-          if ( response.success ) {
-            setAiProviders( response.data?.providers || {} );
-            setAiDefaults( response.data?.defaults || { provider: '', model: '' } );
-          }
-        } )
-        .catch( ( err ) =>
-          console.error( 'Failed to load providers:', err )
-        );
-    }
-  }, [ isOpen ] );
+	// Use TanStack Query for providers data
+	const { data: providersResponse, isLoading: isLoadingProviders } = useProviders();
+	const aiProviders = providersResponse?.providers || {};
+	const aiDefaults = providersResponse?.defaults || { provider: '', model: '' };
+
+
 
 	/**
 	 * Reset form when modal opens with new config
 	 */
 	useEffect( () => {
-		if ( isOpen ) {
-			setProvider( currentConfig?.provider || aiDefaults.provider );
-			setModel( currentConfig?.model || aiDefaults.model );
-			setSystemPrompt( currentConfig?.system_prompt || '' );
+		setProvider( currentConfig?.provider || aiDefaults.provider );
+		setModel( currentConfig?.model || aiDefaults.model );
+		setSystemPrompt( currentConfig?.system_prompt || '' );
 
-			// Pre-populate with all globally enabled tools for new AI steps
-			if ( ! currentConfig?.enabled_tools ) {
-				apiFetch( { path: '/datamachine/v1/tools' } )
-					.then( ( response ) => {
-						if ( response.success ) {
-							const tools = response.data?.tools || {};
-							const availableTools = Object.entries( tools )
-								.filter(
-									( [ id, tool ] ) =>
-										tool.configured && tool.globally_enabled
-								)
-								.map( ( [ id ] ) => id );
-							setSelectedTools( availableTools );
-						}
-					} )
-					.catch( ( err ) =>
-						console.error( 'Failed to load default tools:', err )
-					);
-			} else {
-				setSelectedTools( currentConfig.enabled_tools );
-			}
-
-			setError( null );
+		// Pre-populate with all globally enabled tools for new AI steps
+		if ( ! currentConfig?.enabled_tools ) {
+			apiFetch( { path: '/datamachine/v1/tools' } )
+				.then( ( response ) => {
+					if ( response.success ) {
+						const tools = response.data || {};
+						const availableTools = Object.entries( tools )
+							.filter(
+								( [ id, tool ] ) =>
+									tool.configured && tool.globally_enabled
+							)
+							.map( ( [ id ] ) => id );
+						setSelectedTools( availableTools );
+					}
+				} )
+				.catch( ( err ) =>
+					console.error( 'Failed to load default tools:', err )
+				);
+		} else {
+			setSelectedTools( currentConfig.enabled_tools );
 		}
-	}, [ isOpen, currentConfig, aiDefaults ] );
 
-	if ( ! isOpen ) {
-		return null;
-	}
+		setError( null );
+	}, [ currentConfig, aiDefaults.provider, aiDefaults.model ] );
 
 	/**
 	 * Get provider options
@@ -235,13 +215,11 @@ export default function ConfigureStepModal( {
 			<Modal
 				title={ __( 'Configure AI Step', 'datamachine' ) }
 				onRequestClose={ onClose }
-				className="datamachine-configure-step-modal datamachine-modal--max-width-600"
+				className="datamachine-configure-step-modal"
 			>
 			<div className="datamachine-modal-content">
 				{ error && (
-					<div
-						className="notice notice-error datamachine-spacing--margin-bottom-16"
-					>
+					<div className="datamachine-modal-error notice notice-error">
 						<p>{ error }</p>
 					</div>
 				) }
@@ -251,6 +229,7 @@ export default function ConfigureStepModal( {
 					value={ provider }
 					options={ providerOptions }
 					onChange={ handleProviderChange }
+					disabled={ isLoadingProviders }
 					help={ __(
 						'Choose the AI provider for this step.',
 						'datamachine'

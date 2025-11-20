@@ -18,7 +18,6 @@ import HandlerSettingField from './handler-settings/HandlerSettingField';
  * Handler Settings Modal Component
  *
  * @param {Object} props - Component props
- * @param {boolean} props.isOpen - Modal open state
  * @param {Function} props.onClose - Close handler
  * @param {string} props.flowStepId - Flow step ID
  * @param {string} props.handlerSlug - Handler slug
@@ -33,7 +32,6 @@ import HandlerSettingField from './handler-settings/HandlerSettingField';
  * @returns {React.ReactElement|null} Handler settings modal
  */
 export default function HandlerSettingsModal( {
-	isOpen,
 	onClose,
 	flowStepId,
 	handlerSlug,
@@ -74,14 +72,10 @@ export default function HandlerSettingsModal( {
 	 * API provides complete config with defaults already merged.
 	 */
 	useEffect( () => {
-		if ( isOpen && currentSettings ) {
+		if ( currentSettings ) {
 			setSettings( currentSettings );
 		}
-	}, [ isOpen, currentSettings ] );
-
-	if ( ! isOpen ) {
-		return null;
-	}
+	}, [ currentSettings ] );
 
 	/**
 	 * Get handler info from props
@@ -138,13 +132,11 @@ export default function HandlerSettingsModal( {
 					__( 'Configure Handler Settings', 'datamachine' )
 				}
 				onRequestClose={ onClose }
-				className="datamachine-handler-settings-modal datamachine-modal--max-width-600"
+				className="datamachine-handler-settings-modal"
 			>
 			<div className="datamachine-modal-content">
 				{ error && (
-					<div
-						className="notice notice-error datamachine-spacing--margin-bottom-16"
-					>
+					<div className="datamachine-modal-error notice notice-error">
 						<p>{ error }</p>
 					</div>
 				) }

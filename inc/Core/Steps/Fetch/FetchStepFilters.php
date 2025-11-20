@@ -21,7 +21,8 @@ function datamachine_register_fetch_step_filters() {
             'description' => __('Collect data from external sources', 'datamachine'),
             'class' => FetchStep::class,
             'position' => 10,
-            'uses_handler' => true
+            'uses_handler' => true,
+            'has_pipeline_config' => false
         ];
         return $steps;
     });

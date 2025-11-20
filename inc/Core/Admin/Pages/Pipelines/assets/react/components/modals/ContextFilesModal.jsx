@@ -12,23 +12,21 @@ import PipelineContextFiles from '../pipelines/PipelineContextFiles';
  * Context Files Modal Component
  *
  * @param {Object} props - Component props
- * @param {boolean} props.isOpen - Modal open state
  * @param {Function} props.onClose - Close handler
  * @param {number} props.pipelineId - Pipeline ID
  * @returns {React.ReactElement|null} Context files modal
  */
-export default function ContextFilesModal( { isOpen, onClose, pipelineId } ) {
-	if ( ! isOpen ) {
-		return null;
-	}
+export default function ContextFilesModal( { onClose, pipelineId } ) {
 
 	return (
 		<Modal
 			title={ __( 'Pipeline Context Files', 'datamachine' ) }
 			onRequestClose={ onClose }
-			className="datamachine-context-files-modal datamachine-modal--max-width-800"
+			className="datamachine-context-files-modal"
 		>
-			<PipelineContextFiles pipelineId={ pipelineId } />
+			<div className="datamachine-modal-content">
+				<PipelineContextFiles pipelineId={ pipelineId } />
+			</div>
 		</Modal>
 	);
 }

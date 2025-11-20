@@ -16,7 +16,6 @@ import OAuthPopupHandler from './oauth/OAuthPopupHandler';
  * OAuth Authentication Modal Component
  *
  * @param {Object} props - Component props
- * @param {boolean} props.isOpen - Modal open state
  * @param {Function} props.onClose - Close handler
  * @param {string} props.handlerSlug - Handler slug
  * @param {Object} props.handlerInfo - Handler metadata
@@ -24,7 +23,6 @@ import OAuthPopupHandler from './oauth/OAuthPopupHandler';
  * @returns {React.ReactElement|null} OAuth authentication modal
  */
 export default function OAuthAuthenticationModal( {
-	isOpen,
 	onClose,
 	handlerSlug,
 	handlerInfo = {},
@@ -46,20 +44,14 @@ export default function OAuthAuthenticationModal( {
 	 * Load existing connection on mount
 	 */
 	useEffect( () => {
-		if ( isOpen ) {
-			// In production, this would fetch from REST API
-			// For now, simulate checking connection status
-			const existingAccount = null; // Would come from API
-			if ( existingAccount ) {
-				setConnected( true );
-				setAccountData( existingAccount );
-			}
+		// In production, this would fetch from REST API
+		// For now, simulate checking connection status
+		const existingAccount = null; // Would come from API
+		if ( existingAccount ) {
+			setConnected( true );
+			setAccountData( existingAccount );
 		}
-	}, [ isOpen ] );
-
-	if ( ! isOpen ) {
-		return null;
-	}
+	}, [] );
 
 	/**
 	 * Handle OAuth success
@@ -156,20 +148,19 @@ export default function OAuthAuthenticationModal( {
 
 	return (
 		<Modal
-			title={ __( 'OAuth Authentication', 'datamachine' ) }
+			title={ handlerInfo.label ?
+				sprintf( __( 'Connect %s Account', 'datamachine' ), handlerInfo.label ) :
+				__( 'Connect Account', 'datamachine' )
+			}
 			onRequestClose={ onClose }
-			className="datamachine-oauth-modal datamachine-modal--max-width-600"
+			className="datamachine-oauth-modal"
 		>
-			<div className="datamachine-modal-content">
-				{ error && (
-					<Notice
-						status="error"
-						isDismissible
-						onRemove={ () => setError( null ) }
-					>
-						<p>{ error }</p>
-					</Notice>
-				) }
+		<div className="datamachine-modal-content">
+			{ error && (
+				<div className="datamachine-modal-error notice notice-error">
+					<p>{ error }</p>
+				</div>
+			) }
 
 				{ success && (
 					<Notice
@@ -264,7 +255,7 @@ export default function OAuthAuthenticationModal( {
 					</>
 				) }
 
-				<div className="datamachine-modal-actions datamachine-modal-actions--end">
+				<div className="datamachine-modal-actions">
 					<Button
 						variant="secondary"
 						onClick={ onClose }

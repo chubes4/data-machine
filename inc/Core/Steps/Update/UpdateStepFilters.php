@@ -37,7 +37,8 @@ function datamachine_register_update_step_filters() {
             'description' => __('Update existing content with processed data', 'datamachine'),
             'class' => UpdateStep::class,
             'position' => 25,  // Between AI (20) and Publish (30)
-            'uses_handler' => true
+            'uses_handler' => true,
+            'has_pipeline_config' => false
         ];
         return $steps;
     });

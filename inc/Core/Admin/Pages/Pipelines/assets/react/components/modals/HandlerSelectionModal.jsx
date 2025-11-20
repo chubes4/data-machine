@@ -13,14 +13,12 @@ import { useHandlers } from '../../queries/handlers';
  * Handler Selection Modal Component
  *
  * @param {Object} props - Component props
- * @param {boolean} props.isOpen - Modal open state
  * @param {Function} props.onClose - Close handler
  * @param {string} props.stepType - Step type (fetch, publish, update)
  * @param {Function} props.onSelectHandler - Handler selection callback
  * @returns {React.ReactElement|null} Handler selection modal
  */
 export default function HandlerSelectionModal( {
-	isOpen,
 	onClose,
 	stepType,
 	onSelectHandler,
@@ -28,15 +26,11 @@ export default function HandlerSelectionModal( {
 	// Use TanStack Query for data
 	const { data: allHandlers = {} } = useHandlers();
 
-	if ( ! isOpen ) {
-		return null;
-	}
-
 	/**
 	 * Filter handlers by step type
 	 */
 	const handlers = Object.entries( allHandlers ).filter(
-		( [ slug, handler ] ) => handler.type === stepType
+		( [ , handler ] ) => handler.type === stepType
 	);
 
 	/**
@@ -53,7 +47,7 @@ export default function HandlerSelectionModal( {
 		<Modal
 			title={ __( 'Select Handler', 'datamachine' ) }
 			onRequestClose={ onClose }
-			className="datamachine-handler-selection-modal datamachine-modal--max-width-600"
+			className="datamachine-handler-selection-modal"
 		>
 			<div className="datamachine-modal-content">
 				<p className="datamachine-modal-header-text">
@@ -98,7 +92,7 @@ export default function HandlerSelectionModal( {
 					</div>
 				) }
 
-				<div className="datamachine-modal-actions datamachine-modal-actions--end">
+				<div className="datamachine-modal-actions">
 					<Button variant="secondary" onClick={ onClose }>
 						{ __( 'Cancel', 'datamachine' ) }
 					</Button>

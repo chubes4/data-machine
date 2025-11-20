@@ -79,6 +79,7 @@ export default function FlowStepCard( {
 					setLocalUserMessage( currentMessage ); // Revert on error
 				}
 			} catch ( err ) {
+				// eslint-disable-next-line no-console
 				console.error( 'User message update error:', err );
 				setError(
 					err.message || __( 'An error occurred', 'datamachine' )

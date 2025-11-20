@@ -15,6 +15,17 @@ Data Machine uses a Pipeline+Flow architecture with standardized base classes fo
 
 Data Machine underwent a comprehensive OOP refactoring introducing standardized inheritance patterns that dramatically reduce code duplication:
 
+**Handler Registration Traits** (@since v0.2.2) - Code Reduction:
+
+Standardized traits that eliminate ~70% of boilerplate code across all handler and tool registrations:
+
+- **HandlerRegistrationTrait**: Single `registerHandler()` method for all handler types (fetch, publish, update)
+- **ToolRegistrationTrait**: Agent-agnostic tool registration with dynamic filter creation for unlimited agent types
+
+**Modern React Architecture** (@since v0.2.3) - Performance Optimization:
+
+Complete modernization of the admin interface with TanStack Query + Zustand for optimal performance:
+
 **Step Hierarchy**:
 - **Step** (`/inc/Core/Steps/Step.php`) - Abstract base for all step types
   - Unified payload handling across Fetch, AI, Publish, Update steps

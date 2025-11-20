@@ -6,7 +6,7 @@
  * Emits limited events for page communication.
  * Modal lifecycle managed by vanilla JS, page actions by datamachine-jobs.js.
  *
- * @package DataMachine\Core\Admin\Pages\Jobs
+ * @package
  * @since NEXT_VERSION
  */
 
@@ -23,14 +23,14 @@
 		/**
 		 * Initialize jobs modal content handlers
 		 */
-		init: function () {
+		init() {
 			this.bindEvents();
 		},
 
 		/**
 		 * Bind event handlers for modal content interactions
 		 */
-		bindEvents: function () {
+		bindEvents() {
 			// Clear processed items form handling
 			document.addEventListener( 'submit', ( e ) => {
 				if (
@@ -74,8 +74,10 @@
 
 		/**
 		 * Handle clear type selection change
+		 *
+		 * @param {Event} e - The change event object
 		 */
-		handleClearTypeChange: function ( e ) {
+		handleClearTypeChange( e ) {
 			const clearType = e.target.value;
 			const pipelineWrapper = document.getElementById(
 				'datamachine-pipeline-select-wrapper'
@@ -88,31 +90,39 @@
 			);
 
 			if ( clearType === 'pipeline' ) {
-				if ( pipelineWrapper )
+				if ( pipelineWrapper ) {
 					pipelineWrapper.classList.remove( 'datamachine-hidden' );
-				if ( flowWrapper )
+				}
+				if ( flowWrapper ) {
 					flowWrapper.classList.add( 'datamachine-hidden' );
+				}
 				if ( flowSelect ) {
 					flowSelect.innerHTML =
 						'<option value="">— Select a Pipeline First —</option>';
 				}
 			} else if ( clearType === 'flow' ) {
-				if ( pipelineWrapper )
+				if ( pipelineWrapper ) {
 					pipelineWrapper.classList.remove( 'datamachine-hidden' );
-				if ( flowWrapper )
+				}
+				if ( flowWrapper ) {
 					flowWrapper.classList.remove( 'datamachine-hidden' );
+				}
 			} else {
-				if ( pipelineWrapper )
+				if ( pipelineWrapper ) {
 					pipelineWrapper.classList.add( 'datamachine-hidden' );
-				if ( flowWrapper )
+				}
+				if ( flowWrapper ) {
 					flowWrapper.classList.add( 'datamachine-hidden' );
+				}
 			}
 		},
 
 		/**
 		 * Handle pipeline selection for flow filtering
+		 *
+		 * @param {Event} e - The change event object
 		 */
-		handlePipelineSelection: function ( e ) {
+		handlePipelineSelection( e ) {
 			const pipelineId = e.target.value;
 			const flowSelect = document.getElementById(
 				'datamachine-clear-flow-select'
@@ -121,7 +131,9 @@
 				'datamachine-clear-type-select'
 			).value;
 
-			if ( ! flowSelect ) return;
+			if ( ! flowSelect ) {
+				return;
+			}
 
 			flowSelect.innerHTML = '<option value="">— Loading... —</option>';
 
@@ -166,7 +178,7 @@
 		/**
 		 * Handle clear processed items form submission
 		 */
-		handleClearProcessedItems: function ( e ) {
+		handleClearProcessedItems( e ) {
 			e.preventDefault();
 
 			const form = e.target;
@@ -225,13 +237,16 @@
 			}
 
 			// Confirm action
+			// eslint-disable-next-line no-undef
 			if ( ! confirm( confirmMessage ) ) {
 				return;
 			}
 
 			// Show loading state
 			this.setLoadingState( button, spinner, true );
-			if ( result ) result.classList.add( 'datamachine-hidden' );
+			if ( result ) {
+				result.classList.add( 'datamachine-hidden' );
+			}
 
 			// Make REST API request
 			wp.apiFetch( {
@@ -249,8 +264,9 @@
 					const flowWrapper = document.getElementById(
 						'datamachine-flow-select-wrapper'
 					);
-					if ( pipelineWrapper )
+					if ( pipelineWrapper ) {
 						pipelineWrapper.classList.add( 'datamachine-hidden' );
+					}
 					if ( flowWrapper )
 						flowWrapper.classList.add( 'datamachine-hidden' );
 
@@ -279,7 +295,7 @@
 		/**
 		 * Handle clear jobs form submission
 		 */
-		handleClearJobs: function ( e ) {
+		handleClearJobs( e ) {
 			e.preventDefault();
 
 			const form = e.target;
@@ -330,6 +346,7 @@
 			}
 
 			// Confirm action
+			// eslint-disable-next-line no-undef
 			if ( ! confirm( confirmMessage ) ) {
 				return;
 			}
@@ -372,8 +389,12 @@
 
 		/**
 		 * Show result message with appropriate styling
+		 *
+		 * @param {HTMLElement} resultEl - The result element to update
+		 * @param {string} type - The message type (success/error)
+		 * @param {string} message - The message to display
 		 */
-		showResult: function ( resultEl, type, message ) {
+		showResult( resultEl, type, message ) {
 			if ( ! resultEl ) return;
 
 			resultEl.classList.remove(
@@ -389,7 +410,7 @@
 		/**
 		 * Set loading state for button and spinner
 		 */
-		setLoadingState: function ( button, spinner, loading ) {
+		setLoadingState( button, spinner, loading ) {
 			if ( button ) button.disabled = loading;
 			if ( spinner ) {
 				if ( loading ) {

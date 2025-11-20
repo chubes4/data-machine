@@ -14,7 +14,7 @@
 		/**
 		 * Initialize jobs page
 		 */
-		init: function () {
+		init() {
 			this.loadJobs();
 			this.bindEvents();
 		},
@@ -22,7 +22,7 @@
 		/**
 		 * Bind event listeners
 		 */
-		bindEvents: function () {
+		bindEvents() {
 			// Listen for jobs cleared event from modal
 			document.addEventListener( 'datamachine-jobs-cleared', () => {
 				this.loadJobs();
@@ -37,7 +37,7 @@
 		/**
 		 * Load jobs from REST API
 		 */
-		loadJobs: function () {
+		loadJobs() {
 			// Show loading state
 			const loadingEl = document.querySelector(
 				'.datamachine-jobs-loading'
@@ -49,9 +49,15 @@
 				'.datamachine-jobs-table-container'
 			);
 
-			if ( loadingEl ) loadingEl.style.display = 'block';
-			if ( emptyStateEl ) emptyStateEl.style.display = 'none';
-			if ( tableContainerEl ) tableContainerEl.style.display = 'none';
+			if ( loadingEl ) {
+				loadingEl.style.display = 'block';
+			}
+			if ( emptyStateEl ) {
+				emptyStateEl.style.display = 'none';
+			}
+			if ( tableContainerEl ) {
+				tableContainerEl.style.display = 'none';
+			}
 
 			wp.apiFetch( {
 				path: '/datamachine/v1/jobs?orderby=job_id&order=DESC&per_page=50&offset=0',
@@ -65,25 +71,32 @@
 					}
 				} )
 				.catch( ( error ) => {
+					// eslint-disable-next-line no-console
 					console.error( 'Failed to load jobs:', error );
 					this.showEmptyState();
 				} )
 				.finally( () => {
-					if ( loadingEl ) loadingEl.style.display = 'none';
+					if ( loadingEl ) {
+						loadingEl.style.display = 'none';
+					}
 				} );
 		},
 
 		/**
 		 * Render jobs table
+		 *
+		 * @param {Array} jobs - Array of job objects to render
 		 */
-		renderJobs: function ( jobs ) {
+		renderJobs( jobs ) {
 			if ( ! jobs || jobs.length === 0 ) {
 				this.showEmptyState();
 				return;
 			}
 
 			const tbody = document.getElementById( 'datamachine-jobs-tbody' );
-			if ( ! tbody ) return;
+			if ( ! tbody ) {
+				return;
+			}
 
 			tbody.innerHTML = '';
 
@@ -99,14 +112,20 @@
 				'.datamachine-jobs-empty-state'
 			);
 
-			if ( tableContainerEl ) tableContainerEl.style.display = 'block';
-			if ( emptyStateEl ) emptyStateEl.style.display = 'none';
+			if ( tableContainerEl ) {
+				tableContainerEl.style.display = 'block';
+			}
+			if ( emptyStateEl ) {
+				emptyStateEl.style.display = 'none';
+			}
 		},
 
 		/**
 		 * Render individual job row
+		 *
+		 * @param {Object} job - The job object to render
 		 */
-		renderJobRow: function ( job ) {
+		renderJobRow( job ) {
 			const pipelineName = job.pipeline_name || 'Unknown Pipeline';
 			const flowName = job.flow_name || 'Unknown Flow';
 			const status = job.status || 'unknown';
@@ -153,8 +172,10 @@
 
 		/**
 		 * Format job status for display
+		 *
+		 * @param {string} status - The job status to format
 		 */
-		formatStatus: function ( status ) {
+		formatStatus( status ) {
 			return (
 				status.charAt( 0 ).toUpperCase() +
 				status.slice( 1 ).replace( /_/g, ' ' )
@@ -163,18 +184,28 @@
 
 		/**
 		 * Get CSS class for job status
+		 *
+		 * @param {string} status - The job status
 		 */
-		getStatusClass: function ( status ) {
-			if ( status === 'failed' ) return 'failed';
-			if ( status === 'completed' ) return 'completed';
+		getStatusClass( status ) {
+			if ( status === 'failed' ) {
+				return 'failed';
+			}
+			if ( status === 'completed' ) {
+				return 'completed';
+			}
 			return 'other';
 		},
 
 		/**
 		 * Format date for display
+		 *
+		 * @param {string} dateString - The date string to format
 		 */
-		formatDate: function ( dateString ) {
-			if ( ! dateString ) return '';
+		formatDate( dateString ) {
+			if ( ! dateString ) {
+				return '';
+			}
 
 			try {
 				const date = new Date( dateString.replace( ' ', 'T' ) + 'Z' );
@@ -195,7 +226,7 @@
 		/**
 		 * Show empty state
 		 */
-		showEmptyState: function () {
+		showEmptyState() {
 			const emptyStateEl = document.querySelector(
 				'.datamachine-jobs-empty-state'
 			);
@@ -203,14 +234,20 @@
 				'.datamachine-jobs-table-container'
 			);
 
-			if ( emptyStateEl ) emptyStateEl.style.display = 'block';
-			if ( tableContainerEl ) tableContainerEl.style.display = 'none';
+			if ( emptyStateEl ) {
+				emptyStateEl.style.display = 'block';
+			}
+			if ( tableContainerEl ) {
+				tableContainerEl.style.display = 'none';
+			}
 		},
 
 		/**
 		 * Escape HTML for safe rendering
+		 *
+		 * @param {string} text - The text to escape
 		 */
-		escapeHtml: function ( text ) {
+		escapeHtml( text ) {
 			const div = document.createElement( 'div' );
 			div.textContent = text;
 			return div.innerHTML;

@@ -18,13 +18,15 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 
 **Features**:
 - **Base Class Architecture**: Standardized inheritance patterns for steps, handlers, and settings reducing code duplication
+- **Handler Registration Traits**: HandlerRegistrationTrait and ToolRegistrationTrait eliminate ~70% of boilerplate code across all handlers and tools
 - **Modern React Admin Interface**: Complete Pipelines page rebuild with 6,591 lines of React code using @wordpress/element and @wordpress/components
+- **TanStack Query + Zustand**: Modern state management architecture providing optimal performance with granular component updates
 - **Zero jQuery/AJAX Architecture**: Modern React frontend with REST API integration
 - **Tool-First AI**: Universal Engine architecture with multi-turn conversation loops, centralized tool execution, and filter-based directive system
 - **Universal Engine Layer**: Shared AI infrastructure serving both Pipeline and Chat agents with AIConversationLoop, ToolExecutor, ToolParameters, ConversationManager, and RequestBuilder components
 - **Visual Pipeline Builder**: Real-time updates with 50+ React components, custom hooks, and Context API state management
 - **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter with filter-based directive system (global, agent-specific, pipeline, chat)
-- **Complete REST API**: 17 endpoints (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Schedule, Settings, StepTypes, Tools, Users, Chat base, Chat/Chat)
+- **Complete REST API**: 16 endpoints (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Schedule, Settings, StepTypes, Tools, Users, Chat)
 - **Chat API**: Conversational interface for building and executing workflows through natural language
 - **Schedule API**: Dedicated endpoint for recurring and one-time flow scheduling
 - **Ephemeral Workflows**: Execute workflows without database persistence via REST API

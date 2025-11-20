@@ -159,6 +159,7 @@ class Settings {
 
 		return rest_ensure_response([
 			'success' => true,
+			'data' => null,
 			'message' => __('All cache has been cleared successfully.', 'datamachine')
 		]);
 	}
@@ -178,8 +179,10 @@ class Settings {
 
 		return rest_ensure_response([
 			'success' => true,
-			'settings' => [
-				'ai_settings' => $ai_settings
+			'data' => [
+				'settings' => [
+					'ai_settings' => $ai_settings
+				]
 			]
 		]);
 	}

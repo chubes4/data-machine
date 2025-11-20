@@ -14,23 +14,17 @@ import ImportTab from './import-export/ImportTab';
  * Import/Export Modal Component
  *
  * @param {Object} props - Component props
- * @param {boolean} props.isOpen - Modal open state
  * @param {Function} props.onClose - Close handler
  * @param {Array} props.pipelines - All available pipelines
  * @param {Function} props.onSuccess - Success callback
  * @returns {React.ReactElement|null} Import/export modal
  */
 export default function ImportExportModal( {
-	isOpen,
 	onClose,
 	pipelines = [],
 	onSuccess,
 } ) {
-	const [ activeTab, setActiveTab ] = useState( 'export' );
 
-	if ( ! isOpen ) {
-		return null;
-	}
 
 	/**
 	 * Tab configuration
@@ -62,14 +56,13 @@ export default function ImportExportModal( {
 		<Modal
 			title={ __( 'Import / Export Pipelines', 'datamachine' ) }
 			onRequestClose={ onClose }
-			className="datamachine-import-export-modal datamachine-modal--max-width-700"
+			className="datamachine-import-export-modal"
 		>
 			<div className="datamachine-modal-content">
 				<TabPanel
 					className="datamachine-import-export-tabs"
 					activeClass="is-active"
 					tabs={ tabs }
-					onSelect={ ( tabName ) => setActiveTab( tabName ) }
 				>
 					{ ( tab ) => (
 						<div className="datamachine-tab-content">

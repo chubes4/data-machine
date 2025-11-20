@@ -10,15 +10,10 @@ import { __ } from '@wordpress/i18n';
 import FlowHeader from './FlowHeader';
 import FlowSteps from './FlowSteps';
 import FlowFooter from './FlowFooter';
-import {
-	FlowScheduleModal,
-	HandlerSelectionModal,
-	HandlerSettingsModal,
-	OAuthAuthenticationModal,
-} from '../modals';
-import { useFlow, useUpdateFlowHandler, useDeleteFlow, useDuplicateFlow, useRunFlow } from '../../queries/flows';
+
+import { useFlow, useDeleteFlow, useDuplicateFlow, useRunFlow } from '../../queries/flows';
 import { useHandlers } from '../../queries/handlers';
-import { useUIStore } from '../../stores/uiStore';
+
 import { MODAL_TYPES } from '../../utils/constants';
 
 /**
@@ -26,19 +21,16 @@ import { MODAL_TYPES } from '../../utils/constants';
  *
  * @returns {React.ReactElement} Flow card content
  */
-function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated }) {
+function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated, openModal }) {
 	// Use TanStack Query for data
 	const { data: flowData } = useFlow(flow.flow_id);
-	const { data: handlers = {} } = useHandlers();
 
 	// Use mutations
-	const updateHandlerMutation = useUpdateFlowHandler();
 	const deleteFlowMutation = useDeleteFlow();
 	const duplicateFlowMutation = useDuplicateFlow();
 	const runFlowMutation = useRunFlow();
 
-	// Use Zustand for UI state
-	const { openModal, closeModal, activeModal, modalData } = useUIStore();
+
 
 	// Use the passed flow data if query hasn't loaded yet
 	const currentFlowData = flowData || flow;
@@ -63,7 +55,9 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 					onFlowDeleted( flowId );
 				}
 			} catch ( error ) {
+				// eslint-disable-next-line no-console
 				console.error( 'Flow deletion error:', error );
+				// eslint-disable-next-line no-undef
 				alert(
 					__(
 						'An error occurred while deleting the flow',
@@ -87,7 +81,9 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 					onFlowDuplicated( flowId );
 				}
 			} catch ( error ) {
+				// eslint-disable-next-line no-console
 				console.error( 'Flow duplication error:', error );
+				// eslint-disable-next-line no-undef
 				alert(
 					__(
 						'An error occurred while duplicating the flow',
@@ -106,9 +102,12 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 		async ( flowId ) => {
 			try {
 				await runFlowMutation.mutateAsync(flowId);
+				// eslint-disable-next-line no-undef
 				alert( __( 'Flow started successfully!', 'datamachine' ) );
 			} catch ( error ) {
+				// eslint-disable-next-line no-console
 				console.error( 'Flow execution error:', error );
+				// eslint-disable-next-line no-undef
 				alert(
 					__(
 						'An error occurred while running the flow',
@@ -177,63 +176,7 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 		]
 	);
 
-	/**
-	 * Handle handler selection from handler selection modal
-	 */
-	const handleHandlerSelected = useCallback(
-		async ( handlerSlug ) => {
-			try {
-				// Immediately save handler selection with empty settings
-				await updateHandlerMutation.mutateAsync({
-					flowStepId: modalData.flowStepId,
-					handlerSlug,
-					settings: {}
-				});
 
-				// Then open settings modal for configuration
-				const updatedData = {
-					...modalData,
-					handlerSlug,
-					currentSettings: {}, // Reset settings when changing handler
-				};
-				openModal( MODAL_TYPES.HANDLER_SETTINGS, updatedData );
-			} catch ( error ) {
-				console.error( 'Handler selection error:', error );
-				alert(
-					__(
-						'An error occurred while selecting the handler',
-						'datamachine'
-					)
-				);
-			}
-		},
-		[ modalData, openModal, updateHandlerMutation ]
-	);
-
-	/**
-	 * Handle change handler button in settings modal
-	 */
-	const handleChangeHandler = useCallback( () => {
-		openModal( MODAL_TYPES.HANDLER_SELECTION, {
-			stepType: modalData.stepType,
-			flowStepId: modalData.flowStepId,
-			pipelineId: modalData.pipelineId,
-			flowId: modalData.flowId,
-		} );
-	}, [ modalData, openModal ] );
-
-	/**
-	 * Handle OAuth connect button
-	 */
-	const handleOAuthConnect = useCallback(
-		( handlerSlug, handlerInfo ) => {
-			openModal( MODAL_TYPES.OAUTH, {
-				handlerSlug,
-				handlerInfo,
-			} );
-		},
-		[ openModal ]
-	);
 
 	if ( ! currentFlowData ) {
 		return null;
@@ -276,48 +219,6 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 					/>
 				</CardBody>
 			</Card>
-
-			{ /* Modals */ }
-			{ activeModal === MODAL_TYPES.FLOW_SCHEDULE && (
-				<FlowScheduleModal
-					isOpen={ true }
-					onClose={ closeModal }
-					{ ...modalData }
-					onSuccess={ () => {
-						closeModal();
-					} }
-				/>
-			) }
-
-			{ activeModal === MODAL_TYPES.HANDLER_SELECTION && (
-				<HandlerSelectionModal
-					isOpen={ true }
-					onClose={ closeModal }
-					{ ...modalData }
-					onSelectHandler={ handleHandlerSelected }
-				/>
-			) }
-
-			{ activeModal === MODAL_TYPES.HANDLER_SETTINGS && (
-				<HandlerSettingsModal
-					isOpen={ true }
-					onClose={ closeModal }
-					{ ...modalData }
-					handlers={ handlers }
-					onSuccess={ closeModal }
-					onChangeHandler={ handleChangeHandler }
-					onOAuthConnect={ handleOAuthConnect }
-				/>
-			) }
-
-			{ activeModal === MODAL_TYPES.OAUTH && (
-				<OAuthAuthenticationModal
-					isOpen={ true }
-					onClose={ closeModal }
-					{ ...modalData }
-					onSuccess={ closeModal }
-				/>
-			) }
 		</>
 	);
 }
@@ -330,6 +231,7 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
  * @param {Object} props.pipelineConfig - Pipeline configuration
  * @param {Function} props.onFlowDeleted - Callback when flow is deleted
  * @param {Function} props.onFlowDuplicated - Callback when flow is duplicated
+ * @param {function} openModal - Function to open modals, passed from parent for centralized state management.
  * @returns {React.ReactElement} Flow card
  */
 export default function FlowCard( {
@@ -337,6 +239,7 @@ export default function FlowCard( {
 	pipelineConfig,
 	onFlowDeleted,
 	onFlowDuplicated,
+	openModal,
 } ) {
 	return (
 		<FlowCardContent
@@ -344,6 +247,7 @@ export default function FlowCard( {
 			pipelineConfig={ pipelineConfig }
 			onFlowDeleted={ onFlowDeleted }
 			onFlowDuplicated={ onFlowDuplicated }
+			openModal={ openModal }
 		/>
 	);
 }

@@ -126,6 +126,76 @@ class Files {
     }
 
     /**
+     * List files for flow or pipeline context
+     */
+    public static function list_files(WP_REST_Request $request) {
+        $flow_step_id = $request->get_param('flow_step_id');
+        $pipeline_id = $request->get_param('pipeline_id');
+
+        $file_storage = new \DataMachine\Core\FilesRepository\FileStorage();
+
+        // Pipeline context files
+        if ($pipeline_id) {
+            $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+            $pipeline = $db_pipelines->get_pipeline($pipeline_id);
+            if (!$pipeline) {
+                return new WP_Error(
+                    'pipeline_not_found',
+                    __('Pipeline not found.', 'datamachine'),
+                    ['status' => 404]
+                );
+            }
+
+            $files = $file_storage->get_pipeline_files($pipeline_id, $pipeline['pipeline_name']);
+
+            return rest_ensure_response([
+                'success' => true,
+                'data' => $files
+            ]);
+        }
+
+        // Flow step files
+        if ($flow_step_id) {
+            $flow_step = apply_filters('datamachine_get_flow_step_config', [], $flow_step_id);
+            if (empty($flow_step)) {
+                return new WP_Error(
+                    'flow_step_not_found',
+                    __('Flow step not found.', 'datamachine'),
+                    ['status' => 404]
+                );
+            }
+
+            $flow_id = apply_filters('datamachine_get_flow_id_from_step', null, $flow_step_id);
+            $flow = apply_filters('datamachine_get_flow_config', [], $flow_id);
+            $pipeline_id = $flow['pipeline_id'] ?? null;
+
+            if (!$pipeline_id || !$flow_id) {
+                return new WP_Error(
+                    'invalid_flow_config',
+                    __('Invalid flow configuration.', 'datamachine'),
+                    ['status' => 400]
+                );
+            }
+
+            $files = $file_storage->get_all_files([
+                'pipeline_id' => $pipeline_id,
+                'flow_id' => $flow_id
+            ]);
+
+            return rest_ensure_response([
+                'success' => true,
+                'data' => $files
+            ]);
+        }
+
+        return new WP_Error(
+            'missing_scope',
+            __('Must provide either flow_step_id or pipeline_id.', 'datamachine'),
+            ['status' => 400]
+        );
+    }
+
+    /**
      * Handle file upload for flow files or pipeline context
      */
     public static function handle_upload(WP_REST_Request $request) {

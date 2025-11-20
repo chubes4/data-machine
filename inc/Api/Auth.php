@@ -127,6 +127,7 @@ class Auth {
 
 			return rest_ensure_response([
 				'success' => true,
+				'data' => null,
 				/* translators: %s: Service name (e.g., Twitter, Facebook) */
 				'message' => sprintf(__('%s account disconnected successfully', 'datamachine'), ucfirst($handler_slug))
 			]);
@@ -183,9 +184,11 @@ class Auth {
 
 			return rest_ensure_response([
 				'success' => true,
-				'authenticated' => true,
-				'account_details' => $account_details,
-				'handler_slug' => $handler_slug
+				'data' => [
+					'authenticated' => true,
+					'account_details' => $account_details,
+					'handler_slug' => $handler_slug
+				]
 			]);
 		} else {
 			// Check for recent OAuth errors stored in transients
@@ -198,11 +201,13 @@ class Auth {
 
 				return rest_ensure_response([
 					'success' => true,
-					'authenticated' => false,
-					'error' => true,
-					'error_code' => 'oauth_failed',
-					'error_message' => $error_transient,
-					'handler_slug' => $handler_slug
+					'data' => [
+						'authenticated' => false,
+						'error' => true,
+						'error_code' => 'oauth_failed',
+						'error_message' => $error_transient,
+						'handler_slug' => $handler_slug
+					]
 				]);
 			} elseif ($success_transient) {
 				// Clear the success transient and re-check auth status
@@ -219,9 +224,11 @@ class Auth {
 
 					return rest_ensure_response([
 						'success' => true,
-						'authenticated' => true,
-						'account_details' => $account_details,
-						'handler_slug' => $handler_slug
+						'data' => [
+							'authenticated' => true,
+							'account_details' => $account_details,
+							'handler_slug' => $handler_slug
+						]
 					]);
 				}
 			}
@@ -229,9 +236,11 @@ class Auth {
 			// Still not authenticated, continue polling
 			return rest_ensure_response([
 				'success' => true,
-				'authenticated' => false,
-				'error' => false,
-				'handler_slug' => $handler_slug
+				'data' => [
+					'authenticated' => false,
+					'error' => false,
+					'handler_slug' => $handler_slug
+				]
 			]);
 		}
 	}
@@ -315,6 +324,7 @@ class Auth {
 			if (!$data_changed) {
 				return rest_ensure_response([
 					'success' => true,
+					'data' => null,
 					'message' => __('Configuration is already up to date - no changes detected', 'datamachine')
 				]);
 			}
@@ -330,6 +340,7 @@ class Auth {
 		if ($saved) {
 			return rest_ensure_response([
 				'success' => true,
+				'data' => null,
 				'message' => __('Configuration saved successfully', 'datamachine')
 			]);
 		} else {

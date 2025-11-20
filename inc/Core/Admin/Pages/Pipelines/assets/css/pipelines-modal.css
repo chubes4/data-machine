@@ -10,26 +10,47 @@
 
 /* ===== MODAL LAYOUT CLASSES ===== */
 
-/* Modal width utilities - Replace inline maxWidth styles with these classes */
-.datamachine-modal--max-width-500 {
-    max-width: 500px;
-}
-
-.datamachine-modal--max-width-600 {
-    max-width: 600px;
-}
-
-.datamachine-modal--max-width-700 {
-    max-width: 700px;
-}
-
-.datamachine-modal--max-width-800 {
-    max-width: 800px;
-}
-
 /* Modal content containers */
+/* Modal sizing - Consistent width constraints for WordPress Modal component */
+.datamachine-configure-step-modal .components-modal__frame,
+.datamachine-context-files-modal .components-modal__frame,
+.datamachine-import-export-modal .components-modal__frame,
+.datamachine-handler-selection-modal .components-modal__frame,
+.datamachine-step-selection-modal .components-modal__frame,
+.datamachine-oauth-modal .components-modal__frame,
+.datamachine-flow-schedule-modal .components-modal__frame,
+.datamachine-handler-settings-modal .components-modal__frame {
+    max-width: 900px;
+    width: 95vw;
+}
+
+/* Responsive modal sizing for smaller screens */
+@media (max-width: 768px) {
+    .datamachine-configure-step-modal .components-modal__frame,
+    .datamachine-context-files-modal .components-modal__frame,
+    .datamachine-import-export-modal .components-modal__frame,
+    .datamachine-handler-selection-modal .components-modal__frame,
+    .datamachine-step-selection-modal .components-modal__frame,
+    .datamachine-oauth-modal .components-modal__frame,
+    .datamachine-flow-schedule-modal .components-modal__frame,
+    .datamachine-handler-settings-modal .components-modal__frame {
+        width: 98vw;
+        max-width: none;
+    }
+}
 .datamachine-modal-content {
     padding: 0;
+}
+
+/* Modal body - main content area */
+.datamachine-modal-body {
+    /* Main content area with consistent spacing */
+}
+
+/* Modal error display */
+.datamachine-modal-error {
+    margin-bottom: 16px;
+    padding: 12px;
 }
 
 /* Modal sections */
@@ -86,14 +107,11 @@
 
 /* Modal action footer */
 .datamachine-modal-actions {
-    display: flex;
-    justify-content: space-between;
     margin-top: 24px;
-    padding-top: 20px;
+    padding-top: 16px;
     border-top: 1px solid var(--datamachine-border-1);
-}
-
-.datamachine-modal-actions--end {
+    display: flex;
+    gap: 12px;
     justify-content: flex-end;
 }
 

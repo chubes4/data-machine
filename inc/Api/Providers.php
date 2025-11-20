@@ -77,8 +77,10 @@ class Providers {
 
 			return rest_ensure_response([
 				'success' => true,
-				'data' => $providers,
-				'defaults' => $defaults
+				'data' => [
+					'providers' => $providers,
+					'defaults' => $defaults
+				]
 			]);
 
 		} catch (\Exception $e) {

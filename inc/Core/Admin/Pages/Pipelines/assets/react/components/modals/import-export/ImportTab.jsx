@@ -54,7 +54,7 @@ export default function ImportTab( { onSuccess, onClose } ) {
 			const response = await importPipelines( csvContent );
 
 			if ( response.success ) {
-				const count = response.data?.created_count || 0;
+				const count = response.data.created_count || 0;
 				setSuccess(
 					count > 0
 						? __(

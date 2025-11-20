@@ -98,9 +98,11 @@ class StepTypes {
 
 		return rest_ensure_response([
 			'success' => true,
-			'step_type' => $step_type,
-			'definition' => $step_types[$step_type],
-			'config' => $config
+			'data' => [
+				'step_type' => $step_type,
+				'definition' => $step_types[$step_type],
+				'config' => $config
+			]
 		]);
 	}
 }

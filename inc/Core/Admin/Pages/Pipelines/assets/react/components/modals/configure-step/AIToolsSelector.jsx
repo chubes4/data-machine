@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import apiFetch from '@wordpress/api-fetch';
+import { useTools } from '../../../queries/config';
 import ToolCheckbox from './ToolCheckbox';
 import ConfigurationWarning from './ConfigurationWarning';
 
@@ -22,40 +22,19 @@ export default function AIToolsSelector( {
 	selectedTools = [],
 	onSelectionChange,
 } ) {
-	const [ tools, setTools ] = useState( [] );
-	const [ isLoadingTools, setIsLoadingTools ] = useState( true );
 	const [ unconfiguredTools, setUnconfiguredTools ] = useState( [] );
 
-	/**
-	 * Fetch tools from REST API
-	 */
-	useEffect( () => {
-		const loadTools = async () => {
-			try {
-				const response = await apiFetch( { path: '/datamachine/v1/tools' } );
-
-				if ( response.success ) {
-					const tools = response.data?.tools || {};
-					const toolsArray = Object.entries( tools ).map(
-						( [ toolId, toolData ] ) => ( {
-							toolId,
-							label: toolData.label || toolId,
-							description: toolData.description || '',
-							configured: toolData.configured || false,
-							globallyEnabled: toolData.globally_enabled !== false,
-						} )
-					);
-					setTools( toolsArray );
-				}
-			} catch ( error ) {
-				console.error( 'Failed to load tools:', error );
-			} finally {
-				setIsLoadingTools( false );
-			}
-		};
-
-		loadTools();
-	}, [] );
+	// Use TanStack Query for tools data
+	const { data: toolsData, isLoading: isLoadingTools } = useTools();
+	const tools = Object.entries( toolsData || {} ).map(
+		( [ toolId, toolData ] ) => ( {
+			toolId,
+			label: toolData.label || toolId,
+			description: toolData.description || '',
+			configured: toolData.configured || false,
+			globallyEnabled: toolData.globally_enabled !== false,
+		} )
+	);
 
 	/**
 	 * Update unconfigured tools list when selection changes

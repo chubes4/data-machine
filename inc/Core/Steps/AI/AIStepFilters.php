@@ -28,7 +28,8 @@ function datamachine_register_ai_step_filters() {
             'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
             'consume_all_packets' => true,
             'position' => 20,
-            'uses_handler' => false
+            'uses_handler' => false,
+            'has_pipeline_config' => true
         ];
         return $steps;
     });

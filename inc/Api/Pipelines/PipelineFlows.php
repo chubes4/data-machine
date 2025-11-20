@@ -85,10 +85,12 @@ class PipelineFlows {
 
 		return rest_ensure_response([
 			'success' => true,
-			'pipeline_id' => $pipeline_id,
-			'flows' => $pipeline_flows,
-			'flow_count' => count($pipeline_flows),
-			'first_flow_id' => $first_flow_id
+			'data' => [
+				'pipeline_id' => $pipeline_id,
+				'flows' => $pipeline_flows,
+				'flow_count' => count($pipeline_flows),
+				'first_flow_id' => $first_flow_id
+			]
 		]);
 	}
 }

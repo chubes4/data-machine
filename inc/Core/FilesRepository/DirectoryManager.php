@@ -73,6 +73,18 @@ class DirectoryManager {
     }
 
     /**
+     * Get pipeline context directory path
+     *
+     * @param int $pipeline_id Pipeline ID
+     * @param string $pipeline_name Pipeline name (unused, for signature compatibility)
+     * @return string Full path to pipeline context directory
+     */
+    public function get_pipeline_context_directory(int $pipeline_id, string $pipeline_name): string {
+        $pipeline_dir = $this->get_pipeline_directory($pipeline_id);
+        return "{$pipeline_dir}/context";
+    }
+
+    /**
      * Ensure directory exists
      *
      * @param string $directory Directory path

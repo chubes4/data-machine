@@ -7,13 +7,13 @@
 import { useState, useEffect } from '@wordpress/element';
 import { Modal, Button, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { getSchedulingIntervals } from '../../utils/api';
 import { updateFlowSchedule } from '../../utils/api';
 
 /**
  * Flow Schedule Modal Component
  *
  * @param {Object} props - Component props
- * @param {boolean} props.isOpen - Modal open state
  * @param {Function} props.onClose - Close handler
  * @param {number} props.flowId - Flow ID
  * @param {string} props.flowName - Flow name
@@ -22,7 +22,6 @@ import { updateFlowSchedule } from '../../utils/api';
  * @returns {React.ReactElement|null} Flow schedule modal
  */
 export default function FlowScheduleModal( {
-	isOpen,
 	onClose,
 	flowId,
 	flowName,
@@ -39,19 +38,12 @@ export default function FlowScheduleModal( {
 
 	// Fetch intervals when modal opens
 	useEffect( () => {
-		if ( isOpen && intervals.length === 0 ) {
+		if ( intervals.length === 0 ) {
 			setIsLoadingIntervals( true );
-			fetch( '/wp-json/datamachine/v1/schedule', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify( { action: 'get_intervals' } )
-			} )
-				.then( response => response.json() )
-				.then( data => {
-					if ( data.success && data.data ) {
-						setIntervals( data.data );
+			getSchedulingIntervals()
+				.then( result => {
+					if ( result.success && result.data ) {
+						setIntervals( result.data );
 					} else {
 						// Show error when API fails to provide intervals
 						setError( __( 'Failed to load scheduling intervals. Please refresh the page and try again.', 'datamachine' ) );
@@ -68,11 +60,7 @@ export default function FlowScheduleModal( {
 					setIsLoadingIntervals( false );
 				} );
 		}
-	}, [ isOpen, intervals.length ] );
-
-	if ( ! isOpen ) {
-		return null;
-	}
+	}, [ intervals.length ] );
 
 	/**
 	 * Handle schedule save
@@ -114,13 +102,11 @@ export default function FlowScheduleModal( {
 		<Modal
 			title={ __( 'Schedule Flow', 'datamachine' ) }
 			onRequestClose={ onClose }
-			className="datamachine-flow-schedule-modal datamachine-modal--max-width-500"
+			className="datamachine-flow-schedule-modal"
 		>
 			<div className="datamachine-modal-content">
 				{ error && (
-					<div
-						className="notice notice-error datamachine-modal-spacing--mb-16"
-					>
+					<div className="datamachine-modal-error notice notice-error">
 						<p>{ error }</p>
 					</div>
 				) }

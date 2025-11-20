@@ -9,10 +9,20 @@ import { __ } from '@wordpress/i18n';
 import { Spinner, Notice, Button } from '@wordpress/components';
 import { usePipelines, useCreatePipeline } from './queries/pipelines';
 import { useFlows } from './queries/flows';
+import { useHandlers } from './queries/handlers';
 import { useUIStore } from './stores/uiStore';
 import PipelineCard from './components/pipelines/PipelineCard';
 import PipelineSelector from './components/pipelines/PipelineSelector';
-import { ImportExportModal } from './components/modals';
+import {
+	ImportExportModal,
+	StepSelectionModal,
+	ConfigureStepModal,
+	ContextFilesModal,
+	FlowScheduleModal,
+	HandlerSelectionModal,
+	HandlerSettingsModal,
+	OAuthAuthenticationModal,
+} from './components/modals';
 import { MODAL_TYPES } from './utils/constants';
 
 /**
@@ -34,6 +44,7 @@ export default function PipelinesApp() {
 	// Data from TanStack Query
 	const { data: pipelines = [], isLoading: pipelinesLoading, error: pipelinesError } = usePipelines();
 	const { data: flows = [], isLoading: flowsLoading, error: flowsError } = useFlows(selectedPipelineId);
+	const { data: handlers = {} } = useHandlers();
 	const createPipelineMutation = useCreatePipeline();
 
 	// Find selected pipeline from pipelines array
@@ -44,11 +55,46 @@ export default function PipelinesApp() {
 	const [ isCreatingPipeline, setIsCreatingPipeline ] = useState( false );
 
 	/**
-	 * Set selected pipeline when pipelines load
+	 * Modal callback handlers
+	 */
+	const handleModalSuccess = useCallback( () => {
+		closeModal();
+	}, [ closeModal ] );
+
+	const handleHandlerSelected = useCallback( ( handlerSlug ) => {
+		// Update modal data with selected handler
+		openModal( MODAL_TYPES.HANDLER_SETTINGS, {
+			...modalData,
+			handlerSlug,
+		} );
+	}, [ openModal, modalData ] );
+
+	const handleChangeHandler = useCallback( () => {
+		openModal( MODAL_TYPES.HANDLER_SELECTION, modalData );
+	}, [ openModal, modalData ] );
+
+	const handleOAuthConnect = useCallback( ( handlerSlug ) => {
+		openModal( MODAL_TYPES.OAUTH, {
+			...modalData,
+			handlerSlug,
+		} );
+	}, [ openModal, modalData ] );
+
+	/**
+	 * Set selected pipeline when pipelines load or when selected pipeline is deleted
 	 */
 	useEffect( () => {
 		if ( pipelines.length > 0 && ! selectedPipelineId ) {
 			setSelectedPipelineId( pipelines[ 0 ].pipeline_id );
+		} else if ( pipelines.length > 0 && selectedPipelineId ) {
+			// Check if selected pipeline still exists, if not, select next available
+			const selectedPipelineExists = pipelines.some(p => p.pipeline_id === selectedPipelineId);
+			if ( ! selectedPipelineExists ) {
+				setSelectedPipelineId( pipelines[ 0 ].pipeline_id );
+			}
+		} else if ( pipelines.length === 0 ) {
+			// No pipelines available
+			setSelectedPipelineId( null );
 		}
 	}, [ pipelines, selectedPipelineId, setSelectedPipelineId ] );
 
@@ -63,6 +109,7 @@ export default function PipelinesApp() {
 				setSelectedPipelineId( result.data.pipeline_id );
 			}
 		} catch ( error ) {
+			// eslint-disable-next-line no-console
 			console.error( 'Error creating pipeline:', error );
 		} finally {
 			setIsCreatingPipeline( false );
@@ -151,17 +198,75 @@ export default function PipelinesApp() {
 			{ /* Pipeline dropdown selector */ }
 			<PipelineSelector />
 
-			<PipelineCard pipeline={ displayPipeline } flows={ flows } />
+			<PipelineCard
+				pipeline={ displayPipeline }
+				flows={ flows }
+				openModal={ openModal }
+			/>
 
-			{ /* Import/Export Modal */ }
+			{ /* Centralized Modal Management */ }
 			{ activeModal === MODAL_TYPES.IMPORT_EXPORT && (
 				<ImportExportModal
-					isOpen={ true }
 					onClose={ closeModal }
 					pipelines={ pipelines }
-					onSuccess={ () => {
-						closeModal();
-					} }
+					onSuccess={ handleModalSuccess }
+				/>
+			) }
+
+			{ activeModal === MODAL_TYPES.STEP_SELECTION && (
+				<StepSelectionModal
+					onClose={ closeModal }
+					{ ...modalData }
+					onSuccess={ handleModalSuccess }
+				/>
+			) }
+
+			{ activeModal === MODAL_TYPES.CONFIGURE_STEP && (
+				<ConfigureStepModal
+					onClose={ closeModal }
+					{ ...modalData }
+					onSuccess={ handleModalSuccess }
+				/>
+			) }
+
+			{ activeModal === MODAL_TYPES.CONTEXT_FILES && (
+				<ContextFilesModal
+					onClose={ closeModal }
+					{ ...modalData }
+				/>
+			) }
+
+			{ activeModal === MODAL_TYPES.FLOW_SCHEDULE && (
+				<FlowScheduleModal
+					onClose={ closeModal }
+					{ ...modalData }
+				/>
+			) }
+
+			{ activeModal === MODAL_TYPES.HANDLER_SELECTION && (
+				<HandlerSelectionModal
+					onClose={ closeModal }
+					{ ...modalData }
+					onSelectHandler={ handleHandlerSelected }
+				/>
+			) }
+
+			{ activeModal === MODAL_TYPES.HANDLER_SETTINGS && (
+				<HandlerSettingsModal
+					onClose={ closeModal }
+					{ ...modalData }
+					handlers={ handlers }
+					onSuccess={ handleModalSuccess }
+					onChangeHandler={ handleChangeHandler }
+					onOAuthConnect={ handleOAuthConnect }
+				/>
+			) }
+
+			{ activeModal === MODAL_TYPES.OAUTH && (
+				<OAuthAuthenticationModal
+					onClose={ closeModal }
+					{ ...modalData }
+					onSuccess={ handleModalSuccess }
 				/>
 			) }
 		</div>

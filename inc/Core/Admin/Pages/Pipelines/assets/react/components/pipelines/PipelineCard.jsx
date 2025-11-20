@@ -7,18 +7,12 @@
 import { useCallback } from '@wordpress/element';
 import { Card, CardBody, CardDivider } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { useDeletePipelineStep } from '../../queries/pipelines';
 import PipelineHeader from './PipelineHeader';
 import PipelineSteps from './PipelineSteps';
 import FlowsSection from '../flows/FlowsSection';
-import {
-	StepSelectionModal,
-	ConfigureStepModal,
-	ContextFilesModal,
-} from '../modals';
-import { useStepTypes } from '../../queries/config';
-import { useDeletePipelineStep } from '../../queries/pipelines';
-import { useUIStore } from '../../stores/uiStore';
 import { MODAL_TYPES } from '../../utils/constants';
+
 
 /**
  * Pipeline Card Component
@@ -26,17 +20,12 @@ import { MODAL_TYPES } from '../../utils/constants';
  * @param {Object} props - Component props
  * @param {Object} props.pipeline - Pipeline data
  * @param {Array} props.flows - Associated flows
+ * @param {function} openModal - Function to open modals, passed from parent for centralized state management.
  * @returns {React.ReactElement} Pipeline card
  */
-export default function PipelineCard( { pipeline, flows } ) {
-	// Use TanStack Query for data
-	const { data: stepTypeSettings = {} } = useStepTypes();
-
+export default function PipelineCard( { pipeline, flows, openModal } ) {
 	// Use mutations
 	const deleteStepMutation = useDeletePipelineStep();
-
-	// Use Zustand for UI state
-	const { openModal, closeModal, activeModal, modalData } = useUIStore();
 
 	if ( ! pipeline ) {
 		return null;
@@ -105,12 +94,6 @@ export default function PipelineCard( { pipeline, flows } ) {
 	 */
 	const handleStepConfigured = useCallback(
 		( step ) => {
-			const stepConfigMeta = stepTypeSettings?.[ step.step_type ];
-
-			if ( ! stepConfigMeta ) {
-				return;
-			}
-
 			const currentConfig =
 				pipeline.pipeline_config?.[ step.pipeline_step_id ] || {};
 			openModal( MODAL_TYPES.CONFIGURE_STEP, {
@@ -120,12 +103,7 @@ export default function PipelineCard( { pipeline, flows } ) {
 				currentConfig,
 			} );
 		},
-		[
-			pipeline.pipeline_id,
-			pipeline.pipeline_config,
-			openModal,
-			stepTypeSettings,
-		]
+		[ pipeline.pipeline_id, pipeline.pipeline_config, openModal ]
 	);
 
 	/**
@@ -137,8 +115,7 @@ export default function PipelineCard( { pipeline, flows } ) {
 		} );
 	}, [ pipeline.pipeline_id, openModal ] );
 
-	return (
-		<>
+		return (
 			<Card className="datamachine-pipeline-card" size="large">
 				<CardBody>
 					<PipelineHeader
@@ -165,40 +142,9 @@ export default function PipelineCard( { pipeline, flows } ) {
 						pipelineId={ pipeline.pipeline_id }
 						flows={ flows }
 						pipelineConfig={ pipeline.pipeline_config || {} }
+						openModal={ openModal }
 					/>
 				</CardBody>
 			</Card>
-
-			{ /* Modals */ }
-			{ activeModal === MODAL_TYPES.STEP_SELECTION && (
-				<StepSelectionModal
-					isOpen={ true }
-					onClose={ closeModal }
-					{ ...modalData }
-					onSuccess={ () => {
-						closeModal();
-					} }
-				/>
-			) }
-
-			{ activeModal === MODAL_TYPES.CONFIGURE_STEP && (
-				<ConfigureStepModal
-					isOpen={ true }
-					onClose={ closeModal }
-					{ ...modalData }
-					onSuccess={ () => {
-						closeModal();
-					} }
-				/>
-			) }
-
-			{ activeModal === MODAL_TYPES.CONTEXT_FILES && (
-				<ContextFilesModal
-					isOpen={ true }
-					onClose={ closeModal }
-					{ ...modalData }
-				/>
-			) }
-		</>
-	);
+		);
 }

@@ -41,7 +41,7 @@ export default function PipelineContextFiles( { pipelineId } ) {
 			const response = await fetchContextFiles( pipelineId );
 
 			if ( response.success ) {
-				setFiles( response.data?.files || [] );
+				setFiles( response.data || [] );
 			} else {
 				setError(
 					response.message ||

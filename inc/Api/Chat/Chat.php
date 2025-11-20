@@ -233,11 +233,13 @@ class Chat {
 
 		return rest_ensure_response([
 			'success' => true,
-			'session_id' => $session_id,
-			'response' => $final_content,
-			'tool_calls' => $loop_result['last_tool_calls'],
-			'conversation' => $messages,
-			'metadata' => $metadata
+			'data' => [
+				'session_id' => $session_id,
+				'response' => $final_content,
+				'tool_calls' => $loop_result['last_tool_calls'],
+				'conversation' => $messages,
+				'metadata' => $metadata
+			]
 		]);
 	}
 }

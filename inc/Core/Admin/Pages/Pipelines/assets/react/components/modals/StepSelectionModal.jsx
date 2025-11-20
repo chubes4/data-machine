@@ -15,7 +15,6 @@ import { useAddPipelineStep } from '../../queries/pipelines';
  * Step Selection Modal Component
  *
  * @param {Object} props - Component props
- * @param {boolean} props.isOpen - Modal open state
  * @param {Function} props.onClose - Close handler
  * @param {number} props.pipelineId - Pipeline ID
  * @param {number} props.nextExecutionOrder - Next execution order
@@ -23,7 +22,6 @@ import { useAddPipelineStep } from '../../queries/pipelines';
  * @returns {React.ReactElement|null} Step selection modal
  */
 export default function StepSelectionModal( {
-	isOpen,
 	onClose,
 	pipelineId,
 	nextExecutionOrder,
@@ -37,10 +35,6 @@ export default function StepSelectionModal( {
 	const addStepMutation = useAddPipelineStep();
 
 	const [ error, setError ] = useState( null );
-
-	if ( ! isOpen ) {
-		return null;
-	}
 
 	/**
 	 * Count handlers for each step type
@@ -78,11 +72,11 @@ export default function StepSelectionModal( {
 		<Modal
 			title={ __( 'Add Pipeline Step', 'datamachine' ) }
 			onRequestClose={ onClose }
-			className="datamachine-step-selection-modal datamachine-modal--max-width-600"
+			className="datamachine-step-selection-modal"
 		>
 			<div className="datamachine-modal-content">
 				{ error && (
-					<div className="notice notice-error datamachine-step-selection-section">
+					<div className="datamachine-modal-error notice notice-error">
 						<p>{ error }</p>
 					</div>
 				) }
@@ -145,7 +139,7 @@ export default function StepSelectionModal( {
 					</p>
 				</div>
 
-				<div className="datamachine-modal-actions datamachine-modal-actions--end">
+				<div className="datamachine-modal-actions">
 					<Button
 						variant="secondary"
 						onClick={ onClose }

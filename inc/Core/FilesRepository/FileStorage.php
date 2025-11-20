@@ -164,6 +164,43 @@ class FileStorage {
     }
 
     /**
+     * Get all files in pipeline context directory
+     *
+     * @param int $pipeline_id Pipeline ID
+     * @param string $pipeline_name Pipeline name
+     * @return array Array of file information
+     */
+    public function get_pipeline_files(int $pipeline_id, string $pipeline_name): array {
+        $directory = $this->directory_manager->get_pipeline_context_directory($pipeline_id, $pipeline_name);
+
+        if (!is_dir($directory)) {
+            return [];
+        }
+
+        $files = glob("{$directory}/*");
+        $file_list = [];
+
+        foreach ($files as $file_path) {
+            if (is_file($file_path)) {
+                $filename = basename($file_path);
+
+                if ($filename === 'index.php') {
+                    continue;
+                }
+
+                $file_list[] = [
+                    'filename' => $filename,
+                    'path' => $file_path,
+                    'size' => filesize($file_path),
+                    'modified' => filemtime($file_path)
+                ];
+            }
+        }
+
+        return $file_list;
+    }
+
+    /**
      * Delete file from flow files directory
      *
      * @param string $filename Filename to delete

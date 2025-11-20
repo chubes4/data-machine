@@ -4,7 +4,7 @@
  * Provides reusable modal lifecycle management for all admin pages.
  * Used by Jobs, Settings, and other vanilla JS admin interfaces.
  *
- * @package DataMachine\Core\Admin\Modal
+ * @package
  * @since 0.2.0
  */
 
@@ -28,7 +28,7 @@
 		 * Call this method from page-specific init functions.
 		 * Safe to call multiple times - will only bind once.
 		 */
-		bindModalEvents: function () {
+		bindModalEvents() {
 			// Prevent duplicate event listener bindings
 			if ( this._initialized ) {
 				return;
@@ -78,8 +78,10 @@
 
 		/**
 		 * Handle modal open
+		 *
+		 * @param {Event} e - The click event object
 		 */
-		handleModalOpen: function ( e ) {
+		handleModalOpen( e ) {
 			e.preventDefault();
 			const button = e.target.classList.contains(
 				'datamachine-open-modal'
@@ -97,8 +99,10 @@
 
 		/**
 		 * Handle modal close
+		 *
+		 * @param {Event} e - The click event object
 		 */
-		handleModalClose: function ( e ) {
+		handleModalClose( e ) {
 			e.preventDefault();
 			const modal = e.target.closest( '.datamachine-modal' );
 			if ( modal ) {
@@ -108,8 +112,10 @@
 
 		/**
 		 * Open modal
+		 *
+		 * @param {HTMLElement} modal - The modal element to open
 		 */
-		openModal: function ( modal ) {
+		openModal( modal ) {
 			modal.setAttribute( 'aria-hidden', 'false' );
 			modal.classList.add( 'datamachine-modal-active' );
 			document.body.classList.add( 'datamachine-modal-active' );
@@ -123,8 +129,10 @@
 
 		/**
 		 * Close modal
+		 *
+		 * @param {HTMLElement} modal - The modal element to close
 		 */
-		closeModal: function ( modal ) {
+		closeModal( modal ) {
 			modal.setAttribute( 'aria-hidden', 'true' );
 			modal.classList.remove( 'datamachine-modal-active' );
 			document.body.classList.remove( 'datamachine-modal-active' );

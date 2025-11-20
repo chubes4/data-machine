@@ -56,6 +56,7 @@ export default function FlowHeader( {
 					onNameChange( flowId, name );
 				}
 			} catch ( err ) {
+				// eslint-disable-next-line no-console
 				console.error( 'Flow title save failed:', err );
 			}
 		},
@@ -86,6 +87,7 @@ export default function FlowHeader( {
 	 * Handle delete with confirmation
 	 */
 	const handleDelete = useCallback( () => {
+		// eslint-disable-next-line no-alert
 		const confirmed = window.confirm(
 			__( 'Are you sure you want to delete this flow?', 'datamachine' )
 		);

@@ -113,9 +113,11 @@ class Execute {
 
             return rest_ensure_response([
                 'success' => true,
-                'execution_type' => 'immediate',
-                'flow_id' => $flow_id,
-                'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}",
+                'data' => [
+                    'execution_type' => 'immediate',
+                    'flow_id' => $flow_id,
+                    'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}"
+                ],
                 'message' => 'Flow execution started'
             ]);
         }
@@ -145,11 +147,13 @@ class Execute {
 
         return rest_ensure_response([
             'success' => true,
-            'execution_type' => 'delayed',
-            'flow_id' => $flow_id,
-            'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}",
-            'timestamp' => $timestamp,
-            'scheduled_time' => wp_date('c', $timestamp),
+            'data' => [
+                'execution_type' => 'delayed',
+                'flow_id' => $flow_id,
+                'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}",
+                'timestamp' => $timestamp,
+                'scheduled_time' => wp_date('c', $timestamp)
+            ],
             'message' => 'Flow scheduled for one-time execution at ' . wp_date('M j, Y g:i A', $timestamp)
         ]);
     }
@@ -218,9 +222,11 @@ class Execute {
 
             return rest_ensure_response([
                 'success' => true,
-                'execution_type' => 'immediate',
-                'job_id' => $job_id,
-                'step_count' => count($workflow['steps'] ?? []),
+                'data' => [
+                    'execution_type' => 'immediate',
+                    'job_id' => $job_id,
+                    'step_count' => count($workflow['steps'] ?? [])
+                ],
                 'message' => 'Ephemeral workflow execution started'
             ]);
         }
@@ -251,11 +257,13 @@ class Execute {
 
             return rest_ensure_response([
                 'success' => true,
-                'execution_type' => 'delayed',
-                'job_id' => $job_id,
-                'step_count' => count($workflow['steps'] ?? []),
-                'timestamp' => $timestamp,
-                'scheduled_time' => wp_date('c', $timestamp),
+                'data' => [
+                    'execution_type' => 'delayed',
+                    'job_id' => $job_id,
+                    'step_count' => count($workflow['steps'] ?? []),
+                    'timestamp' => $timestamp,
+                    'scheduled_time' => wp_date('c', $timestamp)
+                ],
                 'message' => 'Ephemeral workflow scheduled for one-time execution at ' . wp_date('M j, Y g:i A', $timestamp)
             ]);
         }

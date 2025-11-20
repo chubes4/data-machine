@@ -24,6 +24,8 @@
 				const confirmMessage =
 					clearLogsBtn.getAttribute( 'data-confirm-message' ) ||
 					'Are you sure you want to clear all logs? This action cannot be undone.';
+				// eslint-disable-next-line no-alert
+				// eslint-disable-next-line no-undef
 				const confirmed = confirm( confirmMessage );
 
 				if ( ! confirmed ) {
@@ -41,6 +43,7 @@
 		if ( refreshBtn ) {
 			refreshBtn.addEventListener( 'click', function ( e ) {
 				e.preventDefault();
+				// eslint-disable-next-line no-undef
 				location.reload();
 			} );
 		}
@@ -56,6 +59,7 @@
 				const logViewer = document.querySelector( targetSelector );
 
 				if ( ! logViewer ) {
+					// eslint-disable-next-line no-undef
 					alert( 'No log content found to copy.' );
 					return;
 				}
@@ -64,13 +68,14 @@
 				const originalText = copyBtn.textContent;
 
 				// Copy text to clipboard with fallback for local development
+				// eslint-disable-next-line no-undef
 				if ( navigator.clipboard && navigator.clipboard.writeText ) {
 					navigator.clipboard
 						.writeText( logContent )
 						.then( function () {
 							showCopySuccess( copyBtn, originalText );
 						} )
-						.catch( function ( err ) {
+						.catch( function () {
 							showCopyError( copyBtn, originalText );
 						} );
 				} else {
@@ -110,6 +115,7 @@
 		textarea.focus();
 		textarea.select();
 
+		// eslint-disable-next-line no-undef
 		if ( ! document.execCommand( 'copy' ) ) {
 			throw new Error( 'Legacy copy method failed' );
 		}
@@ -160,6 +166,7 @@
 
 		// Toggle between full and recent modes
 		if ( currentMode === 'full' ) {
+			// eslint-disable-next-line no-undef
 			location.reload();
 			return;
 		}
@@ -236,6 +243,7 @@
 				);
 				// Refresh the page after a short delay to show the cleared logs
 				setTimeout( function () {
+					// eslint-disable-next-line no-undef
 					location.reload();
 				}, 1000 );
 			} )

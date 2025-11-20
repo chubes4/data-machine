@@ -129,6 +129,7 @@ class Logs {
 
 		return rest_ensure_response([
 			'success' => true,
+			'data' => null,
 			'message' => __('Logs cleared successfully.', 'datamachine')
 		]);
  	}

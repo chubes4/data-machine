@@ -7,7 +7,8 @@
 import { useState, useEffect, useCallback, useRef } from '@wordpress/element';
 import { TextControl, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { updatePipelineTitle, deletePipeline } from '../../utils/api';
+import { updatePipelineTitle } from '../../utils/api';
+import { useDeletePipeline } from '../../queries/pipelines';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
 
 /**
@@ -30,6 +31,9 @@ export default function PipelineHeader( {
 } ) {
 	const [ localName, setLocalName ] = useState( pipelineName );
 	const saveTimeout = useRef( null );
+
+	// Use mutation hook for pipeline deletion
+	const deletePipelineMutation = useDeletePipeline();
 
 	/**
 	 * Sync local name with prop changes
@@ -96,15 +100,22 @@ export default function PipelineHeader( {
 		}
 
 		try {
-			const response = await deletePipeline( pipelineId );
+			await deletePipelineMutation.mutateAsync( pipelineId );
 
-			if ( response.success && onDelete ) {
+			// Call onDelete callback for any additional cleanup
+			if ( onDelete ) {
 				onDelete( pipelineId );
 			}
 		} catch ( err ) {
 			console.error( 'Pipeline deletion error:', err );
+			alert(
+				__(
+					'An error occurred while deleting the pipeline',
+					'datamachine'
+				)
+			);
 		}
-	}, [ pipelineId, onDelete ] );
+	}, [ pipelineId, onDelete, deletePipelineMutation ] );
 
 	/**
 	 * Cleanup timeout on unmount

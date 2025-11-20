@@ -83,9 +83,10 @@ docs/
 │   ├── tool-execution.md               # Tool discovery and execution (v0.2.0)
 │   ├── request-builder.md              # Centralized AI request construction (v0.2.0)
 │   ├── conversation-manager.md         # Message formatting and conversation utilities (v0.2.1)
-│   ├── parameter-systems.md            # Unified parameter architecture (API docs)
+│   ├── tool-registration-trait.md      # Agent-agnostic tool registration (v0.2.2)
 │   ├── tool-result-finder.md           # Universal tool result search utility (v0.2.1)
 │   ├── chat-database.md                # Session management and CRUD operations (v0.2.0)
+│   ├── handler-registration-trait.md   # Standardized handler registration (v0.2.2)
 │   └── oauth-handlers.md               # Centralized OAuth 1.0a and OAuth 2.0 handlers (v0.2.0)
 ├── handlers/
 │   ├── fetch/
@@ -115,11 +116,33 @@ docs/
 │   ├── pipeline-builder.md             # Visual interface
 │   ├── settings-configuration.md       # Configuration options
 │   └── jobs-management.md              # Monitoring and logs
+├── api/
+│   ├── index.md                         # Complete endpoint catalog
+│   ├── auth.md                          # OAuth account management
+│   ├── authentication.md                # Authentication guide
+│   ├── chat.md                          # Conversational AI endpoint
+│   ├── errors.md                        # Error handling reference
+│   ├── execute.md                       # Flow execution endpoint
+│   ├── files.md                         # File upload and management
+│   ├── flows.md                         # Flow CRUD operations
+│   ├── handlers.md                      # Available handlers
+│   ├── intervals.md                     # Scheduling intervals
+│   ├── jobs.md                          # Job monitoring
+│   ├── logs.md                          # Log management
+│   ├── parameter-systems.md             # Unified parameter architecture
+│   ├── pipelines.md                     # Pipeline CRUD operations
+│   ├── processed-items.md               # Deduplication tracking
+│   ├── providers.md                     # AI provider configuration
+│   ├── schedule.md                      # Flow scheduling
+│   ├── settings.md                      # System settings
+│   ├── step-types.md                    # Available step types
+│   ├── tools.md                         # AI tool availability
+│   └── users.md                         # User preferences
 └── api-reference/
     ├── core-filters.md                 # WordPress filters
     ├── core-actions.md                 # WordPress actions
     ├── engine-filters.md               # Universal Engine filters (v0.2.0)
-    └── rest-api.md                     # REST API trigger endpoint
+    └── rest-api-extensions.md          # REST API extensions
 ```
 
 ## Component Coverage
