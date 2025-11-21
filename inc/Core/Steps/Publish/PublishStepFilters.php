@@ -33,8 +33,8 @@ function datamachine_register_publish_step_filters() {
     // Step registration - Publish declares itself as 'publish' step type (pure discovery mode)
     add_filter('datamachine_step_types', function($steps) {
         $steps['publish'] = [
-            'label' => __('Publish', 'datamachine'),
-            'description' => __('Publish to target destinations', 'datamachine'),
+            'label' => 'Publish',
+            'description' => 'Publish to target destinations',
             'class' => PublishStep::class,
             'position' => 30,
             'uses_handler' => true,

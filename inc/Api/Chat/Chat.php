@@ -206,13 +206,6 @@ class Chat {
 		}
 
 		return rest_ensure_response([
-			'session_id' => $session_id,
-			'message_count' => count($messages),
-			'turn_count' => $loop_result['turn_count'],
-			'completed_naturally' => $loop_result['completed']
-		]);
-
-		return rest_ensure_response([
 			'success' => true,
 			'data' => [
 				'session_id' => $session_id,

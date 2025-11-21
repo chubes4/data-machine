@@ -58,6 +58,8 @@ class Update {
      * @since 1.0.0
      */
     public function handle_job_status_update($job_id, $new_status, $context = 'update', $old_status = null) {
+        $job_id = (int) $job_id; // Ensure job_id is int for database operations
+
         $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
 
         $success = false;
@@ -218,6 +220,10 @@ class Update {
             // Generate flow step ID using existing filter pattern
             $flow_step_id = apply_filters('datamachine_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
             
+            // Get enabled_tools from pipeline step to inherit in flow step
+            $tool_manager = new \DataMachine\Engine\AI\Tools\ToolManager();
+            $pipeline_enabled_tools = $tool_manager->get_step_enabled_tools($pipeline_step_id);
+
             // Create flow step configuration
             $flow_config[$flow_step_id] = [
                 'flow_step_id' => $flow_step_id,
@@ -226,6 +232,7 @@ class Update {
                 'pipeline_id' => $flow['pipeline_id'],
                 'flow_id' => $flow_id,
                 'execution_order' => $step['execution_order'] ?? 0,
+                'enabled_tools' => $pipeline_enabled_tools,
                 'handler' => null
             ];
         }

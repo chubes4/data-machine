@@ -85,15 +85,11 @@ class PipelineCoreDirective {
 }
 
 // Register with universal agent directive system
-add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
-    if ($agent_type === 'pipeline') {
-        $request = PipelineCoreDirective::inject(
-            $request,
-            $provider,
-            $tools,
-            $context['step_id'] ?? null,
-            $context
-        );
-    }
-    return $request;
-}, 10, 5);
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => PipelineCoreDirective::class,
+        'priority' => 10,
+        'agent_types' => ['pipeline']
+    ];
+    return $directives;
+});

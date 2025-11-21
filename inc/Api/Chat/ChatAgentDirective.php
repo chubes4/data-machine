@@ -507,14 +507,11 @@ PROMPT;
 }
 
 // Register with universal agent directive system (Priority 15)
-add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
-    if ($agent_type === 'chat') {
-        $request = ChatAgentDirective::inject(
-            $request,
-            $provider,
-            $tools,
-            $context['session_id'] ?? null
-        );
-    }
-    return $request;
-}, 15, 5);
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => ChatAgentDirective::class,
+        'priority' => 15,
+        'agent_types' => ['chat']
+    ];
+    return $directives;
+});

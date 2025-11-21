@@ -8,7 +8,7 @@
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Publish\Handlers\GoogleSheets
- * @since      NEXT_VERSION
+ * @since      0.1.0
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\GoogleSheets;
@@ -37,8 +37,8 @@ class GoogleSheets extends PublishHandler {
             'googlesheets_publish',
             'publish',
             self::class,
-            __('Google Sheets', 'datamachine'),
-            __('Append data to Google Sheets for analytics and reporting', 'datamachine'),
+            'Google Sheets',
+            'Append data to Google Sheets for analytics and reporting',
             true,
             GoogleSheetsAuth::class,
             GoogleSheetsSettings::class,
@@ -113,8 +113,7 @@ class GoogleSheets extends PublishHandler {
             'worksheet_name' => $handler_config['googlesheets_worksheet_name'] ?? 'Sheet1'
         ]);
 
-        $job_id = $parameters['job_id'] ?? null;
-        $engine_data = $this->getEngineData($job_id);
+        $engine_data = $parameters['engine_data'];
 
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';

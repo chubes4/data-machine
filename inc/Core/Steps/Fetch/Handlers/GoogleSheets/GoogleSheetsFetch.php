@@ -19,6 +19,8 @@ class GoogleSheetsFetch extends FetchHandler {
 
 	use HandlerRegistrationTrait;
 
+	private $auth_service;
+
 	public function __construct() {
 		parent::__construct( 'googlesheets_fetch' );
 
@@ -27,13 +29,33 @@ class GoogleSheetsFetch extends FetchHandler {
             'googlesheets_fetch',
             'fetch',
             self::class,
-            __('Google Sheets', 'datamachine'),
-            __('Fetch data from Google Sheets spreadsheets', 'datamachine'),
+            'Google Sheets',
+            'Fetch data from Google Sheets spreadsheets',
             true,
             GoogleSheetsAuth::class,
             GoogleSheetsFetchSettings::class,
 			null
 		);
+	}
+
+	/**
+	 * Lazy-load auth provider when needed.
+	 *
+	 * @return object|null Auth provider instance or null if unavailable
+	 */
+	private function get_auth_service() {
+		if ($this->auth_service === null) {
+			$this->auth_service = $this->getAuthProvider('googlesheets');
+
+			if ($this->auth_service === null) {
+				$this->log('error', 'Google Sheets Handler: Authentication service not available', [
+					'handler' => 'googlesheets',
+					'missing_service' => 'googlesheets',
+					'available_providers' => array_keys(apply_filters('datamachine_auth_providers', []))
+				]);
+			}
+		}
+		return $this->auth_service;
 	}
 
 	/**
@@ -49,14 +71,14 @@ class GoogleSheetsFetch extends FetchHandler {
 	): array {
 		if (empty($pipeline_id)) {
 			$this->log('error', 'Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-			return $this->emptyResponse();
+			return [];
 		}
         
         // Configuration validation
         $spreadsheet_id = trim($config['spreadsheet_id'] ?? '');
         if (empty($spreadsheet_id)) {
             $this->log('error', 'Spreadsheet ID is required.', ['pipeline_id' => $pipeline_id]);
-            return $this->emptyResponse();
+            return [];
         }
 
         $worksheet_name = trim($config['worksheet_name'] ?? 'Sheet1');
@@ -64,9 +86,9 @@ class GoogleSheetsFetch extends FetchHandler {
         $has_header_row = !empty($config['has_header_row']);
 
         // Get Google Sheets authentication service
-        $auth_service = $this->getAuthProvider('googlesheets');
+        $auth_service = $this->get_auth_service();
         if (!$auth_service) {
-            $this->log('error', 'Authentication service not available.', ['pipeline_id' => $pipeline_id]);
+            $this->log('error', 'Google Sheets authentication not configured', ['pipeline_id' => $pipeline_id]);
             return $this->emptyResponse();
         }
 
@@ -77,7 +99,7 @@ class GoogleSheetsFetch extends FetchHandler {
                 'pipeline_id' => $pipeline_id,
                 'error' => $access_token->get_error_message()
             ]);
-            return $this->emptyResponse();
+            return [];
         }
 
         // Build Google Sheets API URL - get entire worksheet
@@ -106,7 +128,7 @@ class GoogleSheetsFetch extends FetchHandler {
                 'error' => $result['error'],
                 'spreadsheet_id' => $spreadsheet_id
             ]);
-            return $this->emptyResponse();
+            return [];
         }
 
         $response_code = $result['status_code'];
@@ -122,13 +144,13 @@ class GoogleSheetsFetch extends FetchHandler {
                 'error_message' => $error_message,
                 'spreadsheet_id' => $spreadsheet_id
             ]);
-            return $this->emptyResponse();
+            return [];
         }
 
         $sheet_data = json_decode($response_body, true);
         if (empty($sheet_data['values'])) {
             $this->log('debug', 'No data found in specified range.', ['pipeline_id' => $pipeline_id]);
-            return $this->emptyResponse();
+            return [];
         }
 
         $rows = $sheet_data['values'];
@@ -177,7 +199,7 @@ class GoogleSheetsFetch extends FetchHandler {
                 'sheet_identifier' => $sheet_identifier,
                 'pipeline_id' => $pipeline_id
             ]);
-            return $this->emptyResponse();
+            return [];
         }
 
         // Mark as processed
@@ -304,7 +326,7 @@ class GoogleSheetsFetch extends FetchHandler {
 
         // No unprocessed rows found
         $this->log('debug', 'No unprocessed rows found.', ['pipeline_id' => $pipeline_id]);
-        return $this->emptyResponse();
+        return [];
     }
 
     /**
@@ -383,7 +405,7 @@ class GoogleSheetsFetch extends FetchHandler {
 
         // No unprocessed columns found
         $this->log('debug', 'No unprocessed columns found.', ['pipeline_id' => $pipeline_id]);
-        return $this->emptyResponse();
+        return [];
     }
 
     /**

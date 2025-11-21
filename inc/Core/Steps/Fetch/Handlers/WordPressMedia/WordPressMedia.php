@@ -28,8 +28,8 @@ class WordPressMedia extends FetchHandler {
 			'wordpress_media',
 			'fetch',
 			self::class,
-			__('WordPress Media Library', 'datamachine'),
-			__('Fetch images and media from WordPress media library', 'datamachine'),
+			'WordPress Media Library',
+			'Fetch images and media from WordPress media library',
 			false,
 			null,
 			WordPressMediaSettings::class,
@@ -50,7 +50,7 @@ class WordPressMedia extends FetchHandler {
 	): array {
 		if (empty($pipeline_id)) {
 			$this->log('error', 'Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-			return $this->emptyResponse();
+			return [];
 		}
 
 		// Handle null flow_step_id gracefully - skip processed items tracking when flow context missing
@@ -142,7 +142,7 @@ class WordPressMedia extends FetchHandler {
         $posts = $wp_query->posts;
 
         if (empty($posts)) {
-            return $this->emptyResponse();
+            return [];
         }
 
         // Find first unprocessed media item
@@ -241,7 +241,7 @@ class WordPressMedia extends FetchHandler {
         }
 
         // No eligible items found
-        return $this->emptyResponse();
+        return [];
     }
 
 

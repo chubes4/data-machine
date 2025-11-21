@@ -31,42 +31,31 @@ export default function ToolCheckbox( {
 	disabled = false,
 } ) {
 	const isDisabled = disabled || ! globallyEnabled;
-	const containerClass = checked
-		? 'datamachine-tool-checkbox-container datamachine-tool-checkbox-container--checked'
-		: 'datamachine-tool-checkbox-container';
-
-	const finalContainerClass = ! globallyEnabled
-		? `${ containerClass } datamachine-tool-globally-disabled`
-		: containerClass;
 
 	return (
-		<div className={ finalContainerClass }>
-			<div className="datamachine-tool-checkbox-inner">
-				<CheckboxControl
-					checked={ checked }
-					onChange={ onChange }
-					disabled={ isDisabled }
-					__nextHasNoMarginBottom
-				/>
-
-				<div className="datamachine-tool-checkbox-label">
-					<div className="datamachine-tool-checkbox-header">
-						<span className="datamachine-tool-checkbox-title">
+		<div className="datamachine-tool-checkbox-simple">
+			<CheckboxControl
+				checked={ checked }
+				onChange={ onChange }
+				disabled={ isDisabled }
+				__nextHasNoMarginBottom
+				label={
+					<div className="datamachine-tool-label-content">
+						<strong className="datamachine-tool-label-title">
 							{ label }
-						</span>
+						</strong>
+						{ ! globallyEnabled ? (
+							<p className="datamachine-tool-label-description datamachine-global-disabled-text">
+								Disabled globally in Settings
+							</p>
+						) : description ? (
+							<p className="datamachine-tool-label-description">
+								{ description }
+							</p>
+						) : null }
 					</div>
-
-					{ ! globallyEnabled ? (
-						<p className="datamachine-tool-checkbox-description datamachine-global-disabled-text">
-							Disabled globally in Settings
-						</p>
-					) : description ? (
-						<p className="datamachine-tool-checkbox-description">
-							{ description }
-						</p>
-					) : null }
-				</div>
-			</div>
+				}
+			/>
 		</div>
 	);
 }

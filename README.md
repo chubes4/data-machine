@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline, chat
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 0.2.4
+Stable tag: 0.2.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,7 +26,7 @@ AI-first WordPress plugin for content processing workflows with visual pipeline 
 - **Universal Engine Layer**: Shared AI infrastructure serving both Pipeline and Chat agents with AIConversationLoop, ToolExecutor, ToolParameters, ConversationManager, and RequestBuilder components
 - **Visual Pipeline Builder**: Real-time updates with 50+ React components, custom hooks, and TanStack Query + Zustand state management
 - **Multi-Provider AI**: OpenAI, Anthropic, Google, Grok, OpenRouter with filter-based directive system (global, agent-specific, pipeline, chat)
-- **Complete REST API**: 16 endpoints (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Schedule, Settings, StepTypes, Tools, Users, Chat)
+- **Complete REST API**: 16 endpoints (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users, Chat)
 - **Chat API**: Conversational interface for building and executing workflows through natural language
 - **Schedule API**: Dedicated endpoint for recurring and one-time flow scheduling
 - **Ephemeral Workflows**: Execute workflows without database persistence via REST API
@@ -138,7 +138,7 @@ $response = apply_filters('chubes_ai_request', [
 
 ### REST API
 
-Data Machine provides comprehensive REST API access via 17 endpoints for flow execution, pipeline management, and system monitoring:
+Data Machine provides comprehensive REST API access via 16 endpoints for flow execution, pipeline management, and system monitoring:
 - **Core**: Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Schedule, Settings, StepTypes, Tools, Users
 - **Chat**: Chat (base), Chat/Chat (conversations)
 
@@ -219,12 +219,11 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 - `GET /datamachine/v1/processed-items` - Processed items
 - `DELETE /datamachine/v1/processed-items` - Clear processed items
 
-**Implementation**: 17 REST API endpoints with directory-based structure (@since v0.2.0):
+**Implementation**: 16 REST API endpoints with directory-based structure (@since v0.2.0):
 - **Directory-based endpoints**:
   - **Pipelines** (`/inc/Api/Pipelines/`): Pipelines.php (main endpoint), PipelineSteps.php (steps CRUD), PipelineFlows.php (pipeline flows)
-  - **Flows** (`/inc/Api/Flows/`): Flows.php (main endpoint), FlowSteps.php (flow steps CRUD)
+  - **Flows** (`/inc/Api/Flows/`): Flows.php (main endpoint), FlowSteps.php (flow steps CRUD), FlowScheduling.php (scheduling integrated into Flows API)
   - **Chat** (`/inc/Api/Chat/`): Chat.php (endpoint handler), ChatAgentDirective.php (AI directive), ChatFilters.php (self-registration), Tools/MakeAPIRequest.php (chat-only tool)
-  - **Schedule** (`/inc/Api/Schedule/`): Schedule.php (recurring and one-time flow scheduling)
 - **Single-file endpoints**: Auth, Execute, Files, Handlers, Jobs, Logs, ProcessedItems, Providers, Settings, StepTypes, Tools, Users (at `/inc/Api/*.php`)
 - **Nested endpoints**: Pipeline steps, flow configuration, chat sessions with structured URL routing
 

@@ -28,7 +28,7 @@ The WordPress Shared Components are a collection of centralized WordPress functi
 use DataMachine\Core\WordPress\FeaturedImageHandler;
 
 $image_handler = new FeaturedImageHandler();
-$result = $image_handler->process_featured_image($post_id, $image_path_or_url, $handler_config);
+$result = $image_handler->processImage($post_id, $image_path_or_url, $handler_config);
 
 if ($result['success']) {
     $attachment_id = $result['attachment_id'];
@@ -61,7 +61,7 @@ if ($result['success']) {
 use DataMachine\Core\WordPress\TaxonomyHandler;
 
 $taxonomy_handler = new TaxonomyHandler();
-$result = $taxonomy_handler->process_taxonomies($post_id, $taxonomy_data, $handler_config);
+    $result = $taxonomy_handler->processTaxonomies($post_id, $taxonomy_data, $handler_config);
 
 if ($result['success']) {
     $assigned_terms = $result['terms'];
@@ -85,7 +85,7 @@ if ($result['success']) {
 use DataMachine\Core\WordPress\SourceUrlHandler;
 
 $url_handler = new SourceUrlHandler();
-$result = $url_handler->process_source_url($post_id, $source_url, $handler_config);
+    $result = $url_handler->processSourceUrl($post_id, $source_url, $handler_config);
 
 if ($result['success']) {
     $block_content = $result['block_content'];
@@ -137,26 +137,26 @@ class WordPress {
         $post_id = wp_insert_post($post_data);
 
         // Process components in order
-        $this->process_featured_image($post_id, $handler_config);
-        $this->process_taxonomies($post_id, $handler_config);
-        $this->process_source_url($post_id, $handler_config);
+        $this->processFeaturedImage($post_id, $handler_config);
+        $this->processTaxonomies($post_id, $handler_config);
+        $this->processSourceUrl($post_id, $handler_config);
 
         return $post_id;
     }
 
-    private function process_featured_image($post_id, $handler_config) {
+    private function processFeaturedImage($post_id, $handler_config) {
         $image_handler = new FeaturedImageHandler();
-        return $image_handler->process_featured_image($post_id, $image_path, $handler_config);
+        return $image_handler->processImage($post_id, $image_path, $handler_config);
     }
 
-    private function process_taxonomies($post_id, $handler_config) {
+    private function processTaxonomies($post_id, $handler_config) {
         $taxonomy_handler = new TaxonomyHandler();
-        return $taxonomy_handler->process_taxonomies($post_id, $taxonomy_data, $handler_config);
+        return $taxonomy_handler->processTaxonomies($post_id, $taxonomy_data, $handler_config);
     }
 
-    private function process_source_url($post_id, $handler_config) {
+    private function processSourceUrl($post_id, $handler_config) {
         $url_handler = new SourceUrlHandler();
-        return $url_handler->process_source_url($post_id, $source_url, $handler_config);
+        return $url_handler->processSourceUrl($post_id, $source_url, $handler_config);
     }
 }
 ```

@@ -91,7 +91,7 @@ Global tools are located in `/inc/Engine/AI/Tools/Global/`:
 Chat-specific tools at `/inc/Api/Chat/Tools/`:
 - `MakeAPIRequest.php` - REST API operations (chat only)
 
-Handler-specific tools registered via `chubes_ai_tools` filter in each handler's *Filters.php file.
+Handler-specific tools registered via `chubes_ai_tools` filter using HandlerRegistrationTrait in each handler class.
 
 ## Tool Management
 

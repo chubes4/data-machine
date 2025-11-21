@@ -7,7 +7,7 @@
  *
  * @package    DataMachine
  * @subpackage Core\Steps\Fetch\Handlers\WordPress
- * @since      NEXT_VERSION
+ * @since      0.1.0
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPress;

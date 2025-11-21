@@ -26,7 +26,36 @@ class TaxonomyHandler {
      * @param array $handler_config Handler configuration with taxonomy selections
      * @return array Processing results for all configured taxonomies
      */
-    public function processTaxonomies(int $post_id, array $parameters, array $handler_config): array {
+    /**
+     * Register a custom handler for a specific taxonomy.
+     *
+     * Custom handlers will be invoked instead of the standard assignTaxonomy workflow
+     * when a taxonomy matches the registered name.
+     *
+     * @param string $taxonomy_name
+     * @param callable $handler Callable with signature function(int $post_id, array $parameters, array $handler_config, array $engine_data): ?array
+     */
+    public static function addCustomHandler(string $taxonomy_name, callable $handler): void {
+        self::$custom_handlers[$taxonomy_name] = $handler;
+    }
+
+    /**
+     * Internal storage for registered custom handlers
+     *
+     * @var array<string, callable>
+     */
+    private static $custom_handlers = [];
+
+    /**
+     * Process taxonomies based on configuration.
+     *
+     * @param int $post_id WordPress post ID
+     * @param array $parameters Tool parameters with AI-decided taxonomy values
+     * @param array $handler_config Handler configuration with taxonomy selections
+     * @param array $engine_data Engine-provided context (repository, scraping results, etc.)
+     * @return array Processing results for all configured taxonomies
+     */
+    public function processTaxonomies(int $post_id, array $parameters, array $handler_config, array $engine_data = []): array {
         $taxonomy_results = [];
         $taxonomies = self::getPublicTaxonomies();
 
@@ -38,22 +67,15 @@ class TaxonomyHandler {
             $field_key = "taxonomy_{$taxonomy->name}_selection";
             $selection = $handler_config[$field_key] ?? 'skip';
 
-            $this->logTaxonomyOperation('debug', 'WordPress Tool: Processing taxonomy from settings', [
-                'taxonomy_name' => $taxonomy->name,
-                'field_key' => $field_key,
-                'selection_value' => $selection,
-                'selection_type' => gettype($selection)
-            ]);
-
             if ($selection === 'skip') {
                 continue;
             } elseif ($this->isAiDecidedTaxonomy($selection)) {
-                $result = $this->processAiDecidedTaxonomy($post_id, $taxonomy, $parameters);
+                $result = $this->processAiDecidedTaxonomy($post_id, $taxonomy, $parameters, $engine_data, $handler_config);
                 if ($result) {
                     $taxonomy_results[$taxonomy->name] = $result;
                 }
             } elseif ($this->isPreSelectedTaxonomy($selection)) {
-                $result = $this->processPreSelectedTaxonomy($post_id, $taxonomy->name, $selection);
+                $result = $this->processPreSelectedTaxonomy($post_id, $taxonomy->name, $selection, $engine_data);
                 if ($result) {
                     $taxonomy_results[$taxonomy->name] = $result;
                 }
@@ -88,16 +110,33 @@ class TaxonomyHandler {
      * @param array $parameters AI tool parameters
      * @return array|null Taxonomy assignment result or null if no parameter
      */
-    private function processAiDecidedTaxonomy(int $post_id, object $taxonomy, array $parameters): ?array {
+    private function processAiDecidedTaxonomy(int $post_id, object $taxonomy, array $parameters, array $engine_data = [], array $handler_config = []): ?array {
+        // Check for a registered custom handler for this taxonomy
+        if (!empty(self::$custom_handlers[$taxonomy->name]) && is_callable(self::$custom_handlers[$taxonomy->name])) {
+            $handler = self::$custom_handlers[$taxonomy->name];
+            $result = $handler($post_id, $parameters, $handler_config, $engine_data);
+            if ($result) {
+                return $result;
+            }
+        }
+
         $param_name = $this->getParameterName($taxonomy->name);
 
+        // Check AI-decided parameters first, then engine-provided parameters as a fallback
+        $param_value = null;
         if (!empty($parameters[$param_name])) {
-            $taxonomy_result = $this->assignTaxonomy($post_id, $taxonomy->name, $parameters[$param_name]);
+            $param_value = $parameters[$param_name];
+        } elseif (!empty($engine_data[$param_name])) {
+            $param_value = $engine_data[$param_name];
+        }
+
+        if (!empty($param_value)) {
+            $taxonomy_result = $this->assignTaxonomy($post_id, $taxonomy->name, $param_value);
 
             $this->logTaxonomyOperation('debug', 'WordPress Tool: Applied AI-decided taxonomy', [
                 'taxonomy_name' => $taxonomy->name,
                 'parameter_name' => $param_name,
-                'parameter_value' => $parameters[$param_name],
+                'parameter_value' => $param_value,
                 'result' => $taxonomy_result
             ]);
 
@@ -125,6 +164,12 @@ class TaxonomyHandler {
     }
 
     /**
+     * Map a parameter name to the value either from parameters or engine data.
+     * Note: legacy alias handling has been removed — use canonical parameter names only.
+     */
+    // Aliases removed: getParameterName -> parameter lookup only
+
+    /**
      * Process pre-selected taxonomy assignment.
      *
      * @param int $post_id WordPress post ID
@@ -132,7 +177,7 @@ class TaxonomyHandler {
      * @param string $selection Numeric term ID as string
      * @return array|null Taxonomy assignment result or null if invalid
      */
-    private function processPreSelectedTaxonomy(int $post_id, string $taxonomy_name, string $selection): ?array {
+    private function processPreSelectedTaxonomy(int $post_id, string $taxonomy_name, string $selection, array $engine_data = []): ?array {
         $term_id = absint($selection);
         $term_name = apply_filters('datamachine_wordpress_term_name', null, $term_id, $taxonomy_name);
 
@@ -145,10 +190,10 @@ class TaxonomyHandler {
                 $this->logTaxonomyOperation('debug', 'WordPress Tool: Applied pre-selected taxonomy', [
                     'taxonomy_name' => $taxonomy_name,
                     'term_id' => $term_id,
-                    'term_name' => $term->name
+                    'term_name' => $term_name
                 ]);
 
-                return $this->createSuccessResult($taxonomy_name, [$term->name], [$term_id]);
+                return $this->createSuccessResult($taxonomy_name, [$term_name], [$term_id]);
             }
         }
 

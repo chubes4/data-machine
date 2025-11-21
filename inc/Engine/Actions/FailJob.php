@@ -44,6 +44,8 @@ class FailJob {
      * @return bool True on success, false on database failure
      */
     public function handle_job_failure($job_id, $reason, $context_data = []) {
+        $job_id = (int) $job_id; // Ensure job_id is int for database operations
+
         $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
 
         // Always use complete_job method for failed status (sets completion timestamp)

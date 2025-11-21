@@ -56,7 +56,7 @@ function datamachine_register_utility_filters() {
         $method = strtoupper($method);
         if (!in_array($method, $valid_methods)) {
             do_action('datamachine_log', 'error', 'HTTP Request: Invalid method', ['method' => $method, 'context' => $context]);
-            return ['success' => false, 'error' => __('Invalid HTTP method', 'datamachine')];
+            return ['success' => false, 'error' => 'Invalid HTTP method'];
         }
 
         $args = wp_parse_args($args, [
@@ -74,8 +74,7 @@ function datamachine_register_utility_filters() {
 
         if (is_wp_error($response)) {
             $error_message = sprintf(
-                /* translators: %1$s: Service/context name, %2$s: Error message */
-                __('Failed to connect to %1$s: %2$s', 'datamachine'),
+                'Failed to connect to %1$s: %2$s',
                 $context,
                 $response->get_error_message()
             );
@@ -114,8 +113,7 @@ function datamachine_register_utility_filters() {
         
         if (!in_array($status_code, $success_codes)) {
             $error_message = sprintf(
-                /* translators: %1$s: Service/context name, %2$s: HTTP method, %3$d: HTTP status code */
-                __('%1$s %2$s returned HTTP %3$d', 'datamachine'),
+                '%1$s %2$s returned HTTP %3$d',
                 $context,
                 $method,
                 $status_code
@@ -165,35 +163,35 @@ function datamachine_register_utility_filters() {
     add_filter('datamachine_scheduler_intervals', function($intervals) {
         return [
             'every_5_minutes' => [
-                'label' => __('Every 5 Minutes', 'datamachine'),
+                'label' => 'Every 5 Minutes',
                 'seconds' => 300 // 5 * 60
             ],
             'hourly' => [
-                'label' => __('Hourly', 'datamachine'),
+                'label' => 'Hourly',
                 'seconds' => HOUR_IN_SECONDS
             ],
             'every_2_hours' => [
-                'label' => __('Every 2 Hours', 'datamachine'),
+                'label' => 'Every 2 Hours',
                 'seconds' => HOUR_IN_SECONDS * 2
             ],
             'every_4_hours' => [
-                'label' => __('Every 4 Hours', 'datamachine'),
+                'label' => 'Every 4 Hours',
                 'seconds' => HOUR_IN_SECONDS * 4
             ],
             'qtrdaily' => [
-                'label' => __('Every 6 Hours', 'datamachine'),
+                'label' => 'Every 6 Hours',
                 'seconds' => HOUR_IN_SECONDS * 6
             ],
             'twicedaily' => [
-                'label' => __('Twice Daily', 'datamachine'),
+                'label' => 'Twice Daily',
                 'seconds' => HOUR_IN_SECONDS * 12
             ],
             'daily' => [
-                'label' => __('Daily', 'datamachine'),
+                'label' => 'Daily',
                 'seconds' => DAY_IN_SECONDS
             ],
             'weekly' => [
-                'label' => __('Weekly', 'datamachine'),
+                'label' => 'Weekly',
                 'seconds' => WEEK_IN_SECONDS
             ]
         ];

@@ -7,7 +7,7 @@
  * Modal lifecycle managed by vanilla JS, page actions by datamachine-jobs.js.
  *
  * @package
- * @since NEXT_VERSION
+ * @since 0.1.0
  */
 
 ( function () {

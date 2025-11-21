@@ -2,7 +2,7 @@
 
 Data Machine: WordPress plugin for automating content workflows with AI. Visual pipeline builder, chat agent, full REST API, and total extensibility.
 
-**Version**: 0.2.4
+**Version**: 0.2.5
 
 *For user documentation, see `docs/README.md` | For GitHub overview, see `README.md`*
 
@@ -64,18 +64,9 @@ class GoogleSearch {
     use ToolRegistrationTrait;
 
     public function __construct() {
+        $this->registerConfigurationHandlers('google_search');
+        $this->registerSuccessMessageHandler('google_search');
         $this->registerGlobalTool('google_search', $this->getToolDefinition());
-            __('Post content to Twitter with media support', 'datamachine'),
-            true,
-            TwitterAuth::class,
-            TwitterSettings::class,
-            function($tools, $handler_slug, $handler_config) {
-                if ($handler_slug === 'twitter') {
-                    $tools['twitter_publish'] = datamachine_get_twitter_tool($handler_config);
-                }
-                return $tools;
-            }
-        );
     }
 }
 

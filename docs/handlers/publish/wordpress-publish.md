@@ -238,9 +238,9 @@ class WordPress extends PublishHandler {
         $post_data = [
             'post_title' => sanitize_text_field($parameters['title']),
             'post_content' => $content,
-            'post_status' => $this->get_effective_post_status($handler_config),
+            'post_status' => $this->getEffectivePostStatus($handler_config),
             'post_type' => $handler_config['post_type'],
-            'post_author' => $this->get_effective_post_author($handler_config)
+            'post_author' => $this->getEffectivePostAuthor($handler_config)
         ];
 
         $post_id = wp_insert_post($post_data);

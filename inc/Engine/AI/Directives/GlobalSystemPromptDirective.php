@@ -35,7 +35,7 @@ class GlobalSystemPromptDirective {
             return $request;
         }
 
-        $settings = get_option('datamachine_datamachine_settings', []);
+        $settings = get_option('datamachine_settings', []);
         $global_prompt = $settings['global_system_prompt'] ?? '';
 
         if (empty($global_prompt)) {
@@ -58,4 +58,11 @@ class GlobalSystemPromptDirective {
 }
 
 // Self-register (Priority 20 = global directive for all AI agents)
-add_filter('datamachine_global_directives', [GlobalSystemPromptDirective::class, 'inject'], 20, 5);
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => GlobalSystemPromptDirective::class,
+        'priority' => 20,
+        'agent_types' => ['all']
+    ];
+    return $directives;
+});

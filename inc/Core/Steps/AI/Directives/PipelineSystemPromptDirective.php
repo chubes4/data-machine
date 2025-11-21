@@ -36,10 +36,25 @@ class PipelineSystemPromptDirective {
             return $request;
         }
 
+        do_action('datamachine_log', 'debug', 'Pipeline System Prompt: Directive called', [
+            'pipeline_step_id' => $pipeline_step_id,
+            'payload_keys' => array_keys($payload)
+        ]);
+
         $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, $payload);
         $system_prompt = $step_ai_config['system_prompt'] ?? '';
 
+        do_action('datamachine_log', 'debug', 'Pipeline System Prompt: Retrieved system prompt', [
+            'pipeline_step_id' => $pipeline_step_id,
+            'system_prompt_length' => strlen($system_prompt),
+            'has_system_prompt' => !empty($system_prompt)
+        ]);
+
         if (empty($system_prompt)) {
+            do_action('datamachine_log', 'debug', 'Pipeline System Prompt: No system prompt found, skipping injection', [
+                'pipeline_step_id' => $pipeline_step_id,
+                'system_prompt_value' => $system_prompt
+            ]);
             return $request;
         }
 
@@ -64,6 +79,12 @@ class PipelineSystemPromptDirective {
         array_push($request['messages'], [
             'role' => 'system',
             'content' => $content
+        ]);
+
+        do_action('datamachine_log', 'debug', 'Pipeline System Prompt: Injected pipeline system prompt', [
+            'prompt_length' => strlen($system_prompt),
+            'pipeline_step_id' => $pipeline_step_id,
+            'total_messages' => count($request['messages'])
         ]);
 
         return $request;
@@ -152,15 +173,11 @@ class PipelineSystemPromptDirective {
 }
 
 // Register with universal agent directive system (Priority 30 = third in 5-tier directive system)
-add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
-    if ($agent_type === 'pipeline') {
-        $request = PipelineSystemPromptDirective::inject(
-            $request,
-            $provider,
-            $tools,
-            $context['step_id'] ?? null,
-            $context
-        );
-    }
-    return $request;
-}, 30, 5);
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => PipelineSystemPromptDirective::class,
+        'priority' => 30,
+        'agent_types' => ['pipeline']
+    ];
+    return $directives;
+});

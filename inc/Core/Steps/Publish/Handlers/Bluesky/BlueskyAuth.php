@@ -8,7 +8,7 @@
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Publish\Handlers\Bluesky
- * @since      NEXT_VERSION
+ * @since      0.1.0
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Bluesky;

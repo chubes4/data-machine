@@ -69,16 +69,16 @@
         },
         {
             "name": "chubes4/ai-http-client",
-            "version": "v2.0.3",
+            "version": "v2.0.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/chubes4/ai-http-client.git",
-                "reference": "13fa30163ff6682b85885f48bfb31f4ae3ba4760"
+                "reference": "47f10fe48e6ff7c90079e7bc6f0b93d3d0acff5f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/chubes4/ai-http-client/zipball/13fa30163ff6682b85885f48bfb31f4ae3ba4760",
-                "reference": "13fa30163ff6682b85885f48bfb31f4ae3ba4760",
+                "url": "https://api.github.com/repos/chubes4/ai-http-client/zipball/47f10fe48e6ff7c90079e7bc6f0b93d3d0acff5f",
+                "reference": "47f10fe48e6ff7c90079e7bc6f0b93d3d0acff5f",
                 "shasum": ""
             },
             "require": {
@@ -125,7 +125,7 @@
                 "issues": "https://github.com/chubes4/ai-http-client/issues",
                 "source": "https://github.com/chubes4/ai-http-client"
             },
-            "time": "2025-11-20T19:35:12+00:00"
+            "time": "2025-11-21T01:21:21+00:00"
         },
         {
             "name": "composer/ca-bundle",

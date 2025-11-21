@@ -42,6 +42,14 @@ abstract class PublishHandler {
      * @return array Result array
      */
     final public function handle_tool_call(array $parameters, array $tool_def = []): array {
+        // Centralize job_id handling and engine_data retrieval
+        $job_id = (int) ($parameters['job_id'] ?? null);
+        $engine_data = $this->getEngineData($job_id);
+
+        // Enhance parameters for subclasses
+        $parameters['job_id'] = $job_id;
+        $parameters['engine_data'] = $engine_data;
+
         $handler_config = $tool_def['handler_config'] ?? [];
         return $this->executePublish($parameters, $handler_config);
     }
@@ -49,10 +57,10 @@ abstract class PublishHandler {
     /**
      * Get all engine data for the current job.
      *
-     * @param string|null $job_id Job identifier
+     * @param int $job_id Job identifier
      * @return array Engine data with source_url, image_file_path, etc.
      */
-    protected function getEngineData(?string $job_id): array {
+    protected function getEngineData(int $job_id): array {
         if (!$job_id) {
             return [
                 'source_url' => null,
@@ -66,10 +74,10 @@ abstract class PublishHandler {
     /**
      * Get source URL from engine data.
      *
-     * @param string|null $job_id Job identifier
+     * @param int $job_id Job identifier
      * @return string|null Source URL
      */
-    protected function getSourceUrl(?string $job_id): ?string {
+    protected function getSourceUrl(int $job_id): ?string {
         $engine_data = $this->getEngineData($job_id);
         return $engine_data['source_url'] ?? null;
     }
@@ -77,10 +85,10 @@ abstract class PublishHandler {
     /**
      * Get image file path from engine data.
      *
-     * @param string|null $job_id Job identifier
+     * @param int $job_id Job identifier
      * @return string|null Image file path
      */
-    protected function getImageFilePath(?string $job_id): ?string {
+    protected function getImageFilePath(int $job_id): ?string {
         $engine_data = $this->getEngineData($job_id);
         return $engine_data['image_file_path'] ?? null;
     }

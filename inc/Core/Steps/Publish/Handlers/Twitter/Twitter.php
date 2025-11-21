@@ -39,8 +39,8 @@ class Twitter extends PublishHandler {
             'twitter_publish',
             'publish',
             self::class,
-            __('Twitter', 'datamachine'),
-            __('Post content to Twitter with media support', 'datamachine'),
+            'Twitter',
+            'Post content to Twitter with media support',
             true,
             TwitterAuth::class,
             TwitterSettings::class,
@@ -70,9 +70,27 @@ class Twitter extends PublishHandler {
                 return $tools;
             }
         );
+    }
 
-        $all_auth = apply_filters('datamachine_auth_providers', []);
-        $this->auth = $all_auth['twitter'] ?? null;
+    /**
+     * Lazy-load auth provider when needed.
+     *
+     * @return TwitterAuth|null Auth provider instance or null if unavailable
+     */
+    private function get_auth() {
+        if ($this->auth === null) {
+            $all_auth = apply_filters('datamachine_auth_providers', []);
+            $this->auth = $all_auth['twitter'] ?? null;
+
+            if ($this->auth === null) {
+                $this->log('error', 'Twitter Handler: Authentication service not available', [
+                    'handler' => 'twitter',
+                    'missing_service' => 'twitter',
+                    'available_providers' => array_keys($all_auth)
+                ]);
+            }
+        }
+        return $this->auth;
     }
 
     /**
@@ -92,15 +110,19 @@ class Twitter extends PublishHandler {
         // handler_config is ALWAYS flat structure - no nesting
         $content = $parameters['content'] ?? '';
 
-        $job_id = $parameters['job_id'] ?? null;
-        $engine_data = $this->getEngineData($job_id);
+        $engine_data = $parameters['engine_data'];
         $source_url = $engine_data['source_url'] ?? null;
         $image_file_path = $engine_data['image_file_path'] ?? null;
 
         $include_images = $handler_config['include_images'] ?? true;
         $link_handling = $handler_config['link_handling'] ?? 'append';
 
-        $connection = $this->auth->get_connection();
+        $auth = $this->get_auth();
+        if (!$auth) {
+            return $this->errorResponse('Twitter authentication not configured', [], 'critical');
+        }
+
+        $connection = $auth->get_connection();
         if (is_wp_error($connection)) {
             return $this->errorResponse(
                 'Twitter authentication failed: ' . $connection->get_error_message(),
@@ -159,7 +181,7 @@ class Twitter extends PublishHandler {
 
             if ($http_code == 201 && isset($response->data->id)) {
                 $tweet_id = $response->data->id;
-                $account_details = $this->auth->get_account_details();
+                $account_details = $auth->get_account_details();
                 $screen_name = $account_details['screen_name'] ?? 'twitter';
                 $tweet_url = "https://twitter.com/{$screen_name}/status/{$tweet_id}";
 

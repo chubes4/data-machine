@@ -4,7 +4,7 @@
  * Modal for configuring AI provider and model for AI steps.
  */
 
-import { useState, useEffect, useMemo } from '@wordpress/element';
+import { useState, useEffect, useMemo, useRef } from '@wordpress/element';
 import {
 	Modal,
 	Button,
@@ -39,6 +39,16 @@ export default function ConfigureStepModal( {
 } ) {
 	const [ selectedTools, setSelectedTools ] = useState(
 		currentConfig?.enabled_tools || []
+	);
+
+	const configKey = useMemo(() =>
+		JSON.stringify({
+			provider: currentConfig?.provider,
+			model: currentConfig?.model,
+			system_prompt: currentConfig?.system_prompt,
+			enabled_tools: currentConfig?.enabled_tools
+		}),
+		[currentConfig?.provider, currentConfig?.model, currentConfig?.system_prompt, currentConfig?.enabled_tools]
 	);
 
 	const formState = useFormState({
@@ -121,7 +131,7 @@ export default function ConfigureStepModal( {
 		}
 
 		formState.setError( null );
-	}, [ currentConfig, aiDefaults.provider, aiDefaults.model, formState ] );
+	}, [ configKey, aiDefaults.provider, aiDefaults.model ] );
 
 	/**
 	 * Get provider options
@@ -243,20 +253,22 @@ export default function ConfigureStepModal( {
 					onSelectionChange={ setSelectedTools }
 				/>
 
-				<TextareaControl
-					label={ __( 'System Prompt', 'datamachine' ) }
-					value={ formState.data.systemPrompt }
-					onChange={ (value) => formState.updateField('systemPrompt', value) }
-					placeholder={ __(
-						'Enter system prompt for AI processing...',
-						'datamachine'
-					) }
-					rows={ 8 }
-					help={ __(
-						'Optional: Provide instructions for the AI to follow during processing.',
-						'datamachine'
-					) }
-				/>
+				<div className="datamachine-form-field-wrapper">
+					<TextareaControl
+						label={ __( 'System Prompt', 'datamachine' ) }
+						value={ formState.data.systemPrompt }
+						onChange={ (value) => formState.updateField('systemPrompt', value) }
+						placeholder={ __(
+							'Enter system prompt for AI processing...',
+							'datamachine'
+						) }
+						rows={ 8 }
+						help={ __(
+							'Optional: Provide instructions for the AI to follow during processing.',
+							'datamachine'
+						) }
+					/>
+				</div>
 
 				<div className="datamachine-modal-info-box datamachine-modal-info-box--note">
 					<p>

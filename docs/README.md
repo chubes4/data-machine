@@ -133,7 +133,7 @@ docs/
 │   ├── pipelines.md                     # Pipeline CRUD operations
 │   ├── processed-items.md               # Deduplication tracking
 │   ├── providers.md                     # AI provider configuration
-│   ├── schedule.md                      # Flow scheduling
+│   ├── schedule.md                      # Flow scheduling (integrated into Flows API)
 │   ├── settings.md                      # System settings
 │   ├── step-types.md                    # Available step types
 │   ├── tools.md                         # AI tool availability

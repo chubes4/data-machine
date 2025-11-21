@@ -34,8 +34,8 @@ class WordPressAPI extends FetchHandler {
 			'wordpress_api',
 			'fetch',
 			self::class,
-			__('WordPress REST API', 'datamachine'),
-			__('Fetch posts from external WordPress sites via REST API', 'datamachine'),
+			'WordPress REST API',
+			'Fetch posts from external WordPress sites via REST API',
 			false,
 			null,
 			WordPressAPISettings::class,
@@ -56,7 +56,7 @@ class WordPressAPI extends FetchHandler {
 	): array {
 		if (empty($pipeline_id)) {
 			$this->log('error', 'Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-			return $this->emptyResponse();
+			return [];
 		}
 
 		if ($flow_step_id === null) {
@@ -67,12 +67,12 @@ class WordPressAPI extends FetchHandler {
 		$endpoint_url = trim($config['endpoint_url'] ?? '');
 		if (empty($endpoint_url)) {
 			$this->log('error', 'Endpoint URL is required.', ['pipeline_id' => $pipeline_id]);
-			return $this->emptyResponse();
+			return [];
 		}
 
 		if (!filter_var($endpoint_url, FILTER_VALIDATE_URL)) {
 			$this->log('error', 'Invalid endpoint URL format.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
-			return $this->emptyResponse();
+			return [];
 		}
 
 		// Get filtering settings

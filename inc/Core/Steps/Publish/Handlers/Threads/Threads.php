@@ -36,8 +36,8 @@ class Threads extends PublishHandler {
             'threads_publish',
             'publish',
             self::class,
-            __('Threads', 'datamachine'),
-            __('Post content to Meta Threads', 'datamachine'),
+            'Threads',
+            'Post content to Meta Threads',
             true,
             ThreadsAuth::class,
             ThreadsSettings::class,
@@ -67,18 +67,27 @@ class Threads extends PublishHandler {
                 return $tools;
             }
         );
+    }
 
-        // Use filter-based auth access following pure discovery architectural standards
-        $all_auth = apply_filters('datamachine_auth_providers', []);
-        $this->auth = $all_auth['threads'] ?? null;
-
+    /**
+     * Lazy-load auth provider when needed.
+     *
+     * @return ThreadsAuth|null Auth provider instance or null if unavailable
+     */
+    private function get_auth() {
         if ($this->auth === null) {
-            $this->log('error', 'Threads Handler: Authentication service not available', [
-                'missing_service' => 'threads',
-                'available_providers' => array_keys($all_auth)
-            ]);
-            // Handler will return error in executePublish() when auth is null
+            $all_auth = apply_filters('datamachine_auth_providers', []);
+            $this->auth = $all_auth['threads'] ?? null;
+
+            if ($this->auth === null) {
+                $this->log('error', 'Threads Handler: Authentication service not available', [
+                    'handler' => 'threads',
+                    'missing_service' => 'threads',
+                    'available_providers' => array_keys($all_auth)
+                ]);
+            }
         }
+        return $this->auth;
     }
 
     protected function executePublish(array $parameters, array $handler_config): array {
@@ -106,8 +115,7 @@ class Threads extends PublishHandler {
             'link_handling' => $handler_config['link_handling'] ?? 'append'
         ]);
 
-        $job_id = $parameters['job_id'] ?? null;
-        $engine_data = $this->getEngineData($job_id);
+        $engine_data = $parameters['engine_data'];
 
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
@@ -117,13 +125,18 @@ class Threads extends PublishHandler {
         $include_images = $handler_config['include_images'] ?? true;
         $link_handling = $handler_config['link_handling'] ?? 'append';
 
-        $access_token = $this->auth->get_access_token();
+        $auth = $this->get_auth();
+        if (!$auth) {
+            return $this->errorResponse('Threads authentication not configured', [], 'critical');
+        }
+
+        $access_token = $auth->get_access_token();
         if (empty($access_token)) {
             return $this->errorResponse('Threads authentication failed - no access token', [], 'critical');
         }
 
         // Get page ID for posting
-        $page_id = $this->auth->get_page_id();
+        $page_id = $auth->get_page_id();
         if (empty($page_id)) {
             return $this->errorResponse('Threads page ID not available');
         }

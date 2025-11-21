@@ -1,12 +1,12 @@
-# Schedule Endpoint
+# Flow Scheduling
 
-**Implementation**: `inc/Api/Schedule/Schedule.php`
+**Implementation**: `inc/Api/Flows/FlowScheduling.php` (integrated into Flows API)
 
-**Base URL**: `/wp-json/datamachine/v1/schedule`
+**Base URL**: `/wp-json/datamachine/v1/flows`
 
 ## Overview
 
-The Schedule endpoint provides dedicated scheduling operations for database flows. Handles recurring schedules, one-time delays, and schedule management.
+Flow scheduling is now integrated into the Flows API endpoints. Scheduling operations are handled through flow creation and updates rather than a separate endpoint. This provides better consistency and eliminates redundant API endpoints.
 
 ## Authentication
 
@@ -19,253 +19,100 @@ See [Authentication Guide](authentication.md) for setup instructions.
 
 ## Capabilities
 
-- **Recurring Schedules**: Set up automated flow execution (hourly, daily, etc.)
-- **One-Time Delays**: Schedule single future executions
-- **Schedule Management**: Update, clear, or modify existing schedules
+- **Recurring Schedules**: Set up automated flow execution (hourly, daily, etc.) via `scheduling_config` parameter
+- **One-Time Delays**: Schedule single future executions via timestamp in `scheduling_config`
+- **Schedule Management**: Update scheduling through flow configuration updates
 - **Interval Validation**: Ensures only valid intervals are accepted
 - **Action Scheduler Integration**: Uses WordPress Action Scheduler for reliable execution
 
-## Request Format
+## Scheduling Through Flows API
 
-**Method**: `POST`
+Scheduling is now handled through the Flows API endpoints rather than a separate schedule endpoint.
 
-**Content-Type**: `application/json`
+### Setting Up Recurring Schedules
 
-**Required Parameters**:
-- `action` (string): Scheduling action (`schedule`, `unschedule`, `update`, `get_intervals`)
-
-**Conditional Parameters**:
-- `flow_id` (integer): Required for `schedule`, `unschedule`, `update` actions
-- `interval` (string): Required for recurring schedules (hourly, daily, etc.)
-- `timestamp` (integer): Required for one-time schedules
-
-## Actions
-
-### Get Intervals Action
-
-Retrieve the list of available scheduling intervals.
-
-**Parameters**:
-- `action`: `"get_intervals"`
-
-**Example**:
+Use the `POST /flows` endpoint with `scheduling_config`:
 
 ```bash
-curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
+curl -X POST https://example.com/wp-json/datamachine/v1/flows \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{
-    "action": "get_intervals"
+    "pipeline_id": 123,
+    "flow_name": "Daily RSS to Twitter",
+    "scheduling_config": {"interval": "daily"}
   }'
 ```
 
-**Response**:
-```json
-{
-  "success": true,
-  "intervals": [
-    {
-      "value": "manual",
-      "label": "Manual only"
-    },
-    {
-      "value": "every_5_minutes",
-      "label": "Every 5 Minutes"
-    },
-    {
-      "value": "hourly",
-      "label": "Every hour"
-    }
-  ]
-}
-```
+### Setting Up One-Time Schedules
 
-### Schedule Action
-
-Create a new schedule for a flow.
-
-**Parameters**:
-- `flow_id` (required): Flow ID
-- `action`: `"schedule"`
-- `interval` (optional): Recurring interval
-- `timestamp` (optional): One-time execution timestamp
-
-**Examples**:
-
-#### Recurring Schedule (Hourly)
+For one-time execution at a specific timestamp:
 
 ```bash
-curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
+curl -X POST https://example.com/wp-json/datamachine/v1/flows \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{
-    "flow_id": 123,
-    "action": "schedule",
-    "interval": "hourly"
+    "pipeline_id": 123,
+    "flow_name": "One-time execution",
+    "scheduling_config": {"interval": "one_time", "timestamp": 1704153600}
   }'
 ```
 
-**Response**:
-```json
-{
-  "success": true,
-  "action": "schedule",
-  "type": "recurring",
-  "flow_id": 123,
-  "flow_name": "My Flow",
-  "interval": "hourly",
-  "interval_seconds": 3600,
-  "first_run": "2024-01-15T14:00:00+00:00",
-  "message": "Flow scheduled to run hourly"
-}
-```
+### Updating Scheduling
 
-#### One-Time Delayed Execution
+Update scheduling configuration through flow updates (implementation depends on specific flow update endpoints).
+
+### Available Intervals
+
+The following scheduling intervals are supported through the `datamachine_scheduler_intervals` filter:
+
+- `manual` - No automatic execution (default)
+- `hourly` - Every hour
+- `daily` - Once per day
+- `weekly` - Once per week
+- `one_time` - Single execution at specified timestamp
+
+### Manual Scheduling (Disable Automation)
+
+To disable automatic scheduling and require manual execution:
 
 ```bash
-curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
+curl -X POST https://example.com/wp-json/datamachine/v1/flows \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{
-    "flow_id": 123,
-    "action": "schedule",
-    "timestamp": 1704153600
+    "pipeline_id": 123,
+    "flow_name": "Manual Flow",
+    "scheduling_config": {"interval": "manual"}
   }'
 ```
 
-**Response**:
-```json
-{
-  "success": true,
-  "action": "schedule",
-  "type": "one_time",
-  "flow_id": 123,
-  "flow_name": "My Flow",
-  "timestamp": 1704153600,
-  "scheduled_time": "2024-01-02T00:00:00+00:00",
-  "message": "Flow scheduled for one-time execution at Tue, 02 Jan 2024 00:00:00 +0000"
-}
-```
+### Removing Schedules
 
-### Unschedule Action
-
-Remove any existing schedule for a flow.
-
-**Parameters**:
-- `flow_id` (required): Flow ID
-- `action`: `"unschedule"`
-
-**Example**:
+To unschedule a flow, update its scheduling configuration to manual:
 
 ```bash
-curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
+curl -X POST https://example.com/wp-json/datamachine/v1/flows \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{
-    "flow_id": 123,
-    "action": "unschedule"
+    "pipeline_id": 123,
+    "flow_name": "Manual Flow",
+    "scheduling_config": {"interval": "manual"}
   }'
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "action": "unschedule",
-  "flow_id": 123,
-  "message": "Flow schedule cleared"
-}
-```
-
-### Update Action
-
-Modify an existing schedule or set flow to manual execution.
-
-**Parameters**:
-- `flow_id` (required): Flow ID
-- `action`: `"update"`
-- `interval` (optional): New recurring interval, or `"manual"` to clear schedule
-- `timestamp` (optional): New one-time execution timestamp
-
-**Examples**:
-
-#### Change to Daily Schedule
-
-```bash
-curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
-  -H "Content-Type: application/json" \
-  -u username:application_password \
-  -d '{
-    "flow_id": 123,
-    "action": "update",
-    "interval": "daily"
-  }'
-```
-
-#### Set to Manual (Clear Schedule)
-
-```bash
-curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
-  -H "Content-Type: application/json" \
-  -u username:application_password \
-  -d '{
-    "flow_id": 123,
-    "action": "update",
-    "interval": "manual"
-  }'
-```
-
-## Available Intervals
-
-The endpoint accepts any interval defined in the system. Common intervals include:
-
-- `every_5_minutes`
-- `hourly`
-- `every_2_hours`
-- `every_4_hours`
-- `qtrdaily` (every 6 hours)
-- `twicedaily` (every 12 hours)
-- `daily`
-- `weekly`
-
-Use the [Intervals endpoint](intervals.md) to get the complete list of available intervals.
-
-## Error Responses
-
-### Invalid Flow ID
-
-```json
-{
-  "code": "flow_not_found",
-  "message": "Flow 123 not found",
-  "data": { "status": 404 }
-}
-```
-
-### Invalid Interval
-
-```json
-{
-  "code": "invalid_interval",
-  "message": "Invalid interval: invalid_interval",
-  "data": { "status": 400 }
-}
-```
-
-### Action Scheduler Unavailable
-
-```json
-{
-  "code": "scheduler_unavailable",
-  "message": "Action Scheduler not available",
-  "data": { "status": 500 }
-}
 ```
 
 ## Implementation Notes
 
+- Scheduling is handled through the `FlowScheduling` class integrated into the Flows API
 - Uses WordPress Action Scheduler for reliable execution
 - Schedules are automatically cleared when flows are deleted
+- All scheduling operations require `manage_options` capability
+
+## Migration from v0.2.3
+
+In v0.2.4, the standalone `/wp-json/datamachine/v1/schedule` endpoint was removed and scheduling functionality was integrated into the Flows API. Update your API calls to use the Flows endpoints with the `scheduling_config` parameter instead of the old action-based schedule endpoint.
 - Existing schedules continue working after plugin updates
 - All scheduling operations are logged for debugging
 

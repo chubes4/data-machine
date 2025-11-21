@@ -3,12 +3,11 @@
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/datamachine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:         0.2.4
+ * Version:         0.2.5
  * Requires at least: 6.2
  * Requires PHP:     8.0
  * Author:          Chris Huber
  * Author URI:      https://chubes.net
- * Text Domain:     datamachine
  * License:         GPL v2 or later
  * License URI:     https://www.gnu.org/licenses/gpl-2.0.html
  */
@@ -21,7 +20,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.2.4' );
+define( 'DATAMACHINE_VERSION', '0.2.5' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -67,6 +66,23 @@ function run_datamachine() {
 	\DataMachine\Api\Chat\Chat::register();
 }
 
+
+// Plugin activation hook to initialize default settings
+register_activation_hook(__FILE__, 'datamachine_activate');
+function datamachine_activate() {
+    $tool_manager = new \DataMachine\Engine\AI\Tools\ToolManager();
+    $opt_out_defaults = $tool_manager->get_opt_out_defaults();
+
+    $default_settings = [
+        'enabled_tools' => array_fill_keys($opt_out_defaults, true),
+        'enabled_admin_pages' => ['pipelines', 'jobs', 'logs', 'settings'],
+        'site_context_enabled' => true,
+        'job_data_cleanup_on_failure' => true,
+        'engine_mode' => 'full',
+    ];
+
+    add_option('datamachine_settings', $default_settings);
+}
 
 add_action('plugins_loaded', 'run_datamachine', 20);
 
@@ -164,9 +180,8 @@ function datamachine_check_requirements() {
 	if ( version_compare( PHP_VERSION, '8.0', '<' ) ) {
 		add_action( 'admin_notices', function() {
 			echo '<div class="notice notice-error"><p>';
-			printf( 
-				/* translators: %1$s: current PHP version, %2$s: required PHP version */
-				esc_html__( 'Data Machine requires PHP %2$s or higher. You are running PHP %1$s.', 'datamachine' ),
+			printf(
+				esc_html( 'Data Machine requires PHP %2$s or higher. You are running PHP %1$s.' ),
 				esc_html( PHP_VERSION ),
 				'8.0'
 			);
@@ -180,8 +195,7 @@ function datamachine_check_requirements() {
 		add_action( 'admin_notices', function() use ( $wp_version ) {
 			echo '<div class="notice notice-error"><p>';
 			printf(
-				/* translators: %1$s: current WordPress version, %2$s: required WordPress version */
-				esc_html__( 'Data Machine requires WordPress %2$s or higher. You are running WordPress %1$s.', 'datamachine' ),
+				esc_html( 'Data Machine requires WordPress %2$s or higher. You are running WordPress %1$s.' ),
 				esc_html( $wp_version ),
 				'6.2'
 			);
@@ -193,7 +207,7 @@ function datamachine_check_requirements() {
 	if ( ! file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 		add_action( 'admin_notices', function() {
 			echo '<div class="notice notice-error"><p>';
-			esc_html_e( 'Data Machine: Composer dependencies are missing. Please run "composer install" or contact Chubes to report a bug.', 'datamachine' );
+			echo esc_html( 'Data Machine: Composer dependencies are missing. Please run "composer install" or contact Chubes to report a bug.' );
 			echo '</p></div>';
 		});
 		return false;

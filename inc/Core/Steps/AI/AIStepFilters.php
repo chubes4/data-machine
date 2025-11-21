@@ -23,8 +23,8 @@ function datamachine_register_ai_step_filters() {
 
     add_filter('datamachine_step_types', function($steps) {
         $steps['ai'] = [
-            'label' => __('AI Agent', 'datamachine'),
-            'description' => __('Configure an intelligent agent with custom prompts and tools to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)', 'datamachine'),
+            'label' => 'AI Agent',
+            'description' => 'Configure an intelligent agent with custom prompts and tools to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)',
             'class' => 'DataMachine\\Core\\Steps\\AI\\AIStep',
             'consume_all_packets' => true,
             'position' => 20,
@@ -38,8 +38,8 @@ function datamachine_register_ai_step_filters() {
         $configs['ai'] = [
             'config_type' => 'ai_configuration',
             'modal_type' => 'configure-step',
-            'button_text' => __('Configure', 'datamachine'),
-            'label' => __('AI Agent Configuration', 'datamachine')
+            'button_text' => 'Configure',
+            'label' => 'AI Agent Configuration'
         ];
         return $configs;
     });

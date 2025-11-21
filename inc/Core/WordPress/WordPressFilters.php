@@ -19,20 +19,11 @@ if (!defined('ABSPATH')) {
  * Register WordPress utilities for filter-based service discovery
  */
 function datamachine_register_wordpress_utilities() {
-    // Register TaxonomyHandler
-    add_filter('datamachine_get_taxonomy_handler', function() {
-        return new TaxonomyHandler();
-    });
-
-    // Register FeaturedImageHandler
-    add_filter('datamachine_get_featured_image_handler', function() {
-        return new FeaturedImageHandler();
-    });
-
-    // Register SourceUrlHandler
-    add_filter('datamachine_get_source_url_handler', function() {
-        return new SourceUrlHandler();
-    });
+    // Legacy service discovery provided via filters was removed in favor of direct
+    // instantiation and OOP usage. These helper classes are now initialized
+    // directly by the `WordPressSharedTrait` and should not be discovered via
+    // filters. We leave this file as a placeholder for compatibility but no
+    // longer register the filters.
 }
 
 // Auto-execute registration

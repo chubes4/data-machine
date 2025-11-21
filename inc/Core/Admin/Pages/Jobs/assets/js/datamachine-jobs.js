@@ -4,7 +4,7 @@
  * Handles jobs list retrieval and rendering via REST API.
  * Used by: inc/Core/Admin/Pages/Jobs/Jobs.php
  *
- * @since NEXT_VERSION
+ * @since 0.1.0
  */
 
 ( function () {

@@ -26,7 +26,6 @@
 			"inc/Engine/Filters/Admin.php",
 			"inc/Engine/Logger.php",
 			"inc/Engine/Filters/OAuth.php",
-			"inc/Core/OAuth/OAuthFilters.php",
 			"inc/Engine/Actions/DataMachineActions.php",
 			"inc/Engine/Filters/EngineData.php",
 
@@ -58,7 +57,6 @@
 			"inc/Core/Steps/AI/Directives/PipelineContextDirective.php",
 			"inc/Core/Steps/Update/UpdateStepFilters.php",
 			"inc/Core/FilesRepository/FileCleanup.php",
-			"inc/Core/WordPress/WordPressFilters.php",
 			"inc/Api/StepTypes.php",
 			"inc/Api/Handlers.php",
 			"inc/Api/Providers.php",

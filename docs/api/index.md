@@ -16,7 +16,7 @@ Complete REST API reference for Data Machine
 
 ### Workflow Execution
 - [Execute](execute.md) - Trigger flows and ephemeral workflows
-- [Schedule](schedule.md) - Manage flow scheduling and automation
+- [Flow Scheduling](schedule.md) - Flow scheduling integrated into Flows API
 
 ### Pipeline & Flow Management
 - [Pipelines](pipelines.md) - Create, manage, and export pipeline templates

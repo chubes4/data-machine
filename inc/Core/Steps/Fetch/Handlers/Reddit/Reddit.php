@@ -27,15 +27,33 @@ class Reddit extends FetchHandler {
 			'reddit',
 			'fetch',
 			self::class,
-			__('Reddit', 'datamachine'),
-			__('Fetch posts from Reddit subreddits', 'datamachine'),
+			'Reddit',
+			'Fetch posts from Reddit subreddits',
 			false,
 			null,
 			RedditSettings::class,
 			null
 		);
+	}
 
-		$this->oauth_reddit = $this->getAuthProvider('reddit');
+	/**
+	 * Lazy-load auth provider when needed.
+	 *
+	 * @return object|null Auth provider instance or null if unavailable
+	 */
+	private function get_oauth_reddit() {
+		if ($this->oauth_reddit === null) {
+			$this->oauth_reddit = $this->getAuthProvider('reddit');
+
+			if ($this->oauth_reddit === null) {
+				$this->log('error', 'Reddit Handler: Authentication service not available', [
+					'handler' => 'reddit',
+					'missing_service' => 'reddit',
+					'available_providers' => array_keys(apply_filters('datamachine_auth_providers', []))
+				]);
+			}
+		}
+		return $this->oauth_reddit;
 	}
 
 	private function store_reddit_image(string $image_url, int $pipeline_id, int $flow_id, string $item_id): ?array {
@@ -61,7 +79,11 @@ class Reddit extends FetchHandler {
 		int $flow_id,
 		?string $job_id
 	): array {
-		$oauth_reddit = $this->oauth_reddit;
+		$oauth_reddit = $this->get_oauth_reddit();
+		if (!$oauth_reddit) {
+			$this->log('error', 'Reddit authentication not configured', ['pipeline_id' => $pipeline_id]);
+			return $this->emptyResponse();
+		}
 
 		$reddit_account = datamachine_get_oauth_account('reddit');
 		$access_token = $reddit_account['access_token'] ?? null;
@@ -70,7 +92,7 @@ class Reddit extends FetchHandler {
 
 		if ($needs_refresh && empty($reddit_account['refresh_token'])) {
 			$this->log('error', 'No refresh token available');
-			return $this->emptyResponse();
+			return [];
 		}
 
 		if ($needs_refresh) {
@@ -79,13 +101,13 @@ class Reddit extends FetchHandler {
 
 			if (!$refreshed) {
 				$this->log('error', 'Token refresh failed.', ['pipeline_id' => $pipeline_id]);
-				return $this->emptyResponse();
+				return [];
 			}
 
 		$reddit_account = datamachine_get_oauth_account('reddit');
 			if (empty($reddit_account['access_token'])) {
 				$this->log('error', 'Token refresh successful, but failed to retrieve new token data.', ['pipeline_id' => $pipeline_id]);
-				return $this->emptyResponse();
+				return [];
 			}
 			$this->log('debug', 'Token refresh successful.', ['pipeline_id' => $pipeline_id]);
 		}
@@ -93,7 +115,7 @@ class Reddit extends FetchHandler {
 		$access_token = $reddit_account['access_token'] ?? null;
 		if (empty($access_token)) {
 			$this->log('error', 'Access token is still empty after checks/refresh.', ['pipeline_id' => $pipeline_id]);
-			return $this->emptyResponse();
+			return [];
 		}
 
 		$this->log('debug', 'Token check complete.', [
@@ -103,7 +125,7 @@ class Reddit extends FetchHandler {
 		]);
 		if ( !isset( $config['subreddit'] ) || empty( trim( $config['subreddit'] ) ) ) {
 			$this->log('error', 'Subreddit name not configured.', ['pipeline_id' => $pipeline_id]);
-			return $this->emptyResponse();
+			return [];
 		}
 
 		$subreddit = trim( $config['subreddit'] );
@@ -116,12 +138,12 @@ class Reddit extends FetchHandler {
 		$search_term = trim( $config['search'] ?? '' );
 		if (!preg_match('/^[a-zA-Z0-9_]+$/', $subreddit)) {
 			$this->log('error', 'Invalid subreddit name format.', ['pipeline_id' => $pipeline_id, 'subreddit' => $subreddit]);
-			return $this->emptyResponse();
+			return [];
 		}
 		$valid_sorts = ['hot', 'new', 'top', 'rising', 'controversial'];
 		if (!in_array($sort, $valid_sorts)) {
 			$this->log('error', 'Invalid sort parameter.', ['pipeline_id' => $pipeline_id, 'invalid_sort' => $sort, 'valid_sorts' => $valid_sorts]);
-			return $this->emptyResponse();
+			return [];
 		}
 
 		$after_param = null;
@@ -182,7 +204,7 @@ class Reddit extends FetchHandler {
 			if (!$result['success']) {
 				if ($pages_fetched === 1) {
 					$this->log('error', 'API request failed.', ['pipeline_id' => $pipeline_id, 'error' => $result['error']]);
-					return $this->emptyResponse();
+					return [];
 				}
 				else break;
 			}
@@ -196,7 +218,7 @@ class Reddit extends FetchHandler {
 				$error_message = sprintf(__('Invalid JSON from Reddit API: %s', 'datamachine'), json_last_error_msg());
 				if ($pages_fetched === 1) {
 					$this->log('error', 'Invalid JSON response.', ['pipeline_id' => $pipeline_id, 'error' => $error_message]);
-					return $this->emptyResponse();
+					return [];
 				}
 				else break;
 			}
@@ -448,7 +470,7 @@ class Reddit extends FetchHandler {
 			'pipeline_id' => $pipeline_id
 		]);
 
-		return $this->emptyResponse();
+		return [];
 	}
 
 	public static function get_label(): string {

@@ -170,6 +170,15 @@ function datamachine_sanitize_settings($input) {
         }
     }
 
+    // Auto-enable newly configured tools (opt-out pattern maintenance)
+    $tool_manager = new \DataMachine\Engine\AI\Tools\ToolManager();
+    $opt_out_defaults = $tool_manager->get_opt_out_defaults();
+    foreach ($opt_out_defaults as $tool_id) {
+        if (!isset($sanitized['enabled_tools'][$tool_id])) {
+            $sanitized['enabled_tools'][$tool_id] = true;
+        }
+    }
+
     $sanitized['cleanup_job_data_on_failure'] = !empty($input['cleanup_job_data_on_failure']);
     
     $sanitized['global_system_prompt'] = '';

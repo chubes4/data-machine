@@ -28,11 +28,11 @@ function datamachine_register_handler_filters() {
     add_filter('datamachine_timeframe_limit', function($default, $timeframe_limit) {
         if ($timeframe_limit === null) {
             return [
-                'all_time' => __('All Time', 'datamachine'),
-                '24_hours' => __('Last 24 Hours', 'datamachine'),
-                '72_hours' => __('Last 72 Hours', 'datamachine'),
-                '7_days'   => __('Last 7 Days', 'datamachine'),
-                '30_days'  => __('Last 30 Days', 'datamachine'),
+                'all_time' => 'All Time',
+                '24_hours' => 'Last 24 Hours',
+                '72_hours' => 'Last 72 Hours',
+                '7_days'   => 'Last 7 Days',
+                '30_days'  => 'Last 30 Days',
             ];
         }
 

@@ -4,7 +4,7 @@ Available scheduling intervals for Data Machine flow automation using WordPress 
 
 ## Overview
 
-Data Machine uses WordPress Action Scheduler for recurring flow execution. The Schedule API supports standard WordPress cron intervals plus custom intervals for workflow automation.
+Data Machine uses WordPress Action Scheduler for recurring flow execution. Scheduling is handled through the Flows API with `scheduling_config` parameter, supporting standard WordPress cron intervals plus custom intervals for workflow automation.
 
 ## Standard Intervals
 
@@ -80,27 +80,27 @@ Data Machine supports custom intervals for specific workflow needs:
 
 ## Usage Examples
 
-### Schedule API Integration
+### Flows API Integration
 
 ```bash
 # Schedule flow to run daily
-curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
+curl -X POST https://example.com/wp-json/datamachine/v1/flows \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{
-    "flow_id": 123,
-    "action": "schedule",
-    "interval": "daily"
+    "pipeline_id": 123,
+    "flow_name": "Daily Flow",
+    "scheduling_config": {"interval": "daily"}
   }'
 
 # Schedule flow to run every 2 hours
-curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
+curl -X POST https://example.com/wp-json/datamachine/v1/flows \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{
-    "flow_id": 123,
-    "action": "schedule",
-    "interval": "every_2_hours"
+    "pipeline_id": 123,
+    "flow_name": "Bi-hourly Flow",
+    "scheduling_config": {"interval": "every_2_hours"}
   }'
 ```
 
@@ -189,30 +189,44 @@ curl -X GET https://example.com/wp-json/datamachine/v1/flows/123 \
 ```
 
 ### Schedule Modification
+
+Scheduling modifications are handled through flow updates. To change scheduling for an existing flow, you would typically delete and recreate the flow with new scheduling configuration, or use flow update endpoints if available.
+
 ```bash
-# Update interval
-curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
+# Create flow with updated scheduling
+curl -X POST https://example.com/wp-json/datamachine/v1/flows \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{
-    "flow_id": 123,
-    "action": "update",
-    "interval": "weekly"
+    "pipeline_id": 123,
+    "flow_name": "Weekly Flow",
+    "scheduling_config": {"interval": "weekly"}
   }'
 
-# Pause scheduling
-curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
+# Pause scheduling (set to manual)
+curl -X POST https://example.com/wp-json/datamachine/v1/flows \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{
-    "flow_id": 123,
-    "action": "pause"
+    "pipeline_id": 123,
+    "flow_name": "Manual Flow",
+    "scheduling_config": {"interval": "manual"}
+  }'
+
+# Pause scheduling (set to manual)
+curl -X POST https://example.com/wp-json/datamachine/v1/flows \
+  -H "Content-Type: application/json" \
+  -u username:application_password \
+  -d '{
+    "pipeline_id": 123,
+    "flow_name": "Paused Flow",
+    "scheduling_config": {"interval": "manual"}
   }'
 ```
 
 ## Related Documentation
 
-- [Schedule API](schedule.md) - Complete scheduling endpoint documentation
+- [Flow Scheduling](schedule.md) - Scheduling integrated into Flows API
 - [Execute API](execute.md) - Immediate flow execution
 - [Flows API](flows.md) - Flow management and configuration
 - [Jobs API](jobs.md) - Job monitoring and execution history

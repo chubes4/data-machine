@@ -121,7 +121,8 @@ add_action('datamachine_run_flow_now', function($flow_id) {
  * @param array|null $data Input data for the step
  * @return bool True on success, false on failure
  */
-add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step_id, ?array $dataPackets = null ) {
+    add_action( 'datamachine_execute_step', function( $job_id, string $flow_step_id, ?array $dataPackets = null ) {
+        $job_id = (int) $job_id; // Restore standardized data contract (Action Scheduler may pass as string)
 
         try {
             // Retrieve data by job_id
@@ -267,6 +268,8 @@ add_action( 'datamachine_execute_step', function( int $job_id, string $flow_step
       * @return bool True on successful scheduling, false on failure
       */
     add_action('datamachine_schedule_next_step', function($job_id, $flow_step_id, $dataPackets = []) {
+        $job_id = (int) $job_id; // Ensure job_id is int for database operations
+
         if (!function_exists('as_schedule_single_action')) {
             return false;
         }

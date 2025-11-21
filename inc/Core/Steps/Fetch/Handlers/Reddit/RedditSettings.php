@@ -7,7 +7,7 @@
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers\Reddit
- * @since      NEXT_VERSION
+ * @since      0.1.0
  */
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;

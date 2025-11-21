@@ -89,8 +89,8 @@ function datamachine_register_admin_menu() {
     $first_slug = key($registered_pages);
     
     $main_menu_hook = add_menu_page(
-        __('Data Machine', 'datamachine'),
-        __('Data Machine', 'datamachine'),
+        'Data Machine',
+        'Data Machine',
         $first_page['capability'] ?? 'manage_options',
         'datamachine-' . $first_slug,
         '', // No callback - main menu is just container
@@ -227,7 +227,7 @@ function datamachine_render_admin_page_content($page_config, $page_slug) {
     } else {
         // Default empty state
         echo '<div class="wrap"><h1>' . esc_html($page_config['page_title'] ?? ucfirst($page_slug)) . '</h1>';
-        echo '<p>' . esc_html__('Page content not configured.', 'datamachine') . '</p></div>';
+        echo '<p>' . esc_html('Page content not configured.') . '</p></div>';
     }
 }
 

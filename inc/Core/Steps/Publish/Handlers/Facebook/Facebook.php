@@ -8,7 +8,7 @@
  *
  * @package    Data_Machine
  * @subpackage Core\Steps\Publish\Handlers\Facebook
- * @since      NEXT_VERSION
+ * @since      0.1.0
  */
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Facebook;
@@ -37,8 +37,8 @@ class Facebook extends PublishHandler {
             'facebook_publish',
             'publish',
             self::class,
-            __('Facebook', 'datamachine'),
-            __('Post content to Facebook Pages', 'datamachine'),
+            'Facebook',
+            'Post content to Facebook Pages',
             true,
             FacebookAuth::class,
             FacebookSettings::class,
@@ -68,16 +68,27 @@ class Facebook extends PublishHandler {
                 return $tools;
             }
         );
+    }
 
-        $all_auth = apply_filters('datamachine_auth_providers', []);
-        $this->auth = $all_auth['facebook'] ?? null;
-
+    /**
+     * Lazy-load auth provider when needed.
+     *
+     * @return FacebookAuth|null Auth provider instance or null if unavailable
+     */
+    private function get_auth() {
         if ($this->auth === null) {
-            $this->log('error', 'Facebook Handler: Authentication service not available', [
-                'missing_service' => 'facebook',
-                'available_providers' => array_keys($all_auth)
-            ]);
+            $all_auth = apply_filters('datamachine_auth_providers', []);
+            $this->auth = $all_auth['facebook'] ?? null;
+
+            if ($this->auth === null) {
+                $this->log('error', 'Facebook Handler: Authentication service not available', [
+                    'handler' => 'facebook',
+                    'missing_service' => 'facebook',
+                    'available_providers' => array_keys($all_auth)
+                ]);
+            }
         }
+        return $this->auth;
     }
 
     protected function executePublish(array $parameters, array $handler_config): array {
@@ -93,8 +104,7 @@ class Facebook extends PublishHandler {
 
         // handler_config is ALWAYS flat structure - no nesting
 
-        $job_id = $parameters['job_id'] ?? null;
-        $engine_data = $this->getEngineData($job_id);
+        $engine_data = $parameters['engine_data'];
 
         // Extract parameters from flat structure
         $title = $parameters['title'] ?? '';
@@ -113,9 +123,14 @@ class Facebook extends PublishHandler {
             'handler_config_keys' => array_keys($handler_config)
         ]);
 
+        $auth = $this->get_auth();
+        if (!$auth) {
+            return $this->errorResponse('Facebook authentication not configured', [], 'critical');
+        }
+
         // Get authenticated credentials
-        $page_id = $this->auth->get_page_id();
-        $page_access_token = $this->auth->get_page_access_token();
+        $page_id = $auth->get_page_id();
+        $page_access_token = $auth->get_page_access_token();
 
         // Validate auto-discovered page ID
         if (empty($page_id)) {
@@ -189,7 +204,7 @@ class Facebook extends PublishHandler {
                 $comment_result = null;
                 if ($link_handling === 'comment' && !empty($source_url) && filter_var($source_url, FILTER_VALIDATE_URL)) {
                     // Check if we have comment permissions before attempting to post
-                    if ($this->auth && $this->auth->has_comment_permission()) {
+                    if ($auth && $auth->has_comment_permission()) {
                         $this->log('debug', 'Facebook Tool: Attempting to post link as comment', [
                             'post_id' => $post_id,
                             'source_url' => $source_url,

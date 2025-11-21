@@ -61,6 +61,8 @@ require_once __DIR__ . '/Cache.php';
 function datamachine_register_core_actions() {
     
     add_action('datamachine_mark_item_processed', function($flow_step_id, $source_type, $item_identifier, $job_id) {
+        $job_id = (int) $job_id; // Ensure job_id is int for database operations
+
         if (!isset($flow_step_id) || !isset($source_type) || !isset($item_identifier)) {
             do_action('datamachine_log', 'error', 'datamachine_mark_item_processed called with missing required parameters', [
                 'flow_step_id' => $flow_step_id,

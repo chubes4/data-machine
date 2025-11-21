@@ -53,7 +53,7 @@ function datamachine_register_oauth_system() {
         }
 
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('Insufficient permissions for OAuth operations.', 'datamachine'));
+            wp_die(esc_html('Insufficient permissions for OAuth operations.'));
         }
 
         $all_auth = apply_filters('datamachine_auth_providers', []);
@@ -62,7 +62,7 @@ function datamachine_register_oauth_system() {
         if ($auth_instance && method_exists($auth_instance, 'handle_oauth_callback')) {
             $auth_instance->handle_oauth_callback();
         } else {
-            wp_die(esc_html__('Unknown OAuth provider.', 'datamachine'));
+            wp_die(esc_html('Unknown OAuth provider.'));
         }
 
         exit;
@@ -119,6 +119,6 @@ function datamachine_register_oauth_system() {
         }
         
         do_action('datamachine_log', 'error', 'OAuth Error: Unknown provider requested.', ['provider' => $provider]);
-        return new WP_Error('unknown_provider', __('Unknown OAuth provider.', 'datamachine'));
+        return new WP_Error('unknown_provider', 'Unknown OAuth provider.');
     }, 10, 2);
 }

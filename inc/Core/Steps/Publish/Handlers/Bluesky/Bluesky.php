@@ -26,8 +26,8 @@ class Bluesky extends PublishHandler {
             'bluesky_publish',
             'publish',
             self::class,
-            __('Bluesky', 'datamachine'),
-            __('Post content to Bluesky social network', 'datamachine'),
+            'Bluesky',
+            'Post content to Bluesky social network',
             true,
             BlueskyAuth::class,
             null,
@@ -57,19 +57,26 @@ class Bluesky extends PublishHandler {
                 return $tools;
             }
         );
-
-        $all_auth = apply_filters('datamachine_auth_providers', []);
-        $this->auth = $all_auth['bluesky'] ?? null;
-
-        if ($this->auth === null) {
-            $this->log('error', 'Bluesky Handler: Authentication service not available', [
-                'missing_service' => 'bluesky',
-                'available_providers' => array_keys($all_auth)
-            ]);
-        }
     }
 
+    /**
+     * Lazy-load auth provider when needed.
+     *
+     * @return BlueskyAuth|null Auth provider instance or null if unavailable
+     */
     private function get_auth() {
+        if ($this->auth === null) {
+            $all_auth = apply_filters('datamachine_auth_providers', []);
+            $this->auth = $all_auth['bluesky'] ?? null;
+
+            if ($this->auth === null) {
+                $this->log('error', 'Bluesky Handler: Authentication service not available', [
+                    'handler' => 'bluesky',
+                    'missing_service' => 'bluesky',
+                    'available_providers' => array_keys($all_auth)
+                ]);
+            }
+        }
         return $this->auth;
     }
 
@@ -98,8 +105,7 @@ class Bluesky extends PublishHandler {
             'link_handling' => $handler_config['link_handling'] ?? 'append'
         ]);
 
-        $job_id = $parameters['job_id'] ?? null;
-        $engine_data = $this->getEngineData($job_id);
+        $engine_data = $parameters['engine_data'];
 
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
@@ -109,7 +115,12 @@ class Bluesky extends PublishHandler {
         $include_images = $handler_config['include_images'] ?? true;
         $link_handling = $handler_config['link_handling'] ?? 'append';
 
-        $session = $this->auth->get_session();
+        $auth = $this->get_auth();
+        if (!$auth) {
+            return $this->errorResponse('Bluesky authentication not configured', [], 'critical');
+        }
+
+        $session = $auth->get_session();
         if (is_wp_error($session)) {
             return $this->errorResponse(
                 'Bluesky authentication failed: ' . $session->get_error_message(),

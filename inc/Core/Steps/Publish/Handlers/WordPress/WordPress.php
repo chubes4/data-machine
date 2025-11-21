@@ -9,18 +9,17 @@ namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
 
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
+use DataMachine\Core\WordPress\WordPressSharedTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
 class WordPress extends PublishHandler {
-
     use HandlerRegistrationTrait;
+    use WordPressSharedTrait;
 
-    private $featured_image_handler;
-    private $source_url_handler;
-    private $taxonomy_handler;
+    // Plugin-specific handlers (featured image, source url, taxonomy) are initialized by WordPressSharedTrait
 
     public function __construct() {
         parent::__construct('wordpress');
@@ -30,8 +29,8 @@ class WordPress extends PublishHandler {
             'wordpress_publish',
             'publish',
             self::class,
-            __('WordPress', 'datamachine'),
-            __('Create WordPress posts and pages', 'datamachine'),
+            'WordPress',
+            'Create WordPress posts and pages',
             false,
             null,
             WordPressSettings::class,
@@ -65,9 +64,8 @@ class WordPress extends PublishHandler {
             }
         );
 
-        $this->featured_image_handler = apply_filters('datamachine_get_featured_image_handler', null);
-        $this->source_url_handler = apply_filters('datamachine_get_source_url_handler', null);
-        $this->taxonomy_handler = apply_filters('datamachine_get_taxonomy_handler', null);
+        // Initialize shared helpers
+        $this->initWordPressHelpers();
     }
 
     /**
@@ -96,8 +94,7 @@ class WordPress extends PublishHandler {
             );
         }
 
-        $job_id = $parameters['job_id'] ?? null;
-        $engine_data = $this->getEngineData($job_id);
+        $engine_data = $parameters['engine_data'];
 
         $taxonomies = get_taxonomies(['public' => true], 'names');
         $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
@@ -125,15 +122,15 @@ class WordPress extends PublishHandler {
         }
         
     $content = wp_unslash($parameters['content']);
-    $content = $this->source_url_handler->processSourceUrl($content, $engine_data, $handler_config);
+    $content = $this->processSourceUrl($content, $engine_data, $handler_config);
     $content = wp_filter_post_kses($content);
         
         $post_data = [
             'post_title' => sanitize_text_field(wp_unslash($parameters['title'])),
             'post_content' => $content,
-            'post_status' => $this->get_effective_post_status($handler_config),
+            'post_status' => $this->getEffectivePostStatus($handler_config),
             'post_type' => $handler_config['post_type'],
-            'post_author' => $this->get_effective_post_author($handler_config)
+            'post_author' => $this->getEffectivePostAuthor($handler_config)
         ];
 
         $this->log('debug', 'WordPress Tool: Final post data for wp_insert_post', [
@@ -156,8 +153,17 @@ class WordPress extends PublishHandler {
             );
         }
 
-        $taxonomy_results = $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config);
-        $featured_image_result = $this->featured_image_handler->processImage($post_id, $engine_data, $handler_config);
+        $taxonomy_results = $this->applyTaxonomies($post_id, $parameters, $handler_config, $engine_data);
+        $featured_image_result = $this->processFeaturedImage($post_id, $engine_data, $handler_config);
+
+        // Store post_id in engine data for downstream handlers
+        $job_id = $parameters['job_id'] ?? null;
+        if ($job_id) {
+            apply_filters('datamachine_engine_data', null, $job_id, [
+                'post_id' => $post_id,
+                'published_url' => get_permalink($post_id)
+            ]);
+        }
 
         $this->log('debug', 'WordPress Tool: Post created successfully', [
             'post_id' => $post_id,
@@ -179,49 +185,13 @@ class WordPress extends PublishHandler {
     /**
      * Get the display label for the WordPress handler.
      *
-     * @return string Localized handler label
+     * @return string Handler label
      */
     public static function get_label(): string {
-        return __('WordPress', 'datamachine');
+        return 'WordPress';
     }
 
-    /**
-     * Get the effective post status using configuration hierarchy.
-     *
-     * System defaults override handler-specific settings.
-     *
-     * @param array $handler_config Handler configuration array
-     * @return string Post status (publish, draft, etc.)
-     */
-    private function get_effective_post_status(array $handler_config): string {
-        $all_settings = get_option('datamachine_settings', []);
-        $wp_settings = $all_settings['wordpress_settings'] ?? [];
-        $default_post_status = $wp_settings['default_post_status'] ?? '';
-
-        if (!empty($default_post_status)) {
-            return $default_post_status;
-        }
-        return $handler_config['post_status'] ?? 'draft';
-    }
-
-    /**
-     * Get the effective post author using configuration hierarchy.
-     *
-     * System defaults override handler-specific settings.
-     *
-     * @param array $handler_config Handler configuration array
-     * @return int WordPress user ID for post author
-     */
-    private function get_effective_post_author(array $handler_config): int {
-        $all_settings = get_option('datamachine_settings', []);
-        $wp_settings = $all_settings['wordpress_settings'] ?? [];
-        $default_author_id = $wp_settings['default_author_id'] ?? 0;
-
-        if (!empty($default_author_id)) {
-            return $default_author_id;
-        }
-        return $handler_config['post_author'] ?? get_current_user_id();
-    }
+    // Effective post status/author logic is provided by WordPressSharedTrait
 
 
 }

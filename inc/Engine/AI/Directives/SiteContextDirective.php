@@ -100,5 +100,12 @@ $site_context_directive = apply_filters('datamachine_site_context_directive', Si
 
 // Register the filtered directive for global context (applies to all AI agents - allows replacement by multisite plugin)
 if ($site_context_directive) {
-    add_filter('datamachine_global_directives', [$site_context_directive, 'inject'], 50, 5);
+    add_filter('datamachine_directives', function($directives) use ($site_context_directive) {
+        $directives[] = [
+            'class' => $site_context_directive,
+            'priority' => 50,
+            'agent_types' => ['all']
+        ];
+        return $directives;
+    });
 }

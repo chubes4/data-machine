@@ -18,6 +18,8 @@ function datamachine_register_engine_data_filter() {
       * Retrieval should use direct database access: $db_jobs->retrieve_engine_data($job_id)
       */
     add_filter('datamachine_engine_data', function($default, $job_id, $data = null) {
+        $job_id = (int) $job_id; // Ensure job_id is int for database operations
+
         if ($job_id === null || $job_id === '') {
             return $default;
         }

@@ -82,32 +82,16 @@ class ToolManager {
         $all_settings = get_option('datamachine_settings', []);
         $enabled_tools = $all_settings['enabled_tools'] ?? [];
 
+        // If settings never initialized, treat as opt-out (all configured tools enabled)
+        if (empty($enabled_tools)) {
+            return $this->is_tool_configured($tool_id) || !$this->requires_configuration($tool_id);
+        }
+
         // Present in settings = enabled (opt-out pattern)
         return isset($enabled_tools[$tool_id]);
     }
 
-    /**
-     * Get list of explicitly disabled tools (opt-out pattern).
-     *
-     * @return array Tool IDs that are configured but disabled
-     */
-    public function get_globally_disabled_tools(): array {
-        $all_tools = $this->get_global_tools();
-        $all_settings = get_option('datamachine_settings', []);
-        $enabled_tools = $all_settings['enabled_tools'] ?? [];
-        $disabled = [];
 
-        foreach ($all_tools as $tool_id => $tool_config) {
-            $configured = $this->is_tool_configured($tool_id);
-
-            // Configured but NOT in enabled_tools = user opted out
-            if ($configured && !isset($enabled_tools[$tool_id])) {
-                $disabled[] = $tool_id;
-            }
-        }
-
-        return $disabled;
-    }
 
     // ============================================
     // CONTEXT-AWARE ENABLEMENT

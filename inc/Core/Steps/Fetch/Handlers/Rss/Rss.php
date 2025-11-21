@@ -26,8 +26,8 @@ class Rss extends FetchHandler {
 			'rss',
 			'fetch',
 			self::class,
-			__('RSS Feed', 'datamachine'),
-			__('Fetch content from RSS and Atom feeds', 'datamachine'),
+			'RSS Feed',
+			'Fetch content from RSS and Atom feeds',
 			false,
 			null,
 			RssSettings::class,
@@ -63,13 +63,13 @@ class Rss extends FetchHandler {
                 'error' => $result['error'],
                 'feed_url' => $feed_url
             ]);
-            return $this->emptyResponse();
+            return [];
         }
 
         $feed_content = $result['data'];
         if (empty($feed_content)) {
             $this->log('error', 'RSS feed content is empty.', ['pipeline_id' => $pipeline_id, 'feed_url' => $feed_url]);
-            return $this->emptyResponse();
+            return [];
         }
 
         libxml_use_internal_errors(true);
@@ -85,7 +85,7 @@ class Rss extends FetchHandler {
                 'feed_url' => $feed_url,
                 'xml_errors' => implode(', ', $error_messages)
             ]);
-            return $this->emptyResponse();
+            return [];
         }
 
         $items = [];
@@ -98,11 +98,11 @@ class Rss extends FetchHandler {
             $items = $xml->entry;
         } else {
             $this->log('error', 'Unsupported feed format or no items found in feed.', ['pipeline_id' => $pipeline_id, 'feed_url' => $feed_url]);
-            return $this->emptyResponse();
+            return [];
         }
 
         if (empty($items)) {
-            return $this->emptyResponse();
+            return [];
         }
 
         $total_checked = 0;
@@ -243,7 +243,7 @@ class Rss extends FetchHandler {
             'pipeline_id' => $pipeline_id
         ]);
 
-        return $this->emptyResponse();
+        return [];
     }
 
     /**

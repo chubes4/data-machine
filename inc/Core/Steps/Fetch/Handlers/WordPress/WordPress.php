@@ -28,8 +28,8 @@ class WordPress extends FetchHandler {
 			'wordpress_posts',
 			'fetch',
 			self::class,
-			__('Local WordPress Posts', 'datamachine'),
-			__('Fetch posts and pages from this WordPress installation', 'datamachine'),
+			'Local WordPress Posts',
+			'Fetch posts and pages from this WordPress installation',
 			false,
 			null,
 			WordPressSettings::class,
@@ -277,7 +277,7 @@ class WordPress extends FetchHandler {
 
 
     public static function get_label(): string {
-        return __('Local WordPress Posts', 'datamachine');
+        return 'Local WordPress Posts';
     }
 }
 

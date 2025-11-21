@@ -41,24 +41,33 @@ class FeaturedImageHandler {
         if (!$this->isImageHandlingEnabled($handler_config)) {
             return null;
         }
-
+        // Support either an engine repo file path or a direct image URL
         $image_file_path = $engine_data['image_file_path'] ?? null;
-        if (empty($image_file_path)) {
+        $image_url = $engine_data['image_url'] ?? null;
+        if (empty($image_file_path) && empty($image_url)) {
             return null;
         }
+        // If we have a repository path, use the repository attach flow
+        if (!empty($image_file_path)) {
+            $image_validator = new \DataMachine\Core\FilesRepository\ImageValidator();
+            $validation = $image_validator->validate_repository_file($image_file_path);
 
-        $image_validator = new \DataMachine\Core\FilesRepository\ImageValidator();
-        $validation = $image_validator->validate_repository_file($image_file_path);
+            if (!$validation['valid']) {
+                $this->logImageOperation('error', 'WordPress Featured Image: Repository image validation failed', [
+                    'image_file_path' => $image_file_path,
+                    'errors' => $validation['errors']
+                ]);
+                return ['success' => false, 'error' => implode(', ', $validation['errors'])];
+            }
 
-        if (!$validation['valid']) {
-            $this->logImageOperation('error', 'WordPress Featured Image: Repository image validation failed', [
-                'image_file_path' => $image_file_path,
-                'errors' => $validation['errors']
-            ]);
-            return ['success' => false, 'error' => implode(', ', $validation['errors'])];
+            return $this->attachRepositoryFile($post_id, $image_file_path);
         }
 
-        return $this->attachRepositoryFile($post_id, $image_file_path);
+        // No fallback for direct URLs — we expect a repository file path in engine_data.
+        return null;
+
+        // If we reach here, no image was processed
+        return null;
     }
 
     /**

@@ -10,8 +10,9 @@ Data Machine uses an engine data filter architecture that provides clean data se
 
 1. **Engine Data Propagation** - Fetch handlers store engine data via centralized filters; engine bundles the data into the payload passed to every step and tool
 2. **Clean Data Separation** - AI receives clean data packets without URLs; handlers receive engine parameters via the payload-supplied engine data
-3. **Unified Interface** - All steps, handlers, and tools use consistent parameter formats
+3. **Unified Interface** - All steps, handlers, and tools use consistent parameter formats with required `job_id` for engine data access
 4. **Tool-Based Parameter Building** - ToolParameters class (Universal Engine) provides standardized parameter construction
+5. **Required Job ID** - All tools must include `job_id` parameter to enable engine data access and workflow continuity
 
 ## Core Payload Structure
 
@@ -165,67 +166,44 @@ class MyUpdateHandler {
 ## AI Tool Parameter Building
 
 ### ToolParameters Class (Universal Engine)
-**File**: `/inc/Engine/AI/ToolParameters.php`
+**File**: `/inc/Engine/AI/Tools/ToolParameters.php`
 **Since**: 0.2.0
 
 Centralized parameter building for AI tool execution:
 
 ```php
-use DataMachine\Engine\AI\ToolParameters;
+use DataMachine\Engine\AI\Tools\ToolParameters;
 
-// Standard tool parameter building
+// Unified parameter building for all tool types
 $parameters = ToolParameters::buildParameters(
     $ai_tool_parameters,     // Parameters from AI tool call
-    $payload,                // Step payload (session_id or job_id + engine_data)
+    $payload,                // Step payload (job_id, flow_step_id, data, flow_step_config, engine_data)
     $tool_definition         // Tool definition array
-);
-
-// Handler tool parameter building (includes engine data)
-$parameters = ToolParameters::buildForHandlerTool(
-    $ai_tool_parameters,     // AI tool call parameters
-    $data,                   // Data packet array
-    $tool_definition,        // Tool specification
-    $engine_parameters,      // Engine data (source_url, etc.)
-    $handler_config          // Handler configuration
 );
 ```
 
 ### Parameter Building Process
 
-1. **Start with Payload Context** - Core job/flow identifiers and engine data copied directly from the incoming payload
-2. **Extract Content** - Pull content/title from data packets based on tool specs
-3. **Add Tool Metadata** - Include tool_definition, tool_name, handler_config
-4. **Merge AI Parameters** - Add AI-provided parameters (overwrites conflicts)
-5. **Preserve Engine Data** - Engine metadata stays attached for handler tools and downstream consumers
+1. **Start with Payload** - Copy the complete payload (job_id, flow_step_id, data, flow_step_config, engine_data)
+2. **Merge AI Parameters** - Add AI-provided parameters on top (content, title, query, etc.)
+3. **Preserve Structure** - Maintain unified flat parameter structure for all tool types
 
 ### Example Built Parameters
 
 ```php
 [
-    // Core unified parameters
-    'session_id' => 'session_123', // Chat agent
-    // OR
-    'job_id' => 'uuid-job-123',   // Pipeline agent
+    // Original payload parameters
+    'job_id' => 'uuid-job-123',
+    'flow_step_id' => 'step_uuid_flow_123',
+    'data' => [...], // Complete data packet array
+    'flow_step_config' => [...], // Step configuration
+    'engine_data' => [...], // Engine metadata from fetch handlers
 
-    // Data context (pipeline only)
-    'data' => [...], // Data packet array
-    'handler_config' => ['include_images' => true],
-
-    // Extracted content (from data packets if tool requires)
-    'content' => 'Article content from data packet',
-    'title' => 'Article title from data packet',
-
-    // Tool metadata
-    'tool_definition' => [...],
-    'tool_name' => 'twitter_publish',
-
-    // AI-provided parameters (overwrites extracted defaults)
-    'content' => 'AI-modified tweet content',
+    // AI-provided parameters (merged on top)
+    'content' => 'AI-generated content',
+    'title' => 'AI-generated title',
     'hashtags' => '#ai #automation'
 ]
-
-// Note: Engine data (source_url, image_url) accessed via datamachine_engine_data filter
-// Not included in parameters structure - accessed separately by handlers as needed
 ```
 
 ## Handler-Specific Engine Parameters

@@ -29,7 +29,7 @@
 		// Handle provider change
 		providerSelect.addEventListener('change', function() {
 			const selectedProvider = this.value;
-			updateModelOptions(selectedProvider);
+			updateModelOptions(selectedProvider, ''); // Clear model selection when provider changes
 		});
 	}
 
@@ -48,8 +48,9 @@
 		})
 			.then(data => {
 				if (data.success && data.data) {
-					aiProviders = data.data;
-					populateProviderOptions();
+					aiProviders = data.data.providers;
+					const defaults = data.data.defaults || {};
+					populateProviderOptions(defaults);
 				}
 			})
 			.catch(error => {
@@ -63,9 +64,9 @@
 	/**
 	 * Populate provider dropdown options
 	 */
-	function populateProviderOptions() {
+	function populateProviderOptions(defaults = {}) {
 		const providerSelect = document.getElementById('default_provider');
-		const currentValue = window.datamachineAgentTab?.savedProvider || '';
+		const currentProviderValue = defaults.provider || '';
 
 		// Clear existing options except the first one
 		while (providerSelect.options.length > 1) {
@@ -80,19 +81,18 @@
 			providerSelect.appendChild(option);
 		});
 
-		// Restore selected value if it still exists
-		if (currentValue && aiProviders[currentValue]) {
-			providerSelect.value = currentValue;
-			updateModelOptions(currentValue);
+		// Set selected value from defaults
+		if (currentProviderValue && aiProviders[currentProviderValue]) {
+			providerSelect.value = currentProviderValue;
+			updateModelOptions(currentProviderValue, defaults.model);
 		}
 	}
 
 	/**
 	 * Update model options based on selected provider
 	 */
-	function updateModelOptions(selectedProvider) {
+	function updateModelOptions(selectedProvider, defaultModel = '') {
 		const modelSelect = document.getElementById('default_model');
-		const currentModelValue = window.datamachineAgentTab?.savedModel || '';
 
 		// Clear existing options
 		modelSelect.innerHTML = '';
@@ -100,7 +100,7 @@
 		if (!selectedProvider || !aiProviders[selectedProvider]) {
 			const option = document.createElement('option');
 			option.value = '';
-			option.textContent = window.datamachineAgentTab?.strings?.selectProviderFirst || 'Select provider first...';
+			option.textContent = 'Select provider first...';
 			modelSelect.appendChild(option);
 			return;
 		}
@@ -108,7 +108,7 @@
 		// Add "Select Model..." option
 		const defaultOption = document.createElement('option');
 		defaultOption.value = '';
-		defaultOption.textContent = window.datamachineAgentTab?.strings?.selectModel || 'Select Model...';
+		defaultOption.textContent = 'Select Model...';
 		modelSelect.appendChild(defaultOption);
 
 		const providerData = aiProviders[selectedProvider];
@@ -132,11 +132,11 @@
 			}
 		}
 
-		// Restore selected model if it exists in the new options
-		if (currentModelValue) {
-			const optionExists = Array.from(modelSelect.options).some(option => option.value === currentModelValue);
+		// Set selected model from defaults if it exists in the new options
+		if (defaultModel) {
+			const optionExists = Array.from(modelSelect.options).some(option => option.value === defaultModel);
 			if (optionExists) {
-				modelSelect.value = currentModelValue;
+				modelSelect.value = defaultModel;
 			}
 		}
 	}

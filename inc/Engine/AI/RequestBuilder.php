@@ -21,7 +21,7 @@ class RequestBuilder {
 	 *
 	 * Centralizes request construction logic to ensure Chat and Pipeline agents
 	 * build identical request structures. Handles tool restructuring, directive
-	 * application, and consistent chubes_ai_request filter invocation.
+	 * application via PromptBuilder, and consistent chubes_ai_request filter invocation.
 	 *
 	 * @param array  $messages    Initial messages array with role/content
 	 * @param string $provider    AI provider name (openai, anthropic, google, grok, openrouter)
@@ -49,26 +49,25 @@ class RequestBuilder {
 		// 2. Restructure tools to standard format (ensures consistent tool structure for all providers)
 		$structured_tools = self::restructure_tools($tools);
 
-		// 3. Apply global directives (applies to ALL AI agents - chat + pipeline)
-		$request = apply_filters(
-			'datamachine_global_directives',
-			$request,
-			$provider,
-			$structured_tools,
-			$payload['step_id'] ?? null,
-			$payload
-		);
+		// 3. Apply directives via PromptBuilder
+		$promptBuilder = new PromptBuilder();
+		$promptBuilder->setMessages($messages)->setTools($structured_tools);
 
-		// 4. Apply agent directives (universal system - agents implement via filter)
-		$request = apply_filters(
-			'datamachine_agent_directives',
-			$request,
-			$agent_type,
-			$provider,
-			$structured_tools,
-			$payload
-		);
+		// Get registered directives
+		$directives = apply_filters('datamachine_directives', []);
 
+		// Add each directive to the builder
+		foreach ($directives as $directive) {
+			$promptBuilder->addDirective(
+				$directive['class'],
+				$directive['priority'],
+				$directive['agent_types'] ?? ['all']
+			);
+		}
+
+		// Build the request with directives applied
+		$request = $promptBuilder->build($agent_type, $provider, $payload);
+		$request['model'] = $model;
 		do_action('datamachine_log', 'debug', 'RequestBuilder: Built AI request', [
 			'agent_type' => $agent_type,
 			'provider' => $provider,
@@ -77,7 +76,7 @@ class RequestBuilder {
 			'tool_count' => count($structured_tools)
 		]);
 
-		// 5. Send to ai-http-client via chubes_ai_request filter
+		// 4. Send to ai-http-client via chubes_ai_request filter
 		return apply_filters(
 			'chubes_ai_request',
 			$request,
