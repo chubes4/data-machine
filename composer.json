@@ -28,8 +28,6 @@
 			"inc/Engine/Filters/OAuth.php",
 			"inc/Engine/Actions/DataMachineActions.php",
 			"inc/Engine/Filters/EngineData.php",
-
-			"inc/Engine/Filters/WordPress.php",
 			"inc/Engine/AI/ConversationManager.php",
 			"inc/Core/Admin/Modal/ModalFilters.php",
 			"inc/Core/Admin/AdminRootFilters.php",
@@ -47,6 +45,7 @@
 			"inc/Engine/AI/Tools/Global/WebFetch.php",
 			"inc/Engine/AI/Tools/Global/WordPressPostReader.php",
 			"inc/Engine/AI/Directives/GlobalSystemPromptDirective.php",
+			"inc/Engine/AI/Directives/SiteContext.php",
 			"inc/Engine/AI/Directives/SiteContextDirective.php",
 			"inc/Engine/AI/RequestBuilder.php",
 			"inc/Api/Chat/ChatFilters.php",

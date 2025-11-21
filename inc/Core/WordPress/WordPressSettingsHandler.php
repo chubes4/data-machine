@@ -118,7 +118,7 @@ class WordPressSettingsHandler {
                 // Must be a term ID - validate it exists in this taxonomy
                 $term_id = absint($raw_value);
                 if ($term_id > 0) {
-                    $term_name = apply_filters('datamachine_wordpress_term_name', null, $term_id, $taxonomy->name);
+                    $term_name = TaxonomyHandler::getTermName($term_id, $taxonomy->name);
                     if ($term_name !== null) {
                         $sanitized[$field_key] = $term_id;
                     } else {

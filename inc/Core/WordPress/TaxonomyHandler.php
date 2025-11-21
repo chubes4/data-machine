@@ -19,13 +19,12 @@ if (!defined('ABSPATH')) {
 class TaxonomyHandler {
 
     /**
-     * Process taxonomies based on configuration.
+     * WordPress system taxonomies that should be excluded from Data Machine processing.
      *
-     * @param int $post_id WordPress post ID
-     * @param array $parameters Tool parameters with AI-decided taxonomy values
-     * @param array $handler_config Handler configuration with taxonomy selections
-     * @return array Processing results for all configured taxonomies
+     * @var array
      */
+    private const SYSTEM_TAXONOMIES = ['post_format', 'nav_menu', 'link_category'];
+
     /**
      * Register a custom handler for a specific taxonomy.
      *
@@ -89,9 +88,29 @@ class TaxonomyHandler {
         return get_taxonomies(['public' => true], 'objects');
     }
 
+    /**
+     * Get system taxonomies excluded from Data Machine processing.
+     *
+     * @return array System taxonomy names
+     */
+    public static function getSystemTaxonomies(): array {
+        return self::SYSTEM_TAXONOMIES;
+    }
+
     public static function shouldSkipTaxonomy(string $taxonomy_name): bool {
-        $excluded_taxonomies = apply_filters('datamachine_wordpress_system_taxonomies', []);
-        return in_array($taxonomy_name, $excluded_taxonomies);
+        return in_array($taxonomy_name, self::SYSTEM_TAXONOMIES);
+    }
+
+    /**
+     * Get term name from term ID and taxonomy.
+     *
+     * @param int $term_id WordPress term ID
+     * @param string $taxonomy Taxonomy name
+     * @return string|null Term name if exists, null otherwise
+     */
+    public static function getTermName(int $term_id, string $taxonomy): ?string {
+        $term = get_term($term_id, $taxonomy);
+        return (!is_wp_error($term) && $term) ? $term->name : null;
     }
 
     private function isAiDecidedTaxonomy(string $selection): bool {
@@ -179,7 +198,7 @@ class TaxonomyHandler {
      */
     private function processPreSelectedTaxonomy(int $post_id, string $taxonomy_name, string $selection, array $engine_data = []): ?array {
         $term_id = absint($selection);
-        $term_name = apply_filters('datamachine_wordpress_term_name', null, $term_id, $taxonomy_name);
+        $term_name = self::getTermName($term_id, $taxonomy_name);
 
         if ($term_name !== null) {
             $result = wp_set_object_terms($post_id, [$term_id], $taxonomy_name);

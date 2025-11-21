@@ -97,9 +97,32 @@ export const useUpdateFlowHandler = () => {
   return useMutation({
     mutationFn: ({ flowStepId, handlerSlug, settings, pipelineId, stepType }) =>
       updateFlowHandler(flowStepId, handlerSlug, settings, pipelineId, stepType),
-    onSuccess: () => {
-      // Invalidate the specific flow that contains this step
+    onSuccess: (response, variables) => {
+      // Invalidate the specific flow and update cache using flow_id returned by API
       queryClient.invalidateQueries(['flows']);
+
+      try {
+        if (response?.success && response?.data?.flow_id) {
+          const flowId = response.data.flow_id;
+          // Update single flow cache to include latest step config if provided
+          const existingFlow = queryClient.getQueryData(['flows', 'single', flowId]);
+          if (existingFlow && response.data.step_config) {
+            const updatedFlow = {
+              ...existingFlow,
+              flow_config: {
+                ...existingFlow.flow_config,
+                [response.data.flow_step_id]: response.data.step_config,
+              },
+            };
+            queryClient.setQueryData(['flows', 'single', flowId], updatedFlow);
+          }
+
+          // Ensure flows list for pipeline is invalidated
+          queryClient.invalidateQueries(['flows', variables.pipelineId]);
+        }
+      } catch ( err ) {
+        // Ignore cache update errors
+      }
     },
   });
 };

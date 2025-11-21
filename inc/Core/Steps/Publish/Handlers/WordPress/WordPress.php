@@ -97,10 +97,9 @@ class WordPress extends PublishHandler {
         $engine_data = $parameters['engine_data'];
 
         $taxonomies = get_taxonomies(['public' => true], 'names');
-        $excluded = apply_filters('datamachine_wordpress_system_taxonomies', []);
         $taxonomy_settings = [];
         foreach ($taxonomies as $taxonomy) {
-            if (!in_array($taxonomy, $excluded)) {
+            if (!\DataMachine\Core\WordPress\TaxonomyHandler::shouldSkipTaxonomy($taxonomy)) {
                 $field_key = "taxonomy_{$taxonomy}_selection";
                 $taxonomy_settings[$taxonomy] = $handler_config[$field_key] ?? 'NOT_SET';
             }

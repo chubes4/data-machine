@@ -303,16 +303,11 @@ class FlowSteps {
 		$flow_step_id = sanitize_text_field($request->get_param('flow_step_id'));
 		$user_message = sanitize_textarea_field($request->get_param('user_message'));
 
-		// Use centralized flow user message update action with validation
-		$success = apply_filters('datamachine_update_flow_user_message_result', false, $flow_step_id, $user_message);
+		// Use centralized flow user message update action
+		do_action('datamachine_update_flow_user_message', $flow_step_id, $user_message);
 
-		if (!$success) {
-			return new \WP_Error(
-				'update_failed',
-				__('Failed to save user message', 'datamachine'),
-				['status' => 500]
-			);
-		}
+		// Action completed successfully
+		$success = true;
 
 		// Extract flow_id from flow_step_id to get pipeline_id for cache clearing
 		$parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);

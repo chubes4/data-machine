@@ -3,7 +3,7 @@
  * Cached WordPress site metadata for AI context injection.
  */
 
-namespace DataMachine\Core\Steps\AI;
+namespace DataMachine\Engine\AI\Directives;
 
 defined('ABSPATH') || exit;
 
@@ -86,10 +86,9 @@ class SiteContext {
     private static function get_taxonomies_data(): array {
         $taxonomies_data = [];
         $taxonomies = get_taxonomies(['public' => true], 'objects');
-        $excluded_taxonomies = apply_filters('datamachine_wordpress_system_taxonomies', []);
 
         foreach ($taxonomies as $taxonomy) {
-            if (in_array($taxonomy->name, $excluded_taxonomies)) {
+            if (\DataMachine\Core\WordPress\TaxonomyHandler::shouldSkipTaxonomy($taxonomy->name)) {
                 continue;
             }
 

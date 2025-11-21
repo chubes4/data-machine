@@ -36,11 +36,15 @@ export default function HandlerSelectionModal( {
 	/**
 	 * Handle handler selection
 	 */
-	const handleSelect = ( handlerSlug ) => {
+	const handleSelect = async ( handlerSlug ) => {
 		if ( onSelectHandler ) {
-			onSelectHandler( handlerSlug );
+			try {
+				await onSelectHandler( handlerSlug );
+			} catch ( err ) {
+				// eslint-disable-next-line no-console
+				console.error( 'Handler selection error:', err );
+			}
 		}
-		onClose();
 	};
 
 	return (

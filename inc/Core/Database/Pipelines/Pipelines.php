@@ -127,7 +127,7 @@ class Pipelines {
 
 		if ( false === $cached_result ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i ORDER BY pipeline_name ASC", $this->table_name ), ARRAY_A );
+			$results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i ORDER BY updated_at DESC", $this->table_name ), ARRAY_A );
 
 			// Decode JSON fields immediately after database retrieval
 			foreach ($results as &$pipeline) {

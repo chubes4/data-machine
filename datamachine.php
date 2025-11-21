@@ -40,6 +40,9 @@ if ( ! class_exists( 'ActionScheduler' ) ) {
 
 function run_datamachine() {
 
+	// Set Action Scheduler timeout to 10 minutes (600 seconds) for large tasks
+	add_filter('action_scheduler_timeout_period', function() { return 600; });
+
 	datamachine_register_utility_filters();
 	datamachine_register_admin_filters();
 	datamachine_register_oauth_system();

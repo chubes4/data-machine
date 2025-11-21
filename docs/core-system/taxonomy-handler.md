@@ -52,6 +52,22 @@ public function processTaxonomies(int $post_id, array $parameters, array $handle
 
 **Returns**: Array of processing results for each taxonomy
 
+### getTermName()
+
+Get term name from term ID and taxonomy (static method).
+
+```php
+public static function getTermName(int $term_id, string $taxonomy): ?string
+```
+
+**Parameters**:
+- `$term_id`: WordPress term ID
+- `$taxonomy`: Taxonomy name
+
+**Returns**: Term name if exists, null otherwise
+
+**Usage**: Used for pre-selected taxonomy validation during settings sanitization and term assignment.
+
 ### assignTaxonomy()
 
 Assign taxonomy terms with dynamic creation.
@@ -125,13 +141,19 @@ $options = [
 
 ### System Taxonomy Exclusion
 
-Excludes system taxonomies via filter:
+Excludes system taxonomies via static constant and method:
 
 ```php
-$excluded_taxonomies = apply_filters('datamachine_wordpress_system_taxonomies', []);
-if (in_array($taxonomy_name, $excluded_taxonomies)) {
+// System taxonomies defined as class constant
+private const SYSTEM_TAXONOMIES = ['post_format', 'nav_menu', 'link_category'];
+
+// Check if taxonomy should be skipped
+if (TaxonomyHandler::shouldSkipTaxonomy($taxonomy_name)) {
     // Skip processing
 }
+
+// Get system taxonomies list
+$excluded = TaxonomyHandler::getSystemTaxonomies();
 ```
 
 ## Error Handling

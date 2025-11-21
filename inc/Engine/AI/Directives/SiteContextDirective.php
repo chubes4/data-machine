@@ -16,8 +16,6 @@
 
 namespace DataMachine\Engine\AI\Directives;
 
-use DataMachine\Core\Steps\AI\SiteContext;
-
 defined('ABSPATH') || exit;
 
 class SiteContextDirective {

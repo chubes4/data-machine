@@ -9,7 +9,7 @@ import { useEffect, useCallback, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Spinner, Notice, Button } from '@wordpress/components';
 import { usePipelines, useCreatePipeline } from './queries/pipelines';
-import { useFlows } from './queries/flows';
+import { useFlows, useUpdateFlowHandler } from './queries/flows';
 import { useHandlers, useHandlerDetails } from './queries/handlers';
 import { useUIStore } from './stores/uiStore';
 import PipelineCard from './components/pipelines/PipelineCard';
@@ -42,6 +42,7 @@ export default function PipelinesApp() {
 	const handlerSlug = activeModal === MODAL_TYPES.HANDLER_SETTINGS ? modalData?.handlerSlug : null;
 	const { data: handlerDetails } = useHandlerDetails(handlerSlug);
 	const createPipelineMutation = useCreatePipeline();
+	const updateHandlerMutation = useUpdateFlowHandler();
 
 	// Find selected pipeline from pipelines array
 	const selectedPipeline = pipelines?.find(p => p.pipeline_id === selectedPipelineId);
@@ -57,13 +58,33 @@ export default function PipelinesApp() {
 		closeModal();
 	}, [ closeModal ] );
 
-	const handleHandlerSelected = useCallback( ( handlerSlug ) => {
-		// Update modal data with selected handler
-		openModal( MODAL_TYPES.HANDLER_SETTINGS, {
-			...modalData,
-			handlerSlug,
-		} );
-	}, [ openModal, modalData ] );
+	const handleHandlerSelected = useCallback( async ( selectedHandlerSlug ) => {
+		try {
+			// First persist handler selection to flow step
+			const result = await updateHandlerMutation.mutateAsync({
+				flowStepId: modalData.flowStepId,
+				handlerSlug: selectedHandlerSlug,
+				settings: {},
+				pipelineId: modalData.pipelineId,
+				stepType: modalData.stepType,
+			});
+
+			// On success, open handler settings modal with updated config
+			openModal( MODAL_TYPES.HANDLER_SETTINGS, {
+				...modalData,
+				handlerSlug: selectedHandlerSlug,
+				currentSettings: result?.data?.step_config?.handler_config || {},
+			});
+		} catch ( err ) {
+			// eslint-disable-next-line no-console
+			console.error( 'Error assigning handler to flow step:', err );
+			// Fallback: Open settings modal anyway but without persisted handler
+			openModal( MODAL_TYPES.HANDLER_SETTINGS, {
+				...modalData,
+				handlerSlug: selectedHandlerSlug,
+			});
+		}
+	}, [ openModal, modalData, updateHandlerMutation ] );
 
 	const handleChangeHandler = useCallback( () => {
 		openModal( MODAL_TYPES.HANDLER_SELECTION, modalData );
