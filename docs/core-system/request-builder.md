@@ -25,15 +25,12 @@ Request Building Flow:
 │     • Normalize tool definitions                    │
 │     • Ensure provider compatibility                 │
 │                                                      │
-│  3. Apply Global Directives                         │
-│     • datamachine_global_directives filter          │
-│     • All AI agents receive these                   │
+│  3. Apply Directives via PromptBuilder              │
+│     • datamachine_directives filter collects configs │
+│     • Priority-based sorting and agent targeting    │
+│     • Unified directive management                   │
 │                                                      │
-│  4. Apply Agent Directives                          │
-│     • datamachine_agent_directives filter           │
-│     • Pipeline or Chat specific directives          │
-│                                                      │
-│  5. Send to ai-http-client                          │
+│  4. Send to ai-http-client                          │
 │     • chubes_ai_request filter                      │
 │     • Returns standardized AI response              │
 └─────────────────────────────────────────────────────┘
@@ -121,92 +118,59 @@ if ($ai_response['success']) {
 
 ## Directive Application System
 
-The RequestBuilder applies directives in a specific hierarchical order to ensure consistent behavior across all agents.
+The RequestBuilder integrates with PromptBuilder for unified directive management with priority-based ordering and agent-specific targeting.
 
-### Directive Hierarchy
+### Directive System (@since v0.2.5)
 
 ```
-1. Global Directives (datamachine_global_directives)
-   ↓ Applies to ALL AI agents
+1. PromptBuilder Initialization
+    ↓ RequestBuilder creates PromptBuilder instance
 
-2. Agent Directives (datamachine_agent_directives)
-   ↓ Pipeline-specific OR Chat-specific
+2. Directive Collection
+    ↓ datamachine_directives filter returns directive configurations
+
+3. Priority-Based Sorting
+    ↓ Directives sorted by priority (ascending: low to high)
+
+4. Agent-Specific Application
+    ↓ Each directive applied based on agent type targeting
 ```
 
-### Global Directives
+### Directive Registration
 
-Applied to all AI agents (pipeline + chat) via `datamachine_global_directives` filter:
+Directives are registered via the `datamachine_directives` filter with configuration arrays:
 
 ```php
-$request = apply_filters(
-    'datamachine_global_directives',
-    $request,
-    $provider,
-    $structured_tools,
-    $context['step_id'] ?? null,
-    $context['payload'] ?? []
-);
-```
-
-**Implementation Example**:
-```php
-add_filter('datamachine_global_directives', function($request, $provider, $tools, $step_id, $payload) {
-    // Add global system directive
-    $request['messages'][] = [
-        'role' => 'system',
-        'content' => 'You are an AI agent in the Data Machine system.'
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => MyDirective::class,
+        'priority' => 20,  // Lower numbers applied first
+        'agent_types' => ['all']  // 'all', 'pipeline', 'chat', or array
     ];
-    return $request;
-}, 10, 5);
+    return $directives;
+});
 ```
 
-### Agent Directives
+**Priority Order** (lower = applied first):
+- **10**: Core agent identity and foundational instructions
+- **20**: Global system prompts (user-configured)
+- **30**: Pipeline-specific system prompts
+- **40**: Context and workflow-specific directives
+- **50**: Site context and environmental directives
 
-Applied based on agent type via `datamachine_agent_directives` filter:
+### Current Directive Implementations
 
-```php
-$request = apply_filters(
-    'datamachine_agent_directives',
-    $request,
-    $agent_type,      // 'pipeline' or 'chat'
-    $provider,
-    $structured_tools,
-    $context
-);
-```
-
-**Pipeline Implementation Example**:
-```php
-add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
-    if ($agent_type === 'pipeline') {
-        // Add pipeline-specific directives
-        $request = PipelineCoreDirective::inject($request, $provider, $tools, $context['step_id'] ?? null, $context['payload'] ?? []);
-        $request = PipelineSystemPromptDirective::inject($request, $provider, $tools, $context['step_id'] ?? null, $context['payload'] ?? []);
-    }
-    return $request;
-}, 10, 5);
-```
-
-**Chat Implementation Example**:
-```php
-add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
-    if ($agent_type === 'chat') {
-        // Add chat-specific directives
-        $request = ChatAgentDirective::inject($request, $provider, $tools, $context);
-    }
-    return $request;
-}, 10, 5);
-```
-
-**Current Directive Implementations**:
+**Global Directives** (apply to all agents):
+- `GlobalSystemPromptDirective` - User-configured global AI behavior (priority 20)
+- `SiteContextDirective` - WordPress site context injection (priority 50)
 
 **Pipeline Directives**:
-- `PipelineCoreDirective` - Foundational agent identity and tool instructions (priority 10)
-- `PipelineSystemPromptDirective` - User-defined system prompts (priority 20)
-- `PipelineContextDirective` - Pipeline context files (priority 35)
+- `PipelineCoreDirective` - Foundational pipeline agent identity (priority 10)
+- `PipelineSystemPromptDirective` - User-defined pipeline prompts (priority 30)
+- `PipelineContextDirective` - Pipeline context files (priority 40)
 
 **Chat Directives**:
-- `ChatAgentDirective` - Chat agent identity and capabilities
+- `ChatAgentDirective` - Chat agent identity and capabilities (priority 10)
 
 ## Tool Restructuring
 
@@ -502,31 +466,43 @@ $content = $ai_response['data']['content'] ?? '';
 $tool_calls = $ai_response['data']['tool_calls'] ?? [];
 ```
 
-### Directive Application Order
+### Directive Registration
 
-Directives are applied in hierarchical order. Ensure your custom directives use appropriate filter priorities:
+Register directives using the unified `datamachine_directives` filter with appropriate priorities:
 
 ```php
-// Global directives (priority 10)
-add_filter('datamachine_global_directives', function($request, ...) {
-    // Applied to ALL agents
-    return $request;
-}, 10, 5);
+// Register a global directive (applies to all agents)
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => MyGlobalDirective::class,
+        'priority' => 25,  // Between global prompt (20) and pipeline prompts (30)
+        'agent_types' => ['all']
+    ];
+    return $directives;
+});
 
-// Agent-specific directives (priority 10-40)
-add_filter('datamachine_agent_directives', function($request, $agent_type, ...) {
-    if ($agent_type === 'pipeline') {
-        // Pipeline directives at various priorities
-        $request = PipelineCoreDirective::inject(...);      // Priority 10
-        $request = PipelineSystemPromptDirective::inject(...); // Priority 20
-    }
-    return $request;
-}, 10, 5);
+// Register a pipeline-specific directive
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => MyPipelineDirective::class,
+        'priority' => 35,  // After pipeline system prompts
+        'agent_types' => ['pipeline']
+    ];
+    return $directives;
+});
 ```
+
+**Priority Guidelines**:
+- **10-19**: Core agent identity and foundational instructions
+- **20-29**: Global system prompts and universal behavior
+- **30-39**: Agent-specific system prompts and context
+- **40-49**: Workflow and execution context directives
+- **50+**: Environmental and site-specific directives
 
 ## Related Components
 
 - [Universal Engine Architecture](/docs/core-system/universal-engine.md) - Overall engine structure
 - [AI Conversation Loop](/docs/core-system/ai-conversation-loop.md) - Uses RequestBuilder for AI requests
+- [PromptBuilder Pattern](/docs/core-system/prompt-builder.md) - Unified directive management
 - [Tool Execution Architecture](/docs/core-system/tool-execution.md) - Tool discovery and execution
 - [Universal Engine Filters](/docs/api-reference/engine-filters.md) - Complete filter reference

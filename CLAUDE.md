@@ -92,7 +92,7 @@ datamachine_register_twitter_filters(); // Auto-execute at file load
 - **AutoSave**: Complete pipeline persistence
 - **Admin**: `manage_options` security model
 - **OAuth Handlers**: Centralized OAuth 1.0a and OAuth 2.0 flow implementations (`/inc/Core/OAuth/`)
-- **Schedule API**: Dedicated REST endpoint at `/datamachine/v1/schedule` for recurring and one-time flow scheduling (`/inc/Api/Schedule/Schedule.php`)
+- **Flow Scheduling**: Integrated scheduling functionality in Flows API with FlowScheduling class for recurring and one-time flow execution
 
 **Filter-Based Architecture**: All functionality accessed via WordPress filters for service discovery, configuration, and cross-cutting concerns.
 
@@ -148,9 +148,10 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 
 **Dual-Layer Persistence**: Pipeline-level system prompts (templates) + flow-level user messages (instances)
 
-**AI Directive System**: Filter-based architecture with directive categories applied by `RequestBuilder`:
-- `datamachine_global_directives` - Applied to all AI agents (GlobalSystemPromptDirective, SiteContextDirective)
-- `datamachine_agent_directives` - Agent-specific directives (PipelineCoreDirective, ChatAgentDirective, PipelineSystemPromptDirective, PipelineContextDirective)
+**AI Directive System**: Unified directive management via `PromptBuilder` with priority-based ordering:
+- `datamachine_directives` - Centralized filter returning directive configurations with priority and agent type targeting
+- **Priority Order**: Lower priority numbers applied first (10=core, 20=global prompts, 30=pipeline prompts, 40=context, 50=site context)
+- **Agent Targeting**: Directives can target 'all' agents or specific types ('pipeline', 'chat')
 
 **Universal Engine Architecture**: Shared AI infrastructure serving both Pipeline and Chat agents with centralized components in `/inc/Engine/AI/`:
 - **AIConversationLoop** - Multi-turn conversation execution with automatic tool calling
@@ -158,7 +159,8 @@ wp_datamachine_chat_sessions: session_id, user_id, messages, metadata, provider,
 - **ToolManager** - Centralized tool management replacing distributed validation logic (@since v0.2.1)
 - **ToolParameters** - Centralized parameter building for AI tools
 - **ConversationManager** - Message formatting and conversation utilities
-- **RequestBuilder** - Centralized AI request construction with directive application
+- **RequestBuilder** - Centralized AI request construction with PromptBuilder integration (@since v0.2.5)
+- **PromptBuilder** - Unified directive management with priority-based ordering (@since v0.2.5)
 - **ToolResultFinder** - Universal tool result search utility for data packet interpretation
 
 **Tool Categories**:

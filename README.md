@@ -151,17 +151,17 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
   -u username:application_password \
   -d '{"flow_id": 123}'
 
-# Database Flow - Recurring (Schedule API)
-curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
+# Database Flow - Recurring (Flows API)
+curl -X POST https://example.com/wp-json/datamachine/v1/flows/123/schedule \
   -H "Content-Type: application/json" \
   -u username:application_password \
-  -d '{"flow_id": 123, "action": "schedule", "interval": "hourly"}'
+  -d '{"action": "schedule", "interval": "hourly"}'
 
-# Database Flow - One-Time Scheduled (Schedule API)
-curl -X POST https://example.com/wp-json/datamachine/v1/schedule \
+# Database Flow - One-Time Scheduled (Flows API)
+curl -X POST https://example.com/wp-json/datamachine/v1/flows/123/schedule \
   -H "Content-Type: application/json" \
   -u username:application_password \
-  -d '{"flow_id": 123, "action": "schedule", "timestamp": 1704153600}'
+  -d '{"action": "schedule", "timestamp": 1704153600}'
 
 # Ephemeral Workflow - Immediate
 curl -X POST https://example.com/wp-json/datamachine/v1/execute \
@@ -181,7 +181,7 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 **Available Endpoints**:
 
 *Execution:*
-- `POST /datamachine/v1/execute` - Execute flows or ephemeral workflows (immediate, recurring, delayed)
+- `POST /datamachine/v1/execute` - Execute flows or ephemeral workflows (immediate)
 
 *Chat Interface:*
 - `POST /datamachine/v1/chat` - Conversational AI endpoint with session management
@@ -485,9 +485,9 @@ composer test       # Run tests (PHPUnit configured, test files not yet implemen
 
   - Composer-managed ai-http-client dependency
 - **REST API Integration**:
-  - **17 Endpoints**: Core (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Schedule, Settings, StepTypes, Tools, Users) + Chat (base, conversations)
+  - **16 Endpoints**: Core (Auth, Execute, Files, Flows, Handlers, Jobs, Logs, Pipelines, ProcessedItems, Providers, Settings, StepTypes, Tools, Users) + Chat (base, conversations)
   - **Chat API**: Conversational interface with session management for multi-turn natural language workflow building
-  - **Schedule API**: Dedicated endpoint for recurring and one-time flow scheduling
+- **Flow Scheduling**: Integrated scheduling functionality in Flows API for recurring and one-time flow execution
   - **Ephemeral Workflow Support**: Execute workflows without database persistence
   - **Unified Execute Endpoint**: Supports database flows and ephemeral workflows
   - **Complete Authentication**: WordPress application password or cookie authentication
