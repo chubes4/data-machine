@@ -124,15 +124,13 @@ $image_url = $engine_data['image_url'] ?? null;
 - **Tool-First Architecture** - AI agents can call tools to interact with publish handlers
 - **Filter-Based Directive System** - Structured system messages via auto-registering directive classes with separate global and pipeline directives:
 
-  **Global Directives** (apply to ALL AI agents - pipeline + chat):
-  - `datamachine_global_directives` filter for universal directive registration
-  - **Priority 20**: Global System Prompt - User-configured foundational AI behavior
-  - **Priority 50**: WordPress Site Context - WordPress environment info (toggleable)
-
-  **Agent-Specific Directives** (apply to pipeline or chat AI agents based on agent type):
-  - `datamachine_agent_directives` filter for agent-specific directive registration
-  - **Priority 10**: Pipeline Core Directive - Foundational pipeline agent identity (pipeline agents only)
-  - **Priority 15**: Chat Agent Directive - Chat agent identity, REST API documentation, conversation guidelines (chat agents only)
+  **Unified Directive System** (since v0.2.5):
+  - `datamachine_directives` filter for centralized directive registration with priority-based ordering
+  - **Priority 10**: Core agent identity and foundational instructions
+  - **Priority 20**: Global system prompts and universal behavior
+  - **Priority 30**: Agent-specific system prompts and context
+  - **Priority 40**: Workflow and execution context directives
+  - **Priority 50**: Environmental and site-specific directives
   - **Priority 30**: Pipeline System Prompt - Workflow structure visualization (pipeline agents only)
   - **Priority 40**: Pipeline Context Directive - Workflow context and execution state (pipeline agents only)
   - **Priority 40**: Tool Definitions Directive - Usage instructions and workflow context (pipeline agents only)

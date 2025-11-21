@@ -273,10 +273,9 @@ $tools['tool_name'] = [
 **Universal Engine Directive System** (@since v0.2.0): Centralized AI request construction via `RequestBuilder` with hierarchical directive application through filter-based architecture.
 
 **Directive Application via RequestBuilder**:
-All AI requests now use `RequestBuilder::build()` which applies directives in this hierarchical order:
+All AI requests now use `RequestBuilder::build()` which integrates with `PromptBuilder` for unified directive management with priority-based ordering:
 
-1. **Global Directives** (`datamachine_global_directives` filter) - Applied to all AI agents
-2. **Agent Directives** (`datamachine_agent_directives` filter) - Agent-specific (pipeline vs chat)
+1. **Unified Directives** (`datamachine_directives` filter) - Centralized directive registration with priority and agent targeting
 
 **Request Structure**:
 ```php
@@ -304,25 +303,24 @@ $ai_response = RequestBuilder::build(
 **Chat Agent Directives**:
 - `ChatAgentDirective` - Chat agent identity and capabilities
 
-**Filter-Based Registration**:
+**Unified Directive Registration**:
 ```php
-// Global directives (all AI agents)
-add_filter('datamachine_global_directives', function($request, $provider, $tools, $step_id, $payload) {
-    $request['messages'][] = ['role' => 'system', 'content' => 'Global directive'];
-    return $request;
-}, 10, 5);
+// Register directives with priority and agent targeting
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => MyGlobalDirective::class,
+        'priority' => 20,  // Lower = applied first
+        'agent_types' => ['all']  // 'all', 'pipeline', 'chat', or array
+    ];
 
-// Agent-specific directives
-add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
-    if ($agent_type === 'pipeline') {
-        // Pipeline directives
-        $request = PipelineCoreDirective::inject($request, $provider, $tools, $context['step_id'] ?? null, $context['payload'] ?? []);
-    } elseif ($agent_type === 'chat') {
-        // Chat directives
-        $request = ChatAgentDirective::inject($request, $provider, $tools, $context);
-    }
-    return $request;
-}, 10, 5);
+    $directives[] = [
+        'class' => MyPipelineDirective::class,
+        'priority' => 30,
+        'agent_types' => ['pipeline']
+    ];
+
+    return $directives;
+});
 ```
 
 **Note**: All AI request building now uses `RequestBuilder::build()` to ensure consistent request structure and directive application. Direct calls to `chubes_ai_request` filter are deprecated - use RequestBuilder instead.

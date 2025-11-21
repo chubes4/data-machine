@@ -325,19 +325,19 @@ Chat agent discovers tools via three sources:
 
 ## Filter-Based Architecture
 
-### Global Directives
+### Unified Directive System
 
-Applied to all AI agents via `datamachine_global_directives` filter:
+Directives are registered via the `datamachine_directives` filter with priority and agent targeting:
 
 ```php
-add_filter('datamachine_global_directives', function($request, $provider, $tools, $step_id, $payload) {
-    // Add global directive
-    $request['messages'][] = [
-        'role' => 'system',
-        'content' => 'Always use clear, concise language.'
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => MyDirective::class,
+        'priority' => 25,
+        'agent_types' => ['all']  // Applies to chat and pipeline agents
     ];
-    return $request;
-}, 10, 5);
+    return $directives;
+});
 ```
 
 ### Chat Agent Directives

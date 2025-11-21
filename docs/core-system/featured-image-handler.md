@@ -160,5 +160,5 @@ if ($result && $result['success']) {
 ## See Also
 
 - [WordPress Publish Handler](../handlers/publish/wordpress-publish.md) - Main handler integration
-- [ImageValidator](image-validator.md) - Image validation component
+- [ImageValidator](files-repository.md#imagevalidator) - Image validation component
 - [FilesRepository](files-repository.md) - File management system

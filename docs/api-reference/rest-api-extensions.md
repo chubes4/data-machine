@@ -569,7 +569,7 @@ try {
 
 ## Related Documentation
 
-- [REST API Reference](rest-api.md) - Complete core endpoint documentation
+- [REST API Reference](../api/index.md) - Complete core endpoint documentation
 
 - [Core Filters](core-filters.md) - WordPress filter hooks for handler registration
 - [Core Actions](core-actions.md) - WordPress action hooks for execution

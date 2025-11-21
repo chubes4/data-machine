@@ -120,4 +120,4 @@ All step types extend this base class:
 - **Publish Steps**: See [PublishHandler](publish-handler.md) for publish-specific base class
 - **Update Steps**: Currently extends PublishHandler base class
 
-See [Handler Documentation](../handlers/README.md) for specific implementations.
+See [Fetch Handlers](../handlers/fetch/handlers-overview.md) and [Publish Handlers](../handlers/publish/handlers-overview.md) for specific implementations.

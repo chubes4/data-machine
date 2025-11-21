@@ -8,46 +8,50 @@ Comprehensive reference for filter hooks used by the Universal Engine to apply d
 
 The Universal Engine uses WordPress filters for extensible integration, allowing custom directives, tools, and agent behaviors without modifying core code. All filters follow consistent patterns with clear parameter structures.
 
-## Directive Filters
+## Directive System
 
-Directives inject system messages, tool definitions, and contextual information into AI requests. Applied hierarchically through multiple filters.
+Directives inject system messages, tool definitions, and contextual information into AI requests. Since v0.2.5, directives use a unified registration system with priority-based ordering and agent targeting.
 
-### datamachine_global_directives
+### datamachine_directives
 
-Applies directives to ALL AI agents (pipeline + chat). Use for universal system behavior.
+Centralized filter for directive registration with priority and agent type targeting.
 
 **Hook Usage**:
 ```php
-apply_filters(
-    'datamachine_global_directives',
-    $request,
-    $provider,
-    $tools,
-    $step_id,
-    $payload
-);
+apply_filters('datamachine_directives', $directives);
 ```
 
 **Parameters**:
-- `$request` (array) - AI request array (model, messages)
-- `$provider` (string) - AI provider name (openai, anthropic, google, grok, openrouter)
-- `$tools` (array) - Structured tools array
-- `$step_id` (string|null) - Pipeline step ID or null for chat
-- `$payload` (array) - Pipeline payload array or empty for chat
+- `$directives` (array) - Array of directive configurations
 
-**Return**: Modified `$request` array
+**Return**: Modified `$directives` array
+
+**Directive Configuration**:
+```php
+$directive_config = [
+    'class' => DirectiveClass::class,        // Directive class name
+    'priority' => 20,                        // Priority (lower = applied first)
+    'agent_types' => ['all']                 // 'all', 'pipeline', 'chat', or array
+];
+```
 
 **Implementation Example**:
 ```php
-add_filter('datamachine_global_directives', function($request, $provider, $tools, $step_id, $payload) {
-    // Add global directive to all agents
-    $request['messages'][] = [
-        'role' => 'system',
-        'content' => 'You are operating within the Data Machine WordPress plugin.'
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => MyDirective::class,
+        'priority' => 25,
+        'agent_types' => ['all']
     ];
 
-    return $request;
-}, 10, 5);
+    $directives[] = [
+        'class' => PipelineDirective::class,
+        'priority' => 30,
+        'agent_types' => ['pipeline']
+    ];
+
+    return $directives;
+});
 ```
 
 **Registered Directives**:
@@ -56,32 +60,39 @@ add_filter('datamachine_global_directives', function($request, $provider, $tools
 **File**: `/inc/Engine/AI/Directives/GlobalSystemPromptDirective.php`
 **Purpose**: Injects user-defined global system prompt from settings
 **Configuration**: Settings → AI Configuration → Global System Prompt
-
-```php
-add_filter('datamachine_global_directives', [GlobalSystemPromptDirective::class, 'inject'], 20, 5);
-```
+**Agent Types**: `['all']`
 
 #### GlobalToolsDirective (Priority 25)
 **File**: `/inc/Engine/AI/Directives/GlobalToolsDirective.php`
 **Purpose**: Provides descriptions of available global tools (google_search, local_search, web_fetch, wordpress_post_reader)
 **Behavior**: Only includes tools that are enabled and configured
-
-```php
-add_filter('datamachine_global_directives', [GlobalToolsDirective::class, 'inject'], 25, 5);
-```
+**Agent Types**: `['all']`
 
 #### SiteContextDirective (Priority 50)
 **File**: `/inc/Engine/AI/Directives/SiteContextDirective.php`
 **Purpose**: Injects WordPress site context (site name, URL, description, post types, taxonomies)
 **Configuration**: Settings → AI Configuration → Include Site Context in AI Requests (enabled by default)
+**Agent Types**: `['all']`
 
-```php
-add_filter('datamachine_global_directives', [$site_context_directive, 'inject'], 50, 5);
-```
+#### PipelineCoreDirective (Priority 10)
+**File**: `/inc/Engine/AI/Directives/PipelineCoreDirective.php`
+**Purpose**: Foundational pipeline agent identity with tool instructions
+**Agent Types**: `['pipeline']`
 
-### datamachine_agent_directives
+#### PipelineSystemPromptDirective (Priority 30)
+**File**: `/inc/Engine/AI/Directives/PipelineSystemPromptDirective.php`
+**Purpose**: User-defined pipeline system prompts
+**Agent Types**: `['pipeline']`
 
-Applies agent-specific directives based on agent type. Agents register directives via this universal filter.
+#### PipelineContextDirective (Priority 40)
+**File**: `/inc/Engine/AI/Directives/PipelineContextDirective.php`
+**Purpose**: Pipeline context files and workflow information
+**Agent Types**: `['pipeline']`
+
+#### ChatAgentDirective (Priority 10)
+**File**: `/inc/Engine/AI/Directives/ChatAgentDirective.php`
+**Purpose**: Chat agent identity and capabilities
+**Agent Types**: `['chat']`
 
 **Hook Usage**:
 ```php
