@@ -407,6 +407,22 @@ class Create {
             'synced_steps' => count($pipeline_steps)
         ]);
 
+        // Register with Action Scheduler if a recurring schedule was set
+        if (isset($scheduling_config['interval']) && $scheduling_config['interval'] !== 'manual') {
+            $scheduling_result = \DataMachine\Api\Flows\FlowScheduling::handle_scheduling_update($flow_id, $scheduling_config);
+            if (is_wp_error($scheduling_result)) {
+                do_action('datamachine_log', 'error', 'Failed to schedule flow with Action Scheduler', [
+                    'flow_id' => $flow_id,
+                    'error' => $scheduling_result->get_error_message()
+                ]);
+            } else {
+                do_action('datamachine_log', 'info', 'Flow scheduled with Action Scheduler', [
+                    'flow_id' => $flow_id,
+                    'interval' => $scheduling_config['interval']
+                ]);
+            }
+        }
+
         if (wp_doing_ajax()) {
             $flow_data = $db_flows->get_flow($flow_id);
             $pipeline_steps = $db_pipelines->get_pipeline_config($pipeline_id);

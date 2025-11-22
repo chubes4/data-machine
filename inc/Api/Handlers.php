@@ -40,8 +40,17 @@ class Handlers {
 				'step_type' => [
 					'required' => false,
 					'type' => 'string',
-					'enum' => ['fetch', 'publish', 'update'],
-					'description' => __('Filter handlers by step type (fetch, publish, update)', 'datamachine')
+					'sanitize_callback' => 'sanitize_key',
+					'validate_callback' => function( $param ) {
+						// Allow empty param for no filtering
+						if (empty($param)) {
+							return true;
+						}
+						$types = apply_filters('datamachine_step_types', []);
+						$valid_step_types = is_array($types) ? array_keys($types) : [];
+						return in_array($param, $valid_step_types, true);
+					},
+					'description' => __('Filter handlers by step type (supports custom step types)', 'datamachine')
 				]
 			]
 		]);
@@ -80,10 +89,47 @@ class Handlers {
 		// If null, returns all handlers across all types
 		$handlers = apply_filters('datamachine_handlers', [], $step_type);
 
+		// Get auth providers to detect auth types
+		$auth_providers = apply_filters('datamachine_auth_providers', []);
+
+		// Enrich handler data with auth_type and auth_fields
+		foreach ($handlers as $slug => &$handler) {
+			if ($handler['requires_auth'] && isset($auth_providers[$slug])) {
+				$auth_instance = $auth_providers[$slug];
+				$handler['auth_type'] = self::detect_auth_type($auth_instance);
+
+				// Add auth fields if available (regardless of auth type)
+				if (method_exists($auth_instance, 'get_config_fields')) {
+					$handler['auth_fields'] = $auth_instance->get_config_fields();
+				}
+			}
+		}
+
 		return rest_ensure_response([
 			'success' => true,
 			'data' => $handlers
 		]);
+	}
+
+	/**
+	 * Detect authentication type from auth class instance.
+	 *
+	 * @param object $auth_instance Auth provider instance.
+	 * @return string Auth type: 'oauth2', 'oauth1', or 'simple'.
+	 */
+	private static function detect_auth_type($auth_instance): string {
+		if ($auth_instance instanceof \DataMachine\Core\OAuth\OAuth2Handler) {
+			return 'oauth2';
+		}
+		if ($auth_instance instanceof \DataMachine\Core\OAuth\OAuth1Handler) {
+			return 'oauth1';
+		}
+		if ($auth_instance instanceof \DataMachine\Core\OAuth\BaseSimpleAuthProvider) {
+			return 'simple';
+		}
+
+		// Default to oauth2 for backwards compatibility
+		return 'oauth2';
 	}
 
 	/**

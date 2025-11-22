@@ -83,7 +83,12 @@ class FlowSteps {
 				'step_type' => [
 					'required' => true,
 					'type' => 'string',
-					'enum' => ['fetch', 'publish', 'update'],
+					'sanitize_callback' => 'sanitize_key',
+					'validate_callback' => function( $param ) {
+						$types = apply_filters('datamachine_step_types', []);
+						$valid_step_types = is_array($types) ? array_keys($types) : [];
+						return in_array($param, $valid_step_types, true);
+					},
 					'description' => __('Step type', 'datamachine'),
 				],
 			]
@@ -228,14 +233,10 @@ class FlowSteps {
 			);
 		}
 
-		// Process handler settings
-		$handler_settings = self::process_handler_settings($handler_slug, $request->get_params());
+			// Process handler settings
+			$handler_settings = self::process_handler_settings($handler_slug, $request->get_params());
 
-		try {
-			// Update flow handler via centralized action
-			do_action('datamachine_update_flow_handler', $flow_step_id, $handler_slug, $handler_settings);
-
-			// Split flow step ID
+			// Validate flow_step_id format early so we can safely check persistence after update
 			$parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
 			if (!isset($parts['flow_id']) || !isset($parts['pipeline_step_id'])) {
 				return new \WP_Error(
@@ -246,6 +247,25 @@ class FlowSteps {
 			}
 			$flow_id = $parts['flow_id'];
 			$pipeline_step_id = $parts['pipeline_step_id'];
+
+
+			try {
+				// Update flow handler via action hook and verify persistence in DB
+				do_action('datamachine_update_flow_handler', $flow_step_id, $handler_slug, $handler_settings);
+
+				// Verify handler persisted in flows DB
+				$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+				$flow = $db_flows->get_flow($flow_id);
+				$flow_config = $flow['flow_config'] ?? [];
+				$updated_step = $flow_config[$flow_step_id] ?? [];
+				if (!(isset($updated_step['handler_slug']) && $updated_step['handler_slug'] === $handler_slug)) {
+					return new \WP_Error(
+						'update_failed',
+						__('Failed to update handler for flow step', 'datamachine'),
+						['status' => 500]
+					);
+				}
+
 
 			// Build config from memory (performance optimization)
 			$step_config = [
@@ -270,7 +290,8 @@ class FlowSteps {
 			}
 
 			// Get handler settings display for UI
-			$handler_settings_display = apply_filters('datamachine_get_handler_settings_display', [], $flow_step_id, $step_type);
+			$service = new \DataMachine\Core\Steps\Settings\SettingsDisplayService();
+			$handler_settings_display = $service->getFieldState($handler_slug, $handler_settings);
 
 			/* translators: %s: Handler name or label */
 			$message = sprintf(__('Handler "%s" settings saved successfully.', 'datamachine'), $handler_info['label'] ?? $handler_slug);
@@ -289,9 +310,13 @@ class FlowSteps {
 				'message' => $message
 			]);
 
-        } catch (\Exception $e) {
-            return [];
-        }
+			} catch (\Exception $e) {
+				return new \WP_Error(
+					'handler_update_failed',
+					__('Failed to save handler settings due to server error.', 'datamachine'),
+					['status' => 500]
+				);
+			}
 	}
 
 	/**

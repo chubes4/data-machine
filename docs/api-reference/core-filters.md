@@ -617,27 +617,87 @@ $data = apply_filters('datamachine_data_packet', $data, $packet_data, $flow_step
 
 ## Directive System Filters
 
-### `datamachine_global_directives`
+### `datamachine_directives`
 
-**Purpose**: Modify global AI system directives applied across all AI interactions (pipeline + chat)
+**Since**: v0.2.5
+
+**Purpose**: Unified directive registration with priority-based ordering and agent type targeting
 
 **Parameters**:
-- `$directives` (array) - Current global directives
+- `$directives` (array) - Array of directive configurations
 
 **Return**: Modified directives array
 
+**Directive Configuration Structure**:
+```php
+[
+    'class' => DirectiveClass::class,   // Directive class name
+    'priority' => 20,                    // Priority (lower = applied first)
+    'agent_types' => ['all']             // 'all', 'pipeline', 'chat', or array
+]
+```
+
 **Usage Example**:
 ```php
+add_filter('datamachine_directives', function($directives) {
+    // Global directive (all agents)
+    $directives[] = [
+        'class' => MyGlobalDirective::class,
+        'priority' => 25,
+        'agent_types' => ['all']
+    ];
+
+    // Pipeline-specific directive
+    $directives[] = [
+        'class' => MyPipelineDirective::class,
+        'priority' => 35,
+        'agent_types' => ['pipeline']
+    ];
+
+    return $directives;
+});
+```
+
+**Priority Guidelines**:
+- **10-19**: Core agent identity and foundational instructions
+- **20-29**: Global system prompts and universal behavior
+- **30-39**: Agent-specific system prompts and context
+- **40-49**: Workflow and execution context directives
+- **50+**: Environmental and site-specific directives
+
+### `datamachine_global_directives` (LEGACY — use `datamachine_directives`)
+
+**Deprecated**: v0.2.5
+**Replacement**: Use `datamachine_directives` with `agent_types => ['all']`
+
+**Purpose**: Modify global AI system directives applied across all AI interactions (pipeline + chat)
+
+**Migration Example**:
+```php
+// LEGACY (pre-v0.2.5)
 add_filter('datamachine_global_directives', function($directives) {
     $directives[] = [
         'priority' => 25,
-        'content' => 'Custom global directive for all AI agents'
+        'content' => 'Custom global directive'
+    ];
+    return $directives;
+});
+
+// CURRENT (v0.2.5+)
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => MyGlobalDirective::class,
+        'priority' => 25,
+        'agent_types' => ['all']
     ];
     return $directives;
 });
 ```
 
-### `datamachine_agent_directives`
+### `datamachine_agent_directives` (LEGACY — use `datamachine_directives`)
+
+**Deprecated**: v0.2.5
+**Replacement**: Use `datamachine_directives` with agent-specific `agent_types` targeting
 
 **Purpose**: Modify AI system directives for specific agent types (pipeline or chat)
 
@@ -650,22 +710,28 @@ add_filter('datamachine_global_directives', function($directives) {
 
 **Return**: Modified request array
 
-**Usage Example**:
+**Migration Example**:
 ```php
+// LEGACY (pre-v0.2.5)
 add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
     if ($agent_type === 'pipeline') {
         $request['messages'][] = [
             'role' => 'system',
-            'content' => 'Pipeline-specific directive content'
-        ];
-    } elseif ($agent_type === 'chat') {
-        $request['messages'][] = [
-            'role' => 'system',
-            'content' => 'Chat-specific directive content'
+            'content' => 'Pipeline-specific directive'
         ];
     }
     return $request;
 }, 10, 5);
+
+// CURRENT (v0.2.5+)
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => MyPipelineDirective::class,
+        'priority' => 30,
+        'agent_types' => ['pipeline']
+    ];
+    return $directives;
+});
 ```
 
 ## Navigation Filters

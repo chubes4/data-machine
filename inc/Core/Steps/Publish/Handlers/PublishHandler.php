@@ -156,4 +156,15 @@ abstract class PublishHandler {
             'handler' => $this->handler_type
         ], $context));
     }
+
+    /**
+     * Get OAuth provider instance.
+     *
+     * @param string $provider_key Provider key (e.g., 'reddit', 'googlesheets')
+     * @return object|null Provider instance or null
+     */
+    protected function getAuthProvider(string $provider_key): ?object {
+        $providers = apply_filters('datamachine_auth_providers', []);
+        return $providers[$provider_key] ?? null;
+    }
 }

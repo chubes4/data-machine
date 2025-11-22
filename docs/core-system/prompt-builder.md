@@ -124,8 +124,8 @@ $request = $promptBuilder->build($agent_type, $provider, $context);
 ### Before (v0.2.4 and earlier)
 ```php
 // Separate filters with inconsistent ordering
-add_filter('datamachine_global_directives', 'apply_global_directive', 10, 5);
-add_filter('datamachine_agent_directives', 'apply_agent_directive', 10, 5);
+add_filter('datamachine_global_directives', 'apply_global_directive', 10, 5); // LEGACY - use datamachine_directives instead
+add_filter('datamachine_agent_directives', 'apply_agent_directive', 10, 5); // LEGACY - use datamachine_directives with agent_types to target 'pipeline'/'chat'
 ```
 
 ### After (v0.2.5+)

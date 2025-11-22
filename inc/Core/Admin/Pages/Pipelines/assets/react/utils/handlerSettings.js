@@ -35,42 +35,4 @@ export const getFieldHelpText = (fieldConfig = {}) => {
  * @param {Object} settingsFields Field schema definitions
  * @returns {Object} Sanitized settings with proper types
  */
-export const sanitizeHandlerSettingsPayload = (settings = {}, settingsFields = {}) => {
-	const sanitized = {};
-
-	Object.entries(settings).forEach(([key, value]) => {
-		const fieldConfig = settingsFields[key];
-
-		if (!fieldConfig) {
-			// No schema for this field - preserve as-is
-			sanitized[key] = value;
-			return;
-		}
-
-		// Coerce based on field type
-		switch (fieldConfig.type) {
-			case 'checkbox':
-				// Ensure boolean
-				sanitized[key] = !!value;
-				break;
-
-			case 'select':
-				// Convert numeric strings to integers
-				if (value !== '' && !isNaN(value)) {
-					sanitized[key] = parseInt(value, 10);
-				} else {
-					sanitized[key] = value;
-				}
-				break;
-
-			case 'text':
-			case 'textarea':
-			default:
-				// Preserve strings
-				sanitized[key] = value;
-				break;
-		}
-	});
-
-	return sanitized;
-};
+export default { resolveFieldValue, getFieldHelpText };

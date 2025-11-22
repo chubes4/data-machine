@@ -78,7 +78,7 @@ public function is_tool_configured(string $tool_id): bool
 Returns tools that don't require configuration (WordPress-native functionality).
 
 ```php
-public function getOptOutTools(): array
+public function get_opt_out_defaults(): array
 ```
 
 **Returns**: Array of tool IDs that are always considered "configured" if enabled
@@ -91,7 +91,7 @@ public function getOptOutTools(): array
 **Usage**:
 ```php
 $tool_manager = new ToolManager();
-$opt_out_tools = $tool_manager->getOptOutTools();
+$opt_out_tools = $tool_manager->get_opt_out_defaults();
 // Returns: ['local_search', 'wordpress_post_reader', 'web_fetch']
 ```
 
@@ -330,8 +330,8 @@ $is_configured = !empty($google_config['api_key']);
 ```php
 // New pattern: centralized validation
 $tool_manager = new ToolManager();
-$is_enabled = $tool_manager->isToolEnabled('google_search');
-$is_configured = $tool_manager->isToolConfigured('google_search');
+$is_enabled = $tool_manager->is_globally_enabled('google_search');
+$is_configured = $tool_manager->is_tool_configured('google_search');
 
 // Single source of truth, consistent behavior
 ```

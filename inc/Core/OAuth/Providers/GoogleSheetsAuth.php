@@ -4,29 +4,25 @@
  *
  * Refactored to use centralized OAuth2Handler for standardized OAuth flow.
  * Maintains Google Sheets-specific logic (token refresh, service access).
+ * Shared by both Fetch and Publish handlers.
  *
  * @package    DataMachine
- * @subpackage Core\Steps\Publish\Handlers\GoogleSheets
+ * @subpackage Core\OAuth\Providers
  * @since      0.2.0
  */
 
-namespace DataMachine\Core\Steps\Publish\Handlers\GoogleSheets;
+namespace DataMachine\Core\OAuth\Providers;
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-class GoogleSheetsAuth {
+class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
     const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 
-    /**
-     * @var \DataMachine\Core\OAuth\OAuth2Handler OAuth2 handler instance
-     */
-    private $oauth2;
-
     public function __construct() {
-        $this->oauth2 = new \DataMachine\Core\OAuth\OAuth2Handler();
+        parent::__construct('googlesheets');
     }
 
     /**
@@ -35,7 +31,7 @@ class GoogleSheetsAuth {
      * @return bool True if authenticated
      */
     public function is_authenticated(): bool {
-        $account = datamachine_get_oauth_account('googlesheets');
+        $account = $this->get_account();
         return !empty($account) &&
                is_array($account) &&
                !empty($account['access_token']) &&
@@ -70,7 +66,7 @@ class GoogleSheetsAuth {
      * @return bool True if OAuth credentials are configured
      */
     public function is_configured(): bool {
-        $config = datamachine_get_oauth_keys('googlesheets');
+        $config = $this->get_config();
         return !empty($config['client_id']) && !empty($config['client_secret']);
     }
 
@@ -82,7 +78,7 @@ class GoogleSheetsAuth {
     public function get_service() {
         do_action('datamachine_log', 'debug', 'Attempting to get authenticated Google Sheets access token.');
 
-        $credentials = datamachine_get_oauth_account('googlesheets');
+        $credentials = $this->get_account();
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['refresh_token'])) {
             do_action('datamachine_log', 'error', 'Missing Google Sheets credentials in options.');
             return new \WP_Error('googlesheets_missing_credentials', __('Google Sheets credentials not found. Please authenticate.', 'datamachine'));
@@ -115,7 +111,7 @@ class GoogleSheetsAuth {
      * @return string|\WP_Error New access token or error
      */
     private function refresh_access_token(string $refresh_token) {
-        $config = datamachine_get_oauth_keys('googlesheets');
+        $config = $this->get_config();
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
 
@@ -179,7 +175,7 @@ class GoogleSheetsAuth {
             'last_refreshed_at' => time()
         ];
 
-        apply_filters('datamachine_store_oauth_account', $account_data, 'googlesheets');
+        $this->save_account($account_data);
     }
 
     /**
@@ -188,7 +184,7 @@ class GoogleSheetsAuth {
      * @return string Authorization URL
      */
     public function get_authorization_url(): string {
-        $config = datamachine_get_oauth_keys('googlesheets');
+        $config = $this->get_config();
         $client_id = $config['client_id'] ?? '';
 
         if (empty($client_id)) {
@@ -205,7 +201,7 @@ class GoogleSheetsAuth {
         // Build authorization URL with Google-specific parameters
         $params = [
             'client_id' => $client_id,
-            'redirect_uri' => apply_filters('datamachine_oauth_callback', '', 'googlesheets'),
+            'redirect_uri' => $this->get_callback_url(),
             'scope' => self::SCOPES,
             'response_type' => 'code',
             'access_type' => 'offline', // Google-specific: request refresh token
@@ -224,19 +220,8 @@ class GoogleSheetsAuth {
         $state = isset($_GET['state']) ? sanitize_text_field(wp_unslash($_GET['state'])) : '';
         $code = isset($_GET['code']) ? sanitize_text_field(wp_unslash($_GET['code'])) : '';
 
-        // Verify state via OAuth2Handler
-        if (!$this->oauth2->verify_state('googlesheets', $state)) {
-            do_action('datamachine_log', 'error', 'Google Sheets OAuth Error: State verification failed');
-            wp_redirect(add_query_arg([
-                'page' => 'datamachine-settings',
-                'auth_error' => 'invalid_state',
-                'provider' => 'googlesheets'
-            ], admin_url('admin.php')));
-            exit;
-        }
-
         // Get configuration
-        $config = datamachine_get_oauth_keys('googlesheets');
+        $config = $this->get_config();
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
 
@@ -256,7 +241,7 @@ class GoogleSheetsAuth {
             'client_secret' => $client_secret,
             'code' => $code,
             'grant_type' => 'authorization_code',
-            'redirect_uri' => apply_filters('datamachine_oauth_callback', '', 'googlesheets')
+            'redirect_uri' => $this->get_callback_url()
         ];
 
         // Use OAuth2Handler for token exchange and callback handling
@@ -273,7 +258,9 @@ class GoogleSheetsAuth {
                     'scope' => $token_data['scope'] ?? self::SCOPES,
                     'last_verified_at' => time()
                 ];
-            }
+            },
+            null,
+            [$this, 'save_account']
         );
     }
 
@@ -283,7 +270,7 @@ class GoogleSheetsAuth {
      * @return array|null Account details or null
      */
     public function get_account_details(): ?array {
-        $account = datamachine_get_oauth_account('googlesheets');
+        $account = $this->get_account();
         if (empty($account) || !is_array($account) || empty($account['access_token']) || empty($account['refresh_token'])) {
             return null;
         }
@@ -296,6 +283,6 @@ class GoogleSheetsAuth {
      * @return bool Success status
      */
     public function remove_account(): bool {
-        return apply_filters('datamachine_clear_oauth_account', false, 'googlesheets');
+        return $this->clear_account();
     }
 }

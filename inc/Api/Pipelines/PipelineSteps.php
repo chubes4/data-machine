@@ -44,8 +44,13 @@ class PipelineSteps {
 				'step_type' => [
 					'required' => true,
 					'type' => 'string',
-					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Step type (fetch, ai, publish, update)', 'datamachine'),
+					'sanitize_callback' => 'sanitize_key',
+					'validate_callback' => function( $param ) {
+						$types = apply_filters('datamachine_step_types', []);
+						$valid_step_types = is_array($types) ? array_keys($types) : [];
+						return in_array($param, $valid_step_types, true);
+					},
+					'description' => __('Step type (supports custom step types)', 'datamachine'),
 				]
 			]
 		]);

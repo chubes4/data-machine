@@ -31,6 +31,7 @@ trait HandlerRegistrationTrait {
      * @param string|null $authClass Authentication class name
      * @param string|null $settingsClass Settings class name
      * @param callable|null $aiToolCallback AI tool registration callback
+     * @param string|null $authProviderKey Optional custom auth provider key for shared authentication
      */
     protected static function registerHandler(
         string $slug,
@@ -41,7 +42,8 @@ trait HandlerRegistrationTrait {
         bool $requiresAuth = false,
         ?string $authClass = null,
         ?string $settingsClass = null,
-        ?callable $aiToolCallback = null
+        ?callable $aiToolCallback = null,
+        ?string $authProviderKey = null
     ): void {
         // Handler registration
         add_filter('datamachine_handlers', function($handlers, $step_type = null)
@@ -60,10 +62,16 @@ trait HandlerRegistrationTrait {
 
         // Auth provider registration
         if ($authClass && $requiresAuth) {
+            // Use custom auth provider key if provided, otherwise default to handler slug
+            $provider_key = $authProviderKey ?? $slug;
+
             add_filter('datamachine_auth_providers', function($providers, $step_type = null)
-                use ($slug, $authClass, $type) {
+                use ($provider_key, $authClass, $type) {
                 if ($step_type === null || $step_type === $type) {
-                    $providers[$slug] = new $authClass();
+                    // Singleton pattern: only create instance if key doesn't already exist
+                    if (!isset($providers[$provider_key])) {
+                        $providers[$provider_key] = new $authClass();
+                    }
                 }
                 return $providers;
             }, 10, 2);

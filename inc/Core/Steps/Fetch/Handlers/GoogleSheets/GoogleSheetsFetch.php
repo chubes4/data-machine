@@ -32,9 +32,10 @@ class GoogleSheetsFetch extends FetchHandler {
             'Google Sheets',
             'Fetch data from Google Sheets spreadsheets',
             true,
-            GoogleSheetsAuth::class,
+            \DataMachine\Core\OAuth\Providers\GoogleSheetsAuth::class,
             GoogleSheetsFetchSettings::class,
-			null
+			null,
+			'googlesheets'
 		);
 	}
 

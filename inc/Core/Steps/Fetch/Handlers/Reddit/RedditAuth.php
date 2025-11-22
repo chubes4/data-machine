@@ -16,15 +16,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class RedditAuth {
-
-    /**
-     * @var \DataMachine\Core\OAuth\OAuth2Handler OAuth2 handler instance
-     */
-    private $oauth2;
+class RedditAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
     public function __construct() {
-        $this->oauth2 = new \DataMachine\Core\OAuth\OAuth2Handler();
+        parent::__construct('reddit');
     }
 
     /**
@@ -56,22 +51,12 @@ class RedditAuth {
     }
 
     /**
-     * Check if Reddit authentication is properly configured
-     *
-     * @return bool True if OAuth credentials are configured
-     */
-    public function is_configured(): bool {
-        $config = datamachine_get_oauth_keys('reddit');
-        return !empty($config['client_id']) && !empty($config['client_secret']);
-    }
-
-    /**
      * Get the authorization URL for Reddit OAuth
      *
      * @return string Authorization URL
      */
     public function get_authorization_url(): string {
-        $config = datamachine_get_oauth_keys('reddit');
+        $config = $this->get_config();
         $client_id = $config['client_id'] ?? '';
 
         if (empty($client_id)) {
@@ -90,7 +75,7 @@ class RedditAuth {
             'client_id' => $client_id,
             'response_type' => 'code',
             'state' => $state,
-            'redirect_uri' => apply_filters('datamachine_oauth_callback', '', 'reddit'),
+            'redirect_uri' => $this->get_callback_url(),
             'duration' => 'permanent', // Reddit-specific: request refresh token
             'scope' => 'identity read' // Reddit-specific scopes
         ];
@@ -106,19 +91,8 @@ class RedditAuth {
         $state = isset($_GET['state']) ? sanitize_key(wp_unslash($_GET['state'])) : '';
         $code = isset($_GET['code']) ? sanitize_text_field(wp_unslash($_GET['code'])) : '';
 
-        // Verify state via OAuth2Handler
-        if (!$this->oauth2->verify_state('reddit', $state)) {
-            do_action('datamachine_log', 'error', 'Reddit OAuth Error: State verification failed');
-            wp_redirect(add_query_arg([
-                'page' => 'datamachine-settings',
-                'auth_error' => 'state_mismatch',
-                'provider' => 'reddit'
-            ], admin_url('admin.php')));
-            exit;
-        }
-
         // Get configuration
-        $config = datamachine_get_oauth_keys('reddit');
+        $config = $this->get_config();
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
         $developer_username = $config['developer_username'] ?? '';
@@ -137,7 +111,7 @@ class RedditAuth {
         $token_params = [
             'grant_type' => 'authorization_code',
             'code' => $code,
-            'redirect_uri' => apply_filters('datamachine_oauth_callback', '', 'reddit'),
+            'redirect_uri' => $this->get_callback_url(),
         ];
 
         // Reddit requires Basic Auth for token exchange
@@ -155,7 +129,9 @@ class RedditAuth {
             function($token_data) use ($developer_username) {
                 // Reddit-specific: Get user identity
                 return $this->get_reddit_user_identity($token_data, $developer_username);
-            }
+            },
+            null,
+            [$this, 'save_account']
         );
     }
 
@@ -213,13 +189,13 @@ class RedditAuth {
     public function refresh_token(): bool {
         do_action('datamachine_log', 'debug', 'Attempting Reddit token refresh');
 
-        $reddit_account = datamachine_get_oauth_account('reddit');
+        $reddit_account = $this->get_account();
         if (empty($reddit_account['refresh_token'])) {
             do_action('datamachine_log', 'error', 'Reddit Token Refresh Error: Refresh token not found');
             return false;
         }
 
-        $config = datamachine_get_oauth_keys('reddit');
+        $config = $this->get_config();
         $client_id = $config['client_id'] ?? '';
         $client_secret = $config['client_secret'] ?? '';
         $developer_username = $config['developer_username'] ?? '';
@@ -249,14 +225,14 @@ class RedditAuth {
             ]);
 
             // Clear stored data if refresh token is invalid
-            apply_filters('datamachine_clear_oauth_account', false, 'reddit');
+            $this->clear_account();
             return false;
         }
 
         $data = json_decode($result['data'], true);
         if (empty($data['access_token'])) {
             do_action('datamachine_log', 'error', 'Reddit Token Refresh Error: No access token in response');
-            apply_filters('datamachine_clear_oauth_account', false, 'reddit');
+            $this->clear_account();
             return false;
         }
 
@@ -270,7 +246,7 @@ class RedditAuth {
             'last_refreshed_at' => time()
         ];
 
-        apply_filters('datamachine_store_oauth_account', $updated_account_data, 'reddit');
+        $this->save_account($updated_account_data);
         do_action('datamachine_log', 'debug', 'Reddit token refreshed successfully');
         return true;
     }
@@ -281,7 +257,7 @@ class RedditAuth {
      * @return bool True if authenticated
      */
     public function is_authenticated(): bool {
-        $account = datamachine_get_oauth_account('reddit');
+        $account = $this->get_account();
         return !empty($account) &&
                is_array($account) &&
                !empty($account['access_token']) &&
@@ -294,29 +270,8 @@ class RedditAuth {
      * @return array|null Account details or null if not authenticated
      */
     public function get_account_details(): ?array {
-        $account = datamachine_get_oauth_account('reddit');
+        $account = $this->get_account();
         if (empty($account) || !is_array($account) || empty($account['access_token'])) {
             return null;
         }
-
-        $details = [];
-        if (!empty($account['username'])) {
-            $details['username'] = $account['username'];
-        }
-        if (!empty($account['scope'])) {
-            $details['scope'] = $account['scope'];
-        }
-        if (!empty($account['last_refreshed_at'])) {
-            $details['last_refreshed'] = gmdate('Y-m-d H:i:s', $account['last_refreshed_at']);
-        }
-
-        if (empty($details)) {
-            do_action('datamachine_log', 'warning', 'Reddit account exists but details are missing', [
-                'has_access_token' => !empty($account['access_token']),
-                'available_keys' => array_keys($account)
-            ]);
-        }
-
-        return $details;
-    }
 }

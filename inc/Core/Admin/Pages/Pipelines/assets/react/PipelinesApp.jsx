@@ -38,8 +38,8 @@ export default function PipelinesApp() {
 	const { data: flows = [], isLoading: flowsLoading, error: flowsError } = useFlows(selectedPipelineId);
 	const { data: handlers = {} } = useHandlers();
 
-	// Fetch handler details for settings modal
-	const handlerSlug = activeModal === MODAL_TYPES.HANDLER_SETTINGS ? modalData?.handlerSlug : null;
+	// Fetch handler details for settings modal (skip if already seeded in modalData)
+	const handlerSlug = activeModal === MODAL_TYPES.HANDLER_SETTINGS && !modalData?.handlerDetails ? modalData?.handlerSlug : null;
 	const { data: handlerDetails } = useHandlerDetails(handlerSlug);
 	const createPipelineMutation = useCreatePipeline();
 	const updateHandlerMutation = useUpdateFlowHandler();
@@ -59,41 +59,39 @@ export default function PipelinesApp() {
 	}, [ closeModal ] );
 
 	const handleHandlerSelected = useCallback( async ( selectedHandlerSlug ) => {
-		try {
-			// First persist handler selection to flow step
-			const result = await updateHandlerMutation.mutateAsync({
-				flowStepId: modalData.flowStepId,
-				handlerSlug: selectedHandlerSlug,
-				settings: {},
-				pipelineId: modalData.pipelineId,
-				stepType: modalData.stepType,
-			});
+		// First persist handler selection to flow step
+		const result = await updateHandlerMutation.mutateAsync({
+			flowStepId: modalData.flowStepId,
+			handlerSlug: selectedHandlerSlug,
+			settings: {},
+			pipelineId: modalData.pipelineId,
+			stepType: modalData.stepType,
+		});
 
-			// On success, open handler settings modal with updated config
-			openModal( MODAL_TYPES.HANDLER_SETTINGS, {
-				...modalData,
-				handlerSlug: selectedHandlerSlug,
-				currentSettings: result?.data?.step_config?.handler_config || {},
-			});
-		} catch ( err ) {
-			// eslint-disable-next-line no-console
-			console.error( 'Error assigning handler to flow step:', err );
-			// Fallback: Open settings modal anyway but without persisted handler
-			openModal( MODAL_TYPES.HANDLER_SETTINGS, {
-				...modalData,
-				handlerSlug: selectedHandlerSlug,
-			});
+		if ( ! result || ! result.success ) {
+			const message = result?.message || 'Failed to assign handler to this flow step.';
+			throw new Error( message );
 		}
+
+		// On success, open handler settings modal with updated config
+		openModal( MODAL_TYPES.HANDLER_SETTINGS, {
+			...modalData,
+			handlerSlug: selectedHandlerSlug,
+			currentSettings: result?.data?.step_config?.handler_config || {},
+			// Seed handler details if returned by the update endpoint to avoid an immediate GET
+			handlerDetails: result?.data?.handler_settings_display ?? null,
+		});
 	}, [ openModal, modalData, updateHandlerMutation ] );
 
 	const handleChangeHandler = useCallback( () => {
 		openModal( MODAL_TYPES.HANDLER_SELECTION, modalData );
 	}, [ openModal, modalData ] );
 
-	const handleOAuthConnect = useCallback( ( handlerSlug ) => {
+	const handleOAuthConnect = useCallback( ( handlerSlug, handlerInfo ) => {
 		openModal( MODAL_TYPES.OAUTH, {
 			...modalData,
 			handlerSlug,
+			handlerInfo,
 		} );
 	}, [ openModal, modalData ] );
 

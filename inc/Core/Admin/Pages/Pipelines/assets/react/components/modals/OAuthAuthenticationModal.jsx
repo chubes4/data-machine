@@ -37,17 +37,25 @@ export default function OAuthAuthenticationModal( {
 	const apiConfigForm = useFormState({
 		initialData: {},
 		onSubmit: async (config) => {
-			// In production, this would save to REST API
-			await new Promise( ( resolve ) => setTimeout( resolve, 1000 ) );
+			try {
+				await wp.apiFetch({
+					path: `/datamachine/v1/auth/${handlerSlug}`,
+					method: 'PUT',
+					data: config
+				});
 
-			setConnected( true );
-			setAccountData( { api_key: config.api_key } );
-			setSuccess(
-				__( 'Credentials saved successfully!', 'datamachine' )
-			);
-
-			if ( onSuccess ) {
-				onSuccess();
+				if (authType === 'simple') {
+					setConnected( true );
+					setAccountData( { ...config } );
+					setSuccess( __( 'Connected successfully!', 'datamachine' ) );
+					if ( onSuccess ) {
+						onSuccess();
+					}
+				} else {
+					setSuccess( __( 'Configuration saved! You can now connect your account.', 'datamachine' ) );
+				}
+			} catch (error) {
+				throw new Error( error.message || __( 'Failed to save configuration.', 'datamachine' ) );
 			}
 		}
 	});
@@ -122,7 +130,7 @@ export default function OAuthAuthenticationModal( {
 
 			setConnected( false );
 			setAccountData( null );
-			apiConfigForm.reset();
+			apiConfigForm.reset({});
 			setSuccess(
 				__( 'Account disconnected successfully!', 'datamachine' )
 			);
@@ -183,7 +191,30 @@ export default function OAuthAuthenticationModal( {
 
 				{ ! connected && (
 					<>
-						{ authType === 'oauth2' ? (
+						{ handlerInfo.auth_fields && (
+							<>
+								<APIConfigForm
+									config={ apiConfigForm.data }
+									onChange={ apiConfigForm.updateField }
+									fields={ handlerInfo.auth_fields }
+								/>
+								<div className="datamachine-modal-spacing--mt-16">
+									<Button
+										variant={ authType === 'simple' ? 'primary' : 'secondary' }
+										onClick={ handleSimpleAuthSave }
+										disabled={ apiConfigForm.isSubmitting }
+										isBusy={ apiConfigForm.isSubmitting }
+									>
+										{ apiConfigForm.isSubmitting
+											? __( 'Saving...', 'datamachine' )
+											: ( authType === 'simple' ? __( 'Save Credentials', 'datamachine' ) : __( 'Save Configuration', 'datamachine' ) ) }
+									</Button>
+								</div>
+								{ authType === 'oauth2' && <div className="datamachine-modal-spacing--mb-16 datamachine-modal-spacing--mt-16"><hr /></div> }
+							</>
+						) }
+
+						{ authType === 'oauth2' && (
 							<div className="datamachine-modal-spacing--mb-16">
 								<OAuthPopupHandler
 									oauthUrl={ oauthUrl }
@@ -192,29 +223,6 @@ export default function OAuthAuthenticationModal( {
 									disabled={ apiConfigForm.isSubmitting || disconnectOperation.isLoading }
 								/>
 							</div>
-						) : (
-							<>
-								<APIConfigForm
-									config={ apiConfigForm.data }
-									onChange={ apiConfigForm.updateField }
-									fields={ handlerInfo.auth_fields || [] }
-								/>
-								<div className="datamachine-modal-spacing--mt-16">
-									<Button
-										variant="primary"
-										onClick={ handleSimpleAuthSave }
-										disabled={ apiConfigForm.isSubmitting }
-										isBusy={ apiConfigForm.isSubmitting }
-									>
-										{ apiConfigForm.isSubmitting
-											? __( 'Saving...', 'datamachine' )
-											: __(
-													'Save Credentials',
-													'datamachine'
-											  ) }
-									</Button>
-								</div>
-							</>
 						) }
 					</>
 				) }

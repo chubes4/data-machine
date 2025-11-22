@@ -49,7 +49,16 @@ export default function APIConfigForm( {
 		},
 	];
 
-	const fieldsToRender = fields.length > 0 ? fields : defaultFields;
+	// Convert object to array if needed (API returns object keyed by field name)
+	const fieldsArray = Array.isArray( fields )
+		? fields
+		: Object.entries( fields ).map( ( [ key, field ] ) => ( {
+				...field,
+				key,
+		  } ) );
+
+	const fieldsToRender =
+		fieldsArray.length > 0 ? fieldsArray : defaultFields;
 
 	return (
 		<div className="datamachine-api-config-form">

@@ -166,9 +166,9 @@ Handler configuration follows a simplified request/response contract:
 
 The Pipelines page uses modern React architecture built with WordPress components, eliminating all jQuery/AJAX dependencies in favor of a clean, maintainable component-based system with complete REST API integration.
 
-**Code Statistics:**
-- 6,591 lines of React code
-- 50+ specialized components
+**Code Organization:**
+- Comprehensive React implementation
+- Extensive component library with specialized components
 
 ### Component Structure
 
@@ -210,6 +210,7 @@ The Pipelines page uses modern React architecture built with WordPress component
 - `DataFlowArrow` - Visual data flow indicators between steps
 - `PipelineSelector` - Pipeline selection dropdown with preferences
 - `ModalManager` - Centralized modal rendering logic (@since v0.2.3)
+- `ModalSwitch` - Centralized modal routing component (@since v0.2.5)
 
 **Specialized Sub-Components:**
 
@@ -250,6 +251,7 @@ All data operations use custom hooks that provide:
 - `useStepSettings` - Step configuration management
 - `useModal` - Modal state and operations
 - `useFormState` - Generic form state management (@since v0.2.3)
+- `useHandlerModel` - Handler model integration (@since v0.2.5)
 
 Example hook structure:
 ```javascript
@@ -326,6 +328,120 @@ All requests use WordPress REST API nonce from `wpApiSettings.nonce` with `manag
 - Declarative UI rendering
 - Centralized state management
 - Consistent error handling patterns
+
+## Advanced Architecture Patterns (@since v0.2.5)
+
+### Model-View Pattern
+
+The Pipelines interface implements a model-view separation pattern for handler state management:
+
+**HandlerProvider** (`context/HandlerProvider.jsx`):
+- React context providing handler state across components
+- Centralizes handler selection and configuration state
+- Reduces prop drilling for handler-related data
+
+**HandlerModel** (`models/HandlerModel.js`):
+- Abstract model layer for handler data operations
+- Provides consistent interface for handler state management
+- Separates business logic from UI components
+
+**HandlerFactory** (`models/HandlerFactory.js`):
+- Factory pattern for handler model instantiation
+- Creates appropriate handler models based on handler type
+- Centralizes handler model creation logic
+
+**Individual Handler Models** (`models/handlers/`):
+- Type-specific handler models (e.g., TwitterHandlerModel, GoogleSheetsHandlerModel)
+- Encapsulate handler-specific behavior and validation
+- Provide handler-specific methods and computed properties
+
+### Service Layer Architecture
+
+**handlerService** (`services/handlerService.js`):
+- Service abstraction for handler-related API operations
+- Separates API communication from component logic
+- Provides reusable handler operation methods
+- Centralizes error handling for handler operations
+
+**Benefits**:
+- Clear separation between API calls and UI logic
+- Testable service layer independent of components
+- Consistent error handling patterns
+- Easy to mock for testing
+
+### Modal Management System
+
+**ModalSwitch** (`components/shared/ModalSwitch.jsx`):
+- Centralized modal rendering component
+- Routes modal types to appropriate modal components
+- Replaces scattered conditional modal logic
+- Single source of truth for modal rendering
+
+**Pattern**:
+```javascript
+// Before: Multiple conditional modal renders scattered in components
+{showHandlerModal && <HandlerSettingsModal />}
+{showConfigModal && <ConfigureStepModal />}
+{showOAuthModal && <OAuthAuthenticationModal />}
+
+// After: Single centralized modal switch
+<ModalSwitch activeModal={activeModal} />
+```
+
+**Benefits**:
+- Reduced code duplication
+- Easier to add new modal types
+- Centralized modal state management
+- Consistent modal behavior
+
+### Component Directory Structure
+
+```
+assets/react/
+├── context/              # React context providers
+│   └── HandlerProvider.jsx
+├── models/               # Handler models & factory
+│   ├── HandlerModel.js
+│   ├── HandlerFactory.js
+│   └── handlers/         # Type-specific models
+├── services/             # API service layer
+│   └── handlerService.js
+├── hooks/                # Custom React hooks
+│   ├── useHandlerModel.js
+│   └── useFormState.js
+├── queries/              # TanStack Query definitions
+│   ├── flows.js
+│   └── handlers.js
+├── stores/               # Zustand stores
+│   └── modalStore.js
+└── components/           # React components
+    ├── modals/
+    ├── flows/
+    ├── pipelines/
+    └── shared/
+```
+
+### Pattern Benefits
+
+**Model-View Separation**:
+- Business logic isolated from UI rendering
+- Easier testing of handler operations
+- Reusable handler logic across components
+
+**Service Layer**:
+- API calls abstracted from components
+- Consistent error handling patterns
+- Easy to switch API implementations
+
+**Centralized Modal Management**:
+- Single modal rendering location
+- Reduced conditional logic in components
+- Easier modal state debugging
+
+**Custom Hooks**:
+- Reusable state management logic
+- Consistent data fetching patterns
+- Simplified component logic
 
 **Implemented Features:**
 React architecture provides modern features including:

@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class FacebookAuth {
+class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
     public const GRAPH_API_VERSION = 'v23.0';
     public const AUTH_URL = 'https://www.facebook.com/' . self::GRAPH_API_VERSION . '/dialog/oauth';
@@ -24,13 +24,8 @@ class FacebookAuth {
     public const SCOPES = 'email,public_profile,pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_engagement,business_management';
     public const GRAPH_API_URL = 'https://graph.facebook.com/' . self::GRAPH_API_VERSION;
 
-    /**
-     * @var \DataMachine\Core\OAuth\OAuth2Handler OAuth2 handler instance
-     */
-    private $oauth2;
-
     public function __construct() {
-        $this->oauth2 = new \DataMachine\Core\OAuth\OAuth2Handler();
+        parent::__construct('facebook');
     }
 
     /**
@@ -61,7 +56,7 @@ class FacebookAuth {
      * @return bool True if OAuth credentials are configured
      */
     public function is_configured(): bool {
-        $config = datamachine_get_oauth_keys('facebook');
+        $config = $this->get_config();
         return !empty($config['app_id']) && !empty($config['app_secret']);
     }
 
@@ -71,7 +66,7 @@ class FacebookAuth {
      * @return bool True if authenticated
      */
     public function is_authenticated(): bool {
-        $account = datamachine_get_oauth_account('facebook');
+        $account = $this->get_account();
         if (empty($account) || !is_array($account)) {
             return false;
         }
@@ -93,7 +88,7 @@ class FacebookAuth {
      * @return string|null Page access token or null
      */
     public function get_page_access_token(): ?string {
-        $account = datamachine_get_oauth_account('facebook');
+        $account = $this->get_account();
         if (empty($account) || !is_array($account) || empty($account['page_access_token'])) {
             return null;
         }
@@ -111,7 +106,7 @@ class FacebookAuth {
      * @return string|null User access token or null
      */
     public function get_user_access_token(): ?string {
-        $account = datamachine_get_oauth_account('facebook');
+        $account = $this->get_account();
         if (empty($account) || !is_array($account) || empty($account['user_access_token'])) {
             return null;
         }
@@ -129,7 +124,7 @@ class FacebookAuth {
      * @return string|null Page ID or null
      */
     public function get_page_id(): ?string {
-        $account = datamachine_get_oauth_account('facebook');
+        $account = $this->get_account();
         if (empty($account) || !is_array($account) || empty($account['page_id'])) {
             return null;
         }
@@ -144,10 +139,10 @@ class FacebookAuth {
     public function get_authorization_url(): string {
         $state = $this->oauth2->create_state('facebook');
 
-        $config = datamachine_get_oauth_keys('facebook');
+        $config = $this->get_config();
         $params = [
             'client_id' => $config['app_id'] ?? '',
-            'redirect_uri' => apply_filters('datamachine_oauth_callback', '', 'facebook'),
+            'redirect_uri' => $this->get_callback_url(),
             'scope' => self::SCOPES,
             'response_type' => 'code',
             'state' => $state,
@@ -160,7 +155,7 @@ class FacebookAuth {
      * Handle OAuth callback from Facebook
      */
     public function handle_oauth_callback() {
-        $config = datamachine_get_oauth_keys('facebook');
+        $config = $this->get_config();
 
         $this->oauth2->handle_callback(
             'facebook',
@@ -168,7 +163,7 @@ class FacebookAuth {
             [
                 'client_id' => $config['app_id'] ?? '',
                 'client_secret' => $config['app_secret'] ?? '',
-                'redirect_uri' => apply_filters('datamachine_oauth_callback', '', 'facebook'),
+                'redirect_uri' => $this->get_callback_url(),
                 'code' => $_GET['code'] ?? ''
             ],
             function($long_lived_token_data) {
@@ -210,7 +205,8 @@ class FacebookAuth {
                     $short_lived_token_data['access_token'],
                     $config
                 );
-            }
+            },
+            [$this, 'save_account']
         );
     }
 
@@ -386,7 +382,7 @@ class FacebookAuth {
      * @return array|null Account details or null
      */
     public function get_account_details(): ?array {
-        $account = datamachine_get_oauth_account('facebook');
+        $account = $this->get_account();
         if (empty($account) || !is_array($account)) {
             return null;
         }
@@ -399,7 +395,7 @@ class FacebookAuth {
      * @return bool Success status
      */
     public function remove_account(): bool {
-        $account = datamachine_get_oauth_account('facebook');
+        $account = $this->get_account();
         $token = null;
 
         if (!empty($account) && is_array($account) && !empty($account['user_access_token'])) {
@@ -419,6 +415,6 @@ class FacebookAuth {
             }
         }
 
-        return apply_filters('datamachine_clear_oauth_account', false, 'facebook');
+        return $this->clear_account();
     }
 }

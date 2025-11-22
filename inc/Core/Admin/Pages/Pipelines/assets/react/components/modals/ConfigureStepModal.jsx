@@ -102,7 +102,7 @@ export default function ConfigureStepModal( {
 	 * Reset form when modal opens with new config
 	 */
 	useEffect( () => {
-		formState.updateData({
+		formState.reset({
 			provider: currentConfig?.provider || aiDefaults.provider,
 			model: currentConfig?.model || aiDefaults.model,
 			systemPrompt: currentConfig?.system_prompt || ''

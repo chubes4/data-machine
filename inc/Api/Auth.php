@@ -117,8 +117,16 @@ class Auth {
 			);
 		}
 
-		// Clear OAuth credentials using centralized filter
-		$cleared = apply_filters('datamachine_clear_oauth_account', false, $handler_slug);
+		// Clear OAuth credentials using centralized function
+		if (method_exists($auth_instance, 'clear_account')) {
+			$cleared = $auth_instance->clear_account();
+		} else {
+			return new \WP_Error(
+				'disconnect_not_supported',
+				__('This handler does not support account disconnection', 'datamachine'),
+				['status' => 500]
+			);
+		}
 
 		if ($cleared) {
 			return rest_ensure_response([
@@ -272,9 +280,19 @@ class Auth {
 		// OAuth providers: store to oauth_keys; simple auth: store to oauth_account
 		$uses_oauth = method_exists($auth_instance, 'get_authorization_url') || method_exists($auth_instance, 'handle_oauth_callback');
 
-		$existing_config = $uses_oauth
-			? datamachine_get_oauth_keys($handler_slug)
-			: datamachine_get_oauth_account($handler_slug);
+		$existing_config = [];
+		if (method_exists($auth_instance, 'get_config')) {
+			$existing_config = $auth_instance->get_config();
+		} elseif (method_exists($auth_instance, 'get_account')) {
+			// Simple auth might store config in account data
+			$existing_config = $auth_instance->get_account();
+		} else {
+			return new \WP_Error(
+				'config_retrieval_failed',
+				__('Could not retrieve existing configuration', 'datamachine'),
+				['status' => 500]
+			);
+		}
 
 		// Get all request parameters
 		$request_params = $request->get_params();
@@ -324,9 +342,20 @@ class Auth {
 
 		// OAuth: save API keys; Simple auth: save credentials
 		if ($uses_oauth) {
-			$saved = apply_filters('datamachine_store_oauth_keys', $config_data, $handler_slug);
+			if (method_exists($auth_instance, 'save_config')) {
+				$saved = $auth_instance->save_config($config_data);
+			} else {
+				return new \WP_Error('save_config_not_supported', __('Handler does not support saving config', 'datamachine'));
+			}
 		} else {
-			$saved = apply_filters('datamachine_store_oauth_account', $config_data, $handler_slug);
+			if (method_exists($auth_instance, 'save_account')) {
+				$saved = $auth_instance->save_account($config_data);
+			} elseif (method_exists($auth_instance, 'save_config')) {
+				// Some simple auth might use save_config (like Bluesky now)
+				$saved = $auth_instance->save_config($config_data);
+			} else {
+				return new \WP_Error('save_account_not_supported', __('Handler does not support saving account', 'datamachine'));
+			}
 		}
 
 		if ($saved) {

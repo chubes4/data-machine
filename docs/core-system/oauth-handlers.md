@@ -11,7 +11,12 @@ Centralized OAuth flow handlers eliminating code duplication across all authenti
 **Handlers**:
 - `OAuth1Handler.php` - OAuth 1.0a three-legged flow (Twitter)
 - `OAuth2Handler.php` - OAuth 2.0 authorization code flow (Reddit, Facebook, Threads, Google Sheets)
+- `SimpleAuthHandler.php` - Non-OAuth authentication for API keys and app passwords (Bluesky) (@since v0.2.5)
 - `OAuthFilters.php` - Service discovery filter registration
+
+**Providers Directory** (@since v0.2.5):
+- `Providers/` - Centralized location for OAuth provider implementations
+- `Providers/GoogleSheetsAuth.php` - Google Sheets OAuth2 provider (moved from handler directory in v0.2.5)
 
 **Pattern**: Providers access centralized handlers via WordPress filters rather than implementing custom OAuth logic.
 
@@ -49,6 +54,173 @@ $result = $oauth1->handle_callback('twitter', $access_url, $key, $secret, $accou
 
 **Providers Using OAuth1**:
 - Twitter (OAuth 1.0a for tweet publishing)
+
+## SimpleAuthHandler - Non-OAuth Authentication
+
+**Since**: v0.2.5
+**Location**: `/inc/Core/OAuth/SimpleAuthHandler.php`
+
+Base class for API key and credential-based authentication handlers. Provides consistent storage/retrieval patterns for non-OAuth authentication methods.
+
+**Purpose**: Standardizes authentication for services using API keys, app passwords, or other non-OAuth credential systems.
+
+**Key Methods**:
+- `get_config_fields()` - Returns credential input field definitions
+- `is_authenticated()` - Validates credential presence and completeness
+- `get_stored_credentials()` - Retrieves stored credentials from storage
+- `store_credentials()` - Saves credentials to storage
+
+**Pattern**: Abstract class requiring concrete implementations to define credential fields and validation logic.
+
+### Usage Pattern
+
+```php
+use DataMachine\Core\OAuth\SimpleAuthHandler;
+
+class MyServiceAuth extends SimpleAuthHandler {
+
+    public function get_config_fields(): array {
+        return [
+            'api_key' => [
+                'label' => __('API Key', 'datamachine'),
+                'type' => 'password',
+                'required' => true,
+                'description' => __('Your API key from service.com', 'datamachine')
+            ]
+        ];
+    }
+
+    public function is_authenticated(): bool {
+        $credentials = $this->get_stored_credentials('myservice');
+        return !empty($credentials) && !empty($credentials['api_key']);
+    }
+}
+```
+
+### Storage Pattern
+
+SimpleAuthHandler uses the same storage/retrieval pattern as OAuth handlers:
+
+```php
+// Store credentials
+$this->store_credentials([
+    'api_key' => $api_key,
+    'last_verified' => time()
+], 'myservice');
+
+// Retrieve credentials
+$credentials = $this->get_stored_credentials('myservice');
+$api_key = $credentials['api_key'] ?? '';
+```
+
+**Storage Filters**:
+- `datamachine_store_oauth_account` - Stores credential data
+- `datamachine_retrieve_oauth_account` - Retrieves credential data
+- `datamachine_clear_oauth_account` - Clears stored credentials
+
+### Current Implementations
+
+**BlueskyAuth** (`/inc/Core/Steps/Publish/Handlers/Bluesky/BlueskyAuth.php`):
+- Uses app password authentication pattern
+- Stores username and app_password credentials
+- Creates session tokens via Bluesky AT Protocol
+- Validates credentials by attempting session creation
+
+```php
+public function get_config_fields(): array {
+    return [
+        'username' => [
+            'label' => __('Bluesky Handle', 'datamachine'),
+            'type' => 'text',
+            'required' => true,
+            'description' => __('Your Bluesky handle (e.g., user.bsky.social)', 'datamachine')
+        ],
+        'app_password' => [
+            'label' => __('App Password', 'datamachine'),
+            'type' => 'password',
+            'required' => true,
+            'description' => __('Generate an app password at bsky.app/settings/app-passwords', 'datamachine')
+        ]
+    ];
+}
+```
+
+### Benefits
+
+- **Consistency**: Uses same storage patterns as OAuth handlers
+- **Simplicity**: Reduces boilerplate for non-OAuth authentication
+- **Maintainability**: Centralized credential management logic
+- **Extensibility**: Easy to add new non-OAuth services
+
+## OAuth Providers Architecture
+
+**Since**: v0.2.5
+**Location**: `/inc/Core/OAuth/Providers/`
+
+Centralized directory for OAuth provider implementations, promoting code organization and scalability.
+
+**Purpose**: Separates OAuth provider logic from handler implementations for better modularity and reusability.
+
+**Pattern**: Provider classes implement OAuth flows using centralized OAuth1Handler/OAuth2Handler base classes.
+
+### Current Providers
+
+**GoogleSheetsAuth** (`/inc/Core/OAuth/Providers/GoogleSheetsAuth.php`):
+- OAuth2 provider for Google Sheets API access
+- Shared by both fetch and publish handlers
+- Handles token refresh and service access
+- Provides spreadsheet-specific scopes
+
+**Key Features**:
+- Centralized OAuth configuration
+- Token refresh management
+- Service initialization (access token retrieval)
+- Shared authentication across multiple handlers
+
+### Migration Pattern (v0.2.5)
+
+**Before**: Handler-local auth classes
+```
+/inc/Core/Steps/Publish/Handlers/GoogleSheets/GoogleSheetsAuth.php
+```
+
+**After**: Centralized provider directory
+```
+/inc/Core/OAuth/Providers/GoogleSheetsAuth.php
+```
+
+**Benefits**:
+- **Reusability**: Single auth implementation shared across handlers
+- **Organization**: Clear separation of concerns
+- **Scalability**: Easy to add new providers in dedicated location
+- **Maintenance**: Single point of update for provider-specific logic
+
+### Integration Example
+
+```php
+// Handler uses centralized provider
+use DataMachine\Core\OAuth\Providers\GoogleSheetsAuth;
+
+class GoogleSheetsFetch extends FetchHandler {
+
+    private $auth;
+
+    public function __construct() {
+        $this->auth = new GoogleSheetsAuth();
+    }
+
+    public function fetch($flow_step_config, $job_id) {
+        // Get authenticated service
+        $access_token = $this->auth->get_service();
+
+        if (is_wp_error($access_token)) {
+            return $this->errorResponse($access_token->get_error_message());
+        }
+
+        // Use access token for API calls
+    }
+}
+```
 
 ## OAuth2Handler Methods
 
@@ -494,13 +666,18 @@ $result = apply_filters('datamachine_request', null, 'POST', $token_url, [
 
 ## Benefits
 
-**Code Elimination**: Removes duplicated OAuth logic across 6 providers (Twitter, Reddit, Facebook, Threads, Google Sheets, future providers)
+**Code Elimination**: Removes duplicated OAuth logic across multiple authentication methods:
+- OAuth 1.0a providers (Twitter)
+- OAuth 2.0 providers (Reddit, Facebook, Threads, Google Sheets)
+- Non-OAuth authentication (Bluesky app passwords, API keys)
 
-**Consistency**: Unified error handling, logging, and security patterns across all OAuth flows
+**Consistency**: Unified error handling, logging, and security patterns across all authentication flows
+
+**Organization**: Centralized OAuth Providers directory for better code organization and reusability
 
 **Maintainability**: Single point of update for OAuth security improvements and bug fixes
 
-**Extensibility**: New OAuth providers integrate via service discovery without modifying core handlers
+**Extensibility**: New authentication providers integrate via service discovery without modifying core handlers
 
 **Security**: Centralized security implementation ensures consistent protection across all providers
 

@@ -99,10 +99,10 @@ $global_tools = $tool_manager->get_global_tools();
 $is_available = $tool_manager->is_tool_available('google_search', $step_context_id);
 
 // Configuration checking
-$is_configured = $tool_manager->isToolConfigured('google_search');
+$is_configured = $tool_manager->is_tool_configured('google_search');
 
 // WordPress-native tools (no config needed)
-$opt_out_tools = $tool_manager->getOptOutTools();
+$opt_out_tools = $tool_manager->get_opt_out_defaults();
 // Returns: ['local_search', 'wordpress_post_reader', 'web_fetch']
 
 // UI data aggregation

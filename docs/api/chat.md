@@ -248,14 +248,17 @@ add_filter('datamachine_tool_enabled', function($enabled, $tool_name, $tool_conf
 }, 5, 4);
 ```
 
-**Directive Registration**:
+**Directive Registration** (@since v0.2.5):
 ```php
-add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
-    if ($agent_type === 'chat') {
-        $request = ChatAgentDirective::inject($request, $provider, $tools, $context);
-    }
-    return $request;
-}, 10, 5);
+// Current: Unified directive registration with agent type targeting
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => ChatAgentDirective::class,
+        'priority' => 10,
+        'agent_types' => ['chat']
+    ];
+    return $directives;
+});
 ```
 
 ### Differences from Pipeline Agent
@@ -325,37 +328,36 @@ Chat agent discovers tools via three sources:
 
 ## Filter-Based Architecture
 
-### Unified Directive System
+### Unified Directive System (@since v0.2.5)
 
 Directives are registered via the `datamachine_directives` filter with priority and agent targeting:
 
 ```php
 add_filter('datamachine_directives', function($directives) {
+    // Global directive (applies to all agents)
     $directives[] = [
         'class' => MyDirective::class,
         'priority' => 25,
         'agent_types' => ['all']  // Applies to chat and pipeline agents
     ];
+
+    // Chat-specific directive
+    $directives[] = [
+        'class' => MyChatDirective::class,
+        'priority' => 15,
+        'agent_types' => ['chat']  // Applies only to chat agent
+    ];
+
     return $directives;
 });
 ```
 
-### Chat Agent Directives
-
-Applied only to chat AI agents via `datamachine_agent_directives` filter:
-
-```php
-add_filter('datamachine_agent_directives', function($request, $agent_type, $provider, $tools, $context) {
-    if ($agent_type === 'chat') {
-        // Add chat-specific directive
-        $request['messages'][] = [
-            'role' => 'system',
-            'content' => 'Guide users through workflow creation step-by-step.'
-        ];
-    }
-    return $request;
-}, 10, 5);
-```
+**Priority Guidelines**:
+- **10-19**: Core agent identity and foundational instructions
+- **20-29**: Global system prompts and universal behavior
+- **30-39**: Agent-specific system prompts and context
+- **40-49**: Workflow and execution context directives
+- **50+**: Environmental and site-specific directives
 
 
 

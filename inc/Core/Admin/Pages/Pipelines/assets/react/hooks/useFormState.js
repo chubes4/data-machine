@@ -3,8 +3,73 @@
  *
  * Eliminates repetitive form state management boilerplate.
  * Provides consistent loading, error, and success state handling.
+ * Uses useReducer for stable callback references.
  */
-import { useState, useCallback } from '@wordpress/element';
+import { useReducer, useCallback, useRef, useState } from '@wordpress/element';
+
+/**
+ * Form state reducer
+ */
+const formReducer = (state, action) => {
+  switch (action.type) {
+    case 'UPDATE_FIELD':
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          [action.field]: action.value
+        },
+        error: null
+      };
+
+    case 'UPDATE_DATA':
+      return {
+        ...state,
+        data: {
+          ...state.data,
+          ...action.payload
+        },
+        error: null
+      };
+
+    case 'RESET_DATA':
+      return {
+        ...state,
+        data: action.payload,
+        error: null,
+        success: null
+      };
+
+    case 'SET_SUBMITTING':
+      return {
+        ...state,
+        isSubmitting: action.payload
+      };
+
+    case 'SET_ERROR':
+      return {
+        ...state,
+        error: action.payload
+      };
+
+    case 'SET_SUCCESS':
+      return {
+        ...state,
+        success: action.payload
+      };
+
+    case 'RESET_ALL':
+      return {
+        data: action.payload || {},
+        isSubmitting: false,
+        error: null,
+        success: null
+      };
+
+    default:
+      return state;
+  }
+};
 
 /**
  * Generic form state management hook
@@ -20,76 +85,79 @@ export const useFormState = ({
   validate,
   onSubmit
 } = {}) => {
-  const [data, setData] = useState(initialData);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+  const [state, dispatch] = useReducer(formReducer, {
+    data: initialData,
+    isSubmitting: false,
+    error: null,
+    success: null
+  });
+
+  const validateRef = useRef(validate);
+  const onSubmitRef = useRef(onSubmit);
+  validateRef.current = validate;
+  onSubmitRef.current = onSubmit;
 
   const updateField = useCallback((field, value) => {
-    setData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    // Clear errors when user starts typing
-    if (error) setError(null);
-  }, [error]);
+    dispatch({ type: 'UPDATE_FIELD', field, value });
+  }, []);
 
   const updateData = useCallback((newData) => {
-    setData(prev => ({
-      ...prev,
-      ...newData
-    }));
-    // Clear errors when data changes
-    if (error) setError(null);
-  }, [error]);
+    dispatch({ type: 'UPDATE_DATA', payload: newData });
+  }, []);
 
-  const reset = useCallback(() => {
-    setData(initialData);
-    setError(null);
-    setSuccess(null);
-    setIsSubmitting(false);
-  }, [initialData]);
+  const reset = useCallback((newData) => {
+    dispatch({ type: 'RESET_DATA', payload: newData });
+  }, []);
+
+  const resetAll = useCallback((newData) => {
+    dispatch({ type: 'RESET_ALL', payload: newData });
+  }, []);
+
+  const setError = useCallback((error) => {
+    dispatch({ type: 'SET_ERROR', payload: error });
+  }, []);
+
+  const setSuccess = useCallback((success) => {
+    dispatch({ type: 'SET_SUCCESS', payload: success });
+  }, []);
 
   const submit = useCallback(async () => {
-    if (isSubmitting) return;
+    if (state.isSubmitting) return;
 
-    setError(null);
-    setSuccess(null);
+    dispatch({ type: 'SET_ERROR', payload: null });
+    dispatch({ type: 'SET_SUCCESS', payload: null });
 
-    // Validation
-    if (validate) {
-      const validationError = validate(data);
+    if (validateRef.current) {
+      const validationError = validateRef.current(state.data);
       if (validationError) {
-        setError(validationError);
+        dispatch({ type: 'SET_ERROR', payload: validationError });
         return;
       }
     }
 
-    setIsSubmitting(true);
+    dispatch({ type: 'SET_SUBMITTING', payload: true });
 
     try {
-      const result = await onSubmit(data);
-      setSuccess(result || true);
+      const result = await onSubmitRef.current(state.data);
+      dispatch({ type: 'SET_SUCCESS', payload: result || true });
       return result;
     } catch (err) {
-      setError(err.message || 'An error occurred');
+      dispatch({ type: 'SET_ERROR', payload: err.message || 'An error occurred' });
       throw err;
     } finally {
-      setIsSubmitting(false);
+      dispatch({ type: 'SET_SUBMITTING', payload: false });
     }
-  }, [data, isSubmitting, validate, onSubmit]);
+  }, [state.isSubmitting, state.data]);
 
   return {
-    // State
-    data,
-    isSubmitting,
-    error,
-    success,
-
-    // Actions
+    data: state.data,
+    isSubmitting: state.isSubmitting,
+    error: state.error,
+    success: state.success,
     updateField,
     updateData,
     reset,
+    resetAll,
     submit,
     setError,
     setSuccess,

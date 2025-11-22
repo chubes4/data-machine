@@ -148,13 +148,14 @@ add_filter('chubes_ai_tools', function($tools, $handler_slug = null, $handler_co
 $tool_manager = new ToolManager();
 
 // Layer 1: Global enablement
-$is_globally_enabled = $tool_manager->isToolEnabled('google_search');
+$is_globally_enabled = $tool_manager->is_globally_enabled('google_search');
 
 // Layer 2: Step-specific selection
-$is_step_enabled = $tool_manager->isToolEnabled('google_search', ['google_search']);
+    $step_context_id = 'pipeline_step_id_here'; // Example placeholder step context ID
+    $is_step_enabled = $tool_manager->is_step_tool_enabled($step_context_id, 'google_search');
 
 // Layer 3: Configuration requirements
-$is_configured = $tool_manager->isToolConfigured('google_search');
+    $is_configured = $tool_manager->is_tool_configured('google_search');
 
 // Final availability
 $is_available = $is_globally_enabled && $is_step_enabled && $is_configured;

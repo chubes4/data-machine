@@ -17,15 +17,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class TwitterAuth {
-
-    /**
-     * @var \DataMachine\Core\OAuth\OAuth1Handler OAuth1 handler instance
-     */
-    private $oauth1;
+class TwitterAuth extends \DataMachine\Core\OAuth\BaseOAuth1Provider {
 
     public function __construct() {
-        $this->oauth1 = new \DataMachine\Core\OAuth\OAuth1Handler();
+        parent::__construct('twitter');
     }
 
     /**
@@ -34,11 +29,7 @@ class TwitterAuth {
      * @return bool True if authenticated
      */
     public function is_authenticated(): bool {
-        $account = datamachine_get_oauth_account('twitter');
-        return !empty($account) &&
-               is_array($account) &&
-               !empty($account['access_token']) &&
-               !empty($account['access_token_secret']);
+        return parent::is_authenticated();
     }
 
     /**
@@ -69,8 +60,7 @@ class TwitterAuth {
      * @return bool True if configured
      */
     public function is_configured(): bool {
-        $config = datamachine_get_oauth_keys('twitter');
-        return !empty($config['api_key']) && !empty($config['api_secret']);
+        return parent::is_configured();
     }
 
     /**
@@ -79,7 +69,7 @@ class TwitterAuth {
      * @return TwitterOAuth|\WP_Error Connection or error
      */
     public function get_connection() {
-        $credentials = datamachine_get_oauth_account('twitter');
+        $credentials = $this->get_account();
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['access_token_secret'])) {
             do_action('datamachine_log', 'error', 'Missing Twitter credentials in options.');
             return new \WP_Error('twitter_missing_credentials', __('Twitter credentials not found. Please authenticate.', 'datamachine'));
@@ -88,7 +78,7 @@ class TwitterAuth {
         $access_token = $credentials['access_token'];
         $access_token_secret = $credentials['access_token_secret'];
 
-        $config = datamachine_get_oauth_keys('twitter');
+        $config = $this->get_config();
         $consumer_key = $config['api_key'] ?? '';
         $consumer_secret = $config['api_secret'] ?? '';
 
@@ -112,7 +102,7 @@ class TwitterAuth {
      * @return string Authorization URL
      */
     public function get_authorization_url(): string {
-        $config = datamachine_get_oauth_keys('twitter');
+        $config = $this->get_config();
         $api_key = $config['api_key'] ?? '';
         $api_secret = $config['api_secret'] ?? '';
 
@@ -124,7 +114,7 @@ class TwitterAuth {
             return '';
         }
 
-        $callback_url = apply_filters('datamachine_oauth_callback', '', 'twitter');
+        $callback_url = $this->get_callback_url();
 
         // Get request token via OAuth1Handler
         $request_token = $this->oauth1->get_request_token(
@@ -160,7 +150,7 @@ class TwitterAuth {
             exit;
         }
 
-        $config = datamachine_get_oauth_keys('twitter');
+        $config = $this->get_config();
         $api_key = $config['api_key'] ?? '';
         $api_secret = $config['api_secret'] ?? '';
 
@@ -185,7 +175,8 @@ class TwitterAuth {
                     'screen_name' => $access_token_data['screen_name'] ?? null,
                     'last_verified_at' => time()
                 ];
-            }
+            },
+            [$this, 'save_account']
         );
     }
 
@@ -195,7 +186,7 @@ class TwitterAuth {
      * @return array|null Account details or null
      */
     public function get_account_details(): ?array {
-        $account = datamachine_get_oauth_account('twitter');
+        $account = $this->get_account();
         if (empty($account) || !is_array($account) || empty($account['access_token']) || empty($account['access_token_secret'])) {
             return null;
         }
@@ -208,6 +199,6 @@ class TwitterAuth {
      * @return bool Success status
      */
     public function remove_account(): bool {
-        return apply_filters('datamachine_clear_oauth_account', false, 'twitter');
+        return $this->clear_account();
     }
 }

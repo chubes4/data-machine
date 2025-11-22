@@ -29,8 +29,8 @@ class Reddit extends FetchHandler {
 			self::class,
 			'Reddit',
 			'Fetch posts from Reddit subreddits',
-			false,
-			null,
+			true,
+			RedditAuth::class,
 			RedditSettings::class,
 			null
 		);
@@ -85,7 +85,7 @@ class Reddit extends FetchHandler {
 			return $this->emptyResponse();
 		}
 
-		$reddit_account = datamachine_get_oauth_account('reddit');
+		$reddit_account = $oauth_reddit->get_account();
 		$access_token = $reddit_account['access_token'] ?? null;
 		$token_expires_at = $reddit_account['token_expires_at'] ?? 0;
 		$needs_refresh = empty($access_token) || time() >= ($token_expires_at - 300);
@@ -104,7 +104,7 @@ class Reddit extends FetchHandler {
 				return [];
 			}
 
-		$reddit_account = datamachine_get_oauth_account('reddit');
+		$reddit_account = $oauth_reddit->get_account();
 			if (empty($reddit_account['access_token'])) {
 				$this->log('error', 'Token refresh successful, but failed to retrieve new token data.', ['pipeline_id' => $pipeline_id]);
 				return [];

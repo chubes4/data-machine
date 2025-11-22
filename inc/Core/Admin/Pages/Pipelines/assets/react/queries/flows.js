@@ -95,8 +95,28 @@ export const useRunFlow = () => {
 export const useUpdateFlowHandler = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ flowStepId, handlerSlug, settings, pipelineId, stepType }) =>
-      updateFlowHandler(flowStepId, handlerSlug, settings, pipelineId, stepType),
+    mutationFn: async ({ flowStepId, handlerSlug, settings, pipelineId, stepType, flowConfig = {}, pipelineStepConfig = {} }) => {
+      // Attempt to find handler details in cache to create model for sanitization
+      let sanitizedSettings = settings;
+      try {
+        const handlerDetails = queryClient.getQueryData(['handlers', handlerSlug]);
+        const handlers = queryClient.getQueryData(['handlers']) || {};
+        const descriptor = handlers[handlerSlug] || {};
+        if (handlerDetails) {
+          // Use the HandlerModel if available
+          // Lazily import to avoid circular dependencies
+          const { default: createModel } = await import('../models/HandlerFactory');
+          const model = createModel(handlerSlug, descriptor, handlerDetails);
+          if (model && typeof model.sanitizeForAPI === 'function') {
+            sanitizedSettings = model.sanitizeForAPI(settings, handlerDetails.settings || {});
+          }
+        }
+      } catch (err) {
+        // If model creation fails, fall back to original settings
+      }
+
+      return updateFlowHandler(flowStepId, handlerSlug, sanitizedSettings, pipelineId, stepType, flowConfig, pipelineStepConfig);
+    },
     onSuccess: (response, variables) => {
       // Invalidate the specific flow and update cache using flow_id returned by API
       queryClient.invalidateQueries(['flows']);

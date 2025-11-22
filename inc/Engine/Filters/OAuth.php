@@ -1,7 +1,7 @@
 <?php
 
 /**
- * OAuth system with public callbacks and filter-based data operations.
+ * OAuth system registration and routing.
  */
 
 if (!defined('WPINC')) {
@@ -9,26 +9,18 @@ if (!defined('WPINC')) {
 }
 
 /**
- * Get OAuth account data directly from options.
+ * Get the standardized OAuth callback URL for a provider.
+ * Kept for backward compatibility if needed, but prefer $provider->get_callback_url().
  *
- * @param string $provider OAuth provider slug
- * @return array Account data or empty array
+ * @param string $provider Provider slug
+ * @return string Callback URL
  */
-function datamachine_get_oauth_account(string $provider): array {
-    $all_auth_data = get_option('datamachine_auth_data', []);
-    return $all_auth_data[$provider]['account'] ?? [];
+function datamachine_get_oauth_callback_url(string $provider): string {
+    return site_url("/datamachine-auth/{$provider}/");
 }
 
-/**
- * Get OAuth configuration keys directly from options.
- *
- * @param string $provider OAuth provider slug
- * @return array Configuration data or empty array
- */
-function datamachine_get_oauth_keys(string $provider): array {
-    $all_auth_data = get_option('datamachine_auth_data', []);
-    return $all_auth_data[$provider]['config'] ?? [];
-}
+// Legacy storage functions removed. Use BaseAuthProvider methods instead.
+// datamachine_get_oauth_account, datamachine_save_oauth_account, etc.
 
 function datamachine_register_oauth_system() {
 
@@ -67,44 +59,6 @@ function datamachine_register_oauth_system() {
 
         exit;
     }, 5);
-
-    add_filter('datamachine_store_oauth_account', function($data, $provider) {
-        $all_auth_data = get_option('datamachine_auth_data', []);
-        if (!isset($all_auth_data[$provider])) {
-            $all_auth_data[$provider] = [];
-        }
-        $all_auth_data[$provider]['account'] = $data;
-        return update_option('datamachine_auth_data', $all_auth_data);
-    }, 10, 2);
-
-
-
-    add_filter('datamachine_clear_oauth_account', function($result, $provider) {
-        $all_auth_data = get_option('datamachine_auth_data', []);
-        if (isset($all_auth_data[$provider]['account'])) {
-            unset($all_auth_data[$provider]['account']);
-            return update_option('datamachine_auth_data', $all_auth_data);
-        }
-        return true;
-    }, 10, 2);
-
-    add_filter('datamachine_store_oauth_keys', function($data, $provider) {
-        $all_auth_data = get_option('datamachine_auth_data', []);
-        if (!isset($all_auth_data[$provider])) {
-            $all_auth_data[$provider] = [];
-        }
-        $all_auth_data[$provider]['config'] = $data;
-        return update_option('datamachine_auth_data', $all_auth_data);
-    }, 10, 2);
-
-
-
-    add_filter('datamachine_oauth_callback', function($url, $provider) {
-        if (empty($url)) {
-            $url = site_url("/datamachine-auth/{$provider}/");
-        }
-        return $url;
-    }, 10, 2);
 
     add_filter('datamachine_oauth_url', function($auth_url, $provider) {
         if (!empty($auth_url)) {

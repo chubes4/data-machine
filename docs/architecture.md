@@ -249,8 +249,8 @@ Centralized WordPress transient-based cache system:
 **Modern React Architecture**: The Pipelines admin page uses complete React implementation with zero AJAX dependencies, providing a modern, maintainable frontend.
 
 **React Implementation**:
-- 6,591 lines of React code built with @wordpress/element and @wordpress/components
-- 50+ specialized components organized by responsibility
+- A substantial React-based admin UI built with WordPress components
+- Multiple specialized components organized by responsibility
 - Modern state management using TanStack Query + Zustand
 - Complete REST API integration for all data operations
 - Real-time updates without page reloads
@@ -279,7 +279,7 @@ Complete extension system for custom handlers and tools:
 ## Key Features
 
 ### AI Integration
-- Multiple provider support (200+ models via OpenRouter)
+- Support for multiple AI providers (OpenAI, Anthropic, Google, and others)
 - **Unified Directive System**: Priority-based directive management via PromptBuilder:
   - `datamachine_directives` - Centralized filter with priority ordering and agent targeting
 - **Universal Engine Architecture**: Shared AI infrastructure via `/inc/Engine/AI/` components:

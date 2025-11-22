@@ -16,20 +16,15 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class ThreadsAuth {
+class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
     const AUTH_URL = 'https://graph.facebook.com/oauth/authorize';
     const TOKEN_URL = 'https://graph.threads.net/oauth/access_token';
     const REFRESH_URL = 'https://graph.threads.net/refresh_access_token';
     const SCOPES = 'threads_basic,threads_content_publish';
 
-    /**
-     * @var \DataMachine\Core\OAuth\OAuth2Handler OAuth2 handler instance
-     */
-    private $oauth2;
-
     public function __construct() {
-        $this->oauth2 = new \DataMachine\Core\OAuth\OAuth2Handler();
+        parent::__construct('threads');
     }
 
     /**
@@ -60,7 +55,7 @@ class ThreadsAuth {
      * @return bool True if OAuth credentials are configured
      */
     public function is_configured(): bool {
-        $config = datamachine_get_oauth_keys('threads');
+        $config = $this->get_config();
         return !empty($config['app_id']) && !empty($config['app_secret']);
     }
 
@@ -70,7 +65,7 @@ class ThreadsAuth {
      * @return bool True if authenticated
      */
     public function is_authenticated(): bool {
-        $account = datamachine_get_oauth_account('threads');
+        $account = $this->get_account();
         if (empty($account) || !is_array($account)) {
             return false;
         }
@@ -92,7 +87,7 @@ class ThreadsAuth {
      * @return string|null Access token or null
      */
     public function get_access_token(): ?string {
-        $account = datamachine_get_oauth_account('threads');
+        $account = $this->get_account();
         if (empty($account) || !is_array($account) || empty($account['access_token'])) {
             return null;
         }
@@ -116,7 +111,7 @@ class ThreadsAuth {
             if (!is_wp_error($refreshed_data)) {
                 $account['access_token'] = $refreshed_data['access_token'];
                 $account['token_expires_at'] = $refreshed_data['expires_at'];
-                apply_filters('datamachine_store_oauth_account', $account, 'threads');
+                $this->save_account($account);
                 return $refreshed_data['access_token'];
             } else {
                 if (isset($account['token_expires_at']) && time() > intval($account['token_expires_at'])) {
@@ -135,7 +130,7 @@ class ThreadsAuth {
      * @return string|null Page ID or null
      */
     public function get_page_id(): ?string {
-        $account = datamachine_get_oauth_account('threads');
+        $account = $this->get_account();
         if (empty($account) || !is_array($account) || empty($account['page_id'])) {
             return null;
         }
@@ -150,10 +145,10 @@ class ThreadsAuth {
     public function get_authorization_url(): string {
         $state = $this->oauth2->create_state('threads');
 
-        $config = datamachine_get_oauth_keys('threads');
+        $config = $this->get_config();
         $params = [
             'client_id' => $config['app_id'] ?? '',
-            'redirect_uri' => apply_filters('datamachine_oauth_callback', '', 'threads'),
+            'redirect_uri' => $this->get_callback_url(),
             'scope' => self::SCOPES,
             'response_type' => 'code',
             'state' => $state,
@@ -166,7 +161,7 @@ class ThreadsAuth {
      * Handle OAuth callback from Threads
      */
     public function handle_oauth_callback() {
-        $config = datamachine_get_oauth_keys('threads');
+        $config = $this->get_config();
 
         $this->oauth2->handle_callback(
             'threads',
@@ -175,7 +170,7 @@ class ThreadsAuth {
                 'client_id' => $config['app_id'] ?? '',
                 'client_secret' => $config['app_secret'] ?? '',
                 'grant_type' => 'authorization_code',
-                'redirect_uri' => apply_filters('datamachine_oauth_callback', '', 'threads'),
+                'redirect_uri' => $this->get_callback_url(),
                 'code' => $_GET['code'] ?? ''
             ],
             function($long_lived_token_data) {
@@ -207,7 +202,8 @@ class ThreadsAuth {
                     $short_lived_token_data['access_token'],
                     $config
                 );
-            }
+            },
+            [$this, 'save_account']
         );
     }
 
@@ -336,7 +332,7 @@ class ThreadsAuth {
      * @return array|null Account details or null
      */
     public function get_account_details(): ?array {
-        $account = datamachine_get_oauth_account('threads');
+        $account = $this->get_account();
         if (empty($account) || !is_array($account)) {
             return null;
         }
@@ -349,7 +345,7 @@ class ThreadsAuth {
      * @return bool Success status
      */
     public function remove_account(): bool {
-        $account = datamachine_get_oauth_account('threads');
+        $account = $this->get_account();
         $token = null;
 
         if (!empty($account) && is_array($account) && !empty($account['access_token'])) {
@@ -370,6 +366,6 @@ class ThreadsAuth {
             }
         }
 
-        return apply_filters('datamachine_clear_oauth_account', false, 'threads');
+        return $this->clear_account();
     }
 }

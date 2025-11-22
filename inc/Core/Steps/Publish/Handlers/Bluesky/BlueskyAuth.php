@@ -13,21 +13,23 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Bluesky;
 
+use DataMachine\Core\OAuth\BaseSimpleAuthProvider;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
-class BlueskyAuth {
+class BlueskyAuth extends BaseSimpleAuthProvider {
 
-    public function is_authenticated(): bool {
-        $auth_data = datamachine_get_oauth_account('bluesky');
-        return !empty($auth_data) &&
-               !empty($auth_data['username']) &&
-               !empty($auth_data['app_password']);
+    public function __construct() {
+        parent::__construct('bluesky');
     }
 
-    public function is_configured(): bool {
-        return $this->is_authenticated();
+    public function is_authenticated(): bool {
+        $config = $this->get_config();
+        return !empty($config) &&
+               !empty($config['username']) &&
+               !empty($config['app_password']);
     }
 
     public function get_config_fields(): array {
@@ -51,9 +53,9 @@ class BlueskyAuth {
      * Gets authenticated Bluesky session with access token and DID.
      */
     public function get_session() {
-        $auth_data = datamachine_get_oauth_account('bluesky');
-        $handle = $auth_data['username'] ?? '';
-        $password = $auth_data['app_password'] ?? '';
+        $config = $this->get_config();
+        $handle = $config['username'] ?? '';
+        $password = $config['app_password'] ?? '';
 
         if (empty($handle) || empty($password)) {
             do_action('datamachine_log', 'error', 'Bluesky handle or app password missing in site options.');
@@ -190,9 +192,9 @@ class BlueskyAuth {
     }
 
     public function get_account_details(): ?array {
-        $auth_data = datamachine_get_oauth_account('bluesky');
-        $handle = $auth_data['username'] ?? '';
-        $password = $auth_data['app_password'] ?? '';
+        $config = $this->get_config();
+        $handle = $config['username'] ?? '';
+        $password = $config['app_password'] ?? '';
 
         if (empty($handle) || empty($password)) {
             return null;
@@ -201,11 +203,11 @@ class BlueskyAuth {
         return [
             'handle' => $handle,
             'configured' => true,
-            'last_verified_at' => $auth_data['last_verified'] ?? 0
+            'last_verified_at' => time() // Config doesn't have last_verified, so we just say now/configured
         ];
     }
 
     public function remove_account(): bool {
-        return apply_filters('datamachine_clear_oauth_account', false, 'bluesky');
+        return $this->clear_account();
     }
 }

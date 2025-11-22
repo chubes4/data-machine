@@ -123,6 +123,8 @@ class OAuth1Handler {
      * @param string $consumer_secret OAuth consumer secret.
      * @param callable $account_details_fn Callback to build account data from access token response.
      *                                     Signature: function(array $access_token_data): array
+     * @param callable|null $storage_fn Callback to store account data.
+     *                                  Signature: function(array $account_data): bool
      * @return bool|\WP_Error True on success, WP_Error on failure.
      */
     public function handle_callback(
@@ -130,7 +132,8 @@ class OAuth1Handler {
         string $access_token_url,
         string $consumer_key,
         string $consumer_secret,
-        callable $account_details_fn
+        callable $account_details_fn,
+        ?callable $storage_fn = null
     ) {
         // Sanitize input
         $denied = isset($_GET['denied']) ? sanitize_text_field(wp_unslash($_GET['denied'])) : '';
@@ -204,8 +207,15 @@ class OAuth1Handler {
             // Build account data using provider-specific callback
             $account_data = call_user_func($account_details_fn, $access_token_data);
 
-            // Store account data via existing filter
-            $stored = apply_filters('datamachine_store_oauth_account', $account_data, $provider_key);
+            // Store account data
+            $stored = false;
+            if ($storage_fn) {
+                $stored = call_user_func($storage_fn, $account_data);
+            } else {
+                do_action('datamachine_log', 'error', 'OAuth1: No storage callback provided', [
+                    'provider' => $provider_key
+                ]);
+            }
 
             if (!$stored) {
                 do_action('datamachine_log', 'error', 'OAuth1: Failed to store account data', [

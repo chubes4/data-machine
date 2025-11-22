@@ -15,9 +15,9 @@ Data Machine uses a Pipeline+Flow architecture with standardized base classes fo
 
 Data Machine underwent a comprehensive OOP refactoring introducing standardized inheritance patterns that dramatically reduce code duplication:
 
-**Handler Registration Traits** (@since v0.2.2) - Code Reduction:
+**Handler Registration Traits** - Code Reduction:
 
-Standardized traits that eliminate ~70% of boilerplate code across all handler and tool registrations:
+Standardized traits that reduce repetitive registration boilerplate across handler and tool registrations:
 
 - **HandlerRegistrationTrait**: Single `registerHandler()` method for all handler types (fetch, publish, update)
 - **ToolRegistrationTrait**: Agent-agnostic tool registration with dynamic filter creation for unlimited agent types

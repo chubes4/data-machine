@@ -90,6 +90,8 @@ class OAuth2Handler {
      *                                     Signature: function(array $token_data): array|WP_Error
      * @param callable|null $token_transform_fn Optional function to transform token data (for two-stage exchanges like Meta long-lived tokens).
      *                                          Signature: function(array $token_data): array|WP_Error
+     * @param callable|null $storage_fn Optional callback to store account data.
+     *                                  Signature: function(array $account_data): bool
      * @return bool|\WP_Error True on success, WP_Error on failure.
      */
     public function handle_callback(
@@ -97,7 +99,8 @@ class OAuth2Handler {
         string $token_url,
         array $token_params,
         callable $account_details_fn,
-        ?callable $token_transform_fn = null
+        ?callable $token_transform_fn = null,
+        ?callable $storage_fn = null
     ) {
         // Sanitize input
         $code = isset($_GET['code']) ? sanitize_text_field(wp_unslash($_GET['code'])) : '';
@@ -166,8 +169,15 @@ class OAuth2Handler {
             return $account_data;
         }
 
-        // Store account data via existing filter
-        $stored = apply_filters('datamachine_store_oauth_account', $account_data, $provider_key);
+        // Store account data
+        $stored = false;
+        if ($storage_fn) {
+            $stored = call_user_func($storage_fn, $account_data);
+        } else {
+            do_action('datamachine_log', 'error', 'OAuth2: No storage callback provided', [
+                'provider' => $provider_key
+            ]);
+        }
 
         if (!$stored) {
             do_action('datamachine_log', 'error', 'OAuth2: Failed to store account data', [

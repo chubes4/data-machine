@@ -40,7 +40,7 @@ class GoogleSheets extends PublishHandler {
             'Google Sheets',
             'Append data to Google Sheets for analytics and reporting',
             true,
-            GoogleSheetsAuth::class,
+            \DataMachine\Core\OAuth\Providers\GoogleSheetsAuth::class,
             GoogleSheetsSettings::class,
             function($tools, $handler_slug, $handler_config) {
                 if ($handler_slug === 'googlesheets_publish') {
@@ -66,12 +66,12 @@ class GoogleSheets extends PublishHandler {
                     ];
                 }
                 return $tools;
-            }
+            },
+            'googlesheets'
         );
 
-        // Use filter-based auth access following pure discovery architectural standards
-        $all_auth = apply_filters('datamachine_auth_providers', []);
-        $this->auth = $all_auth['googlesheets_output'] ?? null;
+        // Use shared auth provider via base class method
+        $this->auth = $this->getAuthProvider('googlesheets');
     }
 
     /**

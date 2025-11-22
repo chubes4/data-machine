@@ -6,16 +6,8 @@
  */
 import { useUIStore } from '../../stores/uiStore';
 import { MODAL_TYPES } from '../../utils/constants';
-import {
-  ImportExportModal,
-  StepSelectionModal,
-  ConfigureStepModal,
-  FlowScheduleModal,
-  HandlerSelectionModal,
-  HandlerSettingsModal,
-  OAuthAuthenticationModal,
-  ContextFilesModal,
-} from '../modals';
+import ModalSwitch from './ModalSwitch';
+import { HandlerProvider } from '../../context/HandlerProvider';
 
 export default function ModalManager({
   pipelines,
@@ -35,76 +27,16 @@ export default function ModalManager({
   const baseProps = {
     onClose: closeModal,
     ...modalData,
+    handlers,
+    handlerDetails: modalData.handlerDetails ?? handlerDetails,
+    onChangeHandler,
+    onOAuthConnect,
+    onSelectHandler: onHandlerSelected,
   };
 
-  switch (activeModal) {
-    case MODAL_TYPES.IMPORT_EXPORT:
-      return (
-        <ImportExportModal
-          {...baseProps}
-          pipelines={pipelines}
-          onSuccess={onModalSuccess}
-        />
-      );
-
-    case MODAL_TYPES.STEP_SELECTION:
-      return (
-        <StepSelectionModal
-          {...baseProps}
-          onSuccess={onModalSuccess}
-        />
-      );
-
-    case MODAL_TYPES.CONFIGURE_STEP:
-      return (
-        <ConfigureStepModal
-          {...baseProps}
-          onSuccess={onModalSuccess}
-        />
-      );
-
-    case MODAL_TYPES.FLOW_SCHEDULE:
-      return (
-        <FlowScheduleModal
-          {...baseProps}
-          onSuccess={onModalSuccess}
-        />
-      );
-
-    case MODAL_TYPES.HANDLER_SELECTION:
-      return (
-        <HandlerSelectionModal
-          {...baseProps}
-          onSelectHandler={onHandlerSelected}
-          handlers={handlers}
-        />
-      );
-
-    case MODAL_TYPES.HANDLER_SETTINGS:
-      return (
-        <HandlerSettingsModal
-          {...baseProps}
-          handlers={handlers}
-          handlerDetails={handlerDetails}
-          onSuccess={onModalSuccess}
-          onChangeHandler={onChangeHandler}
-          onOAuthConnect={onOAuthConnect}
-        />
-      );
-
-    case MODAL_TYPES.OAUTH:
-      return (
-        <OAuthAuthenticationModal
-          {...baseProps}
-          onSuccess={onModalSuccess}
-        />
-      );
-
-    case MODAL_TYPES.CONTEXT_FILES:
-      return <ContextFilesModal {...baseProps} />;
-
-    default:
-      console.warn(`Unknown modal type: ${activeModal}`);
-      return null;
-  }
+  return (
+    <HandlerProvider>
+      <ModalSwitch activeModal={activeModal} baseProps={baseProps} modalData={modalData} />
+    </HandlerProvider>
+  );
 }

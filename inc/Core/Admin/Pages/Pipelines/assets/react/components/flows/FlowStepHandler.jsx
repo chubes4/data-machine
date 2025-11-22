@@ -8,6 +8,8 @@ import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useGlobalSettings } from '../../queries/config';
 import { useHandlers } from '../../queries/handlers';
+import useHandlerModel from '../../hooks/useHandlerModel';
+import { useHandlerContext } from '../../context/HandlerProvider';
 
 /**
  * Flow Step Handler Component
@@ -48,10 +50,14 @@ export default function FlowStepHandler( {
 		);
 	}
 
-	// Build unified display settings from backend-generated display values
+	// Build unified display settings using handler model if available
 	const displaySettings = {};
 
-	if ( settingsDisplay && settingsDisplay.length > 0 ) {
+	const handlerModel = useHandlerModel(handlerSlug);
+
+	if ( handlerModel ) {
+		Object.assign(displaySettings, handlerModel.getDisplaySettings(settingsDisplay, handlerConfig));
+	} else if ( settingsDisplay && settingsDisplay.length > 0 ) {
 		// Use backend-generated display values with proper formatting
 		settingsDisplay.forEach( ( setting ) => {
 			displaySettings[ setting.key ] = {
@@ -63,10 +69,12 @@ export default function FlowStepHandler( {
 
 	const hasSettings = Object.keys( displaySettings ).length > 0;
 
-	return (
+  const handlerLabel = handlers[handlerSlug]?.label || handlerModel?.getLabel?.() || handlerSlug;
+
+  return (
 		<div className="datamachine-flow-step-handler datamachine-handler-container">
 			<div className="datamachine-handler-tag datamachine-handler-badge">
-				{ handlers[handlerSlug]?.label || handlerSlug }
+				{ handlerLabel }
 			</div>
 
 			{ hasSettings && (

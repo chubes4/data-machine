@@ -18,7 +18,11 @@ Reads data from Google Sheets spreadsheets using OAuth2 authentication with conf
 
 **OAuth2 Required**: Uses Google Sheets API v4 with client_id/client_secret authentication.
 
-**Service Integration**: Reuses existing Google Sheets OAuth infrastructure from publish handler for seamless bi-directional integration.
+**Centralized Provider** (@since v0.2.5): Uses `GoogleSheetsAuth` from `/inc/Core/OAuth/Providers/GoogleSheetsAuth.php` for centralized OAuth2 authentication shared across fetch and publish handlers.
+
+**Service Integration**: OAuth provider handles token refresh, service access, and credential management for seamless bi-directional integration.
+
+**Related Documentation**: See [OAuth Handlers](../../core-system/oauth-handlers.md) for OAuth2Handler and OAuth Providers architecture.
 
 ## Configuration Parameters
 

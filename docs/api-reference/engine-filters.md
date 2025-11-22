@@ -94,8 +94,9 @@ add_filter('datamachine_directives', function($directives) {
 **Purpose**: Chat agent identity and capabilities
 **Agent Types**: `['chat']`
 
-**Hook Usage**:
+**Hook Usage (LEGACY — use datamachine_directives instead)**:
 ```php
+// Legacy usage — not used in core since v0.2.5. Use datamachine_directives with agent_types instead.
 apply_filters(
     'datamachine_agent_directives',
     $request,
@@ -104,6 +105,18 @@ apply_filters(
     $tools,
     $context
 );
+```
+
+**Recommended (current)**:
+```php
+add_filter('datamachine_directives', function($directives) {
+    $directives[] = [
+        'class' => MyChatDirective::class,
+        'priority' => 15,
+        'agent_types' => ['chat']
+    ];
+    return $directives;
+});
 ```
 
 **Parameters**:
@@ -233,7 +246,7 @@ Control tool registration, enablement, and configuration validation.
 
 Universal tool enablement control. Determines which tools are available to AI agents.
 
-**Note**: Direct filter usage for tool availability is replaced by **ToolManager** (@since v0.2.1). The ToolManager provides centralized methods (`isToolEnabled()`, `isToolConfigured()`) that internally use these filters but add additional validation layers. Components should use ToolManager methods rather than calling filters directly.
+**Note**: Direct filter usage for tool availability is replaced by **ToolManager** (@since v0.2.1). The ToolManager provides centralized methods (`is_tool_available()`, `is_tool_configured()`) that internally use these filters but add additional validation layers. Components should use ToolManager methods rather than calling filters directly.
 
 See [Tool Manager](../core-system/tool-manager.md) for the modern tool management approach.
 
@@ -423,25 +436,29 @@ add_filter('datamachine_chat_tools', function($tools) {
 
 ## Directive Application Order
 
-Directives are applied in hierarchical order by RequestBuilder:
+Directives are applied in priority-based order by PromptBuilder (@since v0.2.5):
 
 ```
-1. Global Directives (datamachine_global_directives)
-   ├── GlobalSystemPromptDirective (Priority 20)
-   ├── GlobalToolsDirective (Priority 25)
-   └── SiteContextDirective (Priority 50)
-
-2. Agent Directives (datamachine_agent_directives)
-   Pipeline:
-   ├── PipelineCoreDirective
-   ├── PipelineSystemPromptDirective
-   └── PipelineContextDirective
-
-   Chat:
-   └── ChatAgentDirective
-
-
+Unified Directive System (datamachine_directives filter):
+├── Priority 10-19: Core agent identity
+│   ├── PipelineCoreDirective (Priority 10, pipeline only)
+│   └── ChatAgentDirective (Priority 10, chat only)
+│
+├── Priority 20-29: Global system prompts
+│   ├── GlobalSystemPromptDirective (Priority 20, all agents)
+│   └── GlobalToolsDirective (Priority 25, all agents)
+│
+├── Priority 30-39: Agent-specific prompts
+│   └── PipelineSystemPromptDirective (Priority 30, pipeline only)
+│
+├── Priority 40-49: Context directives
+│   └── PipelineContextDirective (Priority 40, pipeline only)
+│
+└── Priority 50+: Site context
+    └── SiteContextDirective (Priority 50, all agents)
 ```
+
+**Migration Note**: Prior to v0.2.5, directives used separate `datamachine_global_directives` and `datamachine_agent_directives` filters. These are now deprecated in favor of the unified `datamachine_directives` filter with priority-based ordering and agent type targeting.
 
 ## Best Practices
 

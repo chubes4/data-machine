@@ -10,10 +10,11 @@ import { Modal, Button, Notice, Spinner } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 
 import { useUpdateFlowHandler } from '../../queries/flows';
-import { sanitizeHandlerSettingsPayload } from '../../utils/handlerSettings';
 import { useFormState } from '../../hooks/useFormState';
 import FilesHandlerSettings from './handler-settings/files/FilesHandlerSettings';
 import HandlerSettingField from './handler-settings/HandlerSettingField';
+
+import useHandlerModel from '../../hooks/useHandlerModel';
 
 /**
  * Handler Settings Modal Component
@@ -48,27 +49,31 @@ export default function HandlerSettingsModal( {
 	handlerDetails,
 } ) {
 	// Presentational: Receive handler details as props
-	const isLoadingSettings = !handlerDetails;
+	const isLoadingSettings = handlerDetails === undefined || handlerDetails === null;
 	const handlerDetailsError = null;
 	const updateHandlerMutation = useUpdateFlowHandler();
 
 	const [ settingsFields, setSettingsFields ] = useState( {} );
 
+	const handlerModel = useHandlerModel(handlerSlug);
+
 	const formState = useFormState({
 		initialData: currentSettings || {},
 		onSubmit: async (data) => {
-			const payloadSettings = sanitizeHandlerSettingsPayload(
-				data,
-				settingsFields
-			);
+			const settingsToSend = handlerModel ? handlerModel.sanitizeForAPI(data, settingsFields) : data;
 
-			await updateHandlerMutation.mutateAsync({
+			const response = await updateHandlerMutation.mutateAsync({
 				flowStepId,
 				handlerSlug,
-				settings: payloadSettings,
+				settings: settingsToSend,
 				pipelineId,
-				stepType
+				stepType,
 			});
+
+			if ( ! response || ! response.success ) {
+				const message = response?.message || __( 'Failed to update handler settings', 'datamachine' );
+				throw new Error( message );
+			}
 
 			if ( onSuccess ) {
 				onSuccess();
@@ -91,10 +96,13 @@ export default function HandlerSettingsModal( {
 	 * API provides complete config with defaults already merged.
 	 */
 	useEffect( () => {
-		if ( currentSettings ) {
-			formState.updateData( currentSettings );
+		if ( handlerModel ) {
+			const normalized = handlerModel.normalizeForForm(currentSettings || {}, handlerDetails?.settings || {});
+			formState.reset(normalized);
+		} else if ( currentSettings ) {
+			formState.reset( currentSettings );
 		}
-	}, [ currentSettings, formState ] );
+	}, [ currentSettings, handlerModel, handlerDetails ] );
 
 	/**
 	 * Get handler info from props
@@ -172,14 +180,23 @@ export default function HandlerSettingsModal( {
 					</div>
 				) }
 
-				{ /* Files handler gets specialized UI */ }
-				{ ! isLoadingSettings && handlerSlug === 'files' ? (
-					<FilesHandlerSettings
-						currentSettings={ formState.data }
-						onSettingsChange={ formState.updateData }
-					/>
-				) : (
-					! isLoadingSettings && (
+				{ /* Render custom editor or standard fields */ }
+				{ ( () => {
+					if ( isLoadingSettings ) {
+						return null;
+					}
+
+					const customEditor = handlerModel?.renderSettingsEditor?.( {
+						currentSettings: formState.data,
+						onSettingsChange: formState.updateData,
+						handlerDetails,
+					} );
+
+					if ( customEditor ) {
+						return customEditor;
+					}
+
+					return (
 						<>
 							{ Object.keys( settingsFields ).length === 0 && (
 								<div className="datamachine-modal-no-config">
@@ -212,8 +229,8 @@ export default function HandlerSettingsModal( {
 								</div>
 							) }
 						</>
-					)
-				) }
+					);
+				} )() }
 
 				<div className="datamachine-modal-actions">
 					<Button

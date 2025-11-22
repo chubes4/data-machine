@@ -23,6 +23,34 @@
 		init: function () {
 			this.bindEvents();
 			this.initTabManager();
+			this.checkAuthCallback();
+		},
+
+		/**
+		 * Check for OAuth callback parameters and notify opener
+		 */
+		checkAuthCallback: function () {
+			const urlParams = new URLSearchParams( window.location.search );
+			const authSuccess = urlParams.get( 'auth_success' );
+			const authError = urlParams.get( 'auth_error' );
+			const provider = urlParams.get( 'provider' );
+
+			if ( ( authSuccess || authError ) && window.opener ) {
+				const message = {
+					type: 'oauth_callback',
+					provider: provider,
+					success: !! authSuccess,
+					error: authError,
+				};
+
+				// Send message to opener
+				window.opener.postMessage( message, '*' );
+
+				// Close window after short delay to ensure message is sent
+				setTimeout( () => {
+					window.close();
+				}, 500 );
+			}
 		},
 
 		/**
