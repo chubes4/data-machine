@@ -123,13 +123,13 @@ class WordPressAPI extends FetchHandler {
                 'error' => $result['error'],
                 'endpoint_url' => $endpoint_url
             ]);
-            return null;
+            return [];
         }
 
         $response_data = $result['data'];
         if (empty($response_data)) {
             $this->log('error', 'Empty response from endpoint.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
-            return null;
+            return [];
         }
 
         // Parse JSON response
@@ -140,11 +140,11 @@ class WordPressAPI extends FetchHandler {
                 'json_error' => json_last_error_msg(),
                 'endpoint_url' => $endpoint_url
             ]);
-            return null;
+            return [];
         }
 
         if (!is_array($items) || empty($items)) {
-            return null;
+            return [];
         }
 
         // Find first unprocessed item
@@ -267,7 +267,7 @@ class WordPressAPI extends FetchHandler {
         }
 
         // No eligible items found
-        return null;
+        return [];
     }
 
     /**
