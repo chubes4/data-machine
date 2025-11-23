@@ -11,6 +11,7 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Threads;
 
+use DataMachine\Core\EngineData;
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
 use Exception;
@@ -115,12 +116,15 @@ class Threads extends PublishHandler {
             'link_handling' => $handler_config['link_handling'] ?? 'append'
         ]);
 
-        $engine_data = $parameters['engine_data'];
+        $engine = $parameters['engine'] ?? null;
+        if (!$engine instanceof EngineData) {
+            $engine = new EngineData($parameters['engine_data'] ?? [], $parameters['job_id'] ?? null);
+        }
 
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
-        $source_url = $engine_data['source_url'] ?? null;
-        $image_file_path = $engine_data['image_file_path'] ?? null;
+        $source_url = $engine->getSourceUrl();
+        $image_file_path = $engine->getImagePath();
 
         $include_images = $handler_config['include_images'] ?? true;
         $link_handling = $handler_config['link_handling'] ?? 'append';

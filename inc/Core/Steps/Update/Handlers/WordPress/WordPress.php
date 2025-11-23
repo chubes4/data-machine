@@ -7,6 +7,7 @@
 
 namespace DataMachine\Core\Steps\Update\Handlers\WordPress;
 
+use DataMachine\Core\EngineData;
 use DataMachine\Core\Steps\Update\Handlers\UpdateHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
 use DataMachine\Core\WordPress\WordPressSharedTrait;
@@ -68,8 +69,11 @@ class WordPress extends UpdateHandler {
 
     protected function executeUpdate(array $parameters, array $handler_config): array {
         $job_id = $parameters['job_id'];
-        $engine_data = $parameters['engine_data'];
-        $source_url = $engine_data['source_url'] ?? null;
+        $engine = $parameters['engine'] ?? null;
+        if (!$engine instanceof EngineData) {
+            $engine = new EngineData($parameters['engine_data'] ?? [], $job_id);
+        }
+        $source_url = $engine->getSourceUrl();
 
         do_action('datamachine_log', 'debug', 'WordPress Update Tool: Handling tool call', [
             'parameters' => $parameters,
@@ -77,7 +81,7 @@ class WordPress extends UpdateHandler {
             'has_handler_config' => !empty($handler_config),
             'handler_config_keys' => array_keys($handler_config ?? []),
             'source_url_from_engine' => $source_url,
-            'engine_data_keys' => array_keys($engine_data)
+            'engine_data_keys' => array_keys($engine->all())
         ]);
 
         if (empty($source_url)) {
@@ -215,7 +219,7 @@ class WordPress extends UpdateHandler {
             ];
         }
 
-        $taxonomy_results = $this->applyTaxonomies($post_id, $parameters, $handler_config, $engine_data);
+        $taxonomy_results = $this->applyTaxonomies($post_id, $parameters, $handler_config, $engine);
 
         do_action('datamachine_log', 'debug', 'WordPress Update Tool: Post updated successfully', [
             'post_id' => $post_id,

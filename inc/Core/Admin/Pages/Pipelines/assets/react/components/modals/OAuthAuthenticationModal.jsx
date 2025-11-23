@@ -195,7 +195,7 @@ export default function OAuthAuthenticationModal( {
 							<>
 								<APIConfigForm
 									config={ apiConfigForm.data }
-									onChange={ apiConfigForm.updateField }
+									onChange={ apiConfigForm.updateData }
 									fields={ handlerInfo.auth_fields }
 								/>
 								<div className="datamachine-modal-spacing--mt-16">

@@ -7,6 +7,7 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
 
+use DataMachine\Core\EngineData;
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
 use DataMachine\Core\WordPress\WordPressSharedTrait;
@@ -94,7 +95,10 @@ class WordPress extends PublishHandler {
             );
         }
 
-        $engine_data = $parameters['engine_data'];
+        $engine = $parameters['engine'] ?? null;
+        if (!$engine instanceof EngineData) {
+            $engine = new EngineData($parameters['engine_data'] ?? [], $parameters['job_id'] ?? null);
+        }
 
         $taxonomies = get_taxonomies(['public' => true], 'names');
         $taxonomy_settings = [];
@@ -121,7 +125,7 @@ class WordPress extends PublishHandler {
         }
         
     $content = wp_unslash($parameters['content']);
-    $content = $this->processSourceUrl($content, $engine_data, $handler_config);
+    $content = $engine->applySourceAttribution($content, $handler_config);
     $content = wp_filter_post_kses($content);
         
         $post_data = [
@@ -152,13 +156,21 @@ class WordPress extends PublishHandler {
             );
         }
 
-        $taxonomy_results = $this->applyTaxonomies($post_id, $parameters, $handler_config, $engine_data);
-        $featured_image_result = $this->processFeaturedImage($post_id, $engine_data, $handler_config);
+        $taxonomy_results = $this->applyTaxonomies($post_id, $parameters, $handler_config, $engine);
+        $featured_image_result = null;
+        $attachment_id = $engine->attachImageToPost($post_id, $handler_config);
+        if ($attachment_id) {
+            $featured_image_result = [
+                'success' => true,
+                'attachment_id' => $attachment_id,
+                'attachment_url' => wp_get_attachment_url($attachment_id)
+            ];
+        }
 
-        // Store post_id in engine data for downstream handlers
+        // Store post metadata in engine snapshot
         $job_id = $parameters['job_id'] ?? null;
         if ($job_id) {
-            apply_filters('datamachine_engine_data', null, $job_id, [
+            datamachine_merge_engine_data((int) $job_id, [
                 'post_id' => $post_id,
                 'published_url' => get_permalink($post_id)
             ]);

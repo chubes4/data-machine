@@ -13,8 +13,9 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\GoogleSheets;
 
-use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
+use DataMachine\Core\EngineData;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
+use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -113,11 +114,15 @@ class GoogleSheets extends PublishHandler {
             'worksheet_name' => $handler_config['googlesheets_worksheet_name'] ?? 'Sheet1'
         ]);
 
-        $engine_data = $parameters['engine_data'];
+            $job_id = (int) $parameters['job_id'];
+            $engine = $parameters['engine'] ?? new EngineData([], $job_id);
+            if (!$engine instanceof EngineData) {
+                $engine = new EngineData([], $job_id);
+            }
 
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
-        $source_url = $engine_data['source_url'] ?? null;
+        $source_url = $engine->getSourceUrl();
         $source_type = $parameters['source_type'] ?? 'ai_tool';
         
         // Get config from handler settings
@@ -141,7 +146,7 @@ class GoogleSheets extends PublishHandler {
         }
 
         try {
-            // Prepare metadata for row data
+                // Prepare metadata for row data, keeping job context consistent
             $metadata = [
                 'source_url' => $source_url,
                 'source_type' => $source_type,

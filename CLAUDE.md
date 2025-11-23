@@ -14,6 +14,7 @@ Engine & execution
 Core architecture
 
 - Base classes for `Step`, `FetchHandler`, `PublishHandler`, `SettingsHandler`, and `DataPacket` provide consistent behavior and reduce duplication.
+- Base authentication provider architecture (`BaseAuthProvider`, `BaseOAuth1Provider`, `BaseOAuth2Provider`, `BaseSimpleAuthProvider`) centralizes option storage and authentication validation across all providers (@since v0.2.6).
 - FilesRepository is modular (storage, cleanup, validation, download, retrieval) and provides flow-isolated file handling.
 - WordPress shared components centralize publishing concerns (featured image, taxonomy, source URL handling).
 - Handler and Tool registration use standardized traits to auto-register services via WordPress filters.

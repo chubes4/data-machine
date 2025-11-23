@@ -46,8 +46,7 @@ class AIStep extends Step {
             'job_id' => $this->job_id,
             'flow_step_id' => $this->flow_step_id,
             'data' => $this->dataPackets,
-            'flow_step_config' => $this->flow_step_config,
-            'engine_data' => $this->engine_data
+            'flow_step_config' => $this->flow_step_config
         ]);
 
         $provider_name = $step_ai_config['selected_provider'] ?? '';
@@ -120,8 +119,7 @@ class AIStep extends Step {
             'flow_step_id' => $this->flow_step_id,
             'step_id' => $pipeline_step_id,
             'data' => $this->dataPackets,
-            'flow_step_config' => $this->flow_step_config,
-            'engine_data' => $this->engine_data
+            'engine' => $this->engine
         ];
 
         $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, $payload);
@@ -133,11 +131,10 @@ class AIStep extends Step {
         $navigator = new \DataMachine\Engine\StepNavigator();
         $previous_flow_step_id = $navigator->get_previous_flow_step_id($this->flow_step_id, $payload);
 
-        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
-        $previous_step_config = $previous_flow_step_id ? $db_flows->get_flow_step_config( $previous_flow_step_id ) : null;
+        $previous_step_config = $previous_flow_step_id ? $this->engine->getFlowStepConfig($previous_flow_step_id) : null;
 
         $next_flow_step_id = $navigator->get_next_flow_step_id($this->flow_step_id, $payload);
-        $next_step_config = $next_flow_step_id ? $db_flows->get_flow_step_config( $next_flow_step_id ) : null;
+        $next_step_config = $next_flow_step_id ? $this->engine->getFlowStepConfig($next_flow_step_id) : null;
 
         $available_tools = ToolExecutor::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id);
 

@@ -10,14 +10,14 @@
 
 namespace DataMachine\Core\WordPress;
 
+use DataMachine\Core\EngineData;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
 trait WordPressSharedTrait {
     protected $taxonomy_handler;
-    protected $featured_image_handler;
-    protected $source_url_handler;
 
     /**
      * Initialize WordPress-related handlers via filters/service discovery.
@@ -26,8 +26,6 @@ trait WordPressSharedTrait {
         // Initialize the handlers directly using concrete classes for a clearer
         // OOP design and to avoid relying on filter-based service discovery.
         $this->taxonomy_handler = new TaxonomyHandler();
-        $this->featured_image_handler = new FeaturedImageHandler();
-        $this->source_url_handler = new SourceUrlHandler();
     }
 
     /** Logging wrapper */
@@ -39,12 +37,12 @@ trait WordPressSharedTrait {
      * Engine / parameter helpers
      */
     protected function getEngineDataFromParameters(array $parameters): array {
-        return $parameters['engine_data'] ?? [];
+        return $this->resolveEngineContext(null, $parameters)->all();
     }
 
     protected function getSourceUrlFromParameters(array $parameters): ?string {
-        $engine = $this->getEngineDataFromParameters($parameters);
-        return $engine['source_url'] ?? ($parameters['source_url'] ?? null);
+        $engine = $this->resolveEngineContext(null, $parameters);
+        return $engine->getSourceUrl() ?? ($parameters['source_url'] ?? null);
     }
 
     /**
@@ -201,46 +199,65 @@ trait WordPressSharedTrait {
     /**
      * Apply taxonomies via the configured taxonomy handler.
      */
-    protected function applyTaxonomies(int $post_id, array $parameters, array $handler_config, array $engine_data = []): array {
+    protected function applyTaxonomies(int $post_id, array $parameters, array $handler_config, $engine_context = null): array {
         if (!$this->taxonomy_handler) {
             return [];
         }
-        return $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config, $engine_data);
+
+        $engine = $this->resolveEngineContext($engine_context, $parameters);
+        return $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config, $engine->all());
     }
 
     /**
-     * Process a source URL via the source URL handler if available.
+     * Process a source URL via the EngineData object.
      */
-    protected function processSourceUrl(string $content, array $engine_data = [], array $handler_config = []): string {
-        if ($this->source_url_handler && method_exists($this->source_url_handler, 'processSourceUrl')) {
-            return $this->source_url_handler->processSourceUrl($content, $engine_data, $handler_config);
-        }
-        return $content;
+    protected function processSourceUrl(string $content, $engine_context = null, array $handler_config = []): string {
+        $engine = $this->resolveEngineContext($engine_context);
+        return $engine->applySourceAttribution($content, $handler_config);
     }
 
     /**
-     * Process featured image via the featured image handler if available.
+     * Process featured image via the EngineData object.
      */
     protected function processFeaturedImage(int $post_id, $engine_data_or_image_url = null, array $handler_config = []): ?array {
-        // Accept either engine data array expected by the FeaturedImageHandler or a direct image URL
-        if (is_array($engine_data_or_image_url)) {
-            $engine_data = $engine_data_or_image_url;
-            if ($this->featured_image_handler) {
-                return $this->featured_image_handler->processImage($post_id, $engine_data, $handler_config);
-            }
-            return null;
-        }
+        $engine = $engine_data_or_image_url instanceof EngineData
+            ? $engine_data_or_image_url
+            : $this->resolveEngineContext($engine_data_or_image_url);
+        $attachment_id = $engine->attachImageToPost($post_id, $handler_config);
 
-        $image_url = $engine_data_or_image_url;
-        if (!$image_url) {
-            return null;
-        }
-        if ($this->featured_image_handler) {
-            $engine_data = ['image_url' => $image_url];
-            // Handlers expect engine_data only; wrap the URL for compatibility but do not maintain legacy alias behavior
-            return $this->featured_image_handler->processImage($post_id, $engine_data, $handler_config);
+        if ($attachment_id) {
+            return [
+                'success' => true,
+                'attachment_id' => $attachment_id,
+                'attachment_url' => wp_get_attachment_url($attachment_id)
+            ];
         }
         return null;
+    }
+
+    /**
+     * Normalize arbitrary engine context input into an EngineData instance.
+     */
+    private function resolveEngineContext($engine_context = null, array $parameters = []): EngineData {
+        if ($engine_context instanceof EngineData) {
+            return $engine_context;
+        }
+
+        $job_id = (int) ($parameters['job_id'] ?? null);
+
+        if ($engine_context === null) {
+            $engine_context = $parameters['engine'] ?? ($parameters['engine_data'] ?? []);
+        }
+
+        if ($engine_context instanceof EngineData) {
+            return $engine_context;
+        }
+
+        if (!is_array($engine_context)) {
+            $engine_context = is_string($engine_context) ? ['image_url' => $engine_context] : [];
+        }
+
+        return new EngineData($engine_context, $job_id);
     }
 
     /**

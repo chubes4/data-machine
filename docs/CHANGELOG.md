@@ -5,6 +5,44 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.6] - Unreleased
+
+### Added
+- **Base Authentication Provider Architecture** (`/inc/Core/OAuth/`) - Complete authentication provider inheritance system
+  - **BaseAuthProvider** - Abstract base for all auth providers with option storage/retrieval (@since 0.2.6)
+  - **BaseOAuth1Provider** - Base class for OAuth 1.0a providers extending BaseAuthProvider (@since 0.2.6)
+  - **BaseOAuth2Provider** - Base class for OAuth 2.0 providers extending BaseAuthProvider (@since 0.2.6)
+  - **BaseSimpleAuthProvider** - Base class for API key/password auth extending BaseAuthProvider (@since 0.2.6)
+- **React Architecture Enhancements** (`/datamachine/src/`) - Advanced state management patterns
+  - **HandlerModel.js** - Abstract model layer for handler data operations
+  - **HandlerFactory.js** - Factory pattern for handler model instantiation
+  - **useHandlerModel.js** - Custom hook for handler model integration
+  - **ModalSwitch.jsx** - Centralized modal routing component
+  - **HandlerProvider.jsx** - React context for handler state management
+
+### Changed
+- **OAuth Provider Migration** - All authentication providers now extend base classes
+  - TwitterAuth extends BaseOAuth1Provider (migrated from custom implementation)
+  - RedditAuth extends BaseOAuth2Provider (migrated from custom implementation)
+  - FacebookAuth extends BaseOAuth2Provider (migrated from custom implementation)
+  - ThreadsAuth extends BaseOAuth2Provider (migrated from custom implementation)
+  - BlueskyAuth extends BaseSimpleAuthProvider (migrated from custom implementation)
+  - GoogleSheetsAuth extends BaseOAuth2Provider and moved to `/inc/Core/OAuth/Providers/` directory
+- **Flow Ordering** - Changed default flow sorting from newest-first to oldest-first (ASC) to ensure new flows appear at the bottom of the list
+- **Pipeline Builder React Architecture** - Modernized state management and component patterns
+  - Implemented model-view separation pattern for handler state management
+  - Added service layer abstraction for handler-related API operations
+  - Centralized modal rendering through ModalSwitch component
+  - Enhanced component directory structure with models/, services/, context/ directories
+
+### Improved
+- **Code Consistency** - Unified authentication patterns across all providers through base class inheritance
+- **Maintainability** - Centralized option storage logic eliminates duplication across providers
+- **Extensibility** - New authentication providers integrate easily via base class extension
+
+### Fixed
+- **Taxonomy Handling** - Resolved bug in taxonomy processing and removed redundant filter registrations
+
 ## [0.2.5] - 2025-11-20
 
 ### Added

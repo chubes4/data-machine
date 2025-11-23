@@ -274,4 +274,7 @@ class RedditAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
         if (empty($account) || !is_array($account) || empty($account['access_token'])) {
             return null;
         }
+        
+        return $account;
+    }
 }

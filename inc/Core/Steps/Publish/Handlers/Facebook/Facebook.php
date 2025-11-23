@@ -13,6 +13,7 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Facebook;
 
+use DataMachine\Core\EngineData;
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
@@ -104,13 +105,16 @@ class Facebook extends PublishHandler {
 
         // handler_config is ALWAYS flat structure - no nesting
 
-        $engine_data = $parameters['engine_data'];
+        $engine = $parameters['engine'] ?? null;
+        if (!$engine instanceof EngineData) {
+            $engine = new EngineData($parameters['engine_data'] ?? [], $parameters['job_id'] ?? null);
+        }
 
         // Extract parameters from flat structure
         $title = $parameters['title'] ?? '';
         $content = $parameters['content'] ?? '';
-        $source_url = $engine_data['source_url'] ?? null;
-        $image_file_path = $engine_data['image_file_path'] ?? null;
+        $source_url = $engine->getSourceUrl();
+        $image_file_path = $engine->getImagePath();
 
         // Get config from handler configuration
         $include_images = $handler_config['include_images'] ?? false;

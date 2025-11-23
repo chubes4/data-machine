@@ -18,7 +18,7 @@ class ToolParameters {
      * Build unified flat parameter structure for tool execution.
      *
      * @param array $ai_tool_parameters Parameters from AI
-     * @param array $payload Step payload (job_id, flow_step_id, data, flow_step_config, engine_data)
+    * @param array $payload Step payload (job_id, flow_step_id, data, flow_step_config)
      * @param array $tool_definition Tool definition array
      * @return array Complete parameters for tool handler
      */
@@ -27,7 +27,7 @@ class ToolParameters {
         array $payload,
         array $tool_definition
     ): array {
-        // Start with payload (contains job_id, flow_step_id, data, flow_step_config, engine_data)
+        // Start with payload (contains job_id, flow_step_id, data, flow_step_config)
         $parameters = $payload;
 
         // Merge AI-provided parameters on top (content, title, query, etc.)

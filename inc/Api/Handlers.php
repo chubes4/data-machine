@@ -118,18 +118,15 @@ class Handlers {
 	 * @return string Auth type: 'oauth2', 'oauth1', or 'simple'.
 	 */
 	private static function detect_auth_type($auth_instance): string {
-		if ($auth_instance instanceof \DataMachine\Core\OAuth\OAuth2Handler) {
+		if ($auth_instance instanceof \DataMachine\Core\OAuth\BaseOAuth2Provider) {
 			return 'oauth2';
 		}
-		if ($auth_instance instanceof \DataMachine\Core\OAuth\OAuth1Handler) {
+		if ($auth_instance instanceof \DataMachine\Core\OAuth\BaseOAuth1Provider) {
 			return 'oauth1';
 		}
-		if ($auth_instance instanceof \DataMachine\Core\OAuth\BaseSimpleAuthProvider) {
-			return 'simple';
-		}
-
-		// Default to oauth2 for backwards compatibility
-		return 'oauth2';
+		
+		// Default to simple auth for any other provider type (API Key, Basic Auth, etc.)
+		return 'simple';
 	}
 
 	/**

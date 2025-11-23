@@ -1,66 +1,67 @@
 <?php
 /**
- * Centralized engine data storage and retrieval.
+ * Engine data snapshot helpers.
  *
- * @package DataMachine\Engine\Filters
+ * @package DataMachine\Engine
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-function datamachine_register_engine_data_filter() {
+/**
+ * Persist a complete engine data snapshot for a job.
+ */
+function datamachine_set_engine_data(int $job_id, array $snapshot): bool {
+    if ($job_id <= 0) {
+        return false;
+    }
 
-     /**
-      * Array-based storage for engine data with extensibility for custom data types.
-      *
-      * Allows extensions to modify/add data before storage via filter.
-      * Retrieval should use direct database access: $db_jobs->retrieve_engine_data($job_id)
-      */
-    add_filter('datamachine_engine_data', function($default, $job_id, $data = null) {
-        $job_id = (int) $job_id; // Ensure job_id is int for database operations
+    $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
+    $success = $db_jobs->store_engine_data($job_id, $snapshot);
 
-        if ($job_id === null || $job_id === '') {
-            return $default;
-        }
+    if ($success) {
+        wp_cache_set($job_id, $snapshot, 'datamachine_engine_data');
+    }
 
-        $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
-
-        // Only storage mode: when data array is provided, allow extensions to modify
-        if ($data !== null && is_array($data)) {
-            $current_data = $db_jobs->retrieve_engine_data($job_id);
-            $merged_data = array_merge($current_data ?: [], $data);
-            $db_jobs->store_engine_data($job_id, $merged_data);
-
-            do_action('datamachine_log', 'debug', 'Engine Data: Stored data array', [
-                'job_id' => $job_id,
-                'keys' => array_keys($data),
-                'total_keys' => count($merged_data)
-            ]);
-
-            return null;
-        }
-
-        // No retrieval mode - use direct database access instead
-        return $default;
-
-    }, 10, 3);
-
+    return $success;
 }
 
 /**
- * Get engine data directly from database.
- *
- * @param int $job_id Job ID
- * @return array Engine data or empty array
+ * Merge new data into the stored engine snapshot.
+ */
+function datamachine_merge_engine_data(int $job_id, array $data): bool {
+    if ($job_id <= 0) {
+        return false;
+    }
+
+    $current = datamachine_get_engine_data($job_id);
+    $merged = array_replace_recursive($current, $data);
+
+    return datamachine_set_engine_data($job_id, $merged);
+}
+
+/**
+ * Retrieve engine data snapshot for a job.
  */
 function datamachine_get_engine_data(int $job_id): array {
     if ($job_id <= 0) {
         return [];
     }
 
-    $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
-    return $db_jobs->retrieve_engine_data($job_id);
-}
+    $cached = wp_cache_get($job_id, 'datamachine_engine_data');
+    if ($cached !== false) {
+        return is_array($cached) ? $cached : [];
+    }
 
-datamachine_register_engine_data_filter();
+    $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
+    $engine_data = $db_jobs->retrieve_engine_data($job_id);
+
+    if (!is_array($engine_data)) {
+        $engine_data = [];
+    }
+
+    wp_cache_set($job_id, $engine_data, 'datamachine_engine_data');
+
+    return $engine_data;
+}

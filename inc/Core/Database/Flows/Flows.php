@@ -148,7 +148,7 @@ class Flows {
 
         if ( false === $cached_result ) {
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE pipeline_id = %d ORDER BY flow_id DESC", $this->table_name, $pipeline_id ), ARRAY_A );
+            $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE pipeline_id = %d ORDER BY flow_id ASC", $this->table_name, $pipeline_id ), ARRAY_A );
 
             if ($flows === null) {
                 do_action('datamachine_log', 'warning', 'No flows found for pipeline', [

@@ -7,6 +7,8 @@
 
 namespace DataMachine\Core\Steps\Update\Handlers;
 
+use DataMachine\Core\EngineData;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -65,10 +67,11 @@ abstract class UpdateHandler {
 
         // Get engine_data for update operations
         $engine_data = $this->getEngineData($job_id);
+        $engine = new EngineData($engine_data, $job_id);
 
         // Enhance parameters for subclasses
         $parameters['job_id'] = $job_id;
-        $parameters['engine_data'] = $engine_data;
+        $parameters['engine'] = $engine;
 
         $handler_config = $tool_def['handler_config'] ?? [];
         return $this->executeUpdate($parameters, $handler_config);

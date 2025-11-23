@@ -21,9 +21,9 @@ function datamachine_register_ai_filters() {
             return [];
         }
 
-        $job_id = $context['job_id'] ?? null;
+        $job_id = (int) ($context['job_id'] ?? 0);
 
-        if (!$job_id && empty($context['engine_data'])) {
+        if ($job_id <= 0) {
             do_action('datamachine_log', 'debug', 'AI Config: No execution context available', [
                 'pipeline_step_id' => $pipeline_step_id
             ]);
@@ -34,7 +34,7 @@ function datamachine_register_ai_filters() {
             ];
         }
 
-        $engine_data = $context['engine_data'] ?? datamachine_get_engine_data($job_id);
+        $engine_data = datamachine_get_engine_data($job_id);
         $pipeline_config = $engine_data['pipeline_config'] ?? [];
 
         $step_config = $pipeline_config[$pipeline_step_id] ?? [];

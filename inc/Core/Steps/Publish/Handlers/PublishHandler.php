@@ -14,6 +14,8 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers;
 
+use DataMachine\Core\EngineData;
+
 defined('ABSPATH') || exit;
 
 abstract class PublishHandler {
@@ -44,11 +46,16 @@ abstract class PublishHandler {
     final public function handle_tool_call(array $parameters, array $tool_def = []): array {
         // Centralize job_id handling and engine_data retrieval
         $job_id = (int) ($parameters['job_id'] ?? null);
+        if (!$job_id) {
+            return $this->errorResponse('job_id parameter is required for publish operations');
+        }
+
         $engine_data = $this->getEngineData($job_id);
+        $engine = new EngineData($engine_data, $job_id);
 
         // Enhance parameters for subclasses
         $parameters['job_id'] = $job_id;
-        $parameters['engine_data'] = $engine_data;
+        $parameters['engine'] = $engine;
 
         $handler_config = $tool_def['handler_config'] ?? [];
         return $this->executePublish($parameters, $handler_config);

@@ -33,7 +33,7 @@ class AIConversationLoop {
 	 * @param string $provider       AI provider (openai, anthropic, etc.)
 	 * @param string $model          AI model identifier
 	 * @param string $agent_type     Agent type: 'pipeline' or 'chat'
-	 * @param array  $payload        Step payload (job_id, flow_step_id, data, flow_step_config, engine_data)
+	 * @param array  $payload        Step payload (job_id, flow_step_id, data, flow_step_config)
 	 * @param int    $max_turns      Maximum conversation turns (default 12)
 	 * @return array {
 	 *     @type array  $messages        Final conversation state

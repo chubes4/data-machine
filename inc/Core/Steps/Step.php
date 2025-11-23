@@ -11,6 +11,8 @@
 
 namespace DataMachine\Core\Steps;
 
+use DataMachine\Core\EngineData;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -53,11 +55,16 @@ abstract class Step {
     protected array $flow_step_config;
 
     /**
-     * Engine data from payload.
+     * Engine data loaded from centralized storage.
      *
      * @var array
      */
-    protected array $engine_data;
+    protected array $engine_data = [];
+
+    /**
+     * Engine snapshot helper.
+     */
+    protected EngineData $engine;
 
     /**
      * Initialize step with type identifier.
@@ -71,7 +78,7 @@ abstract class Step {
     /**
      * Execute step with unified payload handling.
      *
-     * @param array $payload Unified step payload (job_id, flow_step_id, data, flow_step_config, engine_data)
+    * @param array $payload Unified step payload (job_id, flow_step_id, data, flow_step_config)
      * @return array Updated data packet array
      */
     public function execute(array $payload): array {
@@ -143,8 +150,18 @@ abstract class Step {
         $this->job_id = $payload['job_id'];
         $this->flow_step_id = $payload['flow_step_id'];
         $this->dataPackets = is_array($payload['data'] ?? null) ? $payload['data'] : [];
-        $this->flow_step_config = $payload['flow_step_config'] ?? [];
-        $this->engine_data = $payload['engine_data'] ?? [];
+        $engine = $payload['engine'] ?? null;
+        if (!$engine instanceof EngineData) {
+            $engine = new EngineData(datamachine_get_engine_data($this->job_id), $this->job_id);
+        }
+
+        $this->engine = $engine;
+        $this->engine_data = $engine->all();
+        $this->flow_step_config = $engine->getFlowStepConfig($this->flow_step_id);
+
+        if (empty($this->flow_step_config)) {
+            throw new \RuntimeException('Flow step configuration missing from engine snapshot');
+        }
     }
 
     /**

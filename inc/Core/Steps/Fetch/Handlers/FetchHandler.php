@@ -148,7 +148,7 @@ abstract class FetchHandler {
 	 */
 	protected function storeEngineData( ?string $job_id, array $data ): void {
 		if ( $job_id ) {
-			apply_filters( 'datamachine_engine_data', null, $job_id, $data );
+			datamachine_merge_engine_data( (int) $job_id, $data );
 		}
 	}
 

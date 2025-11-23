@@ -11,6 +11,22 @@
 defined('ABSPATH') || exit;
 
 /**
+ * Normalize stored configuration blobs into arrays.
+ */
+function datamachine_normalize_engine_config($config): array {
+    if (is_array($config)) {
+        return $config;
+    }
+
+    if (is_string($config)) {
+        $decoded = json_decode($config, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    return [];
+}
+
+/**
  * Get file context array from flow ID
  *
  * @param int $flow_id Flow ID
@@ -80,11 +96,30 @@ add_action('datamachine_run_flow_now', function($flow_id) {
     $pipeline = $db_pipelines->get_pipeline($pipeline_id);
     $pipeline_config = $pipeline['pipeline_config'] ?? [];
 
-    // Store both in engine_data for execution
-    $db_jobs->store_engine_data($job_id, [
+    $flow_config = datamachine_normalize_engine_config($flow_config);
+    $pipeline_config = datamachine_normalize_engine_config($pipeline_config);
+
+    $engine_snapshot = [
+        'job' => [
+            'job_id' => $job_id,
+            'flow_id' => $flow_id,
+            'pipeline_id' => $pipeline_id,
+            'created_at' => current_time('mysql')
+        ],
+        'flow' => [
+            'name' => $flow['flow_name'] ?? '',
+            'description' => $flow['flow_description'] ?? '',
+            'scheduling' => $scheduling_config
+        ],
+        'pipeline' => [
+            'name' => $pipeline['pipeline_name'] ?? '',
+            'description' => $pipeline['pipeline_description'] ?? ''
+        ],
         'flow_config' => $flow_config,
         'pipeline_config' => $pipeline_config
-    ]);
+    ];
+
+    datamachine_set_engine_data($job_id, $engine_snapshot);
 
     $first_flow_step_id = null;
     foreach ($flow_config as $flow_step_id => $config) {
@@ -125,10 +160,24 @@ add_action('datamachine_run_flow_now', function($flow_id) {
         $job_id = (int) $job_id; // Restore standardized data contract (Action Scheduler may pass as string)
 
         try {
-            // Retrieve data by job_id
-            $db_flows = new \DataMachine\Core\Database\Flows\Flows();
-            /** @var array $flow_step_config */
-            $flow_step_config = $db_flows->get_flow_step_config( $flow_step_id, $job_id, true );
+            $engine_snapshot = datamachine_get_engine_data($job_id);
+            $engine = new \DataMachine\Core\EngineData($engine_snapshot, $job_id);
+
+            $flow_step_config = $engine->getFlowStepConfig($flow_step_id);
+
+            if (!$flow_step_config) {
+                $db_flows = new \DataMachine\Core\Database\Flows\Flows();
+                $flow_step_config = $db_flows->get_flow_step_config($flow_step_id, $job_id, true);
+
+                if ($flow_step_config) {
+                    $existing_flow_config = $engine_snapshot['flow_config'] ?? [];
+                    $existing_flow_config[$flow_step_id] = $flow_step_config;
+                    datamachine_merge_engine_data($job_id, [
+                        'flow_config' => $existing_flow_config
+                    ]);
+                    $engine = new \DataMachine\Core\EngineData(datamachine_get_engine_data($job_id), $job_id);
+                }
+            }
 
             if (!isset($flow_step_config['flow_id']) || empty($flow_step_config['flow_id'])) {
                 do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
@@ -179,15 +228,11 @@ add_action('datamachine_run_flow_now', function($flow_id) {
             $step_class = $step_definition['class'] ?? '';
             $flow_step = new $step_class();
 
-            // Get engine data for step execution
-            $engine_data = datamachine_get_engine_data($job_id);
-
             $payload = [
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id,
                 'data' => is_array($dataPackets) ? $dataPackets : [],
-                'flow_step_config' => $flow_step_config,
-                'engine_data' => is_array($engine_data) ? $engine_data : [],
+                'engine' => $engine,
             ];
 
             $dataPackets = $flow_step->execute($payload);
@@ -206,7 +251,7 @@ add_action('datamachine_run_flow_now', function($flow_id) {
 
             $step_success = ! empty( $dataPackets );
             if ( $step_success ) {
-                $navigator = new \DataMachine\Engine\StepNavigator();
+                    $navigator = new \DataMachine\Engine\StepNavigator();
                 $next_flow_step_id = $navigator->get_next_flow_step_id($flow_step_id, $payload);
 
                 if ( $next_flow_step_id ) {
@@ -214,14 +259,6 @@ add_action('datamachine_run_flow_now', function($flow_id) {
                 } else {
                     do_action('datamachine_update_job_status', $job_id, 'completed', 'complete');
                     $cleanup = new \DataMachine\Core\FilesRepository\FileCleanup();
-                    if (!isset($flow_step_config['flow_id']) || empty($flow_step_config['flow_id'])) {
-                        do_action('datamachine_log', 'error', 'Flow ID missing during cleanup', [
-                            'job_id' => $job_id,
-                            'flow_step_id' => $flow_step_id
-                        ]);
-                        return false;
-                    }
-                    $flow_id = $flow_step_config['flow_id'];
                     $context = datamachine_get_file_context($flow_id);
                     $cleanup->cleanup_job_data_packets($job_id, $context);
                     do_action('datamachine_log', 'info', 'Pipeline execution completed successfully', [
@@ -276,16 +313,20 @@ add_action('datamachine_run_flow_now', function($flow_id) {
 
         // Store data by job_id (if present)
         if (!empty($dataPackets)) {
-            $db_flows = new \DataMachine\Core\Database\Flows\Flows();
-            $flow_step_config = $db_flows->get_flow_step_config( $flow_step_id, $job_id, true );
-            if (!isset($flow_step_config['flow_id']) || empty($flow_step_config['flow_id'])) {
+            $engine_snapshot = datamachine_get_engine_data($job_id);
+            $engine = new \DataMachine\Core\EngineData($engine_snapshot, $job_id);
+            $flow_step_config = $engine->getFlowStepConfig($flow_step_id);
+
+            $flow_id = (int) ($flow_step_config['flow_id'] ?? ($engine->getJobContext()['flow_id'] ?? 0));
+
+            if ($flow_id <= 0) {
                 do_action('datamachine_log', 'error', 'Flow ID missing during data storage', [
                     'job_id' => $job_id,
                     'flow_step_id' => $flow_step_id
                 ]);
                 return false;
             }
-            $flow_id = $flow_step_config['flow_id'];
+
             $context = datamachine_get_file_context($flow_id);
 
             $storage = new \DataMachine\Core\FilesRepository\FileStorage();

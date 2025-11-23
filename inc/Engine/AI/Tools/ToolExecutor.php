@@ -93,7 +93,7 @@ class ToolExecutor {
      * @param string $tool_name Tool name to execute
      * @param array $tool_parameters Parameters from AI
      * @param array $available_tools Available tools array
-     * @param array $payload Step payload (job_id, flow_step_id, data, flow_step_config, engine_data)
+    * @param array $payload Step payload (job_id, flow_step_id, data, flow_step_config)
      * @return array Tool execution result
      */
     public static function executeTool(string $tool_name, array $tool_parameters, array $available_tools, array $payload): array {

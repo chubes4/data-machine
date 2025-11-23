@@ -13,13 +13,13 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Bluesky;
 
-use DataMachine\Core\OAuth\BaseSimpleAuthProvider;
+use DataMachine\Core\OAuth\BaseAuthProvider;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
-class BlueskyAuth extends BaseSimpleAuthProvider {
+class BlueskyAuth extends BaseAuthProvider {
 
     public function __construct() {
         parent::__construct('bluesky');

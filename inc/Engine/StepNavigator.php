@@ -18,22 +18,33 @@ if (!defined('WPINC')) {
 class StepNavigator {
 
     /**
+     * Load flow configuration from engine data storage.
+     */
+    private function getFlowConfig(int $job_id): array {
+        if ($job_id <= 0) {
+            return [];
+        }
+
+        $engine_data = datamachine_get_engine_data($job_id);
+        return is_array($engine_data['flow_config'] ?? null) ? $engine_data['flow_config'] : [];
+    }
+
+    /**
      * Get next flow step ID based on execution order
      *
-     * Uses engine_data from context for optimal performance during execution.
+     * Uses centralized engine data for execution context.
      *
      * @param string $flow_step_id Current flow step ID
-     * @param array $context Context containing engine_data or job_id
+     * @param array $context Context containing job_id
      * @return string|null Next flow step ID or null if none
      */
     public function get_next_flow_step_id(string $flow_step_id, array $context = []): ?string {
-        $engine_data = $context['engine_data'] ?? [];
-
-        if (empty($engine_data) && !empty($context['job_id'])) {
-            $engine_data = datamachine_get_engine_data($context['job_id']);
+        $job_id = (int) ($context['job_id'] ?? 0);
+        if ($job_id <= 0) {
+            return null;
         }
 
-        $flow_config = $engine_data['flow_config'] ?? [];
+        $flow_config = $this->getFlowConfig($job_id);
 
         $current_step = $flow_config[$flow_step_id] ?? null;
         if (!$current_step) {
@@ -55,20 +66,19 @@ class StepNavigator {
     /**
      * Get previous flow step ID based on execution order
      *
-     * Uses engine_data from context for optimal performance during execution.
+     * Uses centralized engine data for execution context.
      *
      * @param string $flow_step_id Current flow step ID
-     * @param array $context Context containing engine_data or job_id
+     * @param array $context Context containing job_id
      * @return string|null Previous flow step ID or null if none
      */
     public function get_previous_flow_step_id(string $flow_step_id, array $context = []): ?string {
-        $engine_data = $context['engine_data'] ?? [];
-
-        if (empty($engine_data) && !empty($context['job_id'])) {
-            $engine_data = datamachine_get_engine_data($context['job_id']);
+        $job_id = (int) ($context['job_id'] ?? 0);
+        if ($job_id <= 0) {
+            return null;
         }
 
-        $flow_config = $engine_data['flow_config'] ?? [];
+        $flow_config = $this->getFlowConfig($job_id);
 
         $current_step = $flow_config[$flow_step_id] ?? null;
         if (!$current_step) {

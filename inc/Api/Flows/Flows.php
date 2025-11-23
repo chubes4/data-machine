@@ -395,7 +395,7 @@ class Flows {
 			return null;
 		}
 
-		$next_timestamp = as_next_scheduled_action('datamachine_run_flow_now', [$flow_id]);
+		$next_timestamp = as_next_scheduled_action('datamachine_run_flow_now', [$flow_id], 'datamachine');
 
 		return $next_timestamp ? gmdate('Y-m-d H:i:s', $next_timestamp) : null;
 	}

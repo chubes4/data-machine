@@ -9,6 +9,7 @@ import { Modal, Button, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { getSchedulingIntervals } from '../../utils/api';
 import { updateFlowSchedule } from '../../utils/api';
+import { useUpdateFlowSchedule } from '../../queries/flows';
 import { useFormState, useAsyncOperation } from '../../hooks/useFormState';
 
 /**
@@ -29,18 +30,24 @@ export default function FlowScheduleModal( {
 	currentInterval,
 	onSuccess,
 } ) {
+	const updateScheduleMutation = useUpdateFlowSchedule();
+
 	// Form state for interval selection
 	const formState = useFormState({
 		initialData: { selectedInterval: currentInterval || 'manual' },
 		onSubmit: async (data) => {
-			const result = await updateFlowSchedule(flowId, {
-				interval: data.selectedInterval
-			});
-			if (result.success) {
+			try {
+				await updateScheduleMutation.mutateAsync({
+					flowId,
+					schedulingConfig: {
+						interval: data.selectedInterval
+					}
+				});
+				
 				if (onSuccess) onSuccess();
 				onClose();
-			} else {
-				throw new Error(result.message || 'Failed to update schedule');
+			} catch (error) {
+				throw new Error(error.message || 'Failed to update schedule');
 			}
 		}
 	});
