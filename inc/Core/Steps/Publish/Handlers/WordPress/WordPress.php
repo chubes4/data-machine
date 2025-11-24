@@ -10,7 +10,9 @@ namespace DataMachine\Core\Steps\Publish\Handlers\WordPress;
 use DataMachine\Core\EngineData;
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
-use DataMachine\Core\WordPress\WordPressSharedTrait;
+use DataMachine\Core\WordPress\TaxonomyHandler;
+use DataMachine\Core\WordPress\WordPressSettingsResolver;
+use DataMachine\Core\WordPress\WordPressPublishHelper;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -18,12 +20,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WordPress extends PublishHandler {
     use HandlerRegistrationTrait;
-    use WordPressSharedTrait;
 
-    // Plugin-specific handlers (featured image, source url, taxonomy) are initialized by WordPressSharedTrait
+    protected $taxonomy_handler;
 
     public function __construct() {
         parent::__construct('wordpress');
+
+        $this->taxonomy_handler = new TaxonomyHandler();
 
         // Self-register with filters
         self::registerHandler(
@@ -37,36 +40,42 @@ class WordPress extends PublishHandler {
             WordPressSettings::class,
             function($tools, $handler_slug, $handler_config) {
                 if ($handler_slug === 'wordpress_publish') {
+                    // Base parameters (always present)
+                    $base_parameters = [
+                        'title' => [
+                            'type' => 'string',
+                            'required' => true,
+                            'description' => 'The title of the WordPress post or page'
+                        ],
+                        'content' => [
+                            'type' => 'string',
+                            'required' => true,
+                            'description' => 'The main content of the post in HTML format'
+                        ],
+                        'job_id' => [
+                            'type' => 'string',
+                            'description' => 'Optional job ID for tracking workflow execution'
+                        ]
+                    ];
+
+                    // Dynamic taxonomy parameters based on "AI Decides" selections
+                    $taxonomy_parameters = self::buildTaxonomyParameters($handler_config);
+
+                    // Merge base + dynamic parameters
+                    $all_parameters = array_merge($base_parameters, $taxonomy_parameters);
+
                     $tools['wordpress_publish'] = [
                         'class' => self::class,
                         'method' => 'handle_tool_call',
                         'handler' => 'wordpress_publish',
                         'description' => 'Create WordPress posts and pages with automatic taxonomy assignment, featured image processing, and source URL attribution.',
-                        'parameters' => [
-                            'title' => [
-                                'type' => 'string',
-                                'required' => true,
-                                'description' => 'The title of the WordPress post or page'
-                            ],
-                            'content' => [
-                                'type' => 'string',
-                                'required' => true,
-                                'description' => 'The main content of the post in HTML format'
-                            ],
-                            'job_id' => [
-                                'type' => 'string',
-                                'description' => 'Optional job ID for tracking workflow execution'
-                            ]
-                        ],
+                        'parameters' => $all_parameters,
                         'handler_config' => $handler_config
                     ];
                 }
                 return $tools;
             }
         );
-
-        // Initialize shared helpers
-        $this->initWordPressHelpers();
     }
 
     /**
@@ -125,15 +134,15 @@ class WordPress extends PublishHandler {
         }
         
     $content = wp_unslash($parameters['content']);
-    $content = $engine->applySourceAttribution($content, $handler_config);
+    $content = WordPressPublishHelper::applySourceAttribution($content, $engine->getSourceUrl(), $handler_config);
     $content = wp_filter_post_kses($content);
         
         $post_data = [
             'post_title' => sanitize_text_field(wp_unslash($parameters['title'])),
             'post_content' => $content,
-            'post_status' => $this->getEffectivePostStatus($handler_config),
+            'post_status' => WordPressSettingsResolver::getPostStatus($handler_config),
             'post_type' => $handler_config['post_type'],
-            'post_author' => $this->getEffectivePostAuthor($handler_config)
+            'post_author' => WordPressSettingsResolver::getPostAuthor($handler_config)
         ];
 
         $this->log('debug', 'WordPress Tool: Final post data for wp_insert_post', [
@@ -156,9 +165,10 @@ class WordPress extends PublishHandler {
             );
         }
 
-        $taxonomy_results = $this->applyTaxonomies($post_id, $parameters, $handler_config, $engine);
+        $engine_data_array = $engine instanceof EngineData ? $engine->all() : [];
+        $taxonomy_results = $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config, $engine_data_array);
         $featured_image_result = null;
-        $attachment_id = $engine->attachImageToPost($post_id, $handler_config);
+        $attachment_id = WordPressPublishHelper::attachImageToPost($post_id, $engine->getImagePath(), $handler_config);
         if ($attachment_id) {
             $featured_image_result = [
                 'success' => true,
@@ -202,7 +212,77 @@ class WordPress extends PublishHandler {
         return 'WordPress';
     }
 
-    // Effective post status/author logic is provided by WordPressSharedTrait
+    /**
+     * Map taxonomy name to parameter name for AI tool.
+     * Matches TaxonomyHandler::getParameterName() logic.
+     *
+     * @param string $taxonomy_name WordPress taxonomy name
+     * @return string Parameter name for AI tool
+     */
+    private static function getTaxonomyParameterName(string $taxonomy_name): string {
+        if ($taxonomy_name === 'category') {
+            return 'category';
+        } elseif ($taxonomy_name === 'post_tag') {
+            return 'tags';
+        } else {
+            return $taxonomy_name;
+        }
+    }
 
+    /**
+     * Build dynamic taxonomy parameters for tool definition.
+     *
+     * Inspects handler configuration and adds parameters for each taxonomy
+     * where the user selected "AI Decides".
+     *
+     * @param array $handler_config Handler configuration with taxonomy selections
+     * @return array Parameter definitions for AI-decided taxonomies
+     */
+    private static function buildTaxonomyParameters(array $handler_config): array {
+        $parameters = [];
+
+        // Get all public taxonomies
+        $taxonomies = \DataMachine\Core\WordPress\TaxonomyHandler::getPublicTaxonomies();
+
+        foreach ($taxonomies as $taxonomy) {
+            // Skip system taxonomies
+            if (\DataMachine\Core\WordPress\TaxonomyHandler::shouldSkipTaxonomy($taxonomy->name)) {
+                continue;
+            }
+
+            // Check if this taxonomy is set to "AI Decides"
+            $field_key = "taxonomy_{$taxonomy->name}_selection";
+            $selection = $handler_config[$field_key] ?? 'skip';
+
+            if ($selection !== 'ai_decides') {
+                continue;
+            }
+
+            // Map taxonomy name to parameter name
+            $param_name = self::getTaxonomyParameterName($taxonomy->name);
+
+            // Get taxonomy label for description
+            $taxonomy_label = (is_object($taxonomy->labels) && isset($taxonomy->labels->name))
+                ? $taxonomy->labels->name
+                : (isset($taxonomy->label) ? $taxonomy->label : $taxonomy->name);
+
+            // Determine if hierarchical (category-like) or flat (tag-like)
+            $is_hierarchical = $taxonomy->hierarchical;
+
+            // Build parameter definition
+            $parameters[$param_name] = [
+                'type' => $is_hierarchical ? 'string' : 'array',
+                'description' => sprintf(
+                    'Assign %s for this post. %s',
+                    strtolower($taxonomy_label),
+                    $is_hierarchical
+                        ? 'Provide a single category name as a string. Will be created if it does not exist.'
+                        : 'Provide an array of tag names. Tags will be created if they do not exist.'
+                )
+            ];
+        }
+
+        return $parameters;
+    }
 
 }

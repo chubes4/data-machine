@@ -13,6 +13,7 @@ import FlowSteps from './FlowSteps';
 import FlowFooter from './FlowFooter';
 
 import { useFlow, useDeleteFlow, useDuplicateFlow, useRunFlow } from '../../queries/flows';
+import { useUIStore } from '../../stores/uiStore';
 
 import { MODAL_TYPES } from '../../utils/constants';
 
@@ -23,7 +24,6 @@ import { MODAL_TYPES } from '../../utils/constants';
  * @param {Object} props.pipelineConfig - Pipeline configuration
  * @param {Function} props.onFlowDeleted - Callback when flow is deleted
  * @param {Function} props.onFlowDuplicated - Callback when flow is duplicated
- * @param {function} props.openModal - Function to open modals, passed from parent for centralized state management.
  * @returns {React.ReactElement} Flow card
  */
 export default function FlowCard( {
@@ -31,7 +31,6 @@ export default function FlowCard( {
 	pipelineConfig,
 	onFlowDeleted,
 	onFlowDuplicated,
-	openModal,
 } ) {
 	// Container: Fetch complete flow data
 	const { data: completeFlowData, isLoading, error } = useFlow(flow.flow_id);
@@ -64,7 +63,6 @@ export default function FlowCard( {
 			pipelineConfig={ pipelineConfig }
 			onFlowDeleted={ onFlowDeleted }
 			onFlowDuplicated={ onFlowDuplicated }
-			openModal={ openModal }
 		/>
 	);
 }
@@ -76,17 +74,17 @@ export default function FlowCard( {
  * @param {Object} props.pipelineConfig - Pipeline configuration
  * @param {Function} props.onFlowDeleted - Callback when flow is deleted
  * @param {Function} props.onFlowDuplicated - Callback when flow is duplicated
- * @param {function} props.openModal - Function to open modals, passed from parent for centralized state management.
  * @returns {React.ReactElement} Flow card content
  * @pattern Presentational - Receives data as props, no data fetching hooks
  */
-function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated, openModal }) {
+function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated }) {
 	// Presentational: No data fetching hooks - receives complete flow data as props
 
 	// Use mutations
 	const deleteFlowMutation = useDeleteFlow();
 	const duplicateFlowMutation = useDuplicateFlow();
 	const runFlowMutation = useRunFlow();
+	const { openModal } = useUIStore();
 
 	// Presentational: Use flow data passed as prop
 	const currentFlowData = flow;
@@ -239,42 +237,40 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 	}
 
 	return (
-		<>
-			<Card
-				className="datamachine-flow-card datamachine-flow-instance-card"
-				size="large"
-			>
-				<CardBody>
-					<FlowHeader
-						flowId={ currentFlowData.flow_id }
-						flowName={ currentFlowData.flow_name }
-						onNameChange={ handleNameChange }
-						onDelete={ handleDelete }
-						onDuplicate={ handleDuplicate }
-						onRun={ handleRun }
-						onSchedule={ handleSchedule }
-					/>
+		<Card
+			className="datamachine-flow-card datamachine-flow-instance-card"
+			size="large"
+		>
+			<CardBody>
+				<FlowHeader
+					flowId={ currentFlowData.flow_id }
+					flowName={ currentFlowData.flow_name }
+					onNameChange={ handleNameChange }
+					onDelete={ handleDelete }
+					onDuplicate={ handleDuplicate }
+					onRun={ handleRun }
+					onSchedule={ handleSchedule }
+				/>
 
-					<CardDivider />
+				<CardDivider />
 
-					<FlowSteps
-						flowId={ currentFlowData.flow_id }
-						flowConfig={ currentFlowData.flow_config || {} }
-						pipelineConfig={ pipelineConfig }
-						onStepConfigured={ handleStepConfigured }
-					/>
+				<FlowSteps
+					flowId={ currentFlowData.flow_id }
+					flowConfig={ currentFlowData.flow_config || {} }
+					pipelineConfig={ pipelineConfig }
+					onStepConfigured={ handleStepConfigured }
+				/>
 
-					<CardDivider />
+				<CardDivider />
 
-					<FlowFooter
-						schedulingConfig={{
-							...currentFlowData.scheduling_config,
-							next_run_time: currentFlowData.next_run
-						}}
-					/>
-				</CardBody>
-			</Card>
-		</>
+				<FlowFooter
+					schedulingConfig={{
+						...currentFlowData.scheduling_config,
+						next_run_time: currentFlowData.next_run
+					}}
+				/>
+			</CardBody>
+		</Card>
 	);
 }
 

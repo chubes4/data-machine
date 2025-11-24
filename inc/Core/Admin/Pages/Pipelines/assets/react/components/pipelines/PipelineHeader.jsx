@@ -146,14 +146,12 @@ export default function PipelineHeader( {
 				/>
 			</div>
 
-			<div className="datamachine-pipeline-header__title-section">
-				<TextControl
-					value={ localName }
-					onChange={ handleNameChange }
-					placeholder={ __( 'Pipeline name', 'datamachine' ) }
-					className="datamachine-pipeline-header__title-input"
-				/>
-			</div>
+			<TextControl
+				value={ localName }
+				onChange={ handleNameChange }
+				placeholder={ __( 'Pipeline name', 'datamachine' ) }
+				className="datamachine-pipeline-header__title-input"
+			/>
 		</div>
 	);
 }

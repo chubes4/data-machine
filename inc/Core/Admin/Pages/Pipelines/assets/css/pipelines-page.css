@@ -118,6 +118,11 @@
     color: #757575;
 }
 
+.datamachine-empty-state-actions {
+    margin-top: 20px;
+    text-align: center;
+}
+
 /* Table styling */
 .datamachine-table {
     width: 100%;
@@ -131,16 +136,7 @@
     overflow-y: auto;
 }
 
-/* Status badges */
-.datamachine-status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    border-radius: var(--datamachine-border-radius);
-    font-size: 11px;
-    font-weight: 500;
-}
+/* Status badges - base moved to root.css */
 
 /* Info boxes removed - will be recreated with proper naming */
 
@@ -169,11 +165,6 @@
 	align-items: center;
 }
 
-.datamachine-pipeline-header__title-section {
-	flex: 1;
-	padding-right: 120px; /* Space for action buttons */
-}
-
 .datamachine-pipeline-header__title-input {
 	font-size: 20px;
 	font-weight: 600;
@@ -183,6 +174,8 @@
 	border-radius: var(--datamachine-border-radius);
 	width: 100%;
 	max-width: 400px;
+	flex: 1;
+	padding-right: 120px; /* Space for action buttons */
 	transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
 }
 
@@ -201,13 +194,14 @@
 
 
 
-/* Pipeline steps - responsive wrapping flex layout */
+/* Pipeline steps - horizontal scrolling flex layout */
 .datamachine-pipeline-steps {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 20px;
-    padding: 20px 0;
+    padding: 20px;
+    overflow-x: auto;
 }
 
 /* Step cards */
@@ -420,27 +414,6 @@
 	margin-top: 12px;
 }
 
-/* Pipeline table styles */
-.datamachine-pipeline-table {
-	width: 100%;
-	border-collapse: collapse;
-}
-
-.datamachine-pipeline-table tr {
-	border-bottom: 1px solid var(--datamachine-border-2);
-}
-
-.datamachine-pipeline-table td,
-.datamachine-pipeline-table th {
-	padding: 12px 16px;
-	text-align: left;
-}
-
-.datamachine-pipeline-table th {
-	background-color: #f5f5f5;
-	font-weight: 600;
-}
-
 /* ===== HIGH-IMPACT UTILITIES ===== */
 
 /* Table sticky headers */
@@ -481,6 +454,7 @@
 	padding: 12px 16px;
 	text-align: left;
 	font-weight: 600;
+	background-color: #f5f5f5;
 }
 
 .datamachine-pipeline-table td {
@@ -518,17 +492,7 @@
 	max-height: 300px;
 }
 
-/* Status badge base */
-.datamachine-status-badge {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	padding: 4px 8px;
-	border-radius: var(--datamachine-border-radius);
-	font-size: 11px;
-	font-weight: 500;
-}
-
+/* Status badge variants - base moved to root.css */
 .datamachine-status-badge--processed {
 	background: rgba(70, 180, 80, 0.13);
 	color: #46b450;
@@ -669,12 +633,6 @@
 
     .datamachine-flow-header__content {
         width: 100%;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
-    }
-
-    .datamachine-flow-header__title-section {
         flex-direction: column;
         align-items: stretch;
         gap: 8px;
@@ -916,39 +874,9 @@
 
 /* ===== UTILITY CLASSES ===== */
 
-/* Hidden element utility */
-.datamachine-hidden {
-    display: none;
-}
+/* Hidden element utility now in root.css */
 
-/* WordPress-style admin notices */
-.datamachine-admin-notice {
-    background: #fff;
-    border-left: 4px solid #00a32a;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
-    margin: 5px 0 15px;
-    padding: 1px 12px;
-    position: relative;
-    border-radius: var(--datamachine-border-radius);
-}
-
-.datamachine-admin-notice--error {
-    border-left-color: #d63638;
-}
-
-.datamachine-admin-notice--warning {
-    border-left-color: #dba617;
-}
-
-.datamachine-admin-notice--info {
-    border-left-color: #72aee6;
-}
-
-.datamachine-admin-notice p {
-    margin: 0.5em 0;
-    padding: 2px;
-}
-
+/* Admin notice dismissible features - extends root.css base */
 .datamachine-admin-notice--dismissible {
     padding-right: 38px;
     position: relative;
@@ -1078,15 +1006,11 @@
 .datamachine-flows-list .components-card-body {
     padding: 0;
 }
-.datamachine-step-card-wrapper {
-    margin-bottom: 12px;
-}
-
 .datamachine-step-card-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
 }
 
 .datamachine-step-card-ai-config {
@@ -1120,14 +1044,6 @@
     flex: 0 0 auto;
     min-width: 300px;
     max-width: 300px;
-}
-
-.datamachine-steps-container {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 20px;
-    padding: 20px 0;
 }
 
 /* ===== STEP SELECTION MODAL ===== */

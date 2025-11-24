@@ -115,9 +115,10 @@ do_action('datamachine_log', 'debug', 'Step processing started', [
 ## Used By
 
 All step types extend this base class:
-- **Fetch Steps**: See [FetchHandler](fetch-handler.md) for fetch-specific base class
-- **AI Steps**: Direct Step extension with conversation loop integration
-- **Publish Steps**: See [PublishHandler](publish-handler.md) for publish-specific base class
-- **Update Steps**: Currently extends PublishHandler base class
+- **Fetch Steps**: See FetchHandler for fetch-specific base class
 
-See [Fetch Handlers](../handlers/fetch/handlers-overview.md) and [Publish Handlers](../handlers/publish/handlers-overview.md) for specific implementations.
+- **Publish Steps**: See PublishHandler for publish-specific base class
+
+## Related Documentation
+
+See Fetch Handlers and Publish Handlers documentation for specific implementations.

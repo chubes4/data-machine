@@ -216,4 +216,4 @@ public static function sanitize(array $raw_settings): array {
 - [TaxonomyHandler](taxonomy-handler.md) - Taxonomy processing logic
 - [FeaturedImageHandler](featured-image-handler.md) - Image processing
 - [SourceUrlHandler](source-url-handler.md) - URL attribution
-- WordPressSharedTrait - Direct instantiation of WordPress utilities
+- WordPress Handlers - Direct instantiation of WordPress utilities

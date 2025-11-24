@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 function datamachine_register_wordpress_utilities() {
     // Legacy service discovery provided via filters was removed in favor of direct
     // instantiation and OOP usage. These helper classes are now initialized
-    // directly by the `WordPressSharedTrait` and should not be discovered via
+    // directly by WordPress handler constructors and should not be discovered via
     // filters. We leave this file as a placeholder for compatibility but no
     // longer register the filters.
 }

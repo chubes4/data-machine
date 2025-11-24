@@ -33,6 +33,8 @@ export default function FlowStepHandler( {
 	const { data: globalSettings = {} } = useGlobalSettings();
 	const { data: handlers = {} } = useHandlers();
 
+	const handlerModel = useHandlerModel(handlerSlug);
+
 	if ( ! handlerSlug ) {
 		return (
 			<div className="datamachine-flow-step-handler datamachine-flow-step-handler--empty datamachine-handler-warning">
@@ -52,8 +54,6 @@ export default function FlowStepHandler( {
 
 	// Build unified display settings using handler model if available
 	const displaySettings = {};
-
-	const handlerModel = useHandlerModel(handlerSlug);
 
 	if ( handlerModel ) {
 		Object.assign(displaySettings, handlerModel.getDisplaySettings(settingsDisplay, handlerConfig));

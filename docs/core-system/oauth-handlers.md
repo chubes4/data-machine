@@ -4,7 +4,7 @@
 
 ## Overview
 
-Data Machine uses a unified base class architecture for authentication providers, eliminating code duplication across all OAuth 1.0a, OAuth 2.0, and simple authentication implementations. All authentication providers extend standardized base classes that centralize option storage, configuration management, and authentication validation.
+Data Machine uses a unified base class architecture for authentication providers, eliminating code duplication across all OAuth 1.0a and OAuth 2.0 implementations. All authentication providers extend standardized base classes that centralize option storage, configuration management, and authentication validation.
 
 ## Base Authentication Architecture (@since v0.2.6)
 
@@ -177,7 +177,7 @@ public function refresh_token(): bool; // Token refresh implementation
 - RedditAuth (subreddit fetching)
 - FacebookAuth (Graph API publishing)
 - ThreadsAuth (Meta Threads integration)
-- GoogleSheetsAuth (spreadsheet operations)
+- GoogleSheetsAuth (spreadsheet operations, moved to `/inc/Core/OAuth/Providers/` in v0.2.6)
 
 **Example Implementation**:
 
@@ -259,32 +259,18 @@ class RedditAuth extends BaseOAuth2Provider {
 }
 ```
 
-### BaseSimpleAuthProvider
+### Bluesky Authentication (BaseAuthProvider Direct Extension)
 
-**Location**: `/inc/Core/OAuth/BaseSimpleAuthProvider.php`
-**Since**: v0.2.5 (updated to extend BaseAuthProvider in v0.2.6)
+**Provider**: BlueskyAuth
+**Location**: `/inc/Core/Steps/Publish/Handlers/Bluesky/BlueskyAuth.php`
+**Since**: v0.1.0 (updated to extend BaseAuthProvider in v0.2.6)
 
-Base class for API key and credential-based authentication extending BaseAuthProvider.
+Bluesky authentication uses app password authentication and extends BaseAuthProvider directly.
 
-**Features**:
-- Simplified credential storage pattern
-- Helper methods for credential retrieval
-- Logging integration for credential operations
-
-**Protected Methods**:
+**Implementation Pattern**:
 
 ```php
-protected function get_stored_credentials(): ?array;
-protected function store_credentials(array $credentials): bool;
-```
-
-**Providers Using BaseSimpleAuthProvider**:
-- BlueskyAuth (app password authentication)
-
-**Example Implementation**:
-
-```php
-class BlueskyAuth extends BaseSimpleAuthProvider {
+class BlueskyAuth extends BaseAuthProvider {
 
     public function __construct() {
         parent::__construct('bluesky');
@@ -295,29 +281,32 @@ class BlueskyAuth extends BaseSimpleAuthProvider {
             'username' => [
                 'label' => __('Bluesky Handle', 'datamachine'),
                 'type' => 'text',
-                'required' => true
+                'required' => true,
+                'description' => __('Your Bluesky handle (e.g., user.bsky.social)', 'datamachine')
             ],
             'app_password' => [
                 'label' => __('App Password', 'datamachine'),
                 'type' => 'password',
-                'required' => true
+                'required' => true,
+                'description' => __('Generate an app password at bsky.app/settings/app-passwords', 'datamachine')
             ]
         ];
     }
 
     public function is_authenticated(): bool {
-        $credentials = $this->get_stored_credentials();
-        return !empty($credentials['username']) &&
-               !empty($credentials['app_password']);
+        $config = $this->get_config();
+        return !empty($config) &&
+               !empty($config['username']) &&
+               !empty($config['app_password']);
     }
 
     public function authenticate(): bool {
-        $credentials = $this->get_stored_credentials();
+        $config = $this->get_config();
 
         // Validate credentials with API
         $session = $this->create_session(
-            $credentials['username'],
-            $credentials['app_password']
+            $config['username'],
+            $config['app_password']
         );
 
         if (is_wp_error($session)) {
@@ -325,14 +314,12 @@ class BlueskyAuth extends BaseSimpleAuthProvider {
         }
 
         // Store session data
-        $this->store_credentials([
-            'username' => $credentials['username'],
-            'app_password' => $credentials['app_password'],
+        return $this->save_config([
+            'username' => $config['username'],
+            'app_password' => $config['app_password'],
             'session_token' => $session['accessJwt'],
             'did' => $session['did']
         ]);
-
-        return true;
     }
 }
 ```
@@ -649,9 +636,10 @@ class RedditAuth extends BaseOAuth2Provider {
 - Twitter Handler - OAuth1 implementation example
 - Reddit Handler - OAuth2 implementation example
 - Facebook Handler - OAuth2 with token transformation
+- Bluesky Handler - Direct BaseAuthProvider extension example
 - Settings Configuration - OAuth credential management
 
 ---
 
-**Implementation**: `/inc/Core/OAuth/` directory with BaseAuthProvider, BaseOAuth1Provider, BaseOAuth2Provider, BaseSimpleAuthProvider base classes, OAuth1Handler and OAuth2Handler services, and Providers/ directory
+**Implementation**: `/inc/Core/OAuth/` directory with BaseAuthProvider, BaseOAuth1Provider, and BaseOAuth2Provider base classes, OAuth1Handler and OAuth2Handler services, and Providers/ directory (GoogleSheetsAuth)
 **Architecture**: Inheritance-based provider system with centralized storage and validation

@@ -5,6 +5,32 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.7] - 2025-11-24
+
+### BREAKING CHANGES
+- **EngineData API** - Removed WordPress-specific methods violating platform-agnostic architecture
+  - Removed `EngineData::attachImageToPost()` (use `WordPressPublishHelper::attachImageToPost()` instead)
+  - Removed `EngineData::applySourceAttribution()` (use `WordPressPublishHelper::applySourceAttribution()` instead)
+  - Removed private `EngineData::generateSourceBlock()` method
+
+### Added
+- **WordPressPublishHelper** - New centralized WordPress publishing utilities (`/inc/Core/WordPress/WordPressPublishHelper.php`)
+  - `WordPressPublishHelper::attachImageToPost($post_id, $image_path, $config)` - Attach images to WordPress posts
+  - `WordPressPublishHelper::applySourceAttribution($content, $source_url, $config)` - Apply source URL attribution
+  - `WordPressPublishHelper::generateSourceBlock($url)` - Generate Gutenberg source blocks
+
+### Changed
+- **WordPress Publish Handler** - Migrated to use `WordPressPublishHelper` for image and source attribution operations
+- **EngineData Architecture** - Restored platform-agnostic design, now provides only data access methods (`getImagePath()`, `getSourceUrl()`)
+
+### Improved
+- **Architectural Consistency** - EngineData now matches pattern used by all social media handlers (Twitter, Threads, Bluesky, Facebook)
+- **Single Responsibility** - WordPress-specific operations centralized in dedicated helper class
+- **KISS Principle** - Eliminated WordPress dependencies from core data container class
+
+### Requirements
+- **Breaking Change for WordPress Handlers** - Custom handlers must migrate from `EngineData` methods to `WordPressPublishHelper` static methods
+
 ## [0.2.6] - 2025-11-23
 
 ### Added
@@ -45,9 +71,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **WordPressAPI Type Safety** - Fixed TypeError by ensuring fetch_from_endpoint returns array not null
 - **Engine Data Architecture** - Implemented single source of truth for execution context, removed redundant methods
 
+### Documentation
+- **EngineData Documentation** - Created comprehensive documentation for EngineData class consolidating featured image and source URL operations
+- **Deprecated Handler Documentation** - Updated FeaturedImageHandler and SourceUrlHandler documentation to reflect deprecation and migration to EngineData
+- **WordPress Components Documentation** - Updated to reflect v0.2.6 architecture with EngineData consolidation
+- **OAuth Handlers Documentation** - Removed BaseSimpleAuthProvider references (class was never implemented), updated to reflect 3-class base architecture
+- **Architecture Documentation** - Updated core architecture documentation to reflect EngineData consolidation and component evolution
+- **Internal Link Cleanup** - Removed internal .md links throughout documentation per WordPress navigation handling requirements
+
+## [0.2.7] - 2025-11-23
+
+### Added
+- **WordPressSettingsResolver** (`/inc/Core/WordPress/WordPressSettingsResolver.php`) - Centralized utility for WordPress settings resolution with system defaults override
+  - `getPostStatus()` - Single source of truth for post status resolution
+  - `getPostAuthor()` - Single source of truth for post author resolution
+  - Eliminates ~120 lines of duplicated code across handlers
+
+### Removed
+- **WordPressSharedTrait** (`/inc/Core/WordPress/WordPressSharedTrait.php`) - Eliminated architectural bloat by removing trait wrapper layer
+
+### Changed
+- **WordPress Publish Handler** - Refactored to use direct EngineData instantiation and WordPressSettingsResolver for settings
+- **WordPress Update Handler** - Refactored to use direct EngineData instantiation
+- **Single Source of Truth Architecture** - All handlers now use direct EngineData pattern for consistent, predictable data access
+- **EngineData Configuration Keys** - Updated parameter names for consistency
+  - `include_source` → `link_handling` (values: 'none', 'append')
+  - `enable_images` → `include_images`
+- **Handlers API** (`/inc/Api/Handlers.php`) - Enhanced with authentication status
+  - Added `is_authenticated` boolean to handler metadata
+  - Added `account_details` when authenticated
+- **TaxonomyHandler** - Enhanced taxonomy retrieval with post type filtering
+  - `getPublicTaxonomies()` now accepts optional `$post_type` parameter
+- **WordPressSettingsHandler** - Added post type and exclude taxonomies support
+  - Taxonomy fields now support `post_type` and `exclude_taxonomies` configuration options
+
 ### Improved
-- **Pipeline Builder React Architecture** - Enhanced robustness and state management patterns
-- **Documentation System** - Updated all references to use new PromptBuilder directive system
+- **UI/UX** - Pipeline Builder horizontal scrolling layout for better step navigation
+- **CSS Architecture** - Moved common UI components to centralized `/inc/Core/Admin/assets/css/root.css`
+  - Status badge styles centralized
+  - Common admin notice component styles added
+  - Hidden utility class added
+- **Empty State Actions** - Added action buttons to empty state displays
+
+### Breaking Changes
+- **Removed WordPressSharedTrait** - Extensions using this trait must migrate to direct EngineData usage and WordPressSettingsResolver
+  - Affected: datamachine-events v0.3.0 and earlier
+  - Fixed in: datamachine-events v0.3.1+
+
+### Documentation
+- **WordPressSharedTrait Documentation** - Updated to mark as removed with migration guide
+- **EngineData Documentation** - Removed dual-path "or via trait" references, established single direct usage pattern
+- **Architecture Documentation** - Updated to reflect removal of WordPressSharedTrait and direct EngineData integration
+- **WordPress Components Documentation** - Updated integration patterns to show direct EngineData usage
+- **Featured Image Handler Documentation** - Removed trait wrapper references
+- **Source URL Handler Documentation** - Removed trait wrapper references
 
 ## [0.2.5] - 2025-11-20
 
@@ -69,7 +146,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ModalManager.jsx**: Centralized modal rendering system for improved UI consistency
 - **useFormState.js**: Generic form state management hook for React components
 - **FailJob.php**: Dedicated action class for handling job failure scenarios
-- **WordPressSharedTrait** (`/inc/Core/WordPress/WordPressSharedTrait.php`) - Shared functionality trait for WordPress handlers with content updates, taxonomy processing, and image handling
+- **WordPressSharedTrait** (`/inc/Core/WordPress/WordPressSharedTrait.php`) - Shared functionality trait for WordPress handlers with content updates, taxonomy processing, and image handling (removed in v0.2.7)
 
 ### Changed
 - **Handler Architecture Refactoring**: Consolidated handler registration by removing individual filter files

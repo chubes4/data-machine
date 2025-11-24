@@ -36,3 +36,62 @@
     /* Border Radius - Single value for entire interface */
     --datamachine-border-radius: 4px;
 }
+
+/* ===== COMMON UI COMPONENTS ===== */
+/* Shared components used across multiple admin pages */
+
+/* Status Badge - Used for file status, processing status, etc. */
+.datamachine-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: var(--datamachine-border-radius);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* Admin Notice - WordPress-style notices for all admin pages */
+.datamachine-admin-notice {
+    background: #fff;
+    border-left: 4px solid #00a32a;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
+    margin: 5px 0 15px;
+    padding: 12px;
+    position: relative;
+    border-radius: var(--datamachine-border-radius);
+}
+
+.datamachine-admin-notice--error,
+.datamachine-admin-notice.error,
+.datamachine-admin-notice.notice-error {
+    border-left-color: #d63638;
+    background-color: #fef5f5;
+}
+
+.datamachine-admin-notice--warning,
+.datamachine-admin-notice.warning {
+    border-left-color: #ffb900;
+    background-color: #fffbf0;
+}
+
+.datamachine-admin-notice--info {
+    border-left-color: #72aee6;
+}
+
+.datamachine-admin-notice--success,
+.datamachine-admin-notice.success,
+.datamachine-admin-notice.notice-success {
+    border-left-color: #00a32a;
+    background: #f0f6fc;
+}
+
+.datamachine-admin-notice p {
+    margin: 0.5em 0;
+    padding: 2px;
+}
+
+/* Hidden utility - used across all pages */
+.datamachine-hidden {
+    display: none;
+}

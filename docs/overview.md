@@ -22,9 +22,16 @@ Standardized traits that reduce repetitive registration boilerplate across handl
 - **HandlerRegistrationTrait**: Single `registerHandler()` method for all handler types (fetch, publish, update)
 - **ToolRegistrationTrait**: Agent-agnostic tool registration with dynamic filter creation for unlimited agent types
 
-**Modern React Architecture** (@since v0.2.3) - Performance Optimization:
+**Modern React Architecture** (@since v0.2.3, enhanced v0.2.6) - Performance Optimization:
 
-Complete modernization of the admin interface with TanStack Query + Zustand for optimal performance:
+Complete modernization of the admin interface with TanStack Query + Zustand for optimal performance, enhanced with advanced state management patterns in v0.2.6:
+
+**React Enhancements** (@since v0.2.6):
+- **HandlerModel** - Abstract model layer for handler data operations
+- **HandlerFactory** - Factory pattern for handler model instantiation
+- **useHandlerModel** - Custom hook for handler model integration
+- **ModalSwitch** - Centralized modal routing component
+- **HandlerProvider** - React context for handler state management
 
 **Step Hierarchy**:
 - **Step** (`/inc/Core/Steps/Step.php`) - Abstract base for all step types
@@ -62,11 +69,11 @@ Complete modernization of the admin interface with TanStack Query + Zustand for 
   - Type and timestamp enforcement
 
 For implementation details, see:
-- [Step Base Class](core-system/step.md)
-- [FetchHandler Base Class](core-system/fetch-handler.md)
-- [PublishHandler Base Class](core-system/publish-handler.md)
-- [SettingsHandler Classes](core-system/settings-handler.md)
-- [DataPacket Class](core-system/data-packet.md)
+- Step Base Class
+- FetchHandler Base Class
+- PublishHandler Base Class
+- SettingsHandler Classes
+- DataPacket Class
 
 ## Core Concepts
 

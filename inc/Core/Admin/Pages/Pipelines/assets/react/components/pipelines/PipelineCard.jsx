@@ -9,6 +9,7 @@ import { useCallback } from '@wordpress/element';
 import { Card, CardBody, CardDivider } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useDeletePipelineStep } from '../../queries/pipelines';
+import { useUIStore } from '../../stores/uiStore';
 import PipelineHeader from './PipelineHeader';
 import PipelineSteps from './PipelineSteps';
 import FlowsSection from '../flows/FlowsSection';
@@ -21,12 +22,12 @@ import { MODAL_TYPES } from '../../utils/constants';
  * @param {Object} props - Component props
  * @param {Object} props.pipeline - Pipeline data
  * @param {Array} props.flows - Associated flows
- * @param {function} openModal - Function to open modals, passed from parent for centralized state management.
  * @returns {React.ReactElement} Pipeline card
  */
-export default function PipelineCard( { pipeline, flows, openModal } ) {
+export default function PipelineCard( { pipeline, flows } ) {
 	// Use mutations
 	const deleteStepMutation = useDeletePipelineStep();
+	const { openModal } = useUIStore();
 
 	if ( ! pipeline ) {
 		return null;
@@ -143,7 +144,6 @@ export default function PipelineCard( { pipeline, flows, openModal } ) {
 						pipelineId={ pipeline.pipeline_id }
 						flows={ flows }
 						pipelineConfig={ pipeline.pipeline_config || {} }
-						openModal={ openModal }
 					/>
 				</CardBody>
 			</Card>

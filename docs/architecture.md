@@ -77,12 +77,21 @@ $image_url = $engine_data['image_url'] ?? null;
 
 ### Authentication System
 
-**Centralized OAuth Handlers** (@since v0.2.0): Unified OAuth flow implementations eliminate code duplication across all authentication providers.
+**Base Authentication Provider Architecture** (@since v0.2.6): Complete inheritance system with centralized option storage and validation across all authentication providers.
 
-**Architecture**:
-- **OAuth1Handler** (`/inc/Core/OAuth/OAuth1Handler.php`): Three-legged OAuth 1.0a flow for Twitter
-- **OAuth2Handler** (`/inc/Core/OAuth/OAuth2Handler.php`): Authorization code flow for Reddit, Facebook, Threads, Google Sheets
-- **Service Discovery**: Filter-based access via `datamachine_get_oauth1_handler` and `datamachine_get_oauth2_handler`
+**Base Classes**:
+- **BaseAuthProvider** (`/inc/Core/OAuth/BaseAuthProvider.php`): Abstract base for all authentication providers with unified option storage, callback URL generation, and authentication state checking
+- **BaseOAuth1Provider** (`/inc/Core/OAuth/BaseOAuth1Provider.php`): OAuth 1.0a providers (TwitterAuth) extending BaseAuthProvider
+- **BaseOAuth2Provider** (`/inc/Core/OAuth/BaseOAuth2Provider.php`): OAuth 2.0 providers (RedditAuth, FacebookAuth, ThreadsAuth, GoogleSheetsAuth) extending BaseAuthProvider
+
+**OAuth Handlers**:
+- **OAuth1Handler** (`/inc/Core/OAuth/OAuth1Handler.php`): Three-legged OAuth 1.0a flow implementation
+- **OAuth2Handler** (`/inc/Core/OAuth/OAuth2Handler.php`): Authorization code flow implementation
+
+**Authentication Providers**:
+- **OAuth 1.0a**: TwitterAuth extends BaseOAuth1Provider
+- **OAuth 2.0**: RedditAuth, FacebookAuth, ThreadsAuth, GoogleSheetsAuth extend BaseOAuth2Provider
+- **Direct**: BlueskyAuth extends BaseAuthProvider (app password authentication)
 
 **OAuth2 Flow**:
 1. Create state nonce for CSRF protection
@@ -94,10 +103,11 @@ $image_url = $engine_data['image_url'] ?? null;
 2. Build authorization URL
 3. Handle callback: validate parameters, exchange for access token, store credentials
 
-**Other Authentication**:
-- Bluesky: App Password (direct authentication)
-- API key providers: Google Search, AI services
-- Centralized configuration validation
+**Benefits**:
+- Eliminates duplicated storage logic across all providers (~60% code reduction per provider)
+- Standardized error handling and logging
+- Unified security implementation
+- Easy integration of new providers via base class extension
 
 ### Universal Engine Architecture
 
@@ -146,11 +156,13 @@ Data Machine v0.2.1 introduced modular component systems for enhanced code organ
 - **FileRetrieval** - Data retrieval from file storage
 
 **WordPress Shared Components** (`/inc/Core/WordPress/`):
-- **FeaturedImageHandler** - Image processing and media library integration
 - **TaxonomyHandler** - Taxonomy selection and term creation (skip, AI-decided, pre-selected modes)
-- **SourceUrlHandler** - URL attribution with Gutenberg blocks
 - **WordPressSettingsHandler** - Shared WordPress settings fields
 - **WordPressFilters** - Service discovery registration
+
+**EngineData** (`/inc/Core/EngineData.php`):
+- **Consolidated Operations** - Featured image attachment, source URL attribution, and engine data access (@since v0.2.1, enhanced v0.2.6)
+- **Unified Interface** - Single class for all engine data operations (replaces FeaturedImageHandler and SourceUrlHandler in v0.2.6)
 
 **Engine Components** (`/inc/Engine/`):
 - **StepNavigator** - Centralized step navigation logic for execution flow
@@ -162,9 +174,10 @@ Data Machine v0.2.1 introduced modular component systems for enhanced code organ
 - **Extensibility**: Easy to add new functionality via composition
 
 For detailed documentation:
-- [FilesRepository Components](core-system/files-repository.md)
-- [WordPress Shared Components](core-system/wordpress-components.md)
-- [StepNavigator](core-system/step-navigator.md)
+- FilesRepository Components
+- WordPress Shared Components
+- EngineData
+- StepNavigator
 
 ### Centralized Handler Filter System
 
@@ -205,12 +218,12 @@ $data = apply_filters('datamachine_data_packet', $data, $packet_data, $flow_step
 - **Performance**: Optimized implementations used across all handlers
 
 ### WordPress Publish Handler Architecture
-**Modular Component System**: The WordPress publish handler is refactored into specialized processing modules for enhanced maintainability and extensibility.
+**Modular Component System**: The WordPress publish handler uses specialized processing modules for enhanced maintainability and extensibility.
 
 **Core Components**:
-- **FeaturedImageHandler**: Centralized featured image processing with configuration hierarchy (system defaults override handler config)
+- **EngineData**: Consolidated featured image attachment and source URL attribution with configuration hierarchy (system defaults override handler config) (@since v0.2.1, enhanced v0.2.6)
 - **TaxonomyHandler**: Configuration-based taxonomy processing with three selection modes (skip, AI-decided, pre-selected)
-- **SourceUrlHandler**: Source URL attribution with Gutenberg block generation and configuration hierarchy
+- **Direct Integration**: WordPress handlers use EngineData and TaxonomyHandler directly for single source of truth data access
 
 **Configuration Hierarchy**: System-wide defaults ALWAYS override handler-specific configuration when set, providing consistent behavior across all WordPress publish operations.
 
@@ -219,6 +232,7 @@ $data = apply_filters('datamachine_data_packet', $data, $packet_data, $flow_step
 - Configuration validation and error handling per component
 - WordPress native function integration for optimal performance
 - Comprehensive logging throughout all components
+- Unified engine data operations via EngineData class
 
 ### File Management
 Flow-isolated UUID storage with automatic cleanup:

@@ -33,15 +33,22 @@ class WordPressSettingsHandler {
                 'ai_decides' => __('AI Decides', 'datamachine')
             ],
             'description_template' => __('Configure %1$s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'datamachine'),
-            'default' => 'skip'
+            'default' => 'skip',
+            'post_type' => null,
+            'exclude_taxonomies' => []
         ];
         $config = array_merge($defaults, $config);
 
         $taxonomy_fields = [];
-        $taxonomies = TaxonomyHandler::getPublicTaxonomies();
+        $taxonomies = TaxonomyHandler::getPublicTaxonomies($config['post_type']);
 
         foreach ($taxonomies as $taxonomy) {
             if (TaxonomyHandler::shouldSkipTaxonomy($taxonomy->name)) {
+                continue;
+            }
+
+            // Skip extension-specific excluded taxonomies (e.g., venue for events)
+            if (in_array($taxonomy->name, $config['exclude_taxonomies'], true)) {
                 continue;
             }
 
@@ -96,15 +103,22 @@ class WordPressSettingsHandler {
         $defaults = [
             'field_suffix' => 'selection',
             'allowed_values' => ['skip', 'ai_decides'],
-            'default_value' => 'skip'
+            'default_value' => 'skip',
+            'post_type' => null,
+            'exclude_taxonomies' => []
         ];
         $config = array_merge($defaults, $config);
 
         $sanitized = [];
-        $taxonomies = TaxonomyHandler::getPublicTaxonomies();
+        $taxonomies = TaxonomyHandler::getPublicTaxonomies($config['post_type']);
 
         foreach ($taxonomies as $taxonomy) {
             if (TaxonomyHandler::shouldSkipTaxonomy($taxonomy->name)) {
+                continue;
+            }
+
+            // Skip extension-specific excluded taxonomies (e.g., venue for events)
+            if (in_array($taxonomy->name, $config['exclude_taxonomies'], true)) {
                 continue;
             }
 

@@ -18,10 +18,9 @@ import { useCreateFlow } from '../../queries/flows';
  * @param {number} props.pipelineId - Pipeline ID
  * @param {Array} props.flows - Flows array
  * @param {Object} props.pipelineConfig - Pipeline configuration
- * @param {function} openModal - Function to open modals, passed from parent for centralized state management.
  * @returns {React.ReactElement} Flows section
  */
-export default function FlowsSection( { pipelineId, flows, pipelineConfig, openModal } ) {
+export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
 	// Use mutations
 	const createFlowMutation = useCreateFlow();
 
@@ -114,7 +113,6 @@ export default function FlowsSection( { pipelineId, flows, pipelineConfig, openM
 						pipelineConfig={ pipelineConfig }
 						onFlowDeleted={ handleFlowDeleted }
 						onFlowDuplicated={ handleFlowDuplicated }
-						openModal={ openModal }
 					/>
 				) ) }
 

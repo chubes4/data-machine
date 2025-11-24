@@ -12,8 +12,8 @@ import {
 	TextareaControl,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { updateSystemPrompt, getTools } from '../../utils/api';
-import { useProviders } from '../../queries/config';
+import { updateSystemPrompt } from '../../utils/api';
+import { useProviders, useTools } from '../../queries/config';
 import { useFormState } from '../../hooks/useFormState';
 import AIToolsSelector from './configure-step/AIToolsSelector';
 
@@ -96,7 +96,8 @@ export default function ConfigureStepModal( {
 	const aiProviders = providersResponse?.providers || {};
 	const aiDefaults = providersResponse?.defaults || { provider: '', model: '' };
 
-
+	// Use TanStack Query for tools data
+	const { data: tools } = useTools();
 
 	/**
 	 * Reset form when modal opens with new config
@@ -110,28 +111,21 @@ export default function ConfigureStepModal( {
 
 		// Pre-populate with all globally enabled tools for new AI steps
 		if ( ! currentConfig?.enabled_tools ) {
-			getTools()
-				.then( ( result ) => {
-					if ( result.success ) {
-						const tools = result.data || {};
-						const availableTools = Object.entries( tools )
-							.filter(
-								( [ id, tool ] ) =>
-									tool.configured && tool.globally_enabled
-							)
-							.map( ( [ id ] ) => id );
-						setSelectedTools( availableTools );
-					}
-				} )
-				.catch( ( error ) => {
-					console.error( 'Failed to load default tools:', error );
-				} );
+			if ( tools ) {
+				const availableTools = Object.entries( tools )
+					.filter(
+						( [ id, tool ] ) =>
+							tool.configured && tool.globally_enabled
+					)
+					.map( ( [ id ] ) => id );
+				setSelectedTools( availableTools );
+			}
 		} else {
 			setSelectedTools( currentConfig.enabled_tools );
 		}
 
 		formState.setError( null );
-	}, [ configKey, aiDefaults.provider, aiDefaults.model ] );
+	}, [ configKey, aiDefaults.provider, aiDefaults.model, tools ] );
 
 	/**
 	 * Get provider options

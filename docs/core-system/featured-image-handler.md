@@ -1,164 +1,78 @@
-# Featured Image Handler
+# Featured Image Handler (Deprecated)
 
-**File Location**: `inc/Core/WordPress/FeaturedImageHandler.php`
-
+**Original Location**: `inc/Core/WordPress/FeaturedImageHandler.php`
 **Since**: 0.2.1
+**Deprecated**: 0.2.6
+**Replacement**: EngineData class
 
-Handles featured image processing for WordPress publish operations with configuration hierarchy and repository integration.
+## Deprecation Notice
 
-## Overview
+As of v0.2.6, the standalone FeaturedImageHandler class has been removed. Featured image processing functionality has been consolidated into the EngineData class to reduce code duplication and provide a unified interface for engine data operations.
 
-The FeaturedImageHandler processes and attaches featured images to WordPress posts during publishing. It downloads images from URLs, validates them, and attaches them as featured images using the FilesRepository system.
+## Migration to EngineData
 
-## Architecture
+Featured image processing is now handled by the `EngineData::attachImageToPost()` method.
 
-**Location**: `/inc/Core/WordPress/FeaturedImageHandler.php`
-**Dependencies**: FilesRepository (ImageValidator), WordPress media functions
-**Purpose**: Featured image processing and attachment
-
-## Key Methods
-
-### processImage()
-
-Process and attach featured image to post.
-
-```php
-public function processImage(int $post_id, array $engine_data, array $handler_config): ?array
-```
-
-**Parameters**:
-- `$post_id`: WordPress post ID
-- `$engine_data`: Engine data containing `image_file_path`
-- `$handler_config`: Handler configuration settings
-
-**Returns**: Array with attachment details or null if processing failed
-
-**Process**:
-1. Check if image handling is enabled (configuration hierarchy)
-2. Validate repository image file
-3. Create WordPress media attachment
-4. Set as featured image
-
-### isImageHandlingEnabled()
-
-Check if image handling is enabled using configuration hierarchy.
-
-```php
-public function isImageHandlingEnabled(array $handler_config): bool
-```
-
-**Configuration Hierarchy**:
-1. System defaults (`datamachine_settings.wordpress_settings.default_enable_images`)
-2. Handler config (`enable_images`)
-
-**Returns**: Boolean indicating if images should be processed
-
-## Configuration Hierarchy
-
-The handler uses a configuration hierarchy where system-wide defaults always override handler-specific settings:
-
-```php
-// System default takes precedence
-$wp_settings = get_option('datamachine_settings')['wordpress_settings'];
-if (isset($wp_settings['default_enable_images'])) {
-    return (bool) $wp_settings['default_enable_images'];
-}
-
-// Fall back to handler config
-return (bool) ($handler_config['enable_images'] ?? false);
-```
-
-## Integration with FilesRepository
-
-### Image Validation
-
-Uses ImageValidator for comprehensive image validation:
-
-```php
-$validation = $image_validator->validate_repository_file($image_file_path);
-if (!$validation['valid']) {
-    return ['success' => false, 'error' => implode(', ', $validation['errors'])];
-}
-```
-
-### Repository File Attachment
-
-Creates WordPress media attachment from repository file:
-
-```php
-$file_array = [
-    'name' => basename($image_file_path),
-    'tmp_name' => $image_file_path
-];
-$attachment_id = media_handle_sideload($file_array, $post_id);
-```
-
-## WordPress Integration
-
-### Media Library Integration
-
-- Uses `media_handle_sideload()` for proper WordPress media handling
-- Generates all required attachment metadata
-- Creates thumbnails and image sizes automatically
-
-### Featured Image Setting
-
-- Uses `set_post_thumbnail()` for reliable featured image assignment
-- Handles attachment creation errors gracefully
-- Logs all operations for debugging
-
-## Error Handling
-
-### Validation Failures
-
-- Repository file validation errors logged with context
-- Returns structured error response with validation details
-
-### Attachment Creation Errors
-
-- WordPress media errors captured and logged
-- Cleanup performed on attachment creation failures
-
-### Featured Image Setting Errors
-
-- Failed thumbnail setting logged with post/attachment IDs
-- Continues execution even if featured image setting fails
-
-## Logging
-
-Comprehensive logging for all image operations:
-
-```php
-do_action('datamachine_log', 'debug', 'WordPress Featured Image: Successfully set featured image', [
-    'post_id' => $post_id,
-    'attachment_id' => $attachment_id,
-    'image_file_path' => $image_file_path
-]);
-```
-
-## Usage in WordPress Publish Handler
+### Before (v0.2.5 and earlier)
 
 ```php
 $featured_image_handler = new FeaturedImageHandler();
 $result = $featured_image_handler->processImage($post_id, $engine_data, $handler_config);
-
-if ($result && $result['success']) {
-    // Featured image successfully attached
-    $attachment_id = $result['attachment_id'];
-    $attachment_url = $result['attachment_url'];
-}
 ```
 
-## Benefits
+### After (v0.2.6)
 
-- **Configuration Hierarchy**: System defaults override handler settings
-- **Repository Integration**: Uses validated repository files
-- **WordPress Native**: Full WordPress media library integration
-- **Error Resilience**: Graceful handling of various failure scenarios
-- **Comprehensive Logging**: Detailed operation tracking for debugging
+```php
+use DataMachine\Core\EngineData;
 
-## See Also
+$engine = new EngineData($engine_data, $job_id);
+$attachment_id = $engine->attachImageToPost($post_id, $handler_config);
+```
 
-- [WordPress Publish Handler](../handlers/publish/wordpress-publish.md) - Main handler integration
-- [ImageValidator](files-repository.md#imagevalidator) - Image validation component
-- [FilesRepository](files-repository.md) - File management system
+## Current Implementation
+
+The featured image processing functionality is now provided by:
+
+**Class**: `EngineData`
+**Location**: `/inc/Core/EngineData.php`
+**Method**: `attachImageToPost(int $post_id, array $config): ?int`
+
+### Key Features (Preserved)
+
+- Configuration hierarchy (system defaults override handler settings)
+- FilesRepository integration for validated file handling
+- WordPress Media Library integration via `media_handle_sideload()`
+- Featured image setting via `set_post_thumbnail()`
+- Comprehensive error handling and logging
+
+### Configuration
+
+Configuration checking is handled internally by EngineData:
+
+```php
+// Checks $config['enable_images']
+$attachment_id = $engine->attachImageToPost($post_id, $config);
+```
+
+### Image Path Retrieval
+
+EngineData provides helper methods for accessing image data:
+
+```php
+$image_path = $engine->getImagePath(); // Returns 'image_file_path' from engine data
+```
+
+## Related Documentation
+
+- EngineData - Current implementation of featured image processing
+- WordPressSharedTrait (Removed v0.2.7) - Migration guide
+- WordPress Publish Handler - Integration example
+
+## Architecture Benefits
+
+Consolidating featured image handling into EngineData provides:
+
+- **Single Responsibility**: EngineData owns all engine data operations
+- **Reduced Duplication**: Eliminates separate handler class
+- **Unified Interface**: Consistent API for all engine data processing
+- **Simplified Dependencies**: Fewer classes to maintain and test

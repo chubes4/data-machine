@@ -155,12 +155,12 @@ $stored_path = $file_storage->store_file($file_content, $filename, $job_id);
 ## Implementations
 
 All fetch handlers extend this base class:
-- [RSS Handler](../handlers/fetch/rss.md)
-- [Reddit Handler](../handlers/fetch/reddit.md)
-- [WordPress Local Handler](../handlers/fetch/wordpress-local.md)
-- [WordPress Media Handler](../handlers/fetch/wordpress-media.md)
-- [WordPress API Handler](../handlers/fetch/wordpress-api.md)
-- [Google Sheets Handler](../handlers/fetch/google-sheets-fetch.md)
-- [Files Handler](../handlers/fetch/files.md)
+- RSS Handler
+- Reddit Handler
+- WordPress Local Handler
+- WordPress Media Handler
+- WordPress API Handler
+- Google Sheets Handler
+- Files Handler
 
-See [Fetch Handlers Overview](../handlers/fetch/handlers-overview.md) for comparison.
+See Fetch Handlers Overview for comparison.

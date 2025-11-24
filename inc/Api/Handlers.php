@@ -92,7 +92,7 @@ class Handlers {
 		// Get auth providers to detect auth types
 		$auth_providers = apply_filters('datamachine_auth_providers', []);
 
-		// Enrich handler data with auth_type and auth_fields
+		// Enrich handler data with auth_type, auth_fields, and authentication status
 		foreach ($handlers as $slug => &$handler) {
 			if ($handler['requires_auth'] && isset($auth_providers[$slug])) {
 				$auth_instance = $auth_providers[$slug];
@@ -101,6 +101,17 @@ class Handlers {
 				// Add auth fields if available (regardless of auth type)
 				if (method_exists($auth_instance, 'get_config_fields')) {
 					$handler['auth_fields'] = $auth_instance->get_config_fields();
+				}
+
+				// Check if already authenticated
+				$handler['is_authenticated'] = false;
+				if (method_exists($auth_instance, 'is_authenticated')) {
+					$handler['is_authenticated'] = $auth_instance->is_authenticated();
+				}
+
+				// Get account details if authenticated
+				if ($handler['is_authenticated'] && method_exists($auth_instance, 'get_account_details')) {
+					$handler['account_details'] = $auth_instance->get_account_details();
 				}
 			}
 		}

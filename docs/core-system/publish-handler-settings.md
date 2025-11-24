@@ -123,12 +123,12 @@ if ($include_images && $image_file_path) {
 
 All publish handlers extend PublishHandlerSettings:
 
-- [Twitter](../handlers/publish/twitter.md)
-- [Bluesky](../handlers/publish/bluesky.md)
-- [Facebook](../handlers/publish/facebook.md)
-- [Threads](../handlers/publish/threads.md)
-- [WordPress Publish](../handlers/publish/wordpress-publish.md)
-- [Google Sheets Output](../handlers/publish/google-sheets-output.md)
+- Twitter
+- Bluesky
+- Facebook
+- Threads
+- WordPress Publish
+- Google Sheets Output
 
 ## Platform-Specific Extensions
 
@@ -150,7 +150,7 @@ Individual handlers add platform-specific fields:
 
 ## See Also
 
-- [SettingsHandler](settings-handler.md) - Base settings class
-- [FetchHandlerSettings](fetch-handler-settings.md) - Fetch handler base settings
-- [SettingsDisplayService](settings-display-service.md) - UI display logic
-- [PublishHandler](publish-handler.md) - Base publish handler class
+- SettingsHandler - Base settings class
+- FetchHandlerSettings - Fetch handler base settings
+- SettingsDisplayService - UI display logic
+- PublishHandler - Base publish handler class

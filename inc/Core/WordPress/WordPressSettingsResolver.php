@@ -1,0 +1,59 @@
+<?php
+/**
+ * WordPress Settings Resolver
+ *
+ * Centralized utility for resolving WordPress post settings with system defaults override.
+ * Provides single source of truth for WordPress settings resolution across all handlers.
+ *
+ * @package DataMachine\Core\WordPress
+ * @since 0.2.7
+ */
+
+namespace DataMachine\Core\WordPress;
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class WordPressSettingsResolver {
+
+    /**
+     * Get effective post status from handler config with system defaults override.
+     *
+     * System-wide defaults always take precedence over handler-specific configuration.
+     *
+     * @param array $handler_config Handler configuration
+     * @param string $default Default status if not configured (default: 'draft')
+     * @return string Post status (publish, draft, pending, etc.)
+     */
+    public static function getPostStatus(array $handler_config, string $default = 'draft'): string {
+        $all_settings = get_option('datamachine_settings', []);
+        $wp_settings = $all_settings['wordpress_settings'] ?? [];
+        $default_post_status = $wp_settings['default_post_status'] ?? '';
+
+        if (!empty($default_post_status)) {
+            return $default_post_status;
+        }
+        return $handler_config['post_status'] ?? $default;
+    }
+
+    /**
+     * Get effective post author from handler config with system defaults override.
+     *
+     * System-wide defaults always take precedence over handler-specific configuration.
+     *
+     * @param array $handler_config Handler configuration
+     * @param int $default Default author ID if not configured (default: 1)
+     * @return int Post author ID
+     */
+    public static function getPostAuthor(array $handler_config, int $default = 1): int {
+        $all_settings = get_option('datamachine_settings', []);
+        $wp_settings = $all_settings['wordpress_settings'] ?? [];
+        $default_author_id = $wp_settings['default_author_id'] ?? 0;
+
+        if (!empty($default_author_id)) {
+            return $default_author_id;
+        }
+        return $handler_config['post_author'] ?? get_current_user_id() ?: $default;
+    }
+}

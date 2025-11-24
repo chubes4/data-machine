@@ -84,7 +84,10 @@ class TaxonomyHandler {
         return $taxonomy_results;
     }
 
-    public static function getPublicTaxonomies(): array {
+    public static function getPublicTaxonomies(?string $post_type = null): array {
+        if ($post_type !== null) {
+            return get_object_taxonomies($post_type, 'objects');
+        }
         return get_taxonomies(['public' => true], 'objects');
     }
 

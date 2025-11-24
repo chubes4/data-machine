@@ -19,8 +19,15 @@ Complete user documentation for the Data Machine WordPress plugin - an AI-first 
 - ConversationManager - Message formatting and conversation utilities
 - Parameter Systems - Unified parameter architecture and tool building
 - ToolResultFinder - Universal tool result search utility
-- OAuth Handlers - Centralized OAuth 1.0a and 2.0 flow handlers
+- OAuth Handlers - Base authentication provider architecture (v0.2.6)
 - Handler Registration Trait - Standardized handler registration (v0.2.2)
+
+### React Architecture (v0.2.6)
+- HandlerModel - Abstract model layer for handler data operations
+- HandlerFactory - Factory pattern for handler model instantiation
+- useHandlerModel - Custom hook for handler model integration
+- ModalSwitch - Centralized modal routing component
+- HandlerProvider - React context for handler state management
 
 ### Handler Documentation
 

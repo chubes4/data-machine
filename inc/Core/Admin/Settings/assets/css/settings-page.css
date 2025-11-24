@@ -218,28 +218,7 @@
    ADMIN NOTICES AND FEEDBACK
    ======================================================================== */
 
-/* Admin notice styling for AJAX responses */
-.datamachine-admin-notice {
-    padding: 8px 12px;
-    margin: 10px 0;
-    border-left: 4px solid #0073aa;
-    background: #fff;
-    border-radius: 0 3px 3px 0;
-}
-
-.datamachine-admin-notice.notice-success {
-    border-left-color: #00a32a;
-    background: #f0f6fc;
-}
-
-.datamachine-admin-notice.notice-error {
-    border-left-color: #d63638;
-    background: #fcf0f1;
-}
-
-.datamachine-hidden {
-    display: none;
-}
+/* Admin notice and hidden utility now in root.css */
 
 /* ========================================================================
    TOOL ENABLEMENT STATES

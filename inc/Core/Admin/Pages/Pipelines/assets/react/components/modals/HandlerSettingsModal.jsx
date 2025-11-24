@@ -149,8 +149,33 @@ export default function HandlerSettingsModal( {
 						</Button>
 					</div>
 
-					{ handlerInfo.requires_auth && (
-						<div className="datamachine-modal-handler-display">
+				{ handlerInfo.requires_auth && (
+					<div className="datamachine-modal-handler-display">
+						{ handlerInfo.is_authenticated ? (
+							<div className="datamachine-auth-status datamachine-auth-status--connected">
+								<span className="dashicons dashicons-yes-alt"></span>
+								<span>
+									{ handlerInfo.account_details?.username 
+										? sprintf( __( 'Connected as %s', 'datamachine' ), handlerInfo.account_details.username )
+										: __( 'Account Connected', 'datamachine' )
+									}
+								</span>
+								<Button
+									variant="link"
+									size="small"
+									onClick={ () => {
+										if ( onOAuthConnect ) {
+											onOAuthConnect(
+												handlerSlug,
+												handlerInfo
+											);
+										}
+									} }
+								>
+									{ __( 'Manage Connection', 'datamachine' ) }
+								</Button>
+							</div>
+						) : (
 							<Button
 								variant="secondary"
 								onClick={ () => {
@@ -164,8 +189,9 @@ export default function HandlerSettingsModal( {
 							>
 								{ __( 'Connect Account', 'datamachine' ) }
 							</Button>
-						</div>
-					) }
+						) }
+					</div>
+				) }
 				</div>
 
 				{ /* Loading state while fetching settings schema */ }

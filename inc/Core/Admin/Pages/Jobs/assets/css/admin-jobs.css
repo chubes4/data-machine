@@ -146,30 +146,7 @@
     margin: 0;
 }
 
-.datamachine-admin-notice {
-    margin-top: 1rem;
-    padding: 12px;
-    border-left: 4px solid;
-    background: #fff;
-}
-
-.datamachine-admin-notice.success {
-    border-left-color: #46b450;
-    background-color: #f0f8f0;
-    color: #2e7d32;
-}
-
-.datamachine-admin-notice.error {
-    border-left-color: #dc3232;
-    background-color: #fef5f5;
-    color: #a94442;
-}
-
-.datamachine-admin-notice.warning {
-    border-left-color: #ffb900;
-    background-color: #fffbf0;
-    color: #856404;
-}
+/* Admin notice base now in root.css - only page-specific variants here if needed */
 
 /* Clear Jobs Section Styles */
 .datamachine-admin-section + .datamachine-admin-section {
@@ -202,9 +179,7 @@
 }
 
 /* Utility classes for inline style replacement */
-.datamachine-hidden {
-    display: none;
-}
+/* datamachine-hidden now in root.css */
 
 .datamachine-section-border {
     margin-top: 2rem;

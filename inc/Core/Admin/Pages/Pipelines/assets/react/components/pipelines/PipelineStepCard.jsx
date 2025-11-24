@@ -164,44 +164,42 @@ export default function PipelineStepCard( {
 					</Notice>
 				) }
 
-				<div className="datamachine-step-card-wrapper">
-					<div className="datamachine-step-card-header">
-						<strong>{ stepTypes[step.step_type]?.label || step.step_type }</strong>
-					</div>
-
-					{ /* AI Configuration Display */ }
-					{ aiConfig && (
-						<div className="datamachine-ai-config-display datamachine-step-card-ai-config">
-							<div className="datamachine-step-card-ai-label">
-								<strong>
-									{ __( 'AI Provider:', 'datamachine' ) }
-								</strong>{ ' ' }
-								{ aiConfig.provider || 'Not configured' }
-								{ ' | ' }
-								<strong>
-									{ __( 'Model:', 'datamachine' ) }
-								</strong>{ ' ' }
-								{ aiConfig.model || 'Not configured' }
-							</div>
-
-							<TextareaControl
-								label={ __( 'System Prompt', 'datamachine' ) }
-								value={ localPrompt }
-								onChange={ handlePromptChange }
-								placeholder={ __(
-									'Enter system prompt for AI processing...',
-									'datamachine'
-								) }
-								rows={ 6 }
-								help={
-									isSaving
-										? __( 'Saving...', 'datamachine' )
-										: null
-								}
-							/>
-						</div>
-					) }
+				<div className="datamachine-step-card-header">
+					<strong>{ stepTypes[step.step_type]?.label || step.step_type }</strong>
 				</div>
+
+				{ /* AI Configuration Display */ }
+				{ aiConfig && (
+					<div className="datamachine-ai-config-display datamachine-step-card-ai-config">
+						<div className="datamachine-step-card-ai-label">
+							<strong>
+								{ __( 'AI Provider:', 'datamachine' ) }
+							</strong>{ ' ' }
+							{ aiConfig.provider || 'Not configured' }
+							{ ' | ' }
+							<strong>
+								{ __( 'Model:', 'datamachine' ) }
+							</strong>{ ' ' }
+							{ aiConfig.model || 'Not configured' }
+						</div>
+
+						<TextareaControl
+							label={ __( 'System Prompt', 'datamachine' ) }
+							value={ localPrompt }
+							onChange={ handlePromptChange }
+							placeholder={ __(
+								'Enter system prompt for AI processing...',
+								'datamachine'
+							) }
+							rows={ 6 }
+							help={
+								isSaving
+									? __( 'Saving...', 'datamachine' )
+									: null
+							}
+						/>
+					</div>
+				) }
 
 				{ /* Action Buttons */ }
 				<div className="datamachine-step-card-actions">

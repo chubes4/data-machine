@@ -78,8 +78,8 @@ export default function PipelinesApp() {
 			...modalData,
 			handlerSlug: selectedHandlerSlug,
 			currentSettings: result?.data?.step_config?.handler_config || {},
-			// Seed handler details if returned by the update endpoint to avoid an immediate GET
-			handlerDetails: result?.data?.handler_settings_display ?? null,
+			// Don't seed handlerDetails - let the hook fetch the complete details to ensure we have the settings schema
+			// handlerDetails: result?.data?.handler_settings_display ?? null,
 		});
 	}, [ openModal, modalData, updateHandlerMutation ] );
 
@@ -168,7 +168,7 @@ export default function PipelinesApp() {
 						) }
 					</p>
 				</Notice>
-				<div style={{ marginTop: '20px', textAlign: 'center' }}>
+				<div className="datamachine-empty-state-actions">
 					<Button
 						variant="primary"
 						onClick={ handleAddNewPipeline }
@@ -228,7 +228,6 @@ export default function PipelinesApp() {
 			<PipelineCard
 				pipeline={ displayPipeline }
 				flows={ flows }
-				openModal={ openModal }
 			/>
 
 			{ /* Centralized Modal Management */ }

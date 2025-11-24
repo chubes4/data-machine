@@ -181,6 +181,6 @@ $flow_config = [
 
 ## Related Documentation
 
-- [Engine Execution System](/docs/core-system/engine-execution.md)
-- [Step Base Class](/docs/core-system/step.md)
-- [Database Schema](/docs/core-system/database-schema.md)
+- Engine Execution System
+- Step Base Class
+- Database Schema
