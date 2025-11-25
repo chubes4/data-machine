@@ -15,32 +15,32 @@ Complete REST API reference for Data Machine
 ## Endpoint Categories
 
 ### Workflow Execution
-- [Execute](execute.md) - Trigger flows and ephemeral workflows
-- [Flow Scheduling](schedule.md) - Flow scheduling integrated into Flows API
+- Execute: Trigger flows and ephemeral workflows
+- Flow Scheduling: Flow scheduling integrated into Flows API
 
 ### Pipeline & Flow Management
-- [Pipelines](pipelines.md) - Create, manage, and export pipeline templates
-- [Flows](flows.md) - Create, duplicate, and delete flow instances
-- [Jobs](jobs.md) - Monitor and manage job executions
+- Pipelines: Create, manage, and export pipeline templates
+- Flows: Create, duplicate, and delete flow instances
+- Jobs: Monitor and manage job executions
 
 ### Content & Data
-- [Files](files.md) - Upload files for pipeline processing
-- [ProcessedItems](processed-items.md) - Manage deduplication tracking
+- Files: Upload files for pipeline processing
+- ProcessedItems: Manage deduplication tracking
 
 ### AI & Chat
-- [Chat](chat.md) - Conversational AI workflow builder
-- [Handlers](handlers.md) - Available fetch/publish/update handlers
-- [Providers](providers.md) - AI provider configuration
-- [Tools](tools.md) - AI tool availability
+- Chat: Conversational AI workflow builder
+- Handlers: Available fetch/publish/update handlers
+- Providers: AI provider configuration
+- Tools: AI tool availability
 
 ### Configuration
-- [Settings](settings.md) - Tool configuration and cache management
-- [Users](users.md) - User preferences
-- [Auth](auth.md) - OAuth account management
-- [StepTypes](step-types.md) - Available pipeline step types
+- Settings: Tool configuration and cache management
+- Users: User preferences
+- Auth: OAuth account management
+- StepTypes: Available pipeline step types
 
 ### Monitoring
-- [Logs](logs.md) - Log management and debugging
+- Logs: Log management and debugging
 
 ## Common Patterns
 
@@ -51,7 +51,7 @@ Data Machine supports two authentication methods:
 1. **Application Password** (Recommended for external integrations)
 2. **Cookie Authentication** (WordPress admin sessions)
 
-See [Authentication Guide](authentication.md) for detailed setup instructions.
+See Authentication Guide documentation for detailed setup instructions.
 
 ### Error Handling
 
@@ -61,7 +61,7 @@ All endpoints return standardized error responses following WordPress REST API c
 - `rest_invalid_param` (400) - Invalid parameters
 - Resource-specific errors (404, 500)
 
-See [Error Handling Reference](errors.md) for complete error code documentation.
+See Error Handling Reference documentation for complete error code documentation.
 
 ### Pagination
 
@@ -82,16 +82,14 @@ register_rest_route('datamachine/v1', '/pipelines', [
 ]);
 ```
 
-For detailed implementation patterns, see:
-- [Core Actions](../api-reference/core-actions.md)
-- [Core Filters](../api-reference/core-filters.md)
+For detailed implementation patterns, see Core Actions and Core Filters documentation in the api-reference directory.
 
 ## Related Documentation
 
-- [REST API Authentication](authentication.md) - Detailed authentication guide
-- [Error Handling](errors.md) - Complete error reference
-- [Engine Execution](../core-system/engine-execution.md) - Understanding workflow execution
-- [Settings Configuration](../admin-interface/settings-configuration.md) - Configure API access
+- REST API Authentication: Detailed authentication guide
+- Error Handling: Complete error reference
+- Engine Execution: Understanding workflow execution
+- Settings Configuration: Configure API access
 
 ---
 

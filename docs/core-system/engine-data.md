@@ -1,13 +1,11 @@
 # EngineData
 
 **Location**: `/inc/Core/EngineData.php`
-**Since**: v0.2.1 (enhanced in v0.2.6)
+**Since**: v0.2.1 (platform-agnostic refactoring in v0.2.7)
 
 ## Overview
 
-EngineData encapsulates the engine data array that persists across pipeline execution, providing standardized methods for applying engine data (source URLs, images) to various outputs (WordPress posts, social media).
-
-As of v0.2.6, EngineData consolidates featured image and source URL handling functionality previously provided by separate FeaturedImageHandler and SourceUrlHandler classes.
+EngineData encapsulates the engine data array that persists across pipeline execution, providing platform-agnostic data access methods for source URLs, images, and metadata. As of v0.2.7, EngineData is a pure data container with no WordPress-specific operations.
 
 ## Architecture
 
@@ -85,95 +83,7 @@ if ($image_path && file_exists($image_path)) {
 }
 ```
 
-### WordPress Operations
 
-#### applySourceAttribution()
-
-Apply source URL attribution to content with Gutenberg block generation.
-
-```php
-public function applySourceAttribution(string $content, array $config): string
-```
-
-**Parameters**:
-- `$content`: The content to modify
-- `$config`: Handler configuration (checks `include_source`)
-
-**Returns**: Modified content with source attribution appended
-
-**Configuration Check**: Returns original content if `$config['include_source']` is false or missing
-
-**Process**:
-1. Check configuration setting
-2. Validate source URL
-3. Detect content type (Gutenberg blocks vs plain text)
-4. Generate appropriate attribution format
-5. Append to content
-
-**Gutenberg Block Output**:
-```html
-<!-- wp:separator -->
-<hr class="wp-block-separator has-alpha-channel-opacity"/>
-<!-- /wp:separator -->
-
-<!-- wp:paragraph -->
-<p>Source: <a href="https://example.com">https://example.com</a></p>
-<!-- /wp:paragraph -->
-```
-
-**Plain Text Output**:
-```
-Source: https://example.com
-```
-
-**Example**:
-```php
-$engine = new EngineData($engine_data, $job_id);
-$content = $engine->applySourceAttribution($content, $handler_config);
-```
-
-#### attachImageToPost()
-
-Attach image from FilesRepository to WordPress post as featured image.
-
-```php
-public function attachImageToPost(int $post_id, array $config): ?int
-```
-
-**Parameters**:
-- `$post_id`: WordPress post ID
-- `$config`: Handler configuration (checks `enable_images`)
-
-**Returns**: Attachment ID on success, null on failure
-
-**Configuration Check**: Returns null if `$config['enable_images']` is false or missing
-
-**Process**:
-1. Check configuration setting
-2. Retrieve image path from engine data
-3. Validate image file exists and is valid image type
-4. Copy file to temporary location (preserves repository file)
-5. Sideload to WordPress Media Library via `media_handle_sideload()`
-6. Set as featured image via `set_post_thumbnail()`
-
-**Error Handling**:
-- Missing or invalid image path
-- File type validation failures
-- WordPress media creation errors
-- Featured image setting failures
-
-**Logging**: Comprehensive logging at debug, warning, and error levels
-
-**Example**:
-```php
-$engine = new EngineData($engine_data, $job_id);
-$attachment_id = $engine->attachImageToPost($post_id, $handler_config);
-
-if ($attachment_id) {
-    $attachment_url = wp_get_attachment_url($attachment_id);
-    // Featured image attached successfully
-}
-```
 
 ### Context Retrieval
 
@@ -258,22 +168,21 @@ $pipeline_config = $engine->getPipelineConfig();
 
 ## Handler Usage
 
-All handlers use EngineData directly for consistent data access:
+All handlers use EngineData for consistent data access:
 
 ```php
 use DataMachine\Core\EngineData;
 
 $engine = new EngineData($engine_data_array, $job_id);
 
-// Apply source attribution
-$content = $engine->applySourceAttribution($content, $config);
-
-// Attach featured image
-$attachment_id = $engine->attachImageToPost($post_id, $config);
-
-// Access data
+// Access data (platform-agnostic)
 $source_url = $engine->getSourceUrl();
 $image_path = $engine->getImagePath();
+$custom_value = $engine->get('custom_field', 'default');
+
+// Access configuration context
+$flow_config = $engine->getFlowConfig();
+$job_context = $engine->getJobContext();
 ```
 
 ## Data Structure
@@ -304,80 +213,50 @@ Engine data array structure:
 ]
 ```
 
-## Logging
-
-All EngineData operations use the `datamachine_log` action for comprehensive logging:
-
-```php
-do_action('datamachine_log', 'debug', 'EngineData: Attached featured image', [
-    'post_id' => $post_id,
-    'attachment_id' => $attachment_id,
-    'job_id' => $this->job_id
-]);
-
-do_action('datamachine_log', 'warning', 'EngineData: Image file not found', [
-    'path' => $image_path,
-    'job_id' => $this->job_id
-]);
-
-do_action('datamachine_log', 'error', 'EngineData: Failed to create media attachment', [
-    'error' => $error_message,
-    'post_id' => $post_id,
-    'job_id' => $this->job_id
-]);
-```
-
 ## Architecture Benefits
 
-Consolidating engine data operations into EngineData provides:
+EngineData provides a platform-agnostic data access layer:
 
-**Single Responsibility**: One class owns all engine data operations
+**Single Responsibility**: Pure data container with no platform-specific operations
 
-**Reduced Duplication**: Eliminates separate FeaturedImageHandler and SourceUrlHandler classes
+**Platform Agnostic**: No WordPress dependencies, usable across all handlers
 
-**Unified Interface**: Consistent API for all engine data processing
+**Unified Interface**: Consistent API for all engine data retrieval
 
-**Simplified Dependencies**: Fewer classes to maintain and test
+**Simplified Dependencies**: Minimal class responsibilities
 
-**Centralized Logic**: All engine data operations in one location
+**Centralized Access**: Single source of truth for engine data
 
-**Job Context**: Automatic job ID association for logging and tracking
+**Job Context**: Automatic job ID association for tracking
 
-## Migration from v0.2.5
+## Migration from v0.2.6
 
-**FeaturedImageHandler** functionality consolidated into `EngineData::attachImageToPost()`:
-
-```php
-// Before (v0.2.5)
-$handler = new FeaturedImageHandler();
-$result = $handler->processImage($post_id, $engine_data, $config);
-
-// After (v0.2.6+)
-$engine = new EngineData($engine_data, $job_id);
-$attachment_id = $engine->attachImageToPost($post_id, $config);
-```
-
-**SourceUrlHandler** functionality consolidated into `EngineData::applySourceAttribution()`:
+**v0.2.7 Breaking Changes** - WordPress-specific methods removed from EngineData:
 
 ```php
-// Before (v0.2.5)
-$handler = new SourceUrlHandler();
-$content = $handler->processSourceUrl($content, $engine_data, $config);
-
-// After (v0.2.6+)
+// Before (v0.2.6) - WordPress operations in EngineData
 $engine = new EngineData($engine_data, $job_id);
 $content = $engine->applySourceAttribution($content, $config);
+$attachment_id = $engine->attachImageToPost($post_id, $config);
+
+// After (v0.2.7) - Use WordPressPublishHelper for WordPress operations
+use DataMachine\Core\WordPress\WordPressPublishHelper;
+
+$engine = new EngineData($engine_data, $job_id);
+$content = WordPressPublishHelper::applySourceAttribution($content, $source_url, $config);
+$attachment_id = WordPressPublishHelper::attachImageToPost($post_id, $image_path, $config);
 ```
+
+**Why This Change**: Restores platform-agnostic architecture. EngineData now matches the pattern used by all social media handlers (Twitter, Threads, Bluesky, Facebook) which only access data, never perform platform-specific operations.
 
 ## Related Documentation
 
-- Featured Image Handler (Deprecated v0.2.6) - Migration guide
-- Source URL Handler (Deprecated v0.2.6) - Migration guide
+- WordPressPublishHelper - WordPress-specific publishing operations
 - WordPress Components - Component architecture overview
-- WordPress Publish Handler - Integration example
+- WordPress Publish Handler - Integration example with WordPressPublishHelper
 - FilesRepository - Image file management
 
 ---
 
 **Implementation**: `/inc/Core/EngineData.php`
-**Architecture**: Encapsulation pattern with centralized engine data operations
+**Architecture**: Platform-agnostic data container with pure data access methods

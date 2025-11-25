@@ -2,7 +2,7 @@
 
 Data Machine — WordPress plugin for automating content workflows with AI. Visual pipeline builder, chat agent, REST API, and extensibility via handlers and tools.
 
-Version: 0.2.6
+Version: 0.2.7
 
 This file provides a concise, present-tense technical reference for contributors and automated agents. For user-focused docs see datamachine/docs/.
 
@@ -21,7 +21,7 @@ Core architecture
 
 REST API & Admin
 
-- REST endpoints are available under `/wp-json/datamachine/v1/`. See datamachine/docs/api/index.md for current endpoint details and payloads (reference to the API index is provided as a filename, not an inline .md link).
+- REST endpoints are available under `/wp-json/datamachine/v1/`. See API Overview documentation for current endpoint details and payloads.
 - Admin UI is built with React and integrates with the REST API. The UI uses server-side caching and client-side state separation for performance.
 
 AI integration

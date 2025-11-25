@@ -10,6 +10,7 @@
 
 namespace DataMachine\Api\Flows;
 
+use DataMachine\Core\Admin\DateFormatter;
 use DataMachine\Engine\Actions\Delete;
 use WP_REST_Server;
 
@@ -375,6 +376,8 @@ class Flows {
 		}
 
 		$flow_id = $flow['flow_id'] ?? null;
+		$last_run_at = $scheduling_config['last_run_at'] ?? null;
+		$next_run = self::get_next_run_time($flow_id);
 
 		return [
 			'flow_id' => $flow_id,
@@ -382,8 +385,10 @@ class Flows {
 			'pipeline_id' => $flow['pipeline_id'] ?? null,
 			'flow_config' => $flow_config,
 			'scheduling_config' => $scheduling_config,
-			'last_run' => $scheduling_config['last_run_at'] ?? null,
-			'next_run' => self::get_next_run_time($flow_id),
+			'last_run' => $last_run_at,
+			'last_run_display' => DateFormatter::format_for_display($last_run_at),
+			'next_run' => $next_run,
+			'next_run_display' => DateFormatter::format_for_display($next_run),
 		];
 	}
 
@@ -397,7 +402,7 @@ class Flows {
 
 		$next_timestamp = as_next_scheduled_action('datamachine_run_flow_now', [$flow_id], 'datamachine');
 
-		return $next_timestamp ? gmdate('Y-m-d H:i:s', $next_timestamp) : null;
+		return $next_timestamp ? wp_date('Y-m-d H:i:s', $next_timestamp) : null;
 	}
 
 	/**

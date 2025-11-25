@@ -2,23 +2,23 @@
  * Flow Footer Component
  *
  * Display scheduling metadata for a flow.
+ * Uses pre-formatted display strings from backend (no client-side date parsing).
  */
 
 import { __ } from '@wordpress/i18n';
-import { formatDateTime } from '../../utils/formatters';
 
 /**
  * Flow Footer Component
  *
  * @param {Object} props - Component props
- * @param {Object} props.schedulingConfig - Scheduling configuration
- * @param {string} props.schedulingConfig.interval - Schedule interval
- * @param {string} props.schedulingConfig.last_run_at - Last run timestamp
- * @param {string} props.schedulingConfig.next_run_time - Next run timestamp
+ * @param {Object} props.scheduling - Scheduling display data
+ * @param {string} props.scheduling.interval - Schedule interval
+ * @param {string} props.scheduling.last_run_display - Pre-formatted last run display
+ * @param {string} props.scheduling.next_run_display - Pre-formatted next run display
  * @returns {React.ReactElement} Flow footer
  */
-export default function FlowFooter( { schedulingConfig } ) {
-	const { interval, last_run_at, next_run_time } = schedulingConfig || {};
+export default function FlowFooter( { scheduling } ) {
+	const { interval, last_run_display, next_run_display } = scheduling || {};
 
 	const scheduleDisplay =
 		interval && interval !== 'manual'
@@ -34,13 +34,13 @@ export default function FlowFooter( { schedulingConfig } ) {
 
 			<div className="datamachine-flow-meta-item">
 				<strong>{ __( 'Last Run:', 'datamachine' ) }</strong>{ ' ' }
-				{ formatDateTime( last_run_at ) }
+				{ last_run_display || __( 'Never', 'datamachine' ) }
 			</div>
 
 			{ interval && interval !== 'manual' && (
 				<div className="datamachine-flow-meta-item">
 					<strong>{ __( 'Next Run:', 'datamachine' ) }</strong>{ ' ' }
-					{ formatDateTime( next_run_time ) }
+					{ next_run_display || __( 'Never', 'datamachine' ) }
 				</div>
 			) }
 		</div>

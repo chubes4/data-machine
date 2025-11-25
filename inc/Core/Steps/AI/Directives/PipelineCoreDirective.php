@@ -42,11 +42,7 @@ class PipelineCoreDirective {
             'content' => $directive
         ]);
 
-        do_action('datamachine_log', 'debug', 'Pipeline Core Directive: Injected foundational identity', [
-            'directive_length' => strlen($directive),
-            'provider' => $provider_name,
-            'total_messages' => count($request['messages'])
-        ]);
+
 
         return $request;
     }

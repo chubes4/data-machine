@@ -131,8 +131,8 @@
 			const status = job.status || 'unknown';
 			const statusDisplay = this.formatStatus( status );
 			const statusClass = this.getStatusClass( status );
-			const createdAt = this.formatDate( job.created_at );
-			const completedAt = this.formatDate( job.completed_at );
+			const createdAt = job.created_at_display || '';
+			const completedAt = job.completed_at_display || '';
 
 			const tr = document.createElement( 'tr' );
 
@@ -200,27 +200,13 @@
 		/**
 		 * Format date for display
 		 *
-		 * @param {string} dateString - The date string to format
+		 * Backend sends pre-formatted display strings via *_display fields.
+		 * This method is kept for backwards compatibility but just passes through.
+		 *
+		 * @param {string} displayString - Pre-formatted display string from backend
 		 */
-		formatDate( dateString ) {
-			if ( ! dateString ) {
-				return '';
-			}
-
-			try {
-				const date = new Date( dateString.replace( ' ', 'T' ) + 'Z' );
-				const options = {
-					year: 'numeric',
-					month: 'short',
-					day: 'numeric',
-					hour: 'numeric',
-					minute: '2-digit',
-					hour12: true,
-				};
-				return date.toLocaleString( 'en-US', options );
-			} catch ( e ) {
-				return dateString;
-			}
+		formatDate( displayString ) {
+			return displayString || '';
 		},
 
 		/**

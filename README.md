@@ -5,7 +5,7 @@ Tags: ai, automation, content, workflow, pipeline, chat
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 0.2.6
+Stable tag: 0.2.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,7 +54,7 @@ do_action('datamachine_run_flow_now', $flow_id, 'manual');
 ```
 
 REST API
-- The plugin exposes REST endpoints under `/wp-json/datamachine/v1/` for executing flows, managing pipelines and flows, uploading files, and monitoring jobs. See `datamachine/docs/api/index.md` for endpoint details.
+- The plugin exposes REST endpoints under `/wp-json/datamachine/v1/` for executing flows, managing pipelines and flows, uploading files, and monitoring jobs. See API Overview documentation for endpoint details.
 
 Available handlers & tools
 - Fetch sources: files, RSS, Reddit, Google Sheets, WordPress (local, media, API)
@@ -68,4 +68,4 @@ composer test       # Run tests (PHPUnit configured)
 ./build.sh          # Production build to /dist/datamachine.zip
 ```
 
-For full technical details and developer guidance, see `datamachine/CLAUDE.md` and the `datamachine/docs/` folder.
+For full technical details and developer guidance, see CLAUDE.md and the docs directory.

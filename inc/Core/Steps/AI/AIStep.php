@@ -42,14 +42,8 @@ class AIStep extends Step {
 
         $pipeline_step_id = $this->flow_step_config['pipeline_step_id'];
 
-        $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, [
-            'job_id' => $this->job_id,
-            'flow_step_id' => $this->flow_step_id,
-            'data' => $this->dataPackets,
-            'flow_step_config' => $this->flow_step_config
-        ]);
-
-        $provider_name = $step_ai_config['selected_provider'] ?? '';
+        $step_config = $this->engine->getFlowStepConfig($pipeline_step_id);
+        $provider_name = $step_config['provider'] ?? '';
         if (empty($provider_name)) {
             do_action('datamachine_fail_job', $this->job_id, 'ai_provider_missing', [
                 'flow_step_id' => $this->flow_step_id,
@@ -114,6 +108,12 @@ class AIStep extends Step {
 
         $pipeline_step_id = $this->flow_step_config['pipeline_step_id'];
 
+        $step_config = $this->engine->getFlowStepConfig($pipeline_step_id);
+
+        // Get max turns from settings
+        $settings = get_option('datamachine_settings', []);
+        $max_turns = $settings['max_turns'] ?? 12;
+
         $payload = [
             'job_id' => $this->job_id,
             'flow_step_id' => $this->flow_step_id,
@@ -121,12 +121,6 @@ class AIStep extends Step {
             'data' => $this->dataPackets,
             'engine' => $this->engine
         ];
-
-        $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, $payload);
-
-        // Get max turns from settings
-        $settings = get_option('datamachine_settings', []);
-        $max_turns = $settings['max_turns'] ?? 12;
 
         $navigator = new \DataMachine\Engine\StepNavigator();
         $previous_flow_step_id = $navigator->get_previous_flow_step_id($this->flow_step_id, $payload);
@@ -138,7 +132,7 @@ class AIStep extends Step {
 
         $available_tools = ToolExecutor::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id);
 
-        $provider_name = $step_ai_config['selected_provider'] ?? '';
+        $provider_name = $step_config['provider'] ?? $settings['default_provider'] ?? '';
 
         // Execute conversation loop
         $loop = new AIConversationLoop();
@@ -146,7 +140,7 @@ class AIStep extends Step {
             $messages,
             $available_tools,
             $provider_name,
-            $step_ai_config['model'] ?? '',
+            $step_config['model'] ?? $settings['default_model'] ?? '',
             'pipeline',
             $payload,
             $max_turns

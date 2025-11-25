@@ -4,7 +4,7 @@ Creates posts in the local WordPress installation using a modular handler archit
 
 ## Architecture
 
-**Base Class**: Extends [PublishHandler](../../core-system/publish-handler.md) (@since v0.2.1)
+**Base Class**: Extends PublishHandler (@since v0.2.1)
 
 **Inherited Functionality**:
 - Engine data retrieval via `getSourceUrl()` and `getImageFilePath()`
@@ -23,54 +23,53 @@ Creates posts in the local WordPress installation using a modular handler archit
 - Uses configuration hierarchy (system defaults override handler settings)
 
 **Specialized Components**:
-- **`FeaturedImageHandler`**: Featured image processing and media library integration
+- **`WordPressPublishHelper`**: Platform-specific publishing operations (featured images, source attribution)
 - **`TaxonomyHandler`**: Dynamic taxonomy assignment with configuration-based selection
-- **`SourceUrlHandler`**: Source URL attribution with Gutenberg block generation
+- **`WordPressSettingsResolver`**: Configuration resolution with system defaults override
 
-## FeaturedImageHandler
+## Featured Image Processing (@since v0.2.7)
 
-**Purpose**: Centralized featured image processing with configuration hierarchy and WordPress media library integration.
+**Implementation**: `WordPressPublishHelper::attachImageToPost()` static method
 
-### Configuration Hierarchy
+**Purpose**: Attaches images from Files Repository to WordPress posts as featured images with media library integration.
 
-System defaults ALWAYS override handler-specific configuration:
+### Configuration
+
+Configuration checked via `include_images` setting:
 
 ```php
-// Configuration priority system
-if (isset($wp_settings['default_enable_images'])) {
-    return (bool) $wp_settings['default_enable_images'];  // System default overrides
-}
-return (bool) ($handler_config['enable_images'] ?? true);  // Handler fallback
+// WordPressPublishHelper checks configuration
+$attachment_id = WordPressPublishHelper::attachImageToPost($post_id, $image_path, $config);
 ```
 
 ### Features
 
 **Image Processing**:
-- URL validation with `filter_var($url, FILTER_VALIDATE_URL)`
-- Download via WordPress `download_url()` function
+- File path validation with `file_exists()`
+- Image type validation with `wp_check_filetype()`
 - Media library integration with `media_handle_sideload()`
 - Featured image assignment with `set_post_thumbnail()`
 
 **Error Handling**:
-- Download failure management
+- Missing file detection
+- Invalid image type rejection
 - Attachment creation error handling
-- Temporary file cleanup with `wp_delete_file()`
+- Temporary file cleanup
 - Comprehensive logging throughout process
 
 **Usage Example**:
 ```php
-$image_handler = new FeaturedImageHandler();
-$result = $image_handler->processImage($post_id, $parameters, $handler_config);
+use DataMachine\Core\EngineData;
+use DataMachine\Core\WordPress\WordPressPublishHelper;
 
-// Parameter extraction
-$image_url = $parameters['image_url'] ?? null;
+// Get image path from EngineData
+$engine = new EngineData($engine_data, $job_id);
+$image_path = $engine->getImagePath();
 
-// Result structure
-[
-    'success' => true,
-    'attachment_id' => 123,
-    'attachment_url' => 'https://site.com/wp-content/uploads/image.jpg'
-]
+// Attach image using helper
+$attachment_id = WordPressPublishHelper::attachImageToPost($post_id, $image_path, $config);
+
+// Returns: attachment ID (int) or null on failure
 ```
 
 ## TaxonomyHandler
@@ -147,22 +146,21 @@ $parameters = [
 ]
 ```
 
-## SourceUrlHandler
+## Source URL Attribution (@since v0.2.7)
 
-**Purpose**: Source URL processing with configuration hierarchy and Gutenberg block generation for link attribution.
+**Implementation**: `WordPressPublishHelper::applySourceAttribution()` static method
+
+**Purpose**: Appends source URLs to content with automatic Gutenberg block generation or plain text formatting.
 
 **Engine Data Source**: `source_url` retrieved from fetch handlers via `datamachine_engine_data` filter
 
-### Configuration Hierarchy
+### Configuration
 
-Same pattern as FeaturedImageHandler - system defaults override handler config:
+Configuration checked via `link_handling` setting:
 
 ```php
-// Configuration priority system
-if (isset($wp_settings['default_include_source'])) {
-    return (bool) $wp_settings['default_include_source'];  // System override
-}
-return (bool) ($handler_config['include_source'] ?? false);  // Handler fallback
+// WordPressPublishHelper checks configuration
+$content = WordPressPublishHelper::applySourceAttribution($content, $source_url, $config);
 ```
 
 ### Features
@@ -170,9 +168,11 @@ return (bool) ($handler_config['include_source'] ?? false);  // Handler fallback
 **Source Processing**:
 - URL validation with `filter_var($url, FILTER_VALIDATE_URL)`
 - URL sanitization with `esc_url()`
-- Gutenberg block generation for clean integration
+- Automatic content type detection with `has_blocks()`
+- Gutenberg block generation for block content
+- Plain text formatting for classic content
 
-**Block Generation**:
+**Block Generation** (for Gutenberg content):
 ```php
 // Generated Gutenberg blocks
 "<!-- wp:separator --><hr class=\"wp-block-separator has-alpha-channel-opacity\"/><!-- /wp:separator -->
@@ -180,41 +180,44 @@ return (bool) ($handler_config['include_source'] ?? false);  // Handler fallback
 <!-- wp:paragraph --><p>Source: <a href=\"{sanitized_url}\">{sanitized_url}</a></p><!-- /wp:paragraph -->"
 ```
 
-**Content Integration**:
-- Appends source blocks to existing content
-- Maintains clean content structure
-- Preserves content formatting
+**Plain Text Format** (for classic content):
+```php
+"\n\nSource: {sanitized_url}"
+```
 
 **Usage Example**:
 ```php
-$source_handler = new SourceUrlHandler();
-$final_content = $source_handler->processSourceUrl($content, $engine_data, $handler_config);
+use DataMachine\Core\EngineData;
+use DataMachine\Core\WordPress\WordPressPublishHelper;
 
-// Engine data access (from WordPress publish handler)
-$job_id = $parameters['job_id'] ?? null;
-$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
-$source_url = $engine_data['source_url'] ?? null;
+// Get source URL from EngineData
+$engine = new EngineData($engine_data, $job_id);
+$source_url = $engine->getSourceUrl();
 
-// Returns content with appended Gutenberg source attribution blocks
+// Apply source attribution using helper
+$content = WordPressPublishHelper::applySourceAttribution($content, $source_url, $config);
+
+// Returns: modified content with source attribution (if configured)
 ```
 
 ## Main Handler Integration
 
-### Tool Call Workflow
+### Tool Call Workflow (@since v0.2.7)
 
 The WordPress handler extends `PublishHandler` and implements the `executePublish()` method:
 
 ```php
+use DataMachine\Core\EngineData;
+use DataMachine\Core\WordPress\WordPressPublishHelper;
+use DataMachine\Core\WordPress\TaxonomyHandler;
+use DataMachine\Core\WordPress\WordPressSettingsResolver;
+
 class WordPress extends PublishHandler {
-    private $featured_image_handler;
-    private $source_url_handler;
     private $taxonomy_handler;
 
     public function __construct() {
         parent::__construct('wordpress');
-        $this->featured_image_handler = apply_filters('datamachine_get_featured_image_handler', null);
-        $this->source_url_handler = apply_filters('datamachine_get_source_url_handler', null);
-        $this->taxonomy_handler = apply_filters('datamachine_get_taxonomy_handler', null);
+        $this->taxonomy_handler = new TaxonomyHandler();
     }
 
     protected function executePublish(array $parameters, array $handler_config): array {
@@ -223,38 +226,55 @@ class WordPress extends PublishHandler {
             return $this->errorResponse('Missing required parameters');
         }
 
-        // 2. Get engine data via base class method
+        // 2. Create EngineData instance for data access
         $job_id = $parameters['job_id'] ?? null;
-        $engine_data = $this->getEngineData($job_id);
+        $engine = new EngineData($parameters['engine_data'] ?? [], $job_id);
 
-        // 3. Process source URL in content
-        $content = $this->source_url_handler->processSourceUrl(
+        // 3. Get source URL and apply source attribution using helper
+        $source_url = $engine->getSourceUrl();
+        $content = WordPressPublishHelper::applySourceAttribution(
             $parameters['content'],
-            $engine_data,
+            $source_url,
             $handler_config
         );
 
-        // 4. Create WordPress post with configuration hierarchy
+        // 4. Resolve configuration with system defaults
+        $resolver = new WordPressSettingsResolver();
+        $post_status = $resolver->resolvePostStatus($handler_config);
+        $post_author = $resolver->resolvePostAuthor($handler_config);
+
+        // 5. Create WordPress post
         $post_data = [
             'post_title' => sanitize_text_field($parameters['title']),
             'post_content' => $content,
-            'post_status' => $this->getEffectivePostStatus($handler_config),
+            'post_status' => $post_status,
             'post_type' => $handler_config['post_type'],
-            'post_author' => $this->getEffectivePostAuthor($handler_config)
+            'post_author' => $post_author
         ];
 
         $post_id = wp_insert_post($post_data);
 
-        // 5. Process taxonomies and featured image
-        $taxonomy_results = $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config);
-        $featured_image_result = $this->featured_image_handler->processImage($post_id, $engine_data, $handler_config);
+        // 6. Process taxonomies
+        $taxonomy_results = $this->taxonomy_handler->processTaxonomies(
+            $post_id, 
+            $parameters, 
+            $handler_config
+        );
 
-        // 6. Return standardized success response
+        // 7. Attach featured image using helper
+        $image_path = $engine->getImagePath();
+        $attachment_id = WordPressPublishHelper::attachImageToPost(
+            $post_id, 
+            $image_path, 
+            $handler_config
+        );
+
+        // 8. Return standardized success response
         return $this->successResponse([
             'post_id' => $post_id,
             'post_url' => get_permalink($post_id),
             'taxonomy_results' => $taxonomy_results,
-            'featured_image_result' => $featured_image_result
+            'attachment_id' => $attachment_id
         ]);
     }
 }
@@ -279,8 +299,8 @@ All configuration parameters must be provided in handler config:
 - `content`: Post content (sanitized with `wp_kses_post`)
 
 **Optional**:
-- `image_url`: Featured image URL for `FeaturedImageHandler`
-- `source_url`: Source attribution URL for `SourceUrlHandler`
+- `image_url`: Featured image URL (processed by `WordPressPublishHelper`)
+- `source_url`: Source attribution URL (processed by `WordPressPublishHelper`)
 - `category`: Category assignment for `TaxonomyHandler`
 - `tags`: Tags assignment (string or array) for `TaxonomyHandler`
 - Custom taxonomy parameters for `TaxonomyHandler`
@@ -406,108 +426,88 @@ The modular WordPress publish handler architecture provides enhanced maintainabi
 
 ## WordPress Shared Components
 
-The WordPress publish handler uses centralized shared components from `/inc/Core/WordPress/` that provide reusable functionality across all WordPress-related handlers (publish, fetch, update).
+The WordPress publish handler uses centralized shared components from `/datamachine/inc/Core/WordPress/` that provide reusable functionality across all WordPress-related handlers (publish, fetch, update).
 
-### WordPressSettingsHandler
+### WordPressPublishHelper
 
-**Location**: `/inc/Core/WordPress/WordPressSettingsHandler.php`
-**Purpose**: Centralized WordPress settings utilities for handler configuration
-**Since**: 0.2.1
+**Location**: `/datamachine/inc/Core/WordPress/WordPressPublishHelper.php`
+**Purpose**: WordPress-specific publishing operations
+**Since**: 0.2.7
 
-Provides reusable WordPress-specific settings utilities for taxonomy fields, post type options, and user options, eliminating duplication between Publish, Fetch, and Update handler Settings classes.
+Provides static methods for WordPress publishing operations including media attachment and content modification.
 
 **Key Methods**:
 
-#### get_taxonomy_fields()
+#### attachImageToPost()
 
-Generates dynamic taxonomy field definitions for all public taxonomies.
+Attaches image from Files Repository to WordPress post as featured image.
 
 ```php
-$taxonomy_fields = WordPressSettingsHandler::get_taxonomy_fields([
-    'field_suffix' => '_selection',  // or '_filter'
-    'first_options' => [
-        'skip' => __('Skip', 'datamachine'),
-        'ai_decides' => __('AI Decides', 'datamachine')
-    ],
-    'description_template' => __('Configure %1$s assignment...', 'datamachine')
-]);
+$attachment_id = WordPressPublishHelper::attachImageToPost($post_id, $image_path, $config);
+// Returns: int (attachment ID) or null on failure
 ```
 
-**Returns**: Array of field definitions for all public taxonomies with term options.
+#### applySourceAttribution()
 
-#### sanitize_taxonomy_fields()
-
-Sanitizes dynamic taxonomy field settings with validation.
+Appends source URL to content with Gutenberg blocks or plain text.
 
 ```php
-$sanitized = WordPressSettingsHandler::sanitize_taxonomy_fields($raw_settings, [
-    'field_suffix' => '_selection',
-    'allowed_values' => ['skip', 'ai_decides'],
-    'default_value' => 'skip'
-]);
+$content = WordPressPublishHelper::applySourceAttribution($content, $source_url, $config);
+// Returns: string (modified content)
 ```
 
-**Returns**: Sanitized taxonomy settings validated against allowed values and term existence.
+### TaxonomyHandler
 
-#### get_post_type_options()
+**Location**: `/datamachine/inc/Core/WordPress/TaxonomyHandler.php`
+**Purpose**: Dynamic taxonomy assignment with configuration-based processing
+**Since**: 0.2.1
 
-Returns available WordPress post type options for handler configuration.
+Processes taxonomy assignments based on configuration (skip, AI-decided, or pre-selected terms).
+
+### WordPressSettingsResolver
+
+**Location**: `/datamachine/inc/Core/WordPress/WordPressSettingsResolver.php`
+**Purpose**: Configuration resolution with system defaults override
+**Since**: 0.2.7
+
+Resolves effective configuration values by checking system defaults first, then handler configuration.
+
+**Key Methods**:
 
 ```php
-$post_types = WordPressSettingsHandler::get_post_type_options($include_any = false);
-// Returns: ['post' => 'Posts', 'page' => 'Pages', 'custom_type' => 'Custom Type']
+$resolver = new WordPressSettingsResolver();
+$post_status = $resolver->resolvePostStatus($handler_config);
+$post_author = $resolver->resolvePostAuthor($handler_config);
 ```
 
-#### get_user_options()
+### WordPressSettingsHandler
 
-Returns available WordPress users for post authorship selection.
+**Location**: `/datamachine/inc/Core/WordPress/WordPressSettingsHandler.php`
+**Purpose**: Centralized WordPress settings utilities for handler configuration
+**Since**: 0.2.1
+
+Provides reusable WordPress-specific settings utilities for taxonomy fields, post type options, and user options.
+
+**Key Methods**:
 
 ```php
+// Generate taxonomy field definitions
+$taxonomy_fields = WordPressSettingsHandler::get_taxonomy_fields([...]);
+
+// Get post type options
+$post_types = WordPressSettingsHandler::get_post_type_options();
+
+// Get user options
 $users = WordPressSettingsHandler::get_user_options();
-// Returns: [1 => 'Admin User', 2 => 'Editor User']
 ```
 
 ### WordPressFilters
 
-**Location**: `/inc/Core/WordPress/WordPressFilters.php`
+**Location**: `/datamachine/inc/Core/WordPress/WordPressFilters.php`
 **Purpose**: Self-registration filter system for WordPress components
-**Since**: 0.2.0 (consolidated in v0.2.1)
+**Since**: 0.2.0
 
-Handles automatic registration of WordPress components via filter-based architecture.
-
-**Registration Pattern**:
-```php
-function datamachine_register_wordpress_filters() {
-    add_filter('datamachine_handlers', function($handlers) {
-        $handlers['wordpress'] = [
-            'type' => 'publish',
-            'class' => 'DataMachine\\Core\\Steps\\Publish\\Handlers\\WordPress\\WordPress',
-            'label' => __('WordPress', 'datamachine'),
-            'description' => __('Create WordPress posts with full Gutenberg support', 'datamachine')
-        ];
-        return $handlers;
-    });
-
-    add_filter('datamachine_get_featured_image_handler', function() {
-        return new FeaturedImageHandler();
-    });
-
-    add_filter('datamachine_get_taxonomy_handler', function() {
-        return new TaxonomyHandler();
-    });
-
-    add_filter('datamachine_get_source_url_handler', function() {
-        return new SourceUrlHandler();
-    });
-}
-datamachine_register_wordpress_filters();
-```
-
-**Registered Filters**:
-- `datamachine_handlers` - WordPress handler registration
-- `datamachine_get_featured_image_handler` - FeaturedImageHandler service discovery
-- `datamachine_get_taxonomy_handler` - TaxonomyHandler service discovery
-- `datamachine_get_source_url_handler` - SourceUrlHandler service discovery
+Handles automatic registration of WordPress handler via filter-based architecture.
 
 ### Configuration Hierarchy
 
@@ -517,20 +517,11 @@ System-wide WordPress defaults (from Settings page) override handler-specific co
 1. **System Defaults** (Global WordPress settings from Settings page) - Highest priority
 2. **Handler Configuration** (Flow-specific handler settings) - Fallback
 
-**Example**:
-```php
-// Configuration priority pattern (used across all WordPress components)
-if (isset($wp_settings['default_enable_images'])) {
-    return (bool) $wp_settings['default_enable_images'];  // System default overrides
-}
-return (bool) ($handler_config['enable_images'] ?? true);  // Handler fallback
-```
-
-This configuration hierarchy ensures consistent behavior across all WordPress handlers while allowing per-handler customization when system defaults are not set.
+**Implementation**: `WordPressSettingsResolver` class handles configuration resolution throughout the handler.
 
 ## Related Documentation
 
-- [WordPress Shared Components - FeaturedImageHandler, TaxonomyHandler, SourceUrlHandler](/docs/core-system/wordpress-components.md)
-- [WordPress Fetch Handler](/docs/handlers/fetch/wordpress-local.md)
-- [WordPress Update Handler](/docs/handlers/update/wordpress-update.md)
-- [SettingsHandler Base Class](/docs/core-system/settings-handler.md)
+- WordPress Shared Components - WordPressPublishHelper, TaxonomyHandler, WordPressSettingsResolver
+- WordPress Fetch Handler
+- WordPress Update Handler
+- SettingsHandler Base Class

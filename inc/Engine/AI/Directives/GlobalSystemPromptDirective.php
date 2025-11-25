@@ -47,11 +47,7 @@ class GlobalSystemPromptDirective {
             'content' => trim($global_prompt)
         ]);
 
-        do_action('datamachine_log', 'debug', 'Global System Prompt: Injected background guidance', [
-            'prompt_length' => strlen($global_prompt),
-            'provider' => $provider_name,
-            'total_messages' => count($request['messages'])
-        ]);
+
 
         return $request;
     }

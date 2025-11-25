@@ -95,35 +95,25 @@ class PromptBuilder {
 			return $a['priority'] <=> $b['priority'];
 		});
 
-		// Debug: Log directive order after sorting
-		$sorted_priorities = array_column($this->directives, 'priority');
-		do_action('datamachine_log', 'debug', 'PromptBuilder: Directives sorted', [
-			'priorities' => $sorted_priorities,
-			'expected_order' => 'ascending (low to high)'
-		]);
-
 		// Initialize request
 		$request = [
 			'messages' => $this->messages,
 			'tools' => $this->tools
 		];
 
+		// Track applied directives for consolidated logging
+		$applied_directives = [];
+
 		// Apply each applicable directive
 		foreach ($this->directives as $index => $directiveConfig) {
-			$directive_class = is_string($directiveConfig['directive']) ? $directiveConfig['directive'] : get_class($directiveConfig['directive']);
-			do_action('datamachine_log', 'debug', 'PromptBuilder: Processing directive', [
-				'index' => $index,
-				'priority' => $directiveConfig['priority'],
-				'class' => $directive_class,
-				'agent_type' => $agentType
-			]);
-
 			$directive = $directiveConfig['directive'];
 			$agentTypes = $directiveConfig['agentTypes'];
 
 			// Check if directive applies to this agent type
 			if (in_array('all', $agentTypes) || in_array($agentType, $agentTypes)) {
 				$stepId = $payload['step_id'] ?? null;
+				$directive_class = is_string($directive) ? $directive : get_class($directive);
+				$directive_name = substr($directive_class, strrpos($directive_class, '\\') + 1);
 
 				// Call directive injection method
 				if (is_string($directive) && class_exists($directive)) {
@@ -131,7 +121,28 @@ class PromptBuilder {
 				} elseif (is_object($directive) && method_exists($directive, 'inject')) {
 					$request = $directive->inject($request, $provider, $this->tools, $stepId, $payload);
 				}
+
+				// Track applied directive
+				$applied_directives[] = [
+					'name' => $directive_name,
+					'priority' => $directiveConfig['priority']
+				];
 			}
+		}
+
+		// Consolidated log of applied directives
+		if (!empty($applied_directives)) {
+			$directive_list = array_map(function($dir) {
+				return "{$dir['name']} (priority {$dir['priority']})";
+			}, $applied_directives);
+			
+			do_action('datamachine_log', 'debug', 'PromptBuilder: Applied directives', [
+				'agent_type' => $agentType,
+				'provider' => $provider,
+				'directives_applied' => $directive_list,
+				'total_directives' => count($applied_directives),
+				'total_messages' => count($request['messages'])
+			]);
 		}
 
 		return $request;

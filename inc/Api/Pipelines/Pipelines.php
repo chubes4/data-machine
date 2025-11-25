@@ -10,6 +10,7 @@
 
 namespace DataMachine\Api\Pipelines;
 
+use DataMachine\Core\Admin\DateFormatter;
 use DataMachine\Engine\Actions\Delete;
 use WP_REST_Server;
 
@@ -234,6 +235,9 @@ class Pipelines {
 				);
 			}
 
+			// Add display fields for timestamps
+			$pipeline = self::add_display_fields($pipeline);
+
 			// Apply field filtering if requested
 			if (!empty($requested_fields)) {
 				$pipeline = array_intersect_key($pipeline, array_flip($requested_fields));
@@ -254,6 +258,9 @@ class Pipelines {
 			// All pipelines retrieval
 			$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 			$pipelines = $db_pipelines->get_all_pipelines();
+
+			// Add display fields for timestamps
+			$pipelines = array_map([self::class, 'add_display_fields'], $pipelines);
 
 			// Apply field filtering if requested
 			if (!empty($requested_fields)) {
@@ -396,5 +403,23 @@ class Pipelines {
 			],
 			'message' => __('Pipeline title saved successfully', 'datamachine')
 		]);
+	}
+
+	/**
+	 * Add formatted display fields for timestamps.
+	 *
+	 * @param array $pipeline Pipeline data
+	 * @return array Pipeline data with *_display fields added
+	 */
+	private static function add_display_fields( array $pipeline ): array {
+		if ( isset( $pipeline['created_at'] ) ) {
+			$pipeline['created_at_display'] = DateFormatter::format_for_display( $pipeline['created_at'] );
+		}
+
+		if ( isset( $pipeline['updated_at'] ) ) {
+			$pipeline['updated_at_display'] = DateFormatter::format_for_display( $pipeline['updated_at'] );
+		}
+
+		return $pipeline;
 	}
 }

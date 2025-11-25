@@ -14,6 +14,8 @@
 
 namespace DataMachine\Api;
 
+use DataMachine\Core\Admin\DateFormatter;
+
 if (!defined('WPINC')) {
 	die;
 }
@@ -167,6 +169,9 @@ class Jobs {
 		$jobs = $db_jobs->get_jobs_for_list_table($args);
 		$total_jobs = $db_jobs->get_jobs_count();
 
+		// Add display fields for timestamps
+		$jobs = array_map([self::class, 'add_display_fields'], $jobs);
+
 		return rest_ensure_response([
 			'success' => true,
 			'data' => $jobs,
@@ -196,6 +201,9 @@ class Jobs {
 			);
 		}
 
+		// Add display fields for timestamps
+		$job = self::add_display_fields($job);
+
 		return rest_ensure_response([
 			'success' => true,
 			'data' => $job
@@ -218,5 +226,23 @@ class Jobs {
 			'success' => true,
 			'message' => __('Jobs cleared successfully.', 'datamachine')
 		]);
+	}
+
+	/**
+	 * Add formatted display fields for timestamps.
+	 *
+	 * @param array $job Job data
+	 * @return array Job data with *_display fields added
+	 */
+	private static function add_display_fields( array $job ): array {
+		if ( isset( $job['created_at'] ) ) {
+			$job['created_at_display'] = DateFormatter::format_for_display( $job['created_at'] );
+		}
+
+		if ( isset( $job['completed_at'] ) ) {
+			$job['completed_at_display'] = DateFormatter::format_for_display( $job['completed_at'] );
+		}
+
+		return $job;
 	}
 }

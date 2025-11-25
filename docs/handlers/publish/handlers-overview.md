@@ -35,7 +35,7 @@ Publish handlers distribute processed content to external platforms using AI too
 **WordPress** (`wordpress_publish`)
 - **Character Limit**: No limit
 - **Authentication**: None (local installation)
-- **Features**: Modular handler architecture with `FeaturedImageHandler`, `TaxonomyHandler`, `SourceUrlHandler`, configuration hierarchy, Gutenberg blocks
+- **Features**: Modular handler architecture with `WordPressPublishHelper`, `TaxonomyHandler`, `WordPressSettingsResolver`, configuration hierarchy, Gutenberg blocks
 - **API**: WordPress core functions
 
 **Google Sheets** (`googlesheets_output`)
@@ -316,9 +316,10 @@ if ($http_code !== 200) {
 
 **Unique Features**:
 - Modular handler architecture with specialized components
-- `FeaturedImageHandler` for media library integration
+- `WordPressPublishHelper` for media attachment and source attribution
 - `TaxonomyHandler` with configuration-based processing (skip, AI-decided, pre-selected)
-- `SourceUrlHandler` for Gutenberg block source attribution
+- `WordPressSettingsResolver` for configuration hierarchy
+- Automatic Gutenberg block generation for source attribution
 - Configuration hierarchy (system defaults override handler config)
 - Post status control (draft, publish, private)
 - Author assignment

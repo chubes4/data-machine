@@ -79,7 +79,7 @@ abstract class BaseOAuth2Provider extends BaseAuthProvider {
             $details['scope'] = $account['scope'];
         }
         if (!empty($account['last_refreshed_at'])) {
-            $details['last_refreshed'] = gmdate('Y-m-d H:i:s', $account['last_refreshed_at']);
+            $details['last_refreshed'] = wp_date('Y-m-d H:i:s', $account['last_refreshed_at']);
         }
 
         return $details;

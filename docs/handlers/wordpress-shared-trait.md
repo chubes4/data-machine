@@ -20,19 +20,17 @@ The trait wrapper methods (`processSourceUrl()`, `processFeaturedImage()`) added
 
 All functionality has been moved directly into WordPress handler classes as private methods. Handlers now use **direct EngineData instantiation only** for consistent, predictable data access.
 
-## Key Methods
+## Key Methods (Historical - Pre-v0.2.7)
 
 ### Engine Data Operations
 
 **`processSourceUrl(string $content, $engine_context = null, array $handler_config = []): string`**
-- Applies source URL attribution to content via EngineData
-- Wraps `EngineData::applySourceAttribution()`
-- Automatically creates EngineData instance from various input formats
+- Previously applied source URL attribution to content via EngineData wrapper
+- **Replaced by**: `WordPressPublishHelper::applySourceAttribution()` in v0.2.7
 
 **`processFeaturedImage(int $post_id, $engine_data_or_image_url = null, array $handler_config = []): ?array`**
-- Attaches featured image to WordPress post via EngineData
-- Wraps `EngineData::attachImageToPost()`
-- Returns array with `success`, `attachment_id`, and `attachment_url` on success
+- Previously attached featured image to WordPress post via EngineData wrapper
+- **Replaced by**: `WordPressPublishHelper::attachImageToPost()` in v0.2.7
 
 **`getEngineDataFromParameters(array $parameters): array`**
 - Extracts raw engine data array from parameters
@@ -166,6 +164,7 @@ class WordPress extends PublishHandler {
 ```php
 use DataMachine\Core\EngineData;
 use DataMachine\Core\WordPress\TaxonomyHandler;
+use DataMachine\Core\WordPress\WordPressPublishHelper;
 
 class WordPress extends PublishHandler {
     protected $taxonomy_handler;
@@ -177,12 +176,16 @@ class WordPress extends PublishHandler {
     public function executePublish(array $parameters): array {
         $engine = new EngineData($parameters['engine_data'] ?? [], $parameters['job_id'] ?? null);
         
-        // Direct EngineData usage
-        $content = $engine->applySourceAttribution($content, $config);
-        $attachment_id = $engine->attachImageToPost($post_id, $config);
+        // EngineData provides data access only
+        $source_url = $engine->getSourceUrl();
+        $image_path = $engine->getImagePath();
         
-        // Direct TaxonomyHandler usage
-        $taxonomy_results = $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $config, $engine->all());
+        // WordPressPublishHelper handles WordPress operations
+        $content = WordPressPublishHelper::applySourceAttribution($content, $source_url, $config);
+        $attachment_id = WordPressPublishHelper::attachImageToPost($post_id, $image_path, $config);
+        
+        // TaxonomyHandler handles taxonomy processing
+        $taxonomy_results = $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $config);
         
         return $this->successResponse(['post_id' => $post_id]);
     }
@@ -191,11 +194,15 @@ class WordPress extends PublishHandler {
 
 ## Benefits of Removal
 
-**Single Source of Truth**: EngineData is the only way to access engine data
+**Single Source of Truth**: EngineData provides data access, not operations
+
+**Clear Separation**: Data access (EngineData) separate from WordPress operations (WordPressPublishHelper)
+
+**Platform-Agnostic**: EngineData is now platform-agnostic, only providing data
 
 **Reduced Complexity**: Eliminates wrapper layer and trait resolution logic
 
-**Consistency**: All 9 handlers now follow the same direct EngineData pattern
+**Consistency**: All handlers follow the same clear pattern
 
 **Maintainability**: Less code, clearer architecture, easier testing
 

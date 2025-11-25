@@ -51,11 +51,7 @@ class SiteContextDirective {
             'content' => $context_message
         ]);
 
-        do_action('datamachine_log', 'debug', 'Site Context Directive: Injected site context', [
-            'context_length' => strlen($context_message),
-            'provider' => $provider_name,
-            'total_messages' => count($request['messages'])
-        ]);
+
 
         return $request;
     }

@@ -4,15 +4,114 @@
 
 The WordPress Shared Components are a collection of centralized WordPress functionality introduced in version 0.2.1. These components reduce code duplication and provide consistent WordPress integration across handlers, particularly the WordPress publish and update handlers.
 
-As of v0.2.6, featured image and source URL handling have been consolidated into the EngineData class to reduce duplication and provide a unified interface for engine data operations.
+As of v0.2.7, WordPress-specific publishing operations are provided by WordPressPublishHelper, while EngineData serves as a platform-agnostic data access layer.
 
 ## Architecture
 
 **Location**: `/inc/Core/WordPress/`
-**Components**: 3 specialized classes
-**Since**: 0.2.1 (architecture updated in v0.2.6)
+**Components**: 5 specialized classes
+**Since**: 0.2.1 (architecture updated in v0.2.7)
 
 ## Components
+
+### WordPressPublishHelper
+
+**File**: `WordPressPublishHelper.php`
+**Purpose**: WordPress-specific publishing operations including media attachment and content modification
+**Since**: v0.2.7
+
+**Key Features**:
+- Image attachment to WordPress posts as featured images
+- Source URL attribution with Gutenberg block generation
+- Centralized WordPress publishing utilities
+
+**Static Methods**:
+
+#### attachImageToPost()
+```php
+WordPressPublishHelper::attachImageToPost(int $post_id, ?string $image_path, array $config): ?int
+```
+
+Attach image from Files Repository to WordPress post as featured image.
+
+**Process**:
+1. Check configuration (`include_images`)
+2. Validate image path and file type
+3. Copy to temp location (preserves repository file)
+4. Sideload to Media Library via `media_handle_sideload()`
+5. Set as featured image via `set_post_thumbnail()`
+
+**Returns**: Attachment ID on success, null on failure
+
+#### applySourceAttribution()
+```php
+WordPressPublishHelper::applySourceAttribution(string $content, ?string $source_url, array $config): string
+```
+
+Apply source URL attribution to content based on configuration.
+
+**Process**:
+1. Check configuration (`link_handling` = 'append')
+2. Validate source URL
+3. Detect content type (Gutenberg blocks vs plain text)
+4. Generate appropriate attribution format
+5. Append to content
+
+**Returns**: Modified content with source attribution
+
+**Usage**:
+```php
+use DataMachine\Core\WordPress\WordPressPublishHelper;
+use DataMachine\Core\EngineData;
+
+// Get data from EngineData
+$engine = new EngineData($engine_data, $job_id);
+$image_path = $engine->getImagePath();
+$source_url = $engine->getSourceUrl();
+
+// Use WordPressPublishHelper for WordPress operations
+$attachment_id = WordPressPublishHelper::attachImageToPost($post_id, $image_path, $config);
+$content = WordPressPublishHelper::applySourceAttribution($content, $source_url, $config);
+```
+
+### WordPressSettingsResolver
+
+**File**: `WordPressSettingsResolver.php`
+**Purpose**: Centralized utility for WordPress settings resolution with system defaults override
+**Since**: v0.2.7
+
+**Key Features**:
+- Single source of truth for post status resolution
+- Single source of truth for post author resolution
+- System defaults always override handler configuration
+
+**Static Methods**:
+
+#### getPostStatus()
+```php
+WordPressSettingsResolver::getPostStatus(array $handler_config, string $default = 'draft'): string
+```
+
+Get effective post status from handler config with system defaults override.
+
+**Returns**: Post status (publish, draft, pending, etc.)
+
+#### getPostAuthor()
+```php
+WordPressSettingsResolver::getPostAuthor(array $handler_config, int $default = 1): int
+```
+
+Get effective post author from handler config with system defaults override.
+
+**Returns**: Post author ID
+
+**Usage**:
+```php
+use DataMachine\Core\WordPress\WordPressSettingsResolver;
+
+$post_status = WordPressSettingsResolver::getPostStatus($handler_config);
+$post_author = WordPressSettingsResolver::getPostAuthor($handler_config);
+```
 
 ### TaxonomyHandler
 
@@ -71,35 +170,44 @@ if ($result['success']) {
 - Filter-based component discovery
 - Integration with main handler registration system
 
-## EngineData Integration (v0.2.6)
+## EngineData Integration (v0.2.7)
 
 **Class**: `EngineData`
 **Location**: `/inc/Core/EngineData.php`
-**Since**: 0.2.1 (consolidated featured image and source URL handling in v0.2.6)
+**Since**: 0.2.1 (platform-agnostic refactoring in v0.2.7)
 
-EngineData provides centralized engine data operations for WordPress handlers:
+EngineData provides platform-agnostic data access for all handlers:
 
 **Key Methods**:
-- `applySourceAttribution(string $content, array $config): string` - Apply source URL to content
-- `attachImageToPost(int $post_id, array $config): ?int` - Attach featured image to post
 - `getSourceUrl(): ?string` - Retrieve validated source URL
 - `getImagePath(): ?string` - Retrieve image file path
+- `get(string $key, $default = null)` - Retrieve any engine data value
+- `getJobContext(): array` - Retrieve job execution context
+- `getFlowConfig(): array` - Retrieve flow configuration
 
-**Direct Usage in WordPress Handlers**:
+**Data Access Pattern**:
 
 ```php
-// WordPress handlers use EngineData directly
+// EngineData for data access only (platform-agnostic)
 $engine = new EngineData($engine_data, $job_id);
-$content = $engine->applySourceAttribution($content, $handler_config);
-$attachment_id = $engine->attachImageToPost($post_id, $handler_config);
+$source_url = $engine->getSourceUrl();
+$image_path = $engine->getImagePath();
+
+// WordPressPublishHelper for WordPress operations
+use DataMachine\Core\WordPress\WordPressPublishHelper;
+
+$content = WordPressPublishHelper::applySourceAttribution($content, $source_url, $config);
+$attachment_id = WordPressPublishHelper::attachImageToPost($post_id, $image_path, $config);
 ```
 
 ## Integration Pattern
 
-The WordPress publish handler integrates shared components and EngineData directly:
+The WordPress publish handler integrates shared components following the v0.2.7 architecture:
 
 ```php
 use DataMachine\Core\EngineData;
+use DataMachine\Core\WordPress\WordPressPublishHelper;
+use DataMachine\Core\WordPress\WordPressSettingsResolver;
 use DataMachine\Core\WordPress\TaxonomyHandler;
 
 class WordPress {
@@ -110,16 +218,24 @@ class WordPress {
     }
 
     public function create_wordpress_post($content, $handler_config, $engine_data_array, $job_id) {
-        // Create EngineData instance
+        // Create EngineData instance for data access
         $engine = new EngineData($engine_data_array, $job_id);
         
-        // Apply source attribution via EngineData
-        $content = $engine->applySourceAttribution($content, $handler_config);
+        // Get data from EngineData
+        $source_url = $engine->getSourceUrl();
+        $image_path = $engine->getImagePath();
+        
+        // Apply source attribution via WordPressPublishHelper
+        $content = WordPressPublishHelper::applySourceAttribution($content, $source_url, $handler_config);
+
+        // Resolve WordPress settings
+        $post_status = WordPressSettingsResolver::getPostStatus($handler_config);
+        $post_author = WordPressSettingsResolver::getPostAuthor($handler_config);
 
         $post_id = wp_insert_post($post_data);
 
-        // Process featured image via EngineData
-        $engine->attachImageToPost($post_id, $handler_config);
+        // Process featured image via WordPressPublishHelper
+        WordPressPublishHelper::attachImageToPost($post_id, $image_path, $handler_config);
 
         // Process taxonomies via TaxonomyHandler
         $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config, $engine->all());
@@ -161,8 +277,8 @@ $handler_config = [
 ## Used By
 
 WordPress shared components are used by:
-- WordPress Publish Handler - Uses EngineData directly, TaxonomyHandler
-- WordPress Update Handler - Uses EngineData directly, TaxonomyHandler
+- WordPress Publish Handler - Uses WordPressPublishHelper, WordPressSettingsResolver, TaxonomyHandler, EngineData
+- WordPress Update Handler - Uses WordPressPublishHelper, WordPressSettingsResolver, TaxonomyHandler, EngineData
 - Handler Settings - WordPressSettingsHandler provides common fields
 
 These components eliminate code duplication across WordPress-related handlers and provide consistent WordPress integration patterns.
@@ -173,14 +289,19 @@ These components eliminate code duplication across WordPress-related handlers an
 
 **v0.2.6**: Consolidated FeaturedImageHandler and SourceUrlHandler functionality into EngineData class to reduce duplication and provide unified engine data operations.
 
-**v0.2.7**: Removed WordPressSharedTrait to eliminate architectural bloat. All handlers now use direct EngineData instantiation for single source of truth data access.
+**v0.2.7**: Major architectural refactoring:
+- Created WordPressPublishHelper for WordPress-specific publishing operations
+- Created WordPressSettingsResolver for centralized settings resolution
+- Removed WordPressSharedTrait to eliminate architectural bloat
+- Refactored EngineData to be platform-agnostic (data access only, no WordPress operations)
+- All handlers now use direct EngineData instantiation for data access and WordPressPublishHelper for WordPress operations
 
 ## Related Documentation
 
-- EngineData - Direct engine data operations (single source of truth)
-- Featured Image Handler (Deprecated v0.2.6) - Migration guide
-- Source URL Handler (Deprecated v0.2.6) - Migration guide
+- EngineData - Platform-agnostic data access (single source of truth)
+- WordPressPublishHelper - WordPress-specific publishing operations
+- WordPressSettingsResolver - Settings resolution utilities
 - WordPressSharedTrait (Removed v0.2.7) - Migration guide
-- WordPress Publish Handler - Direct EngineData usage example
-- WordPress Update Handler - Direct EngineData usage example
+- WordPress Publish Handler - Integration example
+- WordPress Update Handler - Integration example
 - Base Class Architecture

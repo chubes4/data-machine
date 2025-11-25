@@ -261,14 +261,15 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 					onStepConfigured={ handleStepConfigured }
 				/>
 
-				<CardDivider />
+			<CardDivider />
 
-				<FlowFooter
-					schedulingConfig={{
-						...currentFlowData.scheduling_config,
-						next_run_time: currentFlowData.next_run
-					}}
-				/>
+			<FlowFooter
+				scheduling={{
+					interval: currentFlowData.scheduling_config?.interval,
+					last_run_display: currentFlowData.last_run_display,
+					next_run_display: currentFlowData.next_run_display
+				}}
+			/>
 			</CardBody>
 		</Card>
 	);

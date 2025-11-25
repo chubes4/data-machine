@@ -151,12 +151,6 @@ add_filter('datamachine_directives', function($directives) {
 
 ## Related Components
 
-- [RequestBuilder Pattern](request-builder.md) - Uses PromptBuilder for directive application
-- [Universal Engine Architecture](universal-engine.md) - Overall AI infrastructure
-- [AI Conversation Loop](ai-conversation-loop.md) - Multi-turn conversation execution</content>
-</xai:function_call">The missing `docs/core-system/prompt-builder.md` file has been created with comprehensive documentation covering the PromptBuilder pattern, its architecture, usage, and integration details.
-
-Now let me update the todo and commit the documentation changes. First, let me mark the first todo as completed. 
-
-<xai:function_call name="todowrite">
-<parameter name="todos">[{"status":"completed","id":"create_prompt_builder_docs"}]
+- RequestBuilder Pattern - Uses PromptBuilder for directive application
+- Universal Engine Architecture - Overall AI infrastructure
+- AI Conversation Loop - Multi-turn conversation execution

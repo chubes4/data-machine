@@ -59,7 +59,7 @@ class WordPress extends PublishHandler {
                     ];
 
                     // Dynamic taxonomy parameters based on "AI Decides" selections
-                    $taxonomy_parameters = self::buildTaxonomyParameters($handler_config);
+                    $taxonomy_parameters = TaxonomyHandler::getTaxonomyToolParameters($handler_config);
 
                     // Merge base + dynamic parameters
                     $all_parameters = array_merge($base_parameters, $taxonomy_parameters);
@@ -211,78 +211,4 @@ class WordPress extends PublishHandler {
     public static function get_label(): string {
         return 'WordPress';
     }
-
-    /**
-     * Map taxonomy name to parameter name for AI tool.
-     * Matches TaxonomyHandler::getParameterName() logic.
-     *
-     * @param string $taxonomy_name WordPress taxonomy name
-     * @return string Parameter name for AI tool
-     */
-    private static function getTaxonomyParameterName(string $taxonomy_name): string {
-        if ($taxonomy_name === 'category') {
-            return 'category';
-        } elseif ($taxonomy_name === 'post_tag') {
-            return 'tags';
-        } else {
-            return $taxonomy_name;
-        }
-    }
-
-    /**
-     * Build dynamic taxonomy parameters for tool definition.
-     *
-     * Inspects handler configuration and adds parameters for each taxonomy
-     * where the user selected "AI Decides".
-     *
-     * @param array $handler_config Handler configuration with taxonomy selections
-     * @return array Parameter definitions for AI-decided taxonomies
-     */
-    private static function buildTaxonomyParameters(array $handler_config): array {
-        $parameters = [];
-
-        // Get all public taxonomies
-        $taxonomies = \DataMachine\Core\WordPress\TaxonomyHandler::getPublicTaxonomies();
-
-        foreach ($taxonomies as $taxonomy) {
-            // Skip system taxonomies
-            if (\DataMachine\Core\WordPress\TaxonomyHandler::shouldSkipTaxonomy($taxonomy->name)) {
-                continue;
-            }
-
-            // Check if this taxonomy is set to "AI Decides"
-            $field_key = "taxonomy_{$taxonomy->name}_selection";
-            $selection = $handler_config[$field_key] ?? 'skip';
-
-            if ($selection !== 'ai_decides') {
-                continue;
-            }
-
-            // Map taxonomy name to parameter name
-            $param_name = self::getTaxonomyParameterName($taxonomy->name);
-
-            // Get taxonomy label for description
-            $taxonomy_label = (is_object($taxonomy->labels) && isset($taxonomy->labels->name))
-                ? $taxonomy->labels->name
-                : (isset($taxonomy->label) ? $taxonomy->label : $taxonomy->name);
-
-            // Determine if hierarchical (category-like) or flat (tag-like)
-            $is_hierarchical = $taxonomy->hierarchical;
-
-            // Build parameter definition
-            $parameters[$param_name] = [
-                'type' => $is_hierarchical ? 'string' : 'array',
-                'description' => sprintf(
-                    'Assign %s for this post. %s',
-                    strtolower($taxonomy_label),
-                    $is_hierarchical
-                        ? 'Provide a single category name as a string. Will be created if it does not exist.'
-                        : 'Provide an array of tag names. Tags will be created if they do not exist.'
-                )
-            ];
-        }
-
-        return $parameters;
-    }
-
 }

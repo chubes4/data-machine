@@ -56,7 +56,19 @@ class TaxonomyHandler {
      */
     public function processTaxonomies(int $post_id, array $parameters, array $handler_config, array $engine_data = []): array {
         $taxonomy_results = [];
-        $taxonomies = self::getPublicTaxonomies();
+        
+        // Determine post type to fetch scoped taxonomies
+        $post_type = get_post_type($post_id);
+        if ($post_type === false) {
+            $post_type = null;
+        }
+        $taxonomies = self::getPublicTaxonomies($post_type);
+
+        $this->logTaxonomyOperation('debug', 'Processing taxonomies for post', [
+            'post_id' => $post_id,
+            'post_type' => $post_type,
+            'found_taxonomies' => array_keys($taxonomies)
+        ]);
 
         foreach ($taxonomies as $taxonomy) {
             if (self::shouldSkipTaxonomy($taxonomy->name)) {
@@ -65,6 +77,14 @@ class TaxonomyHandler {
 
             $field_key = "taxonomy_{$taxonomy->name}_selection";
             $selection = $handler_config[$field_key] ?? 'skip';
+
+            $this->logTaxonomyOperation('debug', "Taxonomy check: {$taxonomy->name}", [
+                'selection' => $selection,
+                'field_key' => $field_key,
+                'param_name' => $this->getParameterName($taxonomy->name),
+                'has_tool_param' => isset($parameters[$this->getParameterName($taxonomy->name)]),
+                'has_engine_param' => isset($engine_data[$this->getParameterName($taxonomy->name)])
+            ]);
 
             if ($selection === 'skip') {
                 continue;
@@ -89,6 +109,64 @@ class TaxonomyHandler {
             return get_object_taxonomies($post_type, 'objects');
         }
         return get_taxonomies(['public' => true], 'objects');
+    }
+
+    /**
+     * Generate dynamic taxonomy parameters for AI tool definitions.
+     *
+     * Iterates through public taxonomies (or specific post type taxonomies) and
+     * generates tool parameters for any taxonomy configured as "AI Decides".
+     *
+     * @param array $handler_config Handler configuration with taxonomy selections
+     * @param string|null $post_type Optional post type to filter taxonomies
+     * @return array Parameter definitions for AI-decided taxonomies
+     */
+    public static function getTaxonomyToolParameters(array $handler_config, ?string $post_type = null): array {
+        $parameters = [];
+        $taxonomies = self::getPublicTaxonomies($post_type);
+
+        foreach ($taxonomies as $taxonomy) {
+            if (self::shouldSkipTaxonomy($taxonomy->name)) {
+                continue;
+            }
+
+            $field_key = "taxonomy_{$taxonomy->name}_selection";
+            $selection = $handler_config[$field_key] ?? 'skip';
+
+            if ($selection !== 'ai_decides') {
+                continue;
+            }
+
+            // Map taxonomy name to parameter name (category -> category, post_tag -> tags)
+            $param_name = $taxonomy->name === 'post_tag' ? 'tags' : $taxonomy->name;
+
+            // Get taxonomy label
+            $taxonomy_label = (is_object($taxonomy->labels) && isset($taxonomy->labels->name))
+                ? $taxonomy->labels->name
+                : (isset($taxonomy->label) ? $taxonomy->label : $taxonomy->name);
+
+            $is_hierarchical = $taxonomy->hierarchical;
+
+            $parameters[$param_name] = [
+                'type' => $is_hierarchical ? 'string' : 'array',
+                'description' => sprintf(
+                    'Assign %s for this post. %s',
+                    strtolower($taxonomy_label),
+                    $is_hierarchical
+                        ? 'Provide a single term name as a string. Will be created if it does not exist.'
+                        : 'Provide an array of term names. Terms will be created if they do not exist.'
+                )
+            ];
+
+            // For non-hierarchical (tags), we need to specify items type
+            if (!$is_hierarchical) {
+                $parameters[$param_name]['items'] = [
+                    'type' => 'string'
+                ];
+            }
+        }
+
+        return $parameters;
     }
 
     /**

@@ -14,6 +14,9 @@ class SiteContext {
     /**
      * Get site context data with automatic caching.
      *
+     * Plugins can extend the context data via the 'datamachine_site_context' filter.
+     * Note: Filtering bypasses cache to ensure dynamic data is always fresh.
+     *
      * @return array Site metadata, post types, and taxonomies
      */
     public static function get_context(): array {
@@ -27,6 +30,18 @@ class SiteContext {
             'post_types' => self::get_post_types_data(),
             'taxonomies' => self::get_taxonomies_data()
         ];
+
+        /**
+         * Filter site context data before caching.
+         *
+         * Plugins can use this hook to inject custom context data (e.g., events,
+         * analytics, custom post type summaries). Note: When this filter is used,
+         * caching is bypassed to ensure dynamic data remains fresh.
+         *
+         * @param array $context Site context data with 'site', 'post_types', 'taxonomies' keys
+         * @return array Modified context data
+         */
+        $context = apply_filters('datamachine_site_context', $context);
 
         set_transient(self::CACHE_KEY, $context, 0); // 0 = permanent until invalidated
 

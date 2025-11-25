@@ -4,7 +4,7 @@ Updates existing WordPress posts and pages in the local installation using nativ
 
 ## Architecture
 
-**Base Class**: Extends [PublishHandler](../../core-system/publish-handler.md) (@since v0.2.1)
+**Base Class**: Extends PublishHandler (@since v0.2.1)
 
 **Inherited Functionality**:
 - Engine data retrieval for source_url matching

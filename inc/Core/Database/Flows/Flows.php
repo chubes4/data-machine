@@ -415,7 +415,7 @@ class Flows {
     /**
      * Update the last run time for a flow
      */
-    public function update_flow_last_run(int $flow_id, ?string $timestamp = null): bool {
+    public function update_flow_last_run(int $flow_id, ?string $timestamp = null, ?string $status = null): bool {
         if ($timestamp === null) {
             $timestamp = current_time('mysql');
         }
@@ -427,6 +427,10 @@ class Flows {
         }
         
         $current_config['last_run_at'] = $timestamp;
+
+        if ($status !== null) {
+            $current_config['last_run_status'] = $status;
+        }
 
         return $this->update_flow_scheduling($flow_id, $current_config);
     }

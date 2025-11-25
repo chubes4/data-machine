@@ -36,25 +36,12 @@ class PipelineSystemPromptDirective {
             return $request;
         }
 
-        do_action('datamachine_log', 'debug', 'Pipeline System Prompt: Directive called', [
-            'pipeline_step_id' => $pipeline_step_id,
-            'payload_keys' => array_keys($payload)
-        ]);
-
-        $step_ai_config = apply_filters('datamachine_ai_config', [], $pipeline_step_id, $payload);
-        $system_prompt = $step_ai_config['system_prompt'] ?? '';
-
-        do_action('datamachine_log', 'debug', 'Pipeline System Prompt: Retrieved system prompt', [
-            'pipeline_step_id' => $pipeline_step_id,
-            'system_prompt_length' => strlen($system_prompt),
-            'has_system_prompt' => !empty($system_prompt)
-        ]);
+        $engine_data = datamachine_get_engine_data($payload['job_id']);
+        $pipeline_config = $engine_data['pipeline_config'] ?? [];
+        $step_config = $pipeline_config[$pipeline_step_id] ?? [];
+        $system_prompt = $step_config['system_prompt'] ?? '';
 
         if (empty($system_prompt)) {
-            do_action('datamachine_log', 'debug', 'Pipeline System Prompt: No system prompt found, skipping injection', [
-                'pipeline_step_id' => $pipeline_step_id,
-                'system_prompt_value' => $system_prompt
-            ]);
             return $request;
         }
 
@@ -81,11 +68,7 @@ class PipelineSystemPromptDirective {
             'content' => $content
         ]);
 
-        do_action('datamachine_log', 'debug', 'Pipeline System Prompt: Injected pipeline system prompt', [
-            'prompt_length' => strlen($system_prompt),
-            'pipeline_step_id' => $pipeline_step_id,
-            'total_messages' => count($request['messages'])
-        ]);
+
 
         return $request;
     }
