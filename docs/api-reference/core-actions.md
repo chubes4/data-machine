@@ -173,18 +173,6 @@ do_action('datamachine_save_tool_config', 'google_search', [
 
 ## System Maintenance Actions
 
-### `datamachine_auto_save`
-
-**Purpose**: Automatic pipeline configuration saving
-
-**Parameters**:
-- `$pipeline_id` (int) - Pipeline to save
-
-**Usage**:
-```php
-do_action('datamachine_auto_save', $pipeline_id);
-```
-
 ### `datamachine_cleanup_old_files`
 
 **Purpose**: File repository maintenance

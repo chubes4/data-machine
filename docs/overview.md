@@ -212,12 +212,6 @@ docs/
 - **WordPress Transients** - Native WordPress caching integration with comprehensive logging
 - **Standardized Storage** - datamachine_cache_set action for consistent cache management
 
-### AutoSave System
-- **Complete Pipeline Persistence** - AutoSave system handles all pipeline-related data via single `datamachine_auto_save` action
-- **Flow Synchronization** - Synchronizes execution_order between pipeline and flow steps automatically
-- **Comprehensive Data Management** - Saves pipeline data, all flows, flow configurations, scheduling, and handler settings
-- **Cache Integration** - Automatic cache clearing after successful auto-save for data consistency
-
 ## Requirements
 
 - **PHP** 8.0 or higher

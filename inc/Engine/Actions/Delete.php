@@ -412,13 +412,25 @@ class Delete {
                 }
             }
 
+            foreach ($flow_config as $flow_step_id => &$flow_step) {
+                if (!isset($flow_step['pipeline_step_id'])) {
+                    continue;
+                }
+                foreach ($updated_steps as $updated_step) {
+                    if ($updated_step['pipeline_step_id'] === $flow_step['pipeline_step_id']) {
+                        $flow_step['execution_order'] = $updated_step['execution_order'];
+                        break;
+                    }
+                }
+            }
+            unset($flow_step);
+
             $db_flows->update_flow($flow_id, [
                 'flow_config' => json_encode($flow_config)
             ]);
         }
 
         do_action('datamachine_clear_pipeline_cache', $pipeline_id);
-        do_action('datamachine_auto_save', $pipeline_id);
 
         $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
         $remaining_steps = $db_pipelines->get_pipeline_config($pipeline_id);

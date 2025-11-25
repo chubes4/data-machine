@@ -5,6 +5,19 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.9] - 2025-11-25
+
+### Removed
+- **Legacy AutoSave Hook** - Completely removed the redundant `datamachine_auto_save` action hook and AutoSave.php class. The REST API architecture now handles all persistence directly, eliminating duplicate database writes and improving performance.
+
+### Changed
+- **Delete Step Execution Order Sync** - Fixed execution_order synchronization gap in pipeline step deletion by implementing inline sync logic, ensuring flow steps maintain correct execution order after step removal.
+- **Code Cleanup** - Removed all AutoSave references from core action registrations and documentation.
+
+### Technical
+- **Performance Improvement** - Eliminated redundant database operations that were causing unnecessary writes during pipeline modifications.
+- **Architecture Simplification** - Streamlined persistence logic by removing legacy hook-based approach in favor of direct REST API handling.
+
 ## [0.2.8] - 2025-11-25
 
 ### Added

@@ -643,9 +643,6 @@ class PipelineSteps {
 			);
 		}
 
-		// Trigger auto-save
-		do_action('datamachine_auto_save', $pipeline_id);
-
 		$provider_for_log = $step_config_data['provider'] ?? ($existing_config['provider'] ?? null);
 
 		return rest_ensure_response([

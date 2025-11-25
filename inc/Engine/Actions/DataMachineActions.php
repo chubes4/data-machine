@@ -21,7 +21,7 @@
  *
  * ORGANIZED ACTIONS (WordPress-native registration):
  * - datamachine_create, datamachine_delete: CRUD operations via organized action classes
- * - datamachine_update_job_status, datamachine_update_flow_schedule, datamachine_auto_save, datamachine_update_flow_handler, datamachine_sync_steps_to_flow: Update operations (Update.php)
+ * - datamachine_update_job_status, datamachine_update_flow_schedule, datamachine_update_flow_handler, datamachine_sync_steps_to_flow: Update operations (Update.php)
  * - datamachine_fail_job: Explicit job failure with configurable cleanup (FailJob.php)
  * - External Plugin Actions: Plugins register custom actions using standard add_action() patterns
  *
@@ -134,7 +134,6 @@ function datamachine_register_core_actions() {
     \DataMachine\Engine\Actions\Delete::register();
     \DataMachine\Engine\Actions\Update::register();
     \DataMachine\Engine\Actions\FailJob::register();
-    \DataMachine\Engine\Actions\AutoSave::register();
     \DataMachine\Engine\Actions\ImportExport::register();
     \DataMachine\Engine\Actions\Cache::register();
     datamachine_register_execution_engine();

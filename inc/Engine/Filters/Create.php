@@ -332,8 +332,6 @@ class Create {
 
         do_action('datamachine_clear_pipeline_cache', $pipeline_id);
 
-        do_action('datamachine_auto_save', $pipeline_id);
-
         do_action('datamachine_log', 'info', 'Step created successfully', [
             'pipeline_id' => $pipeline_id,
             'step_type' => $step_type,

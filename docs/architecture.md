@@ -240,17 +240,6 @@ Flow-isolated UUID storage with automatic cleanup:
 - Automatic purging on job completion
 - Support for local and remote file processing
 
-### AutoSave System
-**Complete Pipeline Persistence**: Centralized auto-save operations handle all pipeline-related data in a single action.
-
-**Features**:
-- **Single Action Interface**: `datamachine_auto_save` action handles everything
-- **Complete Data Management**: Saves pipeline data, all flows, flow configurations, and scheduling
-- **Execution Order Synchronization**: Updates flow step execution_order to match pipeline steps
-- **Cache Integration**: Automatic cache clearing after successful auto-save operations
-- **Database Service Integration**: Uses filter-based database service discovery
-- **Error Handling**: Validates services and data before processing
-
 ### Cache Management
 Centralized WordPress transient-based cache system:
 - Automatic cache invalidation on pipeline changes

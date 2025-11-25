@@ -79,11 +79,6 @@ export default function FlowScheduleModal( {
 		formState.submit();
 	};
 
-	/**
-	 * Check if schedule changed
-	 */
-	const hasChanged = formState.data.selectedInterval !== ( currentInterval || 'manual' );
-
 	return (
 		<Modal
 			title={ __( 'Schedule Flow', 'datamachine' ) }
@@ -151,12 +146,12 @@ export default function FlowScheduleModal( {
 						{ __( 'Cancel', 'datamachine' ) }
 					</Button>
 
-					<Button
-						variant="primary"
-						onClick={ handleSave }
-						disabled={ formState.isSubmitting || ! hasChanged || intervals.length === 0 }
-						isBusy={ formState.isSubmitting }
-					>
+				<Button
+					variant="primary"
+					onClick={ handleSave }
+					disabled={ formState.isSubmitting || intervals.length === 0 }
+					isBusy={ formState.isSubmitting }
+				>
 						{ formState.isSubmitting
 							? __( 'Saving...', 'datamachine' )
 							: __( 'Save Schedule', 'datamachine' ) }

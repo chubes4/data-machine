@@ -198,17 +198,7 @@ export default function ConfigureStepModal( {
 
 
 
-	/**
-	 * Check if config changed
-	 */
-	const hasChanged =
-		formState.data.provider !== ( currentConfig?.provider || '' ) ||
-		formState.data.model !== ( currentConfig?.model || '' ) ||
-		formState.data.systemPrompt !== ( currentConfig?.system_prompt || '' ) ||
-		JSON.stringify( selectedTools ) !==
-			JSON.stringify( currentConfig?.enabled_tools || [] );
-
-		return (
+	return (
 			<Modal
 				title={ __( 'Configure AI Step', 'datamachine' ) }
 				onRequestClose={ onClose }
@@ -283,14 +273,12 @@ export default function ConfigureStepModal( {
 						{ __( 'Cancel', 'datamachine' ) }
 					</Button>
 
-					<Button
-						variant="primary"
-						onClick={ formState.submit }
-						disabled={
-							formState.isSubmitting || ! hasChanged || ! formState.data.provider || ! formState.data.model
-						}
-						isBusy={ formState.isSubmitting }
-					>
+				<Button
+					variant="primary"
+					onClick={ formState.submit }
+					disabled={ formState.isSubmitting || ! formState.data.provider || ! formState.data.model }
+					isBusy={ formState.isSubmitting }
+				>
 						{ formState.isSubmitting
 							? __( 'Saving...', 'datamachine' )
 							: __( 'Save Configuration', 'datamachine' ) }
