@@ -4,7 +4,7 @@ Reads data from Google Sheets spreadsheets using OAuth2 authentication with conf
 
 ## Architecture
 
-**Base Class**: Extends [FetchHandler](../../core-system/fetch-handler.md) (@since v0.2.1)
+**Base Class**: Extends FetchHandler (@since v0.2.1)
 
 **Inherited Functionality**:
 - Automatic deduplication via `isItemProcessed()` and `markItemProcessed()`
@@ -12,7 +12,7 @@ Reads data from Google Sheets spreadsheets using OAuth2 authentication with conf
 - Standardized responses via `successResponse()`, `emptyResponse()`, `errorResponse()`
 - Centralized logging and error handling
 
-**Implementation**: Uses [DataPacket](../../core-system/data-packet.md) class for consistent packet structure
+**Implementation**: Uses DataPacket class for consistent packet structure
 
 ## Authentication
 
@@ -22,7 +22,7 @@ Reads data from Google Sheets spreadsheets using OAuth2 authentication with conf
 
 **Service Integration**: OAuth provider handles token refresh, service access, and credential management for seamless bi-directional integration.
 
-**Related Documentation**: See [OAuth Handlers](../../core-system/oauth-handlers.md) for OAuth2Handler and OAuth Providers architecture.
+**Related Documentation**: See OAuth Handlers for OAuth2Handler and OAuth Providers architecture.
 
 ## Configuration Parameters
 

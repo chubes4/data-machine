@@ -4,7 +4,7 @@ Posts content to Facebook Pages using OAuth2 authentication with media upload su
 
 ## Architecture
 
-**Base Class**: Extends [PublishHandler](../../core-system/publish-handler.md) (@since v0.2.1)
+**Base Class**: Extends PublishHandler (@since v0.2.1)
 
 **Inherited Functionality**:
 - Engine data retrieval via `getSourceUrl()` and `getImageFilePath()`

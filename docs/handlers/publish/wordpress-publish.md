@@ -521,7 +521,7 @@ System-wide WordPress defaults (from Settings page) override handler-specific co
 
 ## Related Documentation
 
-- WordPress Shared Components - WordPressPublishHelper, TaxonomyHandler, WordPressSettingsResolver
-- WordPress Fetch Handler
-- WordPress Update Handler
-- SettingsHandler Base Class
+WordPress Shared Components - WordPressPublishHelper, TaxonomyHandler, WordPressSettingsResolver
+WordPress Fetch Handler
+WordPress Update Handler
+SettingsHandler Base Class

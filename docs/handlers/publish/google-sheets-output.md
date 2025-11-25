@@ -4,7 +4,7 @@ Appends structured data to Google Sheets spreadsheets using OAuth2 authenticatio
 
 ## Architecture
 
-**Base Class**: Extends [PublishHandler](../../core-system/publish-handler.md) (@since v0.2.1)
+**Base Class**: Extends PublishHandler (@since v0.2.1)
 
 **Inherited Functionality**:
 - Engine data retrieval via `getSourceUrl()` and `getImageFilePath()`
@@ -22,7 +22,7 @@ Appends structured data to Google Sheets spreadsheets using OAuth2 authenticatio
 
 **Service Integration**: OAuth provider handles token refresh, service access, and credential management with dedicated output-specific configuration.
 
-**Related Documentation**: See [OAuth Handlers](../../core-system/oauth-handlers.md) for OAuth2Handler and OAuth Providers architecture.
+**Related Documentation**: See OAuth Handlers for OAuth2Handler and OAuth Providers architecture.
 
 ## Configuration Parameters
 

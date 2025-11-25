@@ -5,6 +5,20 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.8] - 2025-11-25
+
+### Added
+- **Standardized Publish Fields** - Added `WordPressSettingsHandler::get_standard_publish_fields()` to centralize common WordPress publishing settings configuration.
+
+### Changed
+- **WordPress Settings Refactoring** - Updated `WordPressSettings` to use the new centralized standard fields method, reducing code duplication.
+- **OAuth Modal UX** - Improved authentication modal to actively fetch and sync connection status, ensuring the UI always reflects the true backend state.
+- **Date Formatting** - Moved date formatting logic from frontend (JS) to backend (PHP) for Jobs and Flows, ensuring consistency and respecting WordPress settings.
+
+### Documentation
+- **Architecture Updates** - Comprehensive updates to documentation reflecting v0.2.7 architectural changes (EngineData, WordPressPublishHelper).
+- **Link Fixes** - Resolved broken internal links across handler documentation.
+
 ## [0.2.7] - 2025-11-24
 
 ### BREAKING CHANGES

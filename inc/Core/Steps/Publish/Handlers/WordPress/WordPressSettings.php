@@ -39,8 +39,10 @@ class WordPressSettings extends PublishHandlerSettings {
      * @return array Settings fields.
      */
     private static function get_local_fields(): array {
-        // Get post type options
-        $post_type_options = WordPressSettingsHandler::get_post_type_options(false);
+        // Get standard WordPress publish fields
+        $standard_fields = WordPressSettingsHandler::get_standard_publish_fields([
+            'domain' => 'datamachine'
+        ]);
 
         // Get dynamic taxonomy fields
         $taxonomy_fields = WordPressSettingsHandler::get_taxonomy_fields([
@@ -52,35 +54,8 @@ class WordPressSettings extends PublishHandlerSettings {
             'description_template' => __('Configure %1$s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'datamachine')
         ]);
 
-        // Get user options
-        $user_options = WordPressSettingsHandler::get_user_options();
-
-        $fields = [
-            'post_type' => [
-                'type' => 'select',
-                'label' => __('Post Type', 'datamachine'),
-                'description' => __('Select the post type for published content.', 'datamachine'),
-                'options' => $post_type_options,
-                'default' => 'post',
-            ],
-            'post_status' => [
-                'type' => 'select',
-                'label' => __('Post Status', 'datamachine'),
-                'description' => __('Select the status for the newly created post.', 'datamachine'),
-                'options' => get_post_statuses(),
-                'default' => 'draft',
-            ],
-            'post_author' => [
-                'type' => 'select',
-                'label' => __('Post Author', 'datamachine'),
-                'description' => __('Select which WordPress user to publish posts under.', 'datamachine'),
-                'options' => $user_options,
-                'default' => !empty($user_options) ? array_key_first($user_options) : '',
-            ],
-        ];
-
         // Merge in dynamic taxonomy fields
-        return array_merge($fields, $taxonomy_fields);
+        return array_merge($standard_fields, $taxonomy_fields);
     }
 
 
@@ -93,18 +68,8 @@ class WordPressSettings extends PublishHandlerSettings {
         $common_fields = parent::get_common_fields();
 
         // Align field names and add WordPress-specific fields
-        return array_merge($common_fields, [
-            'post_date_source' => [
-                'type' => 'select',
-                'label' => __('Post Date Setting', 'datamachine'),
-                'description' => __('Choose whether to use the original date from the source (if available) or the current date when publishing.', 'datamachine'),
-                'options' => [
-                    'current_date' => __('Use Current Date', 'datamachine'),
-                    'source_date' => __('Use Source Date (if available)', 'datamachine'),
-                ],
-                'default' => 'current_date',
-            ],
-        ]);
+        // Note: post_date_source is now handled in standard fields
+        return $common_fields;
     }
 
     /**
@@ -120,18 +85,6 @@ class WordPressSettings extends PublishHandlerSettings {
         // Sanitize common publish handler fields
         $sanitized = array_merge($sanitized, parent::sanitize($raw_settings));
 
-        // Sanitize WordPress-specific common fields
-        $valid_date_sources = ['current_date', 'source_date'];
-        $date_source = sanitize_text_field($raw_settings['post_date_source'] ?? 'current_date');
-        if (!in_array($date_source, $valid_date_sources)) {
-            do_action('datamachine_log', 'error', 'WordPress Settings: Invalid post_date_source parameter provided', [
-                'provided_value' => $date_source,
-                'valid_options' => $valid_date_sources
-            ]);
-            $date_source = 'current_date'; // Fall back to default
-        }
-        $sanitized['post_date_source'] = $date_source;
-
         return $sanitized;
     }
 
@@ -142,11 +95,8 @@ class WordPressSettings extends PublishHandlerSettings {
      * @return array Sanitized settings.
      */
     private static function sanitize_local_settings(array $raw_settings): array {
-        $sanitized = [
-            'post_type' => sanitize_text_field($raw_settings['post_type'] ?? 'post'),
-            'post_status' => sanitize_text_field($raw_settings['post_status'] ?? 'draft'),
-            'post_author' => absint($raw_settings['post_author']),
-        ];
+        // Sanitize standard fields
+        $sanitized = WordPressSettingsHandler::sanitize_standard_publish_fields($raw_settings);
 
         // Sanitize dynamic taxonomy selections
         $sanitized = array_merge($sanitized, WordPressSettingsHandler::sanitize_taxonomy_fields($raw_settings, [

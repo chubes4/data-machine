@@ -4,7 +4,7 @@ Retrieves WordPress post and page content from the local installation using WP_Q
 
 ## Architecture
 
-**Base Class**: Extends [FetchHandler](../../core-system/fetch-handler.md) (@since v0.2.1)
+**Base Class**: Extends FetchHandler (@since v0.2.1)
 
 **Inherited Functionality**:
 - Automatic deduplication via `isItemProcessed()` and `markItemProcessed()`
@@ -12,7 +12,7 @@ Retrieves WordPress post and page content from the local installation using WP_Q
 - Standardized responses via `successResponse()`, `emptyResponse()`, `errorResponse()`
 - Centralized logging and error handling
 
-**Implementation**: Uses [DataPacket](../../core-system/data-packet.md) class for consistent packet structure
+**Implementation**: Uses DataPacket class for consistent packet structure
 
 ## Configuration Options
 

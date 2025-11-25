@@ -13,10 +13,12 @@ Engine & execution
 
 Core architecture
 
-- Base classes for `Step`, `FetchHandler`, `PublishHandler`, `SettingsHandler`, and `DataPacket` provide consistent behavior and reduce duplication.
+- Base classes for `Step`, `FetchHandler`, `PublishHandler`, `UpdateHandler`, `SettingsHandler`, and `DataPacket` provide consistent behavior and reduce duplication.
 - Base authentication provider architecture (`BaseAuthProvider`, `BaseOAuth1Provider`, `BaseOAuth2Provider`) centralizes option storage and authentication validation across all providers (@since v0.2.6).
 - FilesRepository is modular (storage, cleanup, validation, download, retrieval) and provides flow-isolated file handling.
-- WordPress shared components centralize publishing concerns (featured image, taxonomy, source URL handling).
+- EngineData provides platform-agnostic data access (single source of truth for engine parameters).
+- WordPressPublishHelper provides WordPress-specific publishing operations (image attachment, source attribution).
+- WordPressSettingsResolver provides centralized settings resolution with system defaults override.
 - Handler and Tool registration use standardized traits to auto-register services via WordPress filters.
 
 REST API & Admin
@@ -28,7 +30,8 @@ AI integration
 
 - Tool-first architecture: AI agents call registered tools; ToolManager centralizes discovery and validation.
 - Prompt and directive management is centralized via a PromptBuilder with ordered directives (site, pipeline, flow, context).
-- Providers are pluggable and configured by site administrators.
+- Providers are pluggable and configured by site administrators (OpenAI, Anthropic, Google, Grok, OpenRouter).
+- Universal Engine architecture supports both Pipeline and Chat agents with shared AI infrastructure.
 
 Database
 

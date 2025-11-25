@@ -94,7 +94,7 @@ if ($next_flow_step_id) {
 - Rollback capability via `get_previous_flow_step_id()`
 - Performance optimized via engine_data context
 
-**See**: [StepNavigator Documentation](/docs/core-system/step-navigator.md) for complete details
+**See**: StepNavigator Documentation for complete details
 
 ## Data Storage
 

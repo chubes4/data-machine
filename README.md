@@ -18,9 +18,10 @@ Badges intentionally omitted for brevity.
 Features
 - Base class architecture for steps, handlers, and settings to reduce duplication and provide shared behavior.
 - React-based admin interface (built with WordPress components) that uses REST API integration.
-- Modern state management patterns (server state caching and client UI state separation).
+- Modern state management patterns (TanStack Query + Zustand for server/client state separation).
 - Tool-first AI with a centralized tool discovery and execution layer.
 - Modular FilesRepository and WordPress shared components for file handling and publishing.
+- Platform-agnostic EngineData with WordPressPublishHelper for WordPress-specific operations.
 - REST API surface for managing flows, pipelines, files, tools, settings, chat, and monitoring.
 
 Requirements
@@ -58,8 +59,9 @@ REST API
 
 Available handlers & tools
 - Fetch sources: files, RSS, Reddit, Google Sheets, WordPress (local, media, API)
-- Publish destinations: social platforms and WordPress
-- Tools: search, web fetch, WordPress post reader, and others. Tool availability depends on configuration and enabled providers.
+- Publish destinations: Twitter, Threads, Bluesky, Facebook, WordPress, Google Sheets
+- Update handlers: WordPress Update with source URL matching
+- Tools: Google Search, Local Search, Web Fetch, WordPress Post Reader, and others. Tool availability depends on configuration and enabled providers.
 
 Development
 ```bash

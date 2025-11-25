@@ -4,7 +4,7 @@ Posts content to Bluesky using app passwords and AT Protocol integration with me
 
 ## Architecture
 
-**Base Class**: Extends [PublishHandler](../../core-system/publish-handler.md) (@since v0.2.1)
+**Base Class**: Extends PublishHandler (@since v0.2.1)
 
 **Inherited Functionality**:
 - Engine data retrieval via `getSourceUrl()` and `getImageFilePath()`

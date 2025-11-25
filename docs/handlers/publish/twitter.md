@@ -4,7 +4,7 @@ Posts content to Twitter with media support, authentication via OAuth 1.0a, and 
 
 ## Architecture
 
-**Base Class**: Extends [PublishHandler](../../core-system/publish-handler.md) (@since v0.2.1)
+**Base Class**: Extends PublishHandler (@since v0.2.1)
 
 **Inherited Functionality**:
 - Engine data retrieval via `getSourceUrl()` and `getImageFilePath()`

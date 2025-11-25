@@ -1,73 +1,79 @@
 # Data Machine Documentation
 
-Complete user documentation for the Data Machine WordPress plugin - an AI-first content processing system with visual pipeline builder and multi-provider AI integration.
+Complete user documentation for the Data Machine WordPress plugin (v0.2.7) - an AI-first content processing system with visual pipeline builder and multi-provider AI integration.
 
 ## Quick Navigation
 
 ### Getting Started
-- Overview: System architecture and core concepts
-- Core System Overview: Engine execution cycle
-- Database Schema: Data storage and relationships
-- Changelog: Version history and changes
+- **Overview**: System architecture and core concepts
+- **Core System Overview**: Engine execution cycle
+- **Database Schema**: Data storage and relationships
+- **Changelog**: Version history and changes
 
 ### Universal Engine
-- Universal Engine Architecture: Shared AI infrastructure layer (v0.2.0)
-- AI Conversation Loop: Multi-turn conversation execution (v0.2.0)
-- Tool Execution Architecture: Tool discovery and execution (v0.2.0)
-- Tool Manager: Centralized tool management (v0.2.1)
-- RequestBuilder Pattern: Centralized AI request construction (v0.2.0)
-- ConversationManager: Message formatting and conversation utilities (v0.2.1)
-- Parameter Systems: Unified parameter architecture and tool building
-- ToolResultFinder: Universal tool result search utility (v0.2.1)
-- OAuth Handlers: Base authentication provider architecture (v0.2.6)
-- Handler Registration Trait: Standardized handler registration (v0.2.2)
+- **Universal Engine Architecture**: Shared AI infrastructure layer
+- **AI Conversation Loop**: Multi-turn conversation execution
+- **Tool Execution Architecture**: Tool discovery and execution
+- **Tool Manager**: Centralized tool management
+- **RequestBuilder Pattern**: Centralized AI request construction
+- **ConversationManager**: Message formatting and conversation utilities
+- **Parameter Systems**: Unified parameter architecture and tool building
+- **ToolResultFinder**: Universal tool result search utility
+- **OAuth Handlers**: Base authentication provider architecture
+- **Handler Registration Trait**: Standardized handler registration
+
+### WordPress Components (v0.2.7)
+- **WordPressPublishHelper**: WordPress-specific publishing operations (media attachment, source attribution)
+- **WordPressSettingsResolver**: Centralized post status/author resolution
+- **TaxonomyHandler**: Taxonomy selection and dynamic term creation
+- **EngineData**: Platform-agnostic data access layer
 
 ### React Architecture
-- HandlerModel: Abstract model layer for handler data operations (v0.2.6)
-- HandlerFactory: Factory pattern for handler model instantiation (v0.2.6)
-- useHandlerModel: Custom hook for handler model integration (v0.2.6)
-- ModalSwitch: Centralized modal routing component (v0.2.6)
-- HandlerProvider: React context for handler state management (v0.2.6)
+- **HandlerModel**: Abstract model layer for handler data operations
+- **HandlerFactory**: Factory pattern for handler model instantiation
+- **useHandlerModel**: Custom hook for handler model integration
+- **ModalSwitch**: Centralized modal routing component
+- **HandlerProvider**: React context for handler state management
 
 ### Handler Documentation
 
 #### Fetch Handlers
-- WordPress Local: Local WordPress post/page content retrieval
-- WordPress Media: Media library attachments with parent post content
-- WordPress API: External WordPress sites via REST API
-- RSS Feed: RSS/Atom feed parsing with deduplication
-- Reddit: OAuth2 subreddit fetching
-- Google Sheets Fetch: Spreadsheet data extraction
-- Files: Local/remote file processing
+- **WordPress Local**: Local WordPress post/page content retrieval
+- **WordPress Media**: Media library attachments with parent post content
+- **WordPress API**: External WordPress sites via REST API
+- **RSS Feed**: RSS/Atom feed parsing with deduplication
+- **Reddit**: OAuth2 subreddit fetching
+- **Google Sheets Fetch**: Spreadsheet data extraction
+- **Files**: Local/remote file processing
 
 #### Publish Handlers
-- Twitter: Twitter publishing with media support
-- Bluesky: App password, AT Protocol
-- Facebook: OAuth2, Graph API
-- Threads: OAuth2, Meta integration
-- WordPress Publish: Local post creation
-- Google Sheets Output: Spreadsheet output
+- **Twitter**: Twitter publishing with media support
+- **Bluesky**: App password, AT Protocol
+- **Facebook**: OAuth2, Graph API
+- **Threads**: OAuth2, Meta integration
+- **WordPress Publish**: Local post creation with WordPressPublishHelper integration
+- **Google Sheets Output**: Spreadsheet output
 
 #### Update Handlers
-- WordPress Update: Modify existing WordPress content
+- **WordPress Update**: Modify existing WordPress content
 
 ### AI Tools
-- Tools Overview: Complete AI tools system architecture
-- Google Search: Web search with Custom Search API
-- Local Search: WordPress internal search
-- WebFetch: Web page content retrieval and processing (50K limit)
-- WordPress Post Reader: Single WordPress post content retrieval by URL
+- **Tools Overview**: Complete AI tools system architecture
+- **Google Search**: Web search with Custom Search API
+- **Local Search**: WordPress internal search
+- **WebFetch**: Web page content retrieval and processing (50K limit)
+- **WordPress Post Reader**: Single WordPress post content retrieval by URL
 
 ### API Reference
-- API Overview: Complete endpoint catalog with modular documentation structure
-- Core Filters: All WordPress filters
-- Core Actions: All WordPress actions
-- Universal Engine Filters: Directive and tool filters (v0.2.0)
+- **API Overview**: Complete endpoint catalog with modular documentation structure
+- **Core Filters**: All WordPress filters
+- **Core Actions**: All WordPress actions
+- **Universal Engine Filters**: Directive and tool filters
 
 ### Admin Interface
-- Pipeline Builder: Visual drag-and-drop interface
-- Settings Configuration: AI providers, tools, defaults
-- Jobs Management: Execution monitoring and logs
+- **Pipeline Builder**: Visual drag-and-drop interface
+- **Settings Configuration**: AI providers, tools, defaults
+- **Jobs Management**: Execution monitoring and logs
 
 ## Documentation Structure
 

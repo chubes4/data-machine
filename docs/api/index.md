@@ -86,10 +86,10 @@ For detailed implementation patterns, see Core Actions and Core Filters document
 
 ## Related Documentation
 
-- REST API Authentication: Detailed authentication guide
-- Error Handling: Complete error reference
-- Engine Execution: Understanding workflow execution
-- Settings Configuration: Configure API access
+REST API Authentication: Detailed authentication guide
+Error Handling: Complete error reference
+Engine Execution: Understanding workflow execution
+Settings Configuration: Configure API access
 
 ---
 

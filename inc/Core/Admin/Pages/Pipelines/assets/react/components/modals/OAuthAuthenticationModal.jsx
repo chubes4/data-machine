@@ -4,7 +4,7 @@
  * Modal for handling OAuth authentication with dual auth types support.
  */
 
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useCallback } from '@wordpress/element';
 import { Modal, Button, Notice } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { useFormState, useAsyncOperation } from '../../hooks/useFormState';
@@ -29,65 +29,158 @@ export default function OAuthAuthenticationModal( {
 	handlerInfo = {},
 	onSuccess,
 } ) {
-	const [ connected, setConnected ] = useState( false );
-	const [ accountData, setAccountData ] = useState( null );
+	const [ connected, setConnected ] = useState( !! handlerInfo?.is_authenticated );
+	const [ accountData, setAccountData ] = useState( handlerInfo?.account_details || null );
 	const [ error, setError ] = useState( null );
 	const [ success, setSuccess ] = useState( null );
+	const [ isStatusLoading, setIsStatusLoading ] = useState( false );
+
+	// Determine auth type and URLs from handler metadata
+	const authType = handlerInfo.auth_type || 'oauth2'; // oauth2, oauth1, or simple
+	const oauthUrl =
+		handlerInfo.oauth_url || `/datamachine-auth/${ handlerSlug }/`;
+
+	const fetchConnectionStatus = useCallback( async ( { silent = false } = {} ) => {
+		if ( ! handlerSlug ) {
+			return null;
+		}
+
+		setIsStatusLoading( true );
+
+		try {
+			const response = await wp.apiFetch( {
+				path: `/datamachine/v1/auth/${ handlerSlug }/status`,
+			} );
+
+			if ( ! response?.success ) {
+				throw new Error(
+					response?.message ||
+						__( 'Unable to load connection status.', 'datamachine' )
+				);
+			}
+
+			const statusData = response.data || {};
+			const isAuthenticated = !! statusData.authenticated;
+
+			setConnected( isAuthenticated );
+			setAccountData( statusData.account_details || null );
+
+			if ( statusData.error ) {
+				setError(
+					statusData.error_message ||
+						__(
+							'Authentication failed. Please try again.',
+							'datamachine'
+						)
+				);
+			} else if ( ! silent ) {
+				setError( null );
+			}
+
+			return statusData;
+		} catch ( statusError ) {
+			if ( ! silent ) {
+				setError(
+					statusError?.message ||
+						__( 'Unable to load connection status.', 'datamachine' )
+				);
+			}
+			throw statusError;
+		} finally {
+			setIsStatusLoading( false );
+		}
+	}, [ handlerSlug ] );
 
 	const apiConfigForm = useFormState({
 		initialData: {},
 		onSubmit: async (config) => {
 			try {
-				await wp.apiFetch({
-					path: `/datamachine/v1/auth/${handlerSlug}`,
+				await wp.apiFetch( {
+					path: `/datamachine/v1/auth/${ handlerSlug }`,
 					method: 'PUT',
-					data: config
-				});
+					data: config,
+				} );
 
-				if (authType === 'simple') {
+				if ( authType === 'simple' ) {
 					setConnected( true );
 					setAccountData( { ...config } );
 					setSuccess( __( 'Connected successfully!', 'datamachine' ) );
+					try {
+						await fetchConnectionStatus( { silent: true } );
+					} catch ( statusError ) {
+						// Status refresh is best-effort; network failures shouldn't break the save flow.
+						// eslint-disable-next-line no-console
+						console.warn( 'Auth status refresh failed:', statusError );
+					}
 					if ( onSuccess ) {
 						onSuccess();
 					}
 				} else {
-					setSuccess( __( 'Configuration saved! You can now connect your account.', 'datamachine' ) );
+					setSuccess(
+						__(
+							'Configuration saved! You can now connect your account.',
+							'datamachine'
+						)
+					);
 				}
-			} catch (error) {
-				throw new Error( error.message || __( 'Failed to save configuration.', 'datamachine' ) );
+			} catch ( error ) {
+				throw new Error(
+					error.message ||
+						__( 'Failed to save configuration.', 'datamachine' )
+				);
 			}
-		}
+		},
 	});
 
 	const disconnectOperation = useAsyncOperation();
 
-	// Determine auth type from handler info
-	const authType = handlerInfo.auth_type || 'oauth2'; // oauth2 or simple
-	const oauthUrl =
-		handlerInfo.oauth_url || `/datamachine-auth/${ handlerSlug }/`;
-
 	/**
-	 * Load existing connection on mount
+	 * Keep modal state in sync with handler metadata when modal opens.
 	 */
 	useEffect( () => {
-		// In production, this would fetch from REST API
-		// For now, simulate checking connection status
-		const existingAccount = null; // Would come from API
-		if ( existingAccount ) {
-			setConnected( true );
-			setAccountData( existingAccount );
-		}
-	}, [] );
+		setConnected( !! handlerInfo?.is_authenticated );
+		setAccountData( handlerInfo?.account_details || null );
+	}, [ handlerSlug, handlerInfo ] );
+
+	/**
+	 * Fetch latest connection status when modal mounts to keep UI accurate.
+	 */
+	useEffect( () => {
+		let isMounted = true;
+
+		const refreshStatus = async () => {
+			try {
+				await fetchConnectionStatus( { silent: true } );
+			} catch ( statusError ) {
+				// Avoid noisy console errors when modal unmounts mid-request.
+				if ( isMounted ) {
+					// eslint-disable-next-line no-console
+					console.warn( 'Unable to refresh auth status:', statusError );
+				}
+			}
+		};
+
+		refreshStatus();
+
+		return () => {
+			isMounted = false;
+		};
+	}, [ handlerSlug, fetchConnectionStatus ] );
 
 	/**
 	 * Handle OAuth success
 	 */
 	const handleOAuthSuccess = ( account ) => {
 		setConnected( true );
-		setAccountData( account );
+		if ( account ) {
+			setAccountData( account );
+		}
 		setSuccess( __( 'Account connected successfully!', 'datamachine' ) );
 		setError( null );
+
+		fetchConnectionStatus( { silent: true } ).catch( () => {
+			// Silent failure - status endpoint will be retried on next open if needed.
+		} );
 
 		if ( onSuccess ) {
 			onSuccess();
@@ -124,17 +217,37 @@ export default function OAuthAuthenticationModal( {
 			return;
 		}
 
-		disconnectOperation.execute(async () => {
-			// In production, this would call REST API to clear credentials
-			await new Promise( ( resolve ) => setTimeout( resolve, 1000 ) );
+		disconnectOperation.execute( async () => {
+			const response = await wp.apiFetch( {
+				path: `/datamachine/v1/auth/${ handlerSlug }`,
+				method: 'DELETE',
+			} );
+
+			if ( ! response?.success ) {
+				throw new Error(
+					response?.message ||
+						__( 'Failed to disconnect account.', 'datamachine' )
+				);
+			}
 
 			setConnected( false );
 			setAccountData( null );
-			apiConfigForm.reset({});
-			setSuccess(
-				__( 'Account disconnected successfully!', 'datamachine' )
-			);
-		});
+			apiConfigForm.reset( {} );
+			setSuccess( null );
+
+			try {
+				await fetchConnectionStatus( { silent: true } );
+			} catch ( statusError ) {
+				// eslint-disable-next-line no-console
+				console.warn( 'Auth status refresh failed:', statusError );
+			}
+
+			if ( onSuccess ) {
+				onSuccess();
+			}
+
+			return __( 'Account disconnected successfully!', 'datamachine' );
+		} );
 	};
 
 	return (
@@ -175,6 +288,15 @@ export default function OAuthAuthenticationModal( {
 						</div>
 						<ConnectionStatus connected={ connected } />
 					</div>
+
+					{ isStatusLoading && (
+						<p className="description">
+							{ __(
+								'Checking current connection status...',
+								'datamachine'
+							) }
+						</p>
+					) }
 
 					<p className="datamachine-modal-text--info">
 						{ authType === 'oauth2'
@@ -220,7 +342,7 @@ export default function OAuthAuthenticationModal( {
 									oauthUrl={ oauthUrl }
 									onSuccess={ handleOAuthSuccess }
 									onError={ handleOAuthError }
-									disabled={ apiConfigForm.isSubmitting || disconnectOperation.isLoading }
+									disabled={ apiConfigForm.isSubmitting || disconnectOperation.isLoading || isStatusLoading }
 								/>
 							</div>
 						) }

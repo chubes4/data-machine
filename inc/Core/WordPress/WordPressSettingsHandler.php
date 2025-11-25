@@ -201,4 +201,103 @@ class WordPressSettingsHandler {
         return $user_options;
     }
 
+    /**
+     * Get standard WordPress publish fields (post_type, post_status, post_author, post_date_source).
+     *
+     * @param array $config Configuration overrides
+     * @return array Standard publish fields
+     */
+    public static function get_standard_publish_fields(array $config = []): array {
+        $defaults = [
+            'domain' => 'datamachine',
+            'post_type_default' => 'post',
+            'post_status_default' => 'draft',
+            'post_author_default' => null,
+            'post_date_source_default' => 'current_date',
+        ];
+        $config = array_merge($defaults, $config);
+        $domain = $config['domain'];
+
+        // Get options
+        $post_type_options = self::get_post_type_options(false);
+        $user_options = self::get_user_options();
+        
+        // Default author to first user if not specified
+        if ($config['post_author_default'] === null && !empty($user_options)) {
+            $config['post_author_default'] = array_key_first($user_options);
+        }
+
+        return [
+            'post_type' => [
+                'type' => 'select',
+                'label' => __('Post Type', $domain),
+                'description' => __('Select the post type for published content.', $domain),
+                'options' => $post_type_options,
+                'default' => $config['post_type_default'],
+            ],
+            'post_status' => [
+                'type' => 'select',
+                'label' => __('Post Status', $domain),
+                'description' => __('Select the status for the newly created post.', $domain),
+                'options' => [
+                    'draft' => __('Draft', $domain),
+                    'publish' => __('Publish', $domain),
+                    'pending' => __('Pending Review', $domain),
+                    'private' => __('Private', $domain),
+                ],
+                'default' => $config['post_status_default'],
+            ],
+            'post_author' => [
+                'type' => 'select',
+                'label' => __('Post Author', $domain),
+                'description' => __('Select which WordPress user to publish posts under.', $domain),
+                'options' => $user_options,
+                'default' => $config['post_author_default'],
+            ],
+            'post_date_source' => [
+                'type' => 'select',
+                'label' => __('Post Date Setting', $domain),
+                'description' => __('Choose whether to use the original date from the source (if available) or the current date when publishing.', $domain),
+                'options' => [
+                    'current_date' => __('Use Current Date', $domain),
+                    'source_date' => __('Use Source Date (if available)', $domain),
+                ],
+                'default' => $config['post_date_source_default'],
+            ],
+        ];
+    }
+
+    /**
+     * Sanitize standard WordPress publish fields.
+     *
+     * @param array $raw_settings Raw settings input
+     * @return array Sanitized settings subset for standard fields
+     */
+    public static function sanitize_standard_publish_fields(array $raw_settings): array {
+        $sanitized = [];
+
+        if (isset($raw_settings['post_type'])) {
+            $sanitized['post_type'] = sanitize_text_field($raw_settings['post_type']);
+        }
+        
+        if (isset($raw_settings['post_status'])) {
+            $sanitized['post_status'] = sanitize_text_field($raw_settings['post_status']);
+        }
+
+        if (isset($raw_settings['post_author'])) {
+            $sanitized['post_author'] = absint($raw_settings['post_author']);
+        }
+
+        if (isset($raw_settings['post_date_source'])) {
+            $valid_date_sources = ['current_date', 'source_date'];
+            $date_source = sanitize_text_field($raw_settings['post_date_source']);
+            if (!in_array($date_source, $valid_date_sources)) {
+                $date_source = 'current_date';
+            }
+            $sanitized['post_date_source'] = $date_source;
+        }
+
+        return $sanitized;
+    }
+
 }
