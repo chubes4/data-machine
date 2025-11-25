@@ -5,6 +5,38 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.10] - 2025-11-25
+
+### Added
+- **PluginSettings Class** (`/inc/Core/PluginSettings.php`) - Centralized settings accessor with request-level caching
+  - `PluginSettings::all()` - Retrieve all plugin settings with automatic caching
+  - `PluginSettings::get($key, $default)` - Type-safe getter for individual settings
+  - `PluginSettings::clearCache()` - Manual cache invalidation (auto-clears on option update)
+- **EngineData::getPipelineStepConfig()** - New method to retrieve configuration for specific pipeline steps, distinguishing between pipeline-level AI settings and flow-level overrides
+- **Cache Management Documentation** (`/docs/core-system/cache-management.md`) - Comprehensive documentation for the cache system including action-based invalidation patterns
+- **Logger Documentation** (`/docs/core-system/logger.md`) - Comprehensive documentation for the Monolog-based logging system
+
+### Changed
+- **Settings Access Architecture** - Migrated from scattered `get_option('datamachine_settings')` calls to centralized `PluginSettings::get()` pattern across 15+ files:
+  - API layer: Chat.php, Providers.php, Settings.php
+  - Engine layer: AIStep.php, ToolManager.php, FailJob.php
+  - Directives: GlobalSystemPromptDirective.php, SiteContextDirective.php
+  - Core services: WordPressSettingsResolver.php, FileCleanup.php
+- **Social Media Handler Defaults** - Changed `include_images` default from `true` to `false` for Twitter, Bluesky, and Threads publish handlers (aligns with Facebook handler behavior)
+- **FlowSteps API** - Simplified settings extraction logic to handle empty/null settings gracefully without unnecessary conditional branches
+- **AIStep Provider Resolution** - Now falls back to default provider from PluginSettings when pipeline step provider is not configured, with improved error messaging
+
+### Fixed
+- **Settings Option Key Typo** - Corrected `job_data_cleanup_on_failure` to `cleanup_job_data_on_failure` in activation defaults
+
+### Removed
+- **Redundant Debug Logging** - Removed verbose handler configuration logging from Bluesky and Threads publish handlers that provided no diagnostic value
+
+### Documentation
+- Updated 45+ documentation files to reflect v0.2.10 changes
+- Added comprehensive EngineData documentation for `getPipelineStepConfig()` method
+- Enhanced engine-data.md with pipeline vs flow configuration distinction
+
 ## [0.2.9] - 2025-11-25
 
 ### Removed

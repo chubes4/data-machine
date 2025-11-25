@@ -13,7 +13,7 @@ Pipeline endpoints provide complete pipeline template management including creat
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication Guide](authentication.md).
+Requires `manage_options` capability. See Authentication Guide.
 
 ## Endpoints
 
@@ -422,10 +422,10 @@ else:
 
 ## Related Documentation
 
-- [Flows Endpoints](flows.md) - Flow instance management
-- [Execute Endpoint](execute.md) - Pipeline execution
-- [StepTypes Endpoint](step-types.md) - Available step types
-- [Authentication](authentication.md) - Auth methods
+- Flows Endpoints - Flow instance management
+- Execute Endpoint - Pipeline execution
+- StepTypes Endpoint - Available step types
+- Authentication - Auth methods
 
 ---
 

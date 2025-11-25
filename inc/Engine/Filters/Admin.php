@@ -149,7 +149,7 @@ add_action('init', function() {
  * Get enabled admin pages based on settings.
  */
 function datamachine_get_enabled_admin_pages() {
-    $settings = get_option('datamachine_settings', []);
+    $settings = \DataMachine\Core\PluginSettings::all();
 
     if (($settings['engine_mode'] ?? false)) {
         return [];
@@ -169,7 +169,7 @@ function datamachine_get_enabled_admin_pages() {
  * Get enabled general AI tools (non-handler-specific).
  */
 function datamachine_get_enabled_global_tools() {
-    $settings = get_option('datamachine_settings', []);
+    $settings = \DataMachine\Core\PluginSettings::all();
     $all_tools = apply_filters('chubes_ai_tools', []);
 
     $global_tools = array_filter($all_tools, function($tool_config) {

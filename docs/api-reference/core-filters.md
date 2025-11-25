@@ -223,7 +223,7 @@ class RSSFilters {
 - **Maintainability**: Centralizes filter registration logic
 - **Type Safety**: Method signature provides clear parameter requirements
 
-See [Handler Registration Trait](../core-system/handler-registration-trait.md) for complete documentation.
+See Handler Registration Trait for complete documentation.
 
 ## AI Integration Filters
 

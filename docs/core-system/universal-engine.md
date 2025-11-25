@@ -140,7 +140,7 @@ $ui_data = $tool_manager->getToolsForUI();
 - **Maintainability**: Single location for tool management logic
 - **Extensibility**: Filter-based architecture for custom tools
 
-See [Tool Manager](tool-manager.md) for complete documentation.
+See Tool Manager for complete documentation.
 
 ### ToolRegistrationTrait (@since v0.2.2)
 

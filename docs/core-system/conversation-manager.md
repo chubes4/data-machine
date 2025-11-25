@@ -509,11 +509,11 @@ if ($validation['is_duplicate']) {
 
 ## Related Components
 
-- [AIConversationLoop](ai-conversation-loop.md) - Multi-turn conversation execution using ConversationManager
-- [ToolExecutor](tool-execution.md) - Tool discovery and execution
-- [RequestBuilder](request-builder.md) - AI request construction
-- [Parameter Systems](../../api/parameter-systems.md) - Tool parameter building and architecture
-- [Universal Engine Architecture](universal-engine.md) - Shared AI infrastructure
+- AIConversationLoop - Multi-turn conversation execution using ConversationManager
+- ToolExecutor - Tool discovery and execution
+- RequestBuilder - AI request construction
+- Parameter Systems - Tool parameter building and architecture
+- Universal Engine Architecture - Shared AI infrastructure
 
 ---
 

@@ -15,7 +15,7 @@ Requires WordPress authentication with `manage_options` capability. Two authenti
 1. **Application Password** (Recommended for external integrations)
 2. **Cookie Authentication** (WordPress admin sessions)
 
-See [Authentication Guide](authentication.md) for setup instructions.
+See Authentication Guide for setup instructions.
 
 ## Capabilities
 
@@ -421,10 +421,10 @@ Integrate with platforms like n8n, Integromat, or custom automation tools to tri
 
 ## Related Documentation
 
-- [Flows Endpoints](flows.md) - Flow management
-- [Jobs Endpoints](jobs.md) - Job monitoring
-- [Authentication](authentication.md) - Auth methods
-- [Errors](errors.md) - Error handling
+- Flows Endpoints - Flow management
+- Jobs Endpoints - Job monitoring
+- Authentication - Auth methods
+- Errors - Error handling
 
 ---
 

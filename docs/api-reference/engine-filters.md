@@ -248,7 +248,7 @@ Universal tool enablement control. Determines which tools are available to AI ag
 
 **Note**: Direct filter usage for tool availability is replaced by **ToolManager** (@since v0.2.1). The ToolManager provides centralized methods (`is_tool_available()`, `is_tool_configured()`) that internally use these filters but add additional validation layers. Components should use ToolManager methods rather than calling filters directly.
 
-See [Tool Manager](../core-system/tool-manager.md) for the modern tool management approach.
+See Tool Manager for the modern tool management approach.
 
 **Hook Usage**:
 ```php
@@ -552,8 +552,8 @@ add_filter('datamachine_tool_enabled', function($enabled, $tool_name, $tool_conf
 
 ## Related Documentation
 
-- [Universal Engine Architecture](/docs/core-system/universal-engine.md) - Overall engine structure
-- [RequestBuilder Pattern](/docs/core-system/request-builder.md) - Directive application system
-- [Tool Execution Architecture](/docs/core-system/tool-execution.md) - Tool discovery and execution
-- [Tool Manager](/docs/core-system/tool-manager.md) - Centralized tool management (@since v0.2.1)
-- [AI Conversation Loop](/docs/core-system/ai-conversation-loop.md) - Multi-turn conversation execution
+- Universal Engine Architecture - Overall engine structure
+- RequestBuilder Pattern - Directive application system
+- Tool Execution Architecture - Tool discovery and execution
+- Tool Manager - Centralized tool management (@since v0.2.1)
+- AI Conversation Loop - Multi-turn conversation execution

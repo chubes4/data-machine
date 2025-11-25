@@ -165,14 +165,14 @@ return $this->errorResponse('Authentication failed', [
 ## Implementations
 
 All publish handlers extend this base class:
-- [Twitter Handler](../handlers/publish/twitter.md)
-- [Bluesky Handler](../handlers/publish/bluesky.md)
-- [Threads Handler](../handlers/publish/threads.md)
-- [Facebook Handler](../handlers/publish/facebook.md)
-- [WordPress Handler](../handlers/publish/wordpress-publish.md)
-- [Google Sheets Handler](../handlers/publish/google-sheets-output.md)
+- Twitter Handler
+- Bluesky Handler
+- Threads Handler
+- Facebook Handler
+- WordPress Handler
+- Google Sheets Handler
 
 Update handlers also extend this base:
-- [WordPress Update Handler](../handlers/update/wordpress-update.md)
+- WordPress Update Handler
 
-See [Publish Handlers Overview](../handlers/publish/handlers-overview.md) for comparison.
+See Publish Handlers Overview for comparison.

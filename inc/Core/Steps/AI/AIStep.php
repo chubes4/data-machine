@@ -3,11 +3,11 @@
 namespace DataMachine\Core\Steps\AI;
 
 use DataMachine\Core\DataPacket;
+use DataMachine\Core\PluginSettings;
 use DataMachine\Core\Steps\Step;
 use DataMachine\Engine\AI\AIConversationLoop;
 use DataMachine\Engine\AI\ConversationManager;
 use DataMachine\Engine\AI\Tools\ToolExecutor;
-use DataMachine\Engine\AI\Tools\ToolManager;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -42,14 +42,14 @@ class AIStep extends Step {
 
         $pipeline_step_id = $this->flow_step_config['pipeline_step_id'];
 
-        $step_config = $this->engine->getFlowStepConfig($pipeline_step_id);
-        $provider_name = $step_config['provider'] ?? '';
+        $pipeline_step_config = $this->engine->getPipelineStepConfig($pipeline_step_id);
+        $provider_name = $pipeline_step_config['provider'] ?? PluginSettings::get('default_provider', '');
         if (empty($provider_name)) {
             do_action('datamachine_fail_job', $this->job_id, 'ai_provider_missing', [
                 'flow_step_id' => $this->flow_step_id,
                 'pipeline_step_id' => $pipeline_step_id,
-                'error_message' => 'AI step requires provider configuration. Please configure an AI provider in step settings.',
-                'solution' => 'Configure AI provider in pipeline step settings'
+                'error_message' => 'AI step requires provider configuration. Please configure an AI provider in step settings or set a default provider in plugin settings.',
+                'solution' => 'Configure AI provider in pipeline step settings or set default provider in Data Machine settings'
             ]);
             return false;
         }
@@ -108,11 +108,9 @@ class AIStep extends Step {
 
         $pipeline_step_id = $this->flow_step_config['pipeline_step_id'];
 
-        $step_config = $this->engine->getFlowStepConfig($pipeline_step_id);
+        $pipeline_step_config = $this->engine->getPipelineStepConfig($pipeline_step_id);
 
-        // Get max turns from settings
-        $settings = get_option('datamachine_settings', []);
-        $max_turns = $settings['max_turns'] ?? 12;
+        $max_turns = PluginSettings::get('max_turns', 12);
 
         $payload = [
             'job_id' => $this->job_id,
@@ -132,7 +130,7 @@ class AIStep extends Step {
 
         $available_tools = ToolExecutor::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id);
 
-        $provider_name = $step_config['provider'] ?? $settings['default_provider'] ?? '';
+        $provider_name = $pipeline_step_config['provider'] ?? $settings['default_provider'] ?? '';
 
         // Execute conversation loop
         $loop = new AIConversationLoop();
@@ -140,7 +138,7 @@ class AIStep extends Step {
             $messages,
             $available_tools,
             $provider_name,
-            $step_config['model'] ?? $settings['default_model'] ?? '',
+            $pipeline_step_config['model'] ?? $settings['default_model'] ?? '',
             'pipeline',
             $payload,
             $max_turns

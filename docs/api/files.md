@@ -10,7 +10,7 @@ The Files endpoint handles file uploads for pipeline processing with flow-isolat
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication Guide](authentication.md).
+Requires `manage_options` capability. See Authentication Guide.
 
 ## Endpoints
 
@@ -281,10 +281,10 @@ done
 
 ## Related Documentation
 
-- [Execute Endpoint](execute.md) - Workflow execution
-- [Flows Endpoints](flows.md) - Flow management
-- [Handlers Endpoint](handlers.md) - Available handlers
-- [Authentication](authentication.md) - Auth methods
+- Execute Endpoint - Workflow execution
+- Flows Endpoints - Flow management
+- Handlers Endpoint - Available handlers
+- Authentication - Auth methods
 
 ---
 

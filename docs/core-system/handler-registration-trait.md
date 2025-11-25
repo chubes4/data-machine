@@ -353,7 +353,7 @@ self::registerHandler(
 
 ## See Also
 
-- [Core Filters](../api-reference/core-filters.md) - Complete filter reference
-- [Fetch Handler](fetch-handler.md) - Fetch handler base class
-- [Publish Handler](publish-handler.md) - Publish handler base class
-- [Settings Handler](settings-handler.md) - Settings base classes
+- Core Filters - Complete filter reference
+- Fetch Handler - Fetch handler base class
+- Publish Handler - Publish handler base class
+- Settings Handler - Settings base classes

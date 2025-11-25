@@ -2,7 +2,7 @@
 
 Data Machine — WordPress plugin for automating content workflows with AI. Visual pipeline builder, chat agent, REST API, and extensibility via handlers and tools.
 
-Version: 0.2.9
+Version: 0.2.10
 
 This file provides a concise, present-tense technical reference for contributors and automated agents. For user-focused docs see datamachine/docs/.
 
@@ -50,7 +50,7 @@ Agent guidance (for automated editors)
 - Make minimal, targeted documentation edits; preserve accurate content and explain assumptions in changelogs.
 - Use present-tense language and remove references to deleted functionality or historical counts.
 - Do not modify source code when aligning documentation unless explicitly authorized.
-- When updating documentation files, remove internal `.md` links between documentation files (for example replace `[Overview](overview.md)` with `Overview`). Preserve anchor links (for example `#section`) and external URLs.
+
 - Do not create new top-level documentation directories. Creating or updating `.md` files is allowed only within existing directories.
 
 Where to find more

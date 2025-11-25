@@ -10,7 +10,7 @@ Jobs endpoints provide monitoring and management of workflow executions. Jobs re
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication Guide](authentication.md).
+Requires `manage_options` capability. See Authentication Guide.
 
 ## Endpoints
 
@@ -325,10 +325,10 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/jobs \
 
 ## Related Documentation
 
-- [Execute Endpoint](execute.md) - Flow execution
-- [Flows Endpoints](flows.md) - Flow management
-- [ProcessedItems Endpoints](processed-items.md) - Deduplication tracking
-- [Logs Endpoints](logs.md) - Detailed execution logs
+- Execute Endpoint - Flow execution
+- Flows Endpoints - Flow management
+- ProcessedItems Endpoints - Deduplication tracking
+- Logs Endpoints - Detailed execution logs
 
 ---
 

@@ -101,11 +101,6 @@ class Bluesky extends PublishHandler {
 
         // handler_config is ALWAYS flat structure - no nesting
 
-        $this->log('debug', 'Bluesky Tool: Using handler configuration', [
-            'include_images' => $handler_config['include_images'] ?? true,
-            'link_handling' => $handler_config['link_handling'] ?? 'append'
-        ]);
-
         $engine = $parameters['engine'] ?? null;
         if (!$engine instanceof EngineData) {
             $engine = new EngineData($parameters['engine_data'] ?? [], $parameters['job_id'] ?? null);
@@ -116,7 +111,7 @@ class Bluesky extends PublishHandler {
         $source_url = $engine->getSourceUrl();
         $image_file_path = $engine->getImagePath();
 
-        $include_images = $handler_config['include_images'] ?? true;
+        $include_images = $handler_config['include_images'] ?? false;
         $link_handling = $handler_config['link_handling'] ?? 'append';
 
         $auth = $this->get_auth();

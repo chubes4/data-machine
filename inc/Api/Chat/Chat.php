@@ -12,6 +12,7 @@
 namespace DataMachine\Api\Chat;
 
 use DataMachine\Core\Database\Chat\Chat as ChatDatabase;
+use DataMachine\Core\PluginSettings;
 use DataMachine\Engine\AI\ConversationManager;
 use DataMachine\Engine\AI\AIConversationLoop;
 use DataMachine\Engine\AI\Tools\ToolManager;
@@ -86,16 +87,15 @@ class Chat {
 		$session_id = $request->get_param('session_id');
 
 		// Get provider and model with defaults
-		$settings = get_option('datamachine_settings', []);
 		$provider = $request->get_param('provider');
 		$model = $request->get_param('model');
-		$max_turns = $settings['max_turns'] ?? 12;
+		$max_turns = PluginSettings::get('max_turns', 12);
 
 		if (empty($provider)) {
-			$provider = $settings['default_provider'] ?? '';
+			$provider = PluginSettings::get('default_provider', '');
 		}
 		if (empty($model)) {
-			$model = $settings['default_model'] ?? '';
+			$model = PluginSettings::get('default_model', '');
 		}
 
 		$provider = sanitize_text_field($provider);

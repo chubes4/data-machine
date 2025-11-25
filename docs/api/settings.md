@@ -10,7 +10,7 @@ Settings endpoints manage tool configuration and cache operations for Data Machi
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication Guide](authentication.md).
+Requires `manage_options` capability. See Authentication Guide.
 
 ## Endpoints
 
@@ -332,9 +332,9 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/cache \
 
 ## Related Documentation
 
-- [Tools Endpoint](tools.md) - Tool availability
-- [Authentication](authentication.md) - Auth methods
-- [Errors](errors.md) - Error handling
+- Tools Endpoint - Tool availability
+- Authentication - Auth methods
+- Errors - Error handling
 
 ---
 

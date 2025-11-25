@@ -10,7 +10,7 @@ Logs endpoints provide access to Data Machine's centralized logging system for m
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication Guide](authentication.md).
+Requires `manage_options` capability. See Authentication Guide.
 
 ## Endpoints
 
@@ -431,10 +431,10 @@ curl https://example.com/wp-json/datamachine/v1/logs/content?mode=recent&limit=5
 
 ## Related Documentation
 
-- [Jobs Endpoints](jobs.md) - Job monitoring
-- [Execute Endpoint](execute.md) - Workflow execution
-- [Settings Endpoints](settings.md) - Configuration management
-- [Authentication](authentication.md) - Auth methods
+- Jobs Endpoints - Job monitoring
+- Execute Endpoint - Workflow execution
+- Settings Endpoints - Configuration management
+- Authentication - Auth methods
 
 ---
 

@@ -642,8 +642,8 @@ async function getFlows() {
 
 ## Related Documentation
 
-- [Authentication](authentication.md) - Auth methods and security
-- [API Overview](index.md) - Complete API documentation
+- Authentication - Auth methods and security
+- API Overview - Complete API documentation
 - All endpoint documentation files contain specific error examples
 
 ---

@@ -11,6 +11,8 @@
 
 namespace DataMachine\Engine\AI\Tools;
 
+use DataMachine\Core\PluginSettings;
+
 defined('ABSPATH') || exit;
 
 class ToolManager {
@@ -34,8 +36,8 @@ class ToolManager {
      * @return array Globally enabled tool IDs
      */
     public function get_globally_enabled_tools(): array {
-        $all_settings = get_option('datamachine_settings', []);
-        return array_keys($all_settings['enabled_tools'] ?? []);
+        $enabled_tools = PluginSettings::get('enabled_tools', []);
+        return array_keys($enabled_tools);
     }
 
     // ============================================
@@ -79,8 +81,7 @@ class ToolManager {
      * @return bool True if globally enabled
      */
     public function is_globally_enabled(string $tool_id): bool {
-        $all_settings = get_option('datamachine_settings', []);
-        $enabled_tools = $all_settings['enabled_tools'] ?? [];
+        $enabled_tools = PluginSettings::get('enabled_tools', []);
 
         // If settings never initialized, treat as opt-out (all configured tools enabled)
         if (empty($enabled_tools)) {

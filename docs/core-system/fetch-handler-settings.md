@@ -113,17 +113,17 @@ if (!$matches) continue; // Skip non-matching items
 
 All fetch handlers extend FetchHandlerSettings:
 
-- [WordPress Local](../handlers/fetch/wordpress-local.md)
-- [WordPress Media](../handlers/fetch/wordpress-media.md)
-- [WordPress API](../handlers/fetch/wordpress-api.md)
-- [RSS](../handlers/fetch/rss.md)
-- [Reddit](../handlers/fetch/reddit.md)
-- [Google Sheets Fetch](../handlers/fetch/google-sheets-fetch.md)
-- [Files](../handlers/fetch/files.md)
+- WordPress Local
+- WordPress Media
+- WordPress API
+- RSS
+- Reddit
+- Google Sheets Fetch
+- Files
 
 ## See Also
 
-- [SettingsHandler](settings-handler.md) - Base settings class
-- [PublishHandlerSettings](publish-handler-settings.md) - Publish handler base settings
-- [SettingsDisplayService](settings-display-service.md) - UI display logic
+- SettingsHandler - Base settings class
+- PublishHandlerSettings - Publish handler base settings
+- SettingsDisplayService - UI display logic
 - [Centralized Handler Filters](../architecture.md#centralized-handler-filter-system) - Filter integration

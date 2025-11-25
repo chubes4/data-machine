@@ -116,4 +116,18 @@ class EngineData {
     public function getPipelineConfig(): array {
         return is_array($this->data['pipeline_config'] ?? null) ? $this->data['pipeline_config'] : [];
     }
+
+    /**
+     * Get configuration for a specific pipeline step.
+     *
+     * Pipeline step config contains AI provider settings (provider, model, system_prompt)
+     * while flow step config contains flow-level overrides (handler_slug, handler_config, user_message).
+     *
+     * @param string $pipeline_step_id Pipeline step identifier.
+     * @return array Step configuration array or empty array.
+     */
+    public function getPipelineStepConfig(string $pipeline_step_id): array {
+        $pipeline_config = $this->getPipelineConfig();
+        return $pipeline_config[$pipeline_step_id] ?? [];
+    }
 }

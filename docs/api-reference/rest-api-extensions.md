@@ -569,10 +569,10 @@ try {
 
 ## Related Documentation
 
-- [REST API Reference](../api/index.md) - Complete core endpoint documentation
+- REST API Reference - Complete core endpoint documentation
 
-- [Core Filters](core-filters.md) - WordPress filter hooks for handler registration
-- [Core Actions](core-actions.md) - WordPress action hooks for execution
+- Core Filters - WordPress filter hooks for handler registration
+- Core Actions - WordPress action hooks for execution
 
 ## Extension Development Guidelines
 

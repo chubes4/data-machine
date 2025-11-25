@@ -116,9 +116,8 @@ class Facebook extends PublishHandler {
         $source_url = $engine->getSourceUrl();
         $image_file_path = $engine->getImagePath();
 
-        // Get config from handler configuration
         $include_images = $handler_config['include_images'] ?? false;
-        $link_handling = $handler_config['link_handling'] ?? 'append'; // 'none', 'append', or 'comment'
+        $link_handling = $handler_config['link_handling'] ?? 'append';
 
         // Debug logging to verify parameter flow
         $this->log('debug', 'Facebook Handler: Parameter extraction complete', [

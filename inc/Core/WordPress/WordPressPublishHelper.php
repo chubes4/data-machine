@@ -98,8 +98,7 @@ class WordPressPublishHelper {
      */
     public static function applySourceAttribution(string $content, ?string $source_url, array $config): string {
         // 1. Check Configuration
-        $link_handling = $config['link_handling'] ?? 'none';
-        if ($link_handling !== 'append') {
+        if (($config['link_handling'] ?? 'append') !== 'append') {
             return $content;
         }
 

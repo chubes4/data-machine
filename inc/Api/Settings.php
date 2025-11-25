@@ -10,6 +10,7 @@
 
 namespace DataMachine\Api;
 
+use DataMachine\Core\PluginSettings;
 use WP_REST_Server;
 
 if (!defined('WPINC')) {
@@ -167,8 +168,7 @@ class Settings {
 	 * @return WP_REST_Response Settings data
 	 */
 	public static function handle_get_settings($request) {
-		$all_settings = get_option('datamachine_settings', []);
-		$ai_settings = $all_settings['ai_settings'] ?? [];
+		$ai_settings = PluginSettings::get('ai_settings', []);
 
 		return rest_ensure_response([
 			'success' => true,
@@ -202,6 +202,7 @@ class Settings {
 
 		// Update the option
 		$updated = update_option('datamachine_settings', $all_settings);
+		PluginSettings::clearCache();
 
 		if (!$updated && get_option('datamachine_settings') !== $all_settings) {
 			return new \WP_Error(

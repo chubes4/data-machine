@@ -161,7 +161,7 @@ The service gracefully handles missing or invalid configurations:
 
 ## See Also
 
-- [SettingsHandler](settings-handler.md) - Base settings class
-- [FetchHandlerSettings](fetch-handler-settings.md) - Fetch handler base settings
-- [PublishHandlerSettings](publish-handler-settings.md) - Publish handler base settings
-- [Pipeline Builder](../admin-interface/pipeline-builder.md) - UI integration
+- SettingsHandler - Base settings class
+- FetchHandlerSettings - Fetch handler base settings
+- PublishHandlerSettings - Publish handler base settings
+- Pipeline Builder - UI integration

@@ -10,7 +10,7 @@ The StepTypes endpoint provides information about available step types for pipel
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication Guide](authentication.md).
+Requires `manage_options` capability. See Authentication Guide.
 
 ## Endpoints
 
@@ -304,10 +304,10 @@ curl https://example.com/wp-json/datamachine/v1/step-types \
 
 ## Related Documentation
 
-- [Pipelines Endpoints](pipelines.md) - Pipeline management with steps
-- [Handlers Endpoint](handlers.md) - Available handlers per step type
-- [Execute Endpoint](execute.md) - Workflow execution
-- [Authentication](authentication.md) - Auth methods
+- Pipelines Endpoints - Pipeline management with steps
+- Handlers Endpoint - Available handlers per step type
+- Execute Endpoint - Workflow execution
+- Authentication - Auth methods
 
 ---
 

@@ -501,8 +501,8 @@ add_filter('datamachine_directives', function($directives) {
 
 ## Related Components
 
-- [Universal Engine Architecture](/docs/core-system/universal-engine.md) - Overall engine structure
-- [AI Conversation Loop](/docs/core-system/ai-conversation-loop.md) - Uses RequestBuilder for AI requests
-- [PromptBuilder Pattern](/docs/core-system/prompt-builder.md) - Unified directive management
-- [Tool Execution Architecture](/docs/core-system/tool-execution.md) - Tool discovery and execution
-- [Universal Engine Filters](/docs/api-reference/engine-filters.md) - Complete filter reference
+- Universal Engine Architecture - Overall engine structure
+- AI Conversation Loop - Uses RequestBuilder for AI requests
+- PromptBuilder Pattern - Unified directive management
+- Tool Execution Architecture - Tool discovery and execution
+- Universal Engine Filters - Complete filter reference

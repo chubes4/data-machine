@@ -161,7 +161,7 @@ $is_globally_enabled = $tool_manager->is_globally_enabled('google_search');
 $is_available = $is_globally_enabled && $is_step_enabled && $is_configured;
 ```
 
-See [Tool Manager](../core-system/tool-manager.md) for complete documentation.
+See Tool Manager for complete documentation.
 
 ## Tool Execution Architecture
 

@@ -11,6 +11,7 @@
 
 namespace DataMachine\Api;
 
+use DataMachine\Core\PluginSettings;
 use WP_REST_Server;
 
 if (!defined('ABSPATH')) {
@@ -69,10 +70,9 @@ class Providers {
 			}
 
 			// Get default settings
-			$settings = get_option('datamachine_settings', []);
 			$defaults = [
-				'provider' => $settings['default_provider'] ?? '',
-				'model' => $settings['default_model'] ?? ''
+				'provider' => PluginSettings::get('default_provider', ''),
+				'model' => PluginSettings::get('default_model', '')
 			];
 
 			return rest_ensure_response([

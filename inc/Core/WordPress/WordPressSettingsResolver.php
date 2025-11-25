@@ -11,6 +11,8 @@
 
 namespace DataMachine\Core\WordPress;
 
+use DataMachine\Core\PluginSettings;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -27,8 +29,7 @@ class WordPressSettingsResolver {
      * @return string Post status (publish, draft, pending, etc.)
      */
     public static function getPostStatus(array $handler_config, string $default = 'draft'): string {
-        $all_settings = get_option('datamachine_settings', []);
-        $wp_settings = $all_settings['wordpress_settings'] ?? [];
+        $wp_settings = PluginSettings::get('wordpress_settings', []);
         $default_post_status = $wp_settings['default_post_status'] ?? '';
 
         if (!empty($default_post_status)) {
@@ -47,8 +48,7 @@ class WordPressSettingsResolver {
      * @return int Post author ID
      */
     public static function getPostAuthor(array $handler_config, int $default = 1): int {
-        $all_settings = get_option('datamachine_settings', []);
-        $wp_settings = $all_settings['wordpress_settings'] ?? [];
+        $wp_settings = PluginSettings::get('wordpress_settings', []);
         $default_author_id = $wp_settings['default_author_id'] ?? 0;
 
         if (!empty($default_author_id)) {

@@ -12,7 +12,7 @@ Flow endpoints manage flow instances - configured, scheduled executions of pipel
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication Guide](authentication.md).
+Requires `manage_options` capability. See Authentication Guide.
 
 ## Endpoints
 
@@ -397,10 +397,10 @@ const deletedJobs = await deleteFlow(flowId);
 
 ## Related Documentation
 
-- [Pipelines Endpoints](pipelines.md) - Pipeline template management
-- [Execute Endpoint](execute.md) - Flow execution
-- [Jobs Endpoints](jobs.md) - Job monitoring
-- [Authentication](authentication.md) - Auth methods
+- Pipelines Endpoints - Pipeline template management
+- Execute Endpoint - Flow execution
+- Jobs Endpoints - Job monitoring
+- Authentication - Auth methods
 
 ---
 

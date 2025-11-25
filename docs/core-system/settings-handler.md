@@ -470,6 +470,6 @@ const FieldEditor = ({ fieldKey, fieldSchema }) => {
 
 ### See Also
 
-- [Handler Registration Trait](handler-registration-trait.md) - Handler registration patterns
-- [Fetch Handler](fetch-handler.md) - Fetch handler base class
-- [Publish Handler](publish-handler.md) - Publish handler base class
+- Handler Registration Trait - Handler registration patterns
+- Fetch Handler - Fetch handler base class
+- Publish Handler - Publish handler base class

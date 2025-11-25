@@ -166,6 +166,36 @@ public function getPipelineConfig(): array
 $pipeline_config = $engine->getPipelineConfig();
 ```
 
+#### getPipelineStepConfig()
+
+Retrieve configuration for a specific pipeline step.
+
+Pipeline step config contains AI provider settings (`provider`, `model`, `system_prompt`) while flow step config contains flow-level overrides (`handler_slug`, `handler_config`, `user_message`).
+
+```php
+public function getPipelineStepConfig(string $pipeline_step_id): array
+```
+
+**Parameters**:
+- `$pipeline_step_id`: Pipeline step identifier (UUID format: `{pipeline_id}_{uuid}`)
+
+**Returns**: Step configuration array or empty array
+
+**Example**:
+```php
+// Get AI provider config for a pipeline step
+$pipeline_step_config = $engine->getPipelineStepConfig($pipeline_step_id);
+$provider = $pipeline_step_config['provider'] ?? '';
+$model = $pipeline_step_config['model'] ?? '';
+$system_prompt = $pipeline_step_config['system_prompt'] ?? '';
+```
+
+**Config Location Guide**:
+| Setting | Config Location | Method |
+|---------|-----------------|--------|
+| `provider`, `model`, `system_prompt` | `pipeline_config` | `getPipelineStepConfig()` |
+| `handler_slug`, `handler_config`, `user_message` | `flow_config` | `getFlowStepConfig()` |
+
 ## Handler Usage
 
 All handlers use EngineData for consistent data access:

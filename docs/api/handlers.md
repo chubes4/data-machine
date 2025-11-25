@@ -10,7 +10,7 @@ The Handlers endpoint provides information about registered fetch, publish, and 
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication Guide](authentication.md).
+Requires `manage_options` capability. See Authentication Guide.
 
 ## Endpoints
 
@@ -332,10 +332,10 @@ curl https://example.com/wp-json/datamachine/v1/handlers \
 
 ## Related Documentation
 
-- [Pipelines Endpoints](pipelines.md) - Pipeline management
-- [Auth Endpoints](auth.md) - Handler authentication
-- [Tools Endpoint](tools.md) - AI tool availability
-- [StepTypes Endpoint](step-types.md) - Step type information
+- Pipelines Endpoints - Pipeline management
+- Auth Endpoints - Handler authentication
+- Tools Endpoint - AI tool availability
+- StepTypes Endpoint - Step type information
 
 ---
 

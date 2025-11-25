@@ -370,7 +370,7 @@ $is_configured = $tool_manager->is_tool_configured('google_search');
 
 ## See Also
 
-- [Universal Engine](universal-engine.md) - Engine architecture overview
-- [Tool Execution Architecture](tool-execution.md) - Tool execution patterns
-- [AI Tools Overview](../ai-tools/tools-overview.md) - Available tools catalog
-- [Core Filters](../api-reference/core-filters.md) - Filter reference
+- Universal Engine - Engine architecture overview
+- Tool Execution Architecture - Tool execution patterns
+- AI Tools Overview - Available tools catalog
+- Core Filters - Filter reference

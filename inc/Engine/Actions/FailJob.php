@@ -11,6 +11,8 @@
 
 namespace DataMachine\Engine\Actions;
 
+use DataMachine\Core\PluginSettings;
+
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
     die;
@@ -63,8 +65,7 @@ class FailJob {
         do_action('datamachine_delete_processed_items', ['job_id' => (int)$job_id]);
 
         // Conditional file cleanup based on settings
-        $settings = get_option('datamachine_settings', []);
-        $cleanup_files = $settings['cleanup_job_data_on_failure'] ?? true;
+        $cleanup_files = PluginSettings::get('cleanup_job_data_on_failure', true);
         $files_cleaned = false;
 
         if ($cleanup_files) {

@@ -212,8 +212,8 @@ if (!as_next_scheduled_action('datamachine_cleanup_old_files')) {
 ## Used By
 
 The FilesRepository modular components are used by:
-- [Files Handler](../handlers/fetch/files.md) - Primary consumer of all components
-- [PublishHandler Base Class](publish-handler.md) - Uses ImageValidator for validation
+- Files Handler - Primary consumer of all components
+- PublishHandler Base Class - Uses ImageValidator for validation
 - Engine Actions - Use FileCleanup for retention policy enforcement
 
 The modular architecture allows individual components to be used independently throughout the system.

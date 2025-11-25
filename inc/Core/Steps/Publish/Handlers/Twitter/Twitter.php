@@ -118,7 +118,7 @@ class Twitter extends PublishHandler {
         $source_url = $engine->getSourceUrl();
         $image_file_path = $engine->getImagePath();
 
-        $include_images = $handler_config['include_images'] ?? true;
+        $include_images = $handler_config['include_images'] ?? false;
         $link_handling = $handler_config['link_handling'] ?? 'append';
 
         $auth = $this->get_auth();

@@ -10,7 +10,7 @@ The Providers endpoint retrieves information about available AI providers and th
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication Guide](authentication.md).
+Requires `manage_options` capability. See Authentication Guide.
 
 ## Endpoints
 
@@ -336,10 +336,10 @@ for (const provider of preferredProviders) {
 
 ## Related Documentation
 
-- [Execute Endpoint](execute.md) - Workflow execution with AI steps
-- [Chat Endpoint](chat.md) - Conversational AI interface
-- [Settings Endpoints](settings.md) - Configuration management
-- [Authentication](authentication.md) - Auth methods
+- Execute Endpoint - Workflow execution with AI steps
+- Chat Endpoint - Conversational AI interface
+- Settings Endpoints - Configuration management
+- Authentication - Auth methods
 
 ---
 

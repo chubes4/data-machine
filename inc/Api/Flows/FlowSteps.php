@@ -370,15 +370,10 @@ class FlowSteps {
 			return [];
 		}
 
-		// Extract settings from the nested 'settings' parameter
-		$raw_settings = $params['settings'] ?? null;
-
-		if ($raw_settings === null) {
-			return [];
-		}
+		$raw_settings = $params['settings'] ?? [];
 
 		if (!is_array($raw_settings)) {
-			return [];
+			$raw_settings = [];
 		}
 
 		try {

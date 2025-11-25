@@ -16,6 +16,8 @@
 
 namespace DataMachine\Engine\AI\Directives;
 
+use DataMachine\Core\PluginSettings;
+
 defined('ABSPATH') || exit;
 
 class SiteContextDirective {
@@ -62,9 +64,7 @@ class SiteContextDirective {
      * @return bool True if enabled, false otherwise
      */
     public static function is_site_context_enabled(): bool {
-        $settings = get_option('datamachine_settings', []);
-
-        return $settings['site_context_enabled'] ?? true;
+        return PluginSettings::get('site_context_enabled', true);
     }
 
     /**

@@ -10,7 +10,7 @@ Users endpoints manage user-specific preferences for Data Machine, including sel
 
 ## Authentication
 
-User-specific permissions apply. See [Authentication Guide](authentication.md).
+User-specific permissions apply. See Authentication Guide.
 
 ## Endpoints
 
@@ -295,9 +295,9 @@ Track user's navigation history and preferred workflows for improved UX.
 
 ## Related Documentation
 
-- [Pipelines Endpoints](pipelines.md) - Pipeline management
-- [Authentication](authentication.md) - Auth methods
-- [Settings Endpoints](settings.md) - Global configuration
+- Pipelines Endpoints - Pipeline management
+- Authentication - Auth methods
+- Settings Endpoints - Global configuration
 
 ---
 

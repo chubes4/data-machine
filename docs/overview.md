@@ -68,12 +68,7 @@ Complete modernization of the admin interface with TanStack Query + Zustand for 
   - Chronological ordering (newest first)
   - Type and timestamp enforcement
 
-For implementation details, see:
-- Step Base Class
-- FetchHandler Base Class
-- PublishHandler Base Class
-- SettingsHandler Classes
-- DataPacket Class
+For implementation details, see the core-system documentation directory.
 
 ## Core Concepts
 

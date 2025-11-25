@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline, chat
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 0.2.9
+Stable tag: 0.2.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -246,6 +246,16 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 5. Chat Interface - Build workflows through conversational AI
 
 == Changelog ==
+
+= 0.2.10 =
+* Added PluginSettings class for centralized settings access with request-level caching
+* Added EngineData::getPipelineStepConfig() for pipeline step configuration retrieval
+* Migrated 15+ files from scattered get_option() calls to centralized PluginSettings::get()
+* Changed social media handler include_images default to false (Twitter, Bluesky, Threads)
+* AIStep now falls back to default provider when pipeline step provider not configured
+* Fixed settings option key typo in activation defaults
+* Removed redundant debug logging from Bluesky and Threads handlers
+* Added cache management and logger documentation
 
 = 0.2.4 =
 * Handler architecture refactoring: consolidated registration by removing individual filter files

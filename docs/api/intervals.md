@@ -226,10 +226,10 @@ curl -X POST https://example.com/wp-json/datamachine/v1/flows \
 
 ## Related Documentation
 
-- [Flow Scheduling](schedule.md) - Scheduling integrated into Flows API
-- [Execute API](execute.md) - Immediate flow execution
-- [Flows API](flows.md) - Flow management and configuration
-- [Jobs API](jobs.md) - Job monitoring and execution history
+- Flow Scheduling - Scheduling integrated into Flows API
+- Execute API - Immediate flow execution
+- Flows API - Flow management and configuration
+- Jobs API - Job monitoring and execution history
 
 ---
 

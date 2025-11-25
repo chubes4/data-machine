@@ -11,6 +11,8 @@
 
 namespace DataMachine\Core\FilesRepository;
 
+use DataMachine\Core\PluginSettings;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -197,8 +199,7 @@ class FileCleanup {
  */
 add_action('datamachine_cleanup_old_files', function() {
     $file_cleanup = new FileCleanup();
-    $settings = get_option('datamachine_settings', []);
-    $retention_days = $settings['file_retention_days'] ?? 7;
+    $retention_days = PluginSettings::get('file_retention_days', 7);
 
     $deleted_count = $file_cleanup->cleanup_old_files($retention_days);
 

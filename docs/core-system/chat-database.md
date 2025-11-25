@@ -589,10 +589,10 @@ foreach ($user_sessions as $session_info) {
 
 ## Related Components
 
-- [Chat API Endpoint](/docs/api/chat.md) - REST API using ChatDatabase
-- [AIConversationLoop](ai-conversation-loop.md) - Conversation execution
-- [Universal Engine Architecture](universal-engine.md) - Shared AI infrastructure
-- [Database Schema](database-schema.md) - Complete database documentation
+- Chat API Endpoint - REST API using ChatDatabase
+- AIConversationLoop - Conversation execution
+- Universal Engine Architecture - Shared AI infrastructure
+- Database Schema - Complete database documentation
 
 ---
 

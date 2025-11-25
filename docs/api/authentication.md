@@ -117,10 +117,10 @@ curl -u username:app_password \
 
 ## Related Documentation
 
-- [Execute Endpoint](execute.md) - Workflow execution
-- [Auth Endpoints](auth.md) - OAuth account management
-- [Errors](errors.md) - Authentication error codes
-- [API Overview](index.md) - Complete API documentation
+- Execute Endpoint - Workflow execution
+- Auth Endpoints - OAuth account management
+- Errors - Authentication error codes
+- API Overview - Complete API documentation
 
 ---
 

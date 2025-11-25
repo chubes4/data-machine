@@ -29,7 +29,7 @@ function datamachine_register_settings_admin_page_filters() {
     
     add_filter('datamachine_admin_assets', function($assets, $context) {
         if ($context === 'settings') {
-            $settings = get_option('datamachine_settings', []);
+            $settings = \DataMachine\Core\PluginSettings::all();
 
             $assets['css'] = [
                 'datamachine-core-modal' => [

@@ -213,6 +213,6 @@ do_action('datamachine_log', 'debug', 'WordPress Tool: Applied AI-decided taxono
 
 ## See Also
 
-- [WordPress Publish Handler](../handlers/publish/wordpress-publish.md) - Main handler integration
-- [WordPressSettingsHandler](wordpress-settings-handler.md) - Settings field generation
+- WordPress Publish Handler - Main handler integration
+- WordPressSettingsHandler - Settings field generation
 - WordPress Handlers - Direct instantiation and initialization

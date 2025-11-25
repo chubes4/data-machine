@@ -10,7 +10,7 @@ The Chat endpoint provides a conversational AI interface for building and execut
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication Guide](authentication.md).
+Requires `manage_options` capability. See Authentication Guide.
 
 ## Endpoints
 
@@ -526,14 +526,14 @@ AI: [Guides through configuration, saves settings]
 
 ## Related Documentation
 
-- [Universal Engine Architecture](/docs/core-system/universal-engine.md) - Shared AI infrastructure
-- [AI Conversation Loop](/docs/core-system/ai-conversation-loop.md) - Multi-turn conversation execution
-- [Tool Execution Architecture](/docs/core-system/tool-execution.md) - Tool discovery and execution
-- [Universal Engine Filters](/docs/api-reference/engine-filters.md) - Directive and tool filters
-- [Execute Endpoint](execute.md) - Workflow execution
-- [Tools Endpoint](tools.md) - Available tools
-- [Handlers Endpoint](handlers.md) - Handler information
-- [Authentication](authentication.md) - Auth methods
+- Universal Engine Architecture - Shared AI infrastructure
+- AI Conversation Loop - Multi-turn conversation execution
+- Tool Execution Architecture - Tool discovery and execution
+- Universal Engine Filters - Directive and tool filters
+- Execute Endpoint - Workflow execution
+- Tools Endpoint - Available tools
+- Handlers Endpoint - Handler information
+- Authentication - Auth methods
 
 ---
 

@@ -165,13 +165,13 @@ Data packets contain **clean data** for AI processing, while **engine parameters
 
 DataPacket is used throughout the codebase for standardized packet creation:
 
-**Fetch Handlers**: See [FetchHandler](fetch-handler.md) implementations:
-- [RSS Handler](../handlers/fetch/rss.md)
-- [Reddit Handler](../handlers/fetch/reddit.md)
-- [Files Handler](../handlers/fetch/files.md)
+**Fetch Handlers**: See FetchHandler implementations:
+- RSS Handler
+- Reddit Handler
+- Files Handler
 
 **AI Steps**: For conversation result packaging
 
 **Any Step**: Any component creating or modifying data packets
 
-All handlers extending [FetchHandler](fetch-handler.md) automatically use DataPacket for packet creation.
+All handlers extending FetchHandler automatically use DataPacket for packet creation.

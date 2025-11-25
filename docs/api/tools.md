@@ -10,7 +10,7 @@ The Tools endpoint provides information about registered AI tools and their conf
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication Guide](authentication.md).
+Requires `manage_options` capability. See Authentication Guide documentation.
 
 ## Endpoints
 
@@ -409,10 +409,10 @@ async function canUseGoogleSearch() {
 
 ## Related Documentation
 
-- [Chat Endpoint](chat.md) - Conversational AI with tools
-- [Settings Endpoints](settings.md) - Tool configuration
-- [Providers Endpoint](providers.md) - AI provider information
-- [Authentication](authentication.md) - Auth methods
+- Chat Endpoint - Conversational AI with tools
+- Settings Endpoints - Tool configuration
+- Providers Endpoint - AI provider information
+- Authentication - Auth methods
 
 ---
 

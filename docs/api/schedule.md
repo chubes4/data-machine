@@ -15,7 +15,7 @@ Requires WordPress authentication with `manage_options` capability. Two authenti
 1. **Application Password** (Recommended for external integrations)
 2. **Cookie Authentication** (WordPress admin sessions)
 
-See [Authentication Guide](authentication.md) for setup instructions.
+See Authentication Guide for setup instructions.
 
 ## Capabilities
 
@@ -118,9 +118,9 @@ In v0.2.4, the standalone `/wp-json/datamachine/v1/schedule` endpoint was remove
 
 ## Related Endpoints
 
-- [Execute](execute.md) - Immediate and delayed flow execution
-- [Flows](flows.md) - Flow management and monitoring
-- [Jobs](jobs.md) - Monitor scheduled execution results</content>
+- Execute - Immediate and delayed flow execution
+- Flows - Flow management and monitoring
+- Jobs - Monitor scheduled execution results</content>
 </xai:function_call">Now I need to create the intervals.md documentation file since I referenced it in the schedule.md. Let me create that. 
 
 <xai:function_call name="write">

@@ -10,7 +10,7 @@ Auth endpoints manage OAuth accounts and handler authentication for social media
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication Guide](authentication.md).
+Requires `manage_options` capability. See Authentication Guide.
 
 ## Endpoints
 
@@ -469,10 +469,10 @@ done
 
 ## Related Documentation
 
-- [Handlers Endpoint](handlers.md) - Handler information
-- [Settings Endpoints](settings.md) - Configuration management
-- [Authentication](authentication.md) - API auth methods
-- [Errors](errors.md) - Error handling
+- Handlers Endpoint - Handler information
+- Settings Endpoints - Configuration management
+- Authentication - API auth methods
+- Errors - Error handling
 
 ---
 

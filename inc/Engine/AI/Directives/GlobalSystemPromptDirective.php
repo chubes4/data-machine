@@ -16,6 +16,8 @@
 
 namespace DataMachine\Engine\AI\Directives;
 
+use DataMachine\Core\PluginSettings;
+
 defined('ABSPATH') || exit;
 
 class GlobalSystemPromptDirective {
@@ -35,8 +37,7 @@ class GlobalSystemPromptDirective {
             return $request;
         }
 
-        $settings = get_option('datamachine_settings', []);
-        $global_prompt = $settings['global_system_prompt'] ?? '';
+        $global_prompt = PluginSettings::get('global_system_prompt', '');
 
         if (empty($global_prompt)) {
             return $request;

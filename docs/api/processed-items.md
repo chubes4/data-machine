@@ -10,7 +10,7 @@ ProcessedItems endpoints manage deduplication tracking records for workflows. Th
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication Guide](authentication.md).
+Requires `manage_options` capability. See Authentication Guide documentation.
 
 ## Endpoints
 
@@ -393,10 +393,10 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items/1523 \
 
 ## Related Documentation
 
-- [Execute Endpoint](execute.md) - Workflow execution
-- [Jobs Endpoints](jobs.md) - Job monitoring
-- [Handlers Endpoint](handlers.md) - Available handlers
-- [Authentication](authentication.md) - Auth methods
+- Execute Endpoint - Workflow execution
+- Jobs Endpoints - Job monitoring
+- Handlers Endpoint - Available handlers
+- Authentication - Auth methods
 
 ---
 
