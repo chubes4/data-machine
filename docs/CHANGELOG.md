@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Delete Step Execution Order Sync** - Fixed execution_order synchronization gap in pipeline step deletion by implementing inline sync logic, ensuring flow steps maintain correct execution order after step removal.
 - **Code Cleanup** - Removed all AutoSave references from core action registrations and documentation.
+- **UI Form Validation** - Simplified form validation logic in ConfigureStepModal and FlowScheduleModal by removing unnecessary hasChanged checks, improving user experience and reducing code complexity.
 
 ### Technical
 - **Performance Improvement** - Eliminated redundant database operations that were causing unnecessary writes during pipeline modifications.
