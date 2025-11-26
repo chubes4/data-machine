@@ -56,6 +56,10 @@ class ExecuteWorkflowTool {
 
         $validation = WorkflowValidator::validate($steps);
         if (!$validation['valid']) {
+            do_action('datamachine_log', 'error', 'ExecuteWorkflowTool: Validation failed', [
+                'error' => $validation['error'],
+                'steps' => $steps
+            ]);
             return [
                 'success' => false,
                 'error' => $validation['error'],
@@ -77,6 +81,10 @@ class ExecuteWorkflowTool {
         $response = rest_do_request($request);
 
         if (is_wp_error($response)) {
+            do_action('datamachine_log', 'error', 'ExecuteWorkflowTool: REST request failed', [
+                'error' => $response->get_error_message(),
+                'steps' => $workflow_steps
+            ]);
             return [
                 'success' => false,
                 'error' => $response->get_error_message(),
@@ -89,6 +97,11 @@ class ExecuteWorkflowTool {
 
         if ($status >= 400) {
             $error_message = $data['message'] ?? 'Execution failed';
+            do_action('datamachine_log', 'error', 'ExecuteWorkflowTool: Execution failed', [
+                'status' => $status,
+                'error' => $error_message,
+                'data' => $data
+            ]);
             return [
                 'success' => false,
                 'error' => $error_message,

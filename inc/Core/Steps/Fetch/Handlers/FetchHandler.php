@@ -189,6 +189,37 @@ abstract class FetchHandler {
 	}
 
 	/**
+	 * Apply exclusion keyword filtering
+	 *
+	 * @param string $text             Text to search
+	 * @param string $exclude_keywords Comma-separated keywords to exclude
+	 * @return bool True if text should be EXCLUDED (matches a keyword)
+	 */
+	protected function applyExcludeKeywords( string $text, string $exclude_keywords ): bool {
+		$exclude_keywords = trim( $exclude_keywords );
+
+		if ( empty( $exclude_keywords ) ) {
+			return false;
+		}
+
+		$keywords = array_map( 'trim', explode( ',', $exclude_keywords ) );
+		$keywords = array_filter( $keywords );
+
+		if ( empty( $keywords ) ) {
+			return false;
+		}
+
+		$text_lower = strtolower( $text );
+		foreach ( $keywords as $keyword ) {
+			if ( mb_stripos( $text_lower, strtolower( $keyword ) ) !== false ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Download remote file to flow-isolated storage
 	 *
 	 * @param string $url         File URL

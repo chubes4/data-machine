@@ -105,6 +105,16 @@ class Auth {
 			);
 		}
 
+		// Check if handler exists but doesn't require auth
+		$all_handlers = apply_filters('datamachine_handlers', []);
+		if (isset($all_handlers[$handler_slug]) && ($all_handlers[$handler_slug]['requires_auth'] ?? false) === false) {
+			return new \WP_Error(
+				'auth_not_required',
+				__('Authentication is not required for this handler', 'datamachine'),
+				['status' => 400]
+			);
+		}
+
 		// Validate handler exists and supports authentication
 		$all_auth = apply_filters('datamachine_auth_providers', []);
 		$auth_instance = $all_auth[$handler_slug] ?? null;
@@ -158,6 +168,20 @@ class Auth {
 				__('Handler slug is required', 'datamachine'),
 				['status' => 400]
 			);
+		}
+
+		// Check if handler exists and doesn't require auth
+		$all_handlers = apply_filters('datamachine_handlers', []);
+		if (isset($all_handlers[$handler_slug]) && ($all_handlers[$handler_slug]['requires_auth'] ?? false) === false) {
+			return rest_ensure_response([
+				'success' => true,
+				'data' => [
+					'authenticated' => true,
+					'requires_auth' => false,
+					'handler_slug' => $handler_slug,
+					'message' => __('Authentication not required for this handler', 'datamachine')
+				]
+			]);
 		}
 
 		// Get auth provider instance
@@ -257,6 +281,16 @@ class Auth {
 			return new \WP_Error(
 				'missing_handler',
 				__('Handler slug is required', 'datamachine'),
+				['status' => 400]
+			);
+		}
+
+		// Check if handler exists but doesn't require auth
+		$all_handlers = apply_filters('datamachine_handlers', []);
+		if (isset($all_handlers[$handler_slug]) && ($all_handlers[$handler_slug]['requires_auth'] ?? false) === false) {
+			return new \WP_Error(
+				'auth_not_required',
+				__('Authentication is not required for this handler', 'datamachine'),
 				['status' => 400]
 			);
 		}

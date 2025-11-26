@@ -77,7 +77,7 @@ class JobsOperations {
         return $job_id;
     }
 
-    public function get_job( int $job_id ): ?object {
+    public function get_job( int $job_id ): ?array {
         if ( empty( $job_id ) ) {
             return null;
         }
@@ -86,24 +86,24 @@ class JobsOperations {
 
         if ( false === $cached_result ) {
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $job = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE job_id = %d", $this->table_name, $job_id ), OBJECT );
+            $job = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE job_id = %d", $this->table_name, $job_id ), ARRAY_A );
             
             // Standardize payload: Decode engine_data if present
-            if ( $job && isset( $job->engine_data ) && is_string( $job->engine_data ) ) {
-                $decoded = json_decode( $job->engine_data, true );
+            if ( $job && isset( $job['engine_data'] ) && is_string( $job['engine_data'] ) ) {
+                $decoded = json_decode( $job['engine_data'], true );
                 if ( json_last_error() === JSON_ERROR_NONE ) {
-                    $job->engine_data = $decoded;
+                    $job['engine_data'] = $decoded;
                 }
             }
 
-            do_action('datamachine_cache_set', $cache_key, $job, 300, 'jobs'); // 5 min cache for job data
+            do_action('datamachine_cache_set', $cache_key, $job, 300, 'jobs');
             $cached_result = $job;
         } else {
             $job = $cached_result;
-            if ( $job && isset( $job->engine_data ) && is_string( $job->engine_data ) ) {
-                $decoded = json_decode( $job->engine_data, true );
+            if ( $job && isset( $job['engine_data'] ) && is_string( $job['engine_data'] ) ) {
+                $decoded = json_decode( $job['engine_data'], true );
                 if ( json_last_error() === JSON_ERROR_NONE ) {
-                    $job->engine_data = $decoded;
+                    $job['engine_data'] = $decoded;
                 }
             }
         }
@@ -298,8 +298,8 @@ class JobsOperations {
     public function retrieve_engine_data(int $job_id): array {
         $job = $this->get_job($job_id);
 
-        if ( $job && isset( $job->engine_data ) && is_array( $job->engine_data ) ) {
-            return $job->engine_data;
+        if ( $job && isset( $job['engine_data'] ) && is_array( $job['engine_data'] ) ) {
+            return $job['engine_data'];
         }
 
         return [];

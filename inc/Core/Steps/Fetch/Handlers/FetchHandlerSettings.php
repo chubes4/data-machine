@@ -33,8 +33,13 @@ abstract class FetchHandlerSettings extends SettingsHandler {
             ],
             'search' => [
                 'type' => 'text',
-                'label' => __('Search Term Filter', 'datamachine'),
-                'description' => __('Filter items by keywords (comma-separated). Items containing any keyword in their title or content will be included.', 'datamachine'),
+                'label' => __('Include Keywords', 'datamachine'),
+                'description' => __('Only process items containing any of these keywords (comma-separated).', 'datamachine'),
+            ],
+            'exclude_keywords' => [
+                'type' => 'text',
+                'label' => __('Exclude Keywords', 'datamachine'),
+                'description' => __('Skip items containing any of these keywords (comma-separated).', 'datamachine'),
             ],
         ];
     }

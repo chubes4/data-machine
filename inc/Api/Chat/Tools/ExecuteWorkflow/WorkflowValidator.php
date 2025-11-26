@@ -34,6 +34,10 @@ class WorkflowValidator {
         }
 
         foreach ($steps as $index => $step) {
+            if (!is_array($step)) {
+                return self::error("Step " . ($index + 1) . ": Invalid format. Step must be an object/array, got " . gettype($step));
+            }
+
             $result = self::validateStep($step, $index);
             if (!$result['valid']) {
                 return $result;

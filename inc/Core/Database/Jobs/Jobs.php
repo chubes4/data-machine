@@ -72,7 +72,7 @@ class Jobs {
         return $this->operations->retrieve_engine_data($job_id);
     }
 
-    public function get_job(int $job_id): ?object {
+    public function get_job(int $job_id): ?array {
         return $this->operations->get_job($job_id);
     }
 

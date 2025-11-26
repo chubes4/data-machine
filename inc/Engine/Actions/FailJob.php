@@ -73,7 +73,7 @@ class FailJob {
             // Get flow_id from job to build file context
             $job = $db_jobs->get_job($job_id);
             if ($job && function_exists('datamachine_get_file_context')) {
-                $context = datamachine_get_file_context($job->flow_id);
+                $context = datamachine_get_file_context($job['flow_id']);
                 $deleted_count = $cleanup->cleanup_job_data_packets($job_id, $context);
                 $files_cleaned = $deleted_count > 0;
             }

@@ -88,44 +88,22 @@ class WordPressPublishHelper {
     /**
      * Apply source attribution to content.
      *
-     * Appends the source URL to the content based on configuration.
-     * Handles both Gutenberg Blocks and Plain Text.
-     *
      * @param string $content The content to modify.
      * @param string|null $source_url Source URL to append.
      * @param array $config Handler configuration (checks 'link_handling').
      * @return string Modified content.
      */
     public static function applySourceAttribution(string $content, ?string $source_url, array $config): string {
-        // 1. Check Configuration
         if (($config['link_handling'] ?? 'append') !== 'append') {
             return $content;
         }
 
-        // 2. Validate URL
         if (!$source_url || !filter_var($source_url, FILTER_VALIDATE_URL)) {
             return $content;
         }
 
-        // 3. Apply based on Content Type
-        if (has_blocks($content)) {
-            return $content . self::generateSourceBlock($source_url);
-        }
-
-        return $content . "\n\nSource: " . esc_url($source_url);
-    }
-
-    /**
-     * Generate Gutenberg Source Block.
-     *
-     * @param string $url Source URL
-     * @return string Gutenberg block HTML
-     */
-    private static function generateSourceBlock(string $url): string {
-        $sanitized_url = esc_url($url);
-        $separator = "\n\n<!-- wp:separator --><hr class=\"wp-block-separator has-alpha-channel-opacity\"/><!-- /wp:separator -->\n\n";
-        $paragraph = "<!-- wp:paragraph --><p>Source: <a href=\"{$sanitized_url}\">{$sanitized_url}</a></p><!-- /wp:paragraph -->";
-        return $separator . $paragraph;
+        $sanitized_url = esc_url($source_url);
+        return $content . "\n\n<p><strong>Source:</strong> <a href=\"{$sanitized_url}\">{$sanitized_url}</a></p>";
     }
 
     /**

@@ -117,15 +117,15 @@ class JobsStatus {
 
         // Update flow last_run_at using existing services if available
         $db_flows = new \DataMachine\Core\Database\Flows\Flows();
-        if (!empty($job->flow_id)) {
+        if (!empty($job['flow_id'])) {
             // Update flow's last_run_at in scheduling configuration
-            $flow_updated = $db_flows->update_flow_last_run($job->flow_id, current_time('mysql', 1));
+            $flow_updated = $db_flows->update_flow_last_run($job['flow_id'], current_time('mysql', 1));
             
             // Log flow update failure if logger available
             if (!$flow_updated) {
                 do_action('datamachine_log', 'warning', 'Failed to update flow last_run_at', [
                     'job_id' => $job_id,
-                    'flow_id' => $job->flow_id
+                    'flow_id' => $job['flow_id']
                 ]);
             }
         }

@@ -99,7 +99,8 @@ class Chat {
 		$session_id = wp_generate_uuid4();
 		$table_name = self::get_table_name();
 
-		$expires_at = current_time('mysql', time() + (24 * HOUR_IN_SECONDS));
+		// Use GMT for expiration to match cleanup logic
+		$expires_at = gmdate('Y-m-d H:i:s', time() + (24 * HOUR_IN_SECONDS));
 
 		$result = $wpdb->insert(
 			$table_name,

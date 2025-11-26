@@ -5,6 +5,17 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-11-26
+
+### Added
+- **Auth API** - Added `requires_auth` check in `inc/Api/Auth.php` to bypass authentication validation for handlers that don't require it (e.g., public scrapers).
+- **FetchHandler** - Added `applyExcludeKeywords()` method to base `FetchHandler` class for negative keyword filtering.
+
+### Changed
+- **Job Data Handling** - Changed `JobsOperations::get_job()` to return `ARRAY_A` (associative array) instead of object, and updated `retrieve_engine_data()` to match.
+- **WordPress Publishing** - Simplified `WordPressPublishHelper::applySourceAttribution()` to use standard HTML paragraph tags instead of Gutenberg separator blocks.
+- **Source Attribution** - Removed `generateSourceBlock()` method in favor of cleaner HTML output.
+
 ## [0.3.0] - 2025-11-26
 
 ### Added
