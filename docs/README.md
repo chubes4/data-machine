@@ -1,6 +1,6 @@
 # Data Machine Documentation
 
-Complete user documentation for the Data Machine WordPress plugin (v0.2.9) - an AI-first content processing system with visual pipeline builder and multi-provider AI integration.
+Complete user documentation for the Data Machine WordPress plugin (v0.3.0) - an AI-first content processing system with visual pipeline builder and multi-provider AI integration.
 
 ## Quick Navigation
 

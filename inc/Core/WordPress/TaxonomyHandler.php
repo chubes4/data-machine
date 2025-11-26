@@ -199,7 +199,7 @@ class TaxonomyHandler {
     }
 
     private function isPreSelectedTaxonomy(string $selection): bool {
-        return is_numeric($selection);
+        return !empty($selection) && $selection !== 'skip' && $selection !== 'ai_decides';
     }
 
     /**
@@ -272,16 +272,30 @@ class TaxonomyHandler {
     /**
      * Process pre-selected taxonomy assignment.
      *
+     * Accepts term ID, name, or slug. Resolves to term ID before assignment.
+     *
      * @param int $post_id WordPress post ID
      * @param string $taxonomy_name Taxonomy name
-     * @param string $selection Numeric term ID as string
+     * @param string $selection Term ID, name, or slug
      * @return array|null Taxonomy assignment result or null if invalid
      */
     private function processPreSelectedTaxonomy(int $post_id, string $taxonomy_name, string $selection, array $engine_data = []): ?array {
-        $term_id = absint($selection);
-        $term_name = self::getTermName($term_id, $taxonomy_name);
+        $term_id = null;
+        $term_name = null;
 
-        if ($term_name !== null) {
+        if (is_numeric($selection)) {
+            $term_id = absint($selection);
+            $term_name = self::getTermName($term_id, $taxonomy_name);
+        } else {
+            $term = get_term_by('name', $selection, $taxonomy_name)
+                 ?: get_term_by('slug', $selection, $taxonomy_name);
+            if ($term) {
+                $term_id = $term->term_id;
+                $term_name = $term->name;
+            }
+        }
+
+        if ($term_id !== null && $term_name !== null) {
             $result = wp_set_object_terms($post_id, [$term_id], $taxonomy_name);
 
             if (is_wp_error($result)) {

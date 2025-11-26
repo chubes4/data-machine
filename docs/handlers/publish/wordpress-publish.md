@@ -81,7 +81,7 @@ $attachment_id = WordPressPublishHelper::attachImageToPost($post_id, $image_path
 **Per Taxonomy Configuration**:
 1. **`'skip'`**: No processing for this taxonomy
 2. **`'ai_decides'`**: Use AI-provided parameters for dynamic assignment
-3. **Numeric ID**: Pre-selected term assignment by term ID
+3. **Term name or slug**: Pre-selected term assignment (resolved to ID automatically)
 
 ### Configuration Format
 
@@ -90,9 +90,11 @@ $attachment_id = WordPressPublishHelper::attachImageToPost($post_id, $image_path
 $handler_config = [
     'taxonomy_category_selection' => 'ai_decides',        // AI decides categories
     'taxonomy_post_tag_selection' => 'skip',              // Skip tags processing
-    'taxonomy_custom_tax_selection' => '15'               // Pre-selected term ID 15
+    'taxonomy_custom_tax_selection' => 'Technology'       // Pre-selected by term name
 ];
 ```
+
+**Note**: Pre-selected values accept term name, slug, or numeric ID. The backend resolves names/slugs to term IDs automatically.
 
 ### AI Parameter Mapping
 
@@ -335,7 +337,7 @@ $handler_config = [
     'post_type' => 'post',
     'enable_images' => false,             // Ignored - system default wins
     'include_source' => true,             // Ignored - system default wins
-    'taxonomy_category_selection' => '5', // Pre-selected category term ID 5
+    'taxonomy_category_selection' => 'Technology', // Pre-selected by term name
     'taxonomy_post_tag_selection' => 'ai_decides'
 ];
 ```

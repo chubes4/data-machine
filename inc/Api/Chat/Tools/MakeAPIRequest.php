@@ -36,26 +36,108 @@ class MakeAPIRequest {
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
-            'description' => 'Make internal REST API calls to Data Machine endpoints. Use this to discover handlers, tools, providers, create pipelines, or execute workflows.',
+            'description' => $this->buildApiDocumentation(),
             'parameters' => [
                 'endpoint' => [
                     'type' => 'string',
                     'required' => true,
-                    'description' => 'REST API endpoint path (e.g., /datamachine/v1/handlers or /datamachine/v1/execute)'
+                    'description' => 'REST API endpoint path (e.g., /datamachine/v1/handlers)'
                 ],
                 'method' => [
                     'type' => 'string',
                     'required' => true,
-                    'description' => 'HTTP method: GET, POST, PUT, or DELETE'
+                    'description' => 'HTTP method: GET, POST, PUT, PATCH, or DELETE'
                 ],
                 'data' => [
                     'type' => 'object',
                     'required' => false,
-                    'description' => 'Request body data for POST/PUT requests (optional)'
+                    'description' => 'Request body data for POST/PUT/PATCH requests'
                 ]
             ]
         ];
 	}
+
+    /**
+     * Build comprehensive API documentation for the tool description.
+     *
+     * @return string API documentation
+     */
+    private function buildApiDocumentation(): string {
+        return <<<'DOC'
+Make Data Machine REST API requests for pipeline management, monitoring, and configuration.
+
+For workflow execution, use the execute_workflow tool instead.
+
+ENDPOINTS:
+
+## Discovery
+GET /datamachine/v1/handlers - List all handlers
+GET /datamachine/v1/handlers?step_type={fetch|publish|update} - Filter by type
+GET /datamachine/v1/handlers/{slug} - Handler details and config schema
+GET /datamachine/v1/auth/{handler}/status - Check OAuth connection status
+GET /datamachine/v1/providers - List AI providers and models
+GET /datamachine/v1/tools - List available AI tools
+
+## Pipelines
+GET /datamachine/v1/pipelines - List all pipelines
+POST /datamachine/v1/pipelines - Create pipeline
+  data: {pipeline_name: "..."}
+GET /datamachine/v1/pipelines/{id} - Get pipeline details
+DELETE /datamachine/v1/pipelines/{id} - Delete pipeline
+
+## Pipeline Steps
+POST /datamachine/v1/pipelines/{id}/steps - Add step to pipeline
+  data: {step_type: "fetch|ai|publish|update"}
+DELETE /datamachine/v1/pipelines/{id}/steps/{step_id} - Remove step
+PUT /datamachine/v1/pipelines/{id}/steps/reorder - Reorder steps
+  data: {step_order: [{pipeline_step_id: "...", execution_order: 0}, ...]}
+
+## Flows
+GET /datamachine/v1/flows - List all flows
+POST /datamachine/v1/flows - Create flow from pipeline
+  data: {pipeline_id: N, flow_name: "...", scheduling_config: {interval: "..."}}
+GET /datamachine/v1/flows/{id} - Get flow details
+DELETE /datamachine/v1/flows/{id} - Delete flow
+POST /datamachine/v1/flows/{id}/duplicate - Duplicate flow
+
+## Flow Configuration
+GET /datamachine/v1/flows/{id}/config - Get complete flow configuration
+GET /datamachine/v1/flows/steps/{flow_step_id}/config - Get step configuration
+PATCH /datamachine/v1/flows/steps/{flow_step_id}/handler - Configure step handler
+  data: {handler_slug: "...", handler_config: {...}}
+PATCH /datamachine/v1/flows/steps/{flow_step_id}/user-message - Update AI step message
+  data: {user_message: "..."}
+
+## Scheduling
+Attach scheduling via flow creation or update:
+  scheduling_config: {interval: "manual|hourly|daily|weekly"}
+  scheduling_config: {interval: "one_time", timestamp: unix_timestamp}
+
+## Jobs & Monitoring
+GET /datamachine/v1/jobs - List all jobs
+GET /datamachine/v1/jobs?flow_id={id} - Jobs for specific flow
+GET /datamachine/v1/jobs?status={pending|running|completed|failed} - Filter by status
+GET /datamachine/v1/jobs/{id} - Job details
+
+## Logs
+GET /datamachine/v1/logs/content - Get log content
+GET /datamachine/v1/logs/content?job_id={id} - Logs for specific job
+GET /datamachine/v1/logs/content?mode=recent&limit=100 - Recent logs
+DELETE /datamachine/v1/logs - Clear logs
+PUT /datamachine/v1/logs/level - Set log level
+  data: {level: "debug|info|warning|error"}
+
+## System
+DELETE /datamachine/v1/cache - Clear all caches
+GET /datamachine/v1/settings - Get plugin settings
+POST /datamachine/v1/settings - Update settings
+
+## Files
+GET /datamachine/v1/files - List uploaded files
+POST /datamachine/v1/files - Upload file
+DELETE /datamachine/v1/files/{filename} - Delete file
+DOC;
+    }
 
 	/**
 	 * Execute API request

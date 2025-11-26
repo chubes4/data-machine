@@ -5,6 +5,28 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-11-26
+
+### Added
+- **ExecuteWorkflow Tool** (`/inc/Api/Chat/Tools/ExecuteWorkflow/`) - New specialized chat tool for workflow execution with modular architecture:
+  - **ExecuteWorkflowTool.php** - Main tool class, registers as `execute_workflow` chat tool with simplified step parameter structure
+  - **DocumentationBuilder.php** - Dynamically builds tool description from registered handlers via `datamachine_handlers` filter
+  - **WorkflowValidator.php** - Validates step structure, handler existence, and step type correctness before execution
+  - **DefaultsInjector.php** - Injects provider/model/post_author defaults from plugin settings automatically
+- **Dynamic Handler Documentation** - Tool descriptions now auto-generate from registered handlers, ensuring documentation stays in sync with actual capabilities
+
+### Changed
+- **ChatAgentDirective Refactoring** - Slimmed from ~450 lines to ~255 lines with pattern-based approach:
+  - Handler selection tables replace verbose endpoint documentation
+  - Taxonomy configuration pattern with clear three-mode options (skip, pre-selected, ai_decides)
+  - Strategic guidance for ephemeral vs persistent workflow decisions
+- **MakeAPIRequest Tool** - Enhanced with comprehensive API documentation for pipeline/flow management, monitoring, and troubleshooting (excludes `/execute` endpoint now handled by `execute_workflow`)
+- **TaxonomyHandler Backend** - `processPreSelectedTaxonomy()` now accepts term name/slug instead of requiring numeric ID, enabling direct use of term names from site context
+
+### Improved
+- **Tool Separation of Concerns** - Clear division between workflow execution (`execute_workflow`) and API management (`make_api_request`)
+- **Chat Agent Architecture** - Extensible pattern for adding new specialized tools without bloating the system directive
+
 ## [0.2.10] - 2025-11-25
 
 ### Added
