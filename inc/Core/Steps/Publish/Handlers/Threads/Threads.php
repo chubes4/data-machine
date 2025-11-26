@@ -55,10 +55,6 @@ class Threads extends PublishHandler {
                                 'content' => [
                                     'type' => 'string',
                                     'description' => 'The text content to post to Threads'
-                                ],
-                                'job_id' => [
-                                    'type' => 'string',
-                                    'description' => 'Optional job ID for tracking'
                                 ]
                             ],
                             'required' => ['content']

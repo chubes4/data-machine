@@ -58,10 +58,6 @@ class Twitter extends PublishHandler {
                                 'content' => [
                                     'type' => 'string',
                                     'description' => 'The text content to post to Twitter'
-                                ],
-                                'job_id' => [
-                                    'type' => 'string',
-                                    'description' => 'Optional job ID for tracking'
                                 ]
                             ],
                             'required' => ['content']

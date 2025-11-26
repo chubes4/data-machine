@@ -51,10 +51,6 @@ class WordPress extends PublishHandler {
                             'type' => 'string',
                             'required' => true,
                             'description' => 'The main content of the post in HTML format'
-                        ],
-                        'job_id' => [
-                            'type' => 'string',
-                            'description' => 'Optional job ID for tracking workflow execution'
                         ]
                     ];
 

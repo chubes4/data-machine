@@ -45,10 +45,6 @@ class Bluesky extends PublishHandler {
                                 'content' => [
                                     'type' => 'string',
                                     'description' => 'The text content to post to Bluesky'
-                                ],
-                                'job_id' => [
-                                    'type' => 'string',
-                                    'description' => 'Optional job ID for tracking'
                                 ]
                             ],
                             'required' => ['content']

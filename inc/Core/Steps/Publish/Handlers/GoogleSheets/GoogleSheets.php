@@ -56,10 +56,6 @@ class GoogleSheets extends PublishHandler {
                                 'data' => [
                                     'type' => 'array',
                                     'description' => 'Array of data rows to append to the sheet'
-                                ],
-                                'job_id' => [
-                                    'type' => 'string',
-                                    'description' => 'Optional job ID for tracking'
                                 ]
                             ],
                             'required' => ['data']

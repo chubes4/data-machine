@@ -56,10 +56,6 @@ class Facebook extends PublishHandler {
                                 'content' => [
                                     'type' => 'string',
                                     'description' => 'The text content to post to Facebook'
-                                ],
-                                'job_id' => [
-                                    'type' => 'string',
-                                    'description' => 'Optional job ID for tracking'
                                 ]
                             ],
                             'required' => ['content']

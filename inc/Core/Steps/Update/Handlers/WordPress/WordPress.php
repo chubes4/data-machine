@@ -53,14 +53,9 @@ class WordPress extends UpdateHandler {
                         'content' => [
                             'type' => 'string',
                             'description' => 'The new content to update the post with'
-                        ],
-                        'job_id' => [
-                            'type' => 'string',
-                            'required' => true,
-                            'description' => 'Job ID for tracking workflow execution'
                         ]
                     ],
-                    'required' => ['content', 'job_id']
+                    'required' => ['content']
                 ]
             ];
         }
