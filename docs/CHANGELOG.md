@@ -5,6 +5,23 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2025-11-29
+
+### Added
+- **DynamicToolProvider Base Class** - New abstract base class for engine-aware tool parameter providers
+  - Prevents AI from requesting parameters that already exist in engine data
+  - Centralized pattern for dynamic tool parameter filtering
+
+### Enhanced
+- **ToolExecutor** - Added engine_data parameter to getAvailableTools() for dynamic tool generation
+- **HandlerRegistrationTrait** - Updated AI tools filter registration to pass 4 parameters (added engine_data)
+- **AIStep** - Enhanced to pass engine data to tool executor for better tool availability determination
+
+### Technical Details
+- **AI Tool Intelligence**: Tools now dynamically adjust parameters based on existing engine data values
+- **Parameter Filtering**: Prevents redundant parameter requests in AI conversations
+- **Engine Awareness**: Tool system now considers workflow context for parameter requirements
+
 ## [0.4.0] - 2025-11-29
 
 ### BREAKING CHANGES

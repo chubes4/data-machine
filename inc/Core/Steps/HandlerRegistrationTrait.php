@@ -88,9 +88,9 @@ trait HandlerRegistrationTrait {
             }, 10, 2);
         }
 
-        // AI tools registration
+        // AI tools registration (4 params: tools, handler_slug, handler_config, engine_data)
         if ($aiToolCallback) {
-            add_filter('chubes_ai_tools', $aiToolCallback, 10, 3);
+            add_filter('chubes_ai_tools', $aiToolCallback, 10, 4);
         }
     }
 }

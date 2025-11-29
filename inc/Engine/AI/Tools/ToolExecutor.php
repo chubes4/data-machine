@@ -22,9 +22,10 @@ class ToolExecutor {
      * @param array|null $previous_step_config Previous step configuration (pipeline only)
      * @param array|null $next_step_config Next step configuration (pipeline only)
      * @param string|null $current_pipeline_step_id Current pipeline step ID (pipeline only)
+     * @param array $engine_data Engine data snapshot for dynamic tool generation
      * @return array Available tools array
      */
-    public static function getAvailableTools(?array $previous_step_config = null, ?array $next_step_config = null, ?string $current_pipeline_step_id = null): array {
+    public static function getAvailableTools(?array $previous_step_config = null, ?array $next_step_config = null, ?string $current_pipeline_step_id = null, array $engine_data = []): array {
         $available_tools = [];
 
         if ($previous_step_config) {
@@ -32,7 +33,7 @@ class ToolExecutor {
             $prev_handler_config = $previous_step_config['handler_config'] ?? [];
 
             if ($prev_handler_slug) {
-                $prev_tools = apply_filters('chubes_ai_tools', [], $prev_handler_slug, $prev_handler_config);
+                $prev_tools = apply_filters('chubes_ai_tools', [], $prev_handler_slug, $prev_handler_config, $engine_data);
                 $allowed_prev_tools = self::getAllowedTools($prev_tools, $prev_handler_slug, $current_pipeline_step_id);
                 $available_tools = array_merge($available_tools, $allowed_prev_tools);
             }
@@ -43,7 +44,7 @@ class ToolExecutor {
             $next_handler_config = $next_step_config['handler_config'] ?? [];
 
             if ($next_handler_slug) {
-                $next_tools = apply_filters('chubes_ai_tools', [], $next_handler_slug, $next_handler_config);
+                $next_tools = apply_filters('chubes_ai_tools', [], $next_handler_slug, $next_handler_config, $engine_data);
                 $allowed_next_tools = self::getAllowedTools($next_tools, $next_handler_slug, $current_pipeline_step_id);
                 $available_tools = array_merge($available_tools, $allowed_next_tools);
             }

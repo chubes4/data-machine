@@ -128,7 +128,8 @@ class AIStep extends Step {
         $next_flow_step_id = $navigator->get_next_flow_step_id($this->flow_step_id, $payload);
         $next_step_config = $next_flow_step_id ? $this->engine->getFlowStepConfig($next_flow_step_id) : null;
 
-        $available_tools = ToolExecutor::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id);
+        $engine_data = $this->engine->all();
+        $available_tools = ToolExecutor::getAvailableTools($previous_step_config, $next_step_config, $pipeline_step_id, $engine_data);
 
         $provider_name = $pipeline_step_config['provider'] ?? $settings['default_provider'] ?? '';
 
