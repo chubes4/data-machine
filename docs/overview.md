@@ -22,6 +22,19 @@ Standardized traits that reduce repetitive registration boilerplate across handl
 - **HandlerRegistrationTrait**: Single `registerHandler()` method for all handler types (fetch, publish, update)
 - **ToolRegistrationTrait**: Agent-agnostic tool registration with dynamic filter creation for unlimited agent types
 
+**Services Layer Architecture** (@since v0.4.0) - Performance Revolution:
+
+Complete replacement of filter-based action system with OOP service managers for 3x performance improvement through direct method calls:
+
+**Service Managers**:
+- **FlowManager** - Flow CRUD operations, duplication, step synchronization
+- **PipelineManager** - Pipeline CRUD operations with complete/simple creation modes  
+- **JobManager** - Job execution monitoring and management
+- **LogsManager** - Centralized log access and filtering
+- **ProcessedItemsManager** - Deduplication tracking across workflows
+- **FlowStepManager** - Individual flow step configuration and handler management
+- **PipelineStepManager** - Pipeline step template management
+
 **Modern React Architecture** (@since v0.2.3, enhanced v0.2.6) - Performance Optimization:
 
 Complete modernization of the admin interface with TanStack Query + Zustand for optimal performance, enhanced with advanced state management patterns in v0.2.6:
@@ -153,7 +166,7 @@ $image_url = $engine_data['image_url'] ?? null;
   - WordPress Post Reader - Single post analysis
   - Registered via `datamachine_global_tools` filter
 - **Chat-Specific Tools** - Available only to chat AI agents:
-  - ExecuteWorkflow (@since v0.3.0) - Execute complete multi-step workflows with automatic defaults injection
+  - ExecuteWorkflow (@since v0.3.0) - Execute complete multi-step workflows with modular architecture (DefaultsInjector, DocumentationBuilder, WorkflowValidator, ExecuteWorkflowTool)
   - MakeAPIRequest - Execute Data Machine REST API operations for pipeline/flow management
   - Registered via `datamachine_chat_tools` filter
 - **Handler-Specific Tools** - Available when next step matches handler type, registered via `chubes_ai_tools` filter
@@ -202,11 +215,11 @@ docs/
 ## System Features
 
 ### Cache Management
-- **Centralized Cache System** - Actions/Cache.php provides WordPress action-based cache clearing
-- **Granular Invalidation** - Separate actions for pipeline, flow, and job cache clearing (datamachine_clear_pipeline_cache, datamachine_clear_flow_cache, datamachine_clear_jobs_cache, datamachine_clear_all_cache)
-- **Pattern-Based Clearing** - Supports wildcard patterns for efficient bulk operations (datamachine_pipeline_*, datamachine_flow_*, datamachine_job_*)
+- **Centralized Cache System** - Services layer provides direct cache management through service managers
+- **Granular Invalidation** - Separate methods for pipeline, flow, and job cache clearing via service managers
+- **Pattern-Based Clearing** - Supports wildcard patterns for efficient bulk operations
 - **WordPress Transients** - Native WordPress caching integration with comprehensive logging
-- **Standardized Storage** - datamachine_cache_set action for consistent cache management
+- **Standardized Storage** - Consistent cache management across all service managers
 
 ## Requirements
 

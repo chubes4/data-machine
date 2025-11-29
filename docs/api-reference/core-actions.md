@@ -2,6 +2,8 @@
 
 Comprehensive reference for all WordPress actions used by Data Machine for pipeline execution, data processing, and system operations.
 
+**Note**: Since v0.4.0, most core operations use the Services Layer architecture for direct method calls, but these actions remain for extensibility and backward compatibility.
+
 ## Pipeline Execution Actions
 
 ### `datamachine_run_flow_now`
@@ -89,6 +91,8 @@ do_action('datamachine_mark_item_processed', $flow_step_id, 'wordpress_local', $
 
 **Purpose**: Update job execution status
 
+**Services Integration**: Primarily handled by JobManager::updateStatus() since v0.4.0
+
 **Parameters**:
 - `$job_id` (string) - Job identifier
 - `$status` (string) - New status ('pending', 'running', 'completed', 'failed', 'completed_no_items')
@@ -96,12 +100,19 @@ do_action('datamachine_mark_item_processed', $flow_step_id, 'wordpress_local', $
 
 **Usage**:
 ```php
+// Services Layer (recommended since v0.4.0)
+$job_manager = new \DataMachine\Services\JobManager();
+$job_manager->updateStatus($job_id, 'completed', 'Pipeline executed successfully');
+
+// Action Hook (for extensibility)
 do_action('datamachine_update_job_status', $job_id, 'completed', 'Pipeline executed successfully');
 ```
 
 ### `datamachine_fail_job`
 
 **Purpose**: Mark job as failed with detailed error information
+
+**Services Integration**: Primarily handled by JobManager::failJob() since v0.4.0
 
 **Parameters**:
 - `$job_id` (string) - Job identifier
@@ -110,6 +121,15 @@ do_action('datamachine_update_job_status', $job_id, 'completed', 'Pipeline execu
 
 **Usage**:
 ```php
+// Services Layer (recommended since v0.4.0)
+$job_manager = new \DataMachine\Services\JobManager();
+$job_manager->failJob($job_id, 'step_execution_failure', [
+    'flow_step_id' => $flow_step_id,
+    'exception_message' => $e->getMessage(),
+    'reason' => 'detailed_error_reason'
+]);
+
+// Action Hook (for extensibility)
 do_action('datamachine_fail_job', $job_id, 'step_execution_failure', [
     'flow_step_id' => $flow_step_id,
     'exception_message' => $e->getMessage(),

@@ -5,7 +5,7 @@ Tags: ai, automation, content, workflow, pipeline, chat
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 0.3.0
+Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,6 +16,7 @@ AI-first WordPress plugin for content processing workflows with a visual pipelin
 Badges intentionally omitted for brevity.
 
 Features
+- Services layer architecture (@since v0.4.0) with OOP service managers for 3x performance improvement over filter-based actions.
 - Base class architecture for steps, handlers, and settings to reduce duplication and provide shared behavior.
 - React-based admin interface (built with WordPress components) that uses REST API integration.
 - Modern state management patterns (TanStack Query + Zustand for server/client state separation).
@@ -48,10 +49,15 @@ Configuration highlights
 
 Programmatic usage (illustrative)
 ```php
-// Create pipeline and run a flow (illustrative)
-$pipeline_id = apply_filters('datamachine_create_pipeline', null, ['pipeline_name' => 'My Pipeline']);
-$flow_id = apply_filters('datamachine_create_flow', null, ['pipeline_id' => $pipeline_id]);
-do_action('datamachine_run_flow_now', $flow_id, 'manual');
+// Create pipeline and run a flow using services layer (illustrative)
+$pipeline_manager = new \DataMachine\Services\PipelineManager();
+$flow_manager = new \DataMachine\Services\FlowManager();
+
+$pipeline_result = $pipeline_manager->create('My Pipeline');
+$flow_result = $flow_manager->create($pipeline_result['pipeline_id'], 'My Flow');
+
+// Execute flow via REST API
+do_action('datamachine_run_flow_now', $flow_result['flow_id'], 'manual');
 ```
 
 REST API

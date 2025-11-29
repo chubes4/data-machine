@@ -10,7 +10,7 @@ Complete REST API reference for Data Machine
 
 **Permissions**: Most endpoints require `manage_options` capability
 
-**Implementation**: All endpoints in `/datamachine/inc/Api/` with automatic registration via `rest_api_init`
+**Implementation**: All endpoints in `/datamachine/inc/Api/` using services layer for direct method calls, with automatic registration via `rest_api_init`
 
 ## Endpoint Categories
 
@@ -71,15 +71,21 @@ Endpoints returning lists support pagination parameters:
 
 ## Implementation Guide
 
-All endpoints are implemented in `/datamachine/inc/Api/` with automatic registration via `rest_api_init`:
+All endpoints are implemented in `/datamachine/inc/Api/` using the services layer architecture for direct method calls, with automatic registration via `rest_api_init`:
 
 ```php
-// Example endpoint registration
+// Example endpoint registration using services layer
 register_rest_route('datamachine/v1', '/pipelines', [
     'methods' => 'GET',
     'callback' => [Pipelines::class, 'get_pipelines'],
     'permission_callback' => [Pipelines::class, 'check_permission']
 ]);
+
+// Services layer usage in endpoint callbacks
+public function create_pipeline($request) {
+    $pipeline_manager = new \DataMachine\Services\PipelineManager();
+    return $pipeline_manager->create($request['name'], $request['options'] ?? []);
+}
 ```
 
 For detailed implementation patterns, see Core Actions and Core Filters documentation in the api-reference directory.

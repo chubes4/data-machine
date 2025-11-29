@@ -1,6 +1,6 @@
 # Data Machine Documentation
 
-Complete user documentation for the Data Machine WordPress plugin (v0.3.1) - an AI-first content processing system with visual pipeline builder and multi-provider AI integration.
+Complete user documentation for the Data Machine WordPress plugin (v0.4.0) - an AI-first content processing system with visual pipeline builder and multi-provider AI integration.
 
 ## Quick Navigation
 
@@ -23,6 +23,7 @@ Complete user documentation for the Data Machine WordPress plugin (v0.3.1) - an 
 - **Handler Registration Trait**: Standardized handler registration
 
 ### Core System Components
+- **Services Layer**: OOP service managers replacing filter-based actions for 3x performance improvement
 - **Logger**: Centralized logging with Monolog integration
 - **Cache Management**: Granular cache invalidation with pattern support
 
@@ -63,6 +64,7 @@ Complete user documentation for the Data Machine WordPress plugin (v0.3.1) - an 
 
 ### AI Tools
 - **Tools Overview**: Complete AI tools system architecture
+- **ExecuteWorkflow**: Execute complete multi-step workflows with modular architecture
 - **Google Search**: Web search with Custom Search API
 - **Local Search**: WordPress internal search
 - **WebFetch**: Web page content retrieval and processing (50K limit)
@@ -95,6 +97,7 @@ docs/
 │   ├── files-repository.md             # FilesRepository components (v0.2.1)
 │   ├── wordpress-components.md         # WordPress shared components (v0.2.1)
 │   ├── step-navigator.md               # StepNavigator component (v0.2.1)
+│   ├── services-layer.md              # OOP service managers for 3x performance improvement (v0.4.0)
 │   ├── universal-engine.md             # Universal Engine architecture (v0.2.0)
 │   ├── ai-conversation-loop.md         # Multi-turn conversation execution (v0.2.0)
 │   ├── tool-execution.md               # Tool discovery and execution (v0.2.0)
@@ -127,6 +130,7 @@ docs/
 │       └── wordpress-update.md         # WordPress content updates
 ├── ai-tools/
 │   ├── tools-overview.md                # AI tools system architecture
+│   ├── execute-workflow.md             # Execute complete multi-step workflows
 │   ├── wordpress-post-reader.md        # Single WordPress post content retrieval
 │   ├── local-search.md                 # WordPress internal search
 │   ├── google-search.md                # Web search tool

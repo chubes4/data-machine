@@ -331,6 +331,8 @@ add_filter('datamachine_directives', function($directives) {
 
 **Purpose**: Create new pipeline
 
+**Services Integration**: Primarily handled by PipelineManager::create() since v0.4.0
+
 **Parameters**:
 - `$pipeline_id` (null) - Placeholder for return value
 - `$data` (array) - Pipeline creation data
@@ -345,15 +347,37 @@ $data = [
 ];
 ```
 
+**Usage**:
+```php
+// Services Layer (recommended since v0.4.0)
+$pipeline_manager = new \DataMachine\Services\PipelineManager();
+$result = $pipeline_manager->create('Pipeline Name', $options);
+
+// Filter Hook (for extensibility)
+$pipeline_id = apply_filters('datamachine_create_pipeline', null, $data);
+```
+
 ### `datamachine_create_flow`
 
 **Purpose**: Create new flow instance
+
+**Services Integration**: Primarily handled by FlowManager::create() since v0.4.0
 
 **Parameters**:
 - `$flow_id` (null) - Placeholder for return value
 - `$data` (array) - Flow creation data
 
 **Return**: Integer flow ID or false
+
+**Usage**:
+```php
+// Services Layer (recommended since v0.4.0)
+$flow_manager = new \DataMachine\Services\FlowManager();
+$result = $flow_manager->create($pipeline_id, 'Flow Name', $options);
+
+// Filter Hook (for extensibility)
+$flow_id = apply_filters('datamachine_create_flow', null, $data);
+```
 
 ### `datamachine_get_pipelines`
 

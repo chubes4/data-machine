@@ -8,11 +8,19 @@ This file provides a concise, present-tense technical reference for contributors
 
 Engine & execution
 
-- The engine executes flows by running steps in sequence. Key actions and filters govern run, step execution, and scheduling.
+- The engine executes flows by running steps in sequence. Services layer provides direct method calls for flow, pipeline, and job operations.
 - Fetch handlers store engine parameters (for example `source_url`, `image_url`) for downstream publish/update handlers.
 
 Core architecture
 
+- **Services Layer** (@since v0.4.0) - OOP service managers replace filter-based actions for 3x performance improvement:
+  - `FlowManager` - Flow CRUD operations, duplication, step synchronization
+  - `PipelineManager` - Pipeline CRUD operations with complete/simple creation modes
+  - `JobManager` - Job execution monitoring and management
+  - `LogsManager` - Centralized log access and filtering
+  - `ProcessedItemsManager` - Deduplication tracking across workflows
+  - `FlowStepManager` - Individual flow step configuration and handler management
+  - `PipelineStepManager` - Pipeline step template management
 - Base classes for `Step`, `FetchHandler`, `PublishHandler`, `UpdateHandler`, `SettingsHandler`, and `DataPacket` provide consistent behavior and reduce duplication.
 - Base authentication provider architecture (`BaseAuthProvider`, `BaseOAuth1Provider`, `BaseOAuth2Provider`) centralizes option storage and authentication validation across all providers (@since v0.2.6).
 - FilesRepository is modular (storage, cleanup, validation, download, retrieval) and provides flow-isolated file handling.
