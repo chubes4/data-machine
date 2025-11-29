@@ -75,10 +75,6 @@ class Cache {
         $this->clear_pipeline_cache($pipeline_id);
         $this->clear_flow_cache($pipeline_id);
         $this->clear_job_cache();
-
-        if (function_exists('wp_cache_flush')) {
-            wp_cache_flush();
-        }
     }
 
     /**
@@ -190,18 +186,10 @@ class Cache {
 
     public function handle_clear_jobs_cache() {
         $this->clear_job_cache();
-
-        if (function_exists('wp_cache_flush')) {
-            wp_cache_flush();
-        }
     }
 
     public function handle_clear_pipelines_list_cache() {
         delete_transient(self::PIPELINES_LIST_CACHE_KEY);
-
-        if (function_exists('wp_cache_flush')) {
-            wp_cache_flush();
-        }
     }
 
     /**
@@ -243,10 +231,6 @@ class Cache {
      */
     public function handle_clear_all_flows_cache() {
         $this->clear_cache_pattern(self::FLOW_PATTERN);
-
-        if (function_exists('wp_cache_flush')) {
-            wp_cache_flush();
-        }
     }
 
     /**
@@ -254,10 +238,6 @@ class Cache {
      */
     public function handle_clear_all_pipelines_cache() {
         $this->clear_cache_pattern(self::PIPELINE_PATTERN);
-
-        if (function_exists('wp_cache_flush')) {
-            wp_cache_flush();
-        }
     }
 
     public function handle_cache_set($key, $data, $timeout = 0, $group = null) {
@@ -307,10 +287,6 @@ class Cache {
 
         foreach ($cache_keys as $key) {
             delete_transient($key);
-        }
-
-        if (function_exists('wp_cache_flush')) {
-            wp_cache_flush();
         }
     }
 

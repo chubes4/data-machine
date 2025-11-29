@@ -219,12 +219,39 @@ class Jobs {
 		$type = $request->get_param('type');
 		$cleanup_processed = $request->get_param('cleanup_processed');
 
-		// Delegate to centralized delete action
-		do_action('datamachine_delete_jobs', $type, $cleanup_processed);
+		$criteria = [];
+		if ($type === 'failed') {
+			$criteria['failed'] = true;
+		} else {
+			$criteria['all'] = true;
+		}
+
+		$job_manager = new \DataMachine\Services\JobManager();
+		$result = $job_manager->delete($criteria, $cleanup_processed);
+
+		if (!$result['success']) {
+			return new \WP_Error(
+				'delete_failed',
+				__('Failed to delete jobs.', 'datamachine'),
+				['status' => 500]
+			);
+		}
+
+		$message_parts = [];
+		/* translators: %d: Number of jobs deleted */
+		$message_parts[] = sprintf(__('Deleted %d jobs', 'datamachine'), $result['jobs_deleted']);
+
+		if ($cleanup_processed && $result['processed_items_cleaned'] > 0) {
+			$message_parts[] = __('and their associated processed items', 'datamachine');
+		}
+
+		$message = implode(' ', $message_parts) . '.';
 
 		return rest_ensure_response([
 			'success' => true,
-			'message' => __('Jobs cleared successfully.', 'datamachine')
+			'message' => $message,
+			'jobs_deleted' => $result['jobs_deleted'],
+			'processed_items_cleaned' => $result['processed_items_cleaned']
 		]);
 	}
 

@@ -11,7 +11,7 @@
 namespace DataMachine\Api\Flows;
 
 use DataMachine\Core\Admin\DateFormatter;
-use DataMachine\Engine\Actions\Delete;
+use DataMachine\Services\FlowManager;
 use WP_REST_Server;
 
 if (!defined('WPINC')) {
@@ -170,55 +170,28 @@ class Flows {
 	 * Handle flow creation request
 	 */
 	public static function handle_create_flow($request) {
-		$params = $request->get_params();
+		$manager = new FlowManager();
 
-		// Delegate to existing datamachine_create_flow filter
-		$flow_id = apply_filters('datamachine_create_flow', false, $params);
+		$options = [];
+		if ($request->get_param('flow_config')) {
+			$options['flow_config'] = $request->get_param('flow_config');
+		}
+		if ($request->get_param('scheduling_config')) {
+			$options['scheduling_config'] = $request->get_param('scheduling_config');
+		}
 
-		if (!$flow_id) {
+		$result = $manager->create(
+			$request->get_param('pipeline_id'),
+			$request->get_param('flow_name') ?? 'Flow',
+			$options
+		);
+
+		if (!$result) {
 			return new \WP_Error(
 				'flow_creation_failed',
 				__('Failed to create flow.', 'datamachine'),
 				['status' => 500]
 			);
-		}
-
-		// Get flow data for response
-		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
-		$flow = $db_flows->get_flow($flow_id);
-		$pipeline_steps = $db_pipelines->get_pipeline_config($params['pipeline_id']);
-
-		if (!isset($flow['flow_name']) || empty(trim($flow['flow_name']))) {
-			return new \WP_Error(
-				'data_integrity_error',
-				__('Flow data is corrupted - missing name.', 'datamachine'),
-				['status' => 500]
-			);
-		}
-
-		return rest_ensure_response([
-			'success' => true,
-			'data' => [
-				'flow_id' => $flow_id,
-				'flow_name' => $flow['flow_name'],
-				'pipeline_id' => $params['pipeline_id'],
-				'synced_steps' => count($pipeline_steps),
-				'flow_data' => $flow
-			]
-		]);
-	}
-
-	/**
-	 * Handle flow deletion request
-	 */
-	public static function handle_delete_flow($request) {
-		$flow_id = (int) $request->get_param('flow_id');
-
-		$result = Delete::delete_flow($flow_id);
-
-		if (is_wp_error($result)) {
-			return $result;
 		}
 
 		return rest_ensure_response([
@@ -228,15 +201,38 @@ class Flows {
 	}
 
 	/**
+	 * Handle flow deletion request
+	 */
+	public static function handle_delete_flow($request) {
+		$flow_id = (int) $request->get_param('flow_id');
+
+		$manager = new FlowManager();
+		$success = $manager->delete($flow_id);
+
+		if (!$success) {
+			return new \WP_Error(
+				'flow_deletion_failed',
+				__('Failed to delete flow.', 'datamachine'),
+				['status' => 500]
+			);
+		}
+
+		return rest_ensure_response([
+			'success' => true,
+			'data' => ['flow_id' => $flow_id]
+		]);
+	}
+
+	/**
 	 * Handle flow duplication request
 	 */
 	public static function handle_duplicate_flow($request) {
 		$source_flow_id = (int) $request->get_param('flow_id');
 
-		// Delegate to existing datamachine_duplicate_flow filter
-		$new_flow_id = apply_filters('datamachine_duplicate_flow', false, $source_flow_id);
+		$manager = new FlowManager();
+		$result = $manager->duplicate($source_flow_id);
 
-		if (!$new_flow_id) {
+		if (!$result) {
 			return new \WP_Error(
 				'flow_duplication_failed',
 				__('Failed to duplicate flow.', 'datamachine'),
@@ -244,30 +240,9 @@ class Flows {
 			);
 		}
 
-		// Get duplicated flow data for response
-		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
-		$flow = $db_flows->get_flow($new_flow_id);
-		$source_flow = $db_flows->get_flow($source_flow_id);
-		if (!isset($source_flow['pipeline_id']) || empty($source_flow['pipeline_id'])) {
-			return new \WP_Error(
-				'rest_invalid_flow_data',
-				__('Source flow is missing required pipeline_id.', 'datamachine'),
-				['status' => 400]
-			);
-		}
-		$pipeline_steps = $db_pipelines->get_pipeline_config($source_flow['pipeline_id']);
-
 		return rest_ensure_response([
 			'success' => true,
-			'data' => [
-				'source_flow_id' => $source_flow_id,
-				'new_flow_id' => $new_flow_id,
-				'flow_name' => $flow['flow_name'] ?? '',
-				'pipeline_id' => $source_flow['pipeline_id'],
-				'flow_data' => $flow,
-				'pipeline_steps' => $pipeline_steps
-			]
+			'data' => $result
 		]);
 	}
 

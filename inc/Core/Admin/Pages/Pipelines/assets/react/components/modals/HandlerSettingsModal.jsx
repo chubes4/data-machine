@@ -8,6 +8,7 @@
 import { useState, useEffect } from '@wordpress/element';
 import { Modal, Button, Notice, Spinner } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
+import { applyFilters } from '@wordpress/hooks';
 
 import { useUpdateFlowHandler } from '../../queries/flows';
 import { useFormState } from '../../hooks/useFormState';
@@ -54,6 +55,7 @@ export default function HandlerSettingsModal( {
 	const updateHandlerMutation = useUpdateFlowHandler();
 
 	const [ settingsFields, setSettingsFields ] = useState( {} );
+	const [ isEnrichingSettings, setIsEnrichingSettings ] = useState( false );
 
 	const handlerModel = useHandlerModel(handlerSlug);
 
@@ -92,16 +94,38 @@ export default function HandlerSettingsModal( {
 
 
 	/**
-	 * Reset form when modal opens with current settings.
-	 * API provides complete config with defaults already merged.
+	 * Initialize form when modal opens.
+	 * Applies 'datamachine.handlerSettings.init' filter to allow plugins
+	 * to enrich settings (e.g., fetching related data like venue details).
 	 */
 	useEffect( () => {
-		if ( handlerModel ) {
-			const normalized = handlerModel.normalizeForForm(currentSettings || {}, handlerDetails?.settings || {});
-			formState.reset(normalized);
-		} else if ( currentSettings ) {
-			formState.reset( currentSettings );
-		}
+		const initializeForm = async () => {
+			let settings = currentSettings || {};
+
+			setIsEnrichingSettings( true );
+
+			try {
+				settings = await applyFilters(
+					'datamachine.handlerSettings.init',
+					Promise.resolve( settings ),
+					handlerSlug,
+					handlerDetails?.settings || {}
+				);
+			} catch ( error ) {
+				console.error( 'Handler settings enrichment failed:', error );
+			}
+
+			setIsEnrichingSettings( false );
+
+			if ( handlerModel ) {
+				const normalized = handlerModel.normalizeForForm( settings, handlerDetails?.settings || {} );
+				formState.reset( normalized );
+			} else {
+				formState.reset( settings );
+			}
+		};
+
+		initializeForm();
 	}, [ currentSettings, handlerModel, handlerDetails ] );
 
 	/**
@@ -110,10 +134,29 @@ export default function HandlerSettingsModal( {
 	const handlerInfo = handlers[ handlerSlug ] || {};
 
 	/**
-	 * Handle setting change
+	 * Handle setting change with plugin hook support.
+	 * Applies 'datamachine.handlerSettings.fieldChange' filter to allow plugins
+	 * to react to field changes (e.g., loading venue data when dropdown changes).
 	 */
-	const handleSettingChange = ( key, value ) => {
+	const handleSettingChange = async ( key, value ) => {
 		formState.updateField( key, value );
+
+		try {
+			const enrichedData = await applyFilters(
+				'datamachine.handlerSettings.fieldChange',
+				Promise.resolve( {} ),
+				key,
+				value,
+				handlerSlug,
+				{ ...formState.data, [ key ]: value }
+			);
+
+			if ( enrichedData && Object.keys( enrichedData ).length > 0 ) {
+				formState.updateData( enrichedData );
+			}
+		} catch ( error ) {
+			console.error( 'Handler settings field change enrichment failed:', error );
+		}
 	};
 
 
@@ -194,8 +237,8 @@ export default function HandlerSettingsModal( {
 				) }
 				</div>
 
-				{ /* Loading state while fetching settings schema */ }
-				{ isLoadingSettings && (
+				{ /* Loading state while fetching settings schema or enriching */ }
+				{ ( isLoadingSettings || isEnrichingSettings ) && (
 					<div className="datamachine-modal-loading-state">
 						<p className="datamachine-modal-loading-text">
 							{ __(
@@ -249,6 +292,8 @@ export default function HandlerSettingsModal( {
 														: config.default ?? config.current_value ?? ''
 												}
 												onChange={ handleSettingChange }
+												onBatchChange={ formState.updateData }
+												handlerSlug={ handlerSlug }
 											/>
 										)
 									) }

@@ -1,6 +1,9 @@
 <?php
 namespace DataMachine\Engine\Actions;
 
+use DataMachine\Services\PipelineManager;
+use DataMachine\Services\PipelineStepManager;
+
 /**
  * Data Machine Import/Export Actions
  * 
@@ -31,7 +34,6 @@ class ImportExport {
      * Handle datamachine_import action
      */
     public function handle_import($type, $data) {
-        // Capability check
         if (!current_user_can('manage_options')) {
             do_action('datamachine_log', 'error', 'Import requires manage_options capability');
             return false;
@@ -42,13 +44,14 @@ class ImportExport {
             return false;
         }
         
-        // Parse CSV and import pipelines
+        $manager = new PipelineManager();
+        $step_manager = new PipelineStepManager();
+        
         $rows = str_getcsv($data, "\n");
         $imported_pipelines = [];
         $processed = [];
         
         foreach ($rows as $index => $row) {
-            // Skip header
             if ($index === 0) continue;
             
             $cols = str_getcsv($row);
@@ -59,14 +62,14 @@ class ImportExport {
             $step_type = $cols[3];
             $step_config = json_decode($cols[4], true);
             
-            // Create pipeline if not processed
             if (!isset($processed[$pipeline_name])) {
-                // Check if exists
                 $existing_id = $this->find_pipeline_by_name($pipeline_name);
                 
                 if (!$existing_id) {
-                    // Create new pipeline using filter
-                    $existing_id = apply_filters('datamachine_create_pipeline', false, ['pipeline_name' => $pipeline_name]);
+                    $result = $manager->create($pipeline_name, [
+                        'flow_config' => ['flow_name' => 'Default Flow']
+                    ]);
+                    $existing_id = $result['pipeline_id'] ?? false;
                 }
                 
                 if ($existing_id) {
@@ -75,17 +78,11 @@ class ImportExport {
                 }
             }
             
-            // Add steps
-            if (isset($processed[$pipeline_name]) && $step_config) {
-                apply_filters('datamachine_create_step', false, [
-                    'pipeline_id' => $processed[$pipeline_name],
-                    'step_type' => $step_type,
-                    'step_config' => $step_config
-                ]);
+            if (isset($processed[$pipeline_name]) && $step_type) {
+                $step_manager->add($processed[$pipeline_name], $step_type);
             }
         }
         
-        // Store result for filter access
         $result = ['imported' => array_unique($imported_pipelines)];
         add_filter('datamachine_import_result', function() use ($result) { return $result; });
         

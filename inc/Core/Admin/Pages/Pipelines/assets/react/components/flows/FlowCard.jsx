@@ -5,7 +5,7 @@
  * @pattern Container - Fetches complete flow data with useFlow hook
  */
 
-import { useCallback } from '@wordpress/element';
+import { useCallback, useState, useRef, useEffect } from '@wordpress/element';
 import { Card, CardBody, CardDivider } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import FlowHeader from './FlowHeader';
@@ -86,6 +86,19 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 	const runFlowMutation = useRunFlow();
 	const { openModal } = useUIStore();
 
+	// Run success state for temporary button feedback
+	const [ runSuccess, setRunSuccess ] = useState( false );
+	const successTimeout = useRef( null );
+
+	// Cleanup timeout on unmount
+	useEffect( () => {
+		return () => {
+			if ( successTimeout.current ) {
+				clearTimeout( successTimeout.current );
+			}
+		};
+	}, [] );
+
 	// Presentational: Use flow data passed as prop
 	const currentFlowData = flow;
 
@@ -156,8 +169,10 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 		async ( flowId ) => {
 			try {
 				await runFlowMutation.mutateAsync(flowId);
-				// eslint-disable-next-line no-undef
-				alert( __( 'Flow started successfully!', 'datamachine' ) );
+				setRunSuccess( true );
+				successTimeout.current = setTimeout( () => {
+					setRunSuccess( false );
+				}, 2000 );
 			} catch ( error ) {
 				// eslint-disable-next-line no-console
 				console.error( 'Flow execution error:', error );
@@ -250,6 +265,7 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 					onDuplicate={ handleDuplicate }
 					onRun={ handleRun }
 					onSchedule={ handleSchedule }
+					runSuccess={ runSuccess }
 				/>
 
 				<CardDivider />

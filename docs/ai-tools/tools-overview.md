@@ -35,10 +35,20 @@ Available to all AI agents (pipeline + chat) via `datamachine_global_tools` filt
 
 Available only to chat AI agents via `datamachine_chat_tools` filter:
 
-**MakeAPIRequest** (`make_api_request`)
-- **Purpose**: Execute Data Machine REST API operations from chat conversations
+**ExecuteWorkflow** (`execute_workflow`) (@since v0.3.0)
+- **Purpose**: Execute complete multi-step workflows in a single tool call with automatic provider/model defaults injection
 - **Configuration**: None required
-- **Use Cases**: Conversational pipeline/flow creation, workflow execution, system queries
+- **Architecture**: Modular design at `/inc/Api/Chat/Tools/ExecuteWorkflow/`:
+  - **ExecuteWorkflowTool.php** - Main tool class with simplified step parameter structure
+  - **DocumentationBuilder.php** - Dynamically builds tool description from registered handlers
+  - **WorkflowValidator.php** - Validates step structure, handler existence, and step type correctness
+  - **DefaultsInjector.php** - Injects provider/model/post_author defaults from plugin settings
+- **Use Cases**: Direct workflow execution, ephemeral workflows without pipeline creation
+
+**MakeAPIRequest** (`make_api_request`)
+- **Purpose**: Execute Data Machine REST API operations for pipeline/flow management, monitoring, and troubleshooting (excludes `/execute` endpoint now handled by `execute_workflow`)
+- **Configuration**: None required
+- **Use Cases**: Conversational pipeline/flow creation, system queries, configuration management
 
 ### Handler-Specific Tools
 

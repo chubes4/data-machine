@@ -130,7 +130,9 @@ Data Machine v0.2.0 introduced a universal Engine layer (`/inc/Engine/AI/`) that
 **Tool Categories**:
 - Handler-specific tools for publish/update operations (twitter_publish, wordpress_update)
 - Global tools in `/inc/Engine/AI/Tools/` for search and analysis (GoogleSearch, LocalSearch, WebFetch, WordPressPostReader)
-- Chat-only tools for workflow building (MakeAPIRequest)
+- Chat-only tools for workflow building:
+  - ExecuteWorkflow (@since v0.3.0) - Direct workflow execution with modular architecture at `/inc/Api/Chat/Tools/ExecuteWorkflow/`
+  - MakeAPIRequest - REST API operations for pipeline/flow management
 - Automatic tool discovery and configuration via filter-based system
 - Three-layer tool enablement: Global settings → Modal selection → Runtime validation
 

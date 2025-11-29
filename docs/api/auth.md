@@ -12,6 +12,15 @@ Auth endpoints manage OAuth accounts and handler authentication for social media
 
 Requires `manage_options` capability. See Authentication Guide.
 
+## Handler Auth Requirements (@since v0.3.1)
+
+Handlers can declare whether they require authentication via the `requires_auth` flag. When a handler's `requires_auth` is `false`, the Auth API bypasses authentication validation for that handler, allowing handlers like public scrapers to operate without OAuth configuration.
+
+**Auth Bypass Behavior**:
+- GET `/auth/{handler_slug}/status` - Returns success with `requires_auth: false` without checking OAuth state
+- PUT `/auth/{handler_slug}` - Returns success without requiring credentials
+- DELETE `/auth/{handler_slug}` - Returns success without disconnection operations
+
 ## Endpoints
 
 ### GET /auth/{handler_slug}/status

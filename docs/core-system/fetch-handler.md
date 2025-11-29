@@ -52,6 +52,21 @@ return $this->emptyResponse();
 return $this->errorResponse('Error message', ['details' => $details]);
 ```
 
+### Exclude Keywords Filtering (@since v0.3.1)
+
+Filter content based on negative keywords to exclude unwanted items:
+
+```php
+// Check if content contains any exclude keywords
+$exclude_keywords = $config['exclude_keywords'] ?? '';
+if (!empty($exclude_keywords) && $this->applyExcludeKeywords($content, $exclude_keywords)) {
+    // Content contains excluded keywords, skip this item
+    continue;
+}
+```
+
+The `applyExcludeKeywords()` method returns `true` if any exclude keyword is found in the text (case-insensitive), indicating the item should be filtered out.
+
 ## Required Implementation
 
 All fetch handlers must implement the `executeFetch()` method:
@@ -144,6 +159,28 @@ $file_storage = new FileStorage();
 $stored_path = $file_storage->store_file($file_content, $filename, $job_id);
 ```
 
+## Key Methods (@since v0.3.1)
+
+### applyExcludeKeywords()
+
+Filter content based on negative keywords:
+
+```php
+protected function applyExcludeKeywords(string $text, string $exclude_keywords): bool
+```
+
+**Parameters**:
+- `$text`: Text content to search
+- `$exclude_keywords`: Comma-separated list of keywords to exclude
+
+**Returns**: `true` if any exclude keyword is found (item should be filtered out), `false` otherwise
+
+**Features**:
+- Case-insensitive matching
+- Unicode-safe via `mb_stripos()`
+- Handles comma-separated keyword lists
+- Returns false for empty keyword lists
+
 ## Benefits
 
 - **Deduplication**: Automatic prevention of duplicate processing
@@ -151,6 +188,7 @@ $stored_path = $file_storage->store_file($file_content, $filename, $job_id);
 - **Engine Integration**: Seamless data flow to downstream handlers
 - **Error Handling**: Centralized error response formatting
 - **Maintainability**: Reduced code duplication and consistent patterns
+- **Negative Filtering** (@since v0.3.1): Built-in exclude keyword filtering
 
 ## Implementations
 

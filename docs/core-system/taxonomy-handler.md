@@ -30,10 +30,11 @@ The TaxonomyHandler processes taxonomy assignments for WordPress posts during pu
 - **Use Case**: Let AI categorize content intelligently
 
 ### Pre-Selected Mode
-- **Value**: Numeric term ID (as string)
+- **Value**: Term name, slug, or numeric ID (as string)
 - **Behavior**: Specific term pre-selected in configuration
-- **Validation**: Term must exist in taxonomy
+- **Validation**: Term must exist in taxonomy (resolved by name, slug, or ID)
 - **Use Case**: Fixed taxonomy assignments
+- **Enhanced** (@since v0.3.0): `processPreSelectedTaxonomy()` accepts term name/slug instead of requiring numeric ID, enabling direct use of term names from site context
 
 ## Key Methods
 

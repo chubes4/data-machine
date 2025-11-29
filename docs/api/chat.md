@@ -173,7 +173,8 @@ Available to all AI agents via `datamachine_global_tools` filter:
 
 Available only to chat AI agents via `datamachine_chat_tools` filter:
 
-- **make_api_request** - Execute Data Machine REST API operations
+- **execute_workflow** (@since v0.3.0) - Execute complete multi-step workflows with automatic defaults injection
+- **make_api_request** - Execute Data Machine REST API operations for pipeline/flow management and monitoring
 
 ### Tool Execution
 
@@ -301,6 +302,7 @@ Chat agent discovers tools via three sources:
    - wordpress_post_reader
 
 2. **Chat Tools** (`datamachine_chat_tools` filter):
+   - execute_workflow (@since v0.3.0)
    - make_api_request
 
 3. **Filtered by Enablement** (`datamachine_tool_enabled` filter):

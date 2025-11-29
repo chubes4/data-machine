@@ -153,7 +153,8 @@ $image_url = $engine_data['image_url'] ?? null;
   - WordPress Post Reader - Single post analysis
   - Registered via `datamachine_global_tools` filter
 - **Chat-Specific Tools** - Available only to chat AI agents:
-  - MakeAPIRequest - Execute Data Machine REST API operations
+  - ExecuteWorkflow (@since v0.3.0) - Execute complete multi-step workflows with automatic defaults injection
+  - MakeAPIRequest - Execute Data Machine REST API operations for pipeline/flow management
   - Registered via `datamachine_chat_tools` filter
 - **Handler-Specific Tools** - Available when next step matches handler type, registered via `chubes_ai_tools` filter
 - **Context-Aware** - Automatic WordPress site context injection (toggleable)

@@ -10,7 +10,7 @@
 
 namespace DataMachine\Api\Pipelines;
 
-use DataMachine\Engine\Actions\Delete;
+use DataMachine\Services\PipelineStepManager;
 use WP_REST_Server;
 
 if (!defined('WPINC')) {
@@ -210,11 +210,8 @@ class PipelineSteps {
 		$pipeline_id = (int) $request->get_param('pipeline_id');
 		$step_type = $request->get_param('step_type');
 
-		// Delegate to datamachine_create_step filter
-		$step_id = apply_filters('datamachine_create_step', false, [
-			'pipeline_id' => $pipeline_id,
-			'step_type' => $step_type
-		]);
+		$manager = new PipelineStepManager();
+		$step_id = $manager->add($pipeline_id, $step_type);
 
 		if (!$step_id) {
 			return new \WP_Error(
@@ -224,13 +221,11 @@ class PipelineSteps {
 			);
 		}
 
-		// Get step data and registered steps for response
 		$all_steps = apply_filters('datamachine_step_types', []);
 		$step_config = $all_steps[$step_type] ?? [];
 		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 		$pipeline_steps = $db_pipelines->get_pipeline_config($pipeline_id);
 
-		// Find the newly created step
 		$step_data = null;
 		foreach ($pipeline_steps as $step) {
 			if ($step['pipeline_step_id'] === $step_id) {
@@ -260,7 +255,8 @@ class PipelineSteps {
 		$pipeline_id = (int) $request->get_param('pipeline_id');
 		$step_id = (string) $request->get_param('step_id');
 
-		$result = Delete::delete_pipeline_step($step_id, $pipeline_id);
+		$manager = new PipelineStepManager();
+		$result = $manager->delete($step_id, $pipeline_id);
 
 		if (is_wp_error($result)) {
 			return $result;
@@ -320,114 +316,16 @@ class PipelineSteps {
 		$pipeline_id = (int) $request->get_param('pipeline_id');
 		$step_order = $request->get_param('step_order');
 
-		// Get database service
-		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+		$manager = new PipelineStepManager();
+		$result = $manager->reorder($pipeline_id, $step_order);
 
-		// Retrieve current pipeline configuration
-		$pipeline_steps = $db_pipelines->get_pipeline_config($pipeline_id);
-		if (empty($pipeline_steps)) {
-			return new \WP_Error(
-				'pipeline_not_found',
-				__('Pipeline not found', 'datamachine'),
-				['status' => 404]
-			);
-		}
-
-		// Update execution_order based on new sequence
-		$updated_steps = [];
-		foreach ($step_order as $item) {
-			$pipeline_step_id = sanitize_text_field($item['pipeline_step_id']);
-			$execution_order = (int) $item['execution_order'];
-
-			// Find step in current configuration
-			$step_found = false;
-			foreach ($pipeline_steps as $step) {
-				if ($step['pipeline_step_id'] === $pipeline_step_id) {
-					$step['execution_order'] = $execution_order;
-					$updated_steps[] = $step;
-					$step_found = true;
-					break;
-				}
-			}
-
-			if (!$step_found) {
-				return new \WP_Error(
-					'step_not_found',
-					sprintf(
-						__('Step %s not found in pipeline', 'datamachine'),
-						$pipeline_step_id
-					),
-					['status' => 400]
-				);
-			}
-		}
-
-		// Verify we updated all steps
-		if (count($updated_steps) !== count($pipeline_steps)) {
-			return new \WP_Error(
-				'step_count_mismatch',
-				__('Step count mismatch during reorder', 'datamachine'),
-				['status' => 400]
-			);
-		}
-
-		// Save updated pipeline configuration
-		$success = $db_pipelines->update_pipeline($pipeline_id, [
-			'pipeline_config' => $updated_steps
-		]);
-
-		if (!$success) {
-			return new \WP_Error(
-				'save_failed',
-				__('Failed to save step order', 'datamachine'),
-				['status' => 500]
-			);
-		}
-
-		// Clear pipeline cache
-		do_action('datamachine_clear_pipeline_cache', $pipeline_id);
-
-		// Sync execution_order to flows
-		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-		$flows = $db_flows->get_flows_for_pipeline($pipeline_id);
-
-		foreach ($flows as $flow) {
-			$flow_id = $flow['flow_id'];
-			$flow_config = $flow['flow_config'] ?? [];
-
-			// Update only execution_order in flow steps
-			foreach ($flow_config as $flow_step_id => &$flow_step) {
-				if (!isset($flow_step['pipeline_step_id']) || empty($flow_step['pipeline_step_id'])) {
-					continue;
-				}
-				$pipeline_step_id = $flow_step['pipeline_step_id'];
-
-				// Find matching updated step and sync execution_order
-				foreach ($updated_steps as $updated_step) {
-					if ($updated_step['pipeline_step_id'] === $pipeline_step_id) {
-						$flow_step['execution_order'] = $updated_step['execution_order'];
-						break;
-					}
-				}
-			}
-			unset($flow_step);
-
-			// Update flow with only execution_order changes
-			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-			$db_flows->update_flow($flow_id, [
-				'flow_config' => $flow_config
-			]);
-
-			// Clear only flow config cache
-			do_action('datamachine_clear_flow_config_cache', $flow_id);
+		if (is_wp_error($result)) {
+			return $result;
 		}
 
 		return rest_ensure_response([
 			'success' => true,
-			'data' => [
-				'pipeline_id' => $pipeline_id,
-				'step_count' => count($updated_steps)
-			],
+			'data' => $result,
 			'message' => __('Step order saved successfully', 'datamachine')
 		]);
 	}
@@ -441,8 +339,8 @@ class PipelineSteps {
 		$pipeline_step_id = sanitize_text_field($request->get_param('pipeline_step_id'));
 		$system_prompt = sanitize_textarea_field($request->get_param('system_prompt'));
 
-		// Use centralized system prompt update action with validation
-		$success = apply_filters('datamachine_update_system_prompt_result', false, $pipeline_step_id, $system_prompt);
+		$manager = new PipelineStepManager();
+		$success = $manager->updateSystemPrompt($pipeline_step_id, $system_prompt);
 
 		if (!$success) {
 			return new \WP_Error(
@@ -450,15 +348,6 @@ class PipelineSteps {
 				__('Failed to save system prompt', 'datamachine'),
 				['status' => 500]
 			);
-		}
-
-		// Get pipeline_id from pipeline_step_id for cache clearing
-		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
-		$pipeline_step_config = $db_pipelines->get_pipeline_step_config( $pipeline_step_id );
-
-		if (!empty($pipeline_step_config['pipeline_id'])) {
-			$pipeline_id = (int) $pipeline_step_config['pipeline_id'];
-			do_action('datamachine_clear_pipeline_cache', $pipeline_id);
 		}
 
 		return rest_ensure_response([

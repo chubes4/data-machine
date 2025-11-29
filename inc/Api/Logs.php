@@ -16,6 +16,8 @@
 
 namespace DataMachine\Api;
 
+use DataMachine\Services\LogsManager;
+
 if (!defined('WPINC')) {
 	die;
 }
@@ -121,11 +123,9 @@ class Logs {
 	 * DELETE /datamachine/v1/logs
 	 */
  	public static function handle_clear_logs($request) {
- 		// Log operation before clearing (don't log to the file we're clearing)
  		error_log('Data Machine: Logs cleared via REST API by user ' . wp_get_current_user()->user_login);
 
- 		// Delegate to centralized delete action
- 		do_action('datamachine_delete_logs');
+ 		LogsManager::clear();
 
 		return rest_ensure_response([
 			'success' => true,
@@ -144,99 +144,17 @@ class Logs {
 		$limit = $request->get_param('limit');
 		$job_id = $request->get_param('job_id');
 
-		$log_file = datamachine_get_log_file_path();
+		$result = LogsManager::getContent($mode, $limit, $job_id);
 
-		// Check if log file exists
-		if (!file_exists($log_file)) {
+		if (!$result['success']) {
 			return new \WP_Error(
-				'log_file_not_found',
-				__('Log file does not exist.', 'datamachine'),
-				['status' => 404]
+				$result['error'],
+				$result['message'],
+				['status' => $result['error'] === 'log_file_not_found' ? 404 : 500]
 			);
 		}
 
-		// Read log file
-		$file_content = @file($log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-
-		if ($file_content === false) {
-			return new \WP_Error(
-				'log_file_read_error',
-				__('Unable to read log file.', 'datamachine'),
-				['status' => 500]
-			);
-		}
-
-		// Reverse to show newest first
-		$file_content = array_reverse($file_content);
-		$total_lines = count($file_content);
-
-		// Apply job_id filter if provided
-		$filtered_lines = null;
-		if ($job_id !== null) {
-			$file_content = self::filter_logs_by_job_id($file_content, $job_id);
-			$filtered_lines = count($file_content);
-		}
-
-		// Apply limit if mode is recent
-		if ($mode === 'recent') {
-			$file_content = array_slice($file_content, 0, $limit);
-		}
-
-		// Join lines with newlines
-		$content = implode("\n", $file_content);
-
-		// Build response
-		$response = [
-			'success' => true,
-			'content' => $content,
-			'total_lines' => $total_lines,
-			'mode' => $mode
-		];
-
-		// Add filtered_lines if filtering was applied
-		if ($filtered_lines !== null) {
-			$response['filtered_lines'] = $filtered_lines;
-			$response['job_id'] = $job_id;
-		}
-
-		// Build message
-		if ($job_id !== null) {
-			$response['message'] = sprintf(
-				__('Retrieved %d log entries for job %d.', 'datamachine'),
-				count($file_content),
-				$job_id
-			);
-		} else {
-			$response['message'] = sprintf(
-				__('Loaded %d %s log entries.', 'datamachine'),
-				count($file_content),
-				$mode === 'recent' ? 'recent' : 'total'
-			);
-		}
-
-		return rest_ensure_response($response);
-	}
-
-	/**
-	 * Filter log lines by job ID
-	 *
-	 * Searches for "job_id":{value} or "job_id": {value} pattern in JSON context
-	 *
-	 * @param array $lines Log file lines
-	 * @param int $job_id Job ID to filter by
-	 * @return array Filtered log lines
-	 */
-	private static function filter_logs_by_job_id($lines, $job_id) {
-		$filtered = [];
-
-		foreach ($lines as $line) {
-			// Match "job_id":{value} or "job_id": {value} in JSON context
-			if (preg_match('/"job_id"\s*:\s*' . preg_quote($job_id, '/') . '(?:[,\}])/', $line)) {
-				$filtered[] = $line;
-			}
-		}
-
-		return $filtered;
+		return rest_ensure_response($result);
 	}
 
 	/**
@@ -245,34 +163,7 @@ class Logs {
 	 * GET /datamachine/v1/logs
 	 */
 	public static function handle_get_metadata($request) {
-		$log_file_path = datamachine_get_log_file_path();
-		$log_file_exists = file_exists($log_file_path);
-		$log_file_size = $log_file_exists ? filesize($log_file_path) : 0;
-
-		// Format file size
-		$size_formatted = $log_file_size > 0
-			? size_format($log_file_size, 2)
-			: '0 bytes';
-
-		// Get current log level
-		$current_level = datamachine_get_log_level();
-
-		// Get available log levels
-		$available_levels = datamachine_get_available_log_levels();
-
-		return rest_ensure_response([
-			'success' => true,
-			'log_file' => [
-				'path' => $log_file_path,
-				'exists' => $log_file_exists,
-				'size' => $log_file_size,
-				'size_formatted' => $size_formatted
-			],
-			'configuration' => [
-				'current_level' => $current_level,
-				'available_levels' => $available_levels
-			]
-		]);
+		return rest_ensure_response(LogsManager::getMetadata());
 	}
 
 	/**
@@ -283,10 +174,8 @@ class Logs {
 	public static function handle_update_level($request) {
 		$new_level = $request->get_param('level');
 
-		// Update log level via action
-		do_action('datamachine_log', 'set_level', $new_level);
+		LogsManager::setLevel($new_level);
 
-		// Get available levels for display name
 		$available_levels = datamachine_get_available_log_levels();
 		$level_display = $available_levels[$new_level] ?? ucfirst($new_level);
 

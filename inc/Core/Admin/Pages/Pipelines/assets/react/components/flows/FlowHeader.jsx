@@ -21,6 +21,7 @@ import { AUTO_SAVE_DELAY } from '../../utils/constants';
  * @param {Function} props.onDuplicate - Duplicate handler
  * @param {Function} props.onRun - Run handler
  * @param {Function} props.onSchedule - Schedule handler
+ * @param {boolean} props.runSuccess - Whether run was just successful
  * @returns {React.ReactElement} Flow header
  */
 export default function FlowHeader( {
@@ -31,6 +32,7 @@ export default function FlowHeader( {
 	onDuplicate,
 	onRun,
 	onSchedule,
+	runSuccess = false,
 } ) {
 	const [ localName, setLocalName ] = useState( flowName );
 	const saveTimeout = useRef( null );
@@ -122,8 +124,11 @@ export default function FlowHeader( {
 					<Button
 						variant="primary"
 						onClick={ () => onRun && onRun( flowId ) }
+						disabled={ runSuccess }
 					>
-						{ __( 'Run Now', 'datamachine' ) }
+						{ runSuccess
+							? __( 'Queued', 'datamachine' )
+							: __( 'Run Now', 'datamachine' ) }
 					</Button>
 				</div>
 			</div>

@@ -19,18 +19,19 @@
  * - datamachine_mark_item_processed: Universal processed item marking across all handlers
  * - datamachine_log: Central logging operations eliminating logger service discovery
  *
- * ORGANIZED ACTIONS (WordPress-native registration):
- * - datamachine_create, datamachine_delete: CRUD operations via organized action classes
- * - datamachine_update_job_status, datamachine_update_flow_schedule, datamachine_update_flow_handler, datamachine_sync_steps_to_flow: Update operations (Update.php)
- * - datamachine_fail_job: Explicit job failure with configurable cleanup (FailJob.php)
- * - External Plugin Actions: Plugins register custom actions using standard add_action() patterns
+ * SERVICE MANAGERS (Direct method calls, no action hooks):
+ * - PipelineManager: Pipeline and step CRUD operations
+ * - FlowManager: Flow CRUD operations
+ * - FlowStepManager: Flow step configuration operations (handler updates, user messages)
+ * - JobManager: Job lifecycle management (create, status updates, failure handling)
+ * - ProcessedItemsManager: Deduplication tracking operations
+ * - LogsManager: Log file operations (clear, getContent, getMetadata, setLevel)
  *
  * EXTENSIBILITY EXAMPLES:
  * External plugins can add: datamachine_transform, datamachine_validate, datamachine_backup, datamachine_migrate, datamachine_sync, datamachine_analyze
  *
  * ARCHITECTURAL BENEFITS:
  * - WordPress-native action registration: Direct add_action() calls, zero overhead
- * - Clean code organization: Separate files for Create, Delete, and Update operations
  * - External plugin extensibility: Standard WordPress action registration patterns
  * - Eliminates code duplication across multiple trigger points
  * - Provides single source of truth for complex operations  
@@ -46,10 +47,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 // Include organized action classes
-require_once __DIR__ . '/Delete.php';
 require_once __DIR__ . '/ImportExport.php';
-require_once __DIR__ . '/Update.php';
-require_once __DIR__ . '/FailJob.php';
 require_once __DIR__ . '/Engine.php';
 require_once __DIR__ . '/Cache.php';
 
@@ -61,7 +59,7 @@ require_once __DIR__ . '/Cache.php';
 function datamachine_register_core_actions() {
     
     add_action('datamachine_mark_item_processed', function($flow_step_id, $source_type, $item_identifier, $job_id) {
-        $job_id = (int) $job_id; // Ensure job_id is int for database operations
+        $job_id = (int) $job_id;
 
         if (!isset($flow_step_id) || !isset($source_type) || !isset($item_identifier)) {
             do_action('datamachine_log', 'error', 'datamachine_mark_item_processed called with missing required parameters', [
@@ -86,10 +84,8 @@ function datamachine_register_core_actions() {
             return;
         }
 
-        $processed_items = new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
-
-        $success = $processed_items->add_processed_item($flow_step_id, $source_type, $item_identifier, $job_id);
-        
+        $processed_items_manager = new \DataMachine\Services\ProcessedItemsManager();
+        $success = $processed_items_manager->add($flow_step_id, $source_type, $item_identifier, $job_id);
         
         return $success;
     }, 10, 4);
@@ -131,9 +127,6 @@ function datamachine_register_core_actions() {
         return false;
     }, 10, 4);
 
-    \DataMachine\Engine\Actions\Delete::register();
-    \DataMachine\Engine\Actions\Update::register();
-    \DataMachine\Engine\Actions\FailJob::register();
     \DataMachine\Engine\Actions\ImportExport::register();
     \DataMachine\Engine\Actions\Cache::register();
     datamachine_register_execution_engine();

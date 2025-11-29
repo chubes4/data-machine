@@ -117,8 +117,8 @@ abstract class FetchHandler {
 			return false;
 		}
 
-		$processed_items = new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
-		return $processed_items->has_item_been_processed( $flow_step_id, $this->handler_type, $item_id );
+		$processed_items_manager = new \DataMachine\Services\ProcessedItemsManager();
+		return $processed_items_manager->hasBeenProcessed( $flow_step_id, $this->handler_type, $item_id );
 	}
 
 	/**

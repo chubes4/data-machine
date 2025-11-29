@@ -11,7 +11,7 @@
 namespace DataMachine\Api\Pipelines;
 
 use DataMachine\Core\Admin\DateFormatter;
-use DataMachine\Engine\Actions\Delete;
+use DataMachine\Services\PipelineManager;
 use WP_REST_Server;
 
 if (!defined('WPINC')) {
@@ -283,16 +283,6 @@ class Pipelines {
 	 * Handle pipeline creation request
 	 */
 	public static function handle_create_pipeline($request) {
-		// Validate permissions
-		if (!current_user_can('manage_options')) {
-			return new \WP_Error(
-				'rest_forbidden',
-				__('Insufficient permissions.', 'datamachine'),
-				['status' => 403]
-			);
-		}
-
-		// Get parameters from request
 		$params = $request->get_json_params();
 		if (empty($params) || !isset($params['pipeline_name'])) {
 			return new \WP_Error(
@@ -302,9 +292,24 @@ class Pipelines {
 			);
 		}
 
-		// Create the pipeline using the centralized filter
-		$pipeline_id = apply_filters('datamachine_create_pipeline', null, $params);
-		if (!$pipeline_id) {
+		$manager = new PipelineManager();
+
+		$is_complete_mode = isset($params['steps']) && is_array($params['steps']) && !empty($params['steps']);
+
+		if ($is_complete_mode) {
+			$result = $manager->createWithSteps(
+				$params['pipeline_name'],
+				$params['steps'],
+				['flow_config' => $params['flow_config'] ?? []]
+			);
+		} else {
+			$result = $manager->create(
+				$params['pipeline_name'],
+				['flow_config' => $params['flow_config'] ?? []]
+			);
+		}
+
+		if (!$result) {
 			return new \WP_Error(
 				'rest_internal_server_error',
 				__('Failed to create pipeline.', 'datamachine'),
@@ -312,24 +317,9 @@ class Pipelines {
 			);
 		}
 
-		// Get pipeline and flow data for response
-		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
-		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-
-		$pipeline = $db_pipelines->get_pipeline($pipeline_id);
-		$existing_flows = $db_flows ? $db_flows->get_flows_for_pipeline($pipeline_id) : [];
-
-		$creation_mode = isset($params['steps']) && is_array($params['steps']) ? 'complete' : 'simple';
-
 		return rest_ensure_response([
 			'success' => true,
-			'data' => [
-				'pipeline_id' => $pipeline_id,
-				'pipeline_name' => $params['pipeline_name'] ?? 'Pipeline',
-				'pipeline_data' => $pipeline,
-				'existing_flows' => $existing_flows,
-				'creation_mode' => $creation_mode
-			]
+			'data' => $result
 		]);
 	}
 
@@ -339,13 +329,14 @@ class Pipelines {
 	public static function handle_delete_pipeline($request) {
 		$pipeline_id = (int) $request->get_param('pipeline_id');
 
-		$result = Delete::delete_pipeline($pipeline_id);
+		$manager = new PipelineManager();
+		$result = $manager->delete($pipeline_id);
 
 		if (is_wp_error($result)) {
 			return $result;
 		}
 
-		return array_merge(['success' => true], $result);
+		return rest_ensure_response(array_merge(['success' => true], $result));
 	}
 
 	/**
@@ -354,16 +345,6 @@ class Pipelines {
 	 * PATCH /datamachine/v1/pipelines/{id}
 	 */
 	public static function handle_update_pipeline_title($request) {
-		// Validate permissions
-		if (!current_user_can('manage_options')) {
-			return new \WP_Error(
-				'rest_forbidden',
-				__('Insufficient permissions.', 'datamachine'),
-				['status' => 403]
-			);
-		}
-
-		// Get parameters from request
 		$pipeline_id = (int) $request->get_param('id');
 		$params = $request->get_json_params();
 
@@ -375,12 +356,9 @@ class Pipelines {
 			);
 		}
 
-		// Get database service
-		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
-
-		// Update pipeline title
-		$success = $db_pipelines->update_pipeline($pipeline_id, [
-			'pipeline_name' => sanitize_text_field(wp_unslash($params['pipeline_name']))
+		$manager = new PipelineManager();
+		$success = $manager->update($pipeline_id, [
+			'pipeline_name' => $params['pipeline_name']
 		]);
 
 		if (!$success) {
@@ -390,10 +368,6 @@ class Pipelines {
 				['status' => 500]
 			);
 		}
-
-		// Clear caches
-		do_action('datamachine_clear_pipeline_cache', $pipeline_id);
-		do_action('datamachine_clear_pipelines_list_cache');
 
 		return rest_ensure_response([
 			'success' => true,

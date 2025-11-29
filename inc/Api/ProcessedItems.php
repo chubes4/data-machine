@@ -74,20 +74,31 @@ class ProcessedItems {
 	 */
 	public static function handle_clear($request) {
 		$clear_type = $request->get_param('clear_type');
-		$target_id = $request->get_param('target_id');
+		$target_id = (int) $request->get_param('target_id');
 
-		// Build criteria based on clear type
-		$criteria = $clear_type === 'pipeline'
-			? ['pipeline_id' => (int)$target_id]
-			: ['flow_id' => (int)$target_id];
+		$processed_items_manager = new \DataMachine\Services\ProcessedItemsManager();
 
-		// Delegate to centralized delete action
-		do_action('datamachine_delete_processed_items', $criteria);
+		$result = $clear_type === 'pipeline'
+			? $processed_items_manager->deleteForPipeline($target_id)
+			: $processed_items_manager->deleteForFlow($target_id);
+
+		if ($result === false) {
+			return new \WP_Error(
+				'delete_failed',
+				__('Failed to delete processed items.', 'datamachine'),
+				['status' => 500]
+			);
+		}
 
 		return rest_ensure_response([
 			'success' => true,
 			'data' => null,
-			'message' => __('Processed items cleared successfully.', 'datamachine')
+			'message' => sprintf(
+				/* translators: %d: Number of processed items deleted */
+				__('Deleted %d processed items.', 'datamachine'),
+				$result
+			),
+			'items_deleted' => $result
 		]);
 	}
 }

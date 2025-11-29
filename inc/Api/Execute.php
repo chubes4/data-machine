@@ -102,18 +102,38 @@ class Execute {
             );
         }
 
-        // Immediate execution
+        // Create job upfront for immediate visibility
+        $job_manager = new \DataMachine\Services\JobManager();
+        $pipeline_id = (int) $flow['pipeline_id'];
+        $job_id = $job_manager->create($flow_id, $pipeline_id);
+
+        if (!$job_id) {
+            return new \WP_Error(
+                'job_creation_failed',
+                'Failed to create job record',
+                ['status' => 500]
+            );
+        }
+
+        // Immediate execution via Action Scheduler
         if (!$timestamp) {
-            do_action('datamachine_run_flow_now', $flow_id);
+            $action_id = as_schedule_single_action(
+                time(),
+                'datamachine_run_flow_now',
+                [$flow_id, $job_id],
+                'datamachine'
+            );
 
             return rest_ensure_response([
                 'success' => true,
                 'data' => [
                     'execution_type' => 'immediate',
                     'flow_id' => $flow_id,
-                    'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}"
+                    'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}",
+                    'job_id' => $job_id,
+                    'action_id' => $action_id
                 ],
-                'message' => 'Flow execution started'
+                'message' => 'Flow execution queued'
             ]);
         }
 
@@ -129,7 +149,7 @@ class Execute {
         $action_id = as_schedule_single_action(
             $timestamp,
             'datamachine_run_flow_now',
-            [$flow_id],
+            [$flow_id, $job_id],
             'datamachine'
         );
 
@@ -139,6 +159,7 @@ class Execute {
                 'execution_type' => 'delayed',
                 'flow_id' => $flow_id,
                 'flow_name' => $flow['flow_name'] ?? "Flow {$flow_id}",
+                'job_id' => $job_id,
                 'timestamp' => $timestamp,
                 'scheduled_time' => wp_date('c', $timestamp)
             ],

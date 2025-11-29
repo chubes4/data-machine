@@ -10,7 +10,7 @@
 
 namespace DataMachine\Api\Flows;
 
-use WP_REST_Server;
+use DataMachine\Services\FlowStepManager;
 
 if (!defined('WPINC')) {
 	die;
@@ -173,9 +173,8 @@ class FlowSteps {
 			);
 		}
 
-		// Retrieve step configuration
-		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-		$step_config = $db_flows->get_flow_step_config( $flow_step_id );
+		$manager = new FlowStepManager();
+		$step_config = $manager->get($flow_step_id);
 
 		if (empty($step_config)) {
 			return new \WP_Error(
@@ -203,9 +202,7 @@ class FlowSteps {
 		$flow_step_id = sanitize_text_field($request->get_param('flow_step_id'));
 		$handler_slug = sanitize_text_field($request->get_param('handler_slug'));
 		$step_type = sanitize_text_field($request->get_param('step_type'));
-		$pipeline_id = (int) $request->get_param('pipeline_id');
 
-		// Validate required fields
 		if (empty($handler_slug) || empty($flow_step_id)) {
 			return new \WP_Error(
 				'missing_required_fields',
@@ -214,7 +211,6 @@ class FlowSteps {
 			);
 		}
 
-		// Validate handler exists
 		$all_handlers = apply_filters('datamachine_handlers', [], $step_type);
 		$handler_info = null;
 
@@ -233,41 +229,31 @@ class FlowSteps {
 			);
 		}
 
-			// Process handler settings
-			$handler_settings = self::process_handler_settings($handler_slug, $request->get_params());
+		$handler_settings = self::process_handler_settings($handler_slug, $request->get_params());
 
-			// Validate flow_step_id format early so we can safely check persistence after update
-			$parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
-			if (!isset($parts['flow_id']) || !isset($parts['pipeline_step_id'])) {
+		$parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
+		if (!isset($parts['flow_id']) || !isset($parts['pipeline_step_id'])) {
+			return new \WP_Error(
+				'invalid_flow_step_id',
+				__('Invalid flow step ID format.', 'datamachine'),
+				['status' => 400]
+			);
+		}
+		$flow_id = $parts['flow_id'];
+		$pipeline_step_id = $parts['pipeline_step_id'];
+
+		try {
+			$manager = new FlowStepManager();
+			$success = $manager->updateHandler($flow_step_id, $handler_slug, $handler_settings);
+
+			if (!$success) {
 				return new \WP_Error(
-					'invalid_flow_step_id',
-					__('Invalid flow step ID format.', 'datamachine'),
-					['status' => 400]
+					'update_failed',
+					__('Failed to update handler for flow step', 'datamachine'),
+					['status' => 500]
 				);
 			}
-			$flow_id = $parts['flow_id'];
-			$pipeline_step_id = $parts['pipeline_step_id'];
 
-
-			try {
-				// Update flow handler via action hook and verify persistence in DB
-				do_action('datamachine_update_flow_handler', $flow_step_id, $handler_slug, $handler_settings);
-
-				// Verify handler persisted in flows DB
-				$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-				$flow = $db_flows->get_flow($flow_id);
-				$flow_config = $flow['flow_config'] ?? [];
-				$updated_step = $flow_config[$flow_step_id] ?? [];
-				if (!(isset($updated_step['handler_slug']) && $updated_step['handler_slug'] === $handler_slug)) {
-					return new \WP_Error(
-						'update_failed',
-						__('Failed to update handler for flow step', 'datamachine'),
-						['status' => 500]
-					);
-				}
-
-
-			// Build config from memory (performance optimization)
 			$step_config = [
 				'step_type' => $step_type,
 				'handler_slug' => $handler_slug,
@@ -278,22 +264,17 @@ class FlowSteps {
 				'flow_step_id' => $flow_step_id
 			];
 
-			// Preserve execution_order if it exists
 			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-			if ($db_flows) {
-				$flow = $db_flows->get_flow($flow_id);
-				$flow_config = $flow['flow_config'] ?? [];
-				$existing_step = $flow_config[$flow_step_id] ?? [];
-				if (isset($existing_step['execution_order'])) {
-					$step_config['execution_order'] = $existing_step['execution_order'];
-				}
+			$flow = $db_flows->get_flow($flow_id);
+			$flow_config = $flow['flow_config'] ?? [];
+			$existing_step = $flow_config[$flow_step_id] ?? [];
+			if (isset($existing_step['execution_order'])) {
+				$step_config['execution_order'] = $existing_step['execution_order'];
 			}
 
-			// Get handler settings display for UI
 			$service = new \DataMachine\Core\Steps\Settings\SettingsDisplayService();
 			$handler_settings_display = $service->getFieldState($handler_slug, $handler_settings);
 
-			/* translators: %s: Handler name or label */
 			$message = sprintf(__('Handler "%s" settings saved successfully.', 'datamachine'), $handler_info['label'] ?? $handler_slug);
 
 			return rest_ensure_response([
@@ -310,13 +291,13 @@ class FlowSteps {
 				'message' => $message
 			]);
 
-			} catch (\Exception $e) {
-				return new \WP_Error(
-					'handler_update_failed',
-					__('Failed to save handler settings due to server error.', 'datamachine'),
-					['status' => 500]
-				);
-			}
+		} catch (\Exception $e) {
+			return new \WP_Error(
+				'handler_update_failed',
+				__('Failed to save handler settings due to server error.', 'datamachine'),
+				['status' => 500]
+			);
+		}
 	}
 
 	/**
@@ -328,18 +309,21 @@ class FlowSteps {
 		$flow_step_id = sanitize_text_field($request->get_param('flow_step_id'));
 		$user_message = sanitize_textarea_field($request->get_param('user_message'));
 
-		// Use centralized flow user message update action
-		do_action('datamachine_update_flow_user_message', $flow_step_id, $user_message);
+		$manager = new FlowStepManager();
+		$success = $manager->updateUserMessage($flow_step_id, $user_message);
 
-		// Action completed successfully
-		$success = true;
+		if (!$success) {
+			return new \WP_Error(
+				'update_failed',
+				__('Failed to update user message.', 'datamachine'),
+				['status' => 500]
+			);
+		}
 
-		// Extract flow_id from flow_step_id to get pipeline_id for cache clearing
 		$parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
 		if ($parts && !empty($parts['flow_id'])) {
 			$flow_id = $parts['flow_id'];
 
-			// Get flow data to extract pipeline_id
 			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
 			$flow = $db_flows->get_flow($flow_id);
 			if ($flow && !empty($flow['pipeline_id'])) {
