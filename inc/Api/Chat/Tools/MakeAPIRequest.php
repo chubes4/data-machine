@@ -66,7 +66,10 @@ class MakeAPIRequest {
         return <<<'DOC'
 Make Data Machine REST API requests for pipeline management, monitoring, and configuration.
 
-For workflow execution, use the execute_workflow tool instead.
+PREFER SPECIALIZED TOOLS:
+- For workflow execution: use execute_workflow tool
+- For creating flows: use create_flow tool
+- For configuring flow steps: use configure_flow_step tool
 
 ENDPOINTS:
 
@@ -94,24 +97,16 @@ PUT /datamachine/v1/pipelines/{id}/steps/reorder - Reorder steps
 
 ## Flows
 GET /datamachine/v1/flows - List all flows
-POST /datamachine/v1/flows - Create flow from pipeline
-  data: {pipeline_id: N, flow_name: "...", scheduling_config: {interval: "..."}}
 GET /datamachine/v1/flows/{id} - Get flow details
 DELETE /datamachine/v1/flows/{id} - Delete flow
 POST /datamachine/v1/flows/{id}/duplicate - Duplicate flow
-
-## Flow Configuration
-GET /datamachine/v1/flows/{id}/config - Get complete flow configuration
-GET /datamachine/v1/flows/steps/{flow_step_id}/config - Get step configuration
-PATCH /datamachine/v1/flows/steps/{flow_step_id}/handler - Configure step handler
-  data: {handler_slug: "...", handler_config: {...}}
-PATCH /datamachine/v1/flows/steps/{flow_step_id}/user-message - Update AI step message
-  data: {user_message: "..."}
+(For creating flows, use the create_flow tool)
+(For configuring flow steps, use the configure_flow_step tool)
 
 ## Scheduling
-Attach scheduling via flow creation or update:
-  scheduling_config: {interval: "manual|hourly|daily|weekly"}
-  scheduling_config: {interval: "one_time", timestamp: unix_timestamp}
+PATCH /datamachine/v1/flows/{id} - Update flow scheduling
+  data: {scheduling_config: {interval: "manual|hourly|daily|weekly|monthly"}}
+  data: {scheduling_config: {interval: "one_time", timestamp: unix_timestamp}}
 
 ## Jobs & Monitoring
 GET /datamachine/v1/jobs - List all jobs

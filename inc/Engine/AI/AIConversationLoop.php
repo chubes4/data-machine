@@ -209,7 +209,7 @@ class AIConversationLoop {
 			]);
 		}
 
-		return [
+		$result = [
 			'messages' => $messages,
 			'final_content' => $final_content,
 			'turn_count' => $turn_count,
@@ -217,5 +217,11 @@ class AIConversationLoop {
 			'last_tool_calls' => $last_tool_calls,
 			'tool_execution_results' => $tool_execution_results
 		];
+
+		if ($turn_count >= $max_turns && !$conversation_complete) {
+			$result['warning'] = 'Maximum conversation turns (' . $max_turns . ') reached. Response may be incomplete.';
+		}
+
+		return $result;
 	}
 }

@@ -205,15 +205,22 @@ class Chat {
 		if (!$update_success) {
 		}
 
+		$response_data = [
+			'session_id' => $session_id,
+			'response' => $final_content,
+			'tool_calls' => $loop_result['last_tool_calls'],
+			'conversation' => $messages,
+			'metadata' => $metadata,
+			'completed' => $loop_result['completed'] ?? true
+		];
+
+		if (isset($loop_result['warning'])) {
+			$response_data['warning'] = $loop_result['warning'];
+		}
+
 		return rest_ensure_response([
 			'success' => true,
-			'data' => [
-				'session_id' => $session_id,
-				'response' => $final_content,
-				'tool_calls' => $loop_result['last_tool_calls'],
-				'conversation' => $messages,
-				'metadata' => $metadata
-			]
+			'data' => $response_data
 		]);
 	}
 }

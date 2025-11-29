@@ -5,6 +5,35 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2025-11-29
+
+### Added
+- **CreateFlow Chat Tool** - Specialized tool for creating flow instances from existing pipelines with automatic step synchronization
+  - Validates pipeline_id and scheduling configuration
+  - Returns flow_step_ids for subsequent configuration
+  - Supports all scheduling intervals (manual, hourly, daily, weekly, monthly, one_time)
+- **ConfigureFlowStep Chat Tool** - Focused tool for configuring flow step handlers and AI user messages
+  - Supports handler configuration for fetch/publish/update steps
+  - Supports user_message configuration for AI steps
+  - Uses flow_step_ids returned from create_flow tool
+
+### Enhanced
+- **Chat API Response Structure** - Added completion status and warning system
+  - Added `completed` field to indicate conversation completion status
+  - Added `warning` field for conversation turn limit notifications
+  - Improved response data organization for better client handling
+
+### Changed
+- **MakeAPIRequest Tool Documentation** - Updated to reference specialized tools for cleaner separation of concerns
+  - Removed flow creation and step configuration endpoints from tool scope
+  - Added clear references to create_flow and configure_flow_step tools
+  - Simplified endpoint documentation to focus on monitoring and management operations
+
+### Improved
+- **Chat Tool Architecture** - Better specialization with dedicated tools for specific workflow operations
+- **Conversation Management** - Enhanced warning system when maximum conversation turns are reached
+- **Tool Separation** - Clearer division between workflow creation/configuration (specialized tools) and API management (MakeAPIRequest)
+
 ## [0.4.1] - 2025-11-29
 
 ### Added
