@@ -51,7 +51,7 @@ The Universal Engine consolidates this shared functionality into a centralized l
 │                  │          │                  │
 │ • PipelineCore   │          │ • ChatAgent      │
 │   Directive      │          │   Directive      │
-│ • Pipeline       │          │ • MakeAPIRequest │
+│ • Pipeline       │          │ • Specialized    │
 │   SystemPrompt   │          │   tool           │
 │   Directive      │          │ • Session        │
 │ • PipelineContext│          │   management     │

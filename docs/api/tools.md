@@ -61,11 +61,17 @@ curl https://example.com/wp-json/datamachine/v1/tools \
       "chat_enabled": false,
       "description": "Read and analyze WordPress post content"
     },
-    "make_api_request": {
-      "label": "Make API Request",
+    "create_pipeline": {
+      "label": "Create Pipeline",
       "configured": true,
       "chat_enabled": true,
-      "description": "Execute Data Machine REST API operations"
+      "description": "Create a new pipeline with optional steps"
+    },
+    "run_flow": {
+      "label": "Run Flow",
+      "configured": true,
+      "chat_enabled": true,
+      "description": "Execute or schedule a flow"
     }
   }
 }
@@ -171,22 +177,61 @@ Available to all AI agents via `datamachine_global_tools` filter.
 
 ### Chat-Only Tools
 
-Available only to chat AI agents via `datamachine_chat_tools` filter.
+Available only to chat AI agents via `datamachine_chat_tools` filter. Since v0.4.3, these are specialized operation-specific tools:
 
-#### make_api_request
-
-**Tool ID**: `make_api_request`
-
+#### execute_workflow (@since v0.3.0)
+**Tool ID**: `execute_workflow`
 **Configuration Required**: No
+**Chat Enabled**: Yes
+**Purpose**: Execute complete multi-step workflows with automatic provider/model defaults injection
 
-**Chat Enabled**: Yes (available only in chat interface)
+#### add_pipeline_step (@since v0.4.3)
+**Tool ID**: `add_pipeline_step`
+**Configuration Required**: No
+**Chat Enabled**: Yes
+**Purpose**: Add steps to existing pipelines
 
-**Purpose**: Execute Data Machine REST API operations
+#### api_query (@since v0.4.3)
+**Tool ID**: `api_query`
+**Configuration Required**: No
+**Chat Enabled**: Yes
+**Purpose**: REST API query tool for discovery operations
 
-**Parameters**:
-- `endpoint` (string): API endpoint path
-- `method` (string): HTTP method (GET, POST, PUT, DELETE)
-- `data` (object, optional): Request payload
+#### configure_flow_step (@since v0.4.2)
+**Tool ID**: `configure_flow_step`
+**Configuration Required**: No
+**Chat Enabled**: Yes
+**Purpose**: Configure handler settings and AI messages for flow steps
+
+#### configure_pipeline_step (@since v0.4.4)
+**Tool ID**: `configure_pipeline_step`
+**Configuration Required**: No
+**Chat Enabled**: Yes
+**Purpose**: Configure pipeline-level AI settings (system prompts)
+
+#### create_flow (@since v0.4.2)
+**Tool ID**: `create_flow`
+**Configuration Required**: No
+**Chat Enabled**: Yes
+**Purpose**: Create flow instances from existing pipelines
+
+#### create_pipeline (@since v0.4.3)
+**Tool ID**: `create_pipeline`
+**Configuration Required**: No
+**Chat Enabled**: Yes
+**Purpose**: Create pipelines with optional initial steps
+
+#### run_flow (@since v0.4.4)
+**Tool ID**: `run_flow`
+**Configuration Required**: No
+**Chat Enabled**: Yes
+**Purpose**: Execute or schedule flows for execution
+
+#### update_flow (@since v0.4.4)
+**Tool ID**: `update_flow`
+**Configuration Required**: No
+**Chat Enabled**: Yes
+**Purpose**: Update flow properties (name, schedule, settings)
 
 **Use Cases**:
 - Create pipelines via chat
@@ -391,7 +436,7 @@ Determine available tools for chat interface:
 ```javascript
 const chatTools = await getChatTools();
 
-if (chatTools.includes('make_api_request')) {
+if (chatTools.includes('create_pipeline')) {
   enableAdvancedChatFeatures();
 }
 ```

@@ -112,24 +112,24 @@ add_filter('datamachine_global_tools', function($tools) {
 
 #### 3. Chat-Only Tools
 
-Tools registered via `datamachine_chat_tools` filter, available only to Chat agent:
+Tools registered via `datamachine_chat_tools` filter, available only to Chat agent. Since v0.4.3, these are specialized operation-specific tools:
 
 ```php
 add_filter('datamachine_chat_tools', function($tools) {
-    $tools['make_api_request'] = [
-        'class' => 'DataMachine\\Api\\Chat\\Tools\\MakeAPIRequest',
+    $tools['create_pipeline'] = [
+        'class' => 'DataMachine\\Api\\Chat\\Tools\\CreatePipeline',
         'method' => 'handle_tool_call',
-        'description' => 'Make REST API requests to Data Machine endpoints',
+        'description' => 'Create a new pipeline with optional steps',
         'parameters' => [
-            'endpoint' => [
+            'name' => [
                 'type' => 'string',
                 'required' => true,
-                'description' => 'API endpoint path'
+                'description' => 'Pipeline name'
             ],
-            'method' => [
-                'type' => 'string',
-                'required' => true,
-                'description' => 'HTTP method (GET, POST, PUT, DELETE)'
+            'steps' => [
+                'type' => 'array',
+                'required' => false,
+                'description' => 'Optional initial steps'
             ]
         ]
     ];
@@ -137,8 +137,16 @@ add_filter('datamachine_chat_tools', function($tools) {
 });
 ```
 
-**Chat Tools**:
-- `make_api_request` - Execute Data Machine REST API operations
+**Chat Tools** (@since v0.4.3):
+- `execute_workflow` - Execute complete multi-step workflows
+- `add_pipeline_step` - Add steps to existing pipelines
+- `api_query` - REST API query for discovery
+- `configure_flow_step` - Configure flow step handlers and AI messages
+- `configure_pipeline_step` - Configure pipeline AI settings
+- `create_flow` - Create flow instances from pipelines
+- `create_pipeline` - Create pipelines with optional steps
+- `run_flow` - Execute or schedule flows
+- `update_flow` - Update flow properties
 
 ### Tool Enablement Control
 
@@ -247,8 +255,8 @@ $result = ToolExecutor::executeTool(
 **Chat Agent Execution**:
 ```php
 $result = ToolExecutor::executeTool(
-    $tool_name,           // 'make_api_request'
-    $tool_parameters,     // ['endpoint' => '/flows', 'method' => 'GET']
+    $tool_name,           // 'create_pipeline'
+    $tool_parameters,     // ['name' => 'My Pipeline', 'steps' => [...]]
     $available_tools,     // All available tools array
     [],                   // Empty data packets for chat
     null,                 // No flow_step_id for chat
@@ -493,12 +501,12 @@ foreach ($engine_parameters as $key => $value) {
 **Registration**: `datamachine_chat_tools` filter
 **Scope**: Chat agent only
 **Enablement**: Via `datamachine_tool_enabled` filter
-**Examples**: `make_api_request`
+**Examples** (@since v0.4.3): `execute_workflow`, `create_pipeline`, `run_flow`, `configure_flow_step`, etc.
 
 **Characteristics**:
 - Only available to chat agent
 - Enable conversational workflow building
-- Interact with Data Machine REST API
+- Specialized operation-specific tools for pipeline/flow management
 - Bridge chat interface to system operations
 
 ## Best Practices

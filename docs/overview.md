@@ -165,9 +165,16 @@ $image_url = $engine_data['image_url'] ?? null;
   - WebFetch - Web page content retrieval (50K limit)
   - WordPress Post Reader - Single post analysis
   - Registered via `datamachine_global_tools` filter
-- **Chat-Specific Tools** - Available only to chat AI agents:
-  - ExecuteWorkflow (@since v0.3.0) - Execute complete multi-step workflows with modular architecture (DefaultsInjector, DocumentationBuilder, WorkflowValidator, ExecuteWorkflowTool)
-  - MakeAPIRequest - Execute Data Machine REST API operations for pipeline/flow management
+- **Chat-Specific Tools** - Available only to chat AI agents, providing specialized operation-specific functionality (@since v0.4.3 refactoring):
+  - ExecuteWorkflow (@since v0.3.0) - Execute complete multi-step workflows with modular architecture
+  - AddPipelineStep (@since v0.4.3) - Add steps to existing pipelines
+  - ApiQuery (@since v0.4.3) - REST API query tool for discovery
+  - ConfigureFlowStep (@since v0.4.2) - Configure handler and AI messages
+  - ConfigurePipelineStep (@since v0.4.4) - Configure pipeline-level AI settings
+  - CreateFlow (@since v0.4.2) - Create flow instances from pipelines
+  - CreatePipeline (@since v0.4.3) - Create pipelines with optional steps
+  - RunFlow (@since v0.4.4) - Execute or schedule flows
+  - UpdateFlow (@since v0.4.4) - Update flow properties
   - Registered via `datamachine_chat_tools` filter
 - **Handler-Specific Tools** - Available when next step matches handler type, registered via `chubes_ai_tools` filter
 - **Context-Aware** - Automatic WordPress site context injection (toggleable)

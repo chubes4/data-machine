@@ -129,9 +129,16 @@ Data Machine v0.2.0 introduced a universal Engine layer (`/inc/Engine/AI/`) that
 **Tool Categories**:
 - Handler-specific tools for publish/update operations (twitter_publish, wordpress_update)
 - Global tools in `/inc/Engine/AI/Tools/` for search and analysis (GoogleSearch, LocalSearch, WebFetch, WordPressPostReader)
-- Chat-only tools for workflow building:
+- Chat-only tools for workflow building (@since v0.4.3 specialized tools refactoring):
   - ExecuteWorkflow (@since v0.3.0) - Direct workflow execution with modular architecture at `/inc/Api/Chat/Tools/ExecuteWorkflow/`
-  - MakeAPIRequest - REST API operations for pipeline/flow management
+  - AddPipelineStep (@since v0.4.3) - Add steps to existing pipelines
+  - ApiQuery (@since v0.4.3) - REST API discovery and queries
+  - ConfigureFlowStep (@since v0.4.2) - Configure flow step handlers and AI messages
+  - ConfigurePipelineStep (@since v0.4.4) - Configure pipeline AI settings
+  - CreateFlow (@since v0.4.2) - Create flow instances from pipelines
+  - CreatePipeline (@since v0.4.3) - Create pipelines with optional steps
+  - RunFlow (@since v0.4.4) - Execute or schedule flows
+  - UpdateFlow (@since v0.4.4) - Update flow properties
 - Automatic tool discovery and configuration via filter-based system
 - Three-layer tool enablement: Global settings → Modal selection → Runtime validation
 

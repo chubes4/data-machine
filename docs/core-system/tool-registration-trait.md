@@ -29,14 +29,13 @@ Core registration method that dynamically creates the appropriate filter based o
 
 **Example:**
 ```php
-$this->registerTool('chat', 'make_api_request', [
-    'class' => 'DataMachine\Api\Chat\Tools\MakeAPIRequest',
+$this->registerTool('chat', 'create_pipeline', [
+    'class' => 'DataMachine\Api\Chat\Tools\CreatePipeline',
     'method' => 'handle_tool_call',
-    'description' => 'Execute Data Machine REST API operations',
+    'description' => 'Create a new pipeline with optional steps',
     'parameters' => [
-        'endpoint' => ['type' => 'string', 'description' => 'API endpoint'],
-        'method' => ['type' => 'string', 'enum' => ['GET', 'POST', 'PUT', 'DELETE']],
-        'data' => ['type' => 'object', 'description' => 'Request data']
+        'name' => ['type' => 'string', 'description' => 'Pipeline name'],
+        'steps' => ['type' => 'array', 'description' => 'Optional initial steps']
     ]
 ]);
 ```
@@ -63,12 +62,13 @@ Convenience method for registering chat-specific tools.
 
 **Example:**
 ```php
-$this->registerChatTool('make_api_request', [
-    'class' => 'DataMachine\Api\Chat\Tools\MakeAPIRequest',
+$this->registerChatTool('create_flow', [
+    'class' => 'DataMachine\Api\Chat\Tools\CreateFlow',
     'method' => 'handle_tool_call',
-    'description' => 'Execute Data Machine REST API operations through chat',
+    'description' => 'Create a flow instance from an existing pipeline',
     'parameters' => [
-        'endpoint' => ['type' => 'string', 'description' => 'API endpoint to call']
+        'pipeline_id' => ['type' => 'integer', 'description' => 'Pipeline ID to instantiate'],
+        'name' => ['type' => 'string', 'description' => 'Flow name']
     ]
 ]);
 ```
@@ -147,24 +147,23 @@ namespace DataMachine\Api\Chat\Tools;
 
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
-class MakeAPIRequest {
+class CreatePipeline {
     use ToolRegistrationTrait;
 
     public function __construct() {
-        $this->registerChatTool('make_api_request', [
+        $this->registerChatTool('create_pipeline', [
             'class' => self::class,
             'method' => 'handle_tool_call',
-            'description' => 'Execute Data Machine REST API operations',
+            'description' => 'Create a new pipeline with optional steps',
             'parameters' => [
-                'endpoint' => ['type' => 'string', 'description' => 'API endpoint'],
-                'method' => ['type' => 'string', 'enum' => ['GET', 'POST', 'PUT', 'DELETE']],
-                'data' => ['type' => 'object', 'description' => 'Request payload']
+                'name' => ['type' => 'string', 'description' => 'Pipeline name'],
+                'steps' => ['type' => 'array', 'description' => 'Optional initial steps']
             ]
         ]);
     }
 
     public function handle_tool_call(array $parameters): array {
-        // API execution logic
+        // Pipeline creation logic
     }
 }
 ```

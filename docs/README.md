@@ -1,6 +1,6 @@
 # Data Machine Documentation
 
-Complete user documentation for the Data Machine WordPress plugin (v0.4.0) - an AI-first content processing system with visual pipeline builder and multi-provider AI integration.
+Complete user documentation for the Data Machine WordPress plugin (v0.4.6) - an AI-first content processing system with visual pipeline builder and multi-provider AI integration.
 
 ## Quick Navigation
 
@@ -107,8 +107,7 @@ docs/
 │   ├── chat-database.md                # Session management and CRUD operations (v0.2.0)
 │   ├── handler-registration-trait.md   # Standardized handler registration (v0.2.2)
 │   ├── oauth-handlers.md               # Centralized OAuth 1.0a and OAuth 2.0 handlers (v0.2.0)
-│   ├── logger.md                      # Centralized logging with Monolog integration
-│   └── cache-management.md            # Granular cache invalidation with pattern support
+│   └── logger.md                      # Centralized logging with Monolog integration
 ├── handlers/
 │   ├── fetch/
 │   │   ├── wordpress-local.md          # Local WordPress content

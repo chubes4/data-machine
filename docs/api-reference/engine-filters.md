@@ -410,20 +410,20 @@ apply_filters('datamachine_chat_tools', $tools);
 **Implementation Example**:
 ```php
 add_filter('datamachine_chat_tools', function($tools) {
-    $tools['make_api_request'] = [
-        'class' => 'DataMachine\\Api\\Chat\\Tools\\MakeAPIRequest',
+    $tools['create_pipeline'] = [
+        'class' => 'DataMachine\\Api\\Chat\\Tools\\CreatePipeline',
         'method' => 'handle_tool_call',
-        'description' => 'Make REST API requests to Data Machine endpoints',
+        'description' => 'Create a new pipeline with optional steps',
         'parameters' => [
-            'endpoint' => [
+            'name' => [
                 'type' => 'string',
                 'required' => true,
-                'description' => 'API endpoint path'
+                'description' => 'Pipeline name'
             ],
-            'method' => [
-                'type' => 'string',
-                'required' => true,
-                'description' => 'HTTP method (GET, POST, PUT, DELETE)'
+            'steps' => [
+                'type' => 'array',
+                'required' => false,
+                'description' => 'Optional initial steps'
             ]
         ]
     ];
@@ -431,8 +431,16 @@ add_filter('datamachine_chat_tools', function($tools) {
 });
 ```
 
-**Registered Chat Tools**:
-- `make_api_request` - Execute Data Machine REST API operations
+**Registered Chat Tools** (@since v0.4.3 specialized tools):
+- `execute_workflow` - Execute complete multi-step workflows
+- `add_pipeline_step` - Add steps to existing pipelines
+- `api_query` - REST API query for discovery
+- `configure_flow_step` - Configure flow step handlers and AI messages
+- `configure_pipeline_step` - Configure pipeline AI settings
+- `create_flow` - Create flow instances from pipelines
+- `create_pipeline` - Create pipelines with optional steps
+- `run_flow` - Execute or schedule flows
+- `update_flow` - Update flow properties
 
 ## Directive Application Order
 

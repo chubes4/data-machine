@@ -65,8 +65,8 @@ curl -X POST https://example.com/wp-json/datamachine/v1/chat \
       "id": "call_abc123",
       "type": "function",
       "function": {
-        "name": "make_api_request",
-        "arguments": "{\"endpoint\":\"/datamachine/v1/pipelines\",\"method\":\"POST\"}"
+        "name": "create_pipeline",
+        "arguments": "{\"name\":\"RSS to Twitter\",\"steps\":[{\"type\":\"fetch\",\"handler\":\"rss\"},{\"type\":\"ai\"},{\"type\":\"publish\",\"handler\":\"twitter\"}]}"
       }
     }
   ],
@@ -171,10 +171,17 @@ Available to all AI agents via `datamachine_global_tools` filter:
 
 ### Chat-Specific Tools
 
-Available only to chat AI agents via `datamachine_chat_tools` filter:
+Available only to chat AI agents via `datamachine_chat_tools` filter (@since v0.4.3 specialized tools):
 
 - **execute_workflow** (@since v0.3.0) - Execute complete multi-step workflows with automatic defaults injection
-- **make_api_request** - Execute Data Machine REST API operations for pipeline/flow management and monitoring
+- **add_pipeline_step** (@since v0.4.3) - Add steps to existing pipelines
+- **api_query** (@since v0.4.3) - REST API query tool for discovery
+- **configure_flow_step** (@since v0.4.2) - Configure handler and AI messages
+- **configure_pipeline_step** (@since v0.4.4) - Configure pipeline-level AI settings
+- **create_flow** (@since v0.4.2) - Create flow instances from pipelines
+- **create_pipeline** (@since v0.4.3) - Create pipelines with optional steps
+- **run_flow** (@since v0.4.4) - Execute or schedule flows
+- **update_flow** (@since v0.4.4) - Update flow properties
 
 ### Tool Execution
 
@@ -187,8 +194,8 @@ Tools are executed automatically by the AI during conversation:
       "id": "call_abc123",
       "type": "function",
       "function": {
-        "name": "make_api_request",
-        "arguments": "{\"endpoint\":\"/datamachine/v1/pipelines\",\"method\":\"POST\",\"data\":{\"pipeline_name\":\"My Pipeline\"}}"
+        "name": "create_pipeline",
+        "arguments": "{\"name\":\"My Pipeline\",\"steps\":[{\"type\":\"fetch\",\"handler\":\"rss\"}]}"
       }
     }
   ]
@@ -268,7 +275,7 @@ add_filter('datamachine_directives', function($directives) {
 - Session-based conversation persistence
 - Global tool enablement (not step-specific)
 - No data packets from previous steps
-- Chat-specific tools (make_api_request)
+- Chat-specific specialized tools (create_pipeline, run_flow, etc.)
 - Session context instead of job context
 
 **Pipeline Agent**:
@@ -301,9 +308,9 @@ Chat agent discovers tools via three sources:
    - web_fetch
    - wordpress_post_reader
 
-2. **Chat Tools** (`datamachine_chat_tools` filter):
-   - execute_workflow (@since v0.3.0)
-   - make_api_request
+2. **Chat Tools** (`datamachine_chat_tools` filter) (@since v0.4.3 specialized tools):
+   - execute_workflow, add_pipeline_step, api_query, configure_flow_step
+   - configure_pipeline_step, create_flow, create_pipeline, run_flow, update_flow
 
 3. **Filtered by Enablement** (`datamachine_tool_enabled` filter):
    - Configuration validation
@@ -461,7 +468,7 @@ curl -X POST https://example.com/wp-json/datamachine/v1/chat \
     "message": "Create a pipeline with these steps: fetch from RSS, process with AI, publish to Twitter"
   }'
 
-# AI will create pipeline using make_api_request tool
+# AI will create pipeline using create_pipeline tool
 ```
 
 ### Monitor Jobs via Chat

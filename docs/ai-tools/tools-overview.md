@@ -33,7 +33,7 @@ Available to all AI agents (pipeline + chat) via `datamachine_global_tools` filt
 
 ### Chat-Specific Tools
 
-Available only to chat AI agents via `datamachine_chat_tools` filter:
+Available only to chat AI agents via `datamachine_chat_tools` filter. These specialized tools provide focused, operation-specific functionality for conversational workflow management:
 
 **ExecuteWorkflow** (`execute_workflow`) (@since v0.3.0)
 - **Purpose**: Execute complete multi-step workflows in a single tool call with automatic provider/model defaults injection
@@ -45,10 +45,45 @@ Available only to chat AI agents via `datamachine_chat_tools` filter:
   - **DefaultsInjector.php** - Injects provider/model/post_author defaults from plugin settings
 - **Use Cases**: Direct workflow execution, ephemeral workflows without pipeline creation
 
-**MakeAPIRequest** (`make_api_request`)
-- **Purpose**: Execute Data Machine REST API operations for pipeline/flow management, monitoring, and troubleshooting (excludes `/execute` endpoint now handled by `execute_workflow`)
+**AddPipelineStep** (`add_pipeline_step`) (@since v0.4.3)
+- **Purpose**: Add steps to existing pipelines
 - **Configuration**: None required
-- **Use Cases**: Conversational pipeline/flow creation, system queries, configuration management
+- **Use Cases**: Incrementally building pipelines through conversation
+
+**ApiQuery** (`api_query`) (@since v0.4.3)
+- **Purpose**: REST API query tool for discovery and read operations
+- **Configuration**: None required
+- **Use Cases**: Querying system state, discovering available handlers and configurations
+
+**ConfigureFlowStep** (`configure_flow_step`) (@since v0.4.2)
+- **Purpose**: Configure handler settings and AI messages for flow steps
+- **Configuration**: None required
+- **Use Cases**: Setting up handler configurations, customizing AI prompts per flow
+
+**ConfigurePipelineStep** (`configure_pipeline_step`) (@since v0.4.4)
+- **Purpose**: Configure pipeline-level AI settings (system prompts)
+- **Configuration**: None required
+- **Use Cases**: Setting pipeline-wide AI behavior and system prompts
+
+**CreateFlow** (`create_flow`) (@since v0.4.2)
+- **Purpose**: Create flow instances from existing pipelines
+- **Configuration**: None required
+- **Use Cases**: Instantiating pipelines as schedulable flows
+
+**CreatePipeline** (`create_pipeline`) (@since v0.4.3)
+- **Purpose**: Create pipelines with optional initial steps
+- **Configuration**: None required
+- **Use Cases**: Creating new workflow templates through conversation
+
+**RunFlow** (`run_flow`) (@since v0.4.4)
+- **Purpose**: Execute or schedule flows for execution
+- **Configuration**: None required
+- **Use Cases**: Triggering immediate or scheduled workflow execution
+
+**UpdateFlow** (`update_flow`) (@since v0.4.4)
+- **Purpose**: Update flow properties (name, schedule, settings)
+- **Configuration**: None required
+- **Use Cases**: Modifying existing flow configurations
 
 ### Handler-Specific Tools
 
@@ -99,7 +134,15 @@ Global tools are located in `/inc/Engine/AI/Tools/Global/`:
 - `WordPressPostReader.php` - Single post analysis
 
 Chat-specific tools at `/inc/Api/Chat/Tools/`:
-- `MakeAPIRequest.php` - REST API operations (chat only)
+- `ExecuteWorkflow/` - Direct workflow execution (modular architecture)
+- `AddPipelineStep.php` - Add steps to pipelines
+- `ApiQuery.php` - REST API discovery and queries
+- `ConfigureFlowStep.php` - Flow step configuration
+- `ConfigurePipelineStep.php` - Pipeline AI settings
+- `CreateFlow.php` - Flow instance creation
+- `CreatePipeline.php` - Pipeline creation
+- `RunFlow.php` - Flow execution/scheduling
+- `UpdateFlow.php` - Flow property updates
 
 Handler-specific tools registered via `chubes_ai_tools` filter using HandlerRegistrationTrait in each handler class.
 
@@ -117,10 +160,10 @@ Handler-specific tools registered via `chubes_ai_tools` filter using HandlerRegi
 ```php
 // Registered via datamachine_chat_tools filter
 add_filter('datamachine_chat_tools', function($tools) {
-    $tools['make_api_request'] = [
-        'class' => 'DataMachine\\Api\\Chat\\Tools\\MakeAPIRequest',
+    $tools['create_pipeline'] = [
+        'class' => 'DataMachine\\Api\\Chat\\Tools\\CreatePipeline',
         'method' => 'handle_tool_call',
-        'description' => 'Execute Data Machine REST API operations',
+        'description' => 'Create a new pipeline with optional steps',
         'parameters' => [/* ... */]
     ];
     return $tools;
@@ -201,7 +244,7 @@ Tools can be enabled/disabled per agent type via filters:
 
 ```php
 add_filter('datamachine_tool_enabled', function($enabled, $tool_id, $agent_type) {
-    if ($agent_type === 'chat' && $tool_id === 'make_api_request') {
+    if ($agent_type === 'chat' && $tool_id === 'create_pipeline') {
         return true;  // Chat-only tool
     }
     return $enabled;
