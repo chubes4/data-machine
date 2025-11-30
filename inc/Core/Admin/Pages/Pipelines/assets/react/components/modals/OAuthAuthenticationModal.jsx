@@ -25,6 +25,7 @@ import OAuthPopupHandler from './oauth/OAuthPopupHandler';
  */
 export default function OAuthAuthenticationModal( {
 	onClose,
+	onBackToSettings,
 	handlerSlug,
 	handlerInfo = {},
 	onSuccess,
@@ -372,15 +373,24 @@ export default function OAuthAuthenticationModal( {
 					</>
 				) }
 
-				<div className="datamachine-modal-actions">
+			<div className="datamachine-modal-actions">
+				{ onBackToSettings && (
 					<Button
 						variant="secondary"
-						onClick={ onClose }
+						onClick={ onBackToSettings }
 						disabled={ apiConfigForm.isSubmitting || disconnectOperation.isLoading }
 					>
-						{ __( 'Close', 'datamachine' ) }
+						{ __( 'Back to Settings', 'datamachine' ) }
 					</Button>
-				</div>
+				) }
+				<Button
+					variant="secondary"
+					onClick={ onClose }
+					disabled={ apiConfigForm.isSubmitting || disconnectOperation.isLoading }
+				>
+					{ __( 'Close', 'datamachine' ) }
+				</Button>
+			</div>
 			</div>
 		</Modal>
 	);

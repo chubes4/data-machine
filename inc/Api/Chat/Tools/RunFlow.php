@@ -26,7 +26,7 @@ class RunFlow {
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
-            'description' => 'Execute an existing flow. Flows run asynchronously in the background via Action Scheduler. "Immediate" execution queues the flow to start within seconds. Use the returned job_id to check execution status via get_job_status.',
+            'description' => 'Execute an existing flow immediately or schedule it for later. For IMMEDIATE execution: provide only flow_id (do NOT include timestamp). For SCHEDULED execution: provide flow_id AND a future Unix timestamp. Flows run asynchronously in the background. Use api_query with GET /datamachine/v1/jobs/{job_id} to check execution status.',
             'parameters' => [
                 'flow_id' => [
                     'type' => 'integer',
@@ -36,7 +36,7 @@ class RunFlow {
                 'timestamp' => [
                     'type' => 'integer',
                     'required' => false,
-                    'description' => 'Unix timestamp for delayed execution (if not provided, executes immediately)'
+                    'description' => 'ONLY for scheduled execution: a future Unix timestamp. OMIT this parameter entirely for immediate execution.'
                 ]
             ]
         ];

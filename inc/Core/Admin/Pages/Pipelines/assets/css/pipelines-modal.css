@@ -20,8 +20,8 @@
 .datamachine-oauth-modal .components-modal__frame,
 .datamachine-flow-schedule-modal .components-modal__frame,
 .datamachine-handler-settings-modal .components-modal__frame {
-    max-width: 900px;
-    width: 95vw;
+    width: 900px;
+    max-width: 95vw;
 }
 
 /* Responsive modal sizing for smaller screens */

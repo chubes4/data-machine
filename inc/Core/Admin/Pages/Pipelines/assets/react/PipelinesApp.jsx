@@ -95,6 +95,10 @@ export default function PipelinesApp() {
 		} );
 	}, [ openModal, modalData ] );
 
+	const handleBackToSettings = useCallback( () => {
+		openModal( MODAL_TYPES.HANDLER_SETTINGS, modalData );
+	}, [ openModal, modalData ] );
+
 	/**
 	 * Set selected pipeline when pipelines load or when selected pipeline is deleted
 	 */
@@ -231,17 +235,18 @@ export default function PipelinesApp() {
 			/>
 
 			{ /* Centralized Modal Management */ }
-			<ModalManager
-				pipelines={ pipelines }
-				handlers={ handlers }
-				handlerDetails={ handlerDetails }
-				pipelineConfig={ selectedPipeline?.pipeline_config || {} }
-				flows={ flows }
-				onModalSuccess={ handleModalSuccess }
-				onHandlerSelected={ handleHandlerSelected }
-				onChangeHandler={ handleChangeHandler }
-				onOAuthConnect={ handleOAuthConnect }
-			/>
+		<ModalManager
+			pipelines={ pipelines }
+			handlers={ handlers }
+			handlerDetails={ handlerDetails }
+			pipelineConfig={ selectedPipeline?.pipeline_config || {} }
+			flows={ flows }
+			onModalSuccess={ handleModalSuccess }
+			onHandlerSelected={ handleHandlerSelected }
+			onChangeHandler={ handleChangeHandler }
+			onOAuthConnect={ handleOAuthConnect }
+			onBackToSettings={ handleBackToSettings }
+		/>
 		</div>
 	);
 }

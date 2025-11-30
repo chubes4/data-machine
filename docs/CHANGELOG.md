@@ -5,6 +5,29 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.9] - 2025-11-30
+
+### Enhanced
+- **UI Layout Improvements** - Restructured flow header and footer components for better information hierarchy
+  - Moved Flow ID display from header title area to footer for cleaner header layout
+  - Improved flow card header structure with better action button organization
+  - Enhanced FlowHeader and FlowFooter component layouts
+
+### Improved
+- **Chat Tool Documentation** - Enhanced RunFlow tool parameter descriptions for clearer immediate vs scheduled execution
+  - Improved timestamp parameter documentation to prevent confusion
+  - Better tool description clarity for AI agent usage
+
+### Fixed
+- **Modal Navigation** - Added "Back to Settings" button option in OAuth authentication modal
+- **CSS Layout** - Improved flow header alignment and modal width handling for better responsive design
+
+### Technical Details
+- **Code Changes**: +15 lines added, -25 lines removed across 10 modified files
+- **UI Components**: Enhanced FlowHeader, FlowFooter, and OAuth modal components
+- **Compatibility**: No breaking changes, fully backward compatible
+- **Components**: Improved React component structure and CSS styling
+
 ## [0.4.8] - 2025-11-30
 
 ### Enhanced

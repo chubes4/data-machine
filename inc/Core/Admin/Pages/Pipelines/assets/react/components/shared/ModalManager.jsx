@@ -19,6 +19,7 @@ export default function ModalManager({
   onHandlerSelected,
   onChangeHandler,
   onOAuthConnect,
+  onBackToSettings,
 }) {
   const { activeModal, modalData, closeModal } = useUIStore();
 
@@ -31,6 +32,7 @@ export default function ModalManager({
     handlerDetails: modalData.handlerDetails ?? handlerDetails,
     onChangeHandler,
     onOAuthConnect,
+    onBackToSettings,
     onSelectHandler: onHandlerSelected,
   };
 

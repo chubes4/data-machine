@@ -334,8 +334,8 @@
 
 .datamachine-flow-header__title {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    gap: 8px;
     flex: 1;
 }
 
@@ -353,10 +353,8 @@
 	transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
 }
 
-.datamachine-flow-header__identifier {
-    font-size: 12px;
-    color: var(--datamachine-text-muted);
-    letter-spacing: 0.02em;
+.datamachine-flow-meta-item--id {
+    font-family: var(--datamachine-font-mono, monospace);
 }
 
 .datamachine-flow-header__title-input:focus {

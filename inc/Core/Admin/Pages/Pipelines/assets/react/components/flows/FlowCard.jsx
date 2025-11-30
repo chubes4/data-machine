@@ -280,6 +280,7 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 			<CardDivider />
 
 			<FlowFooter
+				flowId={ currentFlowData.flow_id }
 				scheduling={{
 					interval: currentFlowData.scheduling_config?.interval,
 					last_run_display: currentFlowData.last_run_display,
