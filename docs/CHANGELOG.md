@@ -5,6 +5,25 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.7] - 2025-11-30
+
+### Enhanced
+- **AI System Extensibility** - Improved dynamic provider and step type validation across chat and execution APIs
+  - Chat API now validates AI providers dynamically using `chubes_ai_providers` filter instead of hardcoded enum
+  - Execute API validates step types dynamically using `datamachine_step_types` filter instead of hardcoded array
+  - Flow scheduling intervals now use dynamic validation via `datamachine_scheduler_intervals` filter
+
+### Improved
+- **PromptBuilder Architecture** - Streamlined directive application process with simplified build method
+  - Removed verbose directive tracking and logging for cleaner code execution
+  - Maintained core functionality while reducing code complexity
+  - Improved performance through reduced overhead in directive processing
+
+### Technical Details
+- **Code Reduction**: -31 lines net change in PromptBuilder.php for improved maintainability
+- **API Flexibility**: Dynamic validation enables easier extension of providers, step types, and scheduling intervals
+- **Architecture**: Enhanced filter-based extensibility for core system components
+
 ## [0.4.6] - 2025-11-30
 
 ### Removed
