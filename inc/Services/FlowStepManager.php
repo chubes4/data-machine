@@ -104,8 +104,6 @@ class FlowStepManager {
             return false;
         }
 
-        do_action('datamachine_clear_flow_cache', $flow_id);
-
         return true;
     }
 

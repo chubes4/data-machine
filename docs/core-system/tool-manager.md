@@ -265,36 +265,6 @@ $is_available = $tool_manager->is_tool_available('my_custom_tool');
 $is_configured = $tool_manager->is_tool_configured('my_custom_tool');
 ```
 
-## Performance Considerations
-
-### Caching
-
-ToolManager uses WordPress transients for performance:
-
-```php
-// Tool availability cached per agent type
-$cache_key = "datamachine_tools_{$agent_type}";
-$tools = get_transient($cache_key);
-
-if (false === $tools) {
-    $tools = $this->discover_tools($agent_type);
-    set_transient($cache_key, $tools, HOUR_IN_SECONDS);
-}
-```
-
-### Cache Invalidation
-
-Tool cache is automatically invalidated when:
-- Settings are updated
-- Tools are enabled/disabled
-- Tool configuration changes
-- Handler registration changes
-
-```php
-// Manual cache clearing
-do_action('datamachine_clear_tools_cache');
-```
-
 ## Error Handling
 
 ToolManager provides consistent error handling:

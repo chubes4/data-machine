@@ -6,7 +6,7 @@
 
 ## Overview
 
-Settings endpoints manage tool configuration and cache operations for Data Machine.
+Settings endpoints manage tool configuration for Data Machine.
 
 ## Authentication
 
@@ -83,62 +83,6 @@ curl -X POST https://example.com/wp-json/datamachine/v1/settings/tools/google_se
 - `google_search` - Google Search API configuration (api_key, search_engine_id)
 - Additional tools can register handlers via `datamachine_save_tool_config` action
 
-### DELETE /cache
-
-Clear Data Machine caches for troubleshooting and forcing fresh data.
-
-**Permission**: `manage_options` capability required
-
-**Parameters**:
-- `type` (string, optional): Cache type to clear - `flows`, `pipelines`, `settings`, `all` (default: `all`)
-
-**Cache Clearing Scope**:
-- `all`: All pipeline caches, flow caches, job caches, WordPress transients with `datamachine_*` pattern, object cache, AI HTTP client cache
-- `flows`: Flow-specific caches only
-- `pipelines`: Pipeline-specific caches only
-- `settings`: Settings and configuration caches only
-
-**Example Requests**:
-
-```bash
-# Clear all caches
-curl -X DELETE https://example.com/wp-json/datamachine/v1/cache \
-  -u username:application_password
-
-# Clear only flow caches
-curl -X DELETE https://example.com/wp-json/datamachine/v1/cache \
-  -H "Content-Type: application/json" \
-  -u username:application_password \
-  -d '{"type": "flows"}'
-
-# Clear only pipeline caches
-curl -X DELETE https://example.com/wp-json/datamachine/v1/cache \
-  -H "Content-Type: application/json" \
-  -u username:application_password \
-  -d '{"type": "pipelines"}'
-
-# Clear settings caches
-curl -X DELETE https://example.com/wp-json/datamachine/v1/cache \
-  -H "Content-Type: application/json" \
-  -u username:application_password \
-  -d '{"type": "settings"}'
-```
-
-**Success Response (200 OK)**:
-
-```json
-{
-  "success": true,
-  "message": "Cache cleared successfully.",
-  "type": "all"
-}
-```
-
-**Response Fields**:
-- `success` (boolean): Request success status
-- `message` (string): Confirmation message
-- `type` (string): Cache type that was cleared
-
 ## Tool Configuration
 
 ### Google Search
@@ -173,61 +117,6 @@ add_action('datamachine_save_tool_config', function($tool_id, $config_data) {
         update_option('my_tool_config', $config_data);
     }
 }, 10, 2);
-```
-
-## Cache Management
-
-### Cache Types
-
-**Pipelines**:
-- Pipeline templates
-- Pipeline steps
-- Pipeline metadata
-
-**Flows**:
-- Flow configurations
-- Flow scheduling
-- Flow steps
-- Flow metadata
-
-**Settings**:
-- Tool configurations
-- Global settings
-
-**All**:
-- Complete cache reset including:
-  - All pipeline caches
-  - All flow caches
-  - All job caches
-  - WordPress transients (`datamachine_*`)
-  - Object cache
-  - AI HTTP client cache
-
-### Use Cases
-
-**Force Reload**:
-```bash
-# Force reload of pipeline configurations from database
-curl -X DELETE https://example.com/wp-json/datamachine/v1/cache \
-  -H "Content-Type: application/json" \
-  -u username:application_password \
-  -d '{"type": "pipelines"}'
-```
-
-**Troubleshoot Stale Data**:
-```bash
-# Clear all caches to reset system state
-curl -X DELETE https://example.com/wp-json/datamachine/v1/cache \
-  -u username:application_password
-```
-
-**After Configuration Changes**:
-```bash
-# Clear settings cache after updating tool configuration
-curl -X DELETE https://example.com/wp-json/datamachine/v1/cache \
-  -H "Content-Type: application/json" \
-  -u username:application_password \
-  -d '{"type": "settings"}'
 ```
 
 ## Integration Examples
@@ -302,32 +191,6 @@ const configured = await configureTool('google_search', {
   search_engine_id: '012345678901234567890:abcdefg'
 });
 console.log(`Tool configured: ${configured}`);
-```
-
-## Common Workflows
-
-### Tool Setup
-
-```bash
-# 1. Configure tool
-curl -X POST https://example.com/wp-json/datamachine/v1/settings/tools/google_search \
-  -H "Content-Type: application/json" \
-  -u username:application_password \
-  -d '{"config_data": {"api_key": "...", "search_engine_id": "..."}}'
-
-# 2. Clear settings cache
-curl -X DELETE https://example.com/wp-json/datamachine/v1/cache \
-  -H "Content-Type: application/json" \
-  -u username:application_password \
-  -d '{"type": "settings"}'
-```
-
-### System Reset
-
-```bash
-# Clear all caches to reset system
-curl -X DELETE https://example.com/wp-json/datamachine/v1/cache \
-  -u username:application_password
 ```
 
 ## Related Documentation

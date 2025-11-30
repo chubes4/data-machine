@@ -27,7 +27,7 @@ class Settings {
 	}
 
 	/**
-	 * Register /datamachine/v1/settings and /datamachine/v1/cache endpoints
+	 * Register /datamachine/v1/settings endpoints
 	 */
 	public static function register_routes() {
 		// Get all settings
@@ -75,13 +75,6 @@ class Settings {
 					'description' => __('Tool configuration data', 'datamachine'),
 				],
 			],
-		]);
-
-		// Cache clearing endpoint
-		register_rest_route('datamachine/v1', '/cache', [
-			'methods' => WP_REST_Server::DELETABLE,
-			'callback' => [self::class, 'handle_clear_cache'],
-			'permission_callback' => [self::class, 'check_permission'],
 		]);
 	}
 
@@ -149,20 +142,6 @@ class Settings {
 	}
 
 	/**
-	 * Handle cache clear request
-	 */
-	public static function handle_clear_cache($request) {
-		// Trigger cache clearing action
-		do_action('datamachine_clear_all_cache');
-
-		return rest_ensure_response([
-			'success' => true,
-			'data' => null,
-			'message' => __('All cache has been cleared successfully.', 'datamachine')
-		]);
-	}
-
-	/**
 	 * Handle get settings request
 	 *
 	 * @return WP_REST_Response Settings data
@@ -211,9 +190,6 @@ class Settings {
 				['status' => 500]
 			);
 		}
-
-		// Clear relevant caches
-		do_action('datamachine_clear_flow_cache');
 
 		// Return updated settings
 		return self::handle_get_settings($request);

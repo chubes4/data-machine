@@ -107,7 +107,6 @@ PUT /datamachine/v1/logs/level - Set log level
   data: {level: "debug|info|warning|error"}
 
 ## System
-DELETE /datamachine/v1/cache - Clear all caches
 GET /datamachine/v1/settings - Get plugin settings
 POST /datamachine/v1/settings - Update settings
 

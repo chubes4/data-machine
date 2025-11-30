@@ -445,10 +445,6 @@ class Flows {
 
 		$flow_payload = self::format_flow_for_response($flow);
 
-		// Clear caches
-		do_action('datamachine_clear_flow_cache', $flow_id);
-		do_action('datamachine_clear_pipelines_list_cache');
-
 		return rest_ensure_response([
 			'success' => true,
 			'data' => $flow_payload,

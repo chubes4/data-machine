@@ -25,7 +25,6 @@ Complete user documentation for the Data Machine WordPress plugin (v0.4.0) - an 
 ### Core System Components
 - **Services Layer**: OOP service managers replacing filter-based actions for 3x performance improvement
 - **Logger**: Centralized logging with Monolog integration
-- **Cache Management**: Granular cache invalidation with pattern support
 
 ### WordPress Components
 - **WordPressPublishHelper**: WordPress-specific publishing operations (media attachment, source attribution)

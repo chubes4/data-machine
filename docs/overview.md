@@ -212,15 +212,6 @@ docs/
 └── api-reference/       # Filters, actions, functions
 ```
 
-## System Features
-
-### Cache Management
-- **Centralized Cache System** - Services layer provides direct cache management through service managers
-- **Granular Invalidation** - Separate methods for pipeline, flow, and job cache clearing via service managers
-- **Pattern-Based Clearing** - Supports wildcard patterns for efficient bulk operations
-- **WordPress Transients** - Native WordPress caching integration with comprehensive logging
-- **Standardized Storage** - Consistent cache management across all service managers
-
 ## Requirements
 
 - **PHP** 8.0 or higher

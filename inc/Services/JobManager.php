@@ -233,10 +233,6 @@ class JobManager {
             }
         }
 
-        if ($deleted_count > 0) {
-            do_action('datamachine_clear_jobs_cache');
-        }
-
         return [
             'success' => true,
             'jobs_deleted' => $deleted_count,

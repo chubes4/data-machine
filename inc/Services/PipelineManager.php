@@ -315,11 +315,6 @@ class PipelineManager {
 
         $success = $this->db_pipelines->update_pipeline($pipeline_id, $update_data);
 
-        if ($success) {
-            do_action('datamachine_clear_pipeline_cache', $pipeline_id);
-            do_action('datamachine_clear_pipelines_list_cache');
-        }
-
         return $success;
     }
 
@@ -406,8 +401,6 @@ class PipelineManager {
                 ['status' => 500]
             );
         }
-
-        do_action('datamachine_clear_pipelines_list_cache');
 
         return [
             'message' => sprintf(

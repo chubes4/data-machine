@@ -9,8 +9,6 @@
 
 namespace DataMachine\Core\Database\Pipelines;
 
-use DataMachine\Engine\Actions\Cache;
-
 defined('ABSPATH') || exit;
 
 class Pipelines {
@@ -76,8 +74,6 @@ class Pipelines {
 			'pipeline_name' => $pipeline_name
 		] );
 
-		do_action('datamachine_clear_pipelines_list_cache');
-
 		return $pipeline_id;
 	}
 
@@ -93,72 +89,40 @@ class Pipelines {
 			return null;
 		}
 
-		$cache_key = Cache::PIPELINE_CACHE_KEY . $pipeline_id;
-		$cached_result = get_transient( $cache_key );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$pipeline = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE pipeline_id = %d", $this->table_name, $pipeline_id ), ARRAY_A );
 
-		if ( false === $cached_result ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$pipeline = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE pipeline_id = %d", $this->table_name, $pipeline_id ), ARRAY_A );
-
-			if ($pipeline && !empty($pipeline['pipeline_config'])) {
-				// Decode JSON field immediately after database retrieval
-				$pipeline['pipeline_config'] = json_decode($pipeline['pipeline_config'], true) ?: [];
-			}
-
-			do_action('datamachine_cache_set', $cache_key, $pipeline, 0, 'pipelines');
-			return $pipeline;
+		if ($pipeline && !empty($pipeline['pipeline_config'])) {
+			$pipeline['pipeline_config'] = json_decode($pipeline['pipeline_config'], true) ?: [];
 		}
 
-		return $cached_result;
+		return $pipeline;
 	}
 
-	/**
-	 * Get all pipelines with decoded configuration.
-	 */
 	/**
 	 * Get all pipelines from the database.
 	 *
 	 * @return array Array of all pipeline records
 	 */
 	public function get_all_pipelines(): array {
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i ORDER BY updated_at DESC", $this->table_name ), ARRAY_A );
 
-		$cache_key = Cache::ALL_PIPELINES_CACHE_KEY;
-		$cached_result = get_transient( $cache_key );
-
-		if ( false === $cached_result ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i ORDER BY updated_at DESC", $this->table_name ), ARRAY_A );
-
-			// Decode JSON fields immediately after database retrieval
-			foreach ($results as &$pipeline) {
-				if (!empty($pipeline['pipeline_config'])) {
-					$pipeline['pipeline_config'] = json_decode($pipeline['pipeline_config'], true) ?: [];
-				}
+		foreach ($results as &$pipeline) {
+			if (!empty($pipeline['pipeline_config'])) {
+				$pipeline['pipeline_config'] = json_decode($pipeline['pipeline_config'], true) ?: [];
 			}
-
-			do_action('datamachine_cache_set', $cache_key, $results, 0, 'pipelines');
-			return $results ?: [];
 		}
 
-		return $cached_result;
+		return $results ?: [];
 	}
 
 	/**
 	 * Get lightweight pipelines list for UI dropdowns.
 	 */
 	public function get_pipelines_list(): array {
-
-		$cache_key = Cache::PIPELINES_LIST_CACHE_KEY;
-		$cached_result = get_transient( $cache_key );
-
-		if ( false === $cached_result ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT pipeline_id, pipeline_name FROM %i ORDER BY pipeline_name ASC", $this->table_name ), ARRAY_A );
-			do_action('datamachine_cache_set', $cache_key, $results, 0, 'pipelines');
-			$cached_result = $results;
-		} else {
-			$results = $cached_result;
-		}
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT pipeline_id, pipeline_name FROM %i ORDER BY pipeline_name ASC", $this->table_name ), ARRAY_A );
 
 		return $results ?: [];
 	}
@@ -234,9 +198,6 @@ class Pipelines {
 			'updated_fields' => array_keys( $update_data )
 		] );
 
-		// Clear pipeline cache after successful update to prevent stale data
-		do_action('datamachine_clear_pipeline_cache', $pipeline_id);
-
 		return true;
 	}
 
@@ -307,9 +268,6 @@ class Pipelines {
 			}
 		}
 
-		// Clear pipeline cache after successful deletion
-		do_action('datamachine_clear_pipeline_cache', $pipeline_id);
-
 		return true;
 	}
 
@@ -323,45 +281,24 @@ class Pipelines {
 			return [];
 		}
 
-		$cache_key = Cache::PIPELINE_CONFIG_CACHE_KEY . $pipeline_id;
-		$cached_result = get_transient( $cache_key );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$pipeline_config_json = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT pipeline_config FROM %i WHERE pipeline_id = %d", $this->table_name, $pipeline_id ) );
 
-		if ( false === $cached_result ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$pipeline_config_json = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT pipeline_config FROM %i WHERE pipeline_id = %d", $this->table_name, $pipeline_id ) );
-
-			if ( empty( $pipeline_config_json ) ) {
-				return [];
-			}
-
-			// Decode JSON immediately after database retrieval
-			$pipeline_config = json_decode( $pipeline_config_json, true ) ?: [];
-
-			do_action('datamachine_cache_set', $cache_key, $pipeline_config, 0, 'pipelines');
-			return $pipeline_config;
+		if ( empty( $pipeline_config_json ) ) {
+			return [];
 		}
 
-		return $cached_result;
+		return json_decode( $pipeline_config_json, true ) ?: [];
 	}
 
 
 	/**
-	 * Get cached pipeline count.
+	 * Get pipeline count.
 	 */
 	public function get_pipelines_count(): int {
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(pipeline_id) FROM %i", $this->table_name ) );
 
-		$cache_key = Cache::PIPELINE_COUNT_CACHE_KEY;
-		$cached_result = get_transient( $cache_key );
-
-		if ( false === $cached_result ) {
-			$count = $this->wpdb->get_var(
-				"SELECT COUNT(pipeline_id) FROM %i", $this->table_name
-			);
-			do_action('datamachine_cache_set', $cache_key, $count, 300, 'pipelines'); // 5 min cache for counts
-			$cached_result = $count;
-		} else {
-			$count = $cached_result;
-		}
 		return (int) $count;
 	}
 
@@ -386,26 +323,17 @@ class Pipelines {
 			$orderby = 'pipeline_id';
 		}
 
-		$cache_key = Cache::PIPELINE_EXPORT_CACHE_KEY;
-		$cached_result = get_transient( $cache_key );
+		$query = sprintf( "SELECT * FROM %%i ORDER BY %s %s LIMIT %%d OFFSET %%d", $orderby, $order );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$results = $this->wpdb->get_results( $this->wpdb->prepare( $query, $this->table_name, $per_page, $offset ), ARRAY_A );
 
-		if ( false === $cached_result ) {
-			$query = sprintf( "SELECT * FROM %%i ORDER BY %s %s LIMIT %%d OFFSET %%d", $orderby, $order );
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$results = $this->wpdb->get_results( $this->wpdb->prepare( $query, $this->table_name, $per_page, $offset ), ARRAY_A );
-
-			// Decode JSON fields immediately after database retrieval
-			foreach ($results as &$pipeline) {
-				if (!empty($pipeline['pipeline_config'])) {
-					$pipeline['pipeline_config'] = json_decode($pipeline['pipeline_config'], true) ?: [];
-				}
+		foreach ($results as &$pipeline) {
+			if (!empty($pipeline['pipeline_config'])) {
+				$pipeline['pipeline_config'] = json_decode($pipeline['pipeline_config'], true) ?: [];
 			}
-
-			do_action('datamachine_cache_set', $cache_key, $results, 300, 'pipelines'); // Cache decoded arrays
-			return $results;
 		}
 
-		return $cached_result;
+		return $results ?: [];
 	}
 
 	/**
@@ -444,10 +372,6 @@ class Pipelines {
 			['%s'],
 			['%d']
 		);
-
-		if ($result !== false) {
-			do_action('datamachine_clear_pipeline_cache', $pipeline_id);
-		}
 
 		return $result !== false;
 	}

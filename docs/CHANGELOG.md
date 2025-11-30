@@ -5,6 +5,32 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] - 2025-11-30
+
+### Removed
+- **Centralized Cache System** - Eliminated `inc/Engine/Actions/Cache.php` (329 lines) and `docs/core-system/cache-management.md` (398 lines)
+  - Removed Cache action class with granular invalidation patterns
+  - Removed cache management documentation and architectural patterns
+  - Simplified DataMachineActions.php by removing cache registration
+
+### Changed
+- **Architecture Simplification** - Streamlined codebase through distributed caching approach
+  - Maintained essential caching in PluginSettings, SiteContext, and EngineData
+  - Eliminated centralized cache management in favor of component-level caching
+  - Reduced code complexity and maintenance overhead
+
+### Improved
+- **Codebase Efficiency** - Net reduction of 1,602 lines across 27 files
+  - Simplified database operation files and service managers
+  - Consolidated documentation and removed redundant content
+  - Enhanced maintainability through architectural simplification
+
+### Technical Details
+- **Code Reduction**: -1,602 lines net change across 27 modified files
+- **Architecture**: Transition from centralized to distributed caching model
+- **Performance**: Maintained caching benefits while reducing system complexity
+- **Compatibility**: No breaking changes to APIs or user-facing functionality
+
 ## [0.4.5] - 2025-11-30
 
 ### Changed

@@ -320,18 +320,6 @@ class FlowSteps {
 			);
 		}
 
-		$parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
-		if ($parts && !empty($parts['flow_id'])) {
-			$flow_id = $parts['flow_id'];
-
-			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-			$flow = $db_flows->get_flow($flow_id);
-			if ($flow && !empty($flow['pipeline_id'])) {
-				$pipeline_id = (int) $flow['pipeline_id'];
-				do_action('datamachine_clear_pipeline_cache', $pipeline_id);
-			}
-		}
-
 		return rest_ensure_response([
 			'success' => true,
 			'data' => [],

@@ -118,26 +118,4 @@ $all_pages = apply_filters('datamachine_admin_pages', []);
         </td>
     </tr>
 
-    <tr>
-        <th scope="row"><?php esc_html_e('Cache', 'datamachine'); ?></th>
-        <td>
-            <fieldset <?php echo esc_attr($disabled_attr); ?>>
-                <button type="button"
-                        id="datamachine-clear-cache-btn"
-                        class="button button-secondary"
-                        <?php echo esc_attr($disabled_attr); ?>>
-                    <?php esc_html_e('Clear Now', 'datamachine'); ?>
-                </button>
-                <p class="description">
-                    <?php esc_html_e('Clear all cached pipeline and flow configurations. Use this to resolve cache inconsistencies or after database modifications.', 'datamachine'); ?>
-                </p>
-                <div id="datamachine-cache-clear-result" class="datamachine-admin-notice datamachine-hidden"></div>
-                <?php if ($engine_mode): ?>
-                    <p class="description">
-                        <?php esc_html_e('Cache controls are disabled when Engine Mode is active.', 'datamachine'); ?>
-                    </p>
-                <?php endif; ?>
-            </fieldset>
-        </td>
-    </tr>
 </table>

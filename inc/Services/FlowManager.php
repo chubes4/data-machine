@@ -145,7 +145,6 @@ class FlowManager {
                 'flow_id' => $flow_id,
                 'pipeline_id' => $flow['pipeline_id']
             ]);
-            do_action('datamachine_clear_pipeline_cache', $flow['pipeline_id']);
         } else {
             do_action('datamachine_log', 'error', 'Failed to delete flow', ['flow_id' => $flow_id]);
         }

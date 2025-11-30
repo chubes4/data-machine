@@ -2,8 +2,6 @@
 
 namespace DataMachine\Core\Database\Flows;
 
-use DataMachine\Engine\Actions\Cache;
-
 /**
  * Flows Database Class
  *
@@ -109,64 +107,43 @@ class Flows {
             'flow_name' => $flow_data['flow_name']
         ]);
 
-        // Clear pipeline flows cache since a new flow was created
-        do_action('datamachine_clear_pipeline_cache', $flow_data['pipeline_id']);
-
         return $flow_id;
     }
 
     public function get_flow(int $flow_id): ?array {
-        
-        $cache_key = Cache::FLOW_CONFIG_CACHE_KEY . $flow_id;
-        $cached_result = get_transient( $cache_key );
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE flow_id = %d", $this->table_name, $flow_id ), ARRAY_A );
 
-        if ( false === $cached_result ) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $flow = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE flow_id = %d", $this->table_name, $flow_id ), ARRAY_A );
-
-            if ($flow === null) {
-                do_action('datamachine_log', 'warning', 'Flow not found', [
-                    'flow_id' => $flow_id
-                ]);
-                return null;
-            }
-
-            $flow['flow_config'] = json_decode($flow['flow_config'], true) ?: [];
-            $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true) ?: [];
-
-            do_action('datamachine_cache_set', $cache_key, $flow, 0, 'flows');
-            return $flow;
+        if ($flow === null) {
+            do_action('datamachine_log', 'warning', 'Flow not found', [
+                'flow_id' => $flow_id
+            ]);
+            return null;
         }
 
-        return $cached_result;
+        $flow['flow_config'] = json_decode($flow['flow_config'], true) ?: [];
+        $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true) ?: [];
+
+        return $flow;
     }
 
     public function get_flows_for_pipeline(int $pipeline_id): array {
-        
-        $cache_key = Cache::PIPELINE_FLOWS_CACHE_KEY . $pipeline_id;
-        $cached_result = get_transient( $cache_key );
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE pipeline_id = %d ORDER BY flow_id ASC", $this->table_name, $pipeline_id ), ARRAY_A );
 
-        if ( false === $cached_result ) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE pipeline_id = %d ORDER BY flow_id ASC", $this->table_name, $pipeline_id ), ARRAY_A );
-
-            if ($flows === null) {
-                do_action('datamachine_log', 'warning', 'No flows found for pipeline', [
-                    'pipeline_id' => $pipeline_id
-                ]);
-                return [];
-            }
-
-            foreach ($flows as &$flow) {
-                $flow['flow_config'] = json_decode($flow['flow_config'], true) ?: [];
-                $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true) ?: [];
-            }
-
-            do_action('datamachine_cache_set', $cache_key, $flows, 0, 'flows');
-            return $flows;
+        if ($flows === null) {
+            do_action('datamachine_log', 'warning', 'No flows found for pipeline', [
+                'pipeline_id' => $pipeline_id
+            ]);
+            return [];
         }
 
-        return $cached_result;
+        foreach ($flows as &$flow) {
+            $flow['flow_config'] = json_decode($flow['flow_config'], true) ?: [];
+            $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true) ?: [];
+        }
+
+        return $flows;
     }
 
 
@@ -221,17 +198,6 @@ class Flows {
             return false;
         }
 
-        // Intelligent cache clearing based on what's actually being updated
-        if (isset($flow_data['scheduling_config'])) {
-            do_action('datamachine_clear_flow_scheduling_cache', $flow_id);
-        } elseif (isset($flow_data['flow_config'])) {
-            do_action('datamachine_clear_flow_config_cache', $flow_id);
-            do_action('datamachine_clear_flow_steps_cache', $flow_id);
-        } else {
-            // Structural flow changes - clear everything
-            do_action('datamachine_clear_flow_cache', $flow_id);
-        }
-
         return true;
     }
 
@@ -265,9 +231,6 @@ class Flows {
             'flow_id' => $flow_id
         ]);
 
-        // Clear flow cache after successful deletion
-        do_action('datamachine_clear_flow_cache', $flow_id);
-
         return true;
     }
 
@@ -293,44 +256,31 @@ class Flows {
             return false;
         }
 
-        // Clear flow cache after successful scheduling update
-        do_action('datamachine_clear_flow_cache', $flow_id);
-
         return true;
     }
 
     public function get_flow_scheduling(int $flow_id): ?array {
-        
-        $cache_key = Cache::FLOW_SCHEDULING_CACHE_KEY . $flow_id;
-        $cached_result = get_transient( $cache_key );
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $scheduling_config_json = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT scheduling_config FROM %i WHERE flow_id = %d", $this->table_name, $flow_id ) );
 
-        if ( false === $cached_result ) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $scheduling_config_json = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT scheduling_config FROM %i WHERE flow_id = %d", $this->table_name, $flow_id ) );
-
-            if ($scheduling_config_json === null) {
-                do_action('datamachine_log', 'warning', 'Flow scheduling configuration not found', [
-                    'flow_id' => $flow_id
-                ]);
-                return null;
-            }
-
-            // Decode JSON immediately after database retrieval
-            $decoded_config = json_decode($scheduling_config_json, true);
-
-            if ($decoded_config === null) {
-                do_action('datamachine_log', 'error', 'Failed to decode flow scheduling configuration', [
-                    'flow_id' => $flow_id,
-                    'raw_config' => $scheduling_config_json
-                ]);
-                return null;
-            }
-
-            do_action('datamachine_cache_set', $cache_key, $decoded_config, 0, 'flows');
-            return $decoded_config;
+        if ($scheduling_config_json === null) {
+            do_action('datamachine_log', 'warning', 'Flow scheduling configuration not found', [
+                'flow_id' => $flow_id
+            ]);
+            return null;
         }
 
-        return $cached_result;
+        $decoded_config = json_decode($scheduling_config_json, true);
+
+        if ($decoded_config === null) {
+            do_action('datamachine_log', 'error', 'Failed to decode flow scheduling configuration', [
+                'flow_id' => $flow_id,
+                'raw_config' => $scheduling_config_json
+            ]);
+            return null;
+        }
+
+        return $decoded_config;
     }
 
     /**
@@ -340,17 +290,8 @@ class Flows {
         
         $current_time = current_time('mysql');
         
-        $cache_key = Cache::DUE_FLOWS_CACHE_KEY . md5( $current_time );
-        $cached_result = get_transient( $cache_key );
-
-        if ( false === $cached_result ) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual' AND (JSON_EXTRACT(scheduling_config, '$.last_run_at') IS NULL OR JSON_EXTRACT(scheduling_config, '$.last_run_at') < %s) ORDER BY flow_id ASC", $this->table_name, $current_time ), ARRAY_A );
-            do_action('datamachine_cache_set', $cache_key, $flows, 60, 'flows'); // 1 min cache for due flows
-            $cached_result = $flows;
-        } else {
-            $flows = $cached_result;
-        }
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual' AND (JSON_EXTRACT(scheduling_config, '$.last_run_at') IS NULL OR JSON_EXTRACT(scheduling_config, '$.last_run_at') < %s) ORDER BY flow_id ASC", $this->table_name, $current_time ), ARRAY_A );
         
         if ($flows === null) {
             return [];

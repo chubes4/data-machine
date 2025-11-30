@@ -68,16 +68,6 @@ $image_url = $engine_data['image_url'] ?? null;
 - **Clean Architecture**: Single responsibility per service manager
 - **Backward Compatibility**: Maintains WordPress hook integration
 
-### Advanced Cache Management System
-**Enhanced Centralized Architecture**: Services layer provides comprehensive cache management through service managers with database component integration and extensible architecture.
-
-**Granular Cache Operations**:
-- Service managers provide targeted cache clearing for their domains
-- Pattern-based clearing with wildcard support
-- WordPress transient integration with performance optimization
-- Comprehensive logging for all cache operations
-- Action-based database component integration for extensible cache management
-
 ### Step Types
 - **Fetch**: Data retrieval with clean content processing (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API)
 - **AI**: Content processing with multi-provider support (OpenAI, Anthropic, Google, Grok)
@@ -250,13 +240,6 @@ Flow-isolated UUID storage with automatic cleanup:
 - Files organized by flow instance
 - Automatic purging on job completion
 - Support for local and remote file processing
-
-### Cache Management
-Centralized WordPress transient-based cache system:
-- Automatic cache invalidation on pipeline changes
-- Pattern-based cache clearing for efficient management
-- Pipeline-specific and global cache operations
-- Integration with auto-save functionality
 
 ### Admin Interface
 

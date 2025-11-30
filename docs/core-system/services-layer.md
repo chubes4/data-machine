@@ -148,17 +148,6 @@ do_action('datamachine_pipeline_created', $pipeline_id, $pipeline_data);
 do_action('datamachine_flow_created', $flow_id, $flow_data);
 ```
 
-### Caching Integration
-Service managers integrate with the existing cache system:
-
-```php
-// Automatic cache clearing on data changes
-if ($success) {
-    do_action('datamachine_clear_pipeline_cache', $pipeline_id);
-    do_action('datamachine_clear_pipelines_list_cache');
-}
-```
-
 ## Error Handling
 
 Service managers provide consistent error handling:

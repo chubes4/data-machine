@@ -39,18 +39,8 @@ class ProcessedItems {
      * @return bool True if the item has been processed, false otherwise.
      */
     public function has_item_been_processed( string $flow_step_id, string $source_type, string $item_identifier ): bool {
-
-        $cache_key = $this->get_processed_item_cache_key( $flow_step_id, $source_type, $item_identifier );
-        $cached_result = get_transient( $cache_key );
-
-        if ( false !== $cached_result ) {
-            return $cached_result > 0;
-        }
-
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
         $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE flow_step_id = %s AND source_type = %s AND item_identifier = %s", $this->table_name, $flow_step_id, $source_type, $item_identifier ) );
-
-        set_transient( $cache_key, $count, 0 );
 
         return $count > 0;
     }
@@ -89,12 +79,6 @@ class ProcessedItems {
                 '%d', // job_id
             )
         );
-
-        // Clear cache for this processed item after successful insertion
-        if ( $result !== false ) {
-            $cache_key = $this->get_processed_item_cache_key( $flow_step_id, $source_type, $item_identifier );
-            delete_transient( $cache_key );
-        }
 
         if ($result === false) {
              // Log error - but check if it's a duplicate key error first
@@ -164,11 +148,6 @@ class ProcessedItems {
             $pattern = '%_' . $criteria['flow_id'];
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
             $result = $this->wpdb->query( $this->wpdb->prepare( "DELETE FROM %i WHERE flow_step_id LIKE %s", $this->table_name, $pattern ) );
-
-            // Clear processed items cache after deletion
-            if ( $result !== false ) {
-                $this->clear_cache_pattern( 'datamachine_processed_*' );
-            }
         } 
         // Handle pipeline_id (get all flows for pipeline and delete their processed items)
         else if (!empty($criteria['pipeline_id']) && empty($criteria['flow_step_id'])) {
@@ -199,63 +178,11 @@ class ProcessedItems {
                 }
             }
             $result = $total_deleted;
-
-            // Clear processed items cache after deletion
-            if ( $result !== false ) {
-                $this->clear_cache_pattern( 'datamachine_processed_*' );
-            }
         }
         else if (!empty($where)) {
-            // Build cache key and log what we're about to delete
-            $cache_key = 'datamachine_count_processed_' . md5(serialize($where));
-            $cached_count = get_transient( $cache_key );
-
-            if ( false === $cached_count ) {
-                // Handle specific WHERE combinations without dynamic SQL building
-                if (isset($where['job_id']) && isset($where['flow_step_id']) && isset($where['source_type'])) {
-                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE job_id = %d AND flow_step_id = %s AND source_type = %s", $this->table_name, $where['job_id'], $where['flow_step_id'], $where['source_type'] ) );
-                } elseif (isset($where['job_id']) && isset($where['flow_step_id'])) {
-                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE job_id = %d AND flow_step_id = %s", $this->table_name, $where['job_id'], $where['flow_step_id'] ) );
-                } elseif (isset($where['job_id']) && isset($where['source_type'])) {
-                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE job_id = %d AND source_type = %s", $this->table_name, $where['job_id'], $where['source_type'] ) );
-                } elseif (isset($where['flow_step_id']) && isset($where['source_type'])) {
-                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE flow_step_id = %s AND source_type = %s", $this->table_name, $where['flow_step_id'], $where['source_type'] ) );
-                } elseif (isset($where['job_id'])) {
-                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE job_id = %d", $this->table_name, $where['job_id'] ) );
-                } elseif (isset($where['flow_step_id'])) {
-                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE flow_step_id = %s", $this->table_name, $where['flow_step_id'] ) );
-                } elseif (isset($where['source_type'])) {
-                    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-                    $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE source_type = %s", $this->table_name, $where['source_type'] ) );
-                } else {
-                    $count = 0;
-                }
-                set_transient( $cache_key, $count, 300 ); // 5 minute cache for counts
-            } else {
-                $count = $cached_count;
-            }
-
-            do_action('datamachine_log', 'debug', 'Processed items deletion query analysis', [
-                'where_conditions' => $where,
-                'where_format' => $where_format,
-                'items_to_delete' => $count,
-                'table_name' => $this->table_name
-            ]);
-
             // Standard delete with WHERE conditions
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
             $result = $this->wpdb->delete($this->table_name, $where, $where_format);
-
-            // Clear processed items cache after deletion
-            if ( $result !== false ) {
-                $this->clear_cache_pattern( 'datamachine_processed_*' );
-            }
         } else {
             do_action('datamachine_log', 'warning', 'No valid criteria provided for processed items deletion');
             return false;
@@ -269,54 +196,6 @@ class ProcessedItems {
         ]);
         
         return $result;
-    }
-
-    /**
-     * Generate cache key for processed items
-     *
-     * @param string $flow_step_id Flow step ID
-     * @param string $source_type Source type
-     * @param string $item_identifier Item identifier
-     * @return string Cache key
-     */
-    private function get_processed_item_cache_key( $flow_step_id, $source_type, $item_identifier ) {
-        return 'datamachine_processed_' . $flow_step_id . '_' . $source_type . '_' . md5( $item_identifier );
-    }
-
-    /**
-     * Clear all processed items cache entries
-     *
-     * Called by datamachine_clear_all_cache action to ensure processed items cache
-     * is included in system-wide cache clearing operations.
-     *
-     * @return int Number of cache entries cleared
-     */
-    public function clear_all_processed_cache() {
-        return $this->clear_cache_pattern( 'datamachine_processed_*' );
-    }
-
-    /**
-     * Clear multiple cache entries matching a pattern
-     *
-     * @param string $pattern Pattern to match (using SQL LIKE syntax with %)
-     * @return int Number of cache entries cleared
-     */
-    private function clear_cache_pattern( $pattern ) {
-
-        // Get all transient keys matching the pattern
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-        $transient_keys = $this->wpdb->get_col( $this->wpdb->prepare( "SELECT option_name FROM %i WHERE option_name LIKE %s", $this->wpdb->options, '_transient_' . $pattern ) );
-
-        $cleared_count = 0;
-        foreach ( $transient_keys as $transient_key ) {
-            // Remove the '_transient_' prefix to get the actual cache key
-            $cache_key = str_replace( '_transient_', '', $transient_key );
-            if ( delete_transient( $cache_key ) ) {
-                $cleared_count++;
-            }
-        }
-
-        return $cleared_count;
     }
 
     /**

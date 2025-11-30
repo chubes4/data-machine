@@ -112,8 +112,6 @@ class PipelineStepManager {
             $this->flow_manager->syncStepsToFlow($flow['flow_id'], $pipeline_id, [$new_step], $pipeline_config);
         }
 
-        do_action('datamachine_clear_pipeline_cache', $pipeline_id);
-
         do_action('datamachine_log', 'info', 'Step created successfully', [
             'pipeline_id' => $pipeline_id,
             'step_type' => $step_type,
@@ -245,8 +243,6 @@ class PipelineStepManager {
             ]);
         }
 
-        do_action('datamachine_clear_pipeline_cache', $pipeline_id);
-
         $remaining_step_count = count($this->db_pipelines->get_pipeline_config($pipeline_id));
 
         return [
@@ -308,8 +304,6 @@ class PipelineStepManager {
             ]);
             return false;
         }
-
-        do_action('datamachine_clear_pipeline_cache', $pipeline_id);
 
         return true;
     }
@@ -386,8 +380,6 @@ class PipelineStepManager {
             );
         }
 
-        do_action('datamachine_clear_pipeline_cache', $pipeline_id);
-
         $flows = $this->db_flows->get_flows_for_pipeline($pipeline_id);
 
         foreach ($flows as $flow) {
@@ -412,8 +404,6 @@ class PipelineStepManager {
             $this->db_flows->update_flow($flow_id, [
                 'flow_config' => $flow_config
             ]);
-
-            do_action('datamachine_clear_flow_config_cache', $flow_id);
         }
 
         return [

@@ -49,7 +49,6 @@ if ( ! defined( 'WPINC' ) ) {
 // Include organized action classes
 require_once __DIR__ . '/ImportExport.php';
 require_once __DIR__ . '/Engine.php';
-require_once __DIR__ . '/Cache.php';
 
 /**
  * Register core Data Machine action hooks.
@@ -128,7 +127,6 @@ function datamachine_register_core_actions() {
     }, 10, 4);
 
     \DataMachine\Engine\Actions\ImportExport::register();
-    \DataMachine\Engine\Actions\Cache::register();
     datamachine_register_execution_engine();
 
 }

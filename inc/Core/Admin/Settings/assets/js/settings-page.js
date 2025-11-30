@@ -68,17 +68,6 @@
 				}
 			} );
 
-			// Cache clearing handler
-			const clearCacheBtn = document.getElementById(
-				'datamachine-clear-cache-btn'
-			);
-			if ( clearCacheBtn ) {
-				clearCacheBtn.addEventListener(
-					'click',
-					this.handleClearCache.bind( this )
-				);
-			}
-
 			// Tab navigation handlers
 			const tabLinks = document.querySelectorAll(
 				'.datamachine-nav-tab-wrapper .nav-tab'
@@ -187,7 +176,6 @@
 					config_data: configData,
 				},
 			} )
-				.then( ( response ) => response.json() )
 				.then( ( response ) => {
 					if ( response.success ) {
 						// Close modal and refresh page to show updated status
@@ -210,82 +198,6 @@
 					this.showError(
 						'Network error: Unable to save configuration'
 					);
-				} )
-				.finally( () => {
-					// Restore button state
-					button.disabled = false;
-					button.textContent = originalText;
-				} );
-		},
-
-		/**
-		 * Handle cache clearing action
-		 */
-		handleClearCache: function ( e ) {
-			e.preventDefault();
-
-			const button = e.target;
-			const result = document.getElementById(
-				'datamachine-cache-clear-result'
-			);
-
-			// Show confirmation dialog
-			if (
-				! confirm(
-					'Are you sure you want to clear all cache? This will force Data Machine to reload all configurations from the database.'
-				)
-			) {
-				return;
-			}
-
-			// Show loading state
-			const originalText = button.textContent;
-			button.textContent = 'Clearing...';
-			button.disabled = true;
-			result.classList.remove(
-				'datamachine-hidden',
-				'notice-success',
-				'notice-error'
-			);
-			result.textContent = '';
-
-			// Send REST request using wp.apiFetch
-			wp.apiFetch( {
-				path: '/datamachine/v1/cache',
-				method: 'DELETE',
-			} )
-				.then( ( response ) => response.json() )
-				.then( ( response ) => {
-					if ( response.success ) {
-						const message =
-							response.message || 'Cache cleared successfully';
-						result.classList.add( 'notice-success' );
-						result.textContent = message;
-						result.classList.remove( 'datamachine-hidden' );
-
-						// Hide success message after 3 seconds
-						setTimeout( () => {
-							result.style.opacity = '0';
-							result.style.transition = 'opacity 0.3s';
-							setTimeout( () => {
-								result.classList.add( 'datamachine-hidden' );
-								result.style.opacity = '';
-								result.style.transition = '';
-							}, 300 );
-						}, 3000 );
-					} else {
-						const errorMessage =
-							response.message || 'Cache clearing failed';
-						result.classList.add( 'notice-error' );
-						result.textContent = errorMessage;
-						result.classList.remove( 'datamachine-hidden' );
-					}
-				} )
-				.catch( ( error ) => {
-					const errorMessage = 'Network error: Unable to clear cache';
-					result.classList.add( 'notice-error' );
-					result.textContent = errorMessage;
-					result.classList.remove( 'datamachine-hidden' );
 				} )
 				.finally( () => {
 					// Restore button state

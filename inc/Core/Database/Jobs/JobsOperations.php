@@ -5,8 +5,6 @@
 
 namespace DataMachine\Core\Database\Jobs;
 
-use DataMachine\Engine\Actions\Cache;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
@@ -72,8 +70,6 @@ class JobsOperations {
         
         $job_id = $this->wpdb->insert_id;
 
-        do_action('datamachine_clear_jobs_cache');
-
         return $job_id;
     }
 
@@ -81,48 +77,24 @@ class JobsOperations {
         if ( empty( $job_id ) ) {
             return null;
         }
-        $cache_key = Cache::JOB_CACHE_KEY . $job_id;
-        $cached_result = get_transient( $cache_key );
 
-        if ( false === $cached_result ) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $job = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE job_id = %d", $this->table_name, $job_id ), ARRAY_A );
-            
-            // Standardize payload: Decode engine_data if present
-            if ( $job && isset( $job['engine_data'] ) && is_string( $job['engine_data'] ) ) {
-                $decoded = json_decode( $job['engine_data'], true );
-                if ( json_last_error() === JSON_ERROR_NONE ) {
-                    $job['engine_data'] = $decoded;
-                }
-            }
-
-            do_action('datamachine_cache_set', $cache_key, $job, 300, 'jobs');
-            $cached_result = $job;
-        } else {
-            $job = $cached_result;
-            if ( $job && isset( $job['engine_data'] ) && is_string( $job['engine_data'] ) ) {
-                $decoded = json_decode( $job['engine_data'], true );
-                if ( json_last_error() === JSON_ERROR_NONE ) {
-                    $job['engine_data'] = $decoded;
-                }
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $job = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE job_id = %d", $this->table_name, $job_id ), ARRAY_A );
+        
+        if ( $job && isset( $job['engine_data'] ) && is_string( $job['engine_data'] ) ) {
+            $decoded = json_decode( $job['engine_data'], true );
+            if ( json_last_error() === JSON_ERROR_NONE ) {
+                $job['engine_data'] = $decoded;
             }
         }
+
         return $job;
     }
 
     public function get_jobs_count(): int {
-        
-        $cache_key = Cache::TOTAL_JOBS_COUNT_CACHE_KEY;
-        $cached_result = get_transient( $cache_key );
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(job_id) FROM %i", $this->table_name ) );
 
-        if ( false === $cached_result ) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(job_id) FROM %i", $this->table_name ) );
-            do_action('datamachine_cache_set', $cache_key, $count, 300, 'jobs'); // 5 min cache for counts
-            $cached_result = $count;
-        } else {
-            $count = $cached_result;
-        }
         return (int) $count;
     }
 
@@ -148,20 +120,11 @@ class JobsOperations {
         $pipelines_table = $this->wpdb->prefix . 'datamachine_pipelines';
         $flows_table = $this->wpdb->prefix . 'datamachine_flows';
         
-        $cache_key = Cache::RECENT_JOBS_CACHE_KEY . md5($orderby . $order . $per_page . $offset);
-        $cached_result = get_transient( $cache_key );
+        $sql = "SELECT j.*, p.pipeline_name, f.flow_name FROM {$this->table_name} j LEFT JOIN {$pipelines_table} p ON j.pipeline_id = p.pipeline_id LEFT JOIN {$flows_table} f ON j.flow_id = f.flow_id ORDER BY $orderby $order";
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $results = $this->wpdb->get_results( $this->wpdb->prepare( $sql . " LIMIT %d OFFSET %d", $per_page, $offset ), ARRAY_A );
 
-        if ( false === $cached_result ) {
-            $sql = "SELECT j.*, p.pipeline_name, f.flow_name FROM {$this->table_name} j LEFT JOIN {$pipelines_table} p ON j.pipeline_id = p.pipeline_id LEFT JOIN {$flows_table} f ON j.flow_id = f.flow_id ORDER BY $orderby $order";
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $results = $this->wpdb->get_results( $this->wpdb->prepare( $sql . " LIMIT %d OFFSET %d", $per_page, $offset ), ARRAY_A );
-            do_action('datamachine_cache_set', $cache_key, $results, 60, 'jobs'); // 1 min cache for recent jobs
-            $cached_result = $results;
-        } else {
-            $results = $cached_result;
-        }
-
-        return $results;
+        return $results ?: [];
     }
 
     /**
@@ -206,17 +169,8 @@ class JobsOperations {
             return [];
         }
         
-        $cache_key = Cache::FLOW_JOBS_CACHE_KEY . $flow_id;
-        $cached_result = get_transient( $cache_key );
-
-        if ( false === $cached_result ) {
-            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            $results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE flow_id = %d ORDER BY created_at DESC", $this->table_name, $flow_id ), ARRAY_A );
-            do_action('datamachine_cache_set', $cache_key, $results, 300, 'jobs'); // 5 min cache for flow jobs
-            $cached_result = $results;
-        } else {
-            $results = $cached_result;
-        }
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE flow_id = %d ORDER BY created_at DESC", $this->table_name, $flow_id ), ARRAY_A );
         
         return $results ?: [];
     }
@@ -244,11 +198,6 @@ class JobsOperations {
             'jobs_deleted' => $result !== false ? $result : 0,
             'success' => $result !== false
         ]);
-
-        // Invalidate job caches
-        if ($result !== false && $result > 0) {
-            do_action('datamachine_clear_jobs_cache');
-        }
 
         return $result;
     }
@@ -279,10 +228,6 @@ class JobsOperations {
             ]);
             return false;
         }
-
-        // Invalidate job cache after engine_data update
-        $cache_key = Cache::JOB_CACHE_KEY . $job_id;
-        delete_transient($cache_key);
 
         do_action('datamachine_log', 'debug', 'Stored engine_data successfully', [
             'job_id' => $job_id,

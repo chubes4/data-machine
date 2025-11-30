@@ -14,8 +14,6 @@
 
 namespace DataMachine\Core\Database\Jobs;
 
-use DataMachine\Engine\Actions\Cache;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
@@ -63,11 +61,6 @@ class JobsStatus {
             ['%s'], // Format for data
             ['%d']  // Format for WHERE
         );
-
-        // Clear job-related caches after starting job
-        if ($updated !== false) {
-            do_action('datamachine_clear_jobs_cache');
-        }
 
         return $updated !== false;
     }
@@ -130,9 +123,6 @@ class JobsStatus {
             }
         }
 
-        // Clear job-related caches after completing job
-        do_action('datamachine_clear_jobs_cache');
-
         return true;
     }
 
@@ -160,11 +150,6 @@ class JobsStatus {
             $format,
             ['%d']
         );
-
-        // Clear job-related caches after status update
-        if ($updated !== false) {
-            do_action('datamachine_clear_jobs_cache');
-        }
 
         return $updated !== false;
     }
