@@ -203,7 +203,7 @@ WORKFLOW PATTERNS:
 - Content enhancement: fetch → ai → update
 - Multi-platform: fetch → ai → publish → ai → publish
 
-STEP FORMAT:
+STEP FORMAT (each step is an object, NOT a JSON string):
 {
   "type": "fetch|ai|publish|update",
   "handler": "handler_slug",  // required for fetch/publish/update
@@ -211,6 +211,15 @@ STEP FORMAT:
   "user_message": "...",      // for ai steps: instruction for AI
   "system_prompt": "..."      // for ai steps: optional system context
 }
+
+COMPLETE EXAMPLE INPUT:
+steps: [
+  {"type": "fetch", "handler": "rss", "config": {"feed_url": "https://example.com/feed"}},
+  {"type": "ai", "user_message": "Summarize this content for social media"},
+  {"type": "publish", "handler": "wordpress_publish", "config": {"post_type": "post", "post_status": "draft", "post_author": 1}}
+]
+
+IMPORTANT: Pass steps as an array of objects, not an array of JSON strings.
 DOC;
     }
 }

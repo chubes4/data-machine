@@ -216,6 +216,26 @@ Or step-by-step:
 6. configure_flow_step for each step
 ```
 
+### Configure AI Pipeline Step
+```
+configure_pipeline_step {pipeline_step_id: "123_uuid", system_prompt: "You are a content editor..."}
+configure_pipeline_step {pipeline_step_id: "123_uuid", provider: "anthropic", model: "claude-sonnet-4-20250514"}
+configure_pipeline_step {pipeline_step_id: "123_uuid", system_prompt: "...", provider: "openai", model: "gpt-4o"}
+```
+
+### Update Existing Flow
+```
+update_flow {flow_id: 123, flow_name: "Daily Twitter Sync"}
+update_flow {flow_id: 123, scheduling_config: {interval: "hourly"}}
+update_flow {flow_id: 123, flow_name: "New Name", scheduling_config: {interval: "daily"}}
+```
+
+### Run Existing Flow
+```
+run_flow {flow_id: 123}
+run_flow {flow_id: 123, timestamp: 1704153600}
+```
+
 ### Check Auth Status
 ```
 GET /datamachine/v1/auth/{handler_slug}/status
@@ -233,8 +253,11 @@ DELETE /datamachine/v1/cache
 - `create_pipeline`: Create a new pipeline with optional predefined steps
 - `add_pipeline_step`: Add a step to an existing pipeline
 - `create_flow`: Create a flow instance from an existing pipeline
-- `configure_flow_step`: Configure handler settings on flow steps
-- `execute_workflow`: Execute ephemeral one-time workflows
+- `update_flow`: Update flow title and/or scheduling configuration
+- `configure_pipeline_step`: Configure AI step settings (system_prompt, provider, model, enabled_tools)
+- `configure_flow_step`: Configure flow step settings (handler, handler_config, user_message)
+- `run_flow`: Execute an existing flow immediately or schedule delayed execution
+- `execute_workflow`: Execute ephemeral one-time workflows (use run_flow for existing flows)
 - `api_query`: Query Data Machine REST API for discovery and monitoring
 - `local_search`: Search WordPress content
 - `wordpress_post_reader`: Read full post content by URL

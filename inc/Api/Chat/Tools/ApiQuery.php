@@ -66,13 +66,6 @@ class ApiQuery {
 		return <<<'DOC'
 Query Data Machine REST API for discovery, monitoring, and troubleshooting.
 
-PREFER SPECIALIZED TOOLS FOR ACTIONS:
-- For creating pipelines: use create_pipeline tool
-- For adding pipeline steps: use add_pipeline_step tool
-- For creating flows: use create_flow tool
-- For configuring flow steps: use configure_flow_step tool
-- For workflow execution: use execute_workflow tool
-
 ENDPOINTS:
 
 ## Discovery
@@ -98,11 +91,6 @@ GET /datamachine/v1/flows - List all flows
 GET /datamachine/v1/flows/{id} - Get flow details
 DELETE /datamachine/v1/flows/{id} - Delete flow
 POST /datamachine/v1/flows/{id}/duplicate - Duplicate flow
-
-## Scheduling
-PATCH /datamachine/v1/flows/{id} - Update flow scheduling
-  data: {scheduling_config: {interval: "manual|hourly|daily|weekly|monthly"}}
-  data: {scheduling_config: {interval: "one_time", timestamp: unix_timestamp}}
 
 ## Jobs & Monitoring
 GET /datamachine/v1/jobs - List all jobs

@@ -38,7 +38,7 @@ class ExecuteWorkflowTool {
                 'steps' => [
                     'type' => 'array',
                     'required' => true,
-                    'description' => 'Workflow steps to execute. Each step needs: type (fetch|ai|publish|update), handler (for non-ai steps), config (handler settings), user_message (for ai steps)'
+                    'description' => 'Array of step objects (NOT JSON strings). Each step is an object with: type, handler, config, user_message. Example: [{"type": "fetch", "handler": "rss", "config": {"feed_url": "https://example.com/feed"}}, {"type": "ai", "user_message": "Summarize this"}, {"type": "publish", "handler": "wordpress_publish", "config": {"post_type": "post"}}]'
                 ]
             ]
         ];

@@ -5,6 +5,30 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2025-11-29
+
+### Added
+- **ConfigurePipelineStep Chat Tool** - Specialized tool for configuring pipeline-level AI step settings including system prompt, provider, model, and enabled tools
+- **RunFlow Chat Tool** - Dedicated tool for executing existing flows immediately or scheduling delayed execution with proper validation
+- **UpdateFlow Chat Tool** - Focused tool for updating flow-level properties including title and scheduling configuration
+
+### Enhanced
+- **ChatAgentDirective** - Updated system prompt documentation to include new specialized tools and improved workflow patterns
+- **ApiQuery Tool** - Enhanced REST API query tool with comprehensive endpoint documentation for better discovery
+- **ExecuteWorkflowTool** - Improved workflow execution with better error handling and response formatting
+- **DocumentationBuilder** - Enhanced dynamic documentation generation from registered handlers
+
+### Improved
+- **Chat Tool Architecture** - Expanded specialized tool ecosystem for better AI agent performance and task separation
+- **Tool Validation** - Added comprehensive parameter validation across all new chat tools
+- **Error Handling** - Standardized error responses and success messages across new tools
+- **Documentation** - Updated tool descriptions and parameter documentation for clarity
+
+### Technical Details
+- **Tool Specialization**: 3 new specialized tools added to chat agent toolkit
+- **Code Addition**: +447 lines of new specialized chat tool functionality
+- **Enhanced Capabilities**: Better AI agent performance through focused, operation-specific tools
+
 ## [0.4.3] - 2025-11-29
 
 ### Added
