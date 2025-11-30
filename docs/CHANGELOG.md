@@ -5,6 +5,18 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.8] - 2025-11-30
+
+### Enhanced
+- **Chat Tools**: Improved CreatePipeline tool with AI step parameter support (provider, model, system_prompt) and clearer flow creation messaging to prevent duplicate flow creation
+- **UI Improvements**: Added flow ID display in flow headers for better identification and enhanced flow card layouts with improved header structure
+- **API Messaging**: Updated execution success messages for better async operation clarity and job status tracking
+
+### Technical Details
+- **Code Changes**: +47 lines for UI enhancements and chat tool improvements
+- **Compatibility**: No breaking changes, fully backward compatible
+- **Components**: Enhanced FlowHeader and FlowCard React components with better layout and information display
+
 ## [0.4.7] - 2025-11-30
 
 ### Enhanced

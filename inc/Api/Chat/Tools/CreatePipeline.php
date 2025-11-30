@@ -40,7 +40,7 @@ class CreatePipeline {
 		return [
 			'class' => self::class,
 			'method' => 'handle_tool_call',
-			'description' => 'Create a new pipeline with optional predefined steps. Automatically creates an associated flow. Use this instead of make_api_request for pipeline creation.',
+			'description' => 'Create a new pipeline with optional predefined steps. IMPORTANT: This tool automatically creates a flow - do NOT call create_flow afterward. For AI steps, include provider, model, and system_prompt in the step definition.',
 			'parameters' => [
 				'pipeline_name' => [
 					'type' => 'string',
@@ -50,7 +50,7 @@ class CreatePipeline {
 				'steps' => [
 					'type' => 'array',
 					'required' => false,
-					'description' => "Array of step definitions in execution order. Each step: {step_type: \"{$types_list}\", handler_slug: \"rss|wordpress|bluesky|etc\", handler_config: {...}}. Handler details can be configured later with configure_flow_step."
+					'description' => "Array of step definitions in execution order. Each step: {step_type: \"{$types_list}\", handler_slug: \"handler_slug\", handler_config: {...}}. For AI steps, also include: provider, model, system_prompt. Handler details can be configured later with configure_flow_step."
 				],
 				'flow_name' => [
 					'type' => 'string',
@@ -137,19 +137,21 @@ class CreatePipeline {
 			}
 		}
 
+		$flow_id = $result['flows'][0]['flow_id'] ?? null;
+
 		return [
 			'success' => true,
 			'data' => [
 				'pipeline_id' => $result['pipeline_id'],
 				'pipeline_name' => $result['pipeline_name'],
-				'flow_id' => $result['flows'][0]['flow_id'] ?? null,
+				'flow_id' => $flow_id,
 				'flow_name' => $flow_name,
 				'steps_created' => count($steps),
 				'flow_step_ids' => $flow_step_ids,
 				'scheduling' => $scheduling_config['interval'],
 				'message' => empty($steps)
-					? 'Pipeline created successfully. Use add_pipeline_step to add steps, then configure_flow_step to configure handlers.'
-					: 'Pipeline created with ' . count($steps) . ' steps. Use configure_flow_step with the flow_step_ids to set handler configurations.'
+					? "Pipeline and flow (ID: {$flow_id}) created. Do NOT call create_flow - a flow already exists. Use add_pipeline_step to add steps, then configure_flow_step to configure handlers."
+					: "Pipeline and flow (ID: {$flow_id}) created with " . count($steps) . " steps. Do NOT call create_flow - a flow already exists. Use configure_flow_step with the flow_step_ids to set handler configurations."
 			],
 			'tool_name' => 'create_pipeline'
 		];
@@ -208,12 +210,24 @@ class CreatePipeline {
 	private function normalizeSteps(array $steps): array {
 		$normalized = [];
 		foreach ($steps as $index => $step) {
-			$normalized[] = [
+			$normalized_step = [
 				'step_type' => $step['step_type'],
 				'execution_order' => $step['execution_order'] ?? $index,
 				'handler_slug' => $step['handler_slug'] ?? null,
 				'handler_config' => $step['handler_config'] ?? []
 			];
+
+			if (isset($step['provider'])) {
+				$normalized_step['provider'] = $step['provider'];
+			}
+			if (isset($step['model'])) {
+				$normalized_step['model'] = $step['model'];
+			}
+			if (isset($step['system_prompt'])) {
+				$normalized_step['system_prompt'] = $step['system_prompt'];
+			}
+
+			$normalized[] = $normalized_step;
 		}
 		return $normalized;
 	}

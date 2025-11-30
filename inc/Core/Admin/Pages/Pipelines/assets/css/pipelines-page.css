@@ -332,6 +332,13 @@
 	flex: 1;
 }
 
+.datamachine-flow-header__title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
 .datamachine-flow-header__title-input {
 	font-size: 16px;
 	font-weight: 500;
@@ -344,6 +351,12 @@
 	height: 36px; /* Match WordPress button height */
 	box-sizing: border-box;
 	transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+}
+
+.datamachine-flow-header__identifier {
+    font-size: 12px;
+    color: var(--datamachine-text-muted);
+    letter-spacing: 0.02em;
 }
 
 .datamachine-flow-header__title-input:focus {
@@ -389,6 +402,27 @@
 .datamachine-flow-steps--empty p {
 	color: #757575;
 	margin: 0;
+}
+
+/* ===== COMPONENT: FLOW FOOTER ===== */
+
+.datamachine-flow-footer {
+    padding: 12px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    border-radius: 0 0 var(--datamachine-border-radius) var(--datamachine-border-radius);
+    background: #fff;
+}
+
+.datamachine-flow-meta-item {
+    font-size: 13px;
+    color: var(--datamachine-text-muted);
+}
+
+.datamachine-flow-meta-item strong {
+    font-weight: 600;
+    color: var(--datamachine-text-secondary);
 }
 
 /* Flow step card inline style replacements */

@@ -26,7 +26,7 @@ class RunFlow {
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
-            'description' => 'Execute an existing flow immediately or schedule it for delayed execution. Use this to run flows that have already been created and configured.',
+            'description' => 'Execute an existing flow. Flows run asynchronously in the background via Action Scheduler. "Immediate" execution queues the flow to start within seconds. Use the returned job_id to check execution status via get_job_status.',
             'parameters' => [
                 'flow_id' => [
                     'type' => 'integer',
@@ -113,8 +113,8 @@ class RunFlow {
             'flow_id' => $flow_id,
             'execution_type' => $execution_type,
             'message' => $execution_type === 'immediate'
-                ? 'Flow executed successfully.'
-                : 'Flow scheduled for delayed execution.'
+                ? 'Flow queued for immediate background execution. It will start within seconds. Use job_id to check status.'
+                : 'Flow scheduled for delayed background execution at the specified time.'
         ];
 
         if (isset($data['data']['job_id'])) {

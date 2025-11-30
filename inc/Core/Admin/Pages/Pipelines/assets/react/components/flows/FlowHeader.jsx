@@ -113,12 +113,19 @@ export default function FlowHeader( {
 	return (
 		<div className="datamachine-flow-header">
 			<div className="datamachine-flow-header__content">
-				<TextControl
-					value={ localName }
-					onChange={ handleNameChange }
-					placeholder={ __( 'Flow name...', 'datamachine' ) }
-					className="datamachine-flow-header__title-input"
-				/>
+				<div className="datamachine-flow-header__title">
+					<TextControl
+						value={ localName }
+						onChange={ handleNameChange }
+						placeholder={ __( 'Flow name...', 'datamachine' ) }
+						className="datamachine-flow-header__title-input"
+					/>
+
+					<span className="datamachine-flow-header__identifier">
+						{ __( 'Flow ID:', 'datamachine' ) }{' '}
+						<strong>#{ flowId }</strong>
+					</span>
+				</div>
 
 				<div className="datamachine-flow-header__primary-actions">
 					<Button

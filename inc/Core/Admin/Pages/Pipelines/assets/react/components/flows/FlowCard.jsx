@@ -283,7 +283,7 @@ function FlowCardContent({ flow, pipelineConfig, onFlowDeleted, onFlowDuplicated
 				scheduling={{
 					interval: currentFlowData.scheduling_config?.interval,
 					last_run_display: currentFlowData.last_run_display,
-					next_run_display: currentFlowData.next_run_display
+					next_run_display: currentFlowData.next_run_display,
 				}}
 			/>
 			</CardBody>

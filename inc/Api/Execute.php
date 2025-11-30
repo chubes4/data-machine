@@ -133,7 +133,7 @@ class Execute {
                     'job_id' => $job_id,
                     'action_id' => $action_id
                 ],
-                'message' => 'Flow execution queued'
+                'message' => 'Flow queued for immediate background execution via Action Scheduler'
             ]);
         }
 
