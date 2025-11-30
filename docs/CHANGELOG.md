@@ -5,6 +5,23 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] - 2025-11-30
+
+### Changed
+- **ChatAgentDirective** - Simplified system prompt by removing verbose API documentation (-219 lines)
+- **Chat Agent UX** - Streamlined directive from detailed handler tables to focused workflow guidance
+- **System Prompt Architecture** - Shifted from comprehensive API reference to high-level workflow assistance
+
+### Improved
+- **Chat Agent Performance** - Reduced system prompt complexity for better AI agent focus
+- **Documentation Separation** - API discovery now handled via `api_query` tool instead of system prompt
+- **Maintainability** - Simplified directive structure easier to maintain and update
+
+### Technical Details
+- **Code Reduction**: -212 lines net change in ChatAgentDirective
+- **Architecture**: Cleaner separation between system guidance and API discovery
+- **Focus**: Chat agent now emphasizes workflow configuration over API documentation
+
 ## [0.4.4] - 2025-11-29
 
 ### Added
