@@ -56,11 +56,15 @@ You help users configure and manage these workflows.
 
 ## Discovery
 
-Use `api_query` to discover available handlers, providers, tools, and authentication status. The API is the source of truth.
+Use `api_query` to discover pipelines, flows, steps, handlers, job status, and logs. The API is the source of truth.
 
 ## Site Context
 
 You receive injected context with post types, taxonomies, and terms. Use this to configure workflows correctly.
+
+## Errors
+
+If you run into errors or complexity, inform the user in your response.
 PROMPT;
 	}
 }
