@@ -20,14 +20,23 @@ use DataMachine\Services\PipelineManager;
 class CreatePipeline {
 	use ToolRegistrationTrait;
 
-	private const VALID_STEP_TYPES = ['fetch', 'ai', 'publish', 'update'];
-	private const VALID_INTERVALS = ['manual', 'hourly', 'daily', 'weekly', 'monthly', 'one_time'];
-
 	public function __construct() {
 		$this->registerTool('chat', 'create_pipeline', $this->getToolDefinition());
 	}
 
+	private static function getValidStepTypes(): array {
+		$step_types = apply_filters('datamachine_step_types', []);
+		return array_keys($step_types);
+	}
+
+	private static function getValidIntervals(): array {
+		$intervals = apply_filters('datamachine_scheduler_intervals', []);
+		return array_merge(['manual', 'one_time'], array_keys($intervals));
+	}
+
 	private function getToolDefinition(): array {
+		$valid_types = self::getValidStepTypes();
+		$types_list = !empty($valid_types) ? implode('|', $valid_types) : 'fetch|ai|publish|update';
 		return [
 			'class' => self::class,
 			'method' => 'handle_tool_call',
@@ -41,7 +50,7 @@ class CreatePipeline {
 				'steps' => [
 					'type' => 'array',
 					'required' => false,
-					'description' => 'Array of step definitions in execution order. Each step: {step_type: "fetch|ai|publish|update", handler_slug: "rss|wordpress|bluesky|etc", handler_config: {...}}. Handler details can be configured later with configure_flow_step.'
+					'description' => "Array of step definitions in execution order. Each step: {step_type: \"{$types_list}\", handler_slug: \"rss|wordpress|bluesky|etc\", handler_config: {...}}. Handler details can be configured later with configure_flow_step."
 				],
 				'flow_name' => [
 					'type' => 'string',
@@ -157,8 +166,9 @@ class CreatePipeline {
 			return 'scheduling_config requires an interval property';
 		}
 
-		if (!in_array($interval, self::VALID_INTERVALS, true)) {
-			return 'Invalid interval. Must be one of: ' . implode(', ', self::VALID_INTERVALS);
+		$valid_intervals = self::getValidIntervals();
+		if (!in_array($interval, $valid_intervals, true)) {
+			return 'Invalid interval. Must be one of: ' . implode(', ', $valid_intervals);
 		}
 
 		if ($interval === 'one_time') {
@@ -186,8 +196,9 @@ class CreatePipeline {
 				return "Step at index {$index} is missing required step_type";
 			}
 
-			if (!in_array($step_type, self::VALID_STEP_TYPES, true)) {
-				return "Step at index {$index} has invalid step_type '{$step_type}'. Must be one of: " . implode(', ', self::VALID_STEP_TYPES);
+			$valid_types = self::getValidStepTypes();
+			if (!in_array($step_type, $valid_types, true)) {
+				return "Step at index {$index} has invalid step_type '{$step_type}'. Must be one of: " . implode(', ', $valid_types);
 			}
 		}
 

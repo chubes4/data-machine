@@ -18,10 +18,13 @@ use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 class UpdateFlow {
     use ToolRegistrationTrait;
 
-    private const VALID_INTERVALS = ['manual', 'hourly', 'daily', 'weekly', 'monthly', 'one_time'];
-
     public function __construct() {
         $this->registerTool('chat', 'update_flow', $this->getToolDefinition());
+    }
+
+    private static function getValidIntervals(): array {
+        $intervals = apply_filters('datamachine_scheduler_intervals', []);
+        return array_merge(['manual', 'one_time'], array_keys($intervals));
     }
 
     private function getToolDefinition(): array {
@@ -142,8 +145,9 @@ class UpdateFlow {
             return 'scheduling_config requires an interval property';
         }
 
-        if (!in_array($interval, self::VALID_INTERVALS, true)) {
-            return 'Invalid interval. Must be one of: ' . implode(', ', self::VALID_INTERVALS);
+        $valid_intervals = self::getValidIntervals();
+        if (!in_array($interval, $valid_intervals, true)) {
+            return 'Invalid interval. Must be one of: ' . implode(', ', $valid_intervals);
         }
 
         if ($interval === 'one_time') {

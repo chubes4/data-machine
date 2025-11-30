@@ -339,18 +339,14 @@ class Flows {
         $current_timestamp = strtotime($current_time);
         $interval = $scheduling_config['interval'];
         
-        switch ($interval) {
-            case 'hourly':
-                return ($current_timestamp - $last_run_timestamp) >= 3600;
-            case 'daily':
-                return ($current_timestamp - $last_run_timestamp) >= 86400;
-            case 'weekly':
-                return ($current_timestamp - $last_run_timestamp) >= 604800;
-            case 'monthly':
-                return ($current_timestamp - $last_run_timestamp) >= 2592000;
-            default:
-                return false;
+        $intervals = apply_filters('datamachine_scheduler_intervals', []);
+        $interval_data = $intervals[$interval] ?? null;
+        
+        if ($interval_data && isset($interval_data['seconds'])) {
+            return ($current_timestamp - $last_run_timestamp) >= $interval_data['seconds'];
         }
+        
+        return false;
     }
 
     /**

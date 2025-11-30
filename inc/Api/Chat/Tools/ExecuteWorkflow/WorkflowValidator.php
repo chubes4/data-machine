@@ -18,9 +18,14 @@ if (!defined('ABSPATH')) {
 class WorkflowValidator {
 
     /**
-     * Valid step types.
+     * Get valid step types from the filter system.
+     *
+     * @return array List of valid step type slugs
      */
-    private const VALID_STEP_TYPES = ['fetch', 'ai', 'publish', 'update'];
+    private static function getValidStepTypes(): array {
+        $step_types = apply_filters('datamachine_step_types', []);
+        return array_keys($step_types);
+    }
 
     /**
      * Validate workflow steps array.
@@ -62,9 +67,10 @@ class WorkflowValidator {
         }
 
         $type = $step['type'];
-        if (!in_array($type, self::VALID_STEP_TYPES, true)) {
-            $valid_types = implode(', ', self::VALID_STEP_TYPES);
-            return self::error("Step {$step_num}: Invalid type '{$type}'. Valid types: {$valid_types}");
+        $valid_types = self::getValidStepTypes();
+        if (!in_array($type, $valid_types, true)) {
+            $valid_types_str = implode(', ', $valid_types);
+            return self::error("Step {$step_num}: Invalid type '{$type}'. Valid types: {$valid_types_str}");
         }
 
         if ($type !== 'ai') {

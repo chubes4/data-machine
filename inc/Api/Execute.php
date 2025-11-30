@@ -283,7 +283,8 @@ class Execute {
             return ['valid' => false, 'error' => 'Workflow must have at least one step'];
         }
 
-        $valid_types = ['fetch', 'ai', 'publish', 'update'];
+        $step_types = apply_filters('datamachine_step_types', []);
+        $valid_types = array_keys($step_types);
 
         foreach ($workflow['steps'] as $index => $step) {
             if (!isset($step['type'])) {
@@ -291,7 +292,7 @@ class Execute {
             }
 
             if (!in_array($step['type'], $valid_types, true)) {
-                return ['valid' => false, 'error' => "Step {$index} has invalid type: {$step['type']}"];
+                return ['valid' => false, 'error' => "Step {$index} has invalid type: {$step['type']}. Valid types: " . implode(', ', $valid_types)];
             }
 
             if ($step['type'] !== 'ai' && !isset($step['handler_slug'])) {

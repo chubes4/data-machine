@@ -67,13 +67,17 @@ class RequestBuilder {
 
 		// Build the request with directives applied
 		$request = $promptBuilder->build($agent_type, $provider, $payload);
+		$applied_directives = $request['applied_directives'] ?? [];
+		unset($request['applied_directives']);
 		$request['model'] = $model;
-		do_action('datamachine_log', 'debug', 'RequestBuilder: Built AI request', [
+
+		do_action('datamachine_log', 'debug', 'AI request built', [
 			'agent_type' => $agent_type,
 			'provider' => $provider,
 			'model' => $model,
 			'message_count' => count($request['messages']),
-			'tool_count' => count($structured_tools)
+			'tool_count' => count($structured_tools),
+			'directives' => $applied_directives
 		]);
 
 		// 4. Send to ai-http-client via chubes_ai_request filter

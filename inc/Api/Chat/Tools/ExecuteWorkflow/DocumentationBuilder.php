@@ -38,19 +38,27 @@ class DocumentationBuilder {
     }
 
     /**
-     * Build step types documentation.
+     * Build step types documentation dynamically from registered step types.
      *
      * @return string Step types section
      */
     private static function buildStepTypesSection(): string {
-        return <<<'DOC'
-STEP TYPES:
-- fetch: Retrieve content from source (requires handler + config)
-- ai: Process/transform content (uses default provider/model if not specified)
-- publish: Send content to destination (requires handler + config)
-- update: Modify existing content (requires handler + config)
+        $step_types = apply_filters('datamachine_step_types', []);
 
-DOC;
+        if (empty($step_types)) {
+            return "STEP TYPES:\nNo step types registered.\n\n";
+        }
+
+        $doc = "STEP TYPES:\n";
+        foreach ($step_types as $slug => $config) {
+            $description = $config['description'] ?? 'No description';
+            $uses_handler = $config['uses_handler'] ?? true;
+            $handler_note = $uses_handler ? ' (requires handler + config)' : '';
+            $doc .= "- {$slug}: {$description}{$handler_note}\n";
+        }
+        $doc .= "\n";
+
+        return $doc;
     }
 
     /**
@@ -192,21 +200,26 @@ DOC;
     }
 
     /**
-     * Build workflow patterns documentation.
+     * Build workflow patterns documentation dynamically.
      *
      * @return string Workflow patterns section
      */
     private static function buildWorkflowPatternsSection(): string {
-        return <<<'DOC'
+        $step_types = apply_filters('datamachine_step_types', []);
+        $type_slugs = !empty($step_types) ? array_keys($step_types) : ['fetch', 'ai', 'publish', 'update'];
+        $types_list = implode('|', $type_slugs);
+
+        return <<<DOC
 WORKFLOW PATTERNS:
 - Content syndication: fetch → ai → publish
 - Content enhancement: fetch → ai → update
+- Event import: event_import → ai → event_upsert
 - Multi-platform: fetch → ai → publish → ai → publish
 
 STEP FORMAT (each step is an object, NOT a JSON string):
 {
-  "type": "fetch|ai|publish|update",
-  "handler": "handler_slug",  // required for fetch/publish/update
+  "type": "{$types_list}",
+  "handler": "handler_slug",  // required for steps that use handlers
   "config": {...},            // handler configuration
   "user_message": "...",      // for ai steps: instruction for AI
   "system_prompt": "..."      // for ai steps: optional system context

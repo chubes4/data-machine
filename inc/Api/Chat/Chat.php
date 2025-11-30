@@ -62,7 +62,13 @@ class Chat {
 				'provider' => [
 					'type' => 'string',
 					'required' => false,
-					'enum' => ['openai', 'anthropic', 'google', 'grok', 'openrouter'],
+					'validate_callback' => function($param) {
+						if (empty($param)) {
+							return true;
+						}
+						$providers = apply_filters('chubes_ai_providers', []);
+						return isset($providers[$param]);
+					},
 					'description' => __('AI provider (optional, uses default if not provided)', 'datamachine'),
 					'sanitize_callback' => 'sanitize_text_field'
 				],

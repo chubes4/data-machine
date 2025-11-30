@@ -20,13 +20,18 @@ use DataMachine\Services\PipelineStepManager;
 class AddPipelineStep {
 	use ToolRegistrationTrait;
 
-	private const VALID_STEP_TYPES = ['fetch', 'ai', 'publish', 'update'];
-
 	public function __construct() {
 		$this->registerTool('chat', 'add_pipeline_step', $this->getToolDefinition());
 	}
 
+	private static function getValidStepTypes(): array {
+		$step_types = apply_filters('datamachine_step_types', []);
+		return array_keys($step_types);
+	}
+
 	private function getToolDefinition(): array {
+		$valid_types = self::getValidStepTypes();
+		$types_list = !empty($valid_types) ? implode(', ', $valid_types) : 'fetch, ai, publish, update';
 		return [
 			'class' => self::class,
 			'method' => 'handle_tool_call',
@@ -40,7 +45,7 @@ class AddPipelineStep {
 				'step_type' => [
 					'type' => 'string',
 					'required' => true,
-					'description' => 'Type of step: fetch, ai, publish, or update'
+					'description' => "Type of step: {$types_list}"
 				]
 			]
 		];
@@ -66,10 +71,11 @@ class AddPipelineStep {
 			];
 		}
 
-		if (!in_array($step_type, self::VALID_STEP_TYPES, true)) {
+		$valid_types = self::getValidStepTypes();
+		if (!in_array($step_type, $valid_types, true)) {
 			return [
 				'success' => false,
-				'error' => "Invalid step_type '{$step_type}'. Must be one of: " . implode(', ', self::VALID_STEP_TYPES),
+				'error' => "Invalid step_type '{$step_type}'. Must be one of: " . implode(', ', $valid_types),
 				'tool_name' => 'add_pipeline_step'
 			];
 		}
