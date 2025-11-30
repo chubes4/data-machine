@@ -202,12 +202,18 @@ POST /datamachine/v1/execute
 
 ### Persistent Pipeline + Flow
 ```
-1. POST /pipelines {"pipeline_name": "..."}
-2. POST /pipelines/{id}/steps {"step_type": "fetch"}
-3. POST /pipelines/{id}/steps {"step_type": "ai"}
-4. POST /pipelines/{id}/steps {"step_type": "publish"}
-5. POST /flows {"pipeline_id": ..., "flow_name": "...", "scheduling_config": {"interval": "daily"}}
-6. Configure flow steps with handler settings
+1. create_pipeline {pipeline_name: "...", steps: [{step_type: "fetch"}, {step_type: "ai"}, {step_type: "publish"}], flow_name: "...", scheduling_config: {interval: "daily"}}
+2. configure_flow_step for each flow_step_id returned
+```
+
+Or step-by-step:
+```
+1. create_pipeline {pipeline_name: "..."}
+2. add_pipeline_step {pipeline_id: ..., step_type: "fetch"}
+3. add_pipeline_step {pipeline_id: ..., step_type: "ai"}
+4. add_pipeline_step {pipeline_id: ..., step_type: "publish"}
+5. create_flow {pipeline_id: ..., flow_name: "...", scheduling_config: {interval: "daily"}}
+6. configure_flow_step for each step
 ```
 
 ### Check Auth Status
@@ -224,7 +230,12 @@ DELETE /datamachine/v1/cache
 
 ## Tools Available
 
-- `make_api_request`: Execute any Data Machine REST API call
+- `create_pipeline`: Create a new pipeline with optional predefined steps
+- `add_pipeline_step`: Add a step to an existing pipeline
+- `create_flow`: Create a flow instance from an existing pipeline
+- `configure_flow_step`: Configure handler settings on flow steps
+- `execute_workflow`: Execute ephemeral one-time workflows
+- `api_query`: Query Data Machine REST API for discovery and monitoring
 - `local_search`: Search WordPress content
 - `wordpress_post_reader`: Read full post content by URL
 - `web_fetch`: Fetch external web page content

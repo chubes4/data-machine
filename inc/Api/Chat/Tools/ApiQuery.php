@@ -1,9 +1,9 @@
 <?php
 /**
- * Make API Request Tool
+ * API Query Tool
  *
- * Internal REST API request tool for chat agent.
- * Allows agent to discover handlers, execute workflows, and manage pipelines.
+ * Internal REST API query tool for chat agent.
+ * Used for discovery, monitoring, and troubleshooting operations.
  *
  * @package DataMachine\Api\Chat\Tools
  * @since 0.2.0
@@ -18,58 +18,60 @@ if (!defined('ABSPATH')) {
 use \DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 /**
- * Make API Request Tool
+ * API Query Tool
  */
-class MakeAPIRequest {
-    use ToolRegistrationTrait;
+class ApiQuery {
+	use ToolRegistrationTrait;
 
-    public function __construct() {
-        $this->registerTool('chat', 'make_api_request', $this->getToolDefinition());
-    }
-
-    /**
-     * Get Make API Request tool definition.
-     *
-     * @return array Tool definition array
-     */
-    private function getToolDefinition(): array {
-        return [
-            'class' => self::class,
-            'method' => 'handle_tool_call',
-            'description' => $this->buildApiDocumentation(),
-            'parameters' => [
-                'endpoint' => [
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'REST API endpoint path (e.g., /datamachine/v1/handlers)'
-                ],
-                'method' => [
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'HTTP method: GET, POST, PUT, PATCH, or DELETE'
-                ],
-                'data' => [
-                    'type' => 'object',
-                    'required' => false,
-                    'description' => 'Request body data for POST/PUT/PATCH requests'
-                ]
-            ]
-        ];
+	public function __construct() {
+		$this->registerTool('chat', 'api_query', $this->getToolDefinition());
 	}
 
-    /**
-     * Build comprehensive API documentation for the tool description.
-     *
-     * @return string API documentation
-     */
-    private function buildApiDocumentation(): string {
-        return <<<'DOC'
-Make Data Machine REST API requests for pipeline management, monitoring, and configuration.
+	/**
+	 * Get API Query tool definition.
+	 *
+	 * @return array Tool definition array
+	 */
+	private function getToolDefinition(): array {
+		return [
+			'class' => self::class,
+			'method' => 'handle_tool_call',
+			'description' => $this->buildApiDocumentation(),
+			'parameters' => [
+				'endpoint' => [
+					'type' => 'string',
+					'required' => true,
+					'description' => 'REST API endpoint path (e.g., /datamachine/v1/handlers)'
+				],
+				'method' => [
+					'type' => 'string',
+					'required' => true,
+					'description' => 'HTTP method: GET, POST, PUT, PATCH, or DELETE'
+				],
+				'data' => [
+					'type' => 'object',
+					'required' => false,
+					'description' => 'Request body data for POST/PUT/PATCH requests'
+				]
+			]
+		];
+	}
 
-PREFER SPECIALIZED TOOLS:
-- For workflow execution: use execute_workflow tool
+	/**
+	 * Build comprehensive API documentation for the tool description.
+	 *
+	 * @return string API documentation
+	 */
+	private function buildApiDocumentation(): string {
+		return <<<'DOC'
+Query Data Machine REST API for discovery, monitoring, and troubleshooting.
+
+PREFER SPECIALIZED TOOLS FOR ACTIONS:
+- For creating pipelines: use create_pipeline tool
+- For adding pipeline steps: use add_pipeline_step tool
 - For creating flows: use create_flow tool
 - For configuring flow steps: use configure_flow_step tool
+- For workflow execution: use execute_workflow tool
 
 ENDPOINTS:
 
@@ -81,27 +83,21 @@ GET /datamachine/v1/auth/{handler}/status - Check OAuth connection status
 GET /datamachine/v1/providers - List AI providers and models
 GET /datamachine/v1/tools - List available AI tools
 
-## Pipelines
+## Pipelines (read-only - use create_pipeline tool for creation)
 GET /datamachine/v1/pipelines - List all pipelines
-POST /datamachine/v1/pipelines - Create pipeline
-  data: {pipeline_name: "..."}
-GET /datamachine/v1/pipelines/{id} - Get pipeline details
+GET /datamachine/v1/pipelines/{id} - Get pipeline details with steps and flows
 DELETE /datamachine/v1/pipelines/{id} - Delete pipeline
 
-## Pipeline Steps
-POST /datamachine/v1/pipelines/{id}/steps - Add step to pipeline
-  data: {step_type: "fetch|ai|publish|update"}
+## Pipeline Steps (use add_pipeline_step tool for adding)
 DELETE /datamachine/v1/pipelines/{id}/steps/{step_id} - Remove step
 PUT /datamachine/v1/pipelines/{id}/steps/reorder - Reorder steps
   data: {step_order: [{pipeline_step_id: "...", execution_order: 0}, ...]}
 
-## Flows
+## Flows (use create_flow and configure_flow_step tools)
 GET /datamachine/v1/flows - List all flows
 GET /datamachine/v1/flows/{id} - Get flow details
 DELETE /datamachine/v1/flows/{id} - Delete flow
 POST /datamachine/v1/flows/{id}/duplicate - Duplicate flow
-(For creating flows, use the create_flow tool)
-(For configuring flow steps, use the configure_flow_step tool)
 
 ## Scheduling
 PATCH /datamachine/v1/flows/{id} - Update flow scheduling
@@ -132,10 +128,10 @@ GET /datamachine/v1/files - List uploaded files
 POST /datamachine/v1/files - Upload file
 DELETE /datamachine/v1/files/{filename} - Delete file
 DOC;
-    }
+	}
 
 	/**
-	 * Execute API request
+	 * Execute API query
 	 *
 	 * @param array $parameters Tool call parameters
 	 * @param array $tool_def   Tool definition
@@ -150,35 +146,31 @@ DOC;
 			return [
 				'success' => false,
 				'error' => 'Endpoint parameter is required',
-				'tool_name' => 'make_api_request'
+				'tool_name' => 'api_query'
 			];
 		}
 
-		$allowed_methods = ['GET', 'POST', 'PUT', 'DELETE'];
+		$allowed_methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 		if (!in_array($method, $allowed_methods, true)) {
 			return [
 				'success' => false,
-				'error' => 'Invalid HTTP method. Allowed: GET, POST, PUT, DELETE',
-				'tool_name' => 'make_api_request'
+				'error' => 'Invalid HTTP method. Allowed: GET, POST, PUT, PATCH, DELETE',
+				'tool_name' => 'api_query'
 			];
 		}
 
-		// Parse endpoint and query string
 		$parsed = parse_url($endpoint);
 		$path = $parsed['path'] ?? $endpoint;
 		$query_string = $parsed['query'] ?? '';
 
-		// Create request with clean path (no query string)
 		$request = new \WP_REST_Request($method, $path);
 
-		// Set query parameters if present
 		if (!empty($query_string)) {
 			parse_str($query_string, $query_params);
 			$request->set_query_params($query_params);
 		}
 
-		// Set body parameters for POST/PUT
-		if (!empty($data) && in_array($method, ['POST', 'PUT'], true)) {
+		if (!empty($data) && in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
 			$request->set_body_params($data);
 		}
 
@@ -188,7 +180,7 @@ DOC;
 			return [
 				'success' => false,
 				'error' => $response->get_error_message(),
-				'tool_name' => 'make_api_request'
+				'tool_name' => 'api_query'
 			];
 		}
 
@@ -199,10 +191,9 @@ DOC;
 			'success' => true,
 			'data' => $response_data,
 			'status' => $status_code,
-			'tool_name' => 'make_api_request'
+			'tool_name' => 'api_query'
 		];
 	}
 }
 
-// Self-register for chat tools
-new MakeAPIRequest();
+new ApiQuery();

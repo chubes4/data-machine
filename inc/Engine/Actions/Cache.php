@@ -190,14 +190,13 @@ class Cache {
 
     public function handle_clear_pipelines_list_cache() {
         delete_transient(self::PIPELINES_LIST_CACHE_KEY);
+        delete_transient(self::ALL_PIPELINES_CACHE_KEY);
     }
 
     /**
      * Complete cache invalidation across all Data Machine components.
      *
-     * Fires actions for extension hooks and directly calls cache clearing methods.
-     * Extensions can listen to datamachine_clear_all_cache or component-specific
-     * actions to clear their own caches.
+     * Extensions can listen to component-specific actions to clear their own caches.
      */
     public function handle_clear_all_cache() {
         delete_transient(self::ALL_PIPELINES_CACHE_KEY);
@@ -206,19 +205,9 @@ class Cache {
         delete_transient(self::PIPELINE_EXPORT_CACHE_KEY);
         delete_transient(self::TOTAL_JOBS_COUNT_CACHE_KEY);
 
-        // Fire global action for extensions to listen
-        do_action('datamachine_clear_all_cache');
-
-        // Fire component-specific actions for extensions
         do_action('datamachine_clear_all_flows_cache');
         do_action('datamachine_clear_all_pipelines_cache');
         do_action('datamachine_clear_jobs_cache');
-
-        // Directly call our own cache clearing methods (no relay needed)
-        $this->handle_clear_all_flows_cache();
-        $this->handle_clear_all_pipelines_cache();
-        $this->handle_clear_jobs_cache();
-
         do_action('chubes_ai_clear_all_cache');
 
         if (function_exists('wp_cache_flush')) {

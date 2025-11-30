@@ -5,6 +5,28 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2025-11-29
+
+### Added
+- **Specialized Chat Tools System** - Complete refactoring replacing generic MakeAPIRequest with focused, operation-specific tools:
+  - **AddPipelineStep Tool** - Adds steps to existing pipelines with automatic flow synchronization
+  - **ApiQuery Tool** - Dedicated REST API query tool with comprehensive endpoint documentation
+  - **CreatePipeline Tool** - Enhanced pipeline creation with optional predefined steps
+  - **CreateFlow Tool** - Streamlined flow creation from existing pipelines
+  - **ConfigureFlowStep Tool** - Focused tool for configuring handlers and AI messages
+
+### Changed
+- **Chat Agent Architecture** - Migrated from generic API tool to specialized tools for improved AI agent performance
+- **Tool Separation of Concerns** - Clear division between workflow operations and API management
+- **Composer Autoload Configuration** - Updated to include new specialized tools
+
+### Removed
+- **MakeAPIRequest Tool** - Eliminated generic tool in favor of specialized, focused tools
+
+### Technical Details
+- **Tool Specialization**: 5 specialized tools replace 1 generic tool for better operation accuracy
+- **Code Optimization**: Net +400 lines for dramatically improved AI agent capabilities
+
 ## [0.4.2] - 2025-11-29
 
 ### Added
