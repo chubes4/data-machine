@@ -218,56 +218,6 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/pipelines/6/steps/abc1
 }
 ```
 
-### PUT /pipelines/{pipeline_id}/steps/reorder
-
-Reorder pipeline steps.
-
-**Permission**: `manage_options` capability required
-
-**Parameters**:
-- `pipeline_id` (integer, required): Pipeline ID (in URL path)
-- `step_order` (array, required): Array of step order objects with `pipeline_step_id` and `execution_order`
-
-**Example Request**:
-
-```bash
-curl -X PUT https://example.com/wp-json/datamachine/v1/pipelines/6/steps/reorder \
-  -H "Content-Type: application/json" \
-  -u username:application_password \
-  -d '{
-    "step_order": [
-      {"pipeline_step_id": "abc123-def456-789", "execution_order": 0},
-      {"pipeline_step_id": "def456-ghi789-012", "execution_order": 1},
-      {"pipeline_step_id": "ghi789-jkl012-345", "execution_order": 2}
-    ]
-  }'
-```
-
-**Success Response (200 OK)**:
-
-```json
-{
-  "success": true,
-  "pipeline_id": 6,
-  "message": "Pipeline steps reordered successfully.",
-  "step_order": [
-    {"pipeline_step_id": "abc123-def456-789", "execution_order": 0},
-    {"pipeline_step_id": "def456-ghi789-012", "execution_order": 1},
-    {"pipeline_step_id": "ghi789-jkl012-345", "execution_order": 2}
-  ]
-}
-```
-
-**Error Response (400 Bad Request)** - Invalid step order:
-
-```json
-{
-  "code": "invalid_step_order",
-  "message": "Invalid step order data provided.",
-  "data": {"status": 400}
-}
-```
-
 ## CSV Export
 
 ### GET /pipelines?format=csv

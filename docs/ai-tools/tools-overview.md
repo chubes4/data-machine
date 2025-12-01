@@ -46,44 +46,52 @@ Available only to chat AI agents via `datamachine_chat_tools` filter. These spec
 - **Use Cases**: Direct workflow execution, ephemeral workflows without pipeline creation
 
 **AddPipelineStep** (`add_pipeline_step`) (@since v0.4.3)
-- **Purpose**: Add steps to existing pipelines
+- **Purpose**: Add steps to existing pipelines with automatic flow synchronization
 - **Configuration**: None required
+- **Features**: Automatically syncs new steps to all flows on the pipeline
 - **Use Cases**: Incrementally building pipelines through conversation
 
 **ApiQuery** (`api_query`) (@since v0.4.3)
-- **Purpose**: REST API query tool for discovery and read operations
+- **Purpose**: REST API query tool with comprehensive endpoint documentation for discovery, monitoring, and troubleshooting
 - **Configuration**: None required
-- **Use Cases**: Querying system state, discovering available handlers and configurations
+- **Features**: Complete API endpoint catalog with usage examples
+- **Use Cases**: System monitoring, handler discovery, job status checking, configuration verification
 
 **ConfigureFlowStep** (`configure_flow_step`) (@since v0.4.2)
-- **Purpose**: Configure handler settings and AI messages for flow steps
+- **Purpose**: Configure handler settings and AI user messages for individual flow steps
 - **Configuration**: None required
-- **Use Cases**: Setting up handler configurations, customizing AI prompts per flow
+- **Features**: Supports both handler configuration and AI message setup
+- **Use Cases**: Setting up fetch/publish/update handlers, customizing AI prompts per flow
 
 **ConfigurePipelineStep** (`configure_pipeline_step`) (@since v0.4.4)
-- **Purpose**: Configure pipeline-level AI settings (system prompts)
+- **Purpose**: Configure pipeline-level AI settings including system prompt, provider, model, and enabled tools
 - **Configuration**: None required
-- **Use Cases**: Setting pipeline-wide AI behavior and system prompts
+- **Features**: Pipeline-wide AI configuration affecting all associated flows
+- **Use Cases**: Setting AI provider/model, system prompts, and tool enablement across workflows
 
 **CreateFlow** (`create_flow`) (@since v0.4.2)
-- **Purpose**: Create flow instances from existing pipelines
+- **Purpose**: Create flow instances from existing pipelines with automatic step synchronization
 - **Configuration**: None required
-- **Use Cases**: Instantiating pipelines as schedulable flows
+- **Features**: Supports manual, recurring, and one-time scheduling
+- **Use Cases**: Instantiating pipelines as executable, schedulable flows
 
 **CreatePipeline** (`create_pipeline`) (@since v0.4.3)
-- **Purpose**: Create pipelines with optional initial steps
+- **Purpose**: Create pipelines with optional predefined steps and automatic flow instantiation
 - **Configuration**: None required
-- **Use Cases**: Creating new workflow templates through conversation
+- **Features**: Automatically creates associated flow, supports AI step configuration in step definitions
+- **Use Cases**: Creating complete workflow templates through conversation
 
 **RunFlow** (`run_flow`) (@since v0.4.4)
-- **Purpose**: Execute or schedule flows for execution
+- **Purpose**: Execute existing flows immediately or schedule delayed execution with job tracking
 - **Configuration**: None required
-- **Use Cases**: Triggering immediate or scheduled workflow execution
+- **Features**: Asynchronous execution via WordPress Action Scheduler, comprehensive job monitoring
+- **Use Cases**: Immediate workflow execution, scheduled automation, manual testing
 
 **UpdateFlow** (`update_flow`) (@since v0.4.4)
-- **Purpose**: Update flow properties (name, schedule, settings)
+- **Purpose**: Update flow-level properties including title and scheduling configuration
 - **Configuration**: None required
-- **Use Cases**: Modifying existing flow configurations
+- **Features**: Modify flow names, change scheduling intervals, switch to manual execution
+- **Use Cases**: Workflow organization, schedule adjustments, maintenance operations
 
 ### Handler-Specific Tools
 
@@ -135,14 +143,18 @@ Global tools are located in `/inc/Engine/AI/Tools/Global/`:
 
 Chat-specific tools at `/inc/Api/Chat/Tools/`:
 - `ExecuteWorkflow/` - Direct workflow execution (modular architecture)
-- `AddPipelineStep.php` - Add steps to pipelines
-- `ApiQuery.php` - REST API discovery and queries
-- `ConfigureFlowStep.php` - Flow step configuration
-- `ConfigurePipelineStep.php` - Pipeline AI settings
-- `CreateFlow.php` - Flow instance creation
-- `CreatePipeline.php` - Pipeline creation
-- `RunFlow.php` - Flow execution/scheduling
-- `UpdateFlow.php` - Flow property updates
+  - `ExecuteWorkflowTool.php` - Main tool class
+  - `DocumentationBuilder.php` - Dynamic documentation generation
+  - `WorkflowValidator.php` - Step validation and error handling
+  - `DefaultsInjector.php` - Provider/model defaults injection
+- `AddPipelineStep.php` - Add steps to pipelines with flow synchronization
+- `ApiQuery.php` - REST API discovery and queries with comprehensive endpoint documentation
+- `ConfigureFlowStep.php` - Flow step configuration for handlers and AI messages
+- `ConfigurePipelineStep.php` - Pipeline-level AI settings configuration
+- `CreateFlow.php` - Flow instance creation with scheduling support
+- `CreatePipeline.php` - Pipeline creation with optional predefined steps
+- `RunFlow.php` - Flow execution and scheduling with job tracking
+- `UpdateFlow.php` - Flow property updates and scheduling modifications
 
 Handler-specific tools registered via `chubes_ai_tools` filter using HandlerRegistrationTrait in each handler class.
 

@@ -40,6 +40,7 @@ AI integration
 - Prompt and directive management is centralized via a PromptBuilder with ordered directives (site, pipeline, flow, context).
 - Providers are pluggable and configured by site administrators (OpenAI, Anthropic, Google, Grok, OpenRouter).
 - Universal Engine architecture supports both Pipeline and Chat agents with shared AI infrastructure.
+- Specialized chat tools provide focused workflow management: AddPipelineStep, ApiQuery, ConfigureFlowStep, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow.
 
 Database
 

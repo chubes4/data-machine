@@ -18,11 +18,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved timestamp parameter documentation to prevent confusion
   - Better tool description clarity for AI agent usage
 
+### Added
+- **Comprehensive Chat Tool Documentation** - Created complete documentation for all 8 specialized chat tools
+  - AddPipelineStep - Pipeline step management with automatic flow synchronization
+  - ApiQuery - REST API discovery and query tool with comprehensive endpoint documentation
+  - ConfigureFlowStep - Flow step configuration for handlers and AI messages
+  - ConfigurePipelineStep - Pipeline-level AI settings configuration
+  - CreateFlow - Flow creation from existing pipelines
+  - CreatePipeline - Pipeline creation with optional predefined steps
+  - RunFlow - Flow execution and scheduling tool
+  - UpdateFlow - Flow property update tool
+
 ### Fixed
 - **Modal Navigation** - Added "Back to Settings" button option in OAuth authentication modal
 - **CSS Layout** - Improved flow header alignment and modal width handling for better responsive design
+- **Documentation Version Synchronization** - Updated all version references from v0.4.6 to v0.4.9 across documentation
 
 ### Technical Details
+- **Documentation**: Added 8 new comprehensive tool documentation files
 - **Code Changes**: +15 lines added, -25 lines removed across 10 modified files
 - **UI Components**: Enhanced FlowHeader, FlowFooter, and OAuth modal components
 - **Compatibility**: No breaking changes, fully backward compatible

@@ -301,7 +301,6 @@ These components eliminate code duplication across WordPress-related handlers an
 EngineData - Platform-agnostic data access (single source of truth)
 WordPressPublishHelper - WordPress-specific publishing operations
 WordPressSettingsResolver - Settings resolution utilities
-WordPressSharedTrait (Removed v0.2.7) - Migration guide
 WordPress Publish Handler - Integration example
 WordPress Update Handler - Integration example
 Base Class Architecture

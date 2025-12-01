@@ -1,6 +1,6 @@
 # Data Machine Documentation
 
-Complete user documentation for the Data Machine WordPress plugin (v0.4.6) - an AI-first content processing system with visual pipeline builder and multi-provider AI integration.
+Complete user documentation for the Data Machine WordPress plugin (v0.4.9) - an AI-first content processing system with visual pipeline builder and multi-provider AI integration.
 
 ## Quick Navigation
 
@@ -68,6 +68,14 @@ Complete user documentation for the Data Machine WordPress plugin (v0.4.6) - an 
 - **Local Search**: WordPress internal search
 - **WebFetch**: Web page content retrieval and processing (50K limit)
 - **WordPress Post Reader**: Single WordPress post content retrieval by URL
+- **AddPipelineStep**: Pipeline step management tool
+- **ApiQuery**: REST API discovery and query tool
+- **ConfigureFlowStep**: Flow step configuration tool
+- **ConfigurePipelineStep**: Pipeline AI settings configuration
+- **CreateFlow**: Flow creation from existing pipelines
+- **CreatePipeline**: Pipeline creation with optional steps
+- **RunFlow**: Flow execution and scheduling tool
+- **UpdateFlow**: Flow property update tool
 
 ### API Reference
 - **API Overview**: Complete endpoint catalog with modular documentation structure
@@ -132,7 +140,15 @@ docs/
 │   ├── wordpress-post-reader.md        # Single WordPress post content retrieval
 │   ├── local-search.md                 # WordPress internal search
 │   ├── google-search.md                # Web search tool
-│   └── web-fetch.md                    # Web content retrieval (50K limit)
+│   ├── web-fetch.md                    # Web content retrieval (50K limit)
+│   ├── add-pipeline-step.md            # Pipeline step management tool
+│   ├── api-query.md                    # REST API discovery and query tool
+│   ├── configure-flow-step.md          # Flow step configuration tool
+│   ├── configure-pipeline-step.md      # Pipeline AI settings configuration
+│   ├── create-flow.md                  # Flow creation from existing pipelines
+│   ├── create-pipeline.md              # Pipeline creation with optional steps
+│   ├── run-flow.md                     # Flow execution and scheduling tool
+│   └── update-flow.md                  # Flow property update tool
 ├── admin-interface/
 │   ├── pipeline-builder.md             # Visual interface
 │   ├── settings-configuration.md       # Configuration options
