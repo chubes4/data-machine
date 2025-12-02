@@ -321,7 +321,7 @@ class Execute {
                 'step_type' => $step['type'],
                 'execution_order' => $index,
                 'handler_slug' => $step['handler_slug'] ?? '',
-                'handler_config' => $step['config'] ?? [],
+                'handler_config' => $step['handler_config'] ?? [],
                 'user_message' => $step['user_message'] ?? '',
                 'enabled_tools' => $step['enabled_tools'] ?? [],
                 'pipeline_id' => 0,  // Sentinel value for ephemeral workflows

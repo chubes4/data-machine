@@ -5,6 +5,28 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2025-12-01
+
+### Changed
+- **ExecuteWorkflow Tool Architecture** - Consolidated modular directory structure into streamlined single-file architecture
+  - Removed `ExecuteWorkflow/` subdirectory with 4 separate files (DefaultsInjector, DocumentationBuilder, ExecuteWorkflowTool, WorkflowValidator)
+  - Added consolidated `ExecuteWorkflowTool.php` that delegates execution to the Execute API
+  - Added shared `HandlerDocumentation.php` utility for dynamic handler documentation generation
+- **Data Contract Standardization** - Centralized JSON encoding at database layer
+  - Service managers now pass arrays to database operations
+  - Database layer exclusively handles JSON encoding via `wp_json_encode()`
+  - Eliminated dual-support fallbacks for string vs array input across 6 files
+- **ConfigureFlowStep Tool** - Enhanced with dynamic handler documentation in tool description
+
+### Fixed
+- **Ephemeral Workflow Execution** - Fixed parameter key from `config` to `handler_config` in Execute API step processing
+
+### Technical Details
+- **Code Reduction**: -612 lines from ExecuteWorkflow modular structure
+- **Code Addition**: +300 lines for consolidated architecture
+- **Net Change**: -645 lines for cleaner, more maintainable codebase
+- **Architecture**: Single source of truth for JSON encoding eliminates type ambiguity
+
 ## [0.5.0] - 2025-12-01
 
 ### Added

@@ -41,12 +41,7 @@ class Pipelines {
 
 		$pipeline_name = sanitize_text_field( $pipeline_data['pipeline_name'] );
 		$pipeline_config = $pipeline_data['pipeline_config'] ?? [];
-
-		if ( is_array( $pipeline_config ) ) {
-			$pipeline_config_json = wp_json_encode( $pipeline_config );
-		} else {
-			$pipeline_config_json = $pipeline_config;
-		}
+		$pipeline_config_json = wp_json_encode( $pipeline_config );
 
 		$data = [
 			'pipeline_name' => $pipeline_name,
@@ -154,14 +149,7 @@ class Pipelines {
 		}
 
 		if ( isset( $pipeline_data['pipeline_config'] ) ) {
-			$pipeline_config = $pipeline_data['pipeline_config'];
-			
-			// Ensure pipeline_config is JSON
-			if ( is_array( $pipeline_config ) ) {
-				$update_data['pipeline_config'] = wp_json_encode( $pipeline_config );
-			} else {
-				$update_data['pipeline_config'] = $pipeline_config;
-			}
+			$update_data['pipeline_config'] = wp_json_encode( $pipeline_data['pipeline_config'] );
 			$format[] = '%s';
 		}
 

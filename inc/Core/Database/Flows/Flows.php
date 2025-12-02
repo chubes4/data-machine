@@ -62,13 +62,8 @@ class Flows {
             }
         }
         
-        $flow_config = is_string($flow_data['flow_config']) ? 
-            $flow_data['flow_config'] : 
-            wp_json_encode($flow_data['flow_config']);
-            
-        $scheduling_config = is_string($flow_data['scheduling_config']) ? 
-            $flow_data['scheduling_config'] : 
-            wp_json_encode($flow_data['scheduling_config']);
+        $flow_config = wp_json_encode($flow_data['flow_config']);
+        $scheduling_config = wp_json_encode($flow_data['scheduling_config']);
         
         $insert_data = [
             'pipeline_id' => intval($flow_data['pipeline_id']),
@@ -161,16 +156,12 @@ class Flows {
         }
         
         if (isset($flow_data['flow_config'])) {
-            $update_data['flow_config'] = is_string($flow_data['flow_config']) ? 
-                $flow_data['flow_config'] : 
-                wp_json_encode($flow_data['flow_config']);
+            $update_data['flow_config'] = wp_json_encode($flow_data['flow_config']);
             $update_formats[] = '%s';
         }
         
         if (isset($flow_data['scheduling_config'])) {
-            $update_data['scheduling_config'] = is_string($flow_data['scheduling_config']) ? 
-                $flow_data['scheduling_config'] : 
-                wp_json_encode($flow_data['scheduling_config']);
+            $update_data['scheduling_config'] = wp_json_encode($flow_data['scheduling_config']);
             $update_formats[] = '%s';
         }
         

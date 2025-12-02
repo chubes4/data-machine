@@ -166,7 +166,7 @@ class PipelineManager {
         }
 
         $success = $this->db_pipelines->update_pipeline($pipeline_id, [
-            'pipeline_config' => json_encode($pipeline_config)
+            'pipeline_config' => $pipeline_config
         ]);
 
         if (!$success) {
@@ -187,8 +187,8 @@ class PipelineManager {
         $flow_id = $this->db_flows->create_flow([
             'pipeline_id' => $pipeline_id,
             'flow_name' => $flow_name,
-            'flow_config' => json_encode([]),
-            'scheduling_config' => json_encode($scheduling_config)
+            'flow_config' => [],
+            'scheduling_config' => $scheduling_config
         ]);
 
         if (!$flow_id) {
@@ -211,7 +211,7 @@ class PipelineManager {
         }
 
         $this->db_flows->update_flow($flow_id, [
-            'flow_config' => json_encode($flow_config)
+            'flow_config' => $flow_config
         ]);
 
         $step_order_map = [];
@@ -304,9 +304,7 @@ class PipelineManager {
         }
 
         if (isset($data['pipeline_config'])) {
-            $update_data['pipeline_config'] = is_string($data['pipeline_config'])
-                ? $data['pipeline_config']
-                : json_encode($data['pipeline_config']);
+            $update_data['pipeline_config'] = $data['pipeline_config'];
         }
 
         if (empty($update_data)) {

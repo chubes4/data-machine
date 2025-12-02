@@ -24,10 +24,20 @@ class ConfigureFlowStep {
     }
 
     private function getToolDefinition(): array {
+        $handler_docs = HandlerDocumentation::buildAllHandlersSections();
+        
+        $description = <<<DESC
+Configure a flow step with a handler (for fetch/publish/update steps) or user message (for AI steps). Use flow_step_ids returned from create_flow.
+
+IMPORTANT: Only use handler_config fields documented below. Do not invent parameters.
+
+{$handler_docs}
+DESC;
+
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
-            'description' => 'Configure a flow step with a handler (for fetch/publish/update steps) or user message (for AI steps). Use flow_step_ids returned from create_flow.',
+            'description' => $description,
             'parameters' => [
                 'flow_step_id' => [
                     'type' => 'string',
@@ -37,12 +47,12 @@ class ConfigureFlowStep {
                 'handler_slug' => [
                     'type' => 'string',
                     'required' => false,
-                    'description' => 'Handler slug for fetch/publish/update steps (e.g., "rss", "wordpress", "bluesky")'
+                    'description' => 'Handler slug for fetch/publish/update steps'
                 ],
                 'handler_config' => [
                     'type' => 'object',
                     'required' => false,
-                    'description' => 'Handler-specific configuration settings'
+                    'description' => 'Handler-specific configuration. Use only the fields documented above for each handler.'
                 ],
                 'user_message' => [
                     'type' => 'string',

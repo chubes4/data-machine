@@ -99,14 +99,12 @@ class AddPipelineStep {
 		$flow_step_ids = [];
 		foreach ($flows as $flow) {
 			$flow_config = $flow['flow_config'] ?? [];
-			if (is_array($flow_config)) {
-				foreach ($flow_config as $flow_step_id => $step_data) {
-					if (isset($step_data['pipeline_step_id']) && $step_data['pipeline_step_id'] === $pipeline_step_id) {
-						$flow_step_ids[] = [
-							'flow_id' => $flow['flow_id'],
-							'flow_step_id' => $flow_step_id
-						];
-					}
+			foreach ($flow_config as $flow_step_id => $step_data) {
+				if (isset($step_data['pipeline_step_id']) && $step_data['pipeline_step_id'] === $pipeline_step_id) {
+					$flow_step_ids[] = [
+						'flow_id' => $flow['flow_id'],
+						'flow_step_id' => $flow_step_id
+					];
 				}
 			}
 		}

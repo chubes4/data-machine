@@ -58,8 +58,8 @@ class FlowManager {
         $flow_data = [
             'pipeline_id' => $pipeline_id,
             'flow_name' => $flow_name,
-            'flow_config' => json_encode($flow_config),
-            'scheduling_config' => json_encode($scheduling_config)
+            'flow_config' => $flow_config,
+            'scheduling_config' => $scheduling_config
         ];
 
         $flow_id = $this->db_flows->create_flow($flow_data);
@@ -175,8 +175,8 @@ class FlowManager {
         $flow_data = [
             'pipeline_id' => $source_flow['pipeline_id'],
             'flow_name' => $duplicate_flow_name,
-            'flow_config' => json_encode($source_flow['flow_config']),
-            'scheduling_config' => json_encode(['interval' => 'manual'])
+            'flow_config' => $source_flow['flow_config'],
+            'scheduling_config' => ['interval' => 'manual']
         ];
 
         $new_flow_id = $this->db_flows->create_flow($flow_data);
@@ -191,7 +191,7 @@ class FlowManager {
         $remapped_config = $this->remapFlowStepIds($source_flow['flow_config'], $source_flow_id, $new_flow_id);
 
         $update_success = $this->db_flows->update_flow($new_flow_id, [
-            'flow_config' => json_encode($remapped_config)
+            'flow_config' => $remapped_config
         ]);
 
         if (!$update_success) {
@@ -261,7 +261,7 @@ class FlowManager {
         }
 
         $success = $this->db_flows->update_flow($flow_id, [
-            'flow_config' => wp_json_encode($flow_config)
+            'flow_config' => $flow_config
         ]);
 
         if (!$success) {

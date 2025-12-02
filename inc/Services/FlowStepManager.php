@@ -92,7 +92,7 @@ class FlowStepManager {
         $flow_config[$flow_step_id]['enabled'] = true;
 
         $success = $this->db_flows->update_flow($flow_id, [
-            'flow_config' => wp_json_encode($flow_config)
+            'flow_config' => $flow_config
         ]);
 
         if (!$success) {
@@ -144,7 +144,7 @@ class FlowStepManager {
         $flow_config[$flow_step_id]['user_message'] = wp_unslash(sanitize_textarea_field($user_message));
 
         $success = $this->db_flows->update_flow($flow_id, [
-            'flow_config' => wp_json_encode($flow_config)
+            'flow_config' => $flow_config
         ]);
 
         if (!$success) {

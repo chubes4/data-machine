@@ -91,11 +91,8 @@ class CreateFlow {
             ];
         }
 
-        $flow_step_ids = [];
         $flow_config = $result['flow_data']['flow_config'] ?? [];
-        if (is_array($flow_config)) {
-            $flow_step_ids = array_keys($flow_config);
-        }
+        $flow_step_ids = array_keys($flow_config);
 
         return [
             'success' => true,

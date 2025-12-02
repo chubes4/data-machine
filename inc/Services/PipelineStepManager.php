@@ -96,7 +96,7 @@ class PipelineStepManager {
         $pipeline_config[$new_step['pipeline_step_id']] = $new_step;
 
         $success = $this->db_pipelines->update_pipeline($pipeline_id, [
-            'pipeline_config' => json_encode($pipeline_config)
+            'pipeline_config' => $pipeline_config
         ]);
 
         if (!$success) {
@@ -201,7 +201,7 @@ class PipelineStepManager {
         }
 
         $success = $this->db_pipelines->update_pipeline($pipeline_id, [
-            'pipeline_config' => json_encode($updated_steps)
+            'pipeline_config' => $updated_steps
         ]);
 
         if (!$success) {
@@ -239,7 +239,7 @@ class PipelineStepManager {
             unset($flow_step);
 
             $this->db_flows->update_flow($flow_id, [
-                'flow_config' => json_encode($flow_config)
+                'flow_config' => $flow_config
             ]);
         }
 
@@ -294,7 +294,7 @@ class PipelineStepManager {
         $pipeline_config[$pipeline_step_id]['system_prompt'] = wp_unslash($system_prompt);
 
         $success = $this->db_pipelines->update_pipeline($target_pipeline['pipeline_id'], [
-            'pipeline_config' => json_encode($pipeline_config)
+            'pipeline_config' => $pipeline_config
         ]);
 
         if (!$success) {

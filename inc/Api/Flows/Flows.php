@@ -340,15 +340,7 @@ class Flows {
 		}
 		unset($step_data);
 
-		$raw_scheduling = $flow['scheduling_config'] ?? [];
-		if (is_array($raw_scheduling)) {
-			$scheduling_config = $raw_scheduling;
-		} else {
-			$scheduling_config = json_decode($raw_scheduling ?: '{}', true);
-			if (!is_array($scheduling_config)) {
-				$scheduling_config = [];
-			}
-		}
+		$scheduling_config = $flow['scheduling_config'] ?? [];
 
 		$flow_id = $flow['flow_id'] ?? null;
 		$last_run_at = $scheduling_config['last_run_at'] ?? null;

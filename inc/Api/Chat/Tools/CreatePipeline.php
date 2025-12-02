@@ -130,10 +130,7 @@ class CreatePipeline {
 		if (!empty($result['flows'])) {
 			$flow = $result['flows'][0] ?? null;
 			if ($flow && !empty($flow['flow_config'])) {
-				$flow_config = $flow['flow_config'];
-				if (is_array($flow_config)) {
-					$flow_step_ids = array_keys($flow_config);
-				}
+				$flow_step_ids = array_keys($flow['flow_config']);
 			}
 		}
 
@@ -184,10 +181,6 @@ class CreatePipeline {
 	}
 
 	private function validateSteps(array $steps): bool|string {
-		if (!is_array($steps)) {
-			return 'steps must be an array';
-		}
-
 		foreach ($steps as $index => $step) {
 			if (!is_array($step)) {
 				return "Step at index {$index} must be an object";
