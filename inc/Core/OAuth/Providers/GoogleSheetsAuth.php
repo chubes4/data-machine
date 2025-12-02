@@ -13,6 +13,8 @@
 
 namespace DataMachine\Core\OAuth\Providers;
 
+use DataMachine\Core\HttpClient;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -120,14 +122,15 @@ class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
             return new \WP_Error('googlesheets_missing_oauth_config', __('Google OAuth configuration is incomplete.', 'datamachine'));
         }
 
-        $result = apply_filters('datamachine_request', null, 'POST', 'https://oauth2.googleapis.com/token', [
+        $result = HttpClient::post('https://oauth2.googleapis.com/token', [
             'body' => [
                 'client_id' => $client_id,
                 'client_secret' => $client_secret,
                 'refresh_token' => $refresh_token,
                 'grant_type' => 'refresh_token'
-            ]
-        ], 'Google Sheets OAuth');
+            ],
+            'context' => 'Google Sheets OAuth',
+        ]);
 
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Google token refresh request failed.', [

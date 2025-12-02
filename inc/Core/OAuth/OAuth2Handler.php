@@ -12,6 +12,8 @@
 
 namespace DataMachine\Core\OAuth;
 
+use DataMachine\Core\HttpClient;
+
 if (!defined('WPINC')) {
     die;
 }
@@ -206,29 +208,26 @@ class OAuth2Handler {
      * @return array|\WP_Error Token data on success, WP_Error on failure.
      */
     private function exchange_token(string $token_url, array $params) {
-        $result = apply_filters('datamachine_request', null, 'POST', $token_url, [
+        $result = HttpClient::post($token_url, [
             'body' => $params,
             'headers' => [
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/x-www-form-urlencoded'
-            ]
+            ],
+            'context' => 'OAuth2 Token Exchange',
         ]);
 
-        if (is_wp_error($result)) {
-            return $result;
+        if (!$result['success']) {
+            return new \WP_Error('http_error', $result['error']);
         }
 
-        if (!isset($result['body'])) {
-            return new \WP_Error('no_response', __('No response from token endpoint.', 'datamachine'));
-        }
-
-        $token_data = json_decode($result['body'], true);
+        $token_data = json_decode($result['data'], true);
 
         if (!$token_data || !isset($token_data['access_token'])) {
             return new \WP_Error(
                 'invalid_token_response',
                 __('Invalid token response.', 'datamachine'),
-                ['response' => $result['body']]
+                ['response' => $result['data']]
             );
         }
 

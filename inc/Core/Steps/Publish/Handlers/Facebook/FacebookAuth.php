@@ -12,6 +12,8 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Facebook;
 
+use DataMachine\Core\HttpClient;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -228,7 +230,7 @@ class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
         ];
         $url = self::TOKEN_URL . '?' . http_build_query($params);
 
-        $result = apply_filters('datamachine_request', null, 'GET', $url, [], 'Facebook OAuth');
+        $result = HttpClient::get($url, ['context' => 'Facebook OAuth']);
 
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Facebook OAuth Error: Long-lived token request failed', ['error' => $result['error']]);
@@ -267,9 +269,10 @@ class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         $url = self::GRAPH_API_URL . '/me/accounts?fields=id,name,access_token';
 
-        $result = apply_filters('datamachine_request', null, 'GET', $url, [
+        $result = HttpClient::get($url, [
             'headers' => ['Authorization' => 'Bearer ' . $user_access_token],
-        ], 'Facebook Authentication');
+            'context' => 'Facebook Authentication',
+        ]);
 
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Facebook Page Fetch Error: Request failed', ['error' => $result['error']]);
@@ -316,9 +319,10 @@ class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
     private function get_user_profile(string $access_token): array|\WP_Error {
         $url = self::GRAPH_API_URL . '/me?fields=id,name';
 
-        $result = apply_filters('datamachine_request', null, 'GET', $url, [
+        $result = HttpClient::get($url, [
             'headers' => ['Authorization' => 'Bearer ' . $access_token],
-        ], 'Facebook Authentication');
+            'context' => 'Facebook Authentication',
+        ]);
 
         if (!$result['success']) {
             return new \WP_Error('facebook_profile_fetch_failed', $result['error']);
@@ -350,7 +354,7 @@ class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         $permissions_url = self::GRAPH_API_URL . '/me/permissions?access_token=' . $user_access_token;
 
-        $result = apply_filters('datamachine_request', null, 'GET', $permissions_url, [], 'Facebook Comment Permission Check');
+        $result = HttpClient::get($permissions_url, ['context' => 'Facebook Comment Permission Check']);
 
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Facebook: Failed to check comment permissions', ['error' => $result['error']]);
@@ -404,9 +408,10 @@ class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         if ($token) {
             $url = self::GRAPH_API_URL . '/me/permissions';
-            $result = apply_filters('datamachine_request', null, 'DELETE', $url, [
+            $result = HttpClient::delete($url, [
                 'body' => ['access_token' => $token],
-            ], 'Facebook Authentication');
+                'context' => 'Facebook Authentication',
+            ]);
 
             if (!$result['success']) {
                 do_action('datamachine_log', 'warning', 'Facebook deauthorization failed (non-critical)', ['error' => $result['error']]);

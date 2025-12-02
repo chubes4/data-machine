@@ -181,17 +181,12 @@ class Reddit extends FetchHandler {
 				$after_param ? '&after=' . urlencode($after_param) : '',
 				$time_param
 			);
-			$args = [
-				'user-agent' => 'php:DataMachineWPPlugin:v' . DATAMACHINE_VERSION,
-				'headers' => [
-					'Authorization' => 'Bearer ' . $access_token
-				]
+			$headers = [
+				'Authorization' => 'Bearer ' . $access_token
 			];
 
-			$log_headers = $args['headers'];
-			if (isset($log_headers['Authorization'])) {
-				$log_headers['Authorization'] = preg_replace('/(Bearer )(.{4}).+(.{4})/', '$1$2...$3', $log_headers['Authorization']);
-			}
+			$log_headers = $headers;
+			$log_headers['Authorization'] = preg_replace('/(Bearer )(.{4}).+(.{4})/', '$1$2...$3', $log_headers['Authorization']);
 			$this->log('debug', 'Making API call.', [
 				'pipeline_id' => $pipeline_id,
 				'page' => $pages_fetched,
@@ -199,7 +194,10 @@ class Reddit extends FetchHandler {
 				'headers' => $log_headers
 			]);
 
-			$result = apply_filters('datamachine_request', null, 'GET', $reddit_url, $args, 'Reddit API');
+			$result = $this->httpGet($reddit_url, [
+				'headers' => $headers,
+				'context' => 'Reddit API'
+			]);
 
 			if (!$result['success']) {
 				if ($pages_fetched === 1) {
@@ -295,13 +293,10 @@ class Reddit extends FetchHandler {
 				$comments_array = [];
 				if ($comment_count_setting > 0 && !empty($item_data['permalink'])) {
 					$comments_url = 'https://oauth.reddit.com' . $item_data['permalink'] . '.json?limit=' . $comment_count_setting . '&sort=top';
-					$comment_args = [
-						'user-agent' => $args['user-agent'],
-						'headers' => [
-							'Authorization' => 'Bearer ' . $access_token
-						]
-					];
-					$comments_result = apply_filters('datamachine_request', null, 'GET', $comments_url, $comment_args, 'Reddit API');
+					$comments_result = $this->httpGet($comments_url, [
+						'headers' => $headers,
+						'context' => 'Reddit API'
+					]);
 
 					if ($comments_result['success']) {
 						$comments_data = json_decode($comments_result['data'], true);

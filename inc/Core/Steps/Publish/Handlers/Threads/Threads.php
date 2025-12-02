@@ -225,16 +225,14 @@ class Threads extends PublishHandler {
     private function create_media_container(string $user_id_threads, array $container_data, string $access_token): array {
         $endpoint = "https://graph.threads.net/v1.0/{$user_id_threads}/threads";
         
-        $args = [
-            'method' => 'POST',
+        $result = $this->httpPost($endpoint, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $access_token,
                 'Content-Type' => 'application/json'
             ],
             'body' => json_encode($container_data),
-        ];
-
-        $result = apply_filters('datamachine_request', null, 'POST', $endpoint, $args, 'Threads API');
+            'context' => 'Threads API'
+        ]);
         
         if (!$result['success']) {
             return [
@@ -267,8 +265,7 @@ class Threads extends PublishHandler {
     private function publish_media_container(string $user_id_threads, string $creation_id, string $access_token): array {
         $endpoint = "https://graph.threads.net/v1.0/{$user_id_threads}/threads_publish";
         
-        $args = [
-            'method' => 'POST',
+        $result = $this->httpPost($endpoint, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $access_token,
                 'Content-Type' => 'application/json'
@@ -276,9 +273,8 @@ class Threads extends PublishHandler {
             'body' => json_encode([
                 'creation_id' => $creation_id
             ]),
-        ];
-
-        $result = apply_filters('datamachine_request', null, 'POST', $endpoint, $args, 'Threads API');
+            'context' => 'Threads API'
+        ]);
         
         if (!$result['success']) {
             return [

@@ -51,11 +51,7 @@ class Rss extends FetchHandler {
         $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
         $search = trim($config['search'] ?? '');
 
-        $args = [
-            'user-agent' => 'DataMachine WordPress Plugin/' . DATAMACHINE_VERSION
-        ];
-
-        $result = apply_filters('datamachine_request', null, 'GET', $feed_url, $args, 'RSS Feed');
+        $result = $this->httpGet($feed_url, ['context' => 'RSS Feed']);
 
         if (!$result['success']) {
             $this->log('error', 'Failed to fetch RSS feed.', [

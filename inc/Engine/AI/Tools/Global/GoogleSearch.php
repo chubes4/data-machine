@@ -9,7 +9,8 @@ namespace DataMachine\Engine\AI\Tools\Global;
 
 defined('ABSPATH') || exit;
 
-use \DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Core\HttpClient;
+use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class GoogleSearch {
     use ToolRegistrationTrait;
@@ -67,33 +68,23 @@ class GoogleSearch {
 
         $request_url = add_query_arg($search_params, $search_url);
 
-        $response = wp_remote_get($request_url, [
+        $result = HttpClient::get($request_url, [
             'timeout' => 10,
             'headers' => [
-                'Accept' => 'application/json'
-            ]
+                'Accept' => 'application/json',
+            ],
+            'context' => 'Google Search Tool',
         ]);
 
-        if (is_wp_error($response)) {
+        if (!$result['success']) {
             return [
                 'success' => false,
-                'error' => 'Failed to connect to Google Search API: ' . $response->get_error_message(),
+                'error' => 'Failed to connect to Google Search API: ' . ($result['error'] ?? 'Unknown error'),
                 'tool_name' => 'google_search'
             ];
         }
 
-        $response_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
-
-        if ($response_code !== 200) {
-            return [
-                'success' => false,
-                'error' => 'Google Search API error (HTTP ' . $response_code . '): ' . $response_body,
-                'tool_name' => 'google_search'
-            ];
-        }
-
-        $search_data = json_decode($response_body, true);
+        $search_data = json_decode($result['data'], true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             return [

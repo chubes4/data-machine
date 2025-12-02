@@ -12,6 +12,8 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;
 
+use DataMachine\Core\HttpClient;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -151,12 +153,13 @@ class RedditAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         // Get user identity from Reddit API
         $identity_url = 'https://oauth.reddit.com/api/v1/me';
-        $identity_result = apply_filters('datamachine_request', null, 'GET', $identity_url, [
+        $identity_result = HttpClient::get($identity_url, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $access_token,
                 'User-Agent' => 'php:DataMachineWPPlugin:v' . DATAMACHINE_VERSION . ' (by /u/' . $developer_username . ')'
-            ]
-        ], 'Reddit Authentication');
+            ],
+            'context' => 'Reddit Authentication'
+        ]);
 
         $identity_username = null;
         if ($identity_result['success'] && $identity_result['status_code'] === 200) {
@@ -207,7 +210,7 @@ class RedditAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         // Reddit-specific token refresh request
         $token_url = 'https://www.reddit.com/api/v1/access_token';
-        $result = apply_filters('datamachine_request', null, 'POST', $token_url, [
+        $result = HttpClient::post($token_url, [
             'headers' => [
                 'Authorization' => 'Basic ' . base64_encode($client_id . ':' . $client_secret),
                 'User-Agent' => 'php:DataMachineWPPlugin:v' . DATAMACHINE_VERSION . ' (by /u/' . $developer_username . ')'
@@ -215,8 +218,9 @@ class RedditAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
             'body' => [
                 'grant_type' => 'refresh_token',
                 'refresh_token' => $reddit_account['refresh_token']
-            ]
-        ], 'Reddit OAuth');
+            ],
+            'context' => 'Reddit OAuth'
+        ]);
 
         if (!$result['success'] || $result['status_code'] !== 200) {
             do_action('datamachine_log', 'error', 'Reddit Token Refresh Error: Request failed', [

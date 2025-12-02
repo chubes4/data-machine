@@ -273,13 +273,14 @@ class GoogleSheets extends PublishHandler {
             
             $api_url = "https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheet_id}/values/{$range}:append";
             
-            $result = apply_filters('datamachine_request', null, 'POST', $api_url, [
+            $result = $this->httpPost($api_url, [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $access_token,
                     'Content-Type' => 'application/json'
                 ],
                 'body' => wp_json_encode($body),
-            ], 'Google Sheets API');
+                'context' => 'Google Sheets API'
+            ]);
 
             if (!$result['success']) {
                 $this->log('error', 'Google Sheets API request failed.', [

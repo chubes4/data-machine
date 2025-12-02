@@ -14,6 +14,7 @@
 namespace DataMachine\Core\Steps\Publish\Handlers\Bluesky;
 
 use DataMachine\Core\OAuth\BaseAuthProvider;
+use DataMachine\Core\HttpClient;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -109,12 +110,13 @@ class BlueskyAuth extends BaseAuthProvider {
         }
 
 
-        $result = apply_filters('datamachine_request', null, 'POST', $url, [
+        $result = HttpClient::post($url, [
             'headers' => [
                 'Content-Type' => 'application/json'
             ],
             'body' => $body,
-        ], 'Bluesky Authentication');
+            'context' => 'Bluesky Authentication'
+        ]);
 
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Bluesky session request failed.', [

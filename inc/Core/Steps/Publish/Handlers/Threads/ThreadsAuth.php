@@ -12,6 +12,8 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Threads;
 
+use DataMachine\Core\HttpClient;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -224,7 +226,7 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
         ];
         $url = 'https://graph.threads.net/access_token?' . http_build_query($params);
 
-        $result = apply_filters('datamachine_request', null, 'GET', $url, [], 'Threads OAuth');
+        $result = HttpClient::get($url, ['context' => 'Threads OAuth']);
 
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Threads OAuth Error: Long-lived token exchange request failed', ['error' => $result['error']]);
@@ -261,9 +263,10 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
     private function get_user_profile(string $access_token): array|\WP_Error {
         $url = 'https://graph.facebook.com/v19.0/me?fields=id,name';
 
-        $result = apply_filters('datamachine_request', null, 'GET', $url, [
+        $result = HttpClient::get($url, [
             'headers' => ['Authorization' => 'Bearer ' . $access_token],
-        ], 'Threads Authentication');
+            'context' => 'Threads Authentication',
+        ]);
 
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Threads OAuth Error: Profile fetch request failed', ['error' => $result['error']]);
@@ -302,7 +305,7 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
         ];
         $url = self::REFRESH_URL . '?' . http_build_query($params);
 
-        $result = apply_filters('datamachine_request', null, 'GET', $url, [], 'Threads OAuth');
+        $result = HttpClient::get($url, ['context' => 'Threads OAuth']);
 
         if (!$result['success']) {
             return new \WP_Error('threads_refresh_http_error', $result['error']);
@@ -354,14 +357,14 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         if ($token) {
             $url = 'https://graph.facebook.com/v19.0/me/permissions';
-            $result = apply_filters('datamachine_request', null, 'DELETE', $url, [
+            $result = HttpClient::delete($url, [
                 'body' => ['access_token' => $token],
-            ], 'Threads Authentication');
+                'context' => 'Threads Authentication',
+            ]);
 
-            if (!$result['success'] || $result['status_code'] !== 200) {
-                $error_details = !$result['success'] ? $result['error'] : 'HTTP ' . $result['status_code'];
+            if (!$result['success']) {
                 do_action('datamachine_log', 'error', 'Threads token revocation failed during account deletion', [
-                    'error' => $error_details
+                    'error' => $result['error'] ?? 'Unknown error'
                 ]);
             }
         }

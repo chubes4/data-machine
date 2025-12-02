@@ -2,7 +2,7 @@
 /**
  * Backend processing filters for Data Machine engine.
  *
- * Core filter registration for handler services, HTTP requests, scheduling,
+ * Core filter registration for handler services, scheduling,
  * and step configuration discovery.
  *
  * @package DataMachine
@@ -39,7 +39,7 @@ datamachine_register_importexport_filters();
 /**
  * Register backend processing filters for engine operations.
  *
- * Registers filters for service discovery, HTTP requests, scheduling,
+ * Registers filters for service discovery, scheduling,
  * and step configuration. Does not handle UI/admin logic.
  *
  * @since 0.1.0
@@ -50,116 +50,6 @@ function datamachine_register_utility_filters() {
         return $providers;
     }, 5, 1);
     
-    
-    add_filter('datamachine_request', function($default, $method, $url, $args, $context) {
-        $valid_methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
-        $method = strtoupper($method);
-        if (!in_array($method, $valid_methods)) {
-            do_action('datamachine_log', 'error', 'HTTP Request: Invalid method', ['method' => $method, 'context' => $context]);
-            return ['success' => false, 'error' => 'Invalid HTTP method'];
-        }
-
-        $args = wp_parse_args($args, [
-            'user-agent' => sprintf('DataMachine/%s (+%s)',
-                defined('DATAMACHINE_VERSION') ? DATAMACHINE_VERSION : '1.0',
-                home_url()),
-            'timeout' => 120
-        ]);
-
-        if ($method !== 'GET') {
-            $args['method'] = $method;
-        }
-
-        $response = ($method === 'GET') ? wp_remote_get($url, $args) : wp_remote_request($url, $args);
-
-        if (is_wp_error($response)) {
-            $error_message = sprintf(
-                'Failed to connect to %1$s: %2$s',
-                $context,
-                $response->get_error_message()
-            );
-            
-            do_action('datamachine_log', 'error', 'HTTP Request: Connection failed', [
-                'context' => $context,
-                'url' => $url,
-                'method' => $method,
-                'error' => $response->get_error_message(),
-                'error_code' => $response->get_error_code()
-            ]);
-            
-            return ['success' => false, 'error' => $error_message];
-        }
-
-        $status_code = wp_remote_retrieve_response_code($response);
-        $body = wp_remote_retrieve_body($response);
-        $success_codes = [];
-        switch ($method) {
-            case 'GET':
-                $success_codes = [200];
-                break;
-            case 'POST':
-                $success_codes = [200, 201, 202];
-                break;
-            case 'PUT':
-                $success_codes = [200, 201, 204];
-                break;
-            case 'PATCH':
-                $success_codes = [200, 204];
-                break;
-            case 'DELETE':
-                $success_codes = [200, 202, 204];
-                break;
-        }
-        
-        if (!in_array($status_code, $success_codes)) {
-            $error_message = sprintf(
-                '%1$s %2$s returned HTTP %3$d',
-                $context,
-                $method,
-                $status_code
-            );
-            $error_details = null;
-            if (!empty($body)) {
-                $decoded = json_decode($body, true);
-                if (is_array($decoded)) {
-                    $error_keys = ['message', 'error', 'error_description', 'detail'];
-                    foreach ($error_keys as $key) {
-                        if (isset($decoded[$key]) && is_string($decoded[$key])) {
-                            $error_details = $decoded[$key];
-                            break;
-                        }
-                    }
-                }
-                if (!$error_details) {
-                    $first_line = strtok($body, "\n");
-                    $error_details = strlen($first_line) > 100 ? substr($first_line, 0, 97) . '...' : $first_line;
-                }
-            }
-            
-            if ($error_details) {
-                $error_message .= ': ' . $error_details;
-            }
-
-            do_action('datamachine_log', 'error', 'HTTP Request: Error response', [
-                'context' => $context,
-                'url' => $url,
-                'method' => $method,
-                'status_code' => $status_code,
-                'body_preview' => substr($body, 0, 200)
-            ]);
-            
-            return ['success' => false, 'error' => $error_message];
-        }
-
-
-        return [
-            'success' => true,
-            'data' => $body,
-            'status_code' => $status_code,
-            'headers' => wp_remote_retrieve_headers($response),
-            'response' => $response
-        ];
-    }, 10, 5);
     add_filter('datamachine_scheduler_intervals', function($intervals) {
         return [
             'every_5_minutes' => [

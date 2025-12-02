@@ -177,10 +177,11 @@ class Facebook extends PublishHandler {
 
             // Make API request to Facebook
             $api_url = $this->buildGraphUrl("{$page_id}/feed");
-            $response = apply_filters('datamachine_request', null, 'POST', $api_url, [
+            $response = $this->httpPost($api_url, [
                 'body' => $post_data,
-                'timeout' => 30
-            ], 'Facebook Feed Publish');
+                'timeout' => 30,
+                'context' => 'Facebook Feed Publish'
+            ]);
 
             if (!$response['success']) {
                 return $this->errorResponse('Facebook API request failed: ' . ($response['error'] ?? 'Unknown error'));
@@ -287,10 +288,11 @@ class Facebook extends PublishHandler {
                 'access_token' => $access_token
             ];
 
-            $response = apply_filters('datamachine_request', null, 'POST', $api_url, [
+            $response = $this->httpPost($api_url, [
                 'body' => $comment_data,
-                'timeout' => 30
-            ], 'Facebook Comment Publish');
+                'timeout' => 30,
+                'context' => 'Facebook Comment Publish'
+            ]);
 
             if (!$response['success']) {
                 $error_msg = 'Facebook comment API request failed: ' . ($response['error'] ?? 'Unknown error');
@@ -378,14 +380,15 @@ class Facebook extends PublishHandler {
         }
 
         $endpoint = $this->buildGraphUrl("{$page_id}/photos");
-        $response = apply_filters('datamachine_request', null, 'POST', $endpoint, [
+        $response = $this->httpPost($endpoint, [
             'body' => [
                 'url' => $image_url,
                 'published' => 'false',
                 'access_token' => $page_access_token
             ],
-            'timeout' => 30
-        ], 'Facebook Photo Upload');
+            'timeout' => 30,
+            'context' => 'Facebook Photo Upload'
+        ]);
 
         if (!$response['success']) {
             $this->log('error', 'Facebook: Photo upload failed', [

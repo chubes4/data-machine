@@ -5,6 +5,28 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-12-01
+
+### Added
+- **HttpClient Class** - New centralized HTTP client (`/inc/Core/HttpClient.php`) providing standardized request handling, error management, and logging across all handlers
+- **@since 0.5.0** - Added version annotation to HttpClient class documentation
+
+### Changed
+- **HTTP Request Architecture** - Complete migration from filter-based HTTP requests to centralized HttpClient usage across all fetch and publish handlers
+- **Handler Base Classes** - Updated `FetchHandler` and `PublishHandler` to integrate HttpClient for consistent HTTP operations
+- **OAuth and Authentication** - Enhanced OAuth2Handler and provider classes with improved HTTP client integration
+
+### Improved
+- **Error Handling** - Standardized HTTP error responses and logging across all external API interactions
+- **Code Consistency** - Unified HTTP request patterns eliminating duplication across 16+ handler files
+- **Performance** - Optimized HTTP operations with consistent timeout handling and browser simulation capabilities
+
+### Technical Details
+- **New File**: +251 lines in HttpClient.php
+- **Refactored Files**: 18 handlers updated to use HttpClient
+- **Code Reduction**: -114 lines removed from DataMachineFilters.php HTTP filter logic
+- **Compatibility**: No breaking changes, fully backward compatible
+
 ## [0.4.9] - 2025-11-30
 
 ### Enhanced

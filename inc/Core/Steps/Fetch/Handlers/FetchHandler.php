@@ -14,6 +14,7 @@ namespace DataMachine\Core\Steps\Fetch\Handlers;
 
 use DataMachine\Core\FilesRepository\FileStorage;
 use DataMachine\Core\FilesRepository\RemoteFileDownloader;
+use DataMachine\Core\HttpClient;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -312,5 +313,58 @@ abstract class FetchHandler {
 	 */
 	protected function emptyResponse(): array {
 		return [];
+	}
+
+	/**
+	 * Perform HTTP request with standardized handling
+	 *
+	 * @param string $method  HTTP method (GET, POST, PUT, DELETE, PATCH)
+	 * @param string $url     Request URL
+	 * @param array  $options Request options:
+	 *                        - headers: array - Additional headers to merge
+	 *                        - body: string|array - Request body (for POST/PUT/PATCH)
+	 *                        - timeout: int - Request timeout (default 120)
+	 *                        - browser_mode: bool - Use browser-like headers (default false)
+	 *                        - context: string - Context for logging (defaults to handler_type)
+	 * @return array{success: bool, data?: string, status_code?: int, headers?: array, response?: array, error?: string}
+	 */
+	protected function httpRequest(string $method, string $url, array $options = []): array {
+		if (!isset($options['context'])) {
+			$options['context'] = ucfirst($this->handler_type);
+		}
+		return HttpClient::request($method, $url, $options);
+	}
+
+	/**
+	 * Perform HTTP GET request
+	 *
+	 * @param string $url     Request URL
+	 * @param array  $options Request options
+	 * @return array Response array
+	 */
+	protected function httpGet(string $url, array $options = []): array {
+		return $this->httpRequest('GET', $url, $options);
+	}
+
+	/**
+	 * Perform HTTP POST request
+	 *
+	 * @param string $url     Request URL
+	 * @param array  $options Request options
+	 * @return array Response array
+	 */
+	protected function httpPost(string $url, array $options = []): array {
+		return $this->httpRequest('POST', $url, $options);
+	}
+
+	/**
+	 * Perform HTTP DELETE request
+	 *
+	 * @param string $url     Request URL
+	 * @param array  $options Request options
+	 * @return array Response array
+	 */
+	protected function httpDelete(string $url, array $options = []): array {
+		return $this->httpRequest('DELETE', $url, $options);
 	}
 }

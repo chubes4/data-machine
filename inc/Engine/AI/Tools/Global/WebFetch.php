@@ -8,7 +8,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-use \DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Core\HttpClient;
+use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class WebFetch {
     use ToolRegistrationTrait;
@@ -37,41 +38,21 @@ class WebFetch {
             ];
         }
 
-        $response = wp_remote_get($url, [
+        $result = HttpClient::get($url, [
             'timeout' => 30,
-            'headers' => [
-                'User-Agent' => 'Data Machine WordPress Plugin/1.0 (WordPress/' . get_bloginfo('version') . ')'
-            ]
+            'browser_mode' => true,
+            'context' => 'Web Fetch Tool',
         ]);
 
-        if (is_wp_error($response)) {
-            do_action('datamachine_log', 'error', 'Web Fetch: HTTP request failed', [
-                'url' => $url,
-                'error' => $response->get_error_message()
-            ]);
-
+        if (!$result['success']) {
             return [
                 'success' => false,
-                'error' => 'Failed to fetch URL: ' . $response->get_error_message(),
+                'error' => 'Failed to fetch URL: ' . ($result['error'] ?? 'Unknown error'),
                 'tool_name' => 'web_fetch'
             ];
         }
 
-        $status_code = wp_remote_retrieve_response_code($response);
-        if ($status_code !== 200) {
-            do_action('datamachine_log', 'error', 'Web Fetch: HTTP error response', [
-                'url' => $url,
-                'status_code' => $status_code
-            ]);
-
-            return [
-                'success' => false,
-                'error' => "HTTP error {$status_code} when fetching URL",
-                'tool_name' => 'web_fetch'
-            ];
-        }
-
-        $html_content = wp_remote_retrieve_body($response);
+        $html_content = $result['data'];
         if (empty($html_content)) {
             return [
                 'success' => false,

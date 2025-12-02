@@ -114,14 +114,13 @@ class GoogleSheetsFetch extends FetchHandler {
             'pipeline_id' => $pipeline_id
         ]);
 
-        // Make API request
-        $result = apply_filters('datamachine_request', null, 'GET', $api_url, [
+        $result = $this->httpGet($api_url, [
             'headers' => [
                 'Authorization' => 'Bearer ' . $access_token,
                 'Accept' => 'application/json',
             ],
-            'user-agent' => 'DataMachine WordPress Plugin/' . DATAMACHINE_VERSION
-        ], 'Google Sheets API');
+            'context' => 'Google Sheets API'
+        ]);
 
         if (!$result['success']) {
             $this->log('error', 'Failed to fetch data.', [

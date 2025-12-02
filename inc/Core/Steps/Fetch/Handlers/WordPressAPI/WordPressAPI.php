@@ -110,12 +110,7 @@ class WordPressAPI extends FetchHandler {
             ]);
         }
 
-        // Make HTTP request using datamachine_request filter
-        $args = [
-            'user-agent' => 'DataMachine WordPress Plugin/' . DATAMACHINE_VERSION
-        ];
-
-        $result = apply_filters('datamachine_request', null, 'GET', $endpoint_url, $args, 'REST API');
+        $result = $this->httpGet($endpoint_url, ['context' => 'REST API']);
 
         if (!$result['success']) {
             $this->log('error', 'Failed to fetch from endpoint.', [

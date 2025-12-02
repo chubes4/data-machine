@@ -306,13 +306,14 @@ class Bluesky extends PublishHandler {
         }
 
         $upload_url = rtrim($pds_url, '/') . '/xrpc/com.atproto.repo.uploadBlob';
-        $result = apply_filters('datamachine_request', null, 'POST', $upload_url, [
+        $result = $this->httpPost($upload_url, [
             'headers' => [
                 'Content-Type' => $mime_type,
                 'Authorization' => 'Bearer ' . $access_token,
             ],
             'body' => $image_content,
-        ], 'Bluesky API');
+            'context' => 'Bluesky API'
+        ]);
 
         unset($image_content);
 
@@ -353,13 +354,14 @@ class Bluesky extends PublishHandler {
             'record' => $record
         ]);
 
-        $result = apply_filters('datamachine_request', null, 'POST', $url, [
+        $result = $this->httpPost($url, [
             'headers' => [
                 'Content-Type' => 'application/json',
                 'Authorization' => 'Bearer ' . $access_token,
             ],
             'body' => $body,
-        ], 'Bluesky API');
+            'context' => 'Bluesky API'
+        ]);
 
         if (!$result['success']) {
             return new \WP_Error('bluesky_post_request_failed', $result['error']);
