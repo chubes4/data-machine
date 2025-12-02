@@ -19,6 +19,8 @@ class FlowScheduling {
     /**
      * Handle scheduling configuration updates for a flow
      *
+     * Preserves last_run_at and last_run_status when updating schedule configuration.
+     *
      * @param int $flow_id Flow ID
      * @param array $scheduling_config Scheduling configuration
      * @return bool|\WP_Error True on success, WP_Error on failure
@@ -36,6 +38,16 @@ class FlowScheduling {
             );
         }
 
+        // Preserve existing last_run data before updating schedule
+        $existing_config = $db_flows->get_flow_scheduling($flow_id);
+        $preserved_data = [];
+        if (!empty($existing_config['last_run_at'])) {
+            $preserved_data['last_run_at'] = $existing_config['last_run_at'];
+        }
+        if (!empty($existing_config['last_run_status'])) {
+            $preserved_data['last_run_status'] = $existing_config['last_run_status'];
+        }
+
         $interval = $scheduling_config['interval'] ?? null;
 
         // Handle manual scheduling (unschedule)
@@ -44,7 +56,7 @@ class FlowScheduling {
                 as_unschedule_action('datamachine_run_flow_now', [$flow_id], 'datamachine');
             }
 
-            $scheduling_data = ['interval' => 'manual'];
+            $scheduling_data = array_merge(['interval' => 'manual'], $preserved_data);
             $db_flows->update_flow_scheduling($flow_id, $scheduling_data);
             return true;
         }
@@ -75,11 +87,11 @@ class FlowScheduling {
                 'datamachine'
             );
 
-            $scheduling_data = [
+            $scheduling_data = array_merge([
                 'interval' => 'one_time',
                 'timestamp' => $timestamp,
                 'scheduled_time' => wp_date('c', $timestamp)
-            ];
+            ], $preserved_data);
             $db_flows->update_flow_scheduling($flow_id, $scheduling_data);
             return true;
         }
@@ -117,11 +129,11 @@ class FlowScheduling {
             'datamachine'
         );
 
-        $scheduling_data = [
+        $scheduling_data = array_merge([
             'interval' => $interval,
             'interval_seconds' => $interval_seconds,
             'first_run' => wp_date('c', time() + $interval_seconds)
-        ];
+        ], $preserved_data);
         $db_flows->update_flow_scheduling($flow_id, $scheduling_data);
         return true;
     }

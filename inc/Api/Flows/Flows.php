@@ -344,6 +344,7 @@ class Flows {
 
 		$flow_id = $flow['flow_id'] ?? null;
 		$last_run_at = $scheduling_config['last_run_at'] ?? null;
+		$last_run_status = $scheduling_config['last_run_status'] ?? null;
 		$next_run = self::get_next_run_time($flow_id);
 
 		return [
@@ -353,7 +354,8 @@ class Flows {
 			'flow_config' => $flow_config,
 			'scheduling_config' => $scheduling_config,
 			'last_run' => $last_run_at,
-			'last_run_display' => DateFormatter::format_for_display($last_run_at),
+			'last_run_status' => $last_run_status,
+			'last_run_display' => DateFormatter::format_for_display($last_run_at, $last_run_status),
 			'next_run' => $next_run,
 			'next_run_display' => DateFormatter::format_for_display($next_run),
 		];

@@ -19,12 +19,14 @@ class DateFormatter {
 	 *
 	 * Uses WordPress timezone and date/time format settings.
 	 * Optionally shows relative time for recent dates.
+	 * Includes status indicator for non-success outcomes.
 	 *
 	 * @param string|null $mysql_datetime MySQL datetime string (Y-m-d H:i:s)
+	 * @param string|null $status Run status ('completed', 'failed', 'completed_no_items')
 	 * @param bool        $include_relative Whether to show relative time for recent dates
-	 * @return string Formatted datetime string or "Never"
+	 * @return string Formatted datetime string (e.g., "2 hours ago", "2 hours ago (error)")
 	 */
-	public static function format_for_display( ?string $mysql_datetime, bool $include_relative = true ): string {
+	public static function format_for_display( ?string $mysql_datetime, ?string $status = null, bool $include_relative = true ): string {
 		if ( empty( $mysql_datetime ) || $mysql_datetime === '0000-00-00 00:00:00' ) {
 			return __( 'Never', 'datamachine' );
 		}
@@ -35,17 +37,29 @@ class DateFormatter {
 			return __( 'Invalid date', 'datamachine' );
 		}
 
+		$display = '';
+
 		if ( $include_relative ) {
 			$relative = self::get_relative_time( $timestamp );
 			if ( $relative ) {
-				return $relative;
+				$display = $relative;
 			}
 		}
 
-		$date_format = get_option( 'date_format' );
-		$time_format = get_option( 'time_format' );
-		
-		return wp_date( "{$date_format} {$time_format}", $timestamp );
+		if ( empty( $display ) ) {
+			$date_format = get_option( 'date_format' );
+			$time_format = get_option( 'time_format' );
+			$display = wp_date( "{$date_format} {$time_format}", $timestamp );
+		}
+
+		// Append status indicator for non-success outcomes
+		if ( $status === 'failed' ) {
+			$display .= ' ' . __( '(error)', 'datamachine' );
+		} elseif ( $status === 'completed_no_items' ) {
+			$display .= ' ' . __( '(no items)', 'datamachine' );
+		}
+
+		return $display;
 	}
 
 	/**

@@ -5,7 +5,7 @@
  * Receives complete handler configuration from API with defaults pre-merged.
  */
 
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import { Modal, Button, Notice, Spinner } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { applyFilters } from '@wordpress/hooks';
@@ -57,6 +57,10 @@ export default function HandlerSettingsModal( {
 	const [ settingsFields, setSettingsFields ] = useState( {} );
 	const [ isEnrichingSettings, setIsEnrichingSettings ] = useState( false );
 
+	// Track enrichment completion to prevent race conditions when handlerDetails loads
+	// This ref stores a key combining handler + settings identity to detect actual changes
+	const enrichmentCompleteRef = useRef( null );
+
 	const handlerModel = useHandlerModel(handlerSlug);
 
 	const formState = useFormState({
@@ -97,10 +101,23 @@ export default function HandlerSettingsModal( {
 	 * Initialize form when modal opens.
 	 * Applies 'datamachine.handlerSettings.init' filter to allow plugins
 	 * to enrich settings (e.g., fetching related data like venue details).
+	 *
+	 * Uses enrichmentCompleteRef to prevent duplicate enrichment when handlerDetails
+	 * loads asynchronously, which would cause the effect to re-run and potentially
+	 * reset already-enriched form data.
 	 */
 	useEffect( () => {
 		const initializeForm = async () => {
 			let settings = currentSettings || {};
+
+			// Create a stable key to identify this specific settings state
+			// Only re-enrich if currentSettings actually changed (not just handlerDetails loading)
+			const settingsKey = JSON.stringify( currentSettings || {} );
+
+			// Skip enrichment if we've already completed it for these exact settings
+			if ( enrichmentCompleteRef.current === settingsKey ) {
+				return;
+			}
 
 			setIsEnrichingSettings( true );
 
@@ -111,6 +128,9 @@ export default function HandlerSettingsModal( {
 					handlerSlug,
 					handlerDetails?.settings || {}
 				);
+
+				// Mark enrichment complete for these settings
+				enrichmentCompleteRef.current = settingsKey;
 			} catch ( error ) {
 				console.error( 'Handler settings enrichment failed:', error );
 			}

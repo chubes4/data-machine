@@ -5,6 +5,22 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2025-12-02
+
+### Fixed
+- **ExecuteWorkflowTool**: Improved REST request error handling for better reliability
+- **Flow Scheduling**: Preserve last_run_at and last_run_status when updating schedule configuration
+- **Flow Data**: Include last_run_status in flow API responses for better status tracking
+- **Date Formatting**: Enhanced display formatting to show status indicators for failed or no-items runs
+- **Handler Settings Modal**: Prevent duplicate settings enrichment when handler details load asynchronously
+- **Job Status Updates**: Properly update flow last_run_status when jobs complete
+- **Pipeline Configuration**: Use array format instead of JSON strings for pipeline_config consistency
+
+### Technical Details
+- **Data Contract Consistency**: Standardized pipeline_config as arrays across service layer
+- **Error Handling**: Improved REST API error response handling in chat tools
+- **UI Reliability**: Fixed race conditions in React modal settings enrichment
+
 ## [0.5.1] - 2025-12-01
 
 ### Changed

@@ -49,7 +49,7 @@ class PipelineManager {
 
         $pipeline_id = $this->db_pipelines->create_pipeline([
             'pipeline_name' => $pipeline_name,
-            'pipeline_config' => '{}'
+            'pipeline_config' => []
         ]);
 
         if (!$pipeline_id) {
@@ -128,7 +128,7 @@ class PipelineManager {
 
         $pipeline_id = $this->db_pipelines->create_pipeline([
             'pipeline_name' => $pipeline_name,
-            'pipeline_config' => '{}'
+            'pipeline_config' => []
         ]);
 
         if (!$pipeline_id) {

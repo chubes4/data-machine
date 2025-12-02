@@ -107,21 +107,21 @@ DESC;
         ]);
 
         $response = rest_do_request($request);
+        $data = $response->get_data();
+        $status = $response->get_status();
 
-        if (is_wp_error($response)) {
+        if ($response->is_error()) {
+            $error = $response->as_error();
             do_action('datamachine_log', 'error', 'ExecuteWorkflowTool: REST request failed', [
-                'error' => $response->get_error_message(),
+                'error' => $error->get_error_message(),
                 'steps' => $steps
             ]);
             return [
                 'success' => false,
-                'error' => $response->get_error_message(),
+                'error' => $error->get_error_message(),
                 'tool_name' => 'execute_workflow'
             ];
         }
-
-        $data = $response->get_data();
-        $status = $response->get_status();
 
         if ($status >= 400) {
             $error_message = $data['message'] ?? 'Execution failed';
