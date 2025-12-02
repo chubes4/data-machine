@@ -96,11 +96,17 @@ class Handlers {
 		foreach ($handlers as $slug => &$handler) {
 			if ($handler['requires_auth'] && isset($auth_providers[$slug])) {
 				$auth_instance = $auth_providers[$slug];
-				$handler['auth_type'] = self::detect_auth_type($auth_instance);
+				$auth_type = self::detect_auth_type($auth_instance);
+				$handler['auth_type'] = $auth_type;
 
 				// Add auth fields if available (regardless of auth type)
 				if (method_exists($auth_instance, 'get_config_fields')) {
 					$handler['auth_fields'] = $auth_instance->get_config_fields();
+				}
+
+				// Add callback URL for OAuth providers (user must configure this externally)
+				if (($auth_type === 'oauth1' || $auth_type === 'oauth2') && method_exists($auth_instance, 'get_callback_url')) {
+					$handler['callback_url'] = $auth_instance->get_callback_url();
 				}
 
 				// Check if already authenticated

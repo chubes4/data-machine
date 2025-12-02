@@ -5,6 +5,13 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.4] - 2025-12-02
+
+### Enhanced
+- **OAuth Authentication UX**: Added redirect URL display in authentication modals for OAuth providers
+- **Handlers API**: Enhanced OAuth provider metadata with callback URL information
+- **WordPress Settings**: Improved taxonomy field label formatting in settings handlers
+
 ## [0.5.3] - 2025-12-02
 
 ### Fixed

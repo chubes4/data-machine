@@ -12,6 +12,7 @@ import ConnectionStatus from './oauth/ConnectionStatus';
 import AccountDetails from './oauth/AccountDetails';
 import APIConfigForm from './oauth/APIConfigForm';
 import OAuthPopupHandler from './oauth/OAuthPopupHandler';
+import RedirectUrlDisplay from './oauth/RedirectUrlDisplay';
 
 /**
  * OAuth Authentication Modal Component
@@ -312,11 +313,15 @@ export default function OAuthAuthenticationModal( {
 					</p>
 				</div>
 
-				{ ! connected && (
-					<>
-						{ handlerInfo.auth_fields && (
-							<>
-								<APIConfigForm
+			{ ! connected && (
+				<>
+					{ ( authType === 'oauth2' || authType === 'oauth1' ) && handlerInfo.callback_url && (
+						<RedirectUrlDisplay url={ handlerInfo.callback_url } />
+					) }
+
+					{ handlerInfo.auth_fields && (
+						<>
+							<APIConfigForm
 									config={ apiConfigForm.data }
 									onChange={ apiConfigForm.updateData }
 									fields={ handlerInfo.auth_fields }

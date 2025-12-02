@@ -57,8 +57,11 @@ class WordPressSettingsHandler {
                 ? $taxonomy->labels->name
                 : (isset($taxonomy->label) ? $taxonomy->label : $taxonomy->name);
 
-            // Build options with configured first options
-            $options = $config['first_options'];
+            // Build options with configured first options, formatting any placeholders with taxonomy label
+            $options = [];
+            foreach ($config['first_options'] as $key => $label) {
+                $options[$key] = sprintf($label, $taxonomy_label);
+            }
 
             // Add visual separator after system options
             $options['separator'] = '──────────';
