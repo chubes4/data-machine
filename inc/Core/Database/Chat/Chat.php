@@ -156,8 +156,14 @@ class Chat {
 		}
 
 		if (!empty($session['expires_at'])) {
-			$expires_timestamp = strtotime($session['expires_at']);
-			if ($expires_timestamp && $expires_timestamp < time()) {
+			try {
+				$expires_timestamp = ( new \DateTime( $session['expires_at'], wp_timezone() ) )->getTimestamp();
+				if ($expires_timestamp < current_time( 'timestamp' )) {
+					$this->delete_session($session_id);
+					return null;
+				}
+			} catch ( \Exception $e ) {
+				// Invalid date format, treat as expired
 				$this->delete_session($session_id);
 				return null;
 			}

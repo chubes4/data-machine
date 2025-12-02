@@ -326,8 +326,8 @@ class Flows {
             return true; // Never run before
         }
         
-        $last_run_timestamp = strtotime($last_run_at);
-        $current_timestamp = strtotime($current_time);
+        $last_run_timestamp = ( new \DateTime( $last_run_at, wp_timezone() ) )->getTimestamp();
+        $current_timestamp = ( new \DateTime( $current_time, wp_timezone() ) )->getTimestamp();
         $interval = $scheduling_config['interval'];
         
         $intervals = apply_filters('datamachine_scheduler_intervals', []);

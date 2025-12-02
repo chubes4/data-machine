@@ -5,6 +5,18 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2025-12-02
+
+### Fixed
+- **Date Handling**: Improved timezone-aware date parsing across DateFormatter, Chat database, and Flows scheduling using DateTime instead of strtotime
+- **DateFormatter**: Removed inconsistent relative time functionality for consistent absolute date display
+- **Session Management**: Enhanced chat session expiration checking with proper error handling for invalid dates
+- **Flow Scheduling**: Better timestamp calculations for scheduling intervals with timezone support
+
+### Technical Details
+- **Date Consistency**: Standardized DateTime usage with wp_timezone() across core database operations
+- **Error Handling**: Added try/catch blocks for invalid date formats in critical paths
+
 ## [0.5.2] - 2025-12-02
 
 ### Fixed
