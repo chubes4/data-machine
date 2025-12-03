@@ -88,7 +88,8 @@ class FlowStepManager {
         }
 
         $flow_config[$flow_step_id]['handler_slug'] = $handler_slug;
-        $flow_config[$flow_step_id]['handler_config'] = $handler_settings;
+        $existing_handler_config = $flow_config[$flow_step_id]['handler_config'] ?? [];
+        $flow_config[$flow_step_id]['handler_config'] = array_merge($existing_handler_config, $handler_settings);
         $flow_config[$flow_step_id]['enabled'] = true;
 
         $success = $this->db_flows->update_flow($flow_id, [

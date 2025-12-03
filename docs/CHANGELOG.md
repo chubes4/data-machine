@@ -5,6 +5,22 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2025-12-03
+
+### Enhanced
+- **ConfigureFlowSteps Tool**: Renamed from ConfigureFlowStep (singular) and enhanced with bulk pipeline-scoped operations for configuring multiple flow steps across all flows in a pipeline
+- **FlowStepManager**: Handler configuration updates now merge into existing config instead of replacing, enabling incremental configuration changes
+- **AIStep Image Handling**: Improved vision image processing to use engine data as single source of truth for file paths and metadata
+- **UI State Persistence**: Added localStorage persistence for selected pipeline in React UI store for cross-session memory
+
+### Added
+- **HttpClient Documentation**: Comprehensive documentation for the centralized HTTP client architecture at `/docs/core-system/http-client.md`
+
+### Technical Details
+- **Bulk Operations**: ConfigureFlowSteps tool now supports both single-step and pipeline-wide bulk configuration modes
+- **Merge Behavior**: Handler config updates use array_merge for incremental changes rather than full replacement
+- **UI Enhancement**: Pipeline selection persists across browser sessions using Zustand persist middleware
+
 ## [0.5.5] - 2025-12-02
 
 ### Fixed

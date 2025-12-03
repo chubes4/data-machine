@@ -1,162 +1,64 @@
 # Data Machine Documentation
 
-Complete user documentation for the Data Machine WordPress plugin (v0.4.9) - an AI-first content processing system with visual pipeline builder and multi-provider AI integration.
+Complete user documentation for Data Machine (v0.5.5), the AI-first WordPress plugin that combines a visual pipeline builder, conversational chat agent, REST API, and handler/tool extensibility under a single workflow engine.
 
 ## Quick Navigation
 
-### Getting Started
-- **Overview**: System architecture and core concepts
-- **Core System Overview**: Engine execution cycle
-- **Database Schema**: Data storage and relationships
-- **Changelog**: Version history and changes
+### Core Concepts
+- **Overview**: System goals, Pipeline+Flow architecture, and high-level data separation patterns.
+- **Architecture**: End-to-end breakdown of execution engine, services layer, and handler infrastructure.
+- **Database Schema**: Tables that persist pipelines, flows, jobs, and processed items.
+- **Changelog**: Historical summary of notable releases and architectural changes.
 
-### Universal Engine
-- **Universal Engine Architecture**: Shared AI infrastructure layer
-- **AI Conversation Loop**: Multi-turn conversation execution
-- **Tool Execution Architecture**: Tool discovery and execution
-- **Tool Manager**: Centralized tool management
-- **RequestBuilder Pattern**: Centralized AI request construction
-- **ConversationManager**: Message formatting and conversation utilities
-- **Parameter Systems**: Unified parameter architecture and tool building
-- **ToolResultFinder**: Universal tool result search utility
-- **OAuth Handlers**: Base authentication provider architecture
-- **Handler Registration Trait**: Standardized handler registration
-
-### Core System Components
-- **Services Layer**: OOP service managers replacing filter-based actions for 3x performance improvement
-- **Logger**: Centralized logging with Monolog integration
-
-### WordPress Components
-- **WordPressPublishHelper**: WordPress-specific publishing operations (media attachment, source attribution)
-- **WordPressSettingsResolver**: Centralized post status/author resolution
-- **TaxonomyHandler**: Taxonomy selection and dynamic term creation
-- **EngineData**: Platform-agnostic data access layer
-
-### React Architecture
-- **HandlerModel**: Abstract model layer for handler data operations
-- **HandlerFactory**: Factory pattern for handler model instantiation
-- **useHandlerModel**: Custom hook for handler model integration
-- **ModalSwitch**: Centralized modal routing component
-- **HandlerProvider**: React context for handler state management
+### Engine & Services
+- **Universal Engine**: Shared AI infrastructure for pipeline and chat agents.
+- **AI Conversation Loop**: Turn-based conversation execution with directive orchestration.
+- **Tool Execution**: Centralized discovery, validation, and execution of AI tools.
+- **Tool Manager**: Runtime tool enablement, provider checks, and contextual metadata.
+- **Request Builder**: Directive-aware construction of provider requests.
+- **Conversation Manager**: Message normalization, logging, and tool call tracking.
+- **Prompt Builder**: Priority-based directive registration via filters.
+- **Parameter Systems**: Unified parameter handling across tools and handlers.
+- **Tool Result Finder**: Utility for interpreting tool responses inside data packets.
+- **OAuth Handlers**: Base classes for OAuth1/OAuth2 providers and app-password flows.
+- **Handler Registration Trait**: Centralized registration pattern for fetch, publish, and update handlers.
+- **HTTP Client**: Standardized outbound request flow for handlers with structured logging and browser-mode header support.
 
 ### Handler Documentation
-
-#### Fetch Handlers
-- **WordPress Local**: Local WordPress post/page content retrieval
-- **WordPress Media**: Media library attachments with parent post content
-- **WordPress API**: External WordPress sites via REST API
-- **RSS Feed**: RSS/Atom feed parsing with deduplication
-- **Reddit**: OAuth2 subreddit fetching
-- **Google Sheets Fetch**: Spreadsheet data extraction
-- **Files**: Local/remote file processing
-
-#### Publish Handlers
-- **Twitter**: Twitter publishing with media support
-- **Bluesky**: App password, AT Protocol
-- **Facebook**: OAuth2, Graph API
-- **Threads**: OAuth2, Meta integration
-- **WordPress Publish**: Local post creation with WordPressPublishHelper integration
-- **Google Sheets Output**: Spreadsheet output
-
-#### Update Handlers
-- **WordPress Update**: Modify existing WordPress content
+- **Fetch Handlers**: Source-specific data retrieval with deduplication, filtering, and engine data storage.
+- **Publish Handlers**: Modular destination integrations with consistent response formatting and logging.
+- **Update Handlers**: Idempotent WordPress updates that respect engine parameters.
 
 ### AI Tools
-- **Tools Overview**: Complete AI tools system architecture
-- **ExecuteWorkflow**: Execute complete multi-step workflows with modular architecture
-- **Google Search**: Web search with Custom Search API
-- **Local Search**: WordPress internal search
-- **WebFetch**: Web page content retrieval and processing (50K limit)
-- **WordPress Post Reader**: Single WordPress post content retrieval by URL
-- **AddPipelineStep**: Pipeline step management tool
-- **ApiQuery**: REST API discovery and query tool
-- **ConfigureFlowStep**: Flow step configuration tool
-- **ConfigurePipelineStep**: Pipeline AI settings configuration
-- **CreateFlow**: Flow creation from existing pipelines
-- **CreatePipeline**: Pipeline creation with optional steps
-- **RunFlow**: Flow execution and scheduling tool
-- **UpdateFlow**: Flow property update tool
+- **Tools Overview**: Global and context-aware tools available to AI agents.
+- **Execute Workflow**: Modular execution of multi-step workflows from the chat toolset.
+- **Global Tools**: Google Search, Local Search, Web Fetch, WordPress Post Reader, and others used across agents.
+- **Chat Tools**: AddPipelineStep, ApiQuery, ConfigureFlowStep, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow, and other workflow management tools.
 
 ### API Reference
-- **API Overview**: Complete endpoint catalog with modular documentation structure
-- **Core Filters**: All WordPress filters
-- **Core Actions**: All WordPress actions
-- **Universal Engine Filters**: Directive and tool filters
+- **API Overview**: Catalog of REST endpoints backed by the services layer.
+- **Auth, Execute, Files, Flows, Jobs, Logs**: Resource-specific reference pages.
+- **Handlers, Providers, Settings, Tools**: Metadata and configuration endpoints for admin UI consumption.
 
 ### Admin Interface
-- **Pipeline Builder**: Visual drag-and-drop interface
-- **Settings Configuration**: AI providers, tools, defaults
-- **Jobs Management**: Execution monitoring and logs
+- **Pipeline Builder**: React-based page for creating pipelines, configuring steps, and enabling tools.
+- **Settings Configuration**: Provider credentials, tool defaults, and global behavior settings.
+- **Jobs Management**: Job history, log streaming, and failure analysis.
 
 ## Documentation Structure
-
 ```
 docs/
-├── overview.md                          # System overview and concepts
-├── core-system/
-│   ├── engine-execution.md             # Three-action execution cycle
-│   ├── database-schema.md              # Database tables and relationships
-│   ├── step.md                         # Step base class (v0.2.1)
-│   ├── fetch-handler.md                # FetchHandler base class (v0.2.1)
-│   ├── publish-handler.md              # PublishHandler base class (v0.2.1)
-│   ├── settings-handler.md             # SettingsHandler base classes (v0.2.1)
-│   ├── data-packet.md                  # DataPacket class (v0.2.1)
-│   ├── files-repository.md             # FilesRepository components (v0.2.1)
-│   ├── wordpress-components.md         # WordPress shared components (v0.2.1)
-│   ├── step-navigator.md               # StepNavigator component (v0.2.1)
-│   ├── services-layer.md              # OOP service managers for 3x performance improvement (v0.4.0)
-│   ├── universal-engine.md             # Universal Engine architecture (v0.2.0)
-│   ├── ai-conversation-loop.md         # Multi-turn conversation execution (v0.2.0)
-│   ├── tool-execution.md               # Tool discovery and execution (v0.2.0)
-│   ├── request-builder.md              # Centralized AI request construction (v0.2.0)
-│   ├── conversation-manager.md         # Message formatting and conversation utilities (v0.2.1)
-│   ├── tool-registration-trait.md      # Agent-agnostic tool registration (v0.2.2)
-│   ├── tool-result-finder.md           # Universal tool result search utility (v0.2.1)
-│   ├── chat-database.md                # Session management and CRUD operations (v0.2.0)
-│   ├── handler-registration-trait.md   # Standardized handler registration (v0.2.2)
-│   ├── oauth-handlers.md               # Centralized OAuth 1.0a and OAuth 2.0 handlers (v0.2.0)
-│   └── logger.md                      # Centralized logging with Monolog integration
-├── handlers/
-│   ├── fetch/
-│   │   ├── wordpress-local.md          # Local WordPress content
-│   │   ├── wordpress-media.md          # Media library attachments
-│   │   ├── wordpress-api.md            # External WordPress sites
-│   │   ├── rss.md                      # RSS feed parsing
-│   │   ├── reddit.md                   # Reddit subreddit fetching
-│   │   ├── google-sheets-fetch.md      # Spreadsheet data extraction
-│   │   └── files.md                    # File processing
-│   ├── publish/
-│   │   ├── wordpress-publish.md        # Local post creation
-│   │   ├── twitter.md                  # Twitter publishing
-│   │   ├── facebook.md                 # Facebook Graph API
-│   │   ├── threads.md                  # Meta Threads
-│   │   ├── bluesky.md                  # Bluesky AT Protocol
-│   │   └── google-sheets-output.md     # Spreadsheet output
-│   └── update/
-│       └── wordpress-update.md         # WordPress content updates
-├── ai-tools/
-│   ├── tools-overview.md                # AI tools system architecture
-│   ├── execute-workflow.md             # Execute complete multi-step workflows
-│   ├── wordpress-post-reader.md        # Single WordPress post content retrieval
-│   ├── local-search.md                 # WordPress internal search
-│   ├── google-search.md                # Web search tool
-│   ├── web-fetch.md                    # Web content retrieval (50K limit)
-│   ├── add-pipeline-step.md            # Pipeline step management tool
-│   ├── api-query.md                    # REST API discovery and query tool
-│   ├── configure-flow-step.md          # Flow step configuration tool
-│   ├── configure-pipeline-step.md      # Pipeline AI settings configuration
-│   ├── create-flow.md                  # Flow creation from existing pipelines
-│   ├── create-pipeline.md              # Pipeline creation with optional steps
-│   ├── run-flow.md                     # Flow execution and scheduling tool
-│   └── update-flow.md                  # Flow property update tool
-├── admin-interface/
-│   ├── pipeline-builder.md             # Visual interface
-│   ├── settings-configuration.md       # Configuration options
-│   └── jobs-management.md              # Monitoring and logs
-├── api/
-│   ├── index.md                         # Complete endpoint catalog
+├── overview.md                        # System overview, data flow, and key concepts
+├── architecture.md                    # Execution engine, architecture principles, and shared components
+├── CHANGELOG.md                       # Semantic changelog for releases
+├── core-system/                       # Engine, services, and core infrastructure pieces
+├── handlers/                          # Fetch, publish, and update handler specifics
+├── ai-tools/                          # AI agent tools, workflows, and tool usage
+├── admin-interface/                   # User guidance for admin pages
+├── api/                               # REST API usage and parameter documents
+├── api-reference/                     # Filters, actions, and extension hook reference
+└── README.md                          # This navigation and orientation page
 ```
 
 ## Component Coverage
-
-(Documentation continues in individual files; refer to the file names above for topics.)
+Refer to the individual files listed above for implementation details, operational guidance, and API references.

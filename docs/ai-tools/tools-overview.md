@@ -57,11 +57,11 @@ Available only to chat AI agents via `datamachine_chat_tools` filter. These spec
 - **Features**: Complete API endpoint catalog with usage examples
 - **Use Cases**: System monitoring, handler discovery, job status checking, configuration verification
 
-**ConfigureFlowStep** (`configure_flow_step`) (@since v0.4.2)
-- **Purpose**: Configure handler settings and AI user messages for individual flow steps
+**ConfigureFlowSteps** (`configure_flow_steps`) (@since v0.4.2)
+- **Purpose**: Configure handler settings and AI user messages for flow steps, supporting both single-step and bulk pipeline-scoped operations
 - **Configuration**: None required
-- **Features**: Supports both handler configuration and AI message setup
-- **Use Cases**: Setting up fetch/publish/update handlers, customizing AI prompts per flow
+- **Features**: Single mode for individual steps, bulk mode for all matching steps across all flows in a pipeline, merge behavior for handler_config
+- **Use Cases**: Setting up fetch/publish/update handlers, customizing AI prompts, bulk configuration changes across pipelines
 
 **ConfigurePipelineStep** (`configure_pipeline_step`) (@since v0.4.4)
 - **Purpose**: Configure pipeline-level AI settings including system prompt, provider, model, and enabled tools
@@ -149,7 +149,7 @@ Chat-specific tools at `/inc/Api/Chat/Tools/`:
   - `DefaultsInjector.php` - Provider/model defaults injection
 - `AddPipelineStep.php` - Add steps to pipelines with flow synchronization
 - `ApiQuery.php` - REST API discovery and queries with comprehensive endpoint documentation
-- `ConfigureFlowStep.php` - Flow step configuration for handlers and AI messages
+- `ConfigureFlowSteps.php` - Flow step configuration (single and bulk modes)
 - `ConfigurePipelineStep.php` - Pipeline-level AI settings configuration
 - `CreateFlow.php` - Flow instance creation with scheduling support
 - `CreatePipeline.php` - Pipeline creation with optional predefined steps

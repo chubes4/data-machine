@@ -243,12 +243,27 @@ $data = apply_filters('datamachine_data_packet', $data, $packet_data, $flow_step
 - Unified engine data operations via EngineData class
 
 ### File Management
+
 Flow-isolated UUID storage with automatic cleanup:
 - Files organized by flow instance
 - Automatic purging on job completion
 - Support for local and remote file processing
 
+### HTTP Client
+
+The centralized `HttpClient` class (`/inc/Core/HttpClient.php`) standardizes all outbound requests for fetch and publish handlers. It wraps the native WordPress HTTP helpers while:
+
+- exposing explicit methods (`get`, `post`, `put`, `patch`, `delete`) that accept consistent option bags
+- merging default headers (plugin `DATAMACHINE_VERSION` and optional browser-mode headers) with user-supplied headers
+- honoring `timeout`, `body`, and `browser_mode` options so handlers can simulate browser traffic when needed
+- validating success codes per method before returning parsed responses
+- logging WP_Error and non-success HTTP responses via `datamachine_log` and returning structured error payloads for downstream handling
+- extracting error metadata from JSON bodies to improve diagnostics
+
+See [HTTP Client](core-system/http-client.md) for implementation details and usage guidance.
+
 ### Admin Interface
+
 
 **Modern React Architecture**: The Pipelines admin page uses complete React implementation with zero AJAX dependencies, providing a modern, maintainable frontend.
 

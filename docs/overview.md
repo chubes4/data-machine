@@ -1,227 +1,61 @@
 # Data Machine User Documentation
 
-**AI-first WordPress plugin for content processing workflows with visual pipeline builder and multi-provider AI integration.**
+**AI-first WordPress plugin for automating and orchestrating content workflows with a visual pipeline builder, conversational chat agent, REST API, and extensibility through handlers and tools.**
 
 ## System Architecture
 
-Data Machine uses a Pipeline+Flow architecture with standardized base classes for code reuse:
+- **Pipelines** are reusable workflow templates that store handler order, tool selections, and AI settings.
+- **Flows** instantiate pipelines with schedule metadata, flow-level overrides, and runtime configuration values stored per flow.
+- **Jobs** track individual flow executions, persist engine parameters, and power the Jobs Management history view.
+- **Steps** execute sequentially (Fetch → AI → Publish/Update) with shared base classes that enforce validation, logging, and engine data synchronization.
 
-- **Pipelines** are reusable workflow templates containing step configurations
-- **Flows** are scheduled instances of pipelines with specific settings
-- **Jobs** are individual executions of flows
-- **Steps** process data sequentially: Fetch → AI → Publish/Update
+## Services Layer
 
-**Base Class Architecture** (@since v0.2.1) - Major Refactoring:
+The services layer (DataMachine\Services) provides direct method calls for core operations:
 
-Data Machine underwent a comprehensive OOP refactoring introducing standardized inheritance patterns that dramatically reduce code duplication:
+- `FlowManager`, `PipelineManager`, `FlowStepManager`, and `PipelineStepManager` handle creation, duplication, synchronization, and ordering.
+- `JobManager` monitors execution outcomes and updates statuses.
+- `LogsManager` aggregates log entries for filtering in the admin UI.
+- `ProcessedItemsManager` deduplicates content across executions by tracking previously processed identifiers.
 
-**Handler Registration Traits** - Code Reduction:
+Services are the single source of truth for REST endpoints, ensuring validation and sanitization before persisting data or enqueuing jobs.
 
-Standardized traits that reduce repetitive registration boilerplate across handler and tool registrations:
+## Data Flow
 
-- **HandlerRegistrationTrait**: Single `registerHandler()` method for all handler types (fetch, publish, update)
-- **ToolRegistrationTrait**: Agent-agnostic tool registration with dynamic filter creation for unlimited agent types
+- **DataPacket** standardizes the payload (content, metadata, attachments) that AI agents receive, keeping packets chronological and clean of URLs when not needed.
+- **EngineData** stores engine-specific parameters such as `source_url`, `image_url`, and flow context, which fetch handlers persist via the `datamachine_engine_data` filter for downstream handlers.
+- **FilesRepository modules** (DirectoryManager, FileStorage, RemoteFileDownloader, ImageValidator, FileCleanup, FileRetrieval) isolate file storage per flow, validate uploads, and enforce automatic cleanup after jobs complete.
 
-**Services Layer Architecture** (@since v0.4.0) - Performance Revolution:
+## AI Integration
 
-Complete replacement of filter-based action system with OOP service managers for 3x performance improvement through direct method calls:
+- **Tool-first architecture** enables AI agents (pipeline and chat) to call tools that interact with handlers, external APIs, or workflow metadata.
+- **PromptBuilder + RequestBuilder** apply layered directives via the `datamachine_directives` filter so every request includes identity, context, and site-specific instructions.
+- **Global tools** (Google Search, Local Search, Web Fetch, WordPress Post Reader) are registered under `/inc/Engine/AI/Tools/` and available to all agents.
+- **Chat-specific tools** (ExecuteWorkflow, AddPipelineStep, ApiQuery, ConfigureFlowStep, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow, ExecuteWorkflow) orchestrate pipeline and flow management within conversations.
+- **ToolParameters + ToolResultFinder** gather parameter metadata for tools and interpret results inside data packets to keep conversations consistent.
 
-**Service Managers**:
-- **FlowManager** - Flow CRUD operations, duplication, step synchronization
-- **PipelineManager** - Pipeline CRUD operations with complete/simple creation modes  
-- **JobManager** - Job execution monitoring and management
-- **LogsManager** - Centralized log access and filtering
-- **ProcessedItemsManager** - Deduplication tracking across workflows
-- **FlowStepManager** - Individual flow step configuration and handler management
-- **PipelineStepManager** - Pipeline step template management
+## Authentication & Security
 
-**Modern React Architecture** (@since v0.2.3, enhanced v0.2.6) - Performance Optimization:
+- **Authentication providers** extend BaseAuthProvider, BaseOAuth1Provider, or BaseOAuth2Provider under `/inc/Core/OAuth/`, covering Twitter, Reddit, Facebook, Threads, Google Sheets, and Bluesky (app passwords).
+- **OAuth handlers** (`OAuth1Handler`, `OAuth2Handler`) standardize callback handling, nonce validation, and credential storage.
+- **Capability checks** (`manage_options`) and WordPress nonces guard REST endpoints; inputs run through `sanitize_*` helpers before hitting services.
+- **HttpClient** centralizes outbound HTTP requests with consistent headers, browser-mode simulation, timeout control, and logging via `datamachine_log`.
 
-Complete modernization of the admin interface with TanStack Query + Zustand for optimal performance, enhanced with advanced state management patterns in v0.2.6:
+## Scheduling & Jobs
 
-**React Enhancements** (@since v0.2.6):
-- **HandlerModel** - Abstract model layer for handler data operations
-- **HandlerFactory** - Factory pattern for handler model instantiation
-- **useHandlerModel** - Custom hook for handler model integration
-- **ModalSwitch** - Centralized modal routing component
-- **HandlerProvider** - React context for handler state management
+- **Action Scheduler** drives scheduled flow execution while REST endpoints handle immediate runs.
+- **Flow schedules** support manual runs, single-execution jobs, recurring intervals (hourly/daily/weekly/monthly/custom), and job metadata such as `last_run_status` and `last_run_at`.
+- **JobManager** updates statuses, emits extensibility actions (`datamachine_update_job_status`), and links jobs to logs and processed items for auditing.
 
-**Step Hierarchy**:
-- **Step** (`/inc/Core/Steps/Step.php`) - Abstract base for all step types
-  - Unified payload handling across Fetch, AI, Publish, Update steps
-  - Automatic validation and logging
-  - Exception handling and error management
+## Admin Interface
 
-**Handler Base Classes**:
-- **FetchHandler** (`/inc/Core/Steps/Fetch/Handlers/FetchHandler.php`)
-  - Deduplication tracking (`isItemProcessed`, `markItemProcessed`)
-  - Engine data storage for downstream handlers
-  - Common filtering logic (timeframe, keywords)
-  - Standardized response methods
+- Completely React-based interface built with WordPress components, TanStack Query for server state (pipelines, flows, handlers), and Zustand for client state (modals, selections).
+- **Pipeline Builder** handles drag-and-drop ordering, handler settings modals, OAuth connection flows, tool selection, and import/export operations.
+- **Job Management** surfaces job history, log streaming, and failure context, all fed by REST responses and standardized log entries.
 
-- **PublishHandler** (`/inc/Core/Steps/Publish/Handlers/PublishHandler.php`)
-  - Engine data retrieval (`getSourceUrl`, `getImageFilePath`)
-  - Image validation and metadata extraction
-  - Standardized response formatting
+## Key Capabilities
 
-**Settings Architecture**:
-- **SettingsHandler** (`/inc/Core/Steps/Settings/SettingsHandler.php`) - Base for all settings
-  - Auto-sanitization based on field schema
-  - Validation and error handling
-- **SettingsDisplayService** (`/inc/Core/Steps/Settings/SettingsDisplayService.php`) - Settings display logic
-  - Processes settings for UI presentation
-  - Smart label generation and value formatting
-
-- **FetchHandlerSettings** - Common fetch fields (timeframe_limit, search)
-- **PublishHandlerSettings** - Common publish fields (status, author)
-
-**Data Standardization**:
-- **DataPacket** (`/inc/Core/DataPacket.php`) - Replaces scattered array construction
-  - Consistent packet structure across entire system
-  - Chronological ordering (newest first)
-  - Type and timestamp enforcement
-
-For implementation details, see the core-system documentation directory.
-
-## Core Concepts
-
-### Pipeline Steps
-
-1. **Fetch Steps** - Retrieve content from various sources (Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API)
-2. **AI Steps** - Process content using AI providers (OpenAI, Anthropic, Google, Grok, OpenRouter) with available tools (Google Search, Local Search, WebFetch, WordPress Post Reader, handler-specific tools)
-3. **Publish Steps** - Distribute content to platforms (Twitter, Facebook, Bluesky, Threads, WordPress with modular handler architecture, Google Sheets)
-4. **Update Steps** - Modify existing content (WordPress posts/pages)
-
-### Data Flow
-
-**Explicit Data Separation Architecture**: Fetch handlers generate clean data packets for AI processing while providing engine parameters separately for publish/update handlers:
-
-```php
-// Clean data packet (AI-visible)
-[
-    'data' => [
-        'content_string' => $content,  // Clean content without URLs
-        'file_info' => $file_info      // File metadata when applicable
-    ],
-    'metadata' => [
-        'source_type' => $type,
-        'item_identifier_to_log' => $id,
-        'original_id' => $id,
-        'original_title' => $title,
-        'original_date_gmt' => $date
-        // Clean data packet for AI processing
-    ]
-]
-
-// Engine parameters stored in database by fetch handlers via centralized filter
-if ($job_id) {
-    apply_filters('datamachine_engine_data', null, $job_id, [
-        'source_url' => $source_url,
-        'image_url' => $image_url
-    ]);
-}
-
-// Engine parameters retrieved by handlers via centralized filter
-$engine_data = apply_filters('datamachine_engine_data', [], $job_id);
-$source_url = $engine_data['source_url'] ?? null;
-$image_url = $engine_data['image_url'] ?? null;
-```
-
-**Data Packet Structure**: AI agents work with clean data packet structure including:
-- Root wrapper with data_packets array
-- Chronological ordering (index 0 = newest)
-- Type-specific fields and workflow dynamics
-- Turn-based data updates for multi-turn conversations
-
-### AI Integration
-
-- **Multi-Provider Support** - OpenAI, Anthropic, Google, Grok, OpenRouter (200+ models)
-- **Tool-First Architecture** - AI agents can call tools to interact with publish handlers
-- **Filter-Based Directive System** - Structured system messages via auto-registering directive classes with separate global and pipeline directives:
-
-  **Unified Directive System** (since v0.2.5):
-  - `datamachine_directives` filter for centralized directive registration with priority-based ordering
-  - **Priority 10**: Core agent identity and foundational instructions
-  - **Priority 20**: Global system prompts and universal behavior
-  - **Priority 30**: Agent-specific system prompts and context
-  - **Priority 40**: Workflow and execution context directives
-  - **Priority 50**: Environmental and site-specific directives
-  - **Priority 30**: Pipeline System Prompt - Workflow structure visualization (pipeline agents only)
-  - **Priority 40**: Pipeline Context Directive - Workflow context and execution state (pipeline agents only)
-  - **Priority 40**: Tool Definitions Directive - Usage instructions and workflow context (pipeline agents only)
-
-- **Universal Engine Architecture** - Shared AI infrastructure serving Pipeline and Chat agents:
-  - **AIConversationLoop** - Multi-turn conversation execution with automatic tool calling
-  - **ToolExecutor** - Universal tool discovery and execution infrastructure
-  - **ToolParameters** - Centralized parameter building for AI tools
-    - `buildParameters()` for standard AI tools
-    - `buildForHandlerTool()` for handler tools with engine parameters
-    - Content/title extraction from data packets
-  - **ConversationManager** - Message formatting and conversation utilities
-  - **RequestBuilder** - Centralized AI request construction with directive application
-- **Global AI Tools** - Available to all AI agents (pipeline + chat), located in `/inc/Engine/AI/Tools/`:
-  - Google Search - Web search with site restriction
-  - Local Search - WordPress content search
-  - WebFetch - Web page content retrieval (50K limit)
-  - WordPress Post Reader - Single post analysis
-  - Registered via `datamachine_global_tools` filter
-- **Chat-Specific Tools** - Available only to chat AI agents, providing specialized operation-specific functionality (@since v0.4.3 refactoring, expanded v0.4.9):
-  - ExecuteWorkflow (@since v0.3.0) - Execute complete multi-step workflows with modular architecture at `/inc/Api/Chat/Tools/ExecuteWorkflow/`
-  - AddPipelineStep (@since v0.4.3) - Add steps to existing pipelines with automatic flow synchronization
-  - ApiQuery (@since v0.4.3) - REST API discovery and queries with comprehensive endpoint documentation
-  - ConfigureFlowStep (@since v0.4.2) - Configure flow step handlers and AI messages
-  - ConfigurePipelineStep (@since v0.4.4) - Configure pipeline-level AI settings including system prompt, provider, model, and enabled tools
-  - CreateFlow (@since v0.4.2) - Create flow instances from pipelines with automatic step synchronization
-  - CreatePipeline (@since v0.4.3) - Create pipelines with optional predefined steps and automatic flow instantiation
-  - RunFlow (@since v0.4.4) - Execute existing flows immediately or schedule delayed execution
-  - UpdateFlow (@since v0.4.4) - Update flow-level properties including title and scheduling configuration
-  - Registered via `datamachine_chat_tools` filter
-- **Handler-Specific Tools** - Available when next step matches handler type, registered via `chubes_ai_tools` filter
-- **Context-Aware** - Automatic WordPress site context injection (toggleable)
-- **Clear Tool Result Messaging** - Human-readable success messages enabling natural conversation termination
-
-### Authentication
-
-- **OAuth 2.0** - Reddit, Google Sheets, Facebook, Threads
-- **OAuth 1.0a** - Twitter
-- **App Passwords** - Bluesky
-- **API Keys** - Google Search, AI providers
-
-## Quick Start
-
-1. **Install Requirements** - PHP 8.0+, WordPress 6.2+
-2. **Configure AI Provider** - Add API keys in WordPress Settings → Data Machine
-3. **Create Pipeline** - Use visual builder with drag-and-drop steps
-4. **Configure Authentication** - Set up OAuth for external services
-5. **Create Flow** - Schedule pipeline with specific settings
-6. **Run Manual Execution** - Test workflow before automation
-
-## Key Features
-
-- **Visual Pipeline Builder** - Drag-and-drop interface with auto-save
-- **Multi-Platform Publishing** - Single pipeline can publish to multiple platforms
-- **Content Deduplication** - Automatic tracking prevents duplicate processing
-- **Error Handling** - Comprehensive logging and failure recovery
-- **Extension System** - Custom handlers and tools via WordPress filters
-- **Action Scheduler Integration** - Asynchronous processing with WordPress cron
-
-## Directory Structure
-
-```
-docs/
-├── core-system/          # Engine, database, execution
-├── handlers/
-│   ├── fetch/           # Data retrieval handlers
-│   ├── publish/         # Publishing platforms
-│   └── update/          # Content modification
-├── ai-tools/            # General and handler-specific tools
-├── admin-interface/     # WordPress admin pages
-└── api-reference/       # Filters, actions, functions
-```
-
-## Requirements
-
-- **PHP** 8.0 or higher
-- **WordPress** 6.2 or higher
-- **Composer Dependencies** - Automatically managed including ai-http-client
-- **Admin Capabilities** - `manage_options` required for all operations
+- **Multi-platform publishing** via dedicated fetch/publish/update handlers for files, RSS, Reddit, Google Sheets, WordPress, Twitter, Threads, Bluesky, Facebook, and Google Sheets output.
+- **Extension points** through filters such as `datamachine_handlers`, `chubes_ai_tools`, `datamachine_step_types`, `datamachine_auth_providers`, and `datamachine_engine_data`.
+- **Directive orchestration** ensures every AI request is context-aware, tool-enabled, and consistent with site policies.
+- **Chartable logging, deduplication, and error handling** keep operators informed about job outcomes and prevent duplicate processing.

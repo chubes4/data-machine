@@ -5,75 +5,60 @@ Tags: ai, automation, content, workflow, pipeline, chat
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.0
-Stable tag: 0.5.5
+Stable tag: 0.5.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-AI-first WordPress plugin for content processing workflows with a visual pipeline builder, conversational chat interface, REST API, and extensibility via handlers and tools.
+AI-first WordPress plugin for content processing workflows with a visual pipeline builder, conversational chat agent, REST API, and handler/tool extensibility.
 
-## Architecture
+## Overview
 
-Badges intentionally omitted for brevity.
+- **Pipeline + Flow architecture** that separates reusable pipeline templates from scheduled flow instances and job executions.
+- **Modern React admin** that relies exclusively on the REST API, TanStack Query, and Zustand for caching, optimistic updates, and client state isolation.
+- **Tool-first AI agents** that discover enabling providers, call contextual tools, and persist conversations via a universal engine shared by chat and pipelines.
+- **Services layer** (FlowManager, PipelineManager, JobManager, LogsManager, ProcessedItemsManager, FlowStepManager, PipelineStepManager) that replaces filter indirection with direct method calls for predictable behavior and easier testing.
+- **Global handler tooling** with modular fetch, publish, and update adapters backed by centralized registration traits and field schemas.
 
-Features
-- Services layer architecture (@since v0.4.0) with OOP service managers for 3x performance improvement over filter-based actions.
-- Base class architecture for steps, handlers, and settings to reduce duplication and provide shared behavior.
-- React-based admin interface (built with WordPress components) that uses REST API integration.
-- Modern state management patterns (TanStack Query + Zustand for server/client state separation).
-- Tool-first AI with a centralized tool discovery and execution layer.
-- Modular FilesRepository and WordPress shared components for file handling and publishing.
-- Platform-agnostic EngineData with WordPressPublishHelper for WordPress-specific operations.
-- REST API surface for managing flows, pipelines, files, tools, settings, chat, and monitoring.
+## Key Features
 
-Requirements
-- WordPress 6.2+, PHP 8.0+
-- Action Scheduler (for scheduled flow execution) for deployments that use scheduling
-- Composer for development workflows
+- **Clean execution pipeline**: Fetch → AI → Publish/Update handlers process normalized data packets while engine parameters remain accessible through centralized filters (`datamachine_engine_data`).
+- **Deduplication tracking** via processed items and job-scoped logging.
+- **Multi-provider AI** support (OpenAI, Anthropic, Google, Grok, OpenRouter) with tool orchestration and directive management through PromptBuilder and RequestBuilder.
+- **Unified tool architecture** covering global search/fetch tools and chat-specific workflow tools such as ApiQuery, CreatePipeline, CreateFlow, ConfigureFlowStep, ConfigurePipelineStep, RunFlow, UpdateFlow, AddPipelineStep, and ExecuteWorkflow.
+- **HTTP client standardization** with HttpClient for consistent headers, browser simulation, timeout handling, and logging integrations.
+- **Extension-ready systems** using WordPress filters for handlers, tools, authentication providers, and step types.
 
-Quick Start
+## Requirements
 
-Development
-1. Clone into `/wp-content/plugins/datamachine/`
-2. Run `composer install`
-3. Activate the plugin in WordPress
-4. Configure an AI provider at Settings → Data Machine
+- WordPress 6.2 or higher and PHP 8.0 or higher.
+- Composer for dependency management and vendor autoloading.
+- Action Scheduler for scheduled flow execution when jobs rely on cron.
 
-Production
-1. Run `./build.sh` to create a distributable ZIP
-2. Install via the WordPress admin interface
-3. Configure AI provider and tools
+## Architecture highlights
 
-Configuration highlights
-- OAuth providers and API keys are configured via Settings → Data Machine → Tool Configuration
-- Tool configuration and enablement control which external services the site will use
+- **EngineData** serves as the platform-agnostic data source, streaming normalized packets and metadata to handlers and tools while shared helpers (WordPressPublishHelper, TaxonomyHandler, WordPressSettingsResolver) address WordPress-specific needs.
+- **FilesRepository** modules (DirectoryManager, FileStorage, FileCleanup, ImageValidator, RemoteFileDownloader, FileRetrieval) ensure flow-scoped file handling, validation, and cleanup.
+- **Step Navigator** and **Tool Result Finder** keep executions ordered and AI interactions traceable.
+- **Prompt/Directive system** centralizes system prompts and directives via `datamachine_directives`, with priorities that layer workflow context, tool definitions, and site information to every request.
 
-Programmatic usage (illustrative)
-```php
-// Create pipeline and run a flow using services layer (illustrative)
-$pipeline_manager = new \DataMachine\Services\PipelineManager();
-$flow_manager = new \DataMachine\Services\FlowManager();
+## REST API surface
 
-$pipeline_result = $pipeline_manager->create('My Pipeline');
-$flow_result = $flow_manager->create($pipeline_result['pipeline_id'], 'My Flow');
+All data flows through `/wp-json/datamachine/v1/`, exposing endpoints for auth, execute, files, flows, pipelines, jobs, logs, processed items, handlers, providers, settings, step types, tools, and other infrastructure needs. Service managers handle validation, sanitation, and error handling before responses reach the REST layer.
 
-// Execute flow via REST API
-do_action('datamachine_run_flow_now', $flow_result['flow_id'], 'manual');
-```
+## Handler & tool coverage
 
-REST API
-- The plugin exposes REST endpoints under `/wp-json/datamachine/v1/` for executing flows, managing pipelines and flows, uploading files, and monitoring jobs. See API Overview documentation for endpoint details.
+- **Fetch handlers**: Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API.
+- **Publish handlers**: Twitter, Threads, Bluesky, Facebook, WordPress Publish, Google Sheets Output.
+- **Update handlers**: WordPress Update with engine parameter support for existing posts.
+- **Global AI tools**: Google Search, Local Search, Web Fetch, WordPress Post Reader.
+- **Chat/workflow tools**: ExecuteWorkflow, AddPipelineStep, ApiQuery, ConfigureFlowStep, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow.
 
-Available handlers & tools
-- Fetch sources: files, RSS, Reddit, Google Sheets, WordPress (local, media, API)
-- Publish destinations: Twitter, Threads, Bluesky, Facebook, WordPress, Google Sheets
-- Update handlers: WordPress Update with source URL matching
-- Tools: Google Search, Local Search, Web Fetch, WordPress Post Reader, and others. Tool availability depends on configuration and enabled providers.
+## Development notes
 
-Development
-```bash
-composer install    # Development setup
-composer test       # Run tests (PHPUnit configured)
-./build.sh          # Production build to /dist/datamachine.zip
-```
+- Composer scripts define PHPUnit suites (`test`, `test:unit`, `test:integration`, `test:coverage`, `test:verbose`).
+- `build.sh` bundles production artifacts into a distributable ZIP with production dependencies.
 
-For full technical details and developer guidance, see CLAUDE.md and the docs directory.
+## Additional resources
+
+- [CLAUDE.md](CLAUDE.md) provides a concise reference for contributors.
+- `/docs/` houses user-facing documentation covering architecture, handlers, AI tools, admin interface guidance, and API references.

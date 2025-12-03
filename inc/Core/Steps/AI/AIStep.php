@@ -65,16 +65,14 @@ class AIStep extends Step {
     protected function executeStep(): array {
         $user_message = trim($this->flow_step_config['user_message'] ?? '');
 
+        // Vision image from engine data (single source of truth)
         $file_path = null;
         $mime_type = null;
-        if (!empty($this->dataPackets)) {
-            $first_item = $this->dataPackets[0] ?? [];
-            $file_info = $first_item['data']['file_info'] ?? null;
-
-            if ($file_info && isset($file_info['file_path']) && file_exists($file_info['file_path'])) {
-                $file_path = $file_info['file_path'];
-                $mime_type = $file_info['mime_type'] ?? '';
-            }
+        $engine_image = $this->engine->get('image_file_path');
+        if ($engine_image && file_exists($engine_image)) {
+            $file_path = $engine_image;
+            $file_info = wp_check_filetype($engine_image);
+            $mime_type = $file_info['type'] ?? '';
         }
 
         $messages = [];
