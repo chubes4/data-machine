@@ -29,7 +29,7 @@ class DateFormatter {
 		}
 
 		try {
-			$timestamp = ( new \DateTime( $mysql_datetime, wp_timezone() ) )->getTimestamp();
+			$timestamp = ( new \DateTime( $mysql_datetime, new \DateTimeZone( 'UTC' ) ) )->getTimestamp();
 		} catch ( \Exception $e ) {
 			return __( 'Invalid date', 'datamachine' );
 		}
@@ -59,7 +59,7 @@ class DateFormatter {
 		}
 
 		try {
-			$timestamp = ( new \DateTime( $mysql_datetime, wp_timezone() ) )->getTimestamp();
+			$timestamp = ( new \DateTime( $mysql_datetime, new \DateTimeZone( 'UTC' ) ) )->getTimestamp();
 		} catch ( \Exception $e ) {
 			return __( 'Invalid date', 'datamachine' );
 		}
@@ -80,7 +80,7 @@ class DateFormatter {
 		}
 
 		try {
-			$timestamp = ( new \DateTime( $mysql_datetime, wp_timezone() ) )->getTimestamp();
+			$timestamp = ( new \DateTime( $mysql_datetime, new \DateTimeZone( 'UTC' ) ) )->getTimestamp();
 		} catch ( \Exception $e ) {
 			return '';
 		}

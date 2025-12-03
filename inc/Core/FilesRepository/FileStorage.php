@@ -120,7 +120,7 @@ class FileStorage {
             'persistent_path' => $destination,
             'size' => filesize($destination),
             'mime_type' => mime_content_type($destination),
-            'uploaded_at' => current_time('mysql')
+            'uploaded_at' => current_time('mysql', true)
         ];
     }
 

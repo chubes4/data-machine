@@ -279,7 +279,7 @@ class Flows {
      */
     public function get_flows_ready_for_execution(): array {
         
-        $current_time = current_time('mysql');
+        $current_time = current_time('mysql', true);
         
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
         $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual' AND (JSON_EXTRACT(scheduling_config, '$.last_run_at') IS NULL OR JSON_EXTRACT(scheduling_config, '$.last_run_at') < %s) ORDER BY flow_id ASC", $this->table_name, $current_time ), ARRAY_A );
@@ -326,8 +326,8 @@ class Flows {
             return true; // Never run before
         }
         
-        $last_run_timestamp = ( new \DateTime( $last_run_at, wp_timezone() ) )->getTimestamp();
-        $current_timestamp = ( new \DateTime( $current_time, wp_timezone() ) )->getTimestamp();
+        $last_run_timestamp = ( new \DateTime( $last_run_at, new \DateTimeZone( 'UTC' ) ) )->getTimestamp();
+        $current_timestamp = ( new \DateTime( $current_time, new \DateTimeZone( 'UTC' ) ) )->getTimestamp();
         $interval = $scheduling_config['interval'];
         
         $intervals = apply_filters('datamachine_scheduler_intervals', []);
@@ -345,7 +345,7 @@ class Flows {
      */
     public function update_flow_last_run(int $flow_id, ?string $timestamp = null, ?string $status = null): bool {
         if ($timestamp === null) {
-            $timestamp = current_time('mysql');
+            $timestamp = current_time('mysql', true);
         }
         
         

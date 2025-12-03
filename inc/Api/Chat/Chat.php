@@ -149,7 +149,7 @@ class Chat {
 			$messages = $session['messages'];
 		} else {
 			$session_id = $chat_db->create_session($user_id, [
-				'started_at' => current_time('mysql'),
+				'started_at' => current_time('mysql', true),
 				'message_count' => 0
 			]);
 
@@ -196,7 +196,7 @@ class Chat {
 		$final_content = $loop_result['final_content'];
 
 		$metadata = [
-			'last_activity' => current_time('mysql'),
+			'last_activity' => current_time('mysql', true),
 			'message_count' => count($messages)
 		];
 

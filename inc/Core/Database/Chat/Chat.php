@@ -157,8 +157,8 @@ class Chat {
 
 		if (!empty($session['expires_at'])) {
 			try {
-				$expires_timestamp = ( new \DateTime( $session['expires_at'], wp_timezone() ) )->getTimestamp();
-				if ($expires_timestamp < current_time( 'timestamp' )) {
+				$expires_timestamp = ( new \DateTime( $session['expires_at'], new \DateTimeZone( 'UTC' ) ) )->getTimestamp();
+				if ($expires_timestamp < time()) {
 					$this->delete_session($session_id);
 					return null;
 				}

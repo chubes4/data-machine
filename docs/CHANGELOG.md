@@ -5,7 +5,26 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2025-12-02
+
+### Fixed
+- **Timezone Handling**: Standardized UTC timezone usage across DateFormatter, Chat database, Flows scheduling, and file operations for better cross-timezone compatibility
+- **API Parameter Bug**: Fixed pipeline title update endpoint to use correct `pipeline_id` parameter instead of `id`
+- **Date Consistency**: Improved GMT timestamp handling using `current_time('mysql', true)` for consistent timezone-aware operations
+
+### Removed
+- **DynamicToolProvider.php**: Removed unused abstract base class that was relocated to datamachine-events extension
+
+### Technical Details
+- **Timezone Standardization**: All database date operations now use UTC timezone for consistent storage and retrieval
+- **API Reliability**: Fixed parameter handling bug in pipeline management endpoints
+
 ## [0.5.4] - 2025-12-02
+
+### Removed
+- **DynamicToolProvider Base Class** - Removed unused abstract base class from core
+  - Pattern relocated to datamachine-events where it's actually used
+  - See datamachine-events `DynamicToolParametersTrait` for the active implementation
 
 ### Enhanced
 - **OAuth Authentication UX**: Added redirect URL display in authentication modals for OAuth providers

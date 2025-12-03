@@ -345,7 +345,7 @@ class Pipelines {
 	 * PATCH /datamachine/v1/pipelines/{id}
 	 */
 	public static function handle_update_pipeline_title($request) {
-		$pipeline_id = (int) $request->get_param('id');
+		$pipeline_id = (int) $request->get_param('pipeline_id');
 		$params = $request->get_json_params();
 
 		if (!$pipeline_id || empty($params['pipeline_name'])) {

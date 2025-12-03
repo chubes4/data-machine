@@ -77,7 +77,7 @@ class UpdateStep extends Step {
         $packet = new DataPacket(
             [
                 'update_result' => $tool_result_data,
-                'updated_at' => current_time('mysql')
+                'updated_at' => current_time('mysql', true)
             ],
             [
                 'step_type' => 'update',

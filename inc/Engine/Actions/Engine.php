@@ -71,7 +71,7 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
     if (is_string($scheduling_config)) {
         $scheduling_config = json_decode($scheduling_config, true) ?: [];
     }
-    $scheduling_config['last_run_at'] = current_time('mysql');
+    $scheduling_config['last_run_at'] = current_time('mysql', true);
     $db_flows->update_flow_scheduling($flow_id, $scheduling_config);
 
     $pipeline_id = (int)$flow['pipeline_id'];
@@ -99,7 +99,7 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
             'job_id' => $job_id,
             'flow_id' => $flow_id,
             'pipeline_id' => $pipeline_id,
-            'created_at' => current_time('mysql')
+            'created_at' => current_time('mysql', true)
         ],
         'flow' => [
             'name' => $flow['flow_name'] ?? '',

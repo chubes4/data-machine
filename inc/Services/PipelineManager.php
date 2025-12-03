@@ -58,12 +58,7 @@ class PipelineManager {
         }
 
         $flow_config = $options['flow_config'] ?? [];
-        $flow_name = $flow_config['flow_name'] ?? null;
-
-        if (empty($flow_name)) {
-            do_action('datamachine_log', 'error', 'Cannot create flow - missing or empty flow name');
-            return null;
-        }
+        $flow_name = $flow_config['flow_name'] ?? '';
 
         $scheduling_config = $flow_config['scheduling_config'] ?? ['interval' => 'manual'];
 
