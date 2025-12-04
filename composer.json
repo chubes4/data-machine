@@ -55,7 +55,7 @@
 			"inc/Api/Chat/Tools/CreatePipeline.php",
 			"inc/Api/Chat/Tools/AddPipelineStep.php",
 			"inc/Api/Chat/Tools/CreateFlow.php",
-			"inc/Api/Chat/Tools/ConfigureFlowStep.php",
+			"inc/Api/Chat/Tools/ConfigureFlowSteps.php",
 			"inc/Api/Chat/Tools/RunFlow.php",
 			"inc/Api/Chat/Tools/UpdateFlow.php",
 			"inc/Api/Chat/Tools/ConfigurePipelineStep.php",
