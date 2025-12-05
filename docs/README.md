@@ -1,6 +1,6 @@
 # Data Machine Documentation
 
-Complete user documentation for Data Machine (v0.5.5), the AI-first WordPress plugin that combines a visual pipeline builder, conversational chat agent, REST API, and handler/tool extensibility under a single workflow engine.
+Complete user documentation for Data Machine (v0.5.6), the AI-first WordPress plugin that combines a visual pipeline builder, conversational chat agent, REST API, and handler/tool extensibility under a single workflow engine.
 
 ## Quick Navigation
 
@@ -13,6 +13,7 @@ Complete user documentation for Data Machine (v0.5.5), the AI-first WordPress pl
 ### Engine & Services
 - **Universal Engine**: Shared AI infrastructure for pipeline and chat agents.
 - **AI Conversation Loop**: Turn-based conversation execution with directive orchestration.
+- **AI Directives System**: Hierarchical directive injection for contextual AI behavior.
 - **Tool Execution**: Centralized discovery, validation, and execution of AI tools.
 - **Tool Manager**: Runtime tool enablement, provider checks, and contextual metadata.
 - **Request Builder**: Directive-aware construction of provider requests.
@@ -23,6 +24,7 @@ Complete user documentation for Data Machine (v0.5.5), the AI-first WordPress pl
 - **OAuth Handlers**: Base classes for OAuth1/OAuth2 providers and app-password flows.
 - **Handler Registration Trait**: Centralized registration pattern for fetch, publish, and update handlers.
 - **HTTP Client**: Standardized outbound request flow for handlers with structured logging and browser-mode header support.
+- **Import/Export System**: Pipeline configuration backup, migration, and sharing functionality.
 
 ### Handler Documentation
 - **Fetch Handlers**: Source-specific data retrieval with deduplication, filtering, and engine data storage.
@@ -52,6 +54,10 @@ docs/
 ├── architecture.md                    # Execution engine, architecture principles, and shared components
 ├── CHANGELOG.md                       # Semantic changelog for releases
 ├── core-system/                       # Engine, services, and core infrastructure pieces
+│   ├── ai-directives.md               # AI directive system and priority hierarchy
+│   ├── http-client.md                 # Centralized HTTP client architecture
+│   ├── import-export.md               # Pipeline import/export functionality
+│   └── [other core system docs...]
 ├── handlers/                          # Fetch, publish, and update handler specifics
 ├── ai-tools/                          # AI agent tools, workflows, and tool usage
 ├── admin-interface/                   # User guidance for admin pages

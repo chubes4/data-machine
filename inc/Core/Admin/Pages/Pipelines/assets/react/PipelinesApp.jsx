@@ -33,6 +33,9 @@ export default function PipelinesApp() {
 		modalData,
 	} = useUIStore();
 
+	// Check if Zustand has finished hydrating from localStorage
+	const hasHydrated = useUIStore.persist.hasHydrated();
+
 	// Data from TanStack Query
 	const { data: pipelines = [], isLoading: pipelinesLoading, error: pipelinesError } = usePipelines();
 	const { data: flows = [], isLoading: flowsLoading, error: flowsError } = useFlows(selectedPipelineId);
@@ -100,9 +103,14 @@ export default function PipelinesApp() {
 	}, [ openModal, modalData ] );
 
 	/**
-	 * Set selected pipeline when pipelines load or when selected pipeline is deleted
+	 * Set selected pipeline when pipelines load or when selected pipeline is deleted.
+	 * Waits for Zustand hydration to complete before applying default selection.
 	 */
 	useEffect( () => {
+		if ( ! hasHydrated ) {
+			return;
+		}
+
 		if ( pipelines.length > 0 && ! selectedPipelineId ) {
 			setSelectedPipelineId( pipelines[ 0 ].pipeline_id );
 		} else if ( pipelines.length > 0 && selectedPipelineId ) {
@@ -115,7 +123,7 @@ export default function PipelinesApp() {
 			// No pipelines available
 			setSelectedPipelineId( null );
 		}
-	}, [ pipelines, selectedPipelineId, setSelectedPipelineId ] );
+	}, [ pipelines, selectedPipelineId, setSelectedPipelineId, hasHydrated ] );
 
 	/**
 	 * Handle creating a new pipeline
