@@ -5,6 +5,19 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.8] - 2025-12-05
+
+### Security
+- Additional package security updates and dependency fixes
+
+### Enhanced
+- **RunFlow Tool**: Improved timestamp validation logic for more reliable flow execution scheduling
+- **React UI Components**: Added Zustand hydration checks to prevent initialization race conditions
+- **State Persistence**: Enhanced UI store with better persistence configuration for cross-session memory
+
+### Fixed
+- **Package Version Mismatch**: Corrected package-lock.json version to match current release
+
 ## [0.5.7] - 2025-12-05
 
 ### Security

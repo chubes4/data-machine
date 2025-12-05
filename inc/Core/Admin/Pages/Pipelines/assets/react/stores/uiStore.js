@@ -49,6 +49,11 @@ export const useUIStore = create(
     {
       name: 'datamachine-ui-store',
       partialize: (state) => ({ selectedPipelineId: state.selectedPipelineId }),
+      version: 1,
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...persistedState,
+      }),
     }
   )
 );

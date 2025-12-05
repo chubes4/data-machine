@@ -57,26 +57,11 @@ class RunFlow {
         $timestamp = $parameters['timestamp'] ?? null;
         $execution_type = 'immediate';
 
-        if ($timestamp !== null) {
-            if (!is_numeric($timestamp) || (int) $timestamp <= 0) {
-                return [
-                    'success' => false,
-                    'error' => 'timestamp must be a positive integer',
-                    'tool_name' => 'run_flow'
-                ];
-            }
-
+        if (!empty($timestamp) && is_numeric($timestamp) && (int) $timestamp > time()) {
             $timestamp = (int) $timestamp;
-
-            if ($timestamp <= time()) {
-                return [
-                    'success' => false,
-                    'error' => 'timestamp must be in the future',
-                    'tool_name' => 'run_flow'
-                ];
-            }
-
             $execution_type = 'delayed';
+        } else {
+            $timestamp = null;
         }
 
         $body_params = ['flow_id' => $flow_id];
@@ -88,15 +73,6 @@ class RunFlow {
         $request->set_body_params($body_params);
 
         $response = rest_do_request($request);
-
-        if (is_wp_error($response)) {
-            return [
-                'success' => false,
-                'error' => $response->get_error_message(),
-                'tool_name' => 'run_flow'
-            ];
-        }
-
         $data = $response->get_data();
         $status = $response->get_status();
 

@@ -104,10 +104,10 @@ export default function PipelinesApp() {
 
 	/**
 	 * Set selected pipeline when pipelines load or when selected pipeline is deleted.
-	 * Waits for Zustand hydration to complete before applying default selection.
+	 * Waits for Zustand hydration AND pipelines query to complete before applying default selection.
 	 */
 	useEffect( () => {
-		if ( ! hasHydrated ) {
+		if ( ! hasHydrated || pipelinesLoading ) {
 			return;
 		}
 
@@ -123,7 +123,7 @@ export default function PipelinesApp() {
 			// No pipelines available
 			setSelectedPipelineId( null );
 		}
-	}, [ pipelines, selectedPipelineId, setSelectedPipelineId, hasHydrated ] );
+	}, [ pipelines, selectedPipelineId, setSelectedPipelineId, hasHydrated, pipelinesLoading ] );
 
 	/**
 	 * Handle creating a new pipeline
