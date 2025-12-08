@@ -159,6 +159,9 @@ class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
     public function handle_oauth_callback() {
         $config = $this->get_config();
 
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection
+        $facebook_code = isset($_GET['code']) ? sanitize_text_field(wp_unslash($_GET['code'])) : '';
+
         $this->oauth2->handle_callback(
             'facebook',
             self::TOKEN_URL,
@@ -166,7 +169,7 @@ class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
                 'client_id' => $config['app_id'] ?? '',
                 'client_secret' => $config['app_secret'] ?? '',
                 'redirect_uri' => $this->get_callback_url(),
-                'code' => $_GET['code'] ?? ''
+                'code' => $facebook_code
             ],
             function($long_lived_token_data) {
                 // Build account data from long-lived token

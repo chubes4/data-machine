@@ -54,20 +54,20 @@ class Logs
     public function render_content()
     {
         // Get current log level setting
-        $current_log_level = $this->get_current_log_level();
+        $datamachine_current_log_level = $this->get_current_log_level();
         
         // Get log file info
-        $log_file_info = $this->get_log_file_info();
+        $datamachine_log_file_info = $this->get_log_file_info();
         
         // Get recent log entries
-        $recent_logs = $this->get_recent_logs();
+        $datamachine_recent_logs = $this->get_recent_logs();
 
         // Use universal template system
         echo wp_kses(apply_filters('datamachine_render_template', '', 'page/logs-page', [
-            'current_log_level' => $current_log_level,
-            'log_file_info' => $log_file_info,
-            'recent_logs' => $recent_logs,
-            'log_file_path' => $this->log_file_path
+            'datamachine_current_log_level' => $datamachine_current_log_level,
+            'datamachine_log_file_info' => $datamachine_log_file_info,
+            'datamachine_recent_logs' => $datamachine_recent_logs,
+            'datamachine_log_file_path' => $this->log_file_path
         ]), datamachine_allowed_html());
     }
 

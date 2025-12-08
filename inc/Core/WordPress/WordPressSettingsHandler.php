@@ -29,10 +29,14 @@ class WordPressSettingsHandler {
         $defaults = [
             'field_suffix' => 'selection',
             'first_options' => [
-                'skip' => __('Skip', 'datamachine'),
-                'ai_decides' => __('AI Decides', 'datamachine')
+                'skip' => esc_html__('Skip', 'datamachine'),
+                'ai_decides' => esc_html__('AI Decides', 'datamachine')
             ],
-            'description_template' => __('Configure %1$s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'datamachine'),
+            /* translators: 1: taxonomy label, 2: taxonomy term label */
+            'description_template' => __(
+                'Configure %1$s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.',
+                'datamachine'
+            ),
             'default' => 'skip',
             'post_type' => null,
             'exclude_taxonomies' => []
@@ -60,7 +64,8 @@ class WordPressSettingsHandler {
             // Build options with configured first options, formatting any placeholders with taxonomy label
             $options = [];
             foreach ($config['first_options'] as $key => $label) {
-                $options[$key] = sprintf($label, $taxonomy_label);
+                /* translators: %s: Taxonomy label */
+            $options[$key] = sprintf($label, $taxonomy_label);
             }
 
             // Add visual separator after system options
@@ -79,6 +84,7 @@ class WordPressSettingsHandler {
             $taxonomy_fields[$field_key] = [
                 'type' => 'select',
                 'label' => $taxonomy_label,
+                /* translators: 1: taxonomy label, 2: taxonomy term label */
                 'description' => sprintf(
                     $config['description_template'],
                     strtolower($taxonomy_label),
@@ -233,37 +239,37 @@ class WordPressSettingsHandler {
         return [
             'post_type' => [
                 'type' => 'select',
-                'label' => __('Post Type', $domain),
-                'description' => __('Select the post type for published content.', $domain),
+                'label' => __('Post Type', 'datamachine'),
+                'description' => __('Select the post type for published content.', 'datamachine'),
                 'options' => $post_type_options,
                 'default' => $config['post_type_default'],
             ],
             'post_status' => [
                 'type' => 'select',
-                'label' => __('Post Status', $domain),
-                'description' => __('Select the status for the newly created post.', $domain),
+                'label' => __('Post Status', 'datamachine'),
+                'description' => __('Select the status for the newly created post.', 'datamachine'),
                 'options' => [
-                    'draft' => __('Draft', $domain),
-                    'publish' => __('Publish', $domain),
-                    'pending' => __('Pending Review', $domain),
-                    'private' => __('Private', $domain),
+                    'draft' => __('Draft', 'datamachine'),
+                    'publish' => __('Publish', 'datamachine'),
+                    'pending' => __('Pending Review', 'datamachine'),
+                    'private' => __('Private', 'datamachine'),
                 ],
                 'default' => $config['post_status_default'],
             ],
             'post_author' => [
                 'type' => 'select',
-                'label' => __('Post Author', $domain),
-                'description' => __('Select which WordPress user to publish posts under.', $domain),
+                'label' => __('Post Author', 'datamachine'),
+                'description' => __('Select which WordPress user to publish posts under.', 'datamachine'),
                 'options' => $user_options,
                 'default' => $config['post_author_default'],
             ],
             'post_date_source' => [
                 'type' => 'select',
-                'label' => __('Post Date Setting', $domain),
-                'description' => __('Choose whether to use the original date from the source (if available) or the current date when publishing.', $domain),
+                'label' => __('Post Date Setting', 'datamachine'),
+                'description' => __('Choose whether to use the original date from the source (if available) or the current date when publishing.', 'datamachine'),
                 'options' => [
-                    'current_date' => __('Use Current Date', $domain),
-                    'source_date' => __('Use Source Date (if available)', $domain),
+                    'current_date' => __('Use Current Date', 'datamachine'),
+                    'source_date' => __('Use Source Date (if available)', 'datamachine'),
                 ],
                 'default' => $config['post_date_source_default'],
             ],

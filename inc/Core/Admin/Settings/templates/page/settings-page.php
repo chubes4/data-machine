@@ -13,14 +13,17 @@ if (!defined('WPINC')) {
     die;
 }
 
-// Get active tab from URL parameter or default to admin
-$active_tab = 'admin';
-if (isset($_GET['tab'])) {
-    $active_tab = sanitize_key($_GET['tab']);
+// Validate nonce for tab switching
+$datamachine_nonce = isset($_GET['_wpnonce']) ? sanitize_text_field(wp_unslash($_GET['_wpnonce'])) : '';
+if (empty($datamachine_nonce) || !wp_verify_nonce($datamachine_nonce, 'datamachine_settings_tab')) {
+    $datamachine_active_tab = 'admin';
+} else {
+    // Get active tab from URL parameter or default to admin
+    $datamachine_active_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'admin';
 }
-$valid_tabs = ['admin', 'agent', 'ai-providers'];
-if (!in_array($active_tab, $valid_tabs)) {
-    $active_tab = 'admin';
+$datamachine_valid_tabs = ['admin', 'agent', 'ai-providers'];
+if (!in_array($datamachine_active_tab, $datamachine_valid_tabs, true)) {
+    $datamachine_active_tab = 'admin';
 }
 
 ?>
@@ -29,16 +32,17 @@ if (!in_array($active_tab, $valid_tabs)) {
     
     <!-- Tab Navigation -->
     <h2 class="nav-tab-wrapper datamachine-nav-tab-wrapper">
-        <a href="?page=datamachine-settings&tab=admin" 
-           class="nav-tab <?php echo $active_tab === 'admin' ? 'nav-tab-active' : ''; ?>">
+        <?php $datamachine_tab_nonce = wp_create_nonce('datamachine_settings_tab'); ?>
+        <a href="?page=datamachine-settings&_wpnonce=<?php echo esc_attr($datamachine_tab_nonce); ?>&tab=admin" 
+           class="nav-tab <?php echo $datamachine_active_tab === 'admin' ? 'nav-tab-active' : ''; ?>">
             <?php esc_html_e('Admin', 'datamachine'); ?>
         </a>
-        <a href="?page=datamachine-settings&tab=agent"
-           class="nav-tab <?php echo $active_tab === 'agent' ? 'nav-tab-active' : ''; ?>">
+        <a href="?page=datamachine-settings&_wpnonce=<?php echo esc_attr($datamachine_tab_nonce); ?>&tab=agent"
+           class="nav-tab <?php echo $datamachine_active_tab === 'agent' ? 'nav-tab-active' : ''; ?>">
             <?php esc_html_e('Agent', 'datamachine'); ?>
         </a>
-        <a href="?page=datamachine-settings&tab=ai-providers"
-           class="nav-tab <?php echo $active_tab === 'ai-providers' ? 'nav-tab-active' : ''; ?>">
+        <a href="?page=datamachine-settings&_wpnonce=<?php echo esc_attr($datamachine_tab_nonce); ?>&tab=ai-providers"
+           class="nav-tab <?php echo $datamachine_active_tab === 'ai-providers' ? 'nav-tab-active' : ''; ?>">
             <?php esc_html_e('AI Providers', 'datamachine'); ?>
         </a>
     </h2>
@@ -47,15 +51,15 @@ if (!in_array($active_tab, $valid_tabs)) {
     <form method="post" action="options.php" class="datamachine-settings-form">
         <?php settings_fields('datamachine_settings'); ?>
         
-        <div id="datamachine-tab-admin" class="datamachine-tab-content <?php echo $active_tab === 'admin' ? 'active' : ''; ?>">
+        <div id="datamachine-tab-admin" class="datamachine-tab-content <?php echo $datamachine_active_tab === 'admin' ? 'active' : ''; ?>">
             <?php echo wp_kses(apply_filters('datamachine_render_template', '', 'page/admin-tab'), datamachine_allowed_html()); ?>
         </div>
         
-        <div id="datamachine-tab-agent" class="datamachine-tab-content <?php echo $active_tab === 'agent' ? 'active' : ''; ?>">
+        <div id="datamachine-tab-agent" class="datamachine-tab-content <?php echo $datamachine_active_tab === 'agent' ? 'active' : ''; ?>">
             <?php echo wp_kses(apply_filters('datamachine_render_template', '', 'page/agent-tab'), datamachine_allowed_html()); ?>
         </div>
 
-        <div id="datamachine-tab-ai-providers" class="datamachine-tab-content <?php echo $active_tab === 'ai-providers' ? 'active' : ''; ?>">
+        <div id="datamachine-tab-ai-providers" class="datamachine-tab-content <?php echo $datamachine_active_tab === 'ai-providers' ? 'active' : ''; ?>">
             <?php echo wp_kses(apply_filters('datamachine_render_template', '', 'page/ai-providers-tab'), datamachine_allowed_html()); ?>
         </div>
         
@@ -67,19 +71,19 @@ if (!in_array($active_tab, $valid_tabs)) {
     <!-- Pre-rendered Tool Config Modals (no AJAX loading) -->
     <?php
     // Get all configurable tools
-    $all_tools = apply_filters('datamachine_global_tools', []);
-    $configurable_tools = [];
-    foreach ($all_tools as $tool_name => $tool_config) {
-        if (!isset($tool_config['handler']) && ($tool_config['requires_config'] ?? false)) {
-            $configurable_tools[$tool_name] = $tool_config;
+    $datamachine_all_tools = apply_filters('datamachine_global_tools', []);
+    $datamachine_configurable_tools = [];
+    foreach ($datamachine_all_tools as $datamachine_tool_name => $datamachine_tool_config) {
+        if (!isset($datamachine_tool_config['handler']) && ($datamachine_tool_config['requires_config'] ?? false)) {
+            $datamachine_configurable_tools[$datamachine_tool_name] = $datamachine_tool_config;
         }
     }
 
     // Pre-render modal for each configurable tool
-    foreach ($configurable_tools as $tool_id => $tool_info):
-        $tool_config = apply_filters('datamachine_get_tool_config', [], $tool_id);
+    foreach ($datamachine_configurable_tools as $datamachine_tool_id => $datamachine_tool_info):
+        $datamachine_tool_config = apply_filters('datamachine_get_tool_config', [], $datamachine_tool_id);
         ?>
-        <div id="datamachine-modal-tool-config-<?php echo esc_attr($tool_id); ?>"
+        <div id="datamachine-modal-tool-config-<?php echo esc_attr($datamachine_tool_id); ?>"
              class="datamachine-modal"
              aria-hidden="true">
             <div class="datamachine-modal-overlay"></div>
@@ -88,7 +92,7 @@ if (!in_array($active_tab, $valid_tabs)) {
                     <h2 class="datamachine-modal-title">
                         <?php
                         /* translators: %s: tool name */
-                        echo esc_html(sprintf(__('Configure %s', 'datamachine'), ucwords(str_replace('_', ' ', $tool_id))));
+                        echo esc_html(sprintf(__('Configure %s', 'datamachine'), ucwords(str_replace('_', ' ', $datamachine_tool_id))));
                         ?>
                     </h2>
                     <button type="button" class="datamachine-modal-close" aria-label="<?php esc_attr_e('Close', 'datamachine'); ?>">
@@ -98,43 +102,43 @@ if (!in_array($active_tab, $valid_tabs)) {
                 <div class="datamachine-modal-body">
                     <?php
                     // Render tool config form
-                    if (isset($all_tools[$tool_id])) {
-                        $tool_class = $all_tools[$tool_id]['class'];
+                    if (isset($datamachine_all_tools[$datamachine_tool_id])) {
+                        $datamachine_tool_class = $datamachine_all_tools[$datamachine_tool_id]['class'];
 
-                        if (class_exists($tool_class) && method_exists($tool_class, 'get_config_fields')) {
-                            $tool_instance = new $tool_class();
-                            $config_fields = $tool_instance->get_config_fields();
+                        if (class_exists($datamachine_tool_class) && method_exists($datamachine_tool_class, 'get_config_fields')) {
+                            $datamachine_tool_instance = new $datamachine_tool_class();
+                            $datamachine_config_fields = $datamachine_tool_instance->get_config_fields();
 
-                            if (!empty($config_fields)):
+                            if (!empty($datamachine_config_fields)):
                                 ?>
                                 <div class="datamachine-tool-config-container">
-                                    <form id="datamachine-<?php echo esc_attr($tool_id); ?>-config-form" data-tool-id="<?php echo esc_attr($tool_id); ?>">
+                                    <form id="datamachine-<?php echo esc_attr($datamachine_tool_id); ?>-config-form" data-tool-id="<?php echo esc_attr($datamachine_tool_id); ?>">
                                         <table class="form-table">
                                             <tbody>
-                                                <?php foreach ($config_fields as $field_name => $field_config): ?>
+                                                <?php foreach ($datamachine_config_fields as $datamachine_field_name => $datamachine_field_config): ?>
                                                     <tr class="form-field">
                                                         <th scope="row">
-                                                            <label for="<?php echo esc_attr($tool_id . '_' . $field_name); ?>">
-                                                                <?php echo esc_html($field_config['label']); ?>
+                                                            <label for="<?php echo esc_attr($datamachine_tool_id . '_' . $datamachine_field_name); ?>">
+                                                                <?php echo esc_html($datamachine_field_config['label']); ?>
                                                             </label>
                                                         </th>
                                                         <td>
                                                             <?php
-                                                            $field_type = $field_config['type'] ?? 'text';
-                                                            $field_value = $tool_config[$field_name] ?? '';
-                                                            $field_placeholder = $field_config['placeholder'] ?? '';
-                                                            $field_required = !empty($field_config['required']);
+                                                            $datamachine_field_type = $datamachine_field_config['type'] ?? 'text';
+                                                            $datamachine_field_value = $datamachine_tool_config[$datamachine_field_name] ?? '';
+                                                            $datamachine_field_placeholder = $datamachine_field_config['placeholder'] ?? '';
+                                                            $datamachine_field_required = !empty($datamachine_field_config['required']);
                                                             ?>
-                                                            <input type="<?php echo esc_attr($field_type); ?>"
-                                                                   id="<?php echo esc_attr($tool_id . '_' . $field_name); ?>"
-                                                                   name="<?php echo esc_attr($field_name); ?>"
-                                                                   value="<?php echo esc_attr($field_value); ?>"
+                                                            <input type="<?php echo esc_attr($datamachine_field_type); ?>"
+                                                                   id="<?php echo esc_attr($datamachine_tool_id . '_' . $datamachine_field_name); ?>"
+                                                                   name="<?php echo esc_attr($datamachine_field_name); ?>"
+                                                                   value="<?php echo esc_attr($datamachine_field_value); ?>"
                                                                    class="regular-text"
-                                                                   placeholder="<?php echo esc_attr($field_placeholder); ?>"
-                                                                   <?php echo $field_required ? 'required' : ''; ?> />
-                                                            <?php if (!empty($field_config['description'])): ?>
+                                                                   placeholder="<?php echo esc_attr($datamachine_field_placeholder); ?>"
+                                                                   <?php echo $datamachine_field_required ? 'required' : ''; ?> />
+                                                            <?php if (!empty($datamachine_field_config['description'])): ?>
                                                                 <p class="description">
-                                                                    <?php echo esc_html($field_config['description']); ?>
+                                                                    <?php echo esc_html($datamachine_field_config['description']); ?>
                                                                 </p>
                                                             <?php endif; ?>
                                                         </td>
@@ -150,7 +154,7 @@ if (!in_array($active_tab, $valid_tabs)) {
                                         </button>
                                         <button type="button"
                                                 class="button button-primary datamachine-tool-config-save"
-                                                data-tool-id="<?php echo esc_attr($tool_id); ?>">
+                                                data-tool-id="<?php echo esc_attr($datamachine_tool_id); ?>">
                                             <?php esc_html_e('Save Configuration', 'datamachine'); ?>
                                         </button>
                                     </div>

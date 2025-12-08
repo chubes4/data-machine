@@ -11,9 +11,9 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 // Delete authentication data (unified datamachine_oauth system)
-$auth_providers = ['twitter', 'facebook', 'threads', 'googlesheets', 'reddit', 'bluesky', 'wordpress_publish', 'wordpress_posts'];
-foreach ($auth_providers as $provider) {
-    delete_option("{$provider}_auth_data");
+$datamachine_auth_providers = ['twitter', 'facebook', 'threads', 'googlesheets', 'reddit', 'bluesky', 'wordpress_publish', 'wordpress_posts'];
+foreach ($datamachine_auth_providers as $datamachine_provider) {
+    delete_option("{$datamachine_provider}_auth_data");
 }
 
 // Note: AI HTTP Client library shared API keys preserved for other plugins using the library
@@ -30,8 +30,8 @@ delete_option( 'datamachine_facebook_user_meta' );
 // Delete user meta for all users - WordPress compliant approach
 global $wpdb;
 // Use prepared statement for security and WordPress compliance
-$pattern = 'datamachine_%';
-$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE %s", $pattern ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+$datamachine_pattern = 'datamachine_%';
+$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE %s", $datamachine_pattern ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 
 // Clear any related caches
 wp_cache_flush();
@@ -41,16 +41,16 @@ wp_cache_flush();
 if ( current_user_can( 'delete_plugins' ) || defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
     // Drop tables in reverse dependency order
-    $tables_to_drop = [
+    $datamachine_tables_to_drop = [
         $wpdb->prefix . 'datamachine_processed_items',
         $wpdb->prefix . 'datamachine_jobs',
         $wpdb->prefix . 'datamachine_flows',
         $wpdb->prefix . 'datamachine_pipelines'
     ];
 
-    foreach ( $tables_to_drop as $table_name ) {
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange
-        $wpdb->query( $wpdb->prepare( "DROP TABLE IF EXISTS %i", $table_name ) );
+    foreach ( $datamachine_tables_to_drop as $datamachine_table_name ) {
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $datamachine_table_name ) );
     }
 
     // Clear all WordPress caches to ensure clean state

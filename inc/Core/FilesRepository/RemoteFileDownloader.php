@@ -67,12 +67,12 @@ class RemoteFileDownloader {
         }
 
         // Use WordPress native download function
-        require_once(ABSPATH . 'wp-admin/includes/file.php');
+        require_once ABSPATH . 'wp-admin/includes/file.php';
         $temp_file = download_url($url, $timeout);
 
         if (is_wp_error($temp_file)) {
             do_action('datamachine_log', 'error', 'RemoteFileDownloader: Failed to download remote file.', [
-                'url' => $url,
+                'url' => esc_url_raw($url),
                 'error' => $temp_file->get_error_message()
             ]);
             return null;
@@ -82,16 +82,29 @@ class RemoteFileDownloader {
         $safe_filename = sanitize_file_name($filename);
         $destination = "{$directory}/{$safe_filename}";
 
-        if (!copy($temp_file, $destination)) {
-            @unlink($temp_file);
+        if (!function_exists('WP_Filesystem')) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+
+        $filesystem_initialized = WP_Filesystem();
+
+        if ($filesystem_initialized) {
+            global $wp_filesystem;
+            $copied = $wp_filesystem->copy($temp_file, $destination, true);
+        } else {
+            $copied = copy($temp_file, $destination);
+        }
+
+        if (!$copied) {
+            wp_delete_file($temp_file);
             do_action('datamachine_log', 'error', 'RemoteFileDownloader: Failed to move downloaded file.', [
-                'url' => $url,
+                'url' => esc_url_raw($url),
                 'destination' => $destination
             ]);
             return null;
         }
 
-        @unlink($temp_file);
+        wp_delete_file($temp_file);
 
         // Generate public URL using FileStorage utility
         $file_url = $this->file_storage->get_public_url($destination);

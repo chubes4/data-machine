@@ -134,6 +134,7 @@ class Settings {
 		return new \WP_Error(
 			'no_tool_handler',
 			sprintf(
+				/* translators: %s: tool ID */
 				__('No configuration handler found for tool: %s', 'datamachine'),
 				$tool_id
 			),

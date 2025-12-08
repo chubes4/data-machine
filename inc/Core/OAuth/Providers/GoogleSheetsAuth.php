@@ -219,8 +219,10 @@ class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
      * Handle OAuth callback from Google
      */
     public function handle_oauth_callback() {
-        // Sanitize input
+        // Sanitize input - nonce verification handled via OAuth state parameter
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection
         $state = isset($_GET['state']) ? sanitize_text_field(wp_unslash($_GET['state'])) : '';
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection
         $code = isset($_GET['code']) ? sanitize_text_field(wp_unslash($_GET['code'])) : '';
 
         // Get configuration
@@ -230,7 +232,7 @@ class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         if (empty($client_id) || empty($client_secret)) {
             do_action('datamachine_log', 'error', 'Google Sheets OAuth Error: Missing configuration');
-            wp_redirect(add_query_arg([
+            wp_safe_redirect(add_query_arg([
                 'page' => 'datamachine-settings',
                 'auth_error' => 'missing_config',
                 'provider' => 'googlesheets'

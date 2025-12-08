@@ -149,11 +149,26 @@ function datamachine_enqueue_settings_assets($hook) {
 
 function datamachine_sanitize_settings($input) {
     $sanitized = [];
-    
+
+    // Engine mode flag
     $sanitized['engine_mode'] = !empty($input['engine_mode']);
-    
+
+    // Ensure defaults for missing arrays during activation
+    if (!isset($input['enabled_pages']) || !is_array($input['enabled_pages'])) {
+        $input['enabled_pages'] = [];
+    }
+
+    if (!isset($input['enabled_tools']) || !is_array($input['enabled_tools'])) {
+        $input['enabled_tools'] = [];
+    }
+
+    if (!isset($input['ai_provider_keys']) || !is_array($input['ai_provider_keys'])) {
+        $input['ai_provider_keys'] = [];
+    }
+
+    // Enabled admin pages (array-safe)
     $sanitized['enabled_pages'] = [];
-    if (is_array($input['enabled_pages'] ?? [])) {
+    if (!empty($input['enabled_pages']) && is_array($input['enabled_pages'])) {
         foreach ($input['enabled_pages'] as $slug => $value) {
             if ($value) {
                 $sanitized['enabled_pages'][sanitize_key($slug)] = true;
@@ -161,8 +176,9 @@ function datamachine_sanitize_settings($input) {
         }
     }
 
+    // Enabled tools (array-safe)
     $sanitized['enabled_tools'] = [];
-    if (is_array($input['enabled_tools'] ?? [])) {
+    if (!empty($input['enabled_tools']) && is_array($input['enabled_tools'])) {
         foreach ($input['enabled_tools'] as $tool_id => $value) {
             if ($value) {
                 $sanitized['enabled_tools'][sanitize_key($tool_id)] = true;
@@ -179,13 +195,16 @@ function datamachine_sanitize_settings($input) {
         }
     }
 
+    // Cleanup flag
     $sanitized['cleanup_job_data_on_failure'] = !empty($input['cleanup_job_data_on_failure']);
-    
+
+    // Global system prompt
     $sanitized['global_system_prompt'] = '';
     if (isset($input['global_system_prompt'])) {
         $sanitized['global_system_prompt'] = wp_unslash($input['global_system_prompt']);
     }
-    
+
+    // Site context toggle
     $sanitized['site_context_enabled'] = !empty($input['site_context_enabled']);
 
     // Default AI provider and model
@@ -200,7 +219,7 @@ function datamachine_sanitize_settings($input) {
     }
 
     // Handle AI provider API keys
-    if (isset($input['ai_provider_keys']) && is_array($input['ai_provider_keys'])) {
+    if (!empty($input['ai_provider_keys']) && is_array($input['ai_provider_keys'])) {
         $provider_keys = [];
         foreach ($input['ai_provider_keys'] as $provider => $key) {
             $provider_keys[sanitize_key($provider)] = sanitize_text_field($key);

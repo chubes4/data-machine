@@ -36,6 +36,29 @@ class FileCleanup {
     }
 
     /**
+     * Remove a directory using WordPress helpers
+     */
+    private function remove_directory(string $directory_path): bool {
+        if (!is_dir($directory_path)) {
+            return true;
+        }
+
+        if (!function_exists('wp_delete_directory')) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+
+        $deleted = wp_delete_directory($directory_path);
+
+        if (!$deleted) {
+            do_action('datamachine_log', 'error', 'FilesRepository: Failed to delete directory.', [
+                'directory_path' => $directory_path
+            ]);
+        }
+
+        return (bool) $deleted;
+    }
+
+    /**
      * Delete entire pipeline directory and all contents
      *
      * Removes pipeline directory including context files, flow directories,
@@ -51,34 +74,16 @@ class FileCleanup {
             return true;
         }
 
-        if (!function_exists('WP_Filesystem')) {
-            require_once(ABSPATH . 'wp-admin/includes/file.php');
+        $deleted = $this->remove_directory($pipeline_dir);
+
+        if ($deleted) {
+            do_action('datamachine_log', 'info', 'Pipeline directory deleted successfully.', [
+                'pipeline_id' => $pipeline_id,
+                'directory_path' => $pipeline_dir
+            ]);
         }
 
-        if (WP_Filesystem()) {
-            global $wp_filesystem;
-            $deleted = $wp_filesystem->rmdir($pipeline_dir, true);
-
-            if ($deleted) {
-                do_action('datamachine_log', 'info', 'Pipeline directory deleted successfully.', [
-                    'pipeline_id' => $pipeline_id,
-                    'directory_path' => $pipeline_dir
-                ]);
-            } else {
-                do_action('datamachine_log', 'error', 'Failed to delete pipeline directory.', [
-                    'pipeline_id' => $pipeline_id,
-                    'directory_path' => $pipeline_dir
-                ]);
-            }
-
-            return $deleted;
-        }
-
-        do_action('datamachine_log', 'error', 'WP_Filesystem unavailable for pipeline directory deletion.', [
-            'pipeline_id' => $pipeline_id
-        ]);
-
-        return false;
+        return $deleted;
     }
 
     /**
@@ -99,15 +104,12 @@ class FileCleanup {
             return 0;
         }
 
-        if (!function_exists('WP_Filesystem')) {
-            require_once(ABSPATH . 'wp-admin/includes/file.php');
+        if (!function_exists('wp_delete_directory')) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
         }
 
-        if (WP_Filesystem()) {
-            global $wp_filesystem;
-            if ($wp_filesystem->rmdir($job_dir, true)) {
-                return 1;
-            }
+        if (wp_delete_directory($job_dir)) {
+            return 1;
         }
 
         return 0;
@@ -142,16 +144,14 @@ class FileCleanup {
                 if (is_dir($files_dir)) {
                     $files = glob("{$files_dir}/*");
                     foreach ($files as $file) {
-                        if (is_file($file) && filemtime($file) < $cutoff_time) {
-                            if (wp_delete_file($file)) {
-                                $deleted_count++;
-                            }
+                        if (is_file($file) && filemtime($file) < $cutoff_time && wp_delete_file($file)) {
+                            $deleted_count++;
                         }
                     }
 
                     // Remove empty files directory
                     if (empty(glob("{$files_dir}/*"))) {
-                        rmdir($files_dir);
+                        $this->remove_directory($files_dir);
                     }
                 }
 
@@ -172,19 +172,16 @@ class FileCleanup {
                         }
 
                         if ($all_old && !empty($files)) {
-                            if (!function_exists('WP_Filesystem')) {
-                                require_once(ABSPATH . 'wp-admin/includes/file.php');
+                            if (!function_exists('wp_delete_directory')) {
+                                require_once ABSPATH . 'wp-admin/includes/file.php';
                             }
-                            if (WP_Filesystem()) {
-                                global $wp_filesystem;
-                                $wp_filesystem->rmdir($job_dir, true);
-                            }
+                            wp_delete_directory($job_dir);
                         }
                     }
 
                     // Remove empty jobs directory
                     if (empty(glob("{$jobs_dir}/*"))) {
-                        rmdir($jobs_dir);
+                        $this->remove_directory($jobs_dir);
                     }
                 }
             }

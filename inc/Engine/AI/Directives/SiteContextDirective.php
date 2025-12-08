@@ -90,13 +90,13 @@ class SiteContextDirective {
  * @param string $directive_class The directive class to use for site context
  * @return string The filtered directive class
  */
-$site_context_directive = apply_filters('datamachine_site_context_directive', SiteContextDirective::class);
+$datamachine_site_context_directive = apply_filters('datamachine_site_context_directive', SiteContextDirective::class);
 
 // Register the filtered directive for global context (applies to all AI agents - allows replacement by multisite plugin)
-if ($site_context_directive) {
-    add_filter('datamachine_directives', function($directives) use ($site_context_directive) {
+if ($datamachine_site_context_directive) {
+    add_filter('datamachine_directives', function($directives) use ($datamachine_site_context_directive) {
         $directives[] = [
-            'class' => $site_context_directive,
+            'class' => $datamachine_site_context_directive,
             'priority' => 50,
             'agent_types' => ['all']
         ];

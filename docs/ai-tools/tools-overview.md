@@ -38,11 +38,7 @@ Available only to chat AI agents via `datamachine_chat_tools` filter. These spec
 **ExecuteWorkflow** (`execute_workflow`) (@since v0.3.0)
 - **Purpose**: Execute complete multi-step workflows in a single tool call with automatic provider/model defaults injection
 - **Configuration**: None required
-- **Architecture**: Modular design at `/inc/Api/Chat/Tools/ExecuteWorkflow/`:
-  - **ExecuteWorkflowTool.php** - Main tool class with simplified step parameter structure
-  - **DocumentationBuilder.php** - Dynamically builds tool description from registered handlers
-  - **WorkflowValidator.php** - Validates step structure, handler existence, and step type correctness
-  - **DefaultsInjector.php** - Injects provider/model/post_author defaults from plugin settings
+- **Architecture**: Streamlined single-file implementation at `/inc/Api/Chat/Tools/ExecuteWorkflowTool.php` that delegates execution to the Execute API, with shared handler documentation utilities
 - **Use Cases**: Direct workflow execution, ephemeral workflows without pipeline creation
 
 **AddPipelineStep** (`add_pipeline_step`) (@since v0.4.3)
@@ -142,11 +138,7 @@ Global tools are located in `/inc/Engine/AI/Tools/Global/`:
 - `WordPressPostReader.php` - Single post analysis
 
 Chat-specific tools at `/inc/Api/Chat/Tools/`:
-- `ExecuteWorkflow/` - Direct workflow execution (modular architecture)
-  - `ExecuteWorkflowTool.php` - Main tool class
-  - `DocumentationBuilder.php` - Dynamic documentation generation
-  - `WorkflowValidator.php` - Step validation and error handling
-  - `DefaultsInjector.php` - Provider/model defaults injection
+- `ExecuteWorkflowTool.php` - Direct workflow execution with Execute API delegation
 - `AddPipelineStep.php` - Add steps to pipelines with flow synchronization
 - `ApiQuery.php` - REST API discovery and queries with comprehensive endpoint documentation
 - `ConfigureFlowSteps.php` - Flow step configuration (single and bulk modes)

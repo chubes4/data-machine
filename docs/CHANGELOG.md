@@ -5,6 +5,30 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-12-08
+
+### Milestone Release
+- **WordPress Plugin Check Compliance**: Complete code cleanup and modifications to pass WordPress plugin directory standards
+- **Testing Phase**: Version prepared for comprehensive testing prior to WordPress.org release
+
+### Enhanced
+- **Core Architecture**: Services layer refinements and function name standardization for better code organization
+- **API Improvements**: Enhanced Files API with expanded functionality, Jobs API updates, and improved endpoint consistency
+- **Chat Tools**: Updated ConfigureFlowSteps tool with improved bulk operations, ExecuteWorkflowTool enhancements, and ApiQuery refinements
+- **Database Operations**: Chat database improvements, job operations enhancements, and pipeline data handling updates
+- **OAuth System**: Authentication handler updates across Google Sheets, Reddit, Facebook, Threads, and Twitter providers
+- **File Management**: Enhanced FileCleanup and RemoteFileDownloader with improved error handling and validation
+
+### Changed
+- **Function Naming**: Standardized function names in main plugin file (datamachine_run_datamachine_plugin, datamachine_activate_plugin_defaults)
+- **Documentation**: Updated CLAUDE.md to reflect ConfigureFlowSteps tool improvements
+- **Admin Interface**: Settings page refinements and UI component updates for better user experience
+
+### Technical Details
+- **Code Changes**: 54 files modified with 707 insertions and 691 deletions
+- **Architecture**: Maintained backward compatibility while improving code quality and WordPress standards compliance
+- **Performance**: Optimized database queries and API operations for better reliability
+
 ## [0.5.8] - 2025-12-05
 
 ### Security

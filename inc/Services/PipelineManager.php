@@ -397,7 +397,8 @@ class PipelineManager {
 
         return [
             'message' => sprintf(
-                __('Pipeline "%1$s" deleted successfully. %2$d flows were also deleted.', 'datamachine'),
+                /* translators: 1: pipeline name, 2: number of flows deleted */
+                esc_html__('Pipeline "%1$s" deleted successfully. %2$d flows were also deleted.', 'datamachine'),
                 $pipeline_name,
                 $flow_count
             ),

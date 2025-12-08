@@ -72,7 +72,7 @@ class WordPressPublishHelper {
                 'error' => $attachment_id->get_error_message(),
                 'post_id' => $post_id
             ]);
-            @unlink($temp_file);
+            wp_delete_file($temp_file);
             return null;
         }
 

@@ -42,18 +42,20 @@ function datamachine_register_logs_admin_page_filters() {
             return;
         }
 
+        $nonce = isset($_POST['datamachine_logs_nonce']) ? sanitize_text_field(wp_unslash($_POST['datamachine_logs_nonce'])) : '';
+
         // Verify nonce
-        if (!wp_verify_nonce($_POST['datamachine_logs_nonce'] ?? '', 'datamachine_logs_action')) {
-            wp_die(__('Security check failed.', 'datamachine'));
+        if (!wp_verify_nonce($nonce, 'datamachine_logs_action')) {
+            wp_die(esc_html__('Security check failed.', 'datamachine'));
         }
 
         // Check user capability
         if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have permission to manage logs.', 'datamachine'));
+            wp_die(esc_html__('You do not have permission to manage logs.', 'datamachine'));
         }
 
         // Sanitize and validate log level
-        $log_level = sanitize_text_field($_POST['log_level'] ?? '');
+        $log_level = isset($_POST['log_level']) ? sanitize_text_field(wp_unslash($_POST['log_level'])) : '';
         $available_levels = array_keys(datamachine_get_available_log_levels());
 
         if (!in_array($log_level, $available_levels)) {
@@ -69,7 +71,9 @@ function datamachine_register_logs_admin_page_filters() {
         if ($updated) {
             add_action('admin_notices', function() use ($log_level) {
                 $level_display = datamachine_get_available_log_levels()[$log_level] ?? ucfirst($log_level);
-                echo '<div class="notice notice-success"><p>' . sprintf(esc_html__('Log level updated to %s.', 'datamachine'), esc_html($level_display)) . '</p></div>';
+                /* translators: %s: Selected log level. */
+                $message = sprintf(esc_html__('Log level updated to %s.', 'datamachine'), esc_html($level_display));
+                echo '<div class="notice notice-success"><p>' . esc_html($message) . '</p></div>';
             });
         } else {
             add_action('admin_notices', function() {

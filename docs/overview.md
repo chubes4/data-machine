@@ -31,7 +31,7 @@ Services are the single source of truth for REST endpoints, ensuring validation 
 - **Tool-first architecture** enables AI agents (pipeline and chat) to call tools that interact with handlers, external APIs, or workflow metadata.
 - **PromptBuilder + RequestBuilder** apply layered directives via the `datamachine_directives` filter so every request includes identity, context, and site-specific instructions.
 - **Global tools** (Google Search, Local Search, Web Fetch, WordPress Post Reader) are registered under `/inc/Engine/AI/Tools/` and available to all agents.
-- **Chat-specific tools** (ExecuteWorkflow, AddPipelineStep, ApiQuery, ConfigureFlowStep, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow, ExecuteWorkflow) orchestrate pipeline and flow management within conversations.
+- **Chat-specific tools** (ExecuteWorkflow, AddPipelineStep, ApiQuery, ConfigureFlowSteps, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow, ExecuteWorkflow) orchestrate pipeline and flow management within conversations.
 - **ToolParameters + ToolResultFinder** gather parameter metadata for tools and interpret results inside data packets to keep conversations consistent.
 
 ## Authentication & Security

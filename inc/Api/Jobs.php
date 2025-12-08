@@ -194,11 +194,16 @@ class Jobs {
 		$job = $db_jobs->get_job($job_id);
 
 		if (!$job) {
-			return new \WP_Error(
-				'job_not_found',
-				sprintf(__('Job %d not found.', 'datamachine'), $job_id),
-				['status' => 404]
-			);
+		return new \WP_Error(
+			'job_not_found',
+			sprintf(
+				/* translators: %d: job ID */
+				__('Job %d not found.', 'datamachine'),
+				$job_id
+			),
+			['status' => 404]
+		);
+
 		}
 
 		// Add display fields for timestamps
@@ -239,10 +244,11 @@ class Jobs {
 
 		$message_parts = [];
 		/* translators: %d: Number of jobs deleted */
-		$message_parts[] = sprintf(__('Deleted %d jobs', 'datamachine'), $result['jobs_deleted']);
+		/* translators: %d: number of jobs deleted */
+		$message_parts[] = sprintf(esc_html__('Deleted %d jobs', 'datamachine'), $result['jobs_deleted']);
 
 		if ($cleanup_processed && $result['processed_items_cleaned'] > 0) {
-			$message_parts[] = __('and their associated processed items', 'datamachine');
+			$message_parts[] = esc_html__('and their associated processed items', 'datamachine');
 		}
 
 		$message = implode(' ', $message_parts) . '.';

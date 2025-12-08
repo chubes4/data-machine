@@ -35,24 +35,25 @@ class Chat {
 	public static function create_table(): void {
 		global $wpdb;
 
-		$table_name = $wpdb->prefix . self::TABLE_NAME;
-		$charset_collate = $wpdb->get_charset_collate();
+        $table_name = self::get_escaped_table_name();
+        $charset_collate = $wpdb->get_charset_collate();
 
-		$sql = "CREATE TABLE {$table_name} (
-			session_id VARCHAR(50) NOT NULL,
-			user_id BIGINT(20) UNSIGNED NOT NULL,
-			messages LONGTEXT NOT NULL COMMENT 'JSON array of conversation messages',
-			metadata LONGTEXT NULL COMMENT 'JSON object for session metadata',
-			provider VARCHAR(50) NULL COMMENT 'AI provider (anthropic, openai, etc)',
-			model VARCHAR(100) NULL COMMENT 'AI model identifier',
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			expires_at DATETIME NULL COMMENT 'Auto-cleanup timestamp',
-			PRIMARY KEY  (session_id),
-			KEY user_id (user_id),
-			KEY created_at (created_at),
-			KEY expires_at (expires_at)
-		) {$charset_collate};";
+        $sql = "CREATE TABLE {$table_name} (
+            session_id VARCHAR(50) NOT NULL,
+            user_id BIGINT(20) UNSIGNED NOT NULL,
+            messages LONGTEXT NOT NULL COMMENT 'JSON array of conversation messages',
+            metadata LONGTEXT NULL COMMENT 'JSON object for session metadata',
+            provider VARCHAR(50) NULL COMMENT 'AI provider (anthropic, openai, etc)',
+            model VARCHAR(100) NULL COMMENT 'AI model identifier',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            expires_at DATETIME NULL COMMENT 'Auto-cleanup timestamp',
+            PRIMARY KEY  (session_id),
+            KEY user_id (user_id),
+            KEY created_at (created_at),
+            KEY expires_at (expires_at)
+        ) {$charset_collate};";
+
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta($sql);
@@ -73,6 +74,7 @@ class Chat {
 		$table_name = $wpdb->prefix . self::TABLE_NAME;
 		$query = $wpdb->prepare('SHOW TABLES LIKE %s', $table_name);
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
 		return $wpdb->get_var($query) === $table_name;
 	}
 
@@ -81,10 +83,25 @@ class Chat {
 	 *
 	 * @return string Full table name
 	 */
-	public static function get_table_name(): string {
-		global $wpdb;
-		return $wpdb->prefix . self::TABLE_NAME;
-	}
+    public static function get_table_name(): string {
+        global $wpdb;
+        return self::sanitize_table_name($wpdb->prefix . self::TABLE_NAME);
+    }
+
+    /**
+     * Sanitize table name to alphanumeric and underscore.
+     */
+    private static function sanitize_table_name(string $table_name): string {
+        return preg_replace('/[^A-Za-z0-9_]/', '', $table_name);
+    }
+
+    /**
+     * Get sanitized table name for queries.
+     */
+    private static function get_escaped_table_name(): string {
+        return esc_sql(self::get_table_name());
+    }
+
 
 	/**
 	 * Create new chat session
@@ -102,6 +119,7 @@ class Chat {
 		// Use GMT for expiration to match cleanup logic
 		$expires_at = gmdate('Y-m-d H:i:s', time() + (24 * HOUR_IN_SECONDS));
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$result = $wpdb->insert(
 			$table_name,
 			[
@@ -141,15 +159,18 @@ class Chat {
 	public function get_session(string $session_id): ?array {
 		global $wpdb;
 
-		$table_name = self::get_table_name();
+        $table_name = self::get_table_name();
 
-		$session = $wpdb->get_row(
-			$wpdb->prepare(
-				"SELECT * FROM {$table_name} WHERE session_id = %s",
-				$session_id
-			),
-			ARRAY_A
-		);
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+        $session = $wpdb->get_row(
+            $wpdb->prepare(
+                'SELECT * FROM %i WHERE session_id = %s',
+                $table_name,
+                $session_id
+            ),
+            ARRAY_A
+        );
+
 
 		if (!$session) {
 			return null;
@@ -213,6 +234,7 @@ class Chat {
 			$update_format[] = '%s';
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$result = $wpdb->update(
 			$table_name,
 			$update_data,
@@ -243,6 +265,7 @@ class Chat {
 
 		$table_name = self::get_table_name();
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$result = $wpdb->delete(
 			$table_name,
 			['session_id' => $session_id],
@@ -272,14 +295,17 @@ class Chat {
 	public function cleanup_expired_sessions(): int {
 		global $wpdb;
 
-		$table_name = self::get_table_name();
+        $table_name = self::get_table_name();
 
-		$deleted = $wpdb->query(
-			$wpdb->prepare(
-				"DELETE FROM {$table_name} WHERE expires_at IS NOT NULL AND expires_at < %s",
-				current_time('mysql', true)
-			)
-		);
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+        $deleted = $wpdb->query(
+            $wpdb->prepare(
+                'DELETE FROM %i WHERE expires_at IS NOT NULL AND expires_at < %s',
+                $table_name,
+                current_time('mysql', true)
+            )
+        );
+
 
 		if ($deleted > 0) {
 			do_action('datamachine_log', 'info', 'Cleaned up expired chat sessions', [

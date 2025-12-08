@@ -146,7 +146,7 @@ class TwitterAuth extends \DataMachine\Core\OAuth\BaseOAuth1Provider {
      */
     public function handle_oauth_callback() {
         if (!current_user_can('manage_options')) {
-            wp_redirect(add_query_arg('auth_error', 'twitter_permission_denied', admin_url('admin.php?page=datamachine-settings')));
+            wp_safe_redirect(add_query_arg('auth_error', 'twitter_permission_denied', admin_url('admin.php?page=datamachine-settings')));
             exit;
         }
 
@@ -156,7 +156,7 @@ class TwitterAuth extends \DataMachine\Core\OAuth\BaseOAuth1Provider {
 
         if (empty($api_key) || empty($api_secret)) {
             do_action('datamachine_log', 'error', 'Twitter OAuth Error: API Key/Secret missing during callback.');
-            wp_redirect(add_query_arg('auth_error', 'twitter_missing_app_keys', admin_url('admin.php?page=datamachine-settings')));
+            wp_safe_redirect(add_query_arg('auth_error', 'twitter_missing_app_keys', admin_url('admin.php?page=datamachine-settings')));
             exit;
         }
 

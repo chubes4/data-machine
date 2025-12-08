@@ -301,18 +301,19 @@ class Pipelines {
 		$offset = (int) ( $args['offset'] ?? 0 );
 
 		// Validate order direction
-		if ( ! in_array( $order, [ 'ASC', 'DESC' ] ) ) {
+		if ( ! in_array( $order, [ 'ASC', 'DESC' ], true ) ) {
 			$order = 'DESC';
 		}
 
 		// Validate orderby column
 		$allowed_orderby = [ 'pipeline_id', 'pipeline_name', 'created_at', 'updated_at' ];
-		if ( ! in_array( $orderby, $allowed_orderby ) ) {
+		if ( ! in_array( $orderby, $allowed_orderby, true ) ) {
 			$orderby = 'pipeline_id';
 		}
 
-		$query = sprintf( "SELECT * FROM %%i ORDER BY %s %s LIMIT %%d OFFSET %%d", $orderby, $order );
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		// $orderby and $order are validated against allowed values above
+		$query = sprintf( 'SELECT * FROM %%i ORDER BY %s %s LIMIT %%d OFFSET %%d', $orderby, $order );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$results = $this->wpdb->get_results( $this->wpdb->prepare( $query, $this->table_name, $per_page, $offset ), ARRAY_A );
 
 		foreach ($results as &$pipeline) {

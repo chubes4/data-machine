@@ -244,7 +244,11 @@ class PipelineSteps {
 				'step_data' => $step_data,
 				'created_type' => 'step'
 			],
-			'message' => sprintf(__('Step "%s" added successfully', 'datamachine'), $step_config['label'] ?? $step_type)
+			'message' => sprintf(
+				/* translators: %s: pipeline step label */
+				esc_html__('Step "%s" added successfully', 'datamachine'),
+				$step_config['label'] ?? $step_type
+			)
 		]);
 	}
 

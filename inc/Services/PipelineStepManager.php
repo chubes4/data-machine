@@ -247,7 +247,8 @@ class PipelineStepManager {
 
         return [
             'message' => sprintf(
-                __('Step deleted successfully from pipeline "%1$s". %2$d flows were affected.', 'datamachine'),
+                /* translators: 1: pipeline name, 2: number of flows affected */
+                esc_html__('Step deleted successfully from pipeline "%1$s". %2$d flows were affected.', 'datamachine'),
                 $pipeline_name,
                 $flow_count
             ),
@@ -352,6 +353,7 @@ class PipelineStepManager {
                 return new WP_Error(
                     'step_not_found',
                     sprintf(
+                        /* translators: %s: pipeline step ID */
                         __('Step %s not found in pipeline', 'datamachine'),
                         $pipeline_step_id
                     ),

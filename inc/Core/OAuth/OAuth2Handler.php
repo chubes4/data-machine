@@ -104,9 +104,12 @@ class OAuth2Handler {
         ?callable $token_transform_fn = null,
         ?callable $storage_fn = null
     ) {
-        // Sanitize input
+        // Sanitize input - nonce verification handled via OAuth state parameter
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection
         $code = isset($_GET['code']) ? sanitize_text_field(wp_unslash($_GET['code'])) : '';
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection
         $state = isset($_GET['state']) ? sanitize_text_field(wp_unslash($_GET['state'])) : '';
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection
         $error = isset($_GET['error']) ? sanitize_text_field(wp_unslash($_GET['error'])) : '';
 
         // Handle OAuth errors
@@ -242,7 +245,7 @@ class OAuth2Handler {
      * @return void
      */
     private function redirect_with_error(string $provider_key, string $error_code): void {
-        wp_redirect(add_query_arg([
+        wp_safe_redirect(add_query_arg([
             'page' => 'datamachine-settings',
             'auth_error' => $error_code,
             'provider' => $provider_key
@@ -257,7 +260,7 @@ class OAuth2Handler {
      * @return void
      */
     private function redirect_with_success(string $provider_key): void {
-        wp_redirect(add_query_arg([
+        wp_safe_redirect(add_query_arg([
             'page' => 'datamachine-settings',
             'auth_success' => '1',
             'provider' => $provider_key

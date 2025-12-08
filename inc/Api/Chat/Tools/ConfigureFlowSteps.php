@@ -28,18 +28,13 @@ class ConfigureFlowSteps {
 
     private function getToolDefinition(): array {
         $handler_docs = HandlerDocumentation::buildAllHandlersSections();
-        
-        $description = <<<DESC
-Configure flow steps with handlers or AI user messages. Supports single-step or bulk pipeline-scoped operations.
 
-MODES:
-- Single: Provide flow_step_id to configure one step
-- Bulk: Provide pipeline_id + (step_type and/or handler_slug) to configure all matching steps across all flows
-
-IMPORTANT: Only use handler_config fields documented below. Do not invent parameters.
-
-{$handler_docs}
-DESC;
+        $description = 'Configure flow steps with handlers or AI user messages. Supports single-step or bulk pipeline-scoped operations.' . "\n\n"
+            . 'MODES:' . "\n"
+            . '- Single: Provide flow_step_id to configure one step' . "\n"
+            . '- Bulk: Provide pipeline_id + (step_type and/or handler_slug) to configure all matching steps across all flows' . "\n\n"
+            . 'IMPORTANT: Only use handler_config fields documented below. Do not invent parameters.' . "\n\n"
+            . $handler_docs;
 
         return [
             'class' => self::class,
@@ -204,7 +199,7 @@ DESC;
 
         foreach ($flows as $flow) {
             $flow_id = $flow['flow_id'];
-            $flow_name = $flow['flow_name'] ?? 'Unnamed Flow';
+            $flow_name = $flow['flow_name'] ?? __('Unnamed Flow', 'datamachine');
             $flow_config = $flow['flow_config'] ?? [];
 
             foreach ($flow_config as $flow_step_id => $step_config) {

@@ -63,8 +63,7 @@ class ApiQuery {
 	 * @return string API documentation
 	 */
 	private function buildApiDocumentation(): string {
-		return <<<'DOC'
-Query Data Machine REST API for discovery, monitoring, and troubleshooting.
+		return 'Query Data Machine REST API for discovery, monitoring, and troubleshooting.
 
 ENDPOINTS:
 
@@ -114,7 +113,7 @@ POST /datamachine/v1/settings - Update settings
 GET /datamachine/v1/files - List uploaded files
 POST /datamachine/v1/files - Upload file
 DELETE /datamachine/v1/files/{filename} - Delete file
-DOC;
+';
 	}
 
 	/**
@@ -146,7 +145,7 @@ DOC;
 			];
 		}
 
-		$parsed = parse_url($endpoint);
+		$parsed = wp_parse_url($endpoint);
 		$path = $parsed['path'] ?? $endpoint;
 		$query_string = $parsed['query'] ?? '';
 

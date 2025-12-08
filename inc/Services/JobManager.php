@@ -211,8 +211,10 @@ class JobManager {
             $jobs_table = $wpdb->prefix . 'datamachine_jobs';
 
             if (!empty($criteria['failed'])) {
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
                 $job_ids_to_delete = $wpdb->get_col($wpdb->prepare("SELECT job_id FROM %i WHERE status = %s", $jobs_table, 'failed'));
             } elseif (!empty($criteria['all'])) {
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
                 $job_ids_to_delete = $wpdb->get_col($wpdb->prepare("SELECT job_id FROM %i", $jobs_table));
             }
         }

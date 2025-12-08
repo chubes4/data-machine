@@ -84,10 +84,15 @@ class OAuth1Handler {
                 'error' => $e->getMessage()
             ]);
 
-            return new \WP_Error(
-                'request_token_exception',
-                sprintf(__('OAuth exception: %s', 'datamachine'), $e->getMessage())
-            );
+                return new \WP_Error(
+                    'request_token_exception',
+                    sprintf(
+                        /* translators: %s: OAuth exception message */
+                        __('OAuth exception: %s', 'datamachine'),
+                        $e->getMessage()
+                    )
+                );
+
         }
     }
 
@@ -135,7 +140,16 @@ class OAuth1Handler {
         callable $account_details_fn,
         ?callable $storage_fn = null
     ) {
-        // Sanitize input
+        $nonce = isset($_GET['_wpnonce']) ? sanitize_text_field(wp_unslash($_GET['_wpnonce'])) : '';
+        if (empty($nonce) || !wp_verify_nonce($nonce, 'datamachine_oauth1_callback')) {
+            do_action('datamachine_log', 'error', 'OAuth1: Callback nonce verification failed', [
+                'provider' => $provider_key
+            ]);
+            $this->redirect_with_error($provider_key, 'invalid_nonce');
+            return new \WP_Error('invalid_nonce', __('Invalid OAuth callback nonce.', 'datamachine'));
+        }
+
+        // Sanitize input after nonce verification
         $denied = isset($_GET['denied']) ? sanitize_text_field(wp_unslash($_GET['denied'])) : '';
         $oauth_token = isset($_GET['oauth_token']) ? sanitize_text_field(wp_unslash($_GET['oauth_token'])) : '';
         $oauth_verifier = isset($_GET['oauth_verifier']) ? sanitize_text_field(wp_unslash($_GET['oauth_verifier'])) : '';
@@ -202,6 +216,7 @@ class OAuth1Handler {
 
                 $this->redirect_with_error($provider_key, 'access_token_failed');
                 return new \WP_Error('access_token_failed', __('Failed to get access token.', 'datamachine'));
+
             }
 
             // Build account data using provider-specific callback
@@ -292,7 +307,7 @@ class OAuth1Handler {
      * @return void
      */
     private function redirect_with_error(string $provider_key, string $error_code): void {
-        wp_redirect(add_query_arg([
+        wp_safe_redirect(add_query_arg([
             'page' => 'datamachine-settings',
             'auth_error' => $error_code,
             'provider' => $provider_key
@@ -307,7 +322,7 @@ class OAuth1Handler {
      * @return void
      */
     private function redirect_with_success(string $provider_key): void {
-        wp_redirect(add_query_arg([
+        wp_safe_redirect(add_query_arg([
             'page' => 'datamachine-settings',
             'auth_success' => '1',
             'provider' => $provider_key

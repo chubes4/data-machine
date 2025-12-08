@@ -142,13 +142,15 @@ class LogsManager {
 
         if ($jobId !== null) {
             $response['message'] = sprintf(
-                __('Retrieved %d log entries for job %d.', 'datamachine'),
+                /* translators: 1: number of log entries, 2: job ID */
+                __('Retrieved %1$d log entries for job %2$d.', 'datamachine'),
                 count($file_content),
                 $jobId
             );
         } else {
             $response['message'] = sprintf(
-                __('Loaded %d %s log entries.', 'datamachine'),
+                /* translators: 1: number of log entries, 2: log set label */
+                __('Loaded %1$d %2$s log entries.', 'datamachine'),
                 count($file_content),
                 $mode === 'recent' ? 'recent' : 'total'
             );

@@ -2,7 +2,7 @@
 
 Data Machine — WordPress plugin for automating content workflows with AI. Visual pipeline builder, chat agent, REST API, and extensibility via handlers and tools.
 
-Version: 0.5.8
+Version: 0.6.0
 
 This file provides a concise, present-tense technical reference for contributors and automated agents. For user-focused docs see datamachine/docs/.
 
@@ -40,7 +40,7 @@ AI integration
 - Prompt and directive management is centralized via a PromptBuilder with ordered directives (site, pipeline, flow, context).
 - Providers are pluggable and configured by site administrators (OpenAI, Anthropic, Google, Grok, OpenRouter).
 - Universal Engine architecture supports both Pipeline and Chat agents with shared AI infrastructure.
-- Specialized chat tools provide focused workflow management: AddPipelineStep, ApiQuery, ConfigureFlowStep, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow.
+- Specialized chat tools provide focused workflow management: AddPipelineStep, ApiQuery, ConfigureFlowSteps, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow.
 
 Database
 

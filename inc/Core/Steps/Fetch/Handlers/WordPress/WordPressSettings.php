@@ -51,7 +51,9 @@ class WordPressSettings extends FetchHandlerSettings {
         // Get dynamic taxonomy filter fields
         $taxonomy_fields = WordPressSettingsHandler::get_taxonomy_fields([
             'field_suffix' => '_filter',
-            'first_options' => [0 => __('All %s', 'datamachine')],
+            /* translators: %s: taxonomy label */
+            'first_options' => [0 => esc_html__('All %s', 'datamachine')],
+            /* translators: 1: taxonomy label, 2: taxonomy term label */
             'description_template' => __('Filter by specific %1$s or fetch from all %2$s.', 'datamachine')
         ]);
 

@@ -165,6 +165,9 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
     public function handle_oauth_callback() {
         $config = $this->get_config();
 
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection
+        $threads_code = isset($_GET['code']) ? sanitize_text_field(wp_unslash($_GET['code'])) : '';
+
         $this->oauth2->handle_callback(
             'threads',
             self::TOKEN_URL,
@@ -173,7 +176,7 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
                 'client_secret' => $config['app_secret'] ?? '',
                 'grant_type' => 'authorization_code',
                 'redirect_uri' => $this->get_callback_url(),
-                'code' => $_GET['code'] ?? ''
+                'code' => $threads_code
             ],
             function($long_lived_token_data) {
                 // Build account data from long-lived token

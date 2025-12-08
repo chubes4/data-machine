@@ -30,16 +30,15 @@ class ExecuteWorkflowTool {
         $type_slugs = !empty($step_types) ? array_keys($step_types) : ['fetch', 'ai', 'publish', 'update'];
         $types_list = implode('|', $type_slugs);
 
-        $description = <<<DESC
-Execute a content automation workflow.
+        $description = 'Execute a content automation workflow.
 
 IMPORTANT: Only use handler_config keys listed in the handler documentation below.
 
-{$handler_docs}
+' . $handler_docs . '
 TAXONOMY CONFIGURATION (wordpress_publish handler):
 For each taxonomy, use key: taxonomy_{taxonomy_name}_selection
 Values:
-- "skip": Don't assign this taxonomy
+- "skip": Don\'t assign this taxonomy
 - "ai_decides": AI assigns based on content at runtime
 - "Term Name": Pre-select this term (use exact term name from site context)
 
@@ -54,7 +53,7 @@ WORKFLOW PATTERNS:
 
 STEP FORMAT:
 {
-  "type": "{$types_list}",
+  "type": "' . $types_list . '",
   "handler_slug": "handler_slug",
   "handler_config": {...},
   "user_message": "...",
@@ -67,7 +66,7 @@ steps: [
   {"type": "ai", "user_message": "Summarize this content for social media"},
   {"type": "publish", "handler_slug": "wordpress_publish", "handler_config": {"post_type": "post", "post_status": "draft"}}
 ]
-DESC;
+';
 
         return [
             'class' => self::class,

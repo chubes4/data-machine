@@ -89,8 +89,10 @@ class RedditAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
      * Handle OAuth callback from Reddit
      */
     public function handle_oauth_callback() {
-        // Sanitize input
+        // Sanitize input - nonce verification handled via OAuth state parameter
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection
         $state = isset($_GET['state']) ? sanitize_key(wp_unslash($_GET['state'])) : '';
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection
         $code = isset($_GET['code']) ? sanitize_text_field(wp_unslash($_GET['code'])) : '';
 
         // Get configuration
@@ -101,7 +103,7 @@ class RedditAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         if (empty($client_id) || empty($client_secret) || empty($developer_username)) {
             do_action('datamachine_log', 'error', 'Reddit OAuth Error: Missing configuration');
-            wp_redirect(add_query_arg([
+            wp_safe_redirect(add_query_arg([
                 'page' => 'datamachine-settings',
                 'auth_error' => 'missing_config',
                 'provider' => 'reddit'

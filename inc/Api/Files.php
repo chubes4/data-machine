@@ -136,6 +136,7 @@ class Files {
 
         // Pipeline context files
         if ($pipeline_id) {
+            $pipeline_id = absint($pipeline_id);
             $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
             $pipeline = $db_pipelines->get_pipeline($pipeline_id);
             if (!$pipeline) {
@@ -146,11 +147,20 @@ class Files {
                 );
             }
 
-            $files = $file_storage->get_pipeline_files($pipeline_id, $pipeline['pipeline_name']);
+            $pipeline_name = sanitize_text_field($pipeline['pipeline_name'] ?? '');
+            if ($pipeline_name === '') {
+                return new WP_Error(
+                    'invalid_pipeline_name',
+                    __('Invalid pipeline name.', 'datamachine'),
+                    ['status' => 400]
+                );
+            }
+
+            $files = $file_storage->get_pipeline_files($pipeline_id, $pipeline_name);
 
             return rest_ensure_response([
                 'success' => true,
-                'data' => $files
+                'data' => array_map([self::class, 'sanitize_file_entry'], $files)
             ]);
         }
 
@@ -184,7 +194,7 @@ class Files {
 
             return rest_ensure_response([
                 'success' => true,
-                'data' => $files
+                'data' => array_map([self::class, 'sanitize_file_entry'], $files)
             ]);
         }
 
@@ -246,7 +256,6 @@ class Files {
             );
         }
 
-        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- tmp_name is validated below via is_uploaded_file()
         $tmp_name = $uploaded['tmp_name'] ?? '';
         if (empty($tmp_name) || !is_uploaded_file($tmp_name)) {
             return new WP_Error(
@@ -256,9 +265,20 @@ class Files {
             );
         }
 
+        $file_name = sanitize_file_name($uploaded['name'] ?? '');
+        $file_type = sanitize_mime_type($uploaded['type'] ?? '');
+
+        if ($file_name === '') {
+            return new WP_Error(
+                'invalid_file_name',
+                __('Invalid file name.', 'datamachine'),
+                ['status' => 400]
+            );
+        }
+
         $file = [
-            'name' => sanitize_file_name($uploaded['name'] ?? ''),
-            'type' => sanitize_mime_type($uploaded['type'] ?? ''),
+            'name' => $file_name,
+            'type' => $file_type,
             'tmp_name' => $tmp_name,
             'error' => $upload_error,
             'size' => intval($uploaded['size'] ?? 0),
@@ -278,13 +298,15 @@ class Files {
 
         // PIPELINE CONTEXT
         if ($pipeline_id) {
+            $pipeline_id = absint($pipeline_id);
             $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
             $context_files = $db_pipelines->get_pipeline_context_files($pipeline_id);
+            $uploaded_files = $context_files['uploaded_files'] ?? [];
 
             return rest_ensure_response([
                 'success' => true,
                 'data' => [
-                    'files' => $context_files['uploaded_files'] ?? [],
+                    'files' => is_array($uploaded_files) ? array_map([self::class, 'sanitize_file_entry'], $uploaded_files) : [],
                     'scope' => 'pipeline'
                 ]
             ]);
@@ -301,24 +323,41 @@ class Files {
                 );
             }
 
-            $context = self::get_file_context($parts['flow_id']);
-            $files = $storage ? $storage->get_all_files($context) : [];
+            $context = self::get_file_context((int) $parts['flow_id']);
+
+            $stored = $storage ? $storage->store_file($file['tmp_name'], $file['name'], $context) : false;
+
+            if (!$stored) {
+                return new WP_Error(
+                    'file_store_failed',
+                    __('Failed to store file.', 'datamachine'),
+                    ['status' => 500]
+                );
+            }
+
+            $files = $storage->get_all_files($context);
 
             return rest_ensure_response([
                 'success' => true,
                 'data' => [
-                    'files' => $files,
+                    'files' => array_map([self::class, 'sanitize_file_entry'], $files),
                     'scope' => 'flow'
                 ]
             ]);
         }
+
+        return new WP_Error(
+            'invalid_request',
+            __('Invalid file upload request.', 'datamachine'),
+            ['status' => 400]
+        );
     }
 
     /**
      * Delete file (flow or pipeline context)
      */
     public static function delete_file(WP_REST_Request $request) {
-        $filename = sanitize_file_name($request['filename']);
+        $filename = sanitize_file_name(wp_unslash($request['filename']));
         $flow_step_id = $request->get_param('flow_step_id');
         $pipeline_id = $request->get_param('pipeline_id');
 
@@ -334,14 +373,16 @@ class Files {
 
         // PIPELINE CONTEXT
         if ($pipeline_id) {
+            $pipeline_id = absint($pipeline_id);
             $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
             $context_files = $db_pipelines->get_pipeline_context_files($pipeline_id);
             $uploaded_files = $context_files['uploaded_files'] ?? [];
 
             foreach ($uploaded_files as $index => $file) {
-                if ($file['original_name'] === $filename) {
-                    if (file_exists($file['persistent_path'])) {
-                        wp_delete_file($file['persistent_path']);
+                if (($file['original_name'] ?? '') === $filename) {
+                    $persistent_path = $file['persistent_path'] ?? '';
+                    if ($persistent_path && file_exists($persistent_path)) {
+                        wp_delete_file($persistent_path);
                     }
                     unset($uploaded_files[$index]);
                     break;
@@ -359,7 +400,7 @@ class Files {
             ]);
         }
 
-        // FLOW FILES
+        // FLOW CONTEXT
         if ($flow_step_id) {
             $parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
             if (!$parts || empty($parts['flow_id'])) {
@@ -370,16 +411,22 @@ class Files {
                 );
             }
 
-            $context = self::get_file_context($parts['flow_id']);
+            $context = self::get_file_context((int) $parts['flow_id']);
             $deleted = $storage ? $storage->delete_file($filename, $context) : false;
 
             return rest_ensure_response([
-                'success' => $deleted,
+                'success' => (bool) $deleted,
                 'data' => [
                     'scope' => 'flow'
                 ]
             ]);
         }
+
+        return new WP_Error(
+            'invalid_request',
+            __('Invalid file delete request.', 'datamachine'),
+            ['status' => 400]
+        );
     }
 
     /**
@@ -402,6 +449,26 @@ class Files {
     }
 
     /**
+     * Normalize and escape file response entry.
+     */
+    private static function sanitize_file_entry(array $file): array {
+        $sanitized = $file;
+        if (isset($sanitized['filename'])) {
+            $sanitized['filename'] = sanitize_file_name($sanitized['filename']);
+        }
+        if (isset($sanitized['original_name'])) {
+            $sanitized['original_name'] = sanitize_file_name($sanitized['original_name']);
+        }
+        if (isset($sanitized['url'])) {
+            $sanitized['url'] = esc_url_raw($sanitized['url']);
+        }
+        if (isset($sanitized['size'])) {
+            $sanitized['size'] = esc_html(size_format((int) $sanitized['size']));
+        }
+        return $sanitized;
+    }
+
+    /**
      * Validate uploaded file using WordPress native security functions
      *
      * @throws \Exception When validation fails
@@ -409,34 +476,34 @@ class Files {
     private static function validate_file_with_wordpress(array $file): void {
         $file_size = filesize($file['tmp_name']);
         if ($file_size === false) {
-            throw new \Exception(__('Cannot determine file size.', 'datamachine'));
+            throw new \Exception(esc_html__('Cannot determine file size.', 'datamachine'));
         }
 
         $max_file_size = wp_max_upload_size();
         if ($file_size > $max_file_size) {
             throw new \Exception(sprintf(
                 /* translators: %1$s: Current file size, %2$s: Maximum allowed file size */
-                __('File too large: %1$s. Maximum allowed size: %2$s', 'datamachine'),
-                size_format($file_size),
-                size_format($max_file_size)
+                esc_html__('File too large: %1$s. Maximum allowed size: %2$s', 'datamachine'),
+                esc_html(size_format($file_size)),
+                esc_html(size_format($max_file_size))
             ));
         }
 
         // Use WordPress's native file type validation
         $wp_filetype = wp_check_filetype($file['name']);
         if (!$wp_filetype['type']) {
-            throw new \Exception(__('File type not allowed.', 'datamachine'));
+            throw new \Exception(esc_html__('File type not allowed.', 'datamachine'));
         }
 
         // Additional path traversal protection (WordPress style)
         $filename = sanitize_file_name($file['name']);
         if ($filename !== $file['name']) {
-            throw new \Exception(__('Invalid file name detected.', 'datamachine'));
+            throw new \Exception(esc_html__('Invalid file name detected.', 'datamachine'));
         }
 
         // Check for path traversal attempts
         if (strpos($file['name'], '..') !== false || strpos($file['name'], '/') !== false || strpos($file['name'], '\\') !== false) {
-            throw new \Exception(__('Invalid file name detected.', 'datamachine'));
+            throw new \Exception(esc_html__('Invalid file name detected.', 'datamachine'));
         }
 
         // Verify MIME type matches file extension (additional security layer)
@@ -456,7 +523,7 @@ class Files {
                                        in_array($detected_mime, $allowed_mime_variations[$wp_filetype['type']], true);
 
                 if (!$is_allowed_variation) {
-                    throw new \Exception(__('File content does not match file type.', 'datamachine'));
+                    throw new \Exception(esc_html__('File content does not match file type.', 'datamachine'));
                 }
             }
         }

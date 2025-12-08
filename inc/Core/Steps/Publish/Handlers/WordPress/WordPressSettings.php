@@ -48,9 +48,10 @@ class WordPressSettings extends PublishHandlerSettings {
         $taxonomy_fields = WordPressSettingsHandler::get_taxonomy_fields([
             'field_suffix' => '_selection',
             'first_options' => [
-                'skip' => __('Skip', 'datamachine'),
-                'ai_decides' => __('AI Decides', 'datamachine')
+                'skip' => esc_html__('Skip', 'datamachine'),
+                'ai_decides' => esc_html__('AI Decides', 'datamachine')
             ],
+            /* translators: 1: taxonomy label, 2: taxonomy term label */
             'description_template' => __('Configure %1$s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'datamachine')
         ]);
 

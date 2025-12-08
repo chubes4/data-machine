@@ -108,20 +108,21 @@ class JobsOperations {
         $per_page = (int) ($args['per_page'] ?? 20);
         $offset = (int) ($args['offset'] ?? 0);
         
-        if (!in_array($order, ['ASC', 'DESC'])) {
+        if (!in_array($order, ['ASC', 'DESC'], true)) {
             $order = 'DESC';
         }
         
         $allowed_orderby = ['j.job_id', 'j.pipeline_id', 'j.flow_id', 'j.status', 'j.completed_at', 'p.pipeline_name', 'f.flow_name'];
-        if (!in_array($orderby, $allowed_orderby)) {
+        if (!in_array($orderby, $allowed_orderby, true)) {
             $orderby = 'j.job_id';
         }
         
         $pipelines_table = $this->wpdb->prefix . 'datamachine_pipelines';
         $flows_table = $this->wpdb->prefix . 'datamachine_flows';
         
+        // $orderby and $order are validated against allowed values above; table names are from wpdb prefix
         $sql = "SELECT j.*, p.pipeline_name, f.flow_name FROM {$this->table_name} j LEFT JOIN {$pipelines_table} p ON j.pipeline_id = p.pipeline_id LEFT JOIN {$flows_table} f ON j.flow_id = f.flow_id ORDER BY $orderby $order";
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
         $results = $this->wpdb->get_results( $this->wpdb->prepare( $sql . " LIMIT %d OFFSET %d", $per_page, $offset ), ARRAY_A );
 
         return $results ?: [];

@@ -71,13 +71,16 @@ if (!defined('WPINC')) {
             <div class="datamachine-modal-body">
                 <?php
                 // Get all pipelines for the dropdown
-                $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+                $datamachine_db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 
-                $pipelines = [];
-                $pipelines_list = $db_pipelines->get_pipelines_list();
-                foreach ($pipelines_list as $pipeline) {
-                    $pipelines[$pipeline['pipeline_id']] = $pipeline['pipeline_name'];
+                $datamachine_pipelines = [];
+                $datamachine_pipelines_list = $datamachine_db_pipelines->get_pipelines_list();
+                foreach ($datamachine_pipelines_list as $datamachine_pipeline) {
+                    $datamachine_pipelines[$datamachine_pipeline['pipeline_id']] = $datamachine_pipeline['pipeline_name'];
                 }
+
+                $datamachine_pipelines_dropdown = $datamachine_pipelines;
+                $datamachine_pipelines_for_table = $datamachine_pipelines_list;
                 ?>
 
                 <div class="datamachine-jobs-modal-content datamachine-jobs-admin-modal">
@@ -112,11 +115,12 @@ if (!defined('WPINC')) {
                                 </label>
                                 <select id="datamachine-clear-pipeline-select" name="pipeline_id" class="regular-text">
                                     <option value=""><?php esc_html_e('— Select a Pipeline —', 'datamachine'); ?></option>
-                                    <?php foreach ($pipelines as $pipeline_id => $pipeline_name): ?>
-                                        <option value="<?php echo esc_attr($pipeline_id); ?>">
-                                            <?php echo esc_html($pipeline_name); ?>
-                                        </option>
-                                    <?php endforeach; ?>
+                            <?php foreach ($datamachine_pipelines as $datamachine_pipeline_id => $datamachine_pipeline_name): ?>
+                                <option value="<?php echo esc_attr($datamachine_pipeline_id); ?>">
+                                    <?php echo esc_html($datamachine_pipeline_name); ?>
+                                </option>
+                            <?php endforeach; ?>
+
                                 </select>
                                 <p class="description">
                                     <?php esc_html_e('All processed items for ALL flows in this pipeline will be cleared.', 'datamachine'); ?>

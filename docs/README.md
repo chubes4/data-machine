@@ -1,6 +1,6 @@
 # Data Machine Documentation
 
-Complete user documentation for Data Machine (v0.5.6), the AI-first WordPress plugin that combines a visual pipeline builder, conversational chat agent, REST API, and handler/tool extensibility under a single workflow engine.
+Complete user documentation for Data Machine (v0.5.8), the AI-first WordPress plugin that combines a visual pipeline builder, conversational chat agent, REST API, and handler/tool extensibility under a single workflow engine.
 
 ## Quick Navigation
 
@@ -35,7 +35,7 @@ Complete user documentation for Data Machine (v0.5.6), the AI-first WordPress pl
 - **Tools Overview**: Global and context-aware tools available to AI agents.
 - **Execute Workflow**: Modular execution of multi-step workflows from the chat toolset.
 - **Global Tools**: Google Search, Local Search, Web Fetch, WordPress Post Reader, and others used across agents.
-- **Chat Tools**: AddPipelineStep, ApiQuery, ConfigureFlowStep, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow, and other workflow management tools.
+- **Chat Tools**: AddPipelineStep, ApiQuery, ConfigureFlowSteps, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow, and other workflow management tools.
 
 ### API Reference
 - **API Overview**: Catalog of REST endpoints backed by the services layer.

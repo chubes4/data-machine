@@ -68,7 +68,7 @@ abstract class SettingsHandler {
                 sprintf(
                     /* translators: %s: Field key */
                     esc_html__('%s is required.', 'datamachine'),
-                    $key
+                    esc_html($key)
                 )
             );
         }

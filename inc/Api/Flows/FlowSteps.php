@@ -275,7 +275,12 @@ class FlowSteps {
 			$service = new \DataMachine\Core\Steps\Settings\SettingsDisplayService();
 			$handler_settings_display = $service->getFieldState($handler_slug, $handler_settings);
 
-			$message = sprintf(__('Handler "%s" settings saved successfully.', 'datamachine'), $handler_info['label'] ?? $handler_slug);
+            $message = sprintf(
+                /* translators: %s: handler label */
+                esc_html__('Handler "%s" settings saved successfully.', 'datamachine'),
+                $handler_info['label'] ?? $handler_slug
+            );
+
 
 			return rest_ensure_response([
 				'success' => true,

@@ -123,8 +123,6 @@ class Logs {
 	 * DELETE /datamachine/v1/logs
 	 */
  	public static function handle_clear_logs($request) {
- 		error_log('Data Machine: Logs cleared via REST API by user ' . wp_get_current_user()->user_login);
-
  		LogsManager::clear();
 
 		return rest_ensure_response([
@@ -183,7 +181,8 @@ class Logs {
 			'success' => true,
 			'level' => $new_level,
 			'message' => sprintf(
-				__('Log level updated to %s.', 'datamachine'),
+				/* translators: %s: log level label */
+				esc_html__('Log level updated to %s.', 'datamachine'),
 				$level_display
 			)
 		]);

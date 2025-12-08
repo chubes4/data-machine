@@ -4,6 +4,7 @@
 .github/
 .DS_Store
 *.log
+.eslintrc.js
 
 # Build system (exclude build files but not the final product)
 build.sh

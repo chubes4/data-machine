@@ -3,7 +3,7 @@
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/datamachine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:           0.5.8
+ * Version:           0.6.0
  * Requires at least: 6.2
  * Requires PHP:     8.0
  * Author:          Chris Huber
@@ -20,7 +20,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.5.8' );
+define( 'DATAMACHINE_VERSION', '0.6.0' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -38,7 +38,7 @@ if ( ! class_exists( 'ActionScheduler' ) ) {
 }
 
 
-function run_datamachine() {
+function datamachine_run_datamachine_plugin() {
 
 	// Set Action Scheduler timeout to 10 minutes (600 seconds) for large tasks
 	add_filter('action_scheduler_timeout_period', function() { return 600; });
@@ -69,8 +69,8 @@ function run_datamachine() {
 
 
 // Plugin activation hook to initialize default settings
-register_activation_hook(__FILE__, 'datamachine_activate');
-function datamachine_activate() {
+register_activation_hook(__FILE__, 'datamachine_activate_plugin_defaults');
+function datamachine_activate_plugin_defaults() {
     $tool_manager = new \DataMachine\Engine\AI\Tools\ToolManager();
     $opt_out_defaults = $tool_manager->get_opt_out_defaults();
 
@@ -85,7 +85,7 @@ function datamachine_activate() {
     add_option('datamachine_settings', $default_settings);
 }
 
-add_action('plugins_loaded', 'run_datamachine', 20);
+add_action('plugins_loaded', 'datamachine_run_datamachine_plugin', 20);
 
 /**
  * Load and instantiate all handlers - they self-register via constructors.
@@ -144,13 +144,13 @@ add_filter( 'upload_mimes', 'datamachine_allow_json_upload' );
 
 add_action('update_option_datamachine_settings', [\DataMachine\Core\PluginSettings::class, 'clearCache']);
 
-register_activation_hook( __FILE__, 'activate_datamachine' );
+register_activation_hook( __FILE__, 'datamachine_activate_datamachine_tables' );
 register_deactivation_hook( __FILE__, 'datamachine_deactivate_plugin' );
 
 function datamachine_deactivate_plugin() {
 }
 
-function activate_datamachine() {
+function datamachine_activate_datamachine_tables() {
 
 	$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 	$db_pipelines->create_table();
@@ -170,10 +170,7 @@ function activate_datamachine() {
 	$upload_dir = wp_upload_dir();
 	$log_dir = $upload_dir['basedir'] . DATAMACHINE_LOG_DIR;
 	if (!file_exists($log_dir)) {
-		$created = wp_mkdir_p($log_dir);
-		if (!$created) {
-			error_log('Data Machine: Failed to create log directory during activation: ' . $log_dir);
-		}
+		wp_mkdir_p($log_dir);
 	}
 
 	$timeout = defined( 'MINUTE_IN_SECONDS' ) ? 5 * MINUTE_IN_SECONDS : 5 * 60;

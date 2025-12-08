@@ -1,14 +1,14 @@
 === Data Machine ===
 Contributors: extrachill
-Tags: ai, automation, content, workflow, pipeline, chat
+Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
-Tested up to: 6.8
+Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.5.8
+Stable tag: 0.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-AI-first WordPress plugin for content processing workflows with visual pipeline builder, conversational chat interface, REST API, and multi-provider AI integration.
+AI-first WordPress plugin for visual pipeline automation, chat, and REST API control.
 
 == Description ==
 
