@@ -319,7 +319,7 @@ Major update with REST API, Chat interface, and performance improvements. Includ
 
 == Developer Documentation ==
 
-For technical specifications, architecture details, and development guides, see the CLAUDE.md file included with the plugin or visit the GitHub repository.
+For technical specifications, architecture details, and development guides, see the AGENTS.md file included with the plugin or visit the GitHub repository.
 
 **REST API Documentation:** Available in docs/api/index.md
 

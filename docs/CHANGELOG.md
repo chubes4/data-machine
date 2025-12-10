@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Function Naming**: Standardized function names in main plugin file (datamachine_run_datamachine_plugin, datamachine_activate_plugin_defaults)
-- **Documentation**: Updated CLAUDE.md to reflect ConfigureFlowSteps tool improvements
+- **Documentation**: Updated AGENTS.md to reflect ConfigureFlowSteps tool improvements
 - **Admin Interface**: Settings page refinements and UI component updates for better user experience
 
 ### Technical Details

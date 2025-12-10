@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 Data Machine — WordPress plugin for automating content workflows with AI. Visual pipeline builder, chat agent, REST API, and extensibility via handlers and tools.
 

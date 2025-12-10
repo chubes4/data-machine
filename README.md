@@ -60,5 +60,5 @@ All data flows through `/wp-json/datamachine/v1/`, exposing endpoints for auth, 
 
 ## Additional resources
 
-- [CLAUDE.md](CLAUDE.md) provides a concise reference for contributors.
+- [AGENTS.md](AGENTS.md) provides a concise reference for contributors.
 - `/docs/` houses user-facing documentation covering architecture, handlers, AI tools, admin interface guidance, and API references.
