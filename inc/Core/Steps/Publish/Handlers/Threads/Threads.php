@@ -62,7 +62,8 @@ class Threads extends PublishHandler {
                     ];
                 }
                 return $tools;
-            }
+            },
+            'threads'
         );
     }
 

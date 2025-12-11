@@ -45,16 +45,20 @@ trait HandlerRegistrationTrait {
         ?callable $aiToolCallback = null,
         ?string $authProviderKey = null
     ): void {
+        // Compute auth provider key for both handler metadata and auth registration
+        $provider_key = $authProviderKey ?? $slug;
+
         // Handler registration
         add_filter('datamachine_handlers', function($handlers, $step_type = null)
-            use ($slug, $type, $class, $label, $description, $requiresAuth) {
+            use ($slug, $type, $class, $label, $description, $requiresAuth, $provider_key) {
             if ($step_type === null || $step_type === $type) {
                 $handlers[$slug] = [
                     'type' => $type,
                     'class' => $class,
                     'label' => $label,
                     'description' => $description,
-                    'requires_auth' => $requiresAuth
+                    'requires_auth' => $requiresAuth,
+                    'auth_provider_key' => $requiresAuth ? $provider_key : null,
                 ];
             }
             return $handlers;
@@ -62,9 +66,6 @@ trait HandlerRegistrationTrait {
 
         // Auth provider registration
         if ($authClass && $requiresAuth) {
-            // Use custom auth provider key if provided, otherwise default to handler slug
-            $provider_key = $authProviderKey ?? $slug;
-
             add_filter('datamachine_auth_providers', function($providers, $step_type = null)
                 use ($provider_key, $authClass, $type) {
                 if ($step_type === null || $step_type === $type) {

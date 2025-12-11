@@ -72,6 +72,20 @@ class Auth {
 				],
 			]
 		]);
+
+		register_rest_route('datamachine/v1', '/auth/(?P<handler_slug>[a-zA-Z0-9_\-]+)/oauth-url', [
+			'methods' => 'GET',
+			'callback' => [self::class, 'handle_get_oauth_url'],
+			'permission_callback' => [self::class, 'check_permission'],
+			'args' => [
+				'handler_slug' => [
+					'required' => true,
+					'type' => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+					'description' => __('Handler identifier', 'datamachine'),
+				],
+			]
+		]);
 	}
 
 	/**
@@ -199,6 +213,30 @@ class Auth {
 		// Check authentication status
 		$is_authenticated = $auth_instance->is_authenticated();
 
+		// Get masked config status regardless of auth state
+		$config_status = [];
+		$raw_config = [];
+		
+		if (method_exists($auth_instance, 'get_config')) {
+			$raw_config = $auth_instance->get_config();
+		} elseif (method_exists($auth_instance, 'get_account')) {
+			$raw_config = $auth_instance->get_account();
+		}
+
+		if (!empty($raw_config) && is_array($raw_config)) {
+			foreach ($raw_config as $key => $value) {
+				if (!empty($value) && is_string($value)) {
+					$length = strlen($value);
+					// Simple masking: show last 4 chars if long enough
+					if ($length > 8) {
+						$config_status[$key] = str_repeat('•', $length - 4) . substr($value, -4);
+					} else {
+						$config_status[$key] = '••••••••';
+					}
+				}
+			}
+		}
+
 		if ($is_authenticated) {
 			// Get account details for success response
 			$account_details = null;
@@ -211,6 +249,7 @@ class Auth {
 				'data' => [
 					'authenticated' => true,
 					'account_details' => $account_details,
+					'config_status' => $config_status,
 					'handler_slug' => $handler_slug
 				]
 			]);
@@ -230,6 +269,7 @@ class Auth {
 						'error' => true,
 						'error_code' => 'oauth_failed',
 						'error_message' => $error_transient,
+						'config_status' => $config_status,
 						'handler_slug' => $handler_slug
 					]
 				]);
@@ -251,6 +291,7 @@ class Auth {
 						'data' => [
 							'authenticated' => true,
 							'account_details' => $account_details,
+							'config_status' => $config_status,
 							'handler_slug' => $handler_slug
 						]
 					]);
@@ -263,9 +304,75 @@ class Auth {
 				'data' => [
 					'authenticated' => false,
 					'error' => false,
+					'config_status' => $config_status,
 					'handler_slug' => $handler_slug
 				]
 			]);
+		}
+	}
+
+	/**
+	 * Handle request to get OAuth authorization URL
+	 *
+	 * GET /datamachine/v1/auth/{handler_slug}/oauth-url
+	 */
+	public static function handle_get_oauth_url($request) {
+		$handler_slug = sanitize_text_field($request->get_param('handler_slug'));
+
+		if (empty($handler_slug)) {
+			return new \WP_Error(
+				'missing_handler',
+				__('Handler slug is required', 'datamachine'),
+				['status' => 400]
+			);
+		}
+
+		// Get auth provider instance
+		$all_auth = apply_filters('datamachine_auth_providers', []);
+		$auth_instance = $all_auth[$handler_slug] ?? null;
+
+		if (!$auth_instance) {
+			return new \WP_Error(
+				'auth_provider_not_found',
+				__('Authentication provider not found', 'datamachine'),
+				['status' => 404]
+			);
+		}
+
+		if (!method_exists($auth_instance, 'get_authorization_url')) {
+			return new \WP_Error(
+				'oauth_not_supported',
+				__('This handler does not support OAuth authorization', 'datamachine'),
+				['status' => 400]
+			);
+		}
+
+		// Check configuration first
+		if (method_exists($auth_instance, 'is_configured') && !$auth_instance->is_configured()) {
+			return new \WP_Error(
+				'oauth_not_configured',
+				__('OAuth credentials not configured. Please provide client ID and secret first.', 'datamachine'),
+				['status' => 400]
+			);
+		}
+
+		try {
+			$oauth_url = $auth_instance->get_authorization_url();
+			
+			return rest_ensure_response([
+				'success' => true,
+				'data' => [
+					'oauth_url' => $oauth_url,
+					'handler_slug' => $handler_slug,
+					'instructions' => __('Visit this URL to authorize your account. You will be redirected back to Data Machine upon completion.', 'datamachine')
+				]
+			]);
+		} catch (\Exception $e) {
+			return new \WP_Error(
+				'oauth_url_generation_failed',
+				$e->getMessage(),
+				['status' => 500]
+			);
 		}
 	}
 

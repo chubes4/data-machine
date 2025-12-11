@@ -63,7 +63,8 @@ class Facebook extends PublishHandler {
                     ];
                 }
                 return $tools;
-            }
+            },
+            'facebook'
         );
     }
 

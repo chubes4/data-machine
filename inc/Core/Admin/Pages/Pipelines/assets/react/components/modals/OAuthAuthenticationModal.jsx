@@ -36,6 +36,7 @@ export default function OAuthAuthenticationModal( {
 	const [ error, setError ] = useState( null );
 	const [ success, setSuccess ] = useState( null );
 	const [ isStatusLoading, setIsStatusLoading ] = useState( false );
+	const [ showConfigForm, setShowConfigForm ] = useState( false );
 
 	// Determine auth type and URLs from handler metadata
 	const authType = handlerInfo.auth_type || 'oauth2'; // oauth2, oauth1, or simple
@@ -66,6 +67,11 @@ export default function OAuthAuthenticationModal( {
 
 			setConnected( isAuthenticated );
 			setAccountData( statusData.account_details || null );
+
+			// Update form with masked config if available and not already edited
+			if ( statusData.config_status && ! apiConfigForm.isDirty ) {
+				apiConfigForm.reset( statusData.config_status );
+			}
 
 			if ( statusData.error ) {
 				setError(
@@ -211,7 +217,7 @@ export default function OAuthAuthenticationModal( {
 		if (
 			! confirm(
 				__(
-					'Are you sure you want to disconnect this account?',
+					'Are you sure you want to disconnect this account? This will remove the access token but keep your API configuration.',
 					'datamachine'
 				)
 			)
@@ -234,8 +240,10 @@ export default function OAuthAuthenticationModal( {
 
 			setConnected( false );
 			setAccountData( null );
-			apiConfigForm.reset( {} );
+			// Don't reset config form on disconnect so keys persist visualy
+			// apiConfigForm.reset( {} );
 			setSuccess( null );
+			setShowConfigForm( true ); // Show config form to allow re-connection
 
 			try {
 				await fetchConnectionStatus( { silent: true } );
@@ -251,6 +259,13 @@ export default function OAuthAuthenticationModal( {
 			return __( 'Account disconnected successfully!', 'datamachine' );
 		} );
 	};
+
+	// Determine if we should show the config form
+	// Show if:
+	// 1. Explicitly requested (showConfigForm is true)
+	// 2. Not connected (initial state)
+	// 3. Simple auth (always needs form visible to edit)
+	const isConfigFormVisible = showConfigForm || ! connected || authType === 'simple';
 
 	return (
 		<Modal
@@ -313,7 +328,7 @@ export default function OAuthAuthenticationModal( {
 					</p>
 				</div>
 
-			{ ! connected && (
+			{ isConfigFormVisible && (
 				<>
 					{ ( authType === 'oauth2' || authType === 'oauth1' ) && handlerInfo.callback_url && (
 						<RedirectUrlDisplay url={ handlerInfo.callback_url } />
@@ -337,12 +352,23 @@ export default function OAuthAuthenticationModal( {
 											? __( 'Saving...', 'datamachine' )
 											: ( authType === 'simple' ? __( 'Save Credentials', 'datamachine' ) : __( 'Save Configuration', 'datamachine' ) ) }
 									</Button>
+									
+									{ /* Cancel button to hide form if we are already connected */ }
+									{ connected && (
+										<Button
+											variant="link"
+											onClick={ () => setShowConfigForm( false ) }
+											className="datamachine-modal-spacing--ml-10"
+										>
+											{ __( 'Cancel', 'datamachine' ) }
+										</Button>
+									) }
 								</div>
 								{ authType === 'oauth2' && <div className="datamachine-modal-spacing--mb-16 datamachine-modal-spacing--mt-16"><hr /></div> }
 							</>
 						) }
 
-						{ authType === 'oauth2' && (
+						{ authType === 'oauth2' && ! connected && (
 							<div className="datamachine-modal-spacing--mb-16">
 								<OAuthPopupHandler
 									oauthUrl={ oauthUrl }
@@ -355,11 +381,11 @@ export default function OAuthAuthenticationModal( {
 					</>
 				) }
 
-				{ connected && (
+				{ connected && ! showConfigForm && (
 					<>
 						<AccountDetails account={ accountData } />
 
-						<div className="datamachine-modal-spacing--mt-16">
+						<div className="datamachine-modal-spacing--mt-16" style={ { display: 'flex', gap: '10px' } }>
 							<Button
 								variant="secondary"
 								onClick={ handleDisconnect }
@@ -374,6 +400,16 @@ export default function OAuthAuthenticationModal( {
 											'datamachine'
 									  ) }
 							</Button>
+							
+							{ /* Change API Config Button */ }
+							{ ( authType === 'oauth2' || authType === 'oauth1' ) && (
+								<Button
+									variant="secondary"
+									onClick={ () => setShowConfigForm( true ) }
+								>
+									{ __( 'Change API Configuration', 'datamachine' ) }
+								</Button>
+							) }
 						</div>
 					</>
 				) }

@@ -38,7 +38,7 @@ if ! command -v rsync &> /dev/null; then
 fi
 
 # Extract version from plugin file
-VERSION=$(grep "Version:" $PLUGIN_FILE | sed 's/.*Version:[[:space:]]*//' | tr -d '[:space:]')
+# Version will be set manually in build process
 if [[ -z "$VERSION" ]]; then
     echo -e "${RED}❌ Error: Could not extract version from $PLUGIN_FILE${NC}"
     exit 1

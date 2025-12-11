@@ -36,18 +36,27 @@ class FileCleanup {
     }
 
     /**
-     * Remove a directory using WordPress helpers
+     * Remove a directory recursively.
      */
     private function remove_directory(string $directory_path): bool {
         if (!is_dir($directory_path)) {
             return true;
         }
 
-        if (!function_exists('wp_delete_directory')) {
-            require_once ABSPATH . 'wp-admin/includes/file.php';
+        $files = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($directory_path, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+
+        foreach ($files as $file) {
+            if ($file->isDir()) {
+                rmdir($file->getRealPath());
+            } else {
+                wp_delete_file($file->getRealPath());
+            }
         }
 
-        $deleted = wp_delete_directory($directory_path);
+        $deleted = rmdir($directory_path);
 
         if (!$deleted) {
             do_action('datamachine_log', 'error', 'FilesRepository: Failed to delete directory.', [
@@ -55,7 +64,7 @@ class FileCleanup {
             ]);
         }
 
-        return (bool) $deleted;
+        return $deleted;
     }
 
     /**
@@ -104,15 +113,7 @@ class FileCleanup {
             return 0;
         }
 
-        if (!function_exists('wp_delete_directory')) {
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-        }
-
-        if (wp_delete_directory($job_dir)) {
-            return 1;
-        }
-
-        return 0;
+        return $this->remove_directory($job_dir) ? 1 : 0;
     }
 
     /**
@@ -172,10 +173,7 @@ class FileCleanup {
                         }
 
                         if ($all_old && !empty($files)) {
-                            if (!function_exists('wp_delete_directory')) {
-                                require_once ABSPATH . 'wp-admin/includes/file.php';
-                            }
-                            wp_delete_directory($job_dir);
+                            $this->remove_directory($job_dir);
                         }
                     }
 

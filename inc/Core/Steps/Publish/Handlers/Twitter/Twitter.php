@@ -65,7 +65,8 @@ class Twitter extends PublishHandler {
                     ];
                 }
                 return $tools;
-            }
+            },
+            'twitter'
         );
     }
 

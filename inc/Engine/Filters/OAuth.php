@@ -59,20 +59,4 @@ function datamachine_register_oauth_system() {
 
         exit;
     }, 5);
-
-    add_filter('datamachine_oauth_url', function($auth_url, $provider) {
-        if (!empty($auth_url)) {
-            return $auth_url;
-        }
-
-        $all_auth = apply_filters('datamachine_auth_providers', []);
-        $auth_instance = $all_auth[$provider] ?? null;
-        
-        if ($auth_instance && method_exists($auth_instance, 'get_authorization_url')) {
-            return $auth_instance->get_authorization_url();
-        }
-        
-        do_action('datamachine_log', 'error', 'OAuth Error: Unknown provider requested.', ['provider' => $provider]);
-        return new WP_Error('unknown_provider', 'Unknown OAuth provider.');
-    }, 10, 2);
 }

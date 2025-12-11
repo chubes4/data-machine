@@ -5,6 +5,30 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2025-12-10
+
+### Added
+- **AuthenticateHandler Chat Tool** - New conversational tool for managing handler authentication via natural language
+  - Actions: list (all statuses), status (specific handler), configure (save credentials), get_oauth_url (OAuth providers), disconnect
+  - Security-aware design with warnings about credential visibility in chat logs
+- **OAuth URL REST Endpoint** - New `GET /auth/{handler_slug}/oauth-url` for programmatic OAuth URL retrieval
+- **Config Status in Auth Responses** - Auth status now returns masked credential indicators for better UX
+
+### Enhanced
+- **OAuth Authentication Modal** - Added "Change API Configuration" button for connected handlers, improved form visibility management
+- **Handler Registration** - Added `auth_provider_key` metadata for flexible handler/auth provider mapping
+- **Social Media Handlers** - Fixed auth provider key registration for Twitter, Facebook, Threads, and Bluesky
+
+### Improved
+- **FileCleanup Architecture** - Replaced `wp_delete_directory()` with native PHP recursive deletion for better cross-platform reliability
+
+### Removed
+- **Redundant OAuth Filter** - Removed `datamachine_oauth_url` filter (functionality moved to REST API)
+
+### Documentation
+- Added AuthenticateHandler tool documentation
+- Updated Auth API documentation with OAuth URL endpoint
+
 ## [0.6.0] - 2025-12-08
 
 ### Milestone Release

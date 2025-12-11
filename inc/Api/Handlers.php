@@ -94,8 +94,9 @@ class Handlers {
 
 		// Enrich handler data with auth_type, auth_fields, and authentication status
 		foreach ($handlers as $slug => &$handler) {
-			if ($handler['requires_auth'] && isset($auth_providers[$slug])) {
-				$auth_instance = $auth_providers[$slug];
+			$auth_key = $handler['auth_provider_key'] ?? $slug;
+			if ($handler['requires_auth'] && isset($auth_providers[$auth_key])) {
+				$auth_instance = $auth_providers[$auth_key];
 				$auth_type = self::detect_auth_type($auth_instance);
 				$handler['auth_type'] = $auth_type;
 

@@ -52,7 +52,8 @@ class Bluesky extends PublishHandler {
                     ];
                 }
                 return $tools;
-            }
+            },
+            'bluesky'
         );
     }
 

@@ -89,6 +89,44 @@ curl https://example.com/wp-json/datamachine/v1/auth/twitter/status \
 }
 ```
 
+### GET /auth/{handler_slug}/oauth-url
+
+Get the authorization URL for an OAuth provider.
+
+**Permission**: `manage_options` capability required
+
+**Parameters**:
+- `handler_slug` (string, required): Handler identifier (e.g., `twitter`, `reddit`, `facebook`)
+
+**Returns**: OAuth authorization URL and instructions
+
+**Example Request**:
+
+```bash
+curl https://example.com/wp-json/datamachine/v1/auth/twitter/oauth-url \
+  -u username:application_password
+```
+
+**Success Response (200 OK)**:
+
+```json
+{
+  "success": true,
+  "oauth_url": "https://api.twitter.com/oauth/authorize?oauth_token=...",
+  "instructions": "Visit this URL to authorize. You will be redirected back to Data Machine."
+}
+```
+
+**Error Response (400 Bad Request)**:
+
+```json
+{
+  "code": "oauth_not_supported",
+  "message": "Handler does not support OAuth",
+  "data": {"status": 400}
+}
+```
+
 ### PUT /auth/{handler_slug}
 
 Save authentication configuration for a handler.
