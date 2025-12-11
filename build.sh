@@ -38,9 +38,12 @@ if ! command -v rsync &> /dev/null; then
 fi
 
 # Extract version from plugin file
-# Version will be set manually in build process
 if [[ -z "$VERSION" ]]; then
-    echo -e "${RED}❌ Error: Could not extract version from $PLUGIN_FILE${NC}"
+    VERSION=$(awk -F':' '/^[[:space:]]*\*?[[:space:]]*Version:[[:space:]]*/ {print $2; exit}' "$PLUGIN_FILE" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+fi
+
+if [[ -z "$VERSION" ]]; then
+    echo -e "${RED}❌ Error: Could not extract version from $PLUGIN_FILE (missing 'Version:' header)${NC}"
     exit 1
 fi
 
