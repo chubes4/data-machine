@@ -1,8 +1,5 @@
 /**
- * Flows Section Component
- *
- * Container component that manages flow list display and creation.
- * @pattern Container - Fetches flows data and manages flow operations
+ * Flows section component.
  */
 
 import { useCallback } from '@wordpress/element';
@@ -11,15 +8,6 @@ import FlowCard from './FlowCard';
 import EmptyFlowCard from './EmptyFlowCard';
 import { useCreateFlow } from '../../queries/flows';
 
-/**
- * Flows Section Component
- *
- * @param {Object} props - Component props
- * @param {number} props.pipelineId - Pipeline ID
- * @param {Array} props.flows - Flows array
- * @param {Object} props.pipelineConfig - Pipeline configuration
- * @returns {React.ReactElement} Flows section
- */
 export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
 	// Use mutations
 	const createFlowMutation = useCreateFlow();
@@ -31,12 +19,12 @@ export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
 		async ( pipelineIdParam ) => {
 			try {
 				const defaultName = __( 'New Flow', 'datamachine' );
-				await createFlowMutation.mutateAsync({
+				await createFlowMutation.mutateAsync( {
 					pipelineId: pipelineIdParam,
-					name: defaultName,
-				});
+					flowName: defaultName,
+				} );
 			} catch ( error ) {
-				console.error( 'Flow creation error:', error );
+				// eslint-disable-next-line no-alert, no-undef
 				alert(
 					__(
 						'An error occurred while creating the flow',
@@ -51,22 +39,16 @@ export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
 	/**
 	 * Handle flow deletion (queries will automatically refetch)
 	 */
-	const handleFlowDeleted = useCallback(
-		( flowId ) => {
-			// Queries will automatically refetch when flow is deleted
-		},
-		[]
-	);
+	const handleFlowDeleted = useCallback( () => {
+		// Queries will automatically refetch when flow is deleted
+	}, [] );
 
 	/**
 	 * Handle flow duplication (queries will automatically refetch)
 	 */
-	const handleFlowDuplicated = useCallback(
-		( flowId ) => {
-			// Queries will automatically refetch when flow is duplicated
-		},
-		[]
-	);
+	const handleFlowDuplicated = useCallback( () => {
+		// Queries will automatically refetch when flow is duplicated
+	}, [] );
 
 	/**
 	 * Empty state
