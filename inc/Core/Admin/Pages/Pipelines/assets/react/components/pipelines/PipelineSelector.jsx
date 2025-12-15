@@ -31,7 +31,7 @@ export default function PipelineSelector() {
 	const options = pipelines.map( ( pipeline ) => ( {
 		label:
 			pipeline.pipeline_name || __( 'Untitled Pipeline', 'datamachine' ),
-		value: pipeline.pipeline_id,
+		value: String( pipeline.pipeline_id ),
 	} ) );
 
 	/**

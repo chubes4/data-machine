@@ -123,6 +123,13 @@ class AIConversationLoop {
 						continue;
 					}
 
+					do_action('datamachine_log', 'debug', 'AIConversationLoop: Tool call', [
+						'agent_type' => $agent_type,
+						'turn' => $turn_count,
+						'tool' => $tool_name,
+						'params' => $tool_parameters
+					]);
+
 					// Validate for duplicate tool calls
 					$validation_result = ConversationManager::validateToolCall(
 						$tool_name,
@@ -158,6 +165,13 @@ class AIConversationLoop {
 						$tools,
 						$payload
 					);
+
+					do_action('datamachine_log', 'debug', 'AIConversationLoop: Tool result', [
+						'agent_type' => $agent_type,
+						'turn' => $turn_count,
+						'tool' => $tool_name,
+						'success' => $tool_result['success'] ?? false
+					]);
 
 					// Determine if this is a handler tool
 					$tool_def = $tools[$tool_name] ?? null;

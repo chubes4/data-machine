@@ -54,7 +54,39 @@ export const useCreatePipeline = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createPipeline,
-    onSuccess: () => {
+    onMutate: async (name) => {
+      await queryClient.cancelQueries({ queryKey: ['pipelines'] });
+
+      const previousPipelines = queryClient.getQueryData(['pipelines']);
+      const optimisticPipelineId = `optimistic_${Date.now()}`;
+
+      queryClient.setQueryData(['pipelines'], (old = []) => [
+        {
+          pipeline_id: optimisticPipelineId,
+          pipeline_name: name,
+          pipeline_config: {},
+        },
+        ...old,
+      ]);
+
+      return { previousPipelines, optimisticPipelineId };
+    },
+    onError: (_err, _name, context) => {
+      if (context?.previousPipelines) {
+        queryClient.setQueryData(['pipelines'], context.previousPipelines);
+      }
+    },
+    onSuccess: (response, _name, context) => {
+      const pipeline = response?.data?.pipeline_data;
+
+      if (pipeline && context?.optimisticPipelineId) {
+        queryClient.setQueryData(['pipelines'], (old = []) =>
+          old.map((p) =>
+            String(p.pipeline_id) === String(context.optimisticPipelineId) ? pipeline : p
+          )
+        );
+      }
+
       queryClient.invalidateQueries(['pipelines']);
     },
   });

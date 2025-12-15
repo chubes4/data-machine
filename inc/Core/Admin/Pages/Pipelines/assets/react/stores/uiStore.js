@@ -11,9 +11,15 @@ import { persist } from 'zustand/middleware';
 export const useUIStore = create(
   persist(
     (set, get) => ({
-      // Pipeline selection
-      selectedPipelineId: null,
-      setSelectedPipelineId: (id) => set({ selectedPipelineId: id }),
+	  	// Pipeline selection
+	  	selectedPipelineId: null,
+	  	setSelectedPipelineId: (id) => {
+	  		if (id === null || id === undefined || id === '') {
+	  			set({ selectedPipelineId: null });
+	  			return;
+	  		}
+	  		set({ selectedPipelineId: String(id) });
+	  	},
 
       // Modal state
       activeModal: null,
@@ -37,13 +43,15 @@ export const useUIStore = create(
           return;
         }
 
-        // If current pipeline still exists, keep it selected
-        if (currentId && pipelines.some(p => p.pipeline_id === currentId)) {
-          return;
-        }
+	  		const normalizedCurrentId = currentId ? String(currentId) : null;
 
-        // Otherwise, select the first available pipeline
-        set({ selectedPipelineId: pipelines[0].pipeline_id });
+	  		// If current pipeline still exists, keep it selected
+	  		if (normalizedCurrentId && pipelines.some((p) => String(p.pipeline_id) === normalizedCurrentId)) {
+	  			return;
+	  		}
+
+	  		// Otherwise, select the first available pipeline
+	  		set({ selectedPipelineId: String(pipelines[0].pipeline_id) });
       },
     }),
     {

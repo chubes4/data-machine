@@ -5,6 +5,20 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2025-12-14
+
+### Fixed
+- **Build Process**: Fixed version extraction in build.sh to automatically parse from plugin file headers instead of requiring manual setting
+- **Pipeline UI**: Fixed type consistency issues in React components where pipeline ID comparisons failed due to string/number mismatches
+
+### Added
+- **Optimistic Updates**: Added optimistic UI updates for pipeline creation providing immediate feedback while API requests process
+- **Debug Logging**: Added debug logging to AI conversation loop for tool call execution and results tracking
+
+### Improved
+- **AI Chat Agent**: Enhanced chat agent directive with action bias guidance, configuration section, and improved context understanding
+- **UI State Management**: Improved pipeline selection state handling with better null checking and string normalization
+
 ## [0.6.1] - 2025-12-10
 
 ### Added

@@ -48,7 +48,7 @@ export default function PipelinesApp() {
 	const updateHandlerMutation = useUpdateFlowHandler();
 
 	// Find selected pipeline from pipelines array
-	const selectedPipeline = pipelines?.find(p => p.pipeline_id === selectedPipelineId);
+	const selectedPipeline = pipelines?.find((p) => String(p.pipeline_id) === selectedPipelineId);
 	const selectedPipelineLoading = false; // No separate loading for selected pipeline
 	const selectedPipelineError = null; // No separate error for selected pipeline
 
@@ -115,7 +115,7 @@ export default function PipelinesApp() {
 			setSelectedPipelineId( pipelines[ 0 ].pipeline_id );
 		} else if ( pipelines.length > 0 && selectedPipelineId ) {
 			// Check if selected pipeline still exists, if not, select next available
-			const selectedPipelineExists = pipelines.some(p => p.pipeline_id === selectedPipelineId);
+			const selectedPipelineExists = pipelines.some((p) => String(p.pipeline_id) === selectedPipelineId);
 			if ( ! selectedPipelineExists ) {
 				setSelectedPipelineId( pipelines[ 0 ].pipeline_id );
 			}
