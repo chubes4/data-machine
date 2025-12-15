@@ -7,22 +7,22 @@
 import { useState, useEffect, useCallback, useRef } from '@wordpress/element';
 import { TextControl, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { updateFlowTitle } from '../../utils/api';
+import { useUpdateFlowTitle } from '../../queries/flows';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
 
 /**
- * Flow Header Component
+ * Flow Header Component.
  *
- * @param {Object} props - Component props
- * @param {number} props.flowId - Flow ID
- * @param {string} props.flowName - Flow name
- * @param {Function} props.onNameChange - Name change handler
- * @param {Function} props.onDelete - Delete handler
- * @param {Function} props.onDuplicate - Duplicate handler
- * @param {Function} props.onRun - Run handler
- * @param {Function} props.onSchedule - Schedule handler
- * @param {boolean} props.runSuccess - Whether run was just successful
- * @returns {React.ReactElement} Flow header
+ * @param {Object}   props              - Component props.
+ * @param {number}   props.flowId       - Flow ID.
+ * @param {string}   props.flowName     - Flow name.
+ * @param {Function} props.onNameChange - Name change handler.
+ * @param {Function} props.onDelete     - Delete handler.
+ * @param {Function} props.onDuplicate  - Duplicate handler.
+ * @param {Function} props.onRun        - Run handler.
+ * @param {Function} props.onSchedule   - Schedule handler.
+ * @param {boolean}  props.runSuccess   - Whether run was just successful.
+ * @return {JSX.Element} Flow header.
  */
 export default function FlowHeader( {
 	flowId,
@@ -36,6 +36,7 @@ export default function FlowHeader( {
 } ) {
 	const [ localName, setLocalName ] = useState( flowName );
 	const saveTimeout = useRef( null );
+	const updateFlowTitleMutation = useUpdateFlowTitle();
 
 	/**
 	 * Sync local name with prop changes
@@ -49,12 +50,17 @@ export default function FlowHeader( {
 	 */
 	const saveName = useCallback(
 		async ( name ) => {
-			if ( ! name || name === flowName ) return;
+			if ( ! name || name === flowName ) {
+				return;
+			}
 
 			try {
-				const response = await updateFlowTitle( flowId, name );
+				const response = await updateFlowTitleMutation.mutateAsync( {
+					flowId,
+					name,
+				} );
 
-				if ( response.success && onNameChange ) {
+				if ( response?.success && onNameChange ) {
 					onNameChange( flowId, name );
 				}
 			} catch ( err ) {
@@ -62,7 +68,7 @@ export default function FlowHeader( {
 				console.error( 'Flow title save failed:', err );
 			}
 		},
-		[ flowId, flowName, onNameChange ]
+		[ flowId, flowName, onNameChange, updateFlowTitleMutation ]
 	);
 
 	/**
@@ -116,7 +122,7 @@ export default function FlowHeader( {
 				<TextControl
 					value={ localName }
 					onChange={ handleNameChange }
-					placeholder={ __( 'Flow name...', 'datamachine' ) }
+					placeholder={ __( 'Flow name…', 'datamachine' ) }
 					className="datamachine-flow-header__title-input"
 				/>
 

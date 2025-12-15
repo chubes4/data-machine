@@ -46,12 +46,18 @@ curl https://example.com/wp-json/datamachine/v1/auth/twitter/status \
 ```json
 {
   "success": true,
-  "authenticated": true,
-  "account_details": {
-    "username": "exampleuser",
-    "id": "1234567890"
-  },
-  "handler_slug": "twitter"
+  "data": {
+    "authenticated": true,
+    "account_details": {
+      "username": "exampleuser",
+      "id": "1234567890"
+    },
+    "config_status": {
+      "api_key": "••••••••",
+      "api_secret": "••••••••"
+    },
+    "handler_slug": "twitter"
+  }
 }
 ```
 
@@ -60,9 +66,15 @@ curl https://example.com/wp-json/datamachine/v1/auth/twitter/status \
 ```json
 {
   "success": true,
-  "authenticated": false,
-  "error": false,
-  "handler_slug": "twitter"
+  "data": {
+    "authenticated": false,
+    "error": false,
+    "config_status": {
+      "api_key": "",
+      "api_secret": ""
+    },
+    "handler_slug": "twitter"
+  }
 }
 ```
 
@@ -71,11 +83,17 @@ curl https://example.com/wp-json/datamachine/v1/auth/twitter/status \
 ```json
 {
   "success": true,
-  "authenticated": false,
-  "error": true,
-  "error_code": "oauth_failed",
-  "error_message": "User denied authorization",
-  "handler_slug": "twitter"
+  "data": {
+    "authenticated": false,
+    "error": true,
+    "error_code": "oauth_failed",
+    "error_message": "User denied authorization",
+    "config_status": {
+      "api_key": "",
+      "api_secret": ""
+    },
+    "handler_slug": "twitter"
+  }
 }
 ```
 

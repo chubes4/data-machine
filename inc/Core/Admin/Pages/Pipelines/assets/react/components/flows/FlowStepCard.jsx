@@ -1,33 +1,33 @@
 /**
- * Flow Step Card Component
+ * Flow Step Card Component.
  *
  * Display individual flow step with handler configuration.
- * @pattern Presentational - Receives stepTypes data as props
  */
 
 import { useState, useEffect, useCallback, useRef } from '@wordpress/element';
 import { Card, CardBody, TextareaControl, Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import FlowStepHandler from './FlowStepHandler';
-import { updateUserMessage } from '../../utils/api';
+import { useUpdateUserMessage } from '../../queries/flows';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
 import { useStepTypes } from '../../queries/config';
 
 /**
- * Flow Step Card Component
+ * Flow Step Card Component.
  *
- * @param {Object} props - Component props
- * @param {number} props.flowId - Flow ID
- * @param {string} props.flowStepId - Flow step ID
- * @param {Object} props.flowStepConfig - Flow step configuration
- * @param {Object} props.pipelineStep - Pipeline step data
- * @param {Object} props.pipelineConfig - Pipeline AI configuration
- * @param {Function} props.onConfigure - Configure handler callback
- * @param {Object} props.stepTypes - Step types configuration
- * @returns {React.ReactElement} Flow step card
+ * @param {Object}   props                - Component props.
+ * @param {number}   props.flowId         - Flow ID.
+ * @param {number}   props.pipelineId     - Pipeline ID.
+ * @param {string}   props.flowStepId     - Flow step ID.
+ * @param {Object}   props.flowStepConfig - Flow step configuration.
+ * @param {Object}   props.pipelineStep   - Pipeline step data.
+ * @param {Object}   props.pipelineConfig - Pipeline AI configuration.
+ * @param {Function} props.onConfigure    - Configure handler callback.
+ * @return {JSX.Element} Flow step card.
  */
 export default function FlowStepCard( {
 	flowId,
+	pipelineId,
 	flowStepId,
 	flowStepConfig,
 	pipelineStep,
@@ -36,7 +36,7 @@ export default function FlowStepCard( {
 } ) {
 	// Global config: Use stepTypes hook directly (TanStack Query handles caching)
 	const { data: stepTypes = {} } = useStepTypes();
-	const stepTypeInfo = stepTypes[pipelineStep.step_type] || {};
+	const stepTypeInfo = stepTypes[ pipelineStep.step_type ] || {};
 	const isAiStep = pipelineStep.step_type === 'ai';
 	const aiConfig = isAiStep
 		? pipelineConfig[ pipelineStep.pipeline_step_id ]
@@ -48,6 +48,7 @@ export default function FlowStepCard( {
 	const [ isSaving, setIsSaving ] = useState( false );
 	const [ error, setError ] = useState( null );
 	const saveTimeout = useRef( null );
+	const updateUserMessageMutation = useUpdateUserMessage();
 
 	/**
 	 * Sync local user message with config changes
@@ -61,23 +62,32 @@ export default function FlowStepCard( {
 	 */
 	const saveUserMessage = useCallback(
 		async ( message ) => {
-			if ( ! isAiStep ) return;
+			if ( ! isAiStep ) {
+				return;
+			}
 
 			const currentMessage = flowStepConfig.user_message || '';
-			if ( message === currentMessage ) return;
+			if ( message === currentMessage ) {
+				return;
+			}
 
 			setIsSaving( true );
 			setError( null );
 
 			try {
-				const response = await updateUserMessage( flowStepId, message );
+				const response = await updateUserMessageMutation.mutateAsync( {
+					pipelineId,
+					flowId,
+					flowStepId,
+					message,
+				} );
 
-				if ( ! response.success ) {
+				if ( ! response?.success ) {
 					setError(
-						response.message ||
+						response?.message ||
 							__( 'Failed to update user message', 'datamachine' )
 					);
-					setLocalUserMessage( currentMessage ); // Revert on error
+					setLocalUserMessage( currentMessage );
 				}
 			} catch ( err ) {
 				// eslint-disable-next-line no-console
@@ -85,12 +95,19 @@ export default function FlowStepCard( {
 				setError(
 					err.message || __( 'An error occurred', 'datamachine' )
 				);
-				setLocalUserMessage( currentMessage ); // Revert on error
+				setLocalUserMessage( currentMessage );
 			} finally {
 				setIsSaving( false );
 			}
 		},
-		[ flowId, flowStepId, flowStepConfig.user_message, isAiStep ]
+		[
+			flowId,
+			pipelineId,
+			flowStepId,
+			flowStepConfig.user_message,
+			isAiStep,
+			updateUserMessageMutation,
+		]
 	);
 
 	/**
@@ -167,13 +184,13 @@ export default function FlowStepCard( {
 								value={ localUserMessage }
 								onChange={ handleUserMessageChange }
 								placeholder={ __(
-									'Enter user message for AI processing...',
+									'Enter user message for AI processing…',
 									'datamachine'
 								) }
 								rows={ 4 }
 								help={
 									isSaving
-										? __( 'Saving...', 'datamachine' )
+										? __( 'Saving…', 'datamachine' )
 										: null
 								}
 							/>
@@ -182,9 +199,10 @@ export default function FlowStepCard( {
 
 					{ /* Handler Configuration - only for steps that use handlers */ }
 					{ ( () => {
-						const stepTypeInfo =
+						const handlerStepTypeInfo =
 							stepTypes[ pipelineStep.step_type ] || {};
-						const usesHandler = stepTypeInfo.uses_handler !== false; // Default true for safety
+						const usesHandler =
+							handlerStepTypeInfo.uses_handler !== false; // Default true for safety
 
 						return usesHandler ? (
 							<FlowStepHandler
@@ -192,7 +210,9 @@ export default function FlowStepCard( {
 								handlerConfig={
 									flowStepConfig.handler_config || {}
 								}
-								settingsDisplay={ flowStepConfig.settings_display || [] }
+								settingsDisplay={
+									flowStepConfig.settings_display || []
+								}
 								stepType={ pipelineStep.step_type }
 								onConfigure={ () =>
 									onConfigure && onConfigure( flowStepId )

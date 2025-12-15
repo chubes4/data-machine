@@ -6,166 +6,359 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  fetchFlows,
-  fetchFlow,
-  createFlow,
-  updateFlowTitle,
-  deleteFlow,
-  duplicateFlow,
-  runFlow,
-  updateFlowHandler,
-  updateUserMessage,
-  updateFlowSchedule,
+	fetchFlows,
+	fetchFlow,
+	createFlow,
+	updateFlowTitle,
+	deleteFlow,
+	duplicateFlow,
+	runFlow,
+	updateFlowHandler,
+	updateUserMessage,
+	updateFlowSchedule,
 } from '../utils/api';
 
-// Queries
-export const useFlows = (pipelineId) =>
-  useQuery({
-    queryKey: ['flows', pipelineId],
-    queryFn: async () => {
-      const response = await fetchFlows(pipelineId);
-      return response.success ? response.data.flows : [];
-    },
-    enabled: !!pipelineId,
-  });
+const setFlowInCache = ( queryClient, flow ) => {
+	if ( ! flow?.flow_id ) {
+		return;
+	}
 
-export const useFlow = (flowId) =>
-  useQuery({
-    queryKey: ['flows', 'single', flowId],
-    queryFn: async () => {
-      const response = await fetchFlow(flowId);
-      return response.success ? response.data : null;
-    },
-    enabled: !!flowId,
-  });
+	queryClient.setQueryData( [ 'flows', 'single', flow.flow_id ], flow );
+
+	if ( flow.pipeline_id ) {
+		queryClient.setQueryData(
+			[ 'flows', flow.pipeline_id ],
+			( oldFlows = [] ) => {
+				if ( ! Array.isArray( oldFlows ) ) {
+					return oldFlows;
+				}
+
+				return oldFlows.map( ( existingFlow ) =>
+					existingFlow.flow_id === flow.flow_id ? flow : existingFlow
+				);
+			}
+		);
+	}
+};
+
+const patchFlowInCache = ( queryClient, { pipelineId, flowId, patchFlow } ) => {
+	if ( ! flowId || typeof patchFlow !== 'function' ) {
+		return;
+	}
+
+	queryClient.setQueryData( [ 'flows', 'single', flowId ], ( oldFlow ) =>
+		oldFlow ? patchFlow( oldFlow ) : oldFlow
+	);
+
+	if ( pipelineId ) {
+		queryClient.setQueryData(
+			[ 'flows', pipelineId ],
+			( oldFlows = [] ) => {
+				if ( ! Array.isArray( oldFlows ) ) {
+					return oldFlows;
+				}
+
+				return oldFlows.map( ( existingFlow ) =>
+					existingFlow.flow_id === flowId
+						? patchFlow( existingFlow )
+						: existingFlow
+				);
+			}
+		);
+	}
+};
+
+const patchFlowStepInCache = (
+	queryClient,
+	{ pipelineId, flowId, flowStepId, patchStep }
+) => {
+	patchFlowInCache( queryClient, {
+		pipelineId,
+		flowId,
+		patchFlow: ( flow ) => {
+			if ( ! flow?.flow_config?.[ flowStepId ] ) {
+				return flow;
+			}
+
+			const existingStep = flow.flow_config[ flowStepId ] || {};
+			const updatedStep = patchStep( existingStep );
+
+			return {
+				...flow,
+				flow_config: {
+					...flow.flow_config,
+					[ flowStepId ]: updatedStep,
+				},
+			};
+		},
+	} );
+};
+
+// Queries
+export const useFlows = ( pipelineId ) =>
+	useQuery( {
+		queryKey: [ 'flows', pipelineId ],
+		queryFn: async () => {
+			const response = await fetchFlows( pipelineId );
+			return response.success ? response.data.flows : [];
+		},
+		enabled: !! pipelineId,
+	} );
+
+export const useFlow = ( flowId ) =>
+	useQuery( {
+		queryKey: [ 'flows', 'single', flowId ],
+		queryFn: async () => {
+			const response = await fetchFlow( flowId );
+			return response.success ? response.data : null;
+		},
+		enabled: !! flowId,
+	} );
 
 // Mutations
 export const useCreateFlow = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ pipelineId, flowName }) => createFlow(pipelineId, flowName),
-    onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries(['flows', pipelineId]);
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: ( { pipelineId, flowName } ) =>
+			createFlow( pipelineId, flowName ),
+		onSuccess: ( _, { pipelineId } ) => {
+			queryClient.invalidateQueries( [ 'flows', pipelineId ] );
+		},
+	} );
 };
 
 export const useUpdateFlowTitle = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ flowId, name }) => updateFlowTitle(flowId, name),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['flows', 'single', data.flow_id]);
-      // Also invalidate the flows list for the pipeline
-      queryClient.invalidateQueries(['flows']);
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: ( { flowId, name } ) => updateFlowTitle( flowId, name ),
+		onSuccess: ( response ) => {
+			if ( ! response?.success || ! response?.data ) {
+				return;
+			}
+
+			setFlowInCache( queryClient, response.data );
+		},
+	} );
 };
 
 export const useDeleteFlow = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: deleteFlow,
-    onSuccess: () => {
-      queryClient.invalidateQueries(['flows']);
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: ( { flowId } ) => deleteFlow( flowId ),
+		onSuccess: ( response, { flowId, pipelineId } ) => {
+			if ( ! response?.success ) {
+				return;
+			}
+
+			queryClient.removeQueries( [ 'flows', 'single', flowId ] );
+
+			if ( pipelineId ) {
+				queryClient.setQueryData(
+					[ 'flows', pipelineId ],
+					( oldFlows = [] ) => {
+						if ( ! Array.isArray( oldFlows ) ) {
+							return oldFlows;
+						}
+
+						return oldFlows.filter(
+							( flow ) => flow.flow_id !== flowId
+						);
+					}
+				);
+			}
+		},
+	} );
 };
 
 export const useDuplicateFlow = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: duplicateFlow,
-    onSuccess: () => {
-      queryClient.invalidateQueries(['flows']);
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: ( { flowId } ) => duplicateFlow( flowId ),
+		onSuccess: ( response, { pipelineId } ) => {
+			if ( ! response?.success ) {
+				return;
+			}
+
+			if ( pipelineId ) {
+				queryClient.invalidateQueries( [ 'flows', pipelineId ] );
+			}
+		},
+	} );
 };
 
 export const useRunFlow = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: runFlow,
-    onSuccess: (_, flowId) => {
-      queryClient.invalidateQueries(['flows', 'single', flowId]);
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: runFlow,
+		onSuccess: ( _, flowId ) => {
+			queryClient.invalidateQueries( [ 'flows', 'single', flowId ] );
+		},
+	} );
 };
 
 export const useUpdateFlowHandler = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ flowStepId, handlerSlug, settings, pipelineId, stepType, flowConfig = {}, pipelineStepConfig = {} }) => {
-      // Attempt to find handler details in cache to create model for sanitization
-      let sanitizedSettings = settings;
-      try {
-        const handlerDetails = queryClient.getQueryData(['handlers', handlerSlug]);
-        const handlers = queryClient.getQueryData(['handlers']) || {};
-        const descriptor = handlers[handlerSlug] || {};
-        if (handlerDetails) {
-          // Use the HandlerModel if available
-          // Lazily import to avoid circular dependencies
-          const { default: createModel } = await import('../models/HandlerFactory');
-          const model = createModel(handlerSlug, descriptor, handlerDetails);
-          if (model && typeof model.sanitizeForAPI === 'function') {
-            sanitizedSettings = model.sanitizeForAPI(settings, handlerDetails.settings || {});
-          }
-        }
-      } catch (err) {
-        // If model creation fails, fall back to original settings
-      }
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: async ( {
+			flowStepId,
+			handlerSlug,
+			settings,
+			pipelineId,
+			stepType,
+			flowConfig = {},
+			pipelineStepConfig = {},
+		} ) => {
+			// Attempt to find handler details in cache to create model for sanitization
+			let sanitizedSettings = settings;
+			try {
+				const handlerDetails = queryClient.getQueryData( [
+					'handlers',
+					handlerSlug,
+				] );
+				const handlers =
+					queryClient.getQueryData( [ 'handlers' ] ) || {};
+				const descriptor = handlers[ handlerSlug ] || {};
+				if ( handlerDetails ) {
+					// Use the HandlerModel if available
+					// Lazily import to avoid circular dependencies
+					const { default: createModel } = await import(
+						'../models/HandlerFactory'
+					);
+					const model = createModel(
+						handlerSlug,
+						descriptor,
+						handlerDetails
+					);
+					if ( model && typeof model.sanitizeForAPI === 'function' ) {
+						sanitizedSettings = model.sanitizeForAPI(
+							settings,
+							handlerDetails.settings || {}
+						);
+					}
+				}
+			} catch ( err ) {
+				// If model creation fails, fall back to original settings
+			}
 
-      return updateFlowHandler(flowStepId, handlerSlug, sanitizedSettings, pipelineId, stepType, flowConfig, pipelineStepConfig);
-    },
-    onSuccess: (response, variables) => {
-      // Invalidate the specific flow and update cache using flow_id returned by API
-      queryClient.invalidateQueries(['flows']);
+			return updateFlowHandler(
+				flowStepId,
+				handlerSlug,
+				sanitizedSettings,
+				pipelineId,
+				stepType,
+				flowConfig,
+				pipelineStepConfig
+			);
+		},
+		onSuccess: ( response, variables ) => {
+			if ( ! response?.success || ! response?.data?.flow_id ) {
+				return;
+			}
 
-      try {
-        if (response?.success && response?.data?.flow_id) {
-          const flowId = response.data.flow_id;
-          // Update single flow cache to include latest step config if provided
-          const existingFlow = queryClient.getQueryData(['flows', 'single', flowId]);
-          if (existingFlow && response.data.step_config) {
-            const updatedFlow = {
-              ...existingFlow,
-              flow_config: {
-                ...existingFlow.flow_config,
-                [response.data.flow_step_id]: response.data.step_config,
-              },
-            };
-            queryClient.setQueryData(['flows', 'single', flowId], updatedFlow);
-          }
+			const flowId = response.data.flow_id;
+			const flowStepId = response.data.flow_step_id;
+			const stepConfig = response.data.step_config;
+			const handlerSettingsDisplay =
+				response.data.handler_settings_display;
 
-          // Ensure flows list for pipeline is invalidated
-          queryClient.invalidateQueries(['flows', variables.pipelineId]);
-        }
-      } catch ( err ) {
-        // Ignore cache update errors
-      }
-    },
-  });
+			if ( ! flowId || ! flowStepId || ! stepConfig ) {
+				return;
+			}
+
+			patchFlowStepInCache( queryClient, {
+				pipelineId: variables.pipelineId,
+				flowId,
+				flowStepId,
+				patchStep: ( existingStep ) => ( {
+					...existingStep,
+					...stepConfig,
+					settings_display:
+						handlerSettingsDisplay || existingStep.settings_display,
+				} ),
+			} );
+		},
+	} );
 };
 
 export const useUpdateUserMessage = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ flowStepId, message }) => updateUserMessage(flowStepId, message),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['flows']);
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: ( { flowStepId, message } ) =>
+			updateUserMessage( flowStepId, message ),
+		onMutate: async ( { pipelineId, flowId, flowStepId, message } ) => {
+			const patches = {
+				pipelineId,
+				flowId,
+				flowStepId,
+				patchStep: ( step ) => ( {
+					...step,
+					user_message: message,
+				} ),
+			};
+
+			const previousSingle = queryClient.getQueryData( [
+				'flows',
+				'single',
+				flowId,
+			] );
+			const previousList = pipelineId
+				? queryClient.getQueryData( [ 'flows', pipelineId ] )
+				: undefined;
+
+			patchFlowStepInCache( queryClient, patches );
+
+			return { previousSingle, previousList };
+		},
+		onError: ( _, { pipelineId, flowId }, context ) => {
+			if ( context?.previousSingle ) {
+				queryClient.setQueryData(
+					[ 'flows', 'single', flowId ],
+					context.previousSingle
+				);
+			}
+
+			if ( pipelineId && context?.previousList ) {
+				queryClient.setQueryData(
+					[ 'flows', pipelineId ],
+					context.previousList
+				);
+			}
+		},
+	} );
 };
 
 export const useUpdateFlowSchedule = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ flowId, schedulingConfig }) => updateFlowSchedule(flowId, schedulingConfig),
-    onSuccess: (response, { flowId }) => {
-      // Update cache with the full flow object returned by the API
-      if (response.success && response.data) {
-        queryClient.setQueryData(['flows', 'single', flowId], response.data);
-      }
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: ( { flowId, schedulingConfig } ) =>
+			updateFlowSchedule( flowId, schedulingConfig ),
+		onSuccess: ( response, { flowId } ) => {
+			if ( ! response?.success || ! response?.data ) {
+				return;
+			}
+
+			const updatedFlow = response.data;
+			const pipelineId = updatedFlow.pipeline_id;
+
+			queryClient.setQueryData(
+				[ 'flows', 'single', flowId ],
+				updatedFlow
+			);
+
+			if ( pipelineId ) {
+				queryClient.setQueryData(
+					[ 'flows', pipelineId ],
+					( oldFlows = [] ) => {
+						if ( ! Array.isArray( oldFlows ) ) {
+							return oldFlows;
+						}
+
+						return oldFlows.map( ( flow ) =>
+							flow.flow_id === flowId ? updatedFlow : flow
+						);
+					}
+				);
+			}
+		},
+	} );
 };

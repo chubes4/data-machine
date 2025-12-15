@@ -10,10 +10,7 @@ Data Machine is an AI-first WordPress plugin that uses a Pipeline+Flow architect
 - **Jobs**: Individual executions of flows with status tracking
 
 ### Execution Engine
-Services layer architecture with direct method calls:
-1. **Services Layer** (@since v0.4.0) - OOP service managers replace filter-based actions for 3x performance improvement
-2. **Direct Method Calls** - Service managers provide direct access to core operations
-3. **REST API Integration** - All endpoints use service managers for consistent behavior
+Services layer architecture with direct method calls for optimal performance.
 
 ### Database Schema
 - `wp_datamachine_pipelines` - Pipeline templates (reusable)
@@ -114,33 +111,19 @@ Data Machine v0.2.0 introduced a universal Engine layer (`/inc/Engine/AI/`) that
 
 **Core Engine Components**:
 
-- **AIConversationLoop** (`/inc/Engine/AI/AIConversationLoop.php`): Multi-turn conversation execution with tool calling support, automatic conversation completion detection, turn-based state management with chronological ordering, and duplicate message prevention
-
-- **ToolExecutor** (`/inc/Engine/AI/ToolExecutor.php`): Universal tool discovery via `getAvailableTools()` method, filter-based tool enablement per agent type, handler tool and global tool integration, and tool configuration validation
-
-- **ToolParameters** (`/inc/Engine/AI/ToolParameters.php`): Centralized parameter building for all AI tools, content/title extraction from data packets, tool metadata integration (tool_definition, tool_name, handler_config), and engine parameter merging for handlers (source_url, image_url)
-
-- **ConversationManager** (`/inc/Engine/AI/ConversationManager.php`): Message formatting utilities for AI requests, tool call recording and tracking, conversation message normalization, and chronological message ordering
-
-- **RequestBuilder** (`/inc/Engine/AI/RequestBuilder.php`): Centralized AI request construction for all agents, directive application system (global, agent-specific, pipeline, chat), tool restructuring for AI provider compatibility, and integration with ai-http-client library
-
-- **ToolResultFinder** (`/inc/Engine/AI/ToolResultFinder.php`): Universal utility for finding AI tool execution results in data packets, handler-specific result search by slug matching, centralized search logic eliminating code duplication across update handlers
+- **AIConversationLoop**: Multi-turn conversation execution with tool calling, completion detection, and state management
+- **ToolExecutor**: Universal tool discovery, enablement validation, and execution across agent types
+- **ToolParameters**: Centralized parameter building for AI tools with data packet integration
+- **ConversationManager**: Message formatting and conversation state management
+- **RequestBuilder**: AI request construction with directive application and tool restructuring
+- **ToolResultFinder**: Utility for finding tool execution results in data packets
 
 **Tool Categories**:
-- Handler-specific tools for publish/update operations (twitter_publish, wordpress_update)
-- Global tools in `/inc/Engine/AI/Tools/` for search and analysis (GoogleSearch, LocalSearch, WebFetch, WordPressPostReader)
-- Chat-only tools for workflow building (@since v0.4.3 specialized tools refactoring, expanded v0.4.9):
-   - ExecuteWorkflow (@since v0.3.0) - Direct workflow execution via streamlined ExecuteWorkflowTool with automatic provider/model defaults
-  - AddPipelineStep (@since v0.4.3) - Add steps to existing pipelines with automatic flow synchronization
-  - ApiQuery (@since v0.4.3) - REST API query tool with comprehensive endpoint documentation for discovery and monitoring
-   - ConfigureFlowSteps (@since v0.4.2) - Configure flow step handlers and AI messages with validation
-  - ConfigurePipelineStep (@since v0.4.4) - Configure pipeline-level AI settings including system prompt, provider, model, and enabled tools
-  - CreateFlow (@since v0.4.2) - Create flow instances from pipelines with automatic step synchronization and scheduling support
-  - CreatePipeline (@since v0.4.3) - Create pipelines with optional predefined steps and automatic flow instantiation
-  - RunFlow (@since v0.4.4) - Execute existing flows immediately or schedule delayed execution with job tracking
-  - UpdateFlow (@since v0.4.4) - Update flow-level properties including title and scheduling configuration
-- Automatic tool discovery and configuration via filter-based system
-- Three-layer tool enablement: Global settings → Modal selection → Runtime validation
+- Handler-specific tools for publish/update operations
+- Global tools for search and analysis (GoogleSearch, LocalSearch, WebFetch, WordPressPostReader)
+- Chat-only tools for workflow building (@since v0.4.3):
+  - ExecuteWorkflow, AddPipelineStep, ApiQuery, ConfigureFlowSteps, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow
+- Automatic tool discovery and three-layer enablement system
 
 ### Filter-Based Discovery
 All components self-register via WordPress filters:

@@ -3,6 +3,7 @@
  */
 
 import { useCallback, useState, useRef, useEffect } from '@wordpress/element';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardBody, CardDivider } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import FlowHeader from './FlowHeader';
@@ -14,6 +15,7 @@ import {
 	useDuplicateFlow,
 	useRunFlow,
 } from '../../queries/flows';
+import { fetchFlow } from '../../utils/api';
 import { useUIStore } from '../../stores/uiStore';
 
 import { MODAL_TYPES } from '../../utils/constants';
@@ -38,15 +40,20 @@ function FlowCardContent( props ) {
 	const deleteFlowMutation = useDeleteFlow();
 	const duplicateFlowMutation = useDuplicateFlow();
 	const runFlowMutation = useRunFlow();
+	const queryClient = useQueryClient();
 	const { openModal } = useUIStore();
 
 	// Run success state for temporary button feedback
 	const [ runSuccess, setRunSuccess ] = useState( false );
+	const [ optimisticLastRunDisplay, setOptimisticLastRunDisplay ] =
+		useState( null );
+	const reconcileTokenRef = useRef( 0 );
 	const successTimeout = useRef( null );
 
 	// Cleanup timeout on unmount
 	useEffect( () => {
 		return () => {
+			reconcileTokenRef.current += 1;
 			if ( successTimeout.current ) {
 				clearTimeout( successTimeout.current );
 			}
@@ -70,7 +77,10 @@ function FlowCardContent( props ) {
 	const handleDelete = useCallback(
 		async ( flowId ) => {
 			try {
-				await deleteFlowMutation.mutateAsync( flowId );
+				await deleteFlowMutation.mutateAsync( {
+					flowId,
+					pipelineId: currentFlowData.pipeline_id,
+				} );
 				// Delete affects pipeline - trigger pipeline refresh
 				if ( onFlowDeleted ) {
 					onFlowDeleted( flowId );
@@ -87,7 +97,7 @@ function FlowCardContent( props ) {
 				);
 			}
 		},
-		[ deleteFlowMutation, onFlowDeleted ]
+		[ deleteFlowMutation, onFlowDeleted, currentFlowData.pipeline_id ]
 	);
 
 	/**
@@ -96,7 +106,10 @@ function FlowCardContent( props ) {
 	const handleDuplicate = useCallback(
 		async ( flowId ) => {
 			try {
-				await duplicateFlowMutation.mutateAsync( flowId );
+				await duplicateFlowMutation.mutateAsync( {
+					flowId,
+					pipelineId: currentFlowData.pipeline_id,
+				} );
 				// Duplicate affects pipeline - trigger pipeline refresh
 				if ( onFlowDuplicated ) {
 					onFlowDuplicated( flowId );
@@ -113,7 +126,68 @@ function FlowCardContent( props ) {
 				);
 			}
 		},
-		[ duplicateFlowMutation, onFlowDuplicated ]
+		[ duplicateFlowMutation, onFlowDuplicated, currentFlowData.pipeline_id ]
+	);
+
+	const sleep = useCallback(
+		( ms ) => new Promise( ( r ) => setTimeout( r, ms ) ),
+		[]
+	);
+
+	const reconcileFlowAfterRun = useCallback(
+		async ( flowId, pipelineId, baselineLastRun, token ) => {
+			const delays = [ 500, 1000, 2000, 4000, 8000 ];
+
+			for ( const delay of delays ) {
+				await sleep( delay );
+
+				if ( reconcileTokenRef.current !== token ) {
+					return;
+				}
+
+				try {
+					const response = await fetchFlow( flowId );
+					if ( ! response?.success || ! response?.data ) {
+						continue;
+					}
+
+					const updatedFlow = response.data;
+
+					queryClient.setQueryData(
+						[ 'flows', 'single', flowId ],
+						updatedFlow
+					);
+
+					if ( pipelineId ) {
+						queryClient.setQueryData(
+							[ 'flows', pipelineId ],
+							( oldFlows = [] ) => {
+								if ( ! Array.isArray( oldFlows ) ) {
+									return oldFlows;
+								}
+
+								return oldFlows.map( ( existingFlow ) =>
+									existingFlow.flow_id === flowId
+										? updatedFlow
+										: existingFlow
+								);
+							}
+						);
+					}
+
+					if (
+						updatedFlow.last_run &&
+						updatedFlow.last_run !== baselineLastRun
+					) {
+						setOptimisticLastRunDisplay( null );
+						return;
+					}
+				} catch ( err ) {
+					continue;
+				}
+			}
+		},
+		[ queryClient, sleep ]
 	);
 
 	/**
@@ -121,13 +195,26 @@ function FlowCardContent( props ) {
 	 */
 	const handleRun = useCallback(
 		async ( flowId ) => {
+			const token = reconcileTokenRef.current + 1;
+			reconcileTokenRef.current = token;
+
+			setOptimisticLastRunDisplay( __( 'Queued', 'datamachine' ) );
+
 			try {
 				await runFlowMutation.mutateAsync( flowId );
 				setRunSuccess( true );
 				successTimeout.current = setTimeout( () => {
 					setRunSuccess( false );
 				}, 2000 );
+
+				reconcileFlowAfterRun(
+					flowId,
+					currentFlowData.pipeline_id,
+					currentFlowData.last_run,
+					token
+				);
 			} catch ( error ) {
+				setOptimisticLastRunDisplay( null );
 				// eslint-disable-next-line no-console
 				console.error( 'Flow execution error:', error );
 				// eslint-disable-next-line no-alert, no-undef
@@ -139,7 +226,12 @@ function FlowCardContent( props ) {
 				);
 			}
 		},
-		[ runFlowMutation ]
+		[
+			currentFlowData.last_run,
+			currentFlowData.pipeline_id,
+			reconcileFlowAfterRun,
+			runFlowMutation,
+		]
 	);
 
 	/**
@@ -230,6 +322,7 @@ function FlowCardContent( props ) {
 
 				<FlowSteps
 					flowId={ currentFlowData.flow_id }
+					pipelineId={ currentFlowData.pipeline_id }
 					flowConfig={ currentFlowData.flow_config || {} }
 					pipelineConfig={ pipelineConfig }
 					onStepConfigured={ handleStepConfigured }
@@ -241,7 +334,9 @@ function FlowCardContent( props ) {
 					flowId={ currentFlowData.flow_id }
 					scheduling={ {
 						interval: currentFlowData.scheduling_config?.interval,
-						last_run_display: currentFlowData.last_run_display,
+						last_run_display:
+							optimisticLastRunDisplay ||
+							currentFlowData.last_run_display,
 						next_run_display: currentFlowData.next_run_display,
 					} }
 				/>

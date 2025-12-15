@@ -50,7 +50,7 @@ curl https://example.com/wp-json/datamachine/v1/handlers?step_type=update \
 ```json
 {
   "success": true,
-  "handlers": {
+  "data": {
     "rss": {
       "type": "fetch",
       "class": "DataMachine\\Core\\Steps\\Fetch\\Handlers\\RSS\\RSS",
@@ -63,21 +63,36 @@ curl https://example.com/wp-json/datamachine/v1/handlers?step_type=update \
       "class": "DataMachine\\Core\\Steps\\Fetch\\Handlers\\Reddit\\Reddit",
       "label": "Reddit",
       "description": "Fetch posts and comments from Reddit",
-      "requires_auth": true
+      "requires_auth": true,
+      "auth_type": "oauth2",
+      "auth_fields": ["client_id", "client_secret"],
+      "callback_url": "https://example.com/wp-admin/admin.php?page=datamachine",
+      "is_authenticated": false
     },
     "twitter": {
       "type": "publish",
       "class": "DataMachine\\Core\\Steps\\Publish\\Handlers\\Twitter\\Twitter",
       "label": "Twitter",
       "description": "Post content to Twitter",
-      "requires_auth": true
+      "requires_auth": true,
+      "auth_type": "oauth1",
+      "auth_fields": ["api_key", "api_secret"],
+      "callback_url": "https://example.com/wp-admin/admin.php?page=datamachine",
+      "is_authenticated": true,
+      "account_details": {
+        "username": "exampleuser",
+        "id": "1234567890"
+      }
     },
     "bluesky": {
       "type": "publish",
       "class": "DataMachine\\Core\\Steps\\Publish\\Handlers\\Bluesky\\Bluesky",
       "label": "Bluesky",
       "description": "Post content to Bluesky",
-      "requires_auth": true
+      "requires_auth": true,
+      "auth_type": "app_password",
+      "auth_fields": ["handle", "password"],
+      "is_authenticated": false
     },
     "wordpress": {
       "type": "publish",
@@ -99,7 +114,7 @@ curl https://example.com/wp-json/datamachine/v1/handlers?step_type=update \
 
 **Response Fields**:
 - `success` (boolean): Request success status
-- `handlers` (object): Object of handler definitions keyed by handler slug
+- `data` (object): Object of handler definitions keyed by handler slug
 
 **Handler Definition Fields**:
 - `type` (string): Handler type (`fetch`, `publish`, `update`)
@@ -107,6 +122,11 @@ curl https://example.com/wp-json/datamachine/v1/handlers?step_type=update \
 - `label` (string): Human-readable handler name
 - `description` (string): Handler description
 - `requires_auth` (boolean): Whether handler requires OAuth/authentication
+- `auth_type` (string, optional): Authentication type (`oauth1`, `oauth2`, `app_password`) - only present if `requires_auth` is true
+- `auth_fields` (array, optional): Required authentication field names - only present if `requires_auth` is true
+- `callback_url` (string, optional): OAuth callback URL for configuration - only present for OAuth handlers
+- `is_authenticated` (boolean, optional): Current authentication status - only present if `requires_auth` is true
+- `account_details` (object, optional): Account information when authenticated - only present when `is_authenticated` is true
 
 ## Handler Types
 
@@ -209,14 +229,14 @@ if response.status_code == 200:
     data = response.json()
 
     # List fetch handlers
-    fetch_handlers = {k: v for k, v in data['handlers'].items() if v['type'] == 'fetch'}
+    fetch_handlers = {k: v for k, v in data['data'].items() if v['type'] == 'fetch'}
     print("Fetch Handlers:")
     for slug, handler in fetch_handlers.items():
         auth_required = "Yes" if handler['requires_auth'] else "No"
         print(f"  {slug}: {handler['label']} (Auth: {auth_required})")
 
     # List publish handlers
-    publish_handlers = {k: v for k, v in data['handlers'].items() if v['type'] == 'publish'}
+    publish_handlers = {k: v for k, v in data['data'].items() if v['type'] == 'publish'}
     print("\nPublish Handlers:")
     for slug, handler in publish_handlers.items():
         auth_required = "Yes" if handler['requires_auth'] else "No"
@@ -243,7 +263,7 @@ async function getHandlersByType(type) {
     auth: handlersAPI.auth
   });
 
-  return response.data.handlers;
+  return response.data.data;
 }
 
 // Get handlers requiring auth
@@ -252,7 +272,7 @@ async function getAuthHandlers() {
     auth: handlersAPI.auth
   });
 
-  const handlers = response.data.handlers;
+  const handlers = response.data.data;
   return Object.entries(handlers)
     .filter(([_, handler]) => handler.requires_auth)
     .reduce((obj, [slug, handler]) => {
@@ -292,7 +312,7 @@ curl https://example.com/wp-json/datamachine/v1/handlers?step_type=fetch \
 ```bash
 # Get all handlers and filter client-side for auth requirements
 curl https://example.com/wp-json/datamachine/v1/handlers \
-  -u username:application_password | jq '.handlers | to_entries | map(select(.value.requires_auth == true))'
+  -u username:application_password | jq '.data | to_entries | map(select(.value.requires_auth == true))'
 ```
 
 ## Use Cases
@@ -327,7 +347,7 @@ Generate handler documentation from metadata:
 
 ```bash
 curl https://example.com/wp-json/datamachine/v1/handlers \
-  -u username:application_password | jq -r '.handlers | to_entries[] | "**\(.value.label)** (\(.key)): \(.value.description)"'
+  -u username:application_password | jq -r '.data | to_entries[] | "**\(.value.label)** (\(.key)): \(.value.description)"'
 ```
 
 ## Related Documentation

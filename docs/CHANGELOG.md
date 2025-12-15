@@ -5,6 +5,20 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2025-12-15
+
+### Added
+- **Optimistic UI Updates**: Added optimistic updates and reconciliation logic for flow execution in FlowCard component
+
+### Improved
+- **React Query Integration**: Refactored flow components to use query hooks instead of direct API calls
+- **Flow Execution UX**: Enhanced flow execution with queued status display and automatic result reconciliation
+- **API Documentation**: Synchronized auth.md and handlers.md with actual response structures and authentication metadata
+- **Code Quality**: Cleaned up excessive comments and improved prop handling across flow components
+
+### Fixed
+- **Stable Tag**: Updated README.md stable tag to reflect current version 0.6.3
+
 ## [0.6.3] - 2025-12-15
 
 ### Improved

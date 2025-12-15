@@ -10,18 +10,19 @@ import FlowStepCard from './FlowStepCard';
 import DataFlowArrow from '../shared/DataFlowArrow';
 
 /**
- * Flow Steps Container Component
+ * Flow Steps Container Component.
  *
- * @param {Object} props - Component props
- * @param {number} props.flowId - Flow ID
- * @param {Object} props.flowConfig - Flow configuration (keyed by flow_step_id)
- * @param {Object} props.pipelineConfig - Pipeline configuration (keyed by pipeline_step_id)
- * @param {Function} props.onStepConfigured - Configure step handler
- * @param {Object} props.stepTypes - Step types configuration
- * @returns {React.ReactElement} Flow steps container
+ * @param {Object}   props                  - Component props.
+ * @param {number}   props.flowId           - Flow ID.
+ * @param {number}   props.pipelineId       - Pipeline ID.
+ * @param {Object}   props.flowConfig       - Flow configuration (keyed by flow_step_id).
+ * @param {Object}   props.pipelineConfig   - Pipeline configuration (keyed by pipeline_step_id).
+ * @param {Function} props.onStepConfigured - Configure step handler.
+ * @return {JSX.Element} Flow steps container.
  */
 export default function FlowSteps( {
 	flowId,
+	pipelineId,
 	flowConfig,
 	pipelineConfig,
 	onStepConfigured,
@@ -106,6 +107,7 @@ export default function FlowSteps( {
 				>
 					<FlowStepCard
 						flowId={ flowId }
+						pipelineId={ pipelineId }
 						flowStepId={ step.flowStepId }
 						flowStepConfig={ step.flowStepConfig }
 						pipelineStep={ step.pipelineStep }
@@ -124,9 +126,5 @@ export default function FlowSteps( {
 		return items;
 	};
 
-	return (
-		<div className="datamachine-flow-steps">
-			{ renderItems() }
-		</div>
-	);
+	return <div className="datamachine-flow-steps">{ renderItems() }</div>;
 }
