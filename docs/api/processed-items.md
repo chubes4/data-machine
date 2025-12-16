@@ -1,4 +1,4 @@
-# ProcessedItems Endpoints
+# Deduplication Tracking Endpoints
 
 **Implementation**: `inc/Api/ProcessedItems.php`
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-ProcessedItems endpoints manage deduplication tracking records for workflows. These records prevent duplicate processing of content items across flow executions.
+Deduplication tracking endpoints manage item tracking records to prevent duplicate processing of content items across flow executions. When a fetch handler processes an item (like an RSS post or Reddit comment), a record is stored to mark it as processed so future flow runs skip it.
 
 ## Authentication
 
@@ -16,11 +16,11 @@ Requires `manage_options` capability. See Authentication Guide documentation.
 
 ### GET /processed-items
 
-Retrieve processed item records with pagination and filtering.
+Retrieve deduplication tracking records with pagination and filtering.
 
 **Permission**: `manage_options` capability required
 
-**Purpose**: Monitor deduplication tracking for debugging and workflow optimization
+**Purpose**: Monitor what items have been processed to prevent duplicates, useful for debugging and workflow optimization
 
 **Parameters**:
 - `page` (integer, optional): Page number for pagination (default: 1)
@@ -74,12 +74,12 @@ curl https://example.com/wp-json/datamachine/v1/processed-items?page=2&per_page=
 
 **Response Fields**:
 - `success` (boolean): Request success status
-- `items` (array): Array of processed item records
-- `total` (integer): Total number of processed items matching filters
+- `items` (array): Array of deduplication tracking records
+- `total` (integer): Total number of tracked items matching filters
 - `page` (integer): Current page number
 - `per_page` (integer): Number of items per page
 
-**Processed Item Fields**:
+**Tracked Item Fields**:
 - `id` (integer): Unique processed item ID
 - `flow_step_id` (string): Flow step identifier (format: `{pipeline_step_id}_{flow_id}`)
 - `source_type` (string): Handler type (e.g., `rss`, `reddit`, `wordpress-local`)
@@ -89,11 +89,11 @@ curl https://example.com/wp-json/datamachine/v1/processed-items?page=2&per_page=
 
 ### DELETE /processed-items/{id}
 
-Delete a specific processed item record to allow reprocessing.
+Delete a specific deduplication tracking record to allow reprocessing that item.
 
 **Permission**: `manage_options` capability required
 
-**Purpose**: Remove specific processed item to force reprocessing of that item
+**Purpose**: Remove tracking for a specific item to force it to be processed again on next flow execution
 
 **Parameters**:
 - `id` (integer, required): Processed item ID (in URL path)
@@ -110,7 +110,7 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items/1523 \
 ```json
 {
   "success": true,
-  "message": "Processed item deleted successfully.",
+  "message": "Deduplication tracking record deleted successfully.",
   "id": 1523
 }
 ```
@@ -118,7 +118,7 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items/1523 \
 **Response Fields**:
 - `success` (boolean): Request success status
 - `message` (string): Confirmation message
-- `id` (integer): Deleted processed item ID
+- `id` (integer): Deleted tracking record ID
 
 **Error Response (404 Not Found)**:
 
@@ -132,11 +132,11 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items/1523 \
 
 ### DELETE /processed-items
 
-Clear processed items in bulk by pipeline or flow.
+Clear deduplication tracking records in bulk by pipeline or flow.
 
 **Permission**: `manage_options` capability required
 
-**Purpose**: Reset deduplication tracking to allow items to be processed again
+**Purpose**: Reset deduplication tracking to allow items to be processed again on next execution
 
 **Parameters**:
 - `clear_type` (string, required): Clear scope - `pipeline` or `flow`
@@ -163,7 +163,9 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items \
 ```json
 {
   "success": true,
-  "message": "Processed items cleared successfully."
+  "data": null,
+  "message": "Deleted 42 deduplication tracking records.",
+  "items_deleted": 42
 }
 ```
 
@@ -177,14 +179,14 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items \
 }
 ```
 
-## Deduplication System
+## Deduplication Tracking System
 
 ### How It Works
 
-1. **Fetch Handler**: Records item identifier when fetching content
-2. **Database Storage**: Stores `flow_step_id`, `source_type`, `item_identifier`, `job_id`
-3. **Future Executions**: Checks if item was previously processed
-4. **Skip Duplicates**: Prevents reprocessing of same item
+1. **Fetch Handler**: Records item identifier when fetching content from a source
+2. **Database Storage**: Stores `flow_step_id`, `source_type`, `item_identifier`, and `job_id`
+3. **Future Executions**: Checks if an item was previously processed before fetching
+4. **Skip Duplicates**: Prevents reprocessing of the same item across flow runs
 
 ### Item Identifiers by Handler
 
@@ -232,13 +234,13 @@ This allows:
 ### Force Reprocessing of RSS Feed
 
 ```bash
-# 1. Clear processed items for flow
+# 1. Clear deduplication tracking for flow
 curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items \
   -H "Content-Type: application/json" \
   -u username:application_password \
   -d '{"clear_type": "flow", "target_id": 42}'
 
-# 2. Execute flow again
+# 2. Execute flow again - items will be processed since tracking was cleared
 curl -X POST https://example.com/wp-json/datamachine/v1/execute \
   -H "Content-Type: application/json" \
   -u username:application_password \
@@ -248,7 +250,7 @@ curl -X POST https://example.com/wp-json/datamachine/v1/execute \
 ### Debug Deduplication Behavior
 
 ```bash
-# Check what items have been processed
+# Check what items have been tracked as processed
 curl https://example.com/wp-json/datamachine/v1/processed-items?flow_id=42&per_page=100 \
   -u username:application_password
 ```
@@ -256,7 +258,7 @@ curl https://example.com/wp-json/datamachine/v1/processed-items?flow_id=42&per_p
 ### Reset Pipeline Tracking
 
 ```bash
-# Clear all processed items for pipeline
+# Clear all deduplication tracking for pipeline
 curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items \
   -H "Content-Type: application/json" \
   -u username:application_password \
@@ -274,33 +276,33 @@ from requests.auth import HTTPBasicAuth
 url = "https://example.com/wp-json/datamachine/v1/processed-items"
 auth = HTTPBasicAuth("username", "application_password")
 
-# Get processed items for flow
+# Get deduplication tracking records for flow
 params = {"flow_id": 42, "per_page": 100}
 response = requests.get(url, params=params, auth=auth)
 
 if response.status_code == 200:
     data = response.json()
-    print(f"Found {len(data['items'])} processed items")
+    print(f"Found {len(data['items'])} tracked items")
 
     for item in data['items']:
         print(f"Processed: {item['item_identifier']} at {item['processed_at']}")
 
-# Clear processed items
+# Clear deduplication tracking
 clear_response = requests.delete(url, json={
     "clear_type": "flow",
     "target_id": 42
 }, auth=auth)
 
 if clear_response.status_code == 200:
-    print("Processed items cleared")
+    print("Deduplication tracking cleared")
 ```
 
-### JavaScript Item Management
+### JavaScript Item Tracking Management
 
 ```javascript
 const axios = require('axios');
 
-const itemsAPI = {
+const deduplicationAPI = {
   baseURL: 'https://example.com/wp-json/datamachine/v1/processed-items',
   auth: {
     username: 'admin',
@@ -308,52 +310,52 @@ const itemsAPI = {
   }
 };
 
-// Get processed items count
-async function getProcessedCount(flowId) {
-  const response = await axios.get(itemsAPI.baseURL, {
+// Get tracked items count
+async function getTrackedCount(flowId) {
+  const response = await axios.get(deduplicationAPI.baseURL, {
     params: { flow_id: flowId, per_page: 1 },
-    auth: itemsAPI.auth
+    auth: deduplicationAPI.auth
   });
 
   return response.data.total;
 }
 
-// Clear by flow
-async function clearFlowItems(flowId) {
-  const response = await axios.delete(itemsAPI.baseURL, {
+// Clear deduplication tracking by flow
+async function clearFlowTracking(flowId) {
+  const response = await axios.delete(deduplicationAPI.baseURL, {
     data: {
       clear_type: 'flow',
       target_id: flowId
     },
-    auth: itemsAPI.auth
+    auth: deduplicationAPI.auth
   });
 
   return response.data.success;
 }
 
-// Delete specific item
-async function deleteItem(itemId) {
+// Delete specific tracking record
+async function deleteTrackingRecord(itemId) {
   const response = await axios.delete(
-    `${itemsAPI.baseURL}/${itemId}`,
-    { auth: itemsAPI.auth }
+    `${deduplicationAPI.baseURL}/${itemId}`,
+    { auth: deduplicationAPI.auth }
   );
 
   return response.data.success;
 }
 
 // Usage
-const count = await getProcessedCount(42);
-console.log(`Flow 42 has processed ${count} items`);
+const count = await getTrackedCount(42);
+console.log(`Flow 42 has ${count} tracked items`);
 
-await clearFlowItems(42);
-console.log('Flow items cleared');
+await clearFlowTracking(42);
+console.log('Flow deduplication tracking cleared');
 ```
 
 ## Use Cases
 
 ### Reprocess RSS Feed Items
 
-Clear processed items to force re-import of previously skipped content:
+Clear deduplication tracking to force re-import of previously skipped content:
 
 ```bash
 curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items \
@@ -364,7 +366,7 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items \
 
 ### Debug Handler Configuration
 
-After fixing handler configuration, reset tracking to reprocess items with new settings:
+After fixing handler configuration, reset deduplication tracking to reprocess items with new settings:
 
 ```bash
 curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items \
@@ -375,16 +377,16 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items \
 
 ### Monitor Workflow Progress
 
-Track how many items have been processed over time:
+Track how many items have been processed over time by checking deduplication records:
 
 ```bash
 curl https://example.com/wp-json/datamachine/v1/processed-items?flow_id=42 \
   -u username:application_password
 ```
 
-### Remove Specific Failed Item
+### Remove Specific Deduplication Record
 
-Delete tracking for specific item to allow retry:
+Delete tracking for a specific item to allow it to be processed again:
 
 ```bash
 curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items/1523 \
@@ -404,3 +406,4 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/processed-items/1523 \
 **Permission**: `manage_options` capability required
 **Implementation**: `inc/Api/ProcessedItems.php`
 **Database Table**: `wp_datamachine_processed_items`
+**Service**: `DataMachine\Services\ProcessedItemsManager`

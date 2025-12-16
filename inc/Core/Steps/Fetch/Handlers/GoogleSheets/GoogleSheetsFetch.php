@@ -329,13 +329,13 @@ class GoogleSheetsFetch extends FetchHandler {
         return [];
     }
 
-    /**
-     * Process spreadsheet columns individually with deduplication.
-     */
-    private function process_by_column($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id) {
-        if (empty($rows)) {
-            return ['processed_items' => []];
-        }
+     /**
+      * Process spreadsheet columns individually with deduplication.
+      */
+     private function process_by_column($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id) {
+         if (empty($rows)) {
+             return [];
+         }
 
         // Determine max columns
         $max_cols = 0;

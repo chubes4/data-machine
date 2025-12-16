@@ -82,7 +82,7 @@ class WordPressAPI extends FetchHandler {
 		// Fetch from API endpoint
 		$item = $this->fetch_from_endpoint($pipeline_id, $endpoint_url, $timeframe_limit, $search, $flow_step_id, $flow_id, $job_id);
 
-		return $item ?: $this->emptyResponse();
+		return $item ?: [];
 	}
 
     /**
