@@ -5,6 +5,22 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5] - 2025-12-16
+
+### Changed
+- **License Update**: Changed project license from proprietary to GPL-2.0-or-later for open-source compatibility
+- **PHP Version Requirement**: Increased minimum PHP version from 8.0 to 8.2 for improved performance and features
+- **Dependency Updates**: Updated composer dependencies including TwitterOAuth (^7.0 → ^8.1), PHPUnit (^10.0 → ^12.0), and WordPress stubs (^6.8 → ^6.9)
+- **Node.js Dependencies**: Minor updates to @wordpress/scripts (^31.0.0 → ^31.1.0) and React Query (5.90.10 → 5.90.12)
+- **File Repository Architecture**: Enhanced file cleanup directory naming to include flow ID for better isolation
+- **Fetch Handler Refactoring**: Simplified base FetchHandler by removing unused successResponse() and emptyResponse() helper methods
+- **Handler Compatibility**: Updated GoogleSheets and Reddit fetch handlers to use direct array returns instead of removed helper methods
+
+### Technical Details
+- **Code Reduction**: -19 lines from FetchHandler refactoring
+- **Compatibility**: PHP 8.2+ now required; existing PHP 8.0/8.1 installations must upgrade
+- **Security**: Updated dependencies address potential vulnerabilities in older versions
+
 ## [0.6.4] - 2025-12-15
 
 ### Added

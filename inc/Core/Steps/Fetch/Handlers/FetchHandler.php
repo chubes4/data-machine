@@ -296,24 +296,7 @@ abstract class FetchHandler {
 		);
 	}
 
-	/**
-	 * Create success response with items
-	 *
-	 * @param array $items Processed items array
-	 * @return array Standardized response
-	 */
-	protected function successResponse( array $items ): array {
-		return [ 'processed_items' => $items ];
-	}
 
-	/**
-	 * Create empty response (no items found)
-	 *
-	 * @return array Empty array indicating no data was found
-	 */
-	protected function emptyResponse(): array {
-		return [];
-	}
 
 	/**
 	 * Perform HTTP request with standardized handling

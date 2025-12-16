@@ -90,7 +90,7 @@ class GoogleSheetsFetch extends FetchHandler {
         $auth_service = $this->get_auth_service();
         if (!$auth_service) {
             $this->log('error', 'Google Sheets authentication not configured', ['pipeline_id' => $pipeline_id]);
-            return $this->emptyResponse();
+            return [];
         }
 
         // Get authenticated access token

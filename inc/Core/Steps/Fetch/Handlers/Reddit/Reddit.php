@@ -82,7 +82,7 @@ class Reddit extends FetchHandler {
 		$oauth_reddit = $this->get_oauth_reddit();
 		if (!$oauth_reddit) {
 			$this->log('error', 'Reddit authentication not configured', ['pipeline_id' => $pipeline_id]);
-			return $this->emptyResponse();
+			return [];
 		}
 
 		$reddit_account = $oauth_reddit->get_account();

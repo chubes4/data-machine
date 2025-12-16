@@ -140,7 +140,8 @@ class FileCleanup {
 
             foreach ($flow_dirs as $flow_dir) {
                 // Clean up flow files (not context!)
-                $files_dir = "{$flow_dir}/files";
+                $flow_id = basename($flow_dir);
+                $files_dir = "{$flow_dir}/{$flow_id}-files";
 
                 if (is_dir($files_dir)) {
                     $files = glob("{$files_dir}/*");

@@ -1,6 +1,6 @@
 {
 	"name": "datamachine",
-  "version": "0.6.4",
+  "version": "0.6.5",
 	"description": "AI-first WordPress plugin with Pipeline+Flow architecture",
 	"private": true,
 	"scripts": {
@@ -11,7 +11,7 @@
 		"lint:style": "wp-scripts lint-style"
 	},
 	"devDependencies": {
-		"@wordpress/scripts": "^31.0.0",
+		"@wordpress/scripts": "^31.1.0",
 		"js-yaml": "^4.1.1"
 	},
 	"overrides": {
@@ -19,16 +19,16 @@
 		"webpack-dev-server": "^5.2.1"
 	},
 	"dependencies": {
-		"@tanstack/react-query": "^5.90.10",
-		"@tanstack/react-query-devtools": "^5.90.2",
-		"@wordpress/api-fetch": "^7.35.0",
-		"@wordpress/components": "^30.8.0",
-		"@wordpress/data": "^10.35.0",
-		"@wordpress/dom-ready": "^4.35.0",
-		"@wordpress/element": "^6.35.0",
-		"@wordpress/hooks": "^4.35.0",
-		"@wordpress/i18n": "^6.8.0",
-		"@wordpress/notices": "^5.35.0",
-		"zustand": "^5.0.8"
+		"@tanstack/react-query": "^5.90.12",
+		"@tanstack/react-query-devtools": "^5.91.1",
+		"@wordpress/api-fetch": "^7.36.0",
+		"@wordpress/components": "^30.9.0",
+		"@wordpress/data": "^10.36.0",
+		"@wordpress/dom-ready": "^4.36.0",
+		"@wordpress/element": "^6.36.0",
+		"@wordpress/hooks": "^4.36.0",
+		"@wordpress/i18n": "^6.9.0",
+		"@wordpress/notices": "^5.36.0",
+		"zustand": "^5.0.9"
 	}
 }
