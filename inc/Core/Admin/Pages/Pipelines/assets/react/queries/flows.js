@@ -17,6 +17,7 @@ import {
 	updateUserMessage,
 	updateFlowSchedule,
 } from '../utils/api';
+import { isSameId } from '../utils/ids';
 
 const setFlowInCache = ( queryClient, flow ) => {
 	if ( ! flow?.flow_id ) {
@@ -34,7 +35,7 @@ const setFlowInCache = ( queryClient, flow ) => {
 				}
 
 				return oldFlows.map( ( existingFlow ) =>
-					existingFlow.flow_id === flow.flow_id ? flow : existingFlow
+					isSameId( existingFlow.flow_id, flow.flow_id ) ? flow : existingFlow
 				);
 			}
 		);
@@ -59,7 +60,7 @@ const patchFlowInCache = ( queryClient, { pipelineId, flowId, patchFlow } ) => {
 				}
 
 				return oldFlows.map( ( existingFlow ) =>
-					existingFlow.flow_id === flowId
+					isSameId( existingFlow.flow_id, flowId )
 						? patchFlow( existingFlow )
 						: existingFlow
 				);
@@ -161,7 +162,7 @@ export const useDeleteFlow = () => {
 						}
 
 						return oldFlows.filter(
-							( flow ) => flow.flow_id !== flowId
+							( flow ) => ! isSameId( flow.flow_id, flowId )
 						);
 					}
 				);
@@ -354,7 +355,7 @@ export const useUpdateFlowSchedule = () => {
 						}
 
 						return oldFlows.map( ( flow ) =>
-							flow.flow_id === flowId ? updatedFlow : flow
+							isSameId( flow.flow_id, flowId ) ? updatedFlow : flow
 						);
 					}
 				);

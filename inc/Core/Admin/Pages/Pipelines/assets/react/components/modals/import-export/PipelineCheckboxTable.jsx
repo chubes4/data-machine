@@ -6,6 +6,7 @@
 
 import { CheckboxControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { isSameId, includesId, normalizeId } from '../../../utils/ids';
 
 /**
  * Pipeline Checkbox Table Component
@@ -25,9 +26,10 @@ export default function PipelineCheckboxTable( {
 	 * Toggle individual pipeline selection
 	 */
 	const togglePipeline = ( pipelineId ) => {
-		const newSelection = selectedIds.includes( pipelineId )
-			? selectedIds.filter( ( id ) => id !== pipelineId )
-			: [ ...selectedIds, pipelineId ];
+		const normalizedId = normalizeId( pipelineId );
+		const newSelection = includesId( selectedIds, pipelineId )
+			? selectedIds.filter( ( id ) => ! isSameId( id, pipelineId ) )
+			: [ ...selectedIds, normalizedId ];
 
 		onSelectionChange( newSelection );
 	};
@@ -39,7 +41,7 @@ export default function PipelineCheckboxTable( {
 		if ( selectedIds.length === pipelines.length ) {
 			onSelectionChange( [] );
 		} else {
-			onSelectionChange( pipelines.map( ( p ) => p.pipeline_id ) );
+			onSelectionChange( pipelines.map( ( p ) => normalizeId( p.pipeline_id ) ) );
 		}
 	};
 
@@ -92,7 +94,8 @@ export default function PipelineCheckboxTable( {
 							pipeline.pipeline_config || {}
 						).length;
 						const flowCount = pipeline.flows?.length || 0;
-						const isSelected = selectedIds.includes(
+						const isSelected = includesId(
+							selectedIds,
 							pipeline.pipeline_id
 						);
 

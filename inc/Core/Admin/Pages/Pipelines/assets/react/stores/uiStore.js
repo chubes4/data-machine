@@ -7,6 +7,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { isSameId, normalizeId } from '../utils/ids';
 
 export const useUIStore = create(
   persist(
@@ -18,7 +19,7 @@ export const useUIStore = create(
 	  			set({ selectedPipelineId: null });
 	  			return;
 	  		}
-	  		set({ selectedPipelineId: String(id) });
+	  		set({ selectedPipelineId: normalizeId(id) });
 	  	},
 
       // Modal state
@@ -43,15 +44,15 @@ export const useUIStore = create(
           return;
         }
 
-	  		const normalizedCurrentId = currentId ? String(currentId) : null;
+	  		const normalizedCurrentId = normalizeId(currentId);
 
 	  		// If current pipeline still exists, keep it selected
-	  		if (normalizedCurrentId && pipelines.some((p) => String(p.pipeline_id) === normalizedCurrentId)) {
+	  		if (normalizedCurrentId && pipelines.some((p) => isSameId(p.pipeline_id, normalizedCurrentId))) {
 	  			return;
 	  		}
 
 	  		// Otherwise, select the first available pipeline
-	  		set({ selectedPipelineId: String(pipelines[0].pipeline_id) });
+	  		set({ selectedPipelineId: normalizeId(pipelines[0].pipeline_id) });
       },
     }),
     {

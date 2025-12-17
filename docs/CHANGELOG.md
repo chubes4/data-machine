@@ -5,10 +5,27 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.7] - 2025-12-17
+
+### Improved
+- **Fetch Handler Consistency**: Standardized empty response handling across all fetch handlers to return consistent empty arrays
+- **API Documentation**: Updated processed-items API documentation to use "deduplication tracking" terminology for better clarity
+- **React Component Reliability**: Added type-safe ID comparison utilities to prevent type coercion bugs in React components
+- **Version Number Consistency**: Fixed inconsistent version numbers across plugin files and documentation
+
+### Fixed
+- **Type Safety**: Implemented ID utility functions (`isSameId`, `includesId`, `normalizeId`) to handle string/number ID comparisons reliably
+- **Component Updates**: Updated FlowCard, FlowSteps, PipelineCheckboxTable, and flows query components to use type-safe ID utilities
+
+### Technical Details
+- **Code Cleanup**: Standardized empty array returns in GoogleSheetsFetch and WordPressAPI handlers
+- **Documentation**: Comprehensive API documentation updates for deduplication tracking endpoints
+- **React Improvements**: New utils/ids.js utility file with type-safe ID comparison functions
+
 ## [0.6.6] - 2025-12-16
 
 ### Improved
-- **Deduplication Tracking**: Renamed "ProcessedItems" endpoints to "Deduplication Tracking" throughout documentation for better clarity and understanding
+- **Deduplication Tracking**: Renamed "ProcessedItems" endpoints to "Deduplication Tracking" throughout documentation for better clarity
 - **Fetch Handler Consistency**: Standardized empty response handling across GoogleSheets and WordPressAPI fetch handlers
 - **API Settings Display**: Updated FlowSteps API to use improved handler settings display method for better configuration management
 

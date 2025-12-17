@@ -18,6 +18,7 @@ import {
   uploadContextFile,
   deleteContextFile,
 } from '../utils/api';
+import { isSameId } from '../utils/ids';
 
 // Queries
 export const usePipelines = () =>
@@ -82,7 +83,7 @@ export const useCreatePipeline = () => {
       if (pipeline && context?.optimisticPipelineId) {
         queryClient.setQueryData(['pipelines'], (old = []) =>
           old.map((p) =>
-            String(p.pipeline_id) === String(context.optimisticPipelineId) ? pipeline : p
+            isSameId(p.pipeline_id, context.optimisticPipelineId) ? pipeline : p
           )
         );
       }

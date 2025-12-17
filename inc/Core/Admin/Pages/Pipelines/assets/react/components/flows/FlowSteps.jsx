@@ -8,6 +8,7 @@ import { useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import FlowStepCard from './FlowStepCard';
 import DataFlowArrow from '../shared/DataFlowArrow';
+import { isSameId } from '../../utils/ids';
 
 /**
  * Flow Steps Container Component.
@@ -60,7 +61,7 @@ export default function FlowSteps( {
 		// Match with pipeline steps
 		return sorted.map( ( flowStep ) => {
 			const pipelineStep = pipelineStepsArray.find(
-				( ps ) => ps.pipeline_step_id === flowStep.pipeline_step_id
+				( ps ) => isSameId( ps.pipeline_step_id, flowStep.pipeline_step_id )
 			);
 
 			return {

@@ -19,6 +19,7 @@ import { fetchFlow } from '../../utils/api';
 import { useUIStore } from '../../stores/uiStore';
 
 import { MODAL_TYPES } from '../../utils/constants';
+import { isSameId } from '../../utils/ids';
 
 export default function FlowCard( props ) {
 	const { flow, pipelineConfig, onFlowDeleted, onFlowDuplicated } = props;
@@ -167,7 +168,7 @@ function FlowCardContent( props ) {
 								}
 
 								return oldFlows.map( ( existingFlow ) =>
-									existingFlow.flow_id === flowId
+									isSameId( existingFlow.flow_id, flowId )
 										? updatedFlow
 										: existingFlow
 								);
@@ -262,7 +263,7 @@ function FlowCardContent( props ) {
 				currentFlowData.flow_config?.[ flowStepId ] || {};
 			const pipelineStepId = flowStepConfig.pipeline_step_id;
 			const pipelineStep = Object.values( pipelineConfig ).find(
-				( s ) => s.pipeline_step_id === pipelineStepId
+				( s ) => isSameId( s.pipeline_step_id, pipelineStepId )
 			);
 
 			// Build data for handler modals
