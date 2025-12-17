@@ -5,6 +5,18 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.6] - 2025-12-16
+
+### Improved
+- **Deduplication Tracking**: Renamed "ProcessedItems" endpoints to "Deduplication Tracking" throughout documentation for better clarity and understanding
+- **Fetch Handler Consistency**: Standardized empty response handling across GoogleSheets and WordPressAPI fetch handlers
+- **API Settings Display**: Updated FlowSteps API to use improved handler settings display method for better configuration management
+
+### Technical Details
+- **Documentation**: Updated API documentation to use consistent "deduplication tracking" terminology
+- **Code Cleanup**: Removed inconsistent empty array returns in fetch handler methods
+- **API Enhancement**: Improved handler settings retrieval in flow step configuration endpoints
+
 ## [0.6.5] - 2025-12-16
 
 ### Changed

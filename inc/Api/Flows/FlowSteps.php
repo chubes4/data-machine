@@ -273,7 +273,7 @@ class FlowSteps {
 			}
 
 			$service = new \DataMachine\Core\Steps\Settings\SettingsDisplayService();
-			$handler_settings_display = $service->getFieldState($handler_slug, $handler_settings);
+			$handler_settings_display = $service->getDisplaySettings($flow_step_id, $step_type);
 
             $message = sprintf(
                 /* translators: %s: handler label */
