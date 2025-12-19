@@ -16,6 +16,7 @@ if (!defined('ABSPATH')) {
 
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 use DataMachine\Services\FlowManager;
+use DataMachine\Core\Database\Flows\Flows as FlowsDB;
 
 class CreateFlow {
     use ToolRegistrationTrait;
@@ -76,6 +77,29 @@ class CreateFlow {
                 'error' => $validation,
                 'tool_name' => 'create_flow'
             ];
+        }
+
+        $flows_db = new FlowsDB();
+        $existing_flows = $flows_db->get_flows_for_pipeline($pipeline_id);
+
+        foreach ($existing_flows as $existing_flow) {
+            if (strcasecmp($existing_flow['flow_name'], $flow_name) === 0) {
+                $flow_config = $existing_flow['flow_config'] ?? [];
+                $flow_step_ids = array_keys($flow_config);
+
+                return [
+                    'success' => true,
+                    'data' => [
+                        'flow_id' => $existing_flow['flow_id'],
+                        'flow_name' => $existing_flow['flow_name'],
+                        'pipeline_id' => $pipeline_id,
+                        'flow_step_ids' => $flow_step_ids,
+                        'already_exists' => true,
+                        'message' => "Flow '{$existing_flow['flow_name']}' already exists for this pipeline. Use configure_flow_steps to modify it, or specify a different flow_name to create a new flow."
+                    ],
+                    'tool_name' => 'create_flow'
+                ];
+            }
         }
 
         $flow_manager = new FlowManager();

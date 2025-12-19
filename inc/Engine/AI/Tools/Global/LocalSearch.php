@@ -16,7 +16,6 @@ class LocalSearch {
     use ToolRegistrationTrait;
 
     public function __construct() {
-        $this->registerSuccessMessageHandler('local_search');
         $this->registerGlobalTool('local_search', $this->getToolDefinition());
     }
 
@@ -90,10 +89,14 @@ class LocalSearch {
 
         $total_results = $wp_query->found_posts;
         $results_count = count($results);
+        $message = $results_count > 0
+            ? "SEARCH COMPLETE: Found {$results_count} WordPress posts matching \"{$query}\".\nSearch Results:"
+            : "SEARCH COMPLETE: No WordPress posts/pages found matching \"{$query}\".";
 
         return [
             'success' => true,
             'data' => [
+                'message' => $message,
                 'query' => $query,
                 'results_count' => $results_count,
                 'total_available' => $total_results,
@@ -159,22 +162,6 @@ class LocalSearch {
         return array_values($post_types);
     }
 
-    public function format_success_message($message, $tool_name, $tool_result, $tool_parameters) {
-        if ($tool_name !== 'local_search') {
-            return $message;
-        }
-
-        $data = $tool_result['data'] ?? [];
-        $results = $data['results'] ?? [];
-        $result_count = $data['results_count'] ?? count($results);
-        $query = $tool_parameters['query'] ?? 'your query';
-
-        if (empty($results)) {
-            return "SEARCH COMPLETE: No WordPress posts/pages found matching \"{$query}\".";
-        }
-
-        return "SEARCH COMPLETE: Found {$result_count} WordPress posts matching \"{$query}\".\nSearch Results:";
-    }
 }
 
 // Self-register the tool

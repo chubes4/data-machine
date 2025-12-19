@@ -15,7 +15,6 @@ class WordPressPostReader {
     use ToolRegistrationTrait;
 
     public function __construct() {
-        $this->registerSuccessMessageHandler('wordpress_post_reader');
         $this->registerGlobalTool('wordpress_post_reader', $this->getToolDefinition());
     }
 
@@ -96,6 +95,12 @@ class WordPressPostReader {
             $response_data['meta_fields'] = [];
         }
 
+        $message = $content_length > 0
+            ? "READ COMPLETE: Retrieved WordPress post from \"{$permalink}\". Content Length: {$content_length} characters ({$content_word_count} words)"
+            : "READ COMPLETE: WordPress post found at \"{$permalink}\" but has no content.";
+
+        $response_data['message'] = $message;
+
         return [
             'success' => true,
             'data' => $response_data,
@@ -142,23 +147,6 @@ class WordPressPostReader {
         return self::is_configured();
     }
 
-    public function format_success_message($message, $tool_name, $tool_result, $tool_parameters) {
-        if ($tool_name !== 'wordpress_post_reader') {
-            return $message;
-        }
-
-        $data = $tool_result['data'] ?? [];
-        $source_url = $tool_parameters['source_url'] ?? 'the URL';
-        $title = $data['title'] ?? '';
-        $content_length = $data['content_length'] ?? 0;
-        $word_count = $data['content_word_count'] ?? 0;
-
-        if ($content_length === 0) {
-            return "READ COMPLETE: WordPress post found at \"{$source_url}\" but has no content.";
-        }
-
-        return "READ COMPLETE: Retrieved WordPress post from \"{$source_url}\". Content Length: {$content_length} characters ({$word_count} words)";
-    }
 }
 
 // Self-register the tool

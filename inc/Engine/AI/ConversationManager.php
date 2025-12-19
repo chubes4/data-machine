@@ -97,9 +97,67 @@ class ConversationManager {
             return "TOOL FAILED: {$tool_name} execution failed - {$error}";
         }
 
-        $default_message = "SUCCESS: " . ucwords(str_replace('_', ' ', $tool_name)) . " completed successfully. The requested operation has been finished as requested.";
+        // Use tool-provided message if available
+        if (!empty($data['message'])) {
+            $identifiers = self::extractKeyIdentifiers($data);
+            $prefix = !empty($data['already_exists']) ? 'EXISTING' : 'SUCCESS';
+            
+            if (!empty($identifiers)) {
+                return "{$prefix}: {$identifiers}\n{$data['message']}";
+            }
+            
+            return "{$prefix}: {$data['message']}";
+        }
 
-        return apply_filters('datamachine_tool_success_message', $default_message, $tool_name, $tool_result, $tool_parameters);
+        // Default fallback for tools without custom message
+        return "SUCCESS: " . ucwords(str_replace('_', ' ', $tool_name)) . " completed successfully.";
+    }
+
+    /**
+     * Extract key identifiers from tool result data for structured responses.
+     *
+     * @param array $data Tool result data
+     * @return string Formatted identifier string
+     */
+    private static function extractKeyIdentifiers(array $data): string {
+        $parts = [];
+
+        // Flow identifiers
+        if (isset($data['flow_id'])) {
+            $name = $data['flow_name'] ?? null;
+            $parts[] = $name 
+                ? "Flow \"{$name}\" (ID: {$data['flow_id']})" 
+                : "Flow ID: {$data['flow_id']}";
+        }
+
+        // Pipeline identifiers (only if no flow_id to avoid redundancy)
+        if (isset($data['pipeline_id']) && !isset($data['flow_id'])) {
+            $name = $data['pipeline_name'] ?? null;
+            $parts[] = $name 
+                ? "Pipeline \"{$name}\" (ID: {$data['pipeline_id']})" 
+                : "Pipeline ID: {$data['pipeline_id']}";
+        }
+
+        // Post identifiers
+        if (isset($data['post_id'])) {
+            $parts[] = "Post ID: {$data['post_id']}";
+        }
+
+        // Job identifiers
+        if (isset($data['job_id'])) {
+            $parts[] = "Job ID: {$data['job_id']}";
+        }
+
+        // Step counts
+        if (isset($data['synced_steps'])) {
+            $parts[] = "{$data['synced_steps']} steps synced";
+        }
+
+        if (isset($data['steps_modified'])) {
+            $parts[] = "{$data['steps_modified']} steps modified";
+        }
+
+        return implode(' | ', $parts);
     }
 
     /**

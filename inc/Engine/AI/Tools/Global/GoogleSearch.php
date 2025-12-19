@@ -17,7 +17,6 @@ class GoogleSearch {
 
     public function __construct() {
         $this->registerConfigurationHandlers('google_search');
-        $this->registerSuccessMessageHandler('google_search');
         $this->registerGlobalTool('google_search', $this->getToolDefinition());
     }
 
@@ -110,11 +109,17 @@ class GoogleSearch {
         $total_results = $search_info['totalResults'] ?? '0';
         $search_time = $search_info['searchTime'] ?? 0;
 
+        $result_count = count($results);
+        $message = $result_count > 0
+            ? "SEARCH COMPLETE: Found {$result_count} results for \"{$query}\".\nSearch Results:"
+            : "SEARCH COMPLETE: No results found for \"{$query}\".";
+
         return [
             'success' => true,
             'data' => [
+                'message' => $message,
                 'query' => $query,
-                'results_count' => count($results),
+                'results_count' => $result_count,
                 'total_available' => $total_results,
                 'search_time' => $search_time,
                 'results' => $results
@@ -232,31 +237,6 @@ class GoogleSearch {
         ];
     }
 
-    /**
-     * Format success message for Google search results.
-     *
-     * @param string $message Default message
-     * @param string $tool_name Tool name
-     * @param array $tool_result Tool execution result
-     * @param array $tool_parameters Tool parameters
-     * @return string Formatted success message
-     */
-    public function format_success_message($message, $tool_name, $tool_result, $tool_parameters) {
-        if ($tool_name !== 'google_search') {
-            return $message;
-        }
-
-        $data = $tool_result['data'] ?? [];
-        $results = $data['results'] ?? $data ?? [];
-        $query = $tool_parameters['query'] ?? 'your query';
-
-        if (empty($results)) {
-            return "SEARCH COMPLETE: No results found for \"{$query}\". Search task finished.";
-        }
-
-        $result_count = count($results);
-        return "SEARCH COMPLETE: Found {$result_count} results for \"{$query}\".\nSearch Results:";
-    }
 }
 
 // Self-register the tool

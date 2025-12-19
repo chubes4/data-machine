@@ -15,7 +15,6 @@ class WebFetch {
     use ToolRegistrationTrait;
 
     public function __construct() {
-        $this->registerSuccessMessageHandler('web_fetch');
         $this->registerGlobalTool('web_fetch', $this->getToolDefinition());
     }
 
@@ -71,13 +70,19 @@ class WebFetch {
         }
 
 
+        $content_length = strlen($extracted_content['content']);
+        $message = $content_length > 0
+            ? "FETCH COMPLETE: Retrieved content from \"{$url}\". Content Length: {$content_length} characters"
+            : "FETCH COMPLETE: No readable content found at \"{$url}\".";
+
         return [
             'success' => true,
             'data' => [
+                'message' => $message,
                 'url' => $url,
                 'title' => $extracted_content['title'],
                 'content' => $extracted_content['content'],
-                'content_length' => strlen($extracted_content['content']),
+                'content_length' => $content_length,
                 'content_truncated' => $content_truncated,
                 'fetch_timestamp' => gmdate('Y-m-d H:i:s')
             ],
@@ -155,21 +160,6 @@ class WebFetch {
         ];
     }
 
-    public function format_success_message($message, $tool_name, $tool_result, $tool_parameters) {
-        if ($tool_name !== 'web_fetch') {
-            return $message;
-        }
-
-        $data = $tool_result['data'] ?? [];
-        $url = $tool_parameters['url'] ?? 'the URL';
-        $content_length = $data['content_length'] ?? 0;
-
-        if ($content_length === 0 || empty($data['content'])) {
-            return "FETCH COMPLETE: No readable content found at \"{$url}\".";
-        }
-
-        return "FETCH COMPLETE: Retrieved content from \"{$url}\". Content Length: {$content_length} characters";
-    }
 }
 
 // Self-register the tool

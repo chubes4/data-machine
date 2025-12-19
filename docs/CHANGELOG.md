@@ -5,6 +5,18 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.8] - 2025-12-19
+
+### Improved
+- **AI Tool Response Architecture**: Refactored success message handling from filter-based system to direct tool-provided messages for better performance and structure
+- **Conversation Manager**: Enhanced response formatting with key identifier extraction (flow IDs, pipeline IDs, post IDs) for clearer AI agent feedback
+- **CreateFlow Tool**: Added duplicate flow detection to prevent creation of flows with identical names in the same pipeline
+
+### Technical Details
+- **Code Changes**: Removed filter-based message handlers across 4 global AI tools, consolidated message logic in ConversationManager
+- **Performance**: Eliminated WordPress filter overhead in tool success message processing
+- **Architecture**: Simplified tool response handling while maintaining backward compatibility
+
 ## [0.6.7] - 2025-12-17
 
 ### Improved

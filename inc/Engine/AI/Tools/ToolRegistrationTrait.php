@@ -64,12 +64,4 @@ trait ToolRegistrationTrait {
         add_action('datamachine_save_tool_config', [$this, 'save_configuration'], 10, 2);
     }
 
-    /**
-     * Register success message formatting handler.
-     *
-     * @param string $tool_name Tool identifier for success messages
-     */
-    protected function registerSuccessMessageHandler(string $tool_name): void {
-        add_filter('datamachine_tool_success_message', [$this, 'format_success_message'], 10, 4);
-    }
 }
