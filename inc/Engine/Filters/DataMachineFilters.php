@@ -44,6 +44,43 @@ datamachine_register_importexport_filters();
  *
  * @since 0.1.0
  */
+function datamachine_get_default_scheduler_intervals() {
+    return [
+        'every_5_minutes' => [
+            'label' => 'Every 5 Minutes',
+            'seconds' => 300,
+        ],
+        'hourly' => [
+            'label' => 'Hourly',
+            'seconds' => HOUR_IN_SECONDS,
+        ],
+        'every_2_hours' => [
+            'label' => 'Every 2 Hours',
+            'seconds' => HOUR_IN_SECONDS * 2,
+        ],
+        'every_4_hours' => [
+            'label' => 'Every 4 Hours',
+            'seconds' => HOUR_IN_SECONDS * 4,
+        ],
+        'qtrdaily' => [
+            'label' => 'Every 6 Hours',
+            'seconds' => HOUR_IN_SECONDS * 6,
+        ],
+        'twicedaily' => [
+            'label' => 'Twice Daily',
+            'seconds' => HOUR_IN_SECONDS * 12,
+        ],
+        'daily' => [
+            'label' => 'Daily',
+            'seconds' => DAY_IN_SECONDS,
+        ],
+        'weekly' => [
+            'label' => 'Weekly',
+            'seconds' => WEEK_IN_SECONDS,
+        ],
+    ];
+}
+
 function datamachine_register_utility_filters() {
     
     add_filter('datamachine_auth_providers', function($providers) {
@@ -51,40 +88,7 @@ function datamachine_register_utility_filters() {
     }, 5, 1);
     
     add_filter('datamachine_scheduler_intervals', function($intervals) {
-        return [
-            'every_5_minutes' => [
-                'label' => 'Every 5 Minutes',
-                'seconds' => 300 // 5 * 60
-            ],
-            'hourly' => [
-                'label' => 'Hourly',
-                'seconds' => HOUR_IN_SECONDS
-            ],
-            'every_2_hours' => [
-                'label' => 'Every 2 Hours',
-                'seconds' => HOUR_IN_SECONDS * 2
-            ],
-            'every_4_hours' => [
-                'label' => 'Every 4 Hours',
-                'seconds' => HOUR_IN_SECONDS * 4
-            ],
-            'qtrdaily' => [
-                'label' => 'Every 6 Hours',
-                'seconds' => HOUR_IN_SECONDS * 6
-            ],
-            'twicedaily' => [
-                'label' => 'Twice Daily',
-                'seconds' => HOUR_IN_SECONDS * 12
-            ],
-            'daily' => [
-                'label' => 'Daily',
-                'seconds' => DAY_IN_SECONDS
-            ],
-            'weekly' => [
-                'label' => 'Weekly',
-                'seconds' => WEEK_IN_SECONDS
-            ]
-        ];
+        return array_merge(datamachine_get_default_scheduler_intervals(), $intervals);
     }, 10);
     
     

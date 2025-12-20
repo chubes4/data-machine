@@ -3,7 +3,7 @@
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/data-machine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:           0.6.11
+ * Version:           0.6.12
  * Requires at least: 6.2
  * Requires PHP:     8.2
  * Author:          Chris Huber, extrachill
@@ -21,7 +21,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.6.11' );
+define( 'DATAMACHINE_VERSION', '0.6.12' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -44,9 +44,6 @@ function datamachine_run_datamachine_plugin() {
 	// Set Action Scheduler timeout to 10 minutes (600 seconds) for large tasks
 	add_filter('action_scheduler_timeout_period', function() { return 600; });
 
-	// One-time migration: Convert legacy 'datamachine' group to 'data-machine'
-	// TODO: Remove in v0.7.0
-	datamachine_migrate_scheduler_group();
 
 	datamachine_register_utility_filters();
 	datamachine_register_admin_filters();
@@ -91,6 +88,7 @@ function datamachine_activate_plugin_defaults() {
 }
 
 add_action('plugins_loaded', 'datamachine_run_datamachine_plugin', 20);
+
 
 /**
  * Load and instantiate all handlers - they self-register via constructors.
@@ -216,16 +214,11 @@ function datamachine_activate_scheduled_flows() {
 		return;
 	}
 
-	$intervals = [
-		'every_5_minutes' => 300,
-		'hourly'          => HOUR_IN_SECONDS,
-		'every_2_hours'   => HOUR_IN_SECONDS * 2,
-		'every_4_hours'   => HOUR_IN_SECONDS * 4,
-		'qtrdaily'        => HOUR_IN_SECONDS * 6,
-		'twicedaily'      => HOUR_IN_SECONDS * 12,
-		'daily'           => DAY_IN_SECONDS,
-		'weekly'          => WEEK_IN_SECONDS,
-	];
+	if ( ! function_exists( 'datamachine_get_default_scheduler_intervals' ) ) {
+		return;
+	}
+
+	$intervals = apply_filters( 'datamachine_scheduler_intervals', datamachine_get_default_scheduler_intervals() );
 
 	$scheduled_count = 0;
 
@@ -259,7 +252,7 @@ function datamachine_activate_scheduled_flows() {
 		}
 
 		// Handle recurring scheduling
-		$interval_seconds = $intervals[ $interval ] ?? null;
+		$interval_seconds = $intervals[ $interval ]['seconds'] ?? null;
 		if ( ! $interval_seconds ) {
 			continue;
 		}
@@ -281,68 +274,6 @@ function datamachine_activate_scheduled_flows() {
 	}
 }
 
-/**
- * One-time migration to convert legacy 'datamachine' Action Scheduler group to 'data-machine'.
- *
- * This handles flows that were scheduled before the text domain migration in v0.6.9.
- * TODO: Remove in v0.7.0
- */
-function datamachine_migrate_scheduler_group() {
-	if ( get_option( 'datamachine_scheduler_group_migrated_069' ) ) {
-		return;
-	}
-
-	if ( ! function_exists( 'as_get_scheduled_actions' ) || ! class_exists( 'ActionScheduler' ) ) {
-		return;
-	}
-
-	$legacy_actions = as_get_scheduled_actions( [
-		'hook'     => 'datamachine_run_flow_now',
-		'group'    => 'datamachine',
-		'status'   => \ActionScheduler_Store::STATUS_PENDING,
-		'per_page' => -1,
-	], 'ids' );
-
-	$migrated_count = 0;
-
-	foreach ( $legacy_actions as $action_id ) {
-		$action = \ActionScheduler::store()->fetch_action( $action_id );
-		if ( ! $action ) {
-			continue;
-		}
-
-		$schedule = $action->get_schedule();
-		$args = $action->get_args();
-
-		// Unschedule old action
-		as_unschedule_action( 'datamachine_run_flow_now', $args, 'datamachine' );
-
-		// Reschedule with new group
-		if ( $schedule instanceof \ActionScheduler_IntervalSchedule ) {
-			$interval_seconds = $schedule->get_recurrence();
-			$next_timestamp = $schedule->get_date()->getTimestamp();
-			as_schedule_recurring_action( $next_timestamp, $interval_seconds, 'datamachine_run_flow_now', $args, 'data-machine' );
-			$migrated_count++;
-		} elseif ( $schedule instanceof \ActionScheduler_SimpleSchedule ) {
-			$scheduled_date = $schedule->get_date();
-			if ( $scheduled_date ) {
-				$timestamp = $scheduled_date->getTimestamp();
-				if ( $timestamp > time() ) {
-					as_schedule_single_action( $timestamp, 'datamachine_run_flow_now', $args, 'data-machine' );
-					$migrated_count++;
-				}
-			}
-		}
-	}
-
-	update_option( 'datamachine_scheduler_group_migrated_069', true );
-
-	if ( $migrated_count > 0 ) {
-		do_action( 'datamachine_log', 'info', 'Migrated scheduled actions from legacy group', [
-			'migrated_count' => $migrated_count,
-		] );
-	}
-}
 
 function datamachine_check_requirements() {
 	if ( version_compare( PHP_VERSION, '8.0', '<' ) ) {
