@@ -5,6 +5,24 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.11] - 2025-12-20
+
+### Added
+- **Flow Re-scheduling on Activation** - Automatically re-schedules all flows with non-manual scheduling intervals when plugin is activated, ensuring workflows resume after plugin reactivation or updates
+- **Action Scheduler Migration Handler** - One-time migration function to convert legacy `datamachine` Action Scheduler group to `data-machine` for flows scheduled before v0.6.9
+
+### Improved
+- **Plugin Activation** - Enhanced `datamachine_activate_plugin()` with comprehensive documentation and flow re-scheduling logic
+- **Scheduler Reliability** - Added safety checks and logging for scheduler migration and flow re-scheduling operations
+
+### Technical Details
+- **New Functions**: 
+  - `datamachine_activate_scheduled_flows()` - Handles re-scheduling of recurring and one-time flows on activation
+  - `datamachine_migrate_scheduler_group()` - One-time migration for Action Scheduler group name changes
+- **Interval Support**: Handles all scheduling intervals (every_5_minutes, hourly, every_2_hours, every_4_hours, qtrdaily, twicedaily, daily, weekly)
+- **Logging**: Added comprehensive logging for migration and re-scheduling operations
+- **Backward Compatibility**: Gracefully handles fresh installs and deployments without existing flows
+
 ## [0.6.10] - 2025-12-20
 
 ### Improved
