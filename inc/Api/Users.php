@@ -42,7 +42,7 @@ class Users
                         'required' => true,
                         'type' => 'integer',
                         'sanitize_callback' => 'absint',
-                        'description' => __('The user ID to retrieve preferences for.', 'datamachine'),
+                        'description' => __('The user ID to retrieve preferences for.', 'data-machine'),
                     ],
                 ],
             ],
@@ -55,13 +55,13 @@ class Users
                         'required' => true,
                         'type' => 'integer',
                         'sanitize_callback' => 'absint',
-                        'description' => __('The user ID to update preferences for.', 'datamachine'),
+                        'description' => __('The user ID to update preferences for.', 'data-machine'),
                     ],
                     'selected_pipeline_id' => [
                         'required' => false,
                         'type' => 'integer',
                         'sanitize_callback' => 'absint',
-                        'description' => __('Pipeline ID to set as the preferred pipeline.', 'datamachine'),
+                        'description' => __('Pipeline ID to set as the preferred pipeline.', 'data-machine'),
                     ],
                 ],
             ],
@@ -82,7 +82,7 @@ class Users
                         'required' => false,
                         'type' => 'integer',
                         'sanitize_callback' => 'absint',
-                        'description' => __('Pipeline ID to set as the preferred pipeline.', 'datamachine'),
+                        'description' => __('Pipeline ID to set as the preferred pipeline.', 'data-machine'),
                     ],
                 ],
             ],
@@ -130,7 +130,7 @@ class Users
         if ($selected_pipeline_id <= 0) {
             return new WP_Error(
                 'invalid_pipeline_id',
-                __('Pipeline ID must be a positive integer.', 'datamachine'),
+                __('Pipeline ID must be a positive integer.', 'data-machine'),
                 ['status' => 400]
             );
         }
@@ -138,7 +138,7 @@ class Users
         if (!self::pipeline_exists($selected_pipeline_id)) {
             return new WP_Error(
                 'pipeline_not_found',
-                __('Pipeline not found.', 'datamachine'),
+                __('Pipeline not found.', 'data-machine'),
                 ['status' => 404]
             );
         }
@@ -182,7 +182,7 @@ class Users
         if (!is_user_logged_in()) {
             return new WP_Error(
                 'rest_not_logged_in',
-                __('You must be logged in to access user preferences.', 'datamachine'),
+                __('You must be logged in to access user preferences.', 'data-machine'),
                 ['status' => 401]
             );
         }
@@ -192,7 +192,7 @@ class Users
         if ($target_user_id <= 0) {
             return new WP_Error(
                 'invalid_user_id',
-                __('A valid user ID is required.', 'datamachine'),
+                __('A valid user ID is required.', 'data-machine'),
                 ['status' => 400]
             );
         }
@@ -203,7 +203,7 @@ class Users
 
         return new WP_Error(
             'rest_forbidden',
-            __('You do not have permission to access this user.', 'datamachine'),
+            __('You do not have permission to access this user.', 'data-machine'),
             ['status' => 403]
         );
     }
@@ -216,7 +216,7 @@ class Users
         if (!is_user_logged_in()) {
             return new WP_Error(
                 'rest_not_logged_in',
-                __('You must be logged in to access user preferences.', 'datamachine'),
+                __('You must be logged in to access user preferences.', 'data-machine'),
                 ['status' => 401]
             );
         }

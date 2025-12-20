@@ -37,16 +37,16 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
     public function get_config_fields(): array {
         return [
             'app_id' => [
-                'label' => __('App ID', 'datamachine'),
+                'label' => __('App ID', 'data-machine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Threads application App ID from developers.facebook.com', 'datamachine')
+                'description' => __('Your Threads application App ID from developers.facebook.com', 'data-machine')
             ],
             'app_secret' => [
-                'label' => __('App Secret', 'datamachine'),
+                'label' => __('App Secret', 'data-machine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Threads application App Secret from developers.facebook.com', 'datamachine')
+                'description' => __('Your Threads application App Secret from developers.facebook.com', 'data-machine')
             ]
         ];
     }
@@ -163,9 +163,15 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
      * Handle OAuth callback from Threads
      */
     public function handle_oauth_callback() {
-        $config = $this->get_config();
+        // Validate OAuth state parameter for CSRF protection
+        $state = isset($_GET['state']) ? sanitize_text_field(wp_unslash($_GET['state'])) : '';
+        $stored_state = get_transient('datamachine_threads_oauth_state');
 
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection
+        if (empty($state) || false === $stored_state || !hash_equals($stored_state, $state)) {
+            wp_die(esc_html__('Invalid or expired OAuth state parameter.', 'data-machine'));
+        }
+
+        $config = $this->get_config();
         $threads_code = isset($_GET['code']) ? sanitize_text_field(wp_unslash($_GET['code'])) : '';
 
         $this->oauth2->handle_callback(
@@ -188,7 +194,7 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
                 if (is_wp_error($posting_entity_info) || empty($posting_entity_info['id'])) {
                     return is_wp_error($posting_entity_info) ? $posting_entity_info : new \WP_Error(
                         'threads_oauth_me_id_missing',
-                        __('Could not retrieve the necessary profile ID using the access token.', 'datamachine')
+                        __('Could not retrieve the necessary profile ID using the access token.', 'data-machine')
                     );
                 }
 
@@ -233,7 +239,7 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Threads OAuth Error: Long-lived token exchange request failed', ['error' => $result['error']]);
-            return new \WP_Error('threads_oauth_exchange_request_failed', __('HTTP error during long-lived token exchange with Threads.', 'datamachine'), $result['error']);
+            return new \WP_Error('threads_oauth_exchange_request_failed', __('HTTP error during long-lived token exchange with Threads.', 'data-machine'), $result['error']);
         }
 
         $body = $result['data'];
@@ -288,7 +294,7 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         if (empty($data['id'])) {
             do_action('datamachine_log', 'error', 'Threads OAuth Error: Profile fetch response missing ID', ['http_code' => $http_code, 'response' => $body]);
-            return new \WP_Error('threads_profile_id_missing', __('Profile ID missing in response from Threads.', 'datamachine'), $data);
+            return new \WP_Error('threads_profile_id_missing', __('Profile ID missing in response from Threads.', 'data-machine'), $data);
         }
 
         do_action('datamachine_log', 'debug', 'Threads OAuth: Profile fetched successfully', ['profile_id' => $data['id']]);

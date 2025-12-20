@@ -50,13 +50,13 @@ class Chat {
 				'message' => [
 					'type' => 'string',
 					'required' => true,
-					'description' => __('User message', 'datamachine'),
+					'description' => __('User message', 'data-machine'),
 					'sanitize_callback' => 'sanitize_textarea_field'
 				],
 				'session_id' => [
 					'type' => 'string',
 					'required' => false,
-					'description' => __('Optional session ID for conversation continuity', 'datamachine'),
+					'description' => __('Optional session ID for conversation continuity', 'data-machine'),
 					'sanitize_callback' => 'sanitize_text_field'
 				],
 				'provider' => [
@@ -69,13 +69,13 @@ class Chat {
 						$providers = apply_filters('chubes_ai_providers', []);
 						return isset($providers[$param]);
 					},
-					'description' => __('AI provider (optional, uses default if not provided)', 'datamachine'),
+					'description' => __('AI provider (optional, uses default if not provided)', 'data-machine'),
 					'sanitize_callback' => 'sanitize_text_field'
 				],
 				'model' => [
 					'type' => 'string',
 					'required' => false,
-					'description' => __('Model identifier (optional, uses default if not provided)', 'datamachine'),
+					'description' => __('Model identifier (optional, uses default if not provided)', 'data-machine'),
 					'sanitize_callback' => 'sanitize_text_field'
 				]
 			]
@@ -112,7 +112,7 @@ class Chat {
 		if (empty($provider)) {
 			return new WP_Error(
 				'provider_required',
-				__('AI provider is required. Please set a default provider in Data Machine settings or provide one in the request.', 'datamachine'),
+				__('AI provider is required. Please set a default provider in Data Machine settings or provide one in the request.', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -120,7 +120,7 @@ class Chat {
 		if (empty($model)) {
 			return new WP_Error(
 				'model_required',
-				__('AI model is required. Please set a default model in Data Machine settings or provide one in the request.', 'datamachine'),
+				__('AI model is required. Please set a default model in Data Machine settings or provide one in the request.', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -133,7 +133,7 @@ class Chat {
 			if (!$session) {
 				return new WP_Error(
 					'session_not_found',
-					__('Session not found or expired', 'datamachine'),
+					__('Session not found or expired', 'data-machine'),
 					['status' => 404]
 				);
 			}
@@ -141,7 +141,7 @@ class Chat {
 			if ((int) $session['user_id'] !== $user_id) {
 				return new WP_Error(
 					'session_access_denied',
-					__('Access denied to this session', 'datamachine'),
+					__('Access denied to this session', 'data-machine'),
 					['status' => 403]
 				);
 			}
@@ -156,7 +156,7 @@ class Chat {
 			if (empty($session_id)) {
 				return new WP_Error(
 					'session_creation_failed',
-					__('Failed to create chat session', 'datamachine'),
+					__('Failed to create chat session', 'data-machine'),
 					['status' => 500]
 				);
 			}

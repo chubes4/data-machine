@@ -303,6 +303,6 @@ class Threads extends PublishHandler {
     }
 
     public static function get_label(): string {
-        return __('Threads', 'datamachine');
+        return __('Threads', 'data-machine');
     }
 }

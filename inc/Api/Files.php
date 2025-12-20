@@ -40,7 +40,7 @@ class Files {
                 'flow_step_id' => [
                     'required' => false,
                     'type' => 'string',
-                    'description' => __('Flow step ID for flow-level files', 'datamachine'),
+                    'description' => __('Flow step ID for flow-level files', 'data-machine'),
                     'sanitize_callback' => function($param) {
                         return sanitize_text_field($param);
                     }
@@ -48,7 +48,7 @@ class Files {
                 'pipeline_id' => [
                     'required' => false,
                     'type' => 'integer',
-                    'description' => __('Pipeline ID for pipeline context files', 'datamachine'),
+                    'description' => __('Pipeline ID for pipeline context files', 'data-machine'),
                     'sanitize_callback' => function($param) {
                         return absint($param);
                     }
@@ -117,7 +117,7 @@ class Files {
         if (!current_user_can('manage_options')) {
             return new WP_Error(
                 'rest_forbidden',
-                __('You do not have permission to manage files.', 'datamachine'),
+                __('You do not have permission to manage files.', 'data-machine'),
                 ['status' => 403]
             );
         }
@@ -142,7 +142,7 @@ class Files {
             if (!$pipeline) {
                 return new WP_Error(
                     'pipeline_not_found',
-                    __('Pipeline not found.', 'datamachine'),
+                    __('Pipeline not found.', 'data-machine'),
                     ['status' => 404]
                 );
             }
@@ -151,7 +151,7 @@ class Files {
             if ($pipeline_name === '') {
                 return new WP_Error(
                     'invalid_pipeline_name',
-                    __('Invalid pipeline name.', 'datamachine'),
+                    __('Invalid pipeline name.', 'data-machine'),
                     ['status' => 400]
                 );
             }
@@ -170,7 +170,7 @@ class Files {
             if (empty($flow_step)) {
                 return new WP_Error(
                     'flow_step_not_found',
-                    __('Flow step not found.', 'datamachine'),
+                    __('Flow step not found.', 'data-machine'),
                     ['status' => 404]
                 );
             }
@@ -182,7 +182,7 @@ class Files {
             if (!$pipeline_id || !$flow_id) {
                 return new WP_Error(
                     'invalid_flow_config',
-                    __('Invalid flow configuration.', 'datamachine'),
+                    __('Invalid flow configuration.', 'data-machine'),
                     ['status' => 400]
                 );
             }
@@ -200,7 +200,7 @@ class Files {
 
         return new WP_Error(
             'missing_scope',
-            __('Must provide either flow_step_id or pipeline_id.', 'datamachine'),
+            __('Must provide either flow_step_id or pipeline_id.', 'data-machine'),
             ['status' => 400]
         );
     }
@@ -216,7 +216,7 @@ class Files {
         if (!$flow_step_id && !$pipeline_id) {
             return new WP_Error(
                 'missing_scope',
-                __('Must provide either flow_step_id or pipeline_id.', 'datamachine'),
+                __('Must provide either flow_step_id or pipeline_id.', 'data-machine'),
                 ['status' => 400]
             );
         }
@@ -224,7 +224,7 @@ class Files {
         if ($flow_step_id && $pipeline_id) {
             return new WP_Error(
                 'conflicting_scope',
-                __('Cannot provide both flow_step_id and pipeline_id.', 'datamachine'),
+                __('Cannot provide both flow_step_id and pipeline_id.', 'data-machine'),
                 ['status' => 400]
             );
         }
@@ -233,7 +233,7 @@ class Files {
         if (empty($files['file'])) {
             return new WP_Error(
                 'missing_file',
-                __('File upload is required.', 'datamachine'),
+                __('File upload is required.', 'data-machine'),
                 ['status' => 400]
             );
         }
@@ -242,7 +242,7 @@ class Files {
         if (!is_array($uploaded)) {
             return new WP_Error(
                 'invalid_file_structure',
-                __('Invalid file upload payload.', 'datamachine'),
+                __('Invalid file upload payload.', 'data-machine'),
                 ['status' => 400]
             );
         }
@@ -251,7 +251,7 @@ class Files {
         if ($upload_error !== UPLOAD_ERR_OK) {
             return new WP_Error(
                 'upload_failed',
-                __('File upload failed.', 'datamachine'),
+                __('File upload failed.', 'data-machine'),
                 ['status' => 400]
             );
         }
@@ -260,7 +260,7 @@ class Files {
         if (empty($tmp_name) || !is_uploaded_file($tmp_name)) {
             return new WP_Error(
                 'invalid_tmp_name',
-                __('Invalid temporary file.', 'datamachine'),
+                __('Invalid temporary file.', 'data-machine'),
                 ['status' => 400]
             );
         }
@@ -271,7 +271,7 @@ class Files {
         if ($file_name === '') {
             return new WP_Error(
                 'invalid_file_name',
-                __('Invalid file name.', 'datamachine'),
+                __('Invalid file name.', 'data-machine'),
                 ['status' => 400]
             );
         }
@@ -318,7 +318,7 @@ class Files {
             if (!$parts || empty($parts['flow_id'])) {
                 return new WP_Error(
                     'invalid_flow_step_id',
-                    __('Invalid flow step ID format.', 'datamachine'),
+                    __('Invalid flow step ID format.', 'data-machine'),
                     ['status' => 400]
                 );
             }
@@ -330,7 +330,7 @@ class Files {
             if (!$stored) {
                 return new WP_Error(
                     'file_store_failed',
-                    __('Failed to store file.', 'datamachine'),
+                    __('Failed to store file.', 'data-machine'),
                     ['status' => 500]
                 );
             }
@@ -348,7 +348,7 @@ class Files {
 
         return new WP_Error(
             'invalid_request',
-            __('Invalid file upload request.', 'datamachine'),
+            __('Invalid file upload request.', 'data-machine'),
             ['status' => 400]
         );
     }
@@ -364,7 +364,7 @@ class Files {
         if (!$flow_step_id && !$pipeline_id) {
             return new WP_Error(
                 'missing_scope',
-                __('Must provide either flow_step_id or pipeline_id.', 'datamachine'),
+                __('Must provide either flow_step_id or pipeline_id.', 'data-machine'),
                 ['status' => 400]
             );
         }
@@ -406,7 +406,7 @@ class Files {
             if (!$parts || empty($parts['flow_id'])) {
                 return new WP_Error(
                     'invalid_flow_step_id',
-                    __('Invalid flow step ID format.', 'datamachine'),
+                    __('Invalid flow step ID format.', 'data-machine'),
                     ['status' => 400]
                 );
             }
@@ -424,7 +424,7 @@ class Files {
 
         return new WP_Error(
             'invalid_request',
-            __('Invalid file delete request.', 'datamachine'),
+            __('Invalid file delete request.', 'data-machine'),
             ['status' => 400]
         );
     }
@@ -476,14 +476,14 @@ class Files {
     private static function validate_file_with_wordpress(array $file): void {
         $file_size = filesize($file['tmp_name']);
         if ($file_size === false) {
-            throw new \Exception(esc_html__('Cannot determine file size.', 'datamachine'));
+            throw new \Exception(esc_html__('Cannot determine file size.', 'data-machine'));
         }
 
         $max_file_size = wp_max_upload_size();
         if ($file_size > $max_file_size) {
             throw new \Exception(sprintf(
                 /* translators: %1$s: Current file size, %2$s: Maximum allowed file size */
-                esc_html__('File too large: %1$s. Maximum allowed size: %2$s', 'datamachine'),
+                esc_html__('File too large: %1$s. Maximum allowed size: %2$s', 'data-machine'),
                 esc_html(size_format($file_size)),
                 esc_html(size_format($max_file_size))
             ));
@@ -492,18 +492,18 @@ class Files {
         // Use WordPress's native file type validation
         $wp_filetype = wp_check_filetype($file['name']);
         if (!$wp_filetype['type']) {
-            throw new \Exception(esc_html__('File type not allowed.', 'datamachine'));
+            throw new \Exception(esc_html__('File type not allowed.', 'data-machine'));
         }
 
         // Additional path traversal protection (WordPress style)
         $filename = sanitize_file_name($file['name']);
         if ($filename !== $file['name']) {
-            throw new \Exception(esc_html__('Invalid file name detected.', 'datamachine'));
+            throw new \Exception(esc_html__('Invalid file name detected.', 'data-machine'));
         }
 
         // Check for path traversal attempts
         if (strpos($file['name'], '..') !== false || strpos($file['name'], '/') !== false || strpos($file['name'], '\\') !== false) {
-            throw new \Exception(esc_html__('Invalid file name detected.', 'datamachine'));
+            throw new \Exception(esc_html__('Invalid file name detected.', 'data-machine'));
         }
 
         // Verify MIME type matches file extension (additional security layer)
@@ -523,7 +523,7 @@ class Files {
                                        in_array($detected_mime, $allowed_mime_variations[$wp_filetype['type']], true);
 
                 if (!$is_allowed_variation) {
-                    throw new \Exception(esc_html__('File content does not match file type.', 'datamachine'));
+                    throw new \Exception(esc_html__('File content does not match file type.', 'data-machine'));
                 }
             }
         }

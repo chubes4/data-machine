@@ -104,26 +104,39 @@ class JobsOperations {
     public function get_jobs_for_list_table(array $args): array {
         
         $orderby = $args['orderby'] ?? 'j.job_id';
-        $order = strtoupper($args['order'] ?? 'DESC');
-        $per_page = (int) ($args['per_page'] ?? 20);
-        $offset = (int) ($args['offset'] ?? 0);
-        
-        if (!in_array($order, ['ASC', 'DESC'], true)) {
-            $order = 'DESC';
-        }
-        
-        $allowed_orderby = ['j.job_id', 'j.pipeline_id', 'j.flow_id', 'j.status', 'j.completed_at', 'p.pipeline_name', 'f.flow_name'];
-        if (!in_array($orderby, $allowed_orderby, true)) {
-            $orderby = 'j.job_id';
-        }
-        
+        $order = strtoupper( $args['order'] ?? 'DESC' );
+        $per_page = (int) ( $args['per_page'] ?? 20 );
+        $offset = (int) ( $args['offset'] ?? 0 );
+        $is_asc = ( $order === 'ASC' );
+
         $pipelines_table = $this->wpdb->prefix . 'datamachine_pipelines';
         $flows_table = $this->wpdb->prefix . 'datamachine_flows';
-        
-        // $orderby and $order are validated against allowed values above; table names are from wpdb prefix
-        $sql = "SELECT j.*, p.pipeline_name, f.flow_name FROM {$this->table_name} j LEFT JOIN {$pipelines_table} p ON j.pipeline_id = p.pipeline_id LEFT JOIN {$flows_table} f ON j.flow_id = f.flow_id ORDER BY $orderby $order";
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-        $results = $this->wpdb->get_results( $this->wpdb->prepare( $sql . " LIMIT %d OFFSET %d", $per_page, $offset ), ARRAY_A );
+
+        // phpcs:disable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL
+        $results = match ( $orderby ) {
+            'j.pipeline_id' => $is_asc
+                ? $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY j.pipeline_id ASC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A )
+                : $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY j.pipeline_id DESC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A ),
+            'j.flow_id' => $is_asc
+                ? $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY j.flow_id ASC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A )
+                : $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY j.flow_id DESC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A ),
+            'j.status' => $is_asc
+                ? $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY j.status ASC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A )
+                : $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY j.status DESC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A ),
+            'j.completed_at' => $is_asc
+                ? $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY j.completed_at ASC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A )
+                : $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY j.completed_at DESC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A ),
+            'p.pipeline_name' => $is_asc
+                ? $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY p.pipeline_name ASC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A )
+                : $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY p.pipeline_name DESC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A ),
+            'f.flow_name' => $is_asc
+                ? $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY f.flow_name ASC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A )
+                : $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY f.flow_name DESC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A ),
+            default => $is_asc
+                ? $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY j.job_id ASC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A )
+                : $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT j.*, p.pipeline_name, f.flow_name FROM %i j LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id LEFT JOIN %i f ON j.flow_id = f.flow_id ORDER BY j.job_id DESC LIMIT %d OFFSET %d', $this->table_name, $pipelines_table, $flows_table, $per_page, $offset ), ARRAY_A ),
+        };
+        // phpcs:enable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL
 
         return $results ?: [];
     }

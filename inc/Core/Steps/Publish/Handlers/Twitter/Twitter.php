@@ -430,7 +430,7 @@ class Twitter extends PublishHandler {
 
 
     public static function get_label(): string {
-        return __('Post to Twitter', 'datamachine');
+        return __('Post to Twitter', 'data-machine');
     }
 
 

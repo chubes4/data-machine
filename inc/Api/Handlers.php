@@ -50,7 +50,7 @@ class Handlers {
 						$valid_step_types = is_array($types) ? array_keys($types) : [];
 						return in_array($param, $valid_step_types, true);
 					},
-					'description' => __('Filter handlers by step type (supports custom step types)', 'datamachine')
+					'description' => __('Filter handlers by step type (supports custom step types)', 'data-machine')
 				]
 			]
 		]);
@@ -64,7 +64,7 @@ class Handlers {
 				'handler_slug' => [
 					'required' => true,
 					'type' => 'string',
-					'description' => __('Handler slug (e.g., twitter, rss, wordpress_publish)', 'datamachine')
+					'description' => __('Handler slug (e.g., twitter, rss, wordpress_publish)', 'data-machine')
 				]
 			]
 		]);
@@ -177,7 +177,7 @@ class Handlers {
 		if (!$handler_info) {
 			return new \WP_Error(
 				'handler_not_found',
-				__('Handler not found', 'datamachine'),
+				__('Handler not found', 'data-machine'),
 				['status' => 404]
 			);
 		}

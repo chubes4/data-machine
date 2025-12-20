@@ -40,16 +40,16 @@ class TwitterAuth extends \DataMachine\Core\OAuth\BaseOAuth1Provider {
     public function get_config_fields(): array {
         return [
             'api_key' => [
-                'label' => __('API Key', 'datamachine'),
+                'label' => __('API Key', 'data-machine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Twitter application API key from developer.twitter.com', 'datamachine')
+                'description' => __('Your Twitter application API key from developer.twitter.com', 'data-machine')
             ],
             'api_secret' => [
-                'label' => __('API Secret', 'datamachine'),
+                'label' => __('API Secret', 'data-machine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Twitter application API secret from developer.twitter.com', 'datamachine')
+                'description' => __('Your Twitter application API secret from developer.twitter.com', 'data-machine')
             ]
         ];
     }
@@ -72,7 +72,7 @@ class TwitterAuth extends \DataMachine\Core\OAuth\BaseOAuth1Provider {
         $credentials = $this->get_account();
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['access_token_secret'])) {
             do_action('datamachine_log', 'error', 'Missing Twitter credentials in options.');
-            return new \WP_Error('twitter_missing_credentials', __('Twitter credentials not found. Please authenticate.', 'datamachine'));
+            return new \WP_Error('twitter_missing_credentials', __('Twitter credentials not found. Please authenticate.', 'data-machine'));
         }
 
         $access_token = $credentials['access_token'];
@@ -84,7 +84,7 @@ class TwitterAuth extends \DataMachine\Core\OAuth\BaseOAuth1Provider {
 
         if (empty($consumer_key) || empty($consumer_secret)) {
             do_action('datamachine_log', 'error', 'Missing Twitter API key/secret in site options.');
-            return new \WP_Error('twitter_missing_app_keys', __('Twitter application keys are not configured in plugin settings.', 'datamachine'));
+            return new \WP_Error('twitter_missing_app_keys', __('Twitter application keys are not configured in plugin settings.', 'data-machine'));
         }
 
         try {
@@ -92,7 +92,7 @@ class TwitterAuth extends \DataMachine\Core\OAuth\BaseOAuth1Provider {
             return $connection;
         } catch (\Exception $e) {
             do_action('datamachine_log', 'error', 'Exception creating TwitterOAuth connection: ' . $e->getMessage());
-            return new \WP_Error('twitter_connection_exception', __('Could not establish connection to Twitter.', 'datamachine'));
+            return new \WP_Error('twitter_connection_exception', __('Could not establish connection to Twitter.', 'data-machine'));
         }
     }
 

@@ -45,7 +45,7 @@ class StepTypes {
 				'step_type' => [
 					'required' => true,
 					'type' => 'string',
-					'description' => __('Step type slug', 'datamachine'),
+					'description' => __('Step type slug', 'data-machine'),
 					'sanitize_callback' => 'sanitize_key'
 				]
 			]
@@ -88,7 +88,7 @@ class StepTypes {
 		if (!isset($step_types[$step_type])) {
 			return new \WP_Error(
 				'step_type_not_found',
-				__('Step type not found', 'datamachine'),
+				__('Step type not found', 'data-machine'),
 				['status' => 404]
 			);
 		}

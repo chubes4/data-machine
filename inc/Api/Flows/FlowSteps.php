@@ -38,7 +38,7 @@ class FlowSteps {
 					'required' => true,
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
-					'description' => __('Flow ID to retrieve configuration for', 'datamachine'),
+					'description' => __('Flow ID to retrieve configuration for', 'data-machine'),
 				],
 			]
 		]);
@@ -52,7 +52,7 @@ class FlowSteps {
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Flow step ID (composite key: pipeline_step_id_flow_id)', 'datamachine'),
+					'description' => __('Flow step ID (composite key: pipeline_step_id_flow_id)', 'data-machine'),
 				],
 			]
 		]);
@@ -66,19 +66,19 @@ class FlowSteps {
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Flow step ID (composite key: pipeline_step_id_flow_id)', 'datamachine'),
+					'description' => __('Flow step ID (composite key: pipeline_step_id_flow_id)', 'data-machine'),
 				],
 				'handler_slug' => [
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Handler identifier', 'datamachine'),
+					'description' => __('Handler identifier', 'data-machine'),
 				],
 				'pipeline_id' => [
 					'required' => true,
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
-					'description' => __('Pipeline ID for context', 'datamachine'),
+					'description' => __('Pipeline ID for context', 'data-machine'),
 				],
 				'step_type' => [
 					'required' => true,
@@ -89,7 +89,7 @@ class FlowSteps {
 						$valid_step_types = is_array($types) ? array_keys($types) : [];
 						return in_array($param, $valid_step_types, true);
 					},
-					'description' => __('Step type', 'datamachine'),
+					'description' => __('Step type', 'data-machine'),
 				],
 			]
 		]);
@@ -103,13 +103,13 @@ class FlowSteps {
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Flow step ID (composite key: pipeline_step_id_flow_id)', 'datamachine'),
+					'description' => __('Flow step ID (composite key: pipeline_step_id_flow_id)', 'data-machine'),
 				],
 				'user_message' => [
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_textarea_field',
-					'description' => __('User message for AI step', 'datamachine'),
+					'description' => __('User message for AI step', 'data-machine'),
 				],
 			]
 		]);
@@ -122,7 +122,7 @@ class FlowSteps {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to manage flow steps.', 'datamachine'),
+				__('You do not have permission to manage flow steps.', 'data-machine'),
 				['status' => 403]
 			);
 		}
@@ -143,7 +143,7 @@ class FlowSteps {
 		if (!$flow) {
 			return new \WP_Error(
 				'flow_not_found',
-				__('Flow not found.', 'datamachine'),
+				__('Flow not found.', 'data-machine'),
 				['status' => 404]
 			);
 		}
@@ -168,7 +168,7 @@ class FlowSteps {
 		if (empty($flow_step_id)) {
 			return new \WP_Error(
 				'invalid_flow_step_id',
-				__('Flow step ID is required.', 'datamachine'),
+				__('Flow step ID is required.', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -179,7 +179,7 @@ class FlowSteps {
 		if (empty($step_config)) {
 			return new \WP_Error(
 				'flow_step_not_found',
-				__('Flow step configuration not found.', 'datamachine'),
+				__('Flow step configuration not found.', 'data-machine'),
 				['status' => 404]
 			);
 		}
@@ -206,7 +206,7 @@ class FlowSteps {
 		if (empty($handler_slug) || empty($flow_step_id)) {
 			return new \WP_Error(
 				'missing_required_fields',
-				__('Handler slug and flow step ID are required.', 'datamachine'),
+				__('Handler slug and flow step ID are required.', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -224,7 +224,7 @@ class FlowSteps {
 		if (!$handler_info) {
 			return new \WP_Error(
 				'handler_not_found',
-				__('Handler not found.', 'datamachine'),
+				__('Handler not found.', 'data-machine'),
 				['status' => 404]
 			);
 		}
@@ -235,7 +235,7 @@ class FlowSteps {
 		if (!isset($parts['flow_id']) || !isset($parts['pipeline_step_id'])) {
 			return new \WP_Error(
 				'invalid_flow_step_id',
-				__('Invalid flow step ID format.', 'datamachine'),
+				__('Invalid flow step ID format.', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -249,7 +249,7 @@ class FlowSteps {
 			if (!$success) {
 				return new \WP_Error(
 					'update_failed',
-					__('Failed to update handler for flow step', 'datamachine'),
+					__('Failed to update handler for flow step', 'data-machine'),
 					['status' => 500]
 				);
 			}
@@ -277,7 +277,7 @@ class FlowSteps {
 
             $message = sprintf(
                 /* translators: %s: handler label */
-                esc_html__('Handler "%s" settings saved successfully.', 'datamachine'),
+                esc_html__('Handler "%s" settings saved successfully.', 'data-machine'),
                 $handler_info['label'] ?? $handler_slug
             );
 
@@ -299,7 +299,7 @@ class FlowSteps {
 		} catch (\Exception $e) {
 			return new \WP_Error(
 				'handler_update_failed',
-				__('Failed to save handler settings due to server error.', 'datamachine'),
+				__('Failed to save handler settings due to server error.', 'data-machine'),
 				['status' => 500]
 			);
 		}
@@ -320,7 +320,7 @@ class FlowSteps {
 		if (!$success) {
 			return new \WP_Error(
 				'update_failed',
-				__('Failed to update user message.', 'datamachine'),
+				__('Failed to update user message.', 'data-machine'),
 				['status' => 500]
 			);
 		}
@@ -328,7 +328,7 @@ class FlowSteps {
 		return rest_ensure_response([
 			'success' => true,
 			'data' => [],
-			'message' => __('User message saved successfully', 'datamachine')
+			'message' => __('User message saved successfully', 'data-machine')
 		]);
 	}
 

@@ -135,7 +135,7 @@ class FlowManager {
         }
 
         if (function_exists('as_unschedule_all_actions')) {
-            as_unschedule_all_actions('datamachine_run_flow_now', [$flow_id], 'datamachine');
+            as_unschedule_all_actions('datamachine_run_flow_now', [$flow_id], 'data-machine');
         }
 
         $success = $this->db_flows->delete_flow($flow_id);

@@ -32,11 +32,11 @@ class WordPressSettings extends SettingsHandler {
         $fields = array_merge($fields, WordPressSettingsHandler::get_taxonomy_fields([
             'field_suffix' => '_selection',
             'first_options' => [
-                'skip' => esc_html__('Skip', 'datamachine'),
-                'ai_decides' => esc_html__('AI Decides', 'datamachine')
+                'skip' => esc_html__('Skip', 'data-machine'),
+                'ai_decides' => esc_html__('AI Decides', 'data-machine')
             ],
             /* translators: 1: taxonomy label, 2: taxonomy term label */
-            'description_template' => __('Configure %1$s assignment for updates: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'datamachine')
+            'description_template' => __('Configure %1$s assignment for updates: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'data-machine')
         ]));
 
         // Add common fields for all destination types
@@ -54,13 +54,13 @@ class WordPressSettings extends SettingsHandler {
         return [
             'allow_title_updates' => [
                 'type' => 'checkbox',
-                'label' => __('Allow Title Updates', 'datamachine'),
-                'description' => __('Enable AI to modify post titles. When disabled, titles will remain unchanged.', 'datamachine'),
+                'label' => __('Allow Title Updates', 'data-machine'),
+                'description' => __('Enable AI to modify post titles. When disabled, titles will remain unchanged.', 'data-machine'),
             ],
             'allow_content_updates' => [
                 'type' => 'checkbox',
-                'label' => __('Allow Content Updates', 'datamachine'),
-                'description' => __('Enable AI to modify post content. When disabled, content will remain unchanged.', 'datamachine'),
+                'label' => __('Allow Content Updates', 'data-machine'),
+                'description' => __('Enable AI to modify post content. When disabled, content will remain unchanged.', 'data-machine'),
             ],
         ];
     }

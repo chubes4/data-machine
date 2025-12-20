@@ -59,7 +59,7 @@ class OAuth1Handler {
 
                 return new \WP_Error(
                     'request_token_failed',
-                    __('Failed to get OAuth request token.', 'datamachine'),
+                    __('Failed to get OAuth request token.', 'data-machine'),
                     ['http_code' => $connection->getLastHttpCode()]
                 );
             }
@@ -88,7 +88,7 @@ class OAuth1Handler {
                     'request_token_exception',
                     sprintf(
                         /* translators: %s: OAuth exception message */
-                        __('OAuth exception: %s', 'datamachine'),
+                        __('OAuth exception: %s', 'data-machine'),
                         $e->getMessage()
                     )
                 );
@@ -146,7 +146,7 @@ class OAuth1Handler {
                 'provider' => $provider_key
             ]);
             $this->redirect_with_error($provider_key, 'invalid_nonce');
-            return new \WP_Error('invalid_nonce', __('Invalid OAuth callback nonce.', 'datamachine'));
+            return new \WP_Error('invalid_nonce', __('Invalid OAuth callback nonce.', 'data-machine'));
         }
 
         // Sanitize input after nonce verification
@@ -164,7 +164,7 @@ class OAuth1Handler {
             ]);
 
             $this->redirect_with_error($provider_key, 'access_denied');
-            return new \WP_Error('access_denied', __('OAuth access denied.', 'datamachine'));
+            return new \WP_Error('access_denied', __('OAuth access denied.', 'data-machine'));
         }
 
         // Validate required parameters
@@ -176,7 +176,7 @@ class OAuth1Handler {
             ]);
 
             $this->redirect_with_error($provider_key, 'missing_parameters');
-            return new \WP_Error('missing_parameters', __('Missing OAuth callback parameters.', 'datamachine'));
+            return new \WP_Error('missing_parameters', __('Missing OAuth callback parameters.', 'data-machine'));
         }
 
         // Retrieve and validate temporary secret
@@ -189,7 +189,7 @@ class OAuth1Handler {
             ]);
 
             $this->redirect_with_error($provider_key, 'token_secret_expired');
-            return new \WP_Error('token_secret_expired', __('OAuth token secret expired.', 'datamachine'));
+            return new \WP_Error('token_secret_expired', __('OAuth token secret expired.', 'data-machine'));
         }
 
         // Clean up temporary secret immediately
@@ -215,7 +215,7 @@ class OAuth1Handler {
                 ]);
 
                 $this->redirect_with_error($provider_key, 'access_token_failed');
-                return new \WP_Error('access_token_failed', __('Failed to get access token.', 'datamachine'));
+                return new \WP_Error('access_token_failed', __('Failed to get access token.', 'data-machine'));
 
             }
 
@@ -238,7 +238,7 @@ class OAuth1Handler {
                 ]);
 
                 $this->redirect_with_error($provider_key, 'storage_failed');
-                return new \WP_Error('storage_failed', __('Failed to store account data.', 'datamachine'));
+                return new \WP_Error('storage_failed', __('Failed to store account data.', 'data-machine'));
             }
 
             do_action('datamachine_log', 'info', 'OAuth1: Authentication successful', [
@@ -257,7 +257,7 @@ class OAuth1Handler {
             ]);
 
             $this->redirect_with_error($provider_key, 'callback_exception');
-            return new \WP_Error('callback_exception', __('OAuth callback exception.', 'datamachine'));
+            return new \WP_Error('callback_exception', __('OAuth callback exception.', 'data-machine'));
         }
     }
 

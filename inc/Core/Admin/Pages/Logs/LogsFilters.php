@@ -46,12 +46,12 @@ function datamachine_register_logs_admin_page_filters() {
 
         // Verify nonce
         if (!wp_verify_nonce($nonce, 'datamachine_logs_action')) {
-            wp_die(esc_html__('Security check failed.', 'datamachine'));
+            wp_die(esc_html__('Security check failed.', 'data-machine'));
         }
 
         // Check user capability
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to manage logs.', 'datamachine'));
+            wp_die(esc_html__('You do not have permission to manage logs.', 'data-machine'));
         }
 
         // Sanitize and validate log level
@@ -60,7 +60,7 @@ function datamachine_register_logs_admin_page_filters() {
 
         if (!in_array($log_level, $available_levels)) {
             add_action('admin_notices', function() {
-                echo '<div class="notice notice-error"><p>' . esc_html__('Invalid log level selected.', 'datamachine') . '</p></div>';
+                echo '<div class="notice notice-error"><p>' . esc_html__('Invalid log level selected.', 'data-machine') . '</p></div>';
             });
             return;
         }
@@ -72,12 +72,12 @@ function datamachine_register_logs_admin_page_filters() {
             add_action('admin_notices', function() use ($log_level) {
                 $level_display = datamachine_get_available_log_levels()[$log_level] ?? ucfirst($log_level);
                 /* translators: %s: Selected log level. */
-                $message = sprintf(esc_html__('Log level updated to %s.', 'datamachine'), esc_html($level_display));
+                $message = sprintf(esc_html__('Log level updated to %s.', 'data-machine'), esc_html($level_display));
                 echo '<div class="notice notice-success"><p>' . esc_html($message) . '</p></div>';
             });
         } else {
             add_action('admin_notices', function() {
-                echo '<div class="notice notice-error"><p>' . esc_html__('Failed to update log level.', 'datamachine') . '</p></div>';
+                echo '<div class="notice notice-error"><p>' . esc_html__('Failed to update log level.', 'data-machine') . '</p></div>';
             });
         }
     });
@@ -85,8 +85,8 @@ function datamachine_register_logs_admin_page_filters() {
     // Pure discovery mode - matches actual system usage
     add_filter('datamachine_admin_pages', function($pages) {
         $pages['logs'] = [
-            'page_title' => __('Logs', 'datamachine'),
-            'menu_title' => __('Logs', 'datamachine'),
+            'page_title' => __('Logs', 'data-machine'),
+            'menu_title' => __('Logs', 'data-machine'),
             'capability' => 'manage_options',
             'position' => 30,
             'templates' => __DIR__ . '/templates/',

@@ -41,12 +41,12 @@ class ProcessedItems {
 					'required' => true,
 					'type' => 'string',
 					'enum' => ['pipeline', 'flow'],
-					'description' => __('Clear by pipeline or flow', 'datamachine')
+					'description' => __('Clear by pipeline or flow', 'data-machine')
 				],
 				'target_id' => [
 					'required' => true,
 					'type' => 'integer',
-					'description' => __('Pipeline ID or Flow ID', 'datamachine')
+					'description' => __('Pipeline ID or Flow ID', 'data-machine')
 				]
 			]
 		]);
@@ -59,7 +59,7 @@ class ProcessedItems {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to manage processed items.', 'datamachine'),
+				__('You do not have permission to manage processed items.', 'data-machine'),
 				['status' => 403]
 			);
 		}
@@ -85,7 +85,7 @@ class ProcessedItems {
 		if ($result === false) {
 			return new \WP_Error(
 				'delete_failed',
-				__('Failed to delete processed items.', 'datamachine'),
+				__('Failed to delete processed items.', 'data-machine'),
 				['status' => 500]
 			);
 		}
@@ -95,7 +95,7 @@ class ProcessedItems {
 			'data' => null,
 			'message' => sprintf(
 				/* translators: %d: Number of processed items deleted */
-				__('Deleted %d processed items.', 'datamachine'),
+				__('Deleted %d processed items.', 'data-machine'),
 				$result
 			),
 			'items_deleted' => $result

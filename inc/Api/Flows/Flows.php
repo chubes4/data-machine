@@ -39,7 +39,7 @@ class Flows {
 				'pipeline_id' => [
 					'required' => true,
 					'type' => 'integer',
-					'description' => __('Parent pipeline ID', 'datamachine'),
+					'description' => __('Parent pipeline ID', 'data-machine'),
 					'validate_callback' => function($param) {
 						return is_numeric($param) && $param > 0;
 					},
@@ -51,7 +51,7 @@ class Flows {
 					'required' => false,
 					'type' => 'string',
 					'default' => 'Flow',
-					'description' => __('Flow name', 'datamachine'),
+					'description' => __('Flow name', 'data-machine'),
 					'sanitize_callback' => function($param) {
 						return sanitize_text_field($param);
 					}
@@ -59,12 +59,12 @@ class Flows {
 				'flow_config' => [
 					'required' => false,
 					'type' => 'array',
-					'description' => __('Flow configuration (handler settings per step)', 'datamachine'),
+					'description' => __('Flow configuration (handler settings per step)', 'data-machine'),
 				],
 				'scheduling_config' => [
 					'required' => false,
 					'type' => 'array',
-					'description' => __('Scheduling configuration', 'datamachine'),
+					'description' => __('Scheduling configuration', 'data-machine'),
 				]
 			]
 		]);
@@ -78,7 +78,7 @@ class Flows {
 					'required' => false,
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
-					'description' => __('Optional pipeline ID to filter flows', 'datamachine'),
+					'description' => __('Optional pipeline ID to filter flows', 'data-machine'),
 				],
 			]
 		]);
@@ -93,7 +93,7 @@ class Flows {
 						'required' => true,
 						'type' => 'integer',
 						'sanitize_callback' => 'absint',
-						'description' => __('Flow ID to retrieve', 'datamachine'),
+						'description' => __('Flow ID to retrieve', 'data-machine'),
 					],
 				]
 			],
@@ -106,7 +106,7 @@ class Flows {
 						'required' => true,
 						'type' => 'integer',
 						'sanitize_callback' => 'absint',
-						'description' => __('Flow ID to delete', 'datamachine'),
+						'description' => __('Flow ID to delete', 'data-machine'),
 					],
 				]
 			],
@@ -119,18 +119,18 @@ class Flows {
 						'required' => true,
 						'type' => 'integer',
 						'sanitize_callback' => 'absint',
-						'description' => __('Flow ID to update', 'datamachine'),
+						'description' => __('Flow ID to update', 'data-machine'),
 					],
 					'flow_name' => [
 						'required' => false,
 						'type' => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
-						'description' => __('New flow title', 'datamachine'),
+						'description' => __('New flow title', 'data-machine'),
 					],
 					'scheduling_config' => [
 						'required' => false,
 						'type' => 'object',
-						'description' => __('Scheduling configuration', 'datamachine'),
+						'description' => __('Scheduling configuration', 'data-machine'),
 					],
 				]
 			]
@@ -145,7 +145,7 @@ class Flows {
 					'required' => true,
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
-					'description' => __('Source flow ID to duplicate', 'datamachine'),
+					'description' => __('Source flow ID to duplicate', 'data-machine'),
 				],
 			]
 		]);
@@ -158,7 +158,7 @@ class Flows {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to create flows.', 'datamachine'),
+				__('You do not have permission to create flows.', 'data-machine'),
 				['status' => 403]
 			);
 		}
@@ -189,7 +189,7 @@ class Flows {
 		if (!$result) {
 			return new \WP_Error(
 				'flow_creation_failed',
-				__('Failed to create flow.', 'datamachine'),
+				__('Failed to create flow.', 'data-machine'),
 				['status' => 500]
 			);
 		}
@@ -212,7 +212,7 @@ class Flows {
 		if (!$success) {
 			return new \WP_Error(
 				'flow_deletion_failed',
-				__('Failed to delete flow.', 'datamachine'),
+				__('Failed to delete flow.', 'data-machine'),
 				['status' => 500]
 			);
 		}
@@ -235,7 +235,7 @@ class Flows {
 		if (!$result) {
 			return new \WP_Error(
 				'flow_duplication_failed',
-				__('Failed to duplicate flow.', 'datamachine'),
+				__('Failed to duplicate flow.', 'data-machine'),
 				['status' => 500]
 			);
 		}
@@ -299,7 +299,7 @@ class Flows {
 		if (!$flow) {
 			return new \WP_Error(
 				'flow_not_found',
-				__('Flow not found.', 'datamachine'),
+				__('Flow not found.', 'data-machine'),
 				['status' => 404]
 			);
 		}
@@ -369,7 +369,7 @@ class Flows {
 			return null;
 		}
 
-		$next_timestamp = as_next_scheduled_action('datamachine_run_flow_now', [$flow_id], 'datamachine');
+		$next_timestamp = as_next_scheduled_action('datamachine_run_flow_now', [$flow_id], 'data-machine');
 
 		return $next_timestamp ? wp_date('Y-m-d H:i:s', $next_timestamp) : null;
 	}
@@ -390,7 +390,7 @@ class Flows {
 		if ($flow_name === null && $scheduling_config === null) {
 			return new \WP_Error(
 				'no_updates',
-				__('Must provide flow_name or scheduling_config to update', 'datamachine'),
+				__('Must provide flow_name or scheduling_config to update', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -401,7 +401,7 @@ class Flows {
 			if (empty($flow_name)) {
 				return new \WP_Error(
 					'empty_title',
-					__('Flow title cannot be empty', 'datamachine'),
+					__('Flow title cannot be empty', 'data-machine'),
 					['status' => 400]
 				);
 			}
@@ -413,7 +413,7 @@ class Flows {
 			if (!$success) {
 				return new \WP_Error(
 					'update_failed',
-					__('Failed to save flow title', 'datamachine'),
+					__('Failed to save flow title', 'data-machine'),
 					['status' => 500]
 				);
 			}
@@ -432,7 +432,7 @@ class Flows {
 		if (!$flow) {
 			return new \WP_Error(
 				'flow_not_found',
-				__('Flow not found after update', 'datamachine'),
+				__('Flow not found after update', 'data-machine'),
 				['status' => 404]
 			);
 		}
@@ -442,7 +442,7 @@ class Flows {
 		return rest_ensure_response([
 			'success' => true,
 			'data' => $flow_payload,
-			'message' => __('Flow updated successfully', 'datamachine')
+			'message' => __('Flow updated successfully', 'data-machine')
 		]);
 	}
 

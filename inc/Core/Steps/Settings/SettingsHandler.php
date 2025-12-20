@@ -67,7 +67,7 @@ abstract class SettingsHandler {
             throw new \InvalidArgumentException(
                 sprintf(
                     /* translators: %s: Field key */
-                    esc_html__('%s is required.', 'datamachine'),
+                    esc_html__('%s is required.', 'data-machine'),
                     esc_html($key)
                 )
             );

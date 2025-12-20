@@ -121,7 +121,7 @@ class Execute {
                 time(),
                 'datamachine_run_flow_now',
                 [$flow_id, $job_id],
-                'datamachine'
+                'data-machine'
             );
 
             return rest_ensure_response([
@@ -150,7 +150,7 @@ class Execute {
             $timestamp,
             'datamachine_run_flow_now',
             [$flow_id, $job_id],
-            'datamachine'
+            'data-machine'
         );
 
         return rest_ensure_response([
@@ -240,7 +240,7 @@ class Execute {
                 $timestamp,
                 'datamachine_schedule_next_step',
                 [$job_id, $first_step_id, []],
-                'datamachine'
+                'data-machine'
             );
 
             if ($action_id === false) {

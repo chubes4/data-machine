@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 0.6.7
+Stable tag: 0.6.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -324,6 +324,25 @@ For technical specifications, architecture details, and development guides, see 
 **REST API Documentation:** Available in docs/api/index.md
 
 **Extension Development:** Complete framework supporting custom handlers, AI tools, and database services with filter-based auto-discovery.
+
+== Source Code ==
+
+This plugin includes minified JavaScript files compiled from source. The complete source code is included in the plugin package.
+
+**React Admin Interface Source:**
+* Location: `inc/Core/Admin/Pages/Pipelines/assets/react/`
+* Entry point: `index.jsx`
+* Components: 50+ React components using @wordpress/element
+
+**Build Instructions:**
+1. Install dependencies: `npm install`
+2. Build for production: `npm run build`
+3. Output location: `inc/Core/Admin/Pages/Pipelines/assets/build/`
+
+**Dependencies:**
+* @wordpress/element
+* @wordpress/components
+* @tanstack/react-query
 
 == Support ==
 

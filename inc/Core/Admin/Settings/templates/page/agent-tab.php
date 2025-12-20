@@ -32,7 +32,7 @@ if (empty($datamachine_enabled_tools)) {
 
 <table class="form-table">
     <tr>
-        <th scope="row"><?php esc_html_e('Tool Configuration', 'datamachine'); ?></th>
+        <th scope="row"><?php esc_html_e('Tool Configuration', 'data-machine'); ?></th>
         <td>
             <?php if ($datamachine_global_tools): ?>
                 <div class="datamachine-tool-config-grid">
@@ -48,7 +48,7 @@ if (empty($datamachine_enabled_tools)) {
                             <p class="description"><?php echo esc_html($datamachine_tool_config['description'] ?? ''); ?></p>
                             <div class="datamachine-tool-controls">
                                 <span class="datamachine-config-status <?php echo $datamachine_is_configured ? 'configured' : 'not-configured'; ?>">
-                                    <?php echo $datamachine_is_configured ? esc_html__('Configured', 'datamachine') : esc_html__('Not Configured', 'datamachine'); ?>
+                                    <?php echo $datamachine_is_configured ? esc_html__('Configured', 'data-machine') : esc_html__('Not Configured', 'data-machine'); ?>
                                 </span>
 
                                 <?php if (!$datamachine_engine_mode): ?>
@@ -59,13 +59,13 @@ if (empty($datamachine_enabled_tools)) {
                                                    name="datamachine_settings[enabled_tools][<?php echo esc_attr($datamachine_tool_name); ?>]"
                                                    value="1"
                                                    <?php checked($datamachine_is_enabled, true); ?>>
-                                            <?php esc_html_e('Enable for agents', 'datamachine'); ?>
+                                            <?php esc_html_e('Enable for agents', 'data-machine'); ?>
                                         </label>
                                     <?php else: ?>
                                         <!-- Show disabled checkbox for unconfigured tools -->
                                         <label class="datamachine-tool-enabled-toggle datamachine-tool-disabled">
                                             <input type="checkbox" disabled>
-                                            <span class="description"><?php esc_html_e('Configure to enable', 'datamachine'); ?></span>
+                                            <span class="description"><?php esc_html_e('Configure to enable', 'data-machine'); ?></span>
                                         </label>
                                     <?php endif; ?>
 
@@ -74,7 +74,7 @@ if (empty($datamachine_enabled_tools)) {
                                         <button type="button"
                                                 class="button datamachine-open-modal"
                                                 data-modal-id="datamachine-modal-tool-config-<?php echo esc_attr($datamachine_tool_name); ?>">
-                                            <?php esc_html_e('Configure', 'datamachine'); ?>
+                                            <?php esc_html_e('Configure', 'data-machine'); ?>
                                         </button>
                                     <?php endif; ?>
                                 <?php endif; ?>
@@ -84,17 +84,17 @@ if (empty($datamachine_enabled_tools)) {
                 </div>
                 <?php if ($datamachine_engine_mode): ?>
                     <p class="description">
-                        <?php esc_html_e('Tool configuration is disabled when Engine Mode is active.', 'datamachine'); ?>
+                        <?php esc_html_e('Tool configuration is disabled when Engine Mode is active.', 'data-machine'); ?>
                     </p>
                 <?php endif; ?>
             <?php else: ?>
-                <p><?php esc_html_e('No global tools are currently available.', 'datamachine'); ?></p>
+                <p><?php esc_html_e('No global tools are currently available.', 'data-machine'); ?></p>
             <?php endif; ?>
         </td>
     </tr>
 
     <tr>
-        <th scope="row"><?php esc_html_e('Global System Prompt', 'datamachine'); ?></th>
+        <th scope="row"><?php esc_html_e('Global System Prompt', 'data-machine'); ?></th>
         <td>
             <textarea name="datamachine_settings[global_system_prompt]" 
                       rows="8" 
@@ -102,53 +102,53 @@ if (empty($datamachine_enabled_tools)) {
                       class="large-text code"
                       <?php echo esc_attr($datamachine_disabled_attr); ?>><?php echo esc_textarea($datamachine_global_prompt); ?></textarea>
             <p class="description">
-                <?php esc_html_e('Primary system message that sets the tone and overall behavior for all AI agents. This is the first and most important instruction that influences every AI response in your workflows.', 'datamachine'); ?>
+                <?php esc_html_e('Primary system message that sets the tone and overall behavior for all AI agents. This is the first and most important instruction that influences every AI response in your workflows.', 'data-machine'); ?>
             </p>
             <?php if ($datamachine_engine_mode): ?>
                 <p class="description">
-                    <?php esc_html_e('Global system prompt is disabled when Engine Mode is active.', 'datamachine'); ?>
+                    <?php esc_html_e('Global system prompt is disabled when Engine Mode is active.', 'data-machine'); ?>
                 </p>
             <?php endif; ?>
         </td>
     </tr>
 
     <tr>
-        <th scope="row"><?php esc_html_e('Default AI Provider & Model', 'datamachine'); ?></th>
+        <th scope="row"><?php esc_html_e('Default AI Provider & Model', 'data-machine'); ?></th>
         <td>
             <div class="datamachine-ai-provider-model-settings">
                 <div class="datamachine-provider-field">
-                    <label for="default_provider"><?php esc_html_e('Default AI Provider', 'datamachine'); ?></label>
+                    <label for="default_provider"><?php esc_html_e('Default AI Provider', 'data-machine'); ?></label>
                     <select name="datamachine_settings[default_provider]"
                             id="default_provider"
                             class="regular-text"
                             <?php echo esc_attr($datamachine_disabled_attr); ?>>
-                        <option value=""><?php esc_html_e('Select Provider...', 'datamachine'); ?></option>
+                        <option value=""><?php esc_html_e('Select Provider...', 'data-machine'); ?></option>
                     </select>
                 </div>
 
                 <div class="datamachine-model-field">
-                    <label for="default_model"><?php esc_html_e('Default AI Model', 'datamachine'); ?></label>
+                    <label for="default_model"><?php esc_html_e('Default AI Model', 'data-machine'); ?></label>
                     <select name="datamachine_settings[default_model]"
                             id="default_model"
                             class="regular-text"
                             <?php echo esc_attr($datamachine_disabled_attr); ?>>
-                        <option value=""><?php esc_html_e('Select provider first...', 'datamachine'); ?></option>
+                        <option value=""><?php esc_html_e('Select provider first...', 'data-machine'); ?></option>
                     </select>
                 </div>
             </div>
             <p class="description">
-                <?php esc_html_e('Set the default AI provider and model for new AI steps and chat requests. These can be overridden on a per-step or per-request basis.', 'datamachine'); ?>
+                <?php esc_html_e('Set the default AI provider and model for new AI steps and chat requests. These can be overridden on a per-step or per-request basis.', 'data-machine'); ?>
             </p>
             <?php if ($datamachine_engine_mode): ?>
                 <p class="description">
-                    <?php esc_html_e('Default AI provider and model settings are disabled when Engine Mode is active.', 'datamachine'); ?>
+                    <?php esc_html_e('Default AI provider and model settings are disabled when Engine Mode is active.', 'data-machine'); ?>
                 </p>
             <?php endif; ?>
         </td>
     </tr>
 
     <tr>
-        <th scope="row"><?php esc_html_e('Provide site context to agents', 'datamachine'); ?></th>
+        <th scope="row"><?php esc_html_e('Provide site context to agents', 'data-machine'); ?></th>
         <td>
             <fieldset <?php echo esc_attr($datamachine_disabled_attr); ?>>
                 <label for="site_context_enabled">
@@ -158,14 +158,14 @@ if (empty($datamachine_enabled_tools)) {
                            value="1"
                            <?php checked($datamachine_site_context_enabled, true); ?>
                            <?php echo esc_attr($datamachine_disabled_attr); ?>>
-                    <?php esc_html_e('Include WordPress site context in AI requests', 'datamachine'); ?>
+                    <?php esc_html_e('Include WordPress site context in AI requests', 'data-machine'); ?>
                 </label>
                 <p class="description">
-                    <?php esc_html_e('Automatically provides site information (post types, taxonomies, user stats) to AI agents for better context awareness.', 'datamachine'); ?>
+                    <?php esc_html_e('Automatically provides site information (post types, taxonomies, user stats) to AI agents for better context awareness.', 'data-machine'); ?>
                 </p>
                 <?php if ($datamachine_engine_mode): ?>
                     <p class="description">
-                        <?php esc_html_e('Site context controls are disabled when Engine Mode is active.', 'datamachine'); ?>
+                        <?php esc_html_e('Site context controls are disabled when Engine Mode is active.', 'data-machine'); ?>
                     </p>
                 <?php endif; ?>
             </fieldset>
@@ -173,7 +173,7 @@ if (empty($datamachine_enabled_tools)) {
     </tr>
 
     <tr>
-        <th scope="row"><?php esc_html_e('Maximum conversation turns', 'datamachine'); ?></th>
+        <th scope="row"><?php esc_html_e('Maximum conversation turns', 'data-machine'); ?></th>
         <td>
             <input type="number"
                    name="datamachine_settings[max_turns]"
@@ -183,11 +183,11 @@ if (empty($datamachine_enabled_tools)) {
                    class="small-text"
                    <?php echo esc_attr($datamachine_disabled_attr); ?>>
             <p class="description">
-                <?php esc_html_e('Maximum number of conversation turns allowed for AI agents (1-50). Applies to both pipeline and chat conversations.', 'datamachine'); ?>
+                <?php esc_html_e('Maximum number of conversation turns allowed for AI agents (1-50). Applies to both pipeline and chat conversations.', 'data-machine'); ?>
             </p>
             <?php if ($datamachine_engine_mode): ?>
                 <p class="description">
-                    <?php esc_html_e('Maximum turns setting is disabled when Engine Mode is active.', 'datamachine'); ?>
+                    <?php esc_html_e('Maximum turns setting is disabled when Engine Mode is active.', 'data-machine'); ?>
                 </p>
             <?php endif; ?>
         </td>

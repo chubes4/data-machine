@@ -33,8 +33,8 @@ function datamachine_register_jobs_admin_page_filters() {
     // Pure discovery mode - matches actual system usage
     add_filter('datamachine_admin_pages', function($pages) {
         $pages['jobs'] = [
-            'page_title' => __('Jobs', 'datamachine'),
-            'menu_title' => __('Jobs', 'datamachine'),  
+            'page_title' => __('Jobs', 'data-machine'),
+            'menu_title' => __('Jobs', 'data-machine'),  
             'capability' => 'manage_options',
             'position' => 20,
             'templates' => __DIR__ . '/templates/',

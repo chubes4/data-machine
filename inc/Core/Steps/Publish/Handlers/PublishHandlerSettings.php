@@ -27,18 +27,18 @@ abstract class PublishHandlerSettings extends SettingsHandler {
         return [
             'link_handling' => [
                 'type' => 'select',
-                'label' => __('Source URL Handling', 'datamachine'),
-                'description' => __('Choose how to handle source URLs when publishing.', 'datamachine'),
+                'label' => __('Source URL Handling', 'data-machine'),
+                'description' => __('Choose how to handle source URLs when publishing.', 'data-machine'),
                 'options' => [
-                    'none' => __('No URL - exclude source link entirely', 'datamachine'),
-                    'append' => __('Append to content - add URL to post content', 'datamachine')
+                    'none' => __('No URL - exclude source link entirely', 'data-machine'),
+                    'append' => __('Append to content - add URL to post content', 'data-machine')
                 ],
                 'default' => 'append'
             ],
             'include_images' => [
                 'type' => 'checkbox',
-                'label' => __('Enable Image Posting', 'datamachine'),
-                'description' => __('Include images when available in source data.', 'datamachine'),
+                'label' => __('Enable Image Posting', 'data-machine'),
+                'description' => __('Include images when available in source data.', 'data-machine'),
                 'default' => false
             ]
         ];

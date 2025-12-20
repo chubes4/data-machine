@@ -286,6 +286,6 @@ class WordPressMedia extends FetchHandler {
      * @return string Handler label.
      */
     public static function get_label(): string {
-        return __('WordPress Media', 'datamachine');
+        return __('WordPress Media', 'data-machine');
     }
 }

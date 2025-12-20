@@ -30,13 +30,13 @@ class WordPressMediaSettings extends FetchHandlerSettings {
         $fields = [
             'include_parent_content' => [
                 'type' => 'checkbox',
-                'label' => __('Include parent post content', 'datamachine'),
-                'description' => __('Include the content of the post/page this media is attached to.', 'datamachine'),
+                'label' => __('Include parent post content', 'data-machine'),
+                'description' => __('Include the content of the post/page this media is attached to.', 'data-machine'),
             ],
             'randomize_selection' => [
                 'type' => 'checkbox',
-                'label' => __('Randomize selection', 'datamachine'),
-                'description' => __('Select a random media file instead of most recently uploaded.', 'datamachine'),
+                'label' => __('Randomize selection', 'data-machine'),
+                'description' => __('Select a random media file instead of most recently uploaded.', 'data-machine'),
             ],
         ];
 

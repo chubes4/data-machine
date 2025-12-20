@@ -36,7 +36,7 @@ class PipelineFlows {
 					'required' => true,
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
-					'description' => __('Pipeline ID to retrieve flows for', 'datamachine'),
+					'description' => __('Pipeline ID to retrieve flows for', 'data-machine'),
 				],
 			]
 		]);
@@ -49,7 +49,7 @@ class PipelineFlows {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to access pipeline flows.', 'datamachine'),
+				__('You do not have permission to access pipeline flows.', 'data-machine'),
 				['status' => 403]
 			);
 		}
@@ -73,7 +73,7 @@ class PipelineFlows {
 		if (!$pipeline) {
 			return new \WP_Error(
 				'pipeline_not_found',
-				__('Pipeline not found.', 'datamachine'),
+				__('Pipeline not found.', 'data-machine'),
 				['status' => 404]
 			);
 		}

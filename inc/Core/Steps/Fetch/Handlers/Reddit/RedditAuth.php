@@ -32,22 +32,22 @@ class RedditAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
     public function get_config_fields(): array {
         return [
             'client_id' => [
-                'label' => __('Client ID', 'datamachine'),
+                'label' => __('Client ID', 'data-machine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Reddit application Client ID from reddit.com/prefs/apps', 'datamachine')
+                'description' => __('Your Reddit application Client ID from reddit.com/prefs/apps', 'data-machine')
             ],
             'client_secret' => [
-                'label' => __('Client Secret', 'datamachine'),
+                'label' => __('Client Secret', 'data-machine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Reddit application Client Secret from reddit.com/prefs/apps', 'datamachine')
+                'description' => __('Your Reddit application Client Secret from reddit.com/prefs/apps', 'data-machine')
             ],
             'developer_username' => [
-                'label' => __('Developer Username', 'datamachine'),
+                'label' => __('Developer Username', 'data-machine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Reddit username that is registered in the Reddit app configuration', 'datamachine')
+                'description' => __('Your Reddit username that is registered in the Reddit app configuration', 'data-machine')
             ]
         ];
     }
@@ -89,10 +89,14 @@ class RedditAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
      * Handle OAuth callback from Reddit
      */
     public function handle_oauth_callback() {
-        // Sanitize input - nonce verification handled via OAuth state parameter
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection
-        $state = isset($_GET['state']) ? sanitize_key(wp_unslash($_GET['state'])) : '';
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection
+        // Validate OAuth state parameter for CSRF protection
+        $state = isset($_GET['state']) ? sanitize_text_field(wp_unslash($_GET['state'])) : '';
+        $stored_state = get_transient('datamachine_reddit_oauth_state');
+
+        if (empty($state) || false === $stored_state || !hash_equals($stored_state, $state)) {
+            wp_die(esc_html__('Invalid or expired OAuth state parameter.', 'data-machine'));
+        }
+
         $code = isset($_GET['code']) ? sanitize_text_field(wp_unslash($_GET['code'])) : '';
 
         // Get configuration

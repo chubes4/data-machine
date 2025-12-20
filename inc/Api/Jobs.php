@@ -44,14 +44,14 @@ class Jobs {
 					'required' => false,
 					'type' => 'string',
 					'default' => 'job_id',
-					'description' => __('Order jobs by field', 'datamachine')
+					'description' => __('Order jobs by field', 'data-machine')
 				],
 				'order' => [
 					'required' => false,
 					'type' => 'string',
 					'default' => 'DESC',
 					'enum' => ['ASC', 'DESC'],
-					'description' => __('Sort order', 'datamachine')
+					'description' => __('Sort order', 'data-machine')
 				],
 				'per_page' => [
 					'required' => false,
@@ -59,29 +59,29 @@ class Jobs {
 					'default' => 50,
 					'minimum' => 1,
 					'maximum' => 100,
-					'description' => __('Number of jobs per page', 'datamachine')
+					'description' => __('Number of jobs per page', 'data-machine')
 				],
 				'offset' => [
 					'required' => false,
 					'type' => 'integer',
 					'default' => 0,
 					'minimum' => 0,
-					'description' => __('Offset for pagination', 'datamachine')
+					'description' => __('Offset for pagination', 'data-machine')
 				],
 				'pipeline_id' => [
 					'required' => false,
 					'type' => 'integer',
-					'description' => __('Filter by pipeline ID', 'datamachine')
+					'description' => __('Filter by pipeline ID', 'data-machine')
 				],
 				'flow_id' => [
 					'required' => false,
 					'type' => 'integer',
-					'description' => __('Filter by flow ID', 'datamachine')
+					'description' => __('Filter by flow ID', 'data-machine')
 				],
 				'status' => [
 					'required' => false,
 					'type' => 'string',
-					'description' => __('Filter by job status', 'datamachine')
+					'description' => __('Filter by job status', 'data-machine')
 				]
 			]
 		]);
@@ -95,7 +95,7 @@ class Jobs {
 				'id' => [
 					'required' => true,
 					'type' => 'integer',
-					'description' => __('Job ID', 'datamachine')
+					'description' => __('Job ID', 'data-machine')
 				]
 			]
 		]);
@@ -110,13 +110,13 @@ class Jobs {
 					'required' => true,
 					'type' => 'string',
 					'enum' => ['all', 'failed'],
-					'description' => __('Which jobs to clear: all or failed', 'datamachine')
+					'description' => __('Which jobs to clear: all or failed', 'data-machine')
 				],
 				'cleanup_processed' => [
 					'required' => false,
 					'type' => 'boolean',
 					'default' => false,
-					'description' => __('Also clear processed items tracking', 'datamachine')
+					'description' => __('Also clear processed items tracking', 'data-machine')
 				]
 			]
 		]);
@@ -129,7 +129,7 @@ class Jobs {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to manage jobs.', 'datamachine'),
+				__('You do not have permission to manage jobs.', 'data-machine'),
 				['status' => 403]
 			);
 		}
@@ -198,7 +198,7 @@ class Jobs {
 			'job_not_found',
 			sprintf(
 				/* translators: %d: job ID */
-				__('Job %d not found.', 'datamachine'),
+				__('Job %d not found.', 'data-machine'),
 				$job_id
 			),
 			['status' => 404]
@@ -237,7 +237,7 @@ class Jobs {
 		if (!$result['success']) {
 			return new \WP_Error(
 				'delete_failed',
-				__('Failed to delete jobs.', 'datamachine'),
+				__('Failed to delete jobs.', 'data-machine'),
 				['status' => 500]
 			);
 		}
@@ -245,10 +245,10 @@ class Jobs {
 		$message_parts = [];
 		/* translators: %d: Number of jobs deleted */
 		/* translators: %d: number of jobs deleted */
-		$message_parts[] = sprintf(esc_html__('Deleted %d jobs', 'datamachine'), $result['jobs_deleted']);
+		$message_parts[] = sprintf(esc_html__('Deleted %d jobs', 'data-machine'), $result['jobs_deleted']);
 
 		if ($cleanup_processed && $result['processed_items_cleaned'] > 0) {
-			$message_parts[] = esc_html__('and their associated processed items', 'datamachine');
+			$message_parts[] = esc_html__('and their associated processed items', 'data-machine');
 		}
 
 		$message = implode(' ', $message_parts) . '.';

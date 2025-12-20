@@ -40,7 +40,7 @@ class Auth {
 						'required' => true,
 						'type' => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
-						'description' => __('Handler identifier (e.g., twitter, facebook)', 'datamachine'),
+						'description' => __('Handler identifier (e.g., twitter, facebook)', 'data-machine'),
 					],
 				]
 			],
@@ -53,7 +53,7 @@ class Auth {
 						'required' => true,
 						'type' => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
-						'description' => __('Handler identifier', 'datamachine'),
+						'description' => __('Handler identifier', 'data-machine'),
 					],
 				]
 			]
@@ -68,7 +68,7 @@ class Auth {
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Handler identifier', 'datamachine'),
+					'description' => __('Handler identifier', 'data-machine'),
 				],
 			]
 		]);
@@ -82,7 +82,7 @@ class Auth {
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Handler identifier', 'datamachine'),
+					'description' => __('Handler identifier', 'data-machine'),
 				],
 			]
 		]);
@@ -95,7 +95,7 @@ class Auth {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to manage authentication.', 'datamachine'),
+				__('You do not have permission to manage authentication.', 'data-machine'),
 				['status' => 403]
 			);
 		}
@@ -114,7 +114,7 @@ class Auth {
 		if (empty($handler_slug)) {
 			return new \WP_Error(
 				'missing_handler',
-				__('Handler slug is required', 'datamachine'),
+				__('Handler slug is required', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -124,7 +124,7 @@ class Auth {
 		if (isset($all_handlers[$handler_slug]) && ($all_handlers[$handler_slug]['requires_auth'] ?? false) === false) {
 			return new \WP_Error(
 				'auth_not_required',
-				__('Authentication is not required for this handler', 'datamachine'),
+				__('Authentication is not required for this handler', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -136,7 +136,7 @@ class Auth {
 		if (!$auth_instance) {
 			return new \WP_Error(
 				'auth_provider_not_found',
-				__('Authentication provider not found', 'datamachine'),
+				__('Authentication provider not found', 'data-machine'),
 				['status' => 404]
 			);
 		}
@@ -147,7 +147,7 @@ class Auth {
 		} else {
 			return new \WP_Error(
 				'disconnect_not_supported',
-				__('This handler does not support account disconnection', 'datamachine'),
+				__('This handler does not support account disconnection', 'data-machine'),
 				['status' => 500]
 			);
 		}
@@ -157,12 +157,12 @@ class Auth {
 				'success' => true,
 				'data' => null,
 				/* translators: %s: Service name (e.g., Twitter, Facebook) */
-				'message' => sprintf(__('%s account disconnected successfully', 'datamachine'), ucfirst($handler_slug))
+				'message' => sprintf(__('%s account disconnected successfully', 'data-machine'), ucfirst($handler_slug))
 			]);
 		} else {
 			return new \WP_Error(
 				'disconnect_failed',
-				__('Failed to disconnect account', 'datamachine'),
+				__('Failed to disconnect account', 'data-machine'),
 				['status' => 500]
 			);
 		}
@@ -179,7 +179,7 @@ class Auth {
 		if (empty($handler_slug)) {
 			return new \WP_Error(
 				'missing_handler',
-				__('Handler slug is required', 'datamachine'),
+				__('Handler slug is required', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -193,7 +193,7 @@ class Auth {
 					'authenticated' => true,
 					'requires_auth' => false,
 					'handler_slug' => $handler_slug,
-					'message' => __('Authentication not required for this handler', 'datamachine')
+					'message' => __('Authentication not required for this handler', 'data-machine')
 				]
 			]);
 		}
@@ -205,7 +205,7 @@ class Auth {
 		if (!$auth_instance) {
 			return new \WP_Error(
 				'auth_provider_not_found',
-				__('Authentication provider not found', 'datamachine'),
+				__('Authentication provider not found', 'data-machine'),
 				['status' => 404]
 			);
 		}
@@ -322,7 +322,7 @@ class Auth {
 		if (empty($handler_slug)) {
 			return new \WP_Error(
 				'missing_handler',
-				__('Handler slug is required', 'datamachine'),
+				__('Handler slug is required', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -334,7 +334,7 @@ class Auth {
 		if (!$auth_instance) {
 			return new \WP_Error(
 				'auth_provider_not_found',
-				__('Authentication provider not found', 'datamachine'),
+				__('Authentication provider not found', 'data-machine'),
 				['status' => 404]
 			);
 		}
@@ -342,7 +342,7 @@ class Auth {
 		if (!method_exists($auth_instance, 'get_authorization_url')) {
 			return new \WP_Error(
 				'oauth_not_supported',
-				__('This handler does not support OAuth authorization', 'datamachine'),
+				__('This handler does not support OAuth authorization', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -351,7 +351,7 @@ class Auth {
 		if (method_exists($auth_instance, 'is_configured') && !$auth_instance->is_configured()) {
 			return new \WP_Error(
 				'oauth_not_configured',
-				__('OAuth credentials not configured. Please provide client ID and secret first.', 'datamachine'),
+				__('OAuth credentials not configured. Please provide client ID and secret first.', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -364,7 +364,7 @@ class Auth {
 				'data' => [
 					'oauth_url' => $oauth_url,
 					'handler_slug' => $handler_slug,
-					'instructions' => __('Visit this URL to authorize your account. You will be redirected back to Data Machine upon completion.', 'datamachine')
+					'instructions' => __('Visit this URL to authorize your account. You will be redirected back to Data Machine upon completion.', 'data-machine')
 				]
 			]);
 		} catch (\Exception $e) {
@@ -387,7 +387,7 @@ class Auth {
 		if (empty($handler_slug)) {
 			return new \WP_Error(
 				'missing_handler',
-				__('Handler slug is required', 'datamachine'),
+				__('Handler slug is required', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -397,7 +397,7 @@ class Auth {
 		if (isset($all_handlers[$handler_slug]) && ($all_handlers[$handler_slug]['requires_auth'] ?? false) === false) {
 			return new \WP_Error(
 				'auth_not_required',
-				__('Authentication is not required for this handler', 'datamachine'),
+				__('Authentication is not required for this handler', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -409,7 +409,7 @@ class Auth {
 		if (!$auth_instance || !method_exists($auth_instance, 'get_config_fields')) {
 			return new \WP_Error(
 				'invalid_auth_provider',
-				__('Auth provider not found or invalid', 'datamachine'),
+				__('Auth provider not found or invalid', 'data-machine'),
 				['status' => 404]
 			);
 		}
@@ -430,7 +430,7 @@ class Auth {
 		} else {
 			return new \WP_Error(
 				'config_retrieval_failed',
-				__('Could not retrieve existing configuration', 'datamachine'),
+				__('Could not retrieve existing configuration', 'data-machine'),
 				['status' => 500]
 			);
 		}
@@ -447,7 +447,7 @@ class Auth {
 				return new \WP_Error(
 					'required_field_missing',
 					/* translators: %s: Field label (e.g., API Key, Client ID) */
-					sprintf(__('%s is required', 'datamachine'), $field_config['label']),
+					sprintf(__('%s is required', 'data-machine'), $field_config['label']),
 					['status' => 400]
 				);
 			}
@@ -476,7 +476,7 @@ class Auth {
 				return rest_ensure_response([
 					'success' => true,
 					'data' => null,
-					'message' => __('Configuration is already up to date - no changes detected', 'datamachine')
+					'message' => __('Configuration is already up to date - no changes detected', 'data-machine')
 				]);
 			}
 		}
@@ -486,7 +486,7 @@ class Auth {
 			if (method_exists($auth_instance, 'save_config')) {
 				$saved = $auth_instance->save_config($config_data);
 			} else {
-				return new \WP_Error('save_config_not_supported', __('Handler does not support saving config', 'datamachine'));
+				return new \WP_Error('save_config_not_supported', __('Handler does not support saving config', 'data-machine'));
 			}
 		} else {
 			if (method_exists($auth_instance, 'save_account')) {
@@ -495,7 +495,7 @@ class Auth {
 				// Some simple auth might use save_config (like Bluesky now)
 				$saved = $auth_instance->save_config($config_data);
 			} else {
-				return new \WP_Error('save_account_not_supported', __('Handler does not support saving account', 'datamachine'));
+				return new \WP_Error('save_account_not_supported', __('Handler does not support saving account', 'data-machine'));
 			}
 		}
 
@@ -503,12 +503,12 @@ class Auth {
 			return rest_ensure_response([
 				'success' => true,
 				'data' => null,
-				'message' => __('Configuration saved successfully', 'datamachine')
+				'message' => __('Configuration saved successfully', 'data-machine')
 			]);
 		} else {
 			return new \WP_Error(
 				'save_failed',
-				__('Failed to save configuration', 'datamachine'),
+				__('Failed to save configuration', 'data-machine'),
 				['status' => 500]
 			);
 		}

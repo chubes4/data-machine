@@ -426,6 +426,6 @@ class Facebook extends PublishHandler {
 
 
     public static function get_label(): string {
-        return __('Facebook', 'datamachine');
+        return __('Facebook', 'data-machine');
     }
 }

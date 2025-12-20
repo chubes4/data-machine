@@ -25,13 +25,13 @@ class DateFormatter {
 	 */
 	public static function format_for_display( ?string $mysql_datetime, ?string $status = null ): string {
 		if ( empty( $mysql_datetime ) || $mysql_datetime === '0000-00-00 00:00:00' ) {
-			return __( 'Never', 'datamachine' );
+			return __( 'Never', 'data-machine' );
 		}
 
 		try {
 			$timestamp = ( new \DateTime( $mysql_datetime, new \DateTimeZone( 'UTC' ) ) )->getTimestamp();
 		} catch ( \Exception $e ) {
-			return __( 'Invalid date', 'datamachine' );
+			return __( 'Invalid date', 'data-machine' );
 		}
 
 		$date_format = get_option( 'date_format' );
@@ -39,9 +39,9 @@ class DateFormatter {
 		$display = wp_date( "{$date_format} {$time_format}", $timestamp );
 
 		if ( $status === 'failed' ) {
-			$display .= ' ' . __( '(error)', 'datamachine' );
+			$display .= ' ' . __( '(error)', 'data-machine' );
 		} elseif ( $status === 'completed_no_items' ) {
-			$display .= ' ' . __( '(no items)', 'datamachine' );
+			$display .= ' ' . __( '(no items)', 'data-machine' );
 		}
 
 		return $display;
@@ -55,13 +55,13 @@ class DateFormatter {
 	 */
 	public static function format_date_only( ?string $mysql_datetime ): string {
 		if ( empty( $mysql_datetime ) || $mysql_datetime === '0000-00-00 00:00:00' ) {
-			return __( 'Never', 'datamachine' );
+			return __( 'Never', 'data-machine' );
 		}
 
 		try {
 			$timestamp = ( new \DateTime( $mysql_datetime, new \DateTimeZone( 'UTC' ) ) )->getTimestamp();
 		} catch ( \Exception $e ) {
-			return __( 'Invalid date', 'datamachine' );
+			return __( 'Invalid date', 'data-machine' );
 		}
 
 		$date_format = get_option( 'date_format' );
@@ -97,7 +97,7 @@ class DateFormatter {
 	 */
 	public static function format_timestamp( ?int $timestamp ): string {
 		if ( empty( $timestamp ) ) {
-			return __( 'Never', 'datamachine' );
+			return __( 'Never', 'data-machine' );
 		}
 
 		$date_format = get_option( 'date_format' );

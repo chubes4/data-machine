@@ -30,8 +30,8 @@ class RssSettings extends FetchHandlerSettings {
         $fields = [
             'feed_url' => [
                 'type' => 'url',
-                'label' => __('RSS Feed URL', 'datamachine'),
-                'description' => __('Enter the full URL of the RSS or Atom feed (e.g., https://example.com/feed).', 'datamachine'),
+                'label' => __('RSS Feed URL', 'data-machine'),
+                'description' => __('Enter the full URL of the RSS or Atom feed (e.g., https://example.com/feed).', 'data-machine'),
                 'required' => true,
             ],
         ];

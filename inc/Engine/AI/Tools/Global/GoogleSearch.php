@@ -198,7 +198,7 @@ class GoogleSearch {
         $search_engine_id = sanitize_text_field($config_data['search_engine_id'] ?? '');
 
         if (empty($api_key) || empty($search_engine_id)) {
-            wp_send_json_error(['message' => __('API Key and Search Engine ID are required', 'datamachine')]);
+            wp_send_json_error(['message' => __('API Key and Search Engine ID are required', 'data-machine')]);
             return;
         }
 
@@ -210,11 +210,11 @@ class GoogleSearch {
 
         if (update_site_option('datamachine_search_config', $stored_config)) {
             wp_send_json_success([
-                'message' => __('Google Search configuration saved successfully', 'datamachine'),
+                'message' => __('Google Search configuration saved successfully', 'data-machine'),
                 'configured' => true
             ]);
         } else {
-            wp_send_json_error(['message' => __('Failed to save configuration', 'datamachine')]);
+            wp_send_json_error(['message' => __('Failed to save configuration', 'data-machine')]);
         }
     }
 
@@ -222,17 +222,17 @@ class GoogleSearch {
         return [
             'api_key' => [
                 'type' => 'text',
-                'label' => __('Google Search API Key', 'datamachine'),
-                'placeholder' => __('Enter your Google Search API key', 'datamachine'),
+                'label' => __('Google Search API Key', 'data-machine'),
+                'placeholder' => __('Enter your Google Search API key', 'data-machine'),
                 'required' => true,
-                'description' => __('Get your API key from Google Cloud Console → APIs & Services → Credentials', 'datamachine')
+                'description' => __('Get your API key from Google Cloud Console → APIs & Services → Credentials', 'data-machine')
             ],
             'search_engine_id' => [
                 'type' => 'text',
-                'label' => __('Custom Search Engine ID', 'datamachine'),
-                'placeholder' => __('Enter your Search Engine ID', 'datamachine'),
+                'label' => __('Custom Search Engine ID', 'data-machine'),
+                'placeholder' => __('Enter your Search Engine ID', 'data-machine'),
                 'required' => true,
-                'description' => __('Create a Custom Search Engine and copy the Search Engine ID (cx parameter)', 'datamachine')
+                'description' => __('Create a Custom Search Engine and copy the Search Engine ID (cx parameter)', 'data-machine')
             ]
         ];
     }

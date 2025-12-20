@@ -38,16 +38,16 @@ class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
     public function get_config_fields(): array {
         return [
             'app_id' => [
-                'label' => __('App ID', 'datamachine'),
+                'label' => __('App ID', 'data-machine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Facebook application App ID from developers.facebook.com', 'datamachine')
+                'description' => __('Your Facebook application App ID from developers.facebook.com', 'data-machine')
             ],
             'app_secret' => [
-                'label' => __('App Secret', 'datamachine'),
+                'label' => __('App Secret', 'data-machine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Facebook application App Secret from developers.facebook.com', 'datamachine')
+                'description' => __('Your Facebook application App Secret from developers.facebook.com', 'data-machine')
             ]
         ];
     }
@@ -157,9 +157,15 @@ class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
      * Handle OAuth callback from Facebook
      */
     public function handle_oauth_callback() {
-        $config = $this->get_config();
+        // Validate OAuth state parameter for CSRF protection
+        $state = isset($_GET['state']) ? sanitize_text_field(wp_unslash($_GET['state'])) : '';
+        $stored_state = get_transient('datamachine_facebook_oauth_state');
 
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection
+        if (empty($state) || false === $stored_state || !hash_equals($stored_state, $state)) {
+            wp_die(esc_html__('Invalid or expired OAuth state parameter.', 'data-machine'));
+        }
+
+        $config = $this->get_config();
         $facebook_code = isset($_GET['code']) ? sanitize_text_field(wp_unslash($_GET['code'])) : '';
 
         $this->oauth2->handle_callback(
@@ -237,7 +243,7 @@ class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Facebook OAuth Error: Long-lived token request failed', ['error' => $result['error']]);
-            return new \WP_Error('facebook_oauth_long_token_request_failed', __('HTTP error during long-lived token exchange with Facebook.', 'datamachine'), $result['error']);
+            return new \WP_Error('facebook_oauth_long_token_request_failed', __('HTTP error during long-lived token exchange with Facebook.', 'data-machine'), $result['error']);
         }
 
         $body = $result['data'];
@@ -279,7 +285,7 @@ class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Facebook Page Fetch Error: Request failed', ['error' => $result['error']]);
-            return new \WP_Error('facebook_page_request_failed', __('HTTP error while fetching Facebook pages.', 'datamachine'), $result['error']);
+            return new \WP_Error('facebook_page_request_failed', __('HTTP error while fetching Facebook pages.', 'data-machine'), $result['error']);
         }
 
         $body = $result['data'];
@@ -294,14 +300,14 @@ class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         if (empty($data['data'])) {
             do_action('datamachine_log', 'error', 'Facebook Page Fetch Error: No pages found for this user');
-            return new \WP_Error('facebook_no_pages_found', __('No Facebook pages were found for this account.', 'datamachine'));
+            return new \WP_Error('facebook_no_pages_found', __('No Facebook pages were found for this account.', 'data-machine'));
         }
 
         $first_page = $data['data'][0];
 
         if (empty($first_page['id']) || empty($first_page['access_token']) || empty($first_page['name'])) {
             do_action('datamachine_log', 'error', 'Facebook Page Fetch Error: Incomplete data for the first page', ['page_data' => $first_page]);
-            return new \WP_Error('facebook_incomplete_page_data', __('Required information (ID, Access Token, Name) was missing for the Facebook page.', 'datamachine'));
+            return new \WP_Error('facebook_incomplete_page_data', __('Required information (ID, Access Token, Name) was missing for the Facebook page.', 'data-machine'));
         }
 
         do_action('datamachine_log', 'debug', 'Successfully fetched credentials for Facebook page', ['page_id' => $first_page['id']]);

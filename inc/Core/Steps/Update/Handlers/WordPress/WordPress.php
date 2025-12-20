@@ -238,7 +238,7 @@ class WordPress extends UpdateHandler {
     }
 
     public static function get_label(): string {
-        return __('WordPress Update', 'datamachine');
+        return __('WordPress Update', 'data-machine');
     }
 
     /**

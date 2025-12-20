@@ -133,7 +133,7 @@ class PipelineStepManager {
         if (!current_user_can('manage_options')) {
             return new WP_Error(
                 'rest_forbidden',
-                __('Insufficient permissions', 'datamachine'),
+                __('Insufficient permissions', 'data-machine'),
                 ['status' => 403]
             );
         }
@@ -144,7 +144,7 @@ class PipelineStepManager {
         if ($pipeline_id <= 0 || $pipeline_step_id === '') {
             return new WP_Error(
                 'invalid_step_parameters',
-                __('Valid pipeline ID and step ID are required.', 'datamachine'),
+                __('Valid pipeline ID and step ID are required.', 'data-machine'),
                 ['status' => 400]
             );
         }
@@ -153,7 +153,7 @@ class PipelineStepManager {
         if (!$pipeline) {
             return new WP_Error(
                 'pipeline_not_found',
-                __('Pipeline not found.', 'datamachine'),
+                __('Pipeline not found.', 'data-machine'),
                 ['status' => 404]
             );
         }
@@ -165,7 +165,7 @@ class PipelineStepManager {
             ]);
             return new WP_Error(
                 'data_integrity_error',
-                __('Pipeline data is corrupted - missing name.', 'datamachine'),
+                __('Pipeline data is corrupted - missing name.', 'data-machine'),
                 ['status' => 500]
             );
         }
@@ -189,7 +189,7 @@ class PipelineStepManager {
         if (!$step_found) {
             return new WP_Error(
                 'step_not_found',
-                __('Step not found in pipeline.', 'datamachine'),
+                __('Step not found in pipeline.', 'data-machine'),
                 ['status' => 404]
             );
         }
@@ -207,7 +207,7 @@ class PipelineStepManager {
         if (!$success) {
             return new WP_Error(
                 'step_deletion_failed',
-                __('Failed to delete step from pipeline.', 'datamachine'),
+                __('Failed to delete step from pipeline.', 'data-machine'),
                 ['status' => 500]
             );
         }
@@ -248,7 +248,7 @@ class PipelineStepManager {
         return [
             'message' => sprintf(
                 /* translators: 1: pipeline name, 2: number of flows affected */
-                esc_html__('Step deleted successfully from pipeline "%1$s". %2$d flows were affected.', 'datamachine'),
+                esc_html__('Step deleted successfully from pipeline "%1$s". %2$d flows were affected.', 'data-machine'),
                 $pipeline_name,
                 $flow_count
             ),
@@ -320,7 +320,7 @@ class PipelineStepManager {
         if (!current_user_can('manage_options')) {
             return new WP_Error(
                 'rest_forbidden',
-                __('Insufficient permissions', 'datamachine'),
+                __('Insufficient permissions', 'data-machine'),
                 ['status' => 403]
             );
         }
@@ -329,7 +329,7 @@ class PipelineStepManager {
         if (empty($pipeline_steps)) {
             return new WP_Error(
                 'pipeline_not_found',
-                __('Pipeline not found', 'datamachine'),
+                __('Pipeline not found', 'data-machine'),
                 ['status' => 404]
             );
         }
@@ -354,7 +354,7 @@ class PipelineStepManager {
                     'step_not_found',
                     sprintf(
                         /* translators: %s: pipeline step ID */
-                        __('Step %s not found in pipeline', 'datamachine'),
+                        __('Step %s not found in pipeline', 'data-machine'),
                         $pipeline_step_id
                     ),
                     ['status' => 400]
@@ -365,7 +365,7 @@ class PipelineStepManager {
         if (count($updated_steps) !== count($pipeline_steps)) {
             return new WP_Error(
                 'step_count_mismatch',
-                __('Step count mismatch during reorder', 'datamachine'),
+                __('Step count mismatch during reorder', 'data-machine'),
                 ['status' => 400]
             );
         }
@@ -377,7 +377,7 @@ class PipelineStepManager {
         if (!$success) {
             return new WP_Error(
                 'save_failed',
-                __('Failed to save step order', 'datamachine'),
+                __('Failed to save step order', 'data-machine'),
                 ['status' => 500]
             );
         }

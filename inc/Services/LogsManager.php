@@ -99,7 +99,7 @@ class LogsManager {
             return [
                 'success' => false,
                 'error' => 'log_file_not_found',
-                'message' => __('Log file does not exist.', 'datamachine')
+                'message' => __('Log file does not exist.', 'data-machine')
             ];
         }
 
@@ -109,7 +109,7 @@ class LogsManager {
             return [
                 'success' => false,
                 'error' => 'log_file_read_error',
-                'message' => __('Unable to read log file.', 'datamachine')
+                'message' => __('Unable to read log file.', 'data-machine')
             ];
         }
 
@@ -143,14 +143,14 @@ class LogsManager {
         if ($jobId !== null) {
             $response['message'] = sprintf(
                 /* translators: 1: number of log entries, 2: job ID */
-                __('Retrieved %1$d log entries for job %2$d.', 'datamachine'),
+                __('Retrieved %1$d log entries for job %2$d.', 'data-machine'),
                 count($file_content),
                 $jobId
             );
         } else {
             $response['message'] = sprintf(
                 /* translators: 1: number of log entries, 2: log set label */
-                __('Loaded %1$d %2$s log entries.', 'datamachine'),
+                __('Loaded %1$d %2$s log entries.', 'data-machine'),
                 count($file_content),
                 $mode === 'recent' ? 'recent' : 'total'
             );

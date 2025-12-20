@@ -19,7 +19,7 @@ $datamachine_all_pages = apply_filters('datamachine_admin_pages', []);
 
 <table class="form-table">
     <tr>
-        <th scope="row"><?php esc_html_e('Engine Mode', 'datamachine'); ?></th>
+        <th scope="row"><?php esc_html_e('Engine Mode', 'data-machine'); ?></th>
         <td>
             <fieldset>
                 <label>
@@ -28,17 +28,17 @@ $datamachine_all_pages = apply_filters('datamachine_admin_pages', []);
                    value="1" 
                    <?php checked($datamachine_engine_mode, true); ?>>
 
-                    <?php esc_html_e('Enable headless mode', 'datamachine'); ?>
+                    <?php esc_html_e('Enable headless mode', 'data-machine'); ?>
                 </label>
                 <p class="description">
-                    <?php esc_html_e('Disables all admin pages (except Settings). Use for programmatic workflows only.', 'datamachine'); ?>
+                    <?php esc_html_e('Disables all admin pages (except Settings). Use for programmatic workflows only.', 'data-machine'); ?>
                 </p>
             </fieldset>
         </td>
     </tr>
     
     <tr>
-        <th scope="row"><?php esc_html_e('Admin Pages', 'datamachine'); ?></th>
+        <th scope="row"><?php esc_html_e('Admin Pages', 'data-machine'); ?></th>
         <td>
             <?php if ($datamachine_all_pages): ?>
                 <fieldset <?php echo esc_attr($datamachine_disabled_attr); ?> >
@@ -58,22 +58,22 @@ $datamachine_all_pages = apply_filters('datamachine_admin_pages', []);
                     <?php endforeach; ?>
 
                     <p class="description">
-                        <?php esc_html_e('Unchecked pages will not appear in the WordPress admin menu.', 'datamachine'); ?>
+                        <?php esc_html_e('Unchecked pages will not appear in the WordPress admin menu.', 'data-machine'); ?>
                     </p>
                     <?php if ($datamachine_engine_mode): ?>
                         <p class="description">
-                            <?php esc_html_e('Admin page controls are disabled when Engine Mode is active.', 'datamachine'); ?>
+                            <?php esc_html_e('Admin page controls are disabled when Engine Mode is active.', 'data-machine'); ?>
                         </p>
                     <?php endif; ?>
                 </fieldset>
             <?php else: ?>
-                <p><?php esc_html_e('No admin pages are currently registered.', 'datamachine'); ?></p>
+                <p><?php esc_html_e('No admin pages are currently registered.', 'data-machine'); ?></p>
             <?php endif; ?>
         </td>
     </tr>
     
     <tr>
-        <th scope="row"><?php esc_html_e('Clean up job data on failure', 'datamachine'); ?></th>
+        <th scope="row"><?php esc_html_e('Clean up job data on failure', 'data-machine'); ?></th>
         <td>
             <fieldset <?php echo esc_attr($datamachine_disabled_attr); ?>>
                 <label for="cleanup_job_data_on_failure">
@@ -83,14 +83,14 @@ $datamachine_all_pages = apply_filters('datamachine_admin_pages', []);
                            value="1" 
                            <?php checked($datamachine_cleanup_enabled, true); ?>
                            <?php echo esc_attr($datamachine_disabled_attr); ?>>
-                    <?php esc_html_e('Remove job data files when jobs fail', 'datamachine'); ?>
+                    <?php esc_html_e('Remove job data files when jobs fail', 'data-machine'); ?>
                 </label>
                 <p class="description">
-                    <?php esc_html_e('Disable to preserve failed job data files for debugging purposes. Processed items in database are always cleaned up to allow retry.', 'datamachine'); ?>
+                    <?php esc_html_e('Disable to preserve failed job data files for debugging purposes. Processed items in database are always cleaned up to allow retry.', 'data-machine'); ?>
                 </p>
                 <?php if ($datamachine_engine_mode): ?>
                     <p class="description">
-                        <?php esc_html_e('Job data cleanup controls are disabled when Engine Mode is active.', 'datamachine'); ?>
+                        <?php esc_html_e('Job data cleanup controls are disabled when Engine Mode is active.', 'data-machine'); ?>
                     </p>
                 <?php endif; ?>
             </fieldset>
@@ -98,7 +98,7 @@ $datamachine_all_pages = apply_filters('datamachine_admin_pages', []);
     </tr>
 
     <tr>
-        <th scope="row"><?php esc_html_e('File retention (days)', 'datamachine'); ?></th>
+        <th scope="row"><?php esc_html_e('File retention (days)', 'data-machine'); ?></th>
         <td>
             <fieldset <?php echo esc_attr($datamachine_disabled_attr); ?>>
                 <input type="number"
@@ -109,11 +109,11 @@ $datamachine_all_pages = apply_filters('datamachine_admin_pages', []);
                        max="90"
                        <?php echo esc_attr($datamachine_disabled_attr); ?>>
                 <p class="description">
-                    <?php esc_html_e('Automatically delete repository files older than this many days. Includes Reddit images, Files handler uploads, and other temporary workflow files.', 'datamachine'); ?>
+                    <?php esc_html_e('Automatically delete repository files older than this many days. Includes Reddit images, Files handler uploads, and other temporary workflow files.', 'data-machine'); ?>
                 </p>
                 <?php if ($datamachine_engine_mode): ?>
                     <p class="description">
-                        <?php esc_html_e('File retention controls are disabled when Engine Mode is active.', 'datamachine'); ?>
+                        <?php esc_html_e('File retention controls are disabled when Engine Mode is active.', 'data-machine'); ?>
                     </p>
                 <?php endif; ?>
             </fieldset>

@@ -53,7 +53,7 @@ class FlowScheduling {
         // Handle manual scheduling (unschedule)
         if ($interval === 'manual' || $interval === null) {
             if (function_exists('as_unschedule_action')) {
-                as_unschedule_action('datamachine_run_flow_now', [$flow_id], 'datamachine');
+                as_unschedule_action('datamachine_run_flow_now', [$flow_id], 'data-machine');
             }
 
             $scheduling_data = array_merge(['interval' => 'manual'], $preserved_data);
@@ -84,7 +84,7 @@ class FlowScheduling {
                 $timestamp,
                 'datamachine_run_flow_now',
                 [$flow_id],
-                'datamachine'
+                'data-machine'
             );
 
             $scheduling_data = array_merge([
@@ -118,7 +118,7 @@ class FlowScheduling {
 
         // Clear any existing schedule first
         if (function_exists('as_unschedule_action')) {
-            as_unschedule_action('datamachine_run_flow_now', [$flow_id], 'datamachine');
+            as_unschedule_action('datamachine_run_flow_now', [$flow_id], 'data-machine');
         }
 
         as_schedule_recurring_action(
@@ -126,7 +126,7 @@ class FlowScheduling {
             $interval_seconds,
             'datamachine_run_flow_now',
             [$flow_id],
-            'datamachine'
+            'data-machine'
         );
 
         $scheduling_data = array_merge([

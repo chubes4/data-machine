@@ -27,19 +27,19 @@ abstract class FetchHandlerSettings extends SettingsHandler {
         return [
             'timeframe_limit' => [
                 'type' => 'select',
-                'label' => __('Process Items Within', 'datamachine'),
-                'description' => __('Only consider items published within this timeframe.', 'datamachine'),
+                'label' => __('Process Items Within', 'data-machine'),
+                'description' => __('Only consider items published within this timeframe.', 'data-machine'),
                 'options' => apply_filters('datamachine_timeframe_limit', [], null),
             ],
             'search' => [
                 'type' => 'text',
-                'label' => __('Include Keywords', 'datamachine'),
-                'description' => __('Only process items containing any of these keywords (comma-separated).', 'datamachine'),
+                'label' => __('Include Keywords', 'data-machine'),
+                'description' => __('Only process items containing any of these keywords (comma-separated).', 'data-machine'),
             ],
             'exclude_keywords' => [
                 'type' => 'text',
-                'label' => __('Exclude Keywords', 'datamachine'),
-                'description' => __('Skip items containing any of these keywords (comma-separated).', 'datamachine'),
+                'label' => __('Exclude Keywords', 'data-machine'),
+                'description' => __('Skip items containing any of these keywords (comma-separated).', 'data-machine'),
             ],
         ];
     }

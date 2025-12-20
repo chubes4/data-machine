@@ -335,7 +335,7 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id
             ],
-            'datamachine'
+            'data-machine'
         );
 
         if (!empty($dataPackets)) {
@@ -367,7 +367,7 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
 
         // 1. Always unschedule existing to prevent duplicates
         if (function_exists('as_unschedule_action')) {
-            as_unschedule_action('datamachine_run_flow_now', [$flow_id], 'datamachine');
+            as_unschedule_action('datamachine_run_flow_now', [$flow_id], 'data-machine');
         }
 
         // 2. Handle 'manual' case
@@ -389,7 +389,7 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
                     $interval_or_timestamp,
                     'datamachine_run_flow_now',
                     [$flow_id],
-                    'datamachine'
+                    'data-machine'
                 );
 
                 // Update database with scheduling configuration
@@ -427,7 +427,7 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
                     $interval_seconds,
                     'datamachine_run_flow_now',
                     [$flow_id],
-                    'datamachine'
+                    'data-machine'
                 );
 
                 // Update database with scheduling configuration

@@ -29,13 +29,13 @@ class WordPressSettingsHandler {
         $defaults = [
             'field_suffix' => 'selection',
             'first_options' => [
-                'skip' => esc_html__('Skip', 'datamachine'),
-                'ai_decides' => esc_html__('AI Decides', 'datamachine')
+                'skip' => esc_html__('Skip', 'data-machine'),
+                'ai_decides' => esc_html__('AI Decides', 'data-machine')
             ],
             /* translators: 1: taxonomy label, 2: taxonomy term label */
             'description_template' => __(
                 'Configure %1$s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.',
-                'datamachine'
+                'data-machine'
             ),
             'default' => 'skip',
             'post_type' => null,
@@ -88,7 +88,7 @@ class WordPressSettingsHandler {
                 'description' => sprintf(
                     $config['description_template'],
                     strtolower($taxonomy_label),
-                    $taxonomy->hierarchical ? __('category', 'datamachine') : __('term', 'datamachine')
+                    $taxonomy->hierarchical ? __('category', 'data-machine') : __('term', 'data-machine')
                 ),
                 'options' => $options,
                 'default' => $config['default'] ?? 'skip',
@@ -170,7 +170,7 @@ class WordPressSettingsHandler {
 
         // Add "Any" option if requested (for fetch handlers)
         if ($include_any) {
-            $post_type_options['any'] = __('Any', 'datamachine');
+            $post_type_options['any'] = __('Any', 'data-machine');
         }
 
         // Remove attachment post type as it's not suitable for content publishing
@@ -218,7 +218,7 @@ class WordPressSettingsHandler {
      */
     public static function get_standard_publish_fields(array $config = []): array {
         $defaults = [
-            'domain' => 'datamachine',
+            'domain' => 'data-machine',
             'post_type_default' => 'post',
             'post_status_default' => 'draft',
             'post_author_default' => null,
@@ -239,37 +239,37 @@ class WordPressSettingsHandler {
         return [
             'post_type' => [
                 'type' => 'select',
-                'label' => __('Post Type', 'datamachine'),
-                'description' => __('Select the post type for published content.', 'datamachine'),
+                'label' => __('Post Type', 'data-machine'),
+                'description' => __('Select the post type for published content.', 'data-machine'),
                 'options' => $post_type_options,
                 'default' => $config['post_type_default'],
             ],
             'post_status' => [
                 'type' => 'select',
-                'label' => __('Post Status', 'datamachine'),
-                'description' => __('Select the status for the newly created post.', 'datamachine'),
+                'label' => __('Post Status', 'data-machine'),
+                'description' => __('Select the status for the newly created post.', 'data-machine'),
                 'options' => [
-                    'draft' => __('Draft', 'datamachine'),
-                    'publish' => __('Publish', 'datamachine'),
-                    'pending' => __('Pending Review', 'datamachine'),
-                    'private' => __('Private', 'datamachine'),
+                    'draft' => __('Draft', 'data-machine'),
+                    'publish' => __('Publish', 'data-machine'),
+                    'pending' => __('Pending Review', 'data-machine'),
+                    'private' => __('Private', 'data-machine'),
                 ],
                 'default' => $config['post_status_default'],
             ],
             'post_author' => [
                 'type' => 'select',
-                'label' => __('Post Author', 'datamachine'),
-                'description' => __('Select which WordPress user to publish posts under.', 'datamachine'),
+                'label' => __('Post Author', 'data-machine'),
+                'description' => __('Select which WordPress user to publish posts under.', 'data-machine'),
                 'options' => $user_options,
                 'default' => $config['post_author_default'],
             ],
             'post_date_source' => [
                 'type' => 'select',
-                'label' => __('Post Date Setting', 'datamachine'),
-                'description' => __('Choose whether to use the original date from the source (if available) or the current date when publishing.', 'datamachine'),
+                'label' => __('Post Date Setting', 'data-machine'),
+                'description' => __('Choose whether to use the original date from the source (if available) or the current date when publishing.', 'data-machine'),
                 'options' => [
-                    'current_date' => __('Use Current Date', 'datamachine'),
-                    'source_date' => __('Use Source Date (if available)', 'datamachine'),
+                    'current_date' => __('Use Current Date', 'data-machine'),
+                    'source_date' => __('Use Source Date (if available)', 'data-machine'),
                 ],
                 'default' => $config['post_date_source_default'],
             ],

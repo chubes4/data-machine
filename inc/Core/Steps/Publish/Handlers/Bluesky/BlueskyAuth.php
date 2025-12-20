@@ -36,16 +36,16 @@ class BlueskyAuth extends BaseAuthProvider {
     public function get_config_fields(): array {
         return [
             'username' => [
-                'label' => __('Bluesky Handle', 'datamachine'),
+                'label' => __('Bluesky Handle', 'data-machine'),
                 'type' => 'text',
                 'required' => true,
-                'description' => __('Your Bluesky handle (e.g., user.bsky.social)', 'datamachine')
+                'description' => __('Your Bluesky handle (e.g., user.bsky.social)', 'data-machine')
             ],
             'app_password' => [
-                'label' => __('App Password', 'datamachine'),
+                'label' => __('App Password', 'data-machine'),
                 'type' => 'password',
                 'required' => true,
-                'description' => __('Generate an app password at bsky.app/settings/app-passwords', 'datamachine')
+                'description' => __('Generate an app password at bsky.app/settings/app-passwords', 'data-machine')
             ]
         ];
     }
@@ -60,7 +60,7 @@ class BlueskyAuth extends BaseAuthProvider {
 
         if (empty($handle) || empty($password)) {
             do_action('datamachine_log', 'error', 'Bluesky handle or app password missing in site options.');
-            return new \WP_Error('bluesky_config_missing', __('Bluesky handle and app password must be configured.', 'datamachine'));
+            return new \WP_Error('bluesky_config_missing', __('Bluesky handle and app password must be configured.', 'data-machine'));
         }
 
         $session_data = $this->create_bluesky_session($handle, $password);
@@ -85,7 +85,7 @@ class BlueskyAuth extends BaseAuthProvider {
                 'has_did' => !empty($did),
                 'has_pds_url' => !empty($pds_url)
             ]);
-            return new \WP_Error('bluesky_session_incomplete', __('Bluesky authentication succeeded but returned incomplete session data (missing accessJwt, did, or pds_url).', 'datamachine'));
+            return new \WP_Error('bluesky_session_incomplete', __('Bluesky authentication succeeded but returned incomplete session data (missing accessJwt, did, or pds_url).', 'data-machine'));
         }
 
         $session_data['handle'] = $handle;
@@ -106,7 +106,7 @@ class BlueskyAuth extends BaseAuthProvider {
 
         if (false === $body) {
             do_action('datamachine_log', 'error', 'Failed to JSON encode Bluesky session request body.', ['handle' => $handle]);
-            return new \WP_Error('bluesky_json_encode_error', __('Could not encode authentication request.', 'datamachine'));
+            return new \WP_Error('bluesky_json_encode_error', __('Could not encode authentication request.', 'data-machine'));
         }
 
 
@@ -124,7 +124,7 @@ class BlueskyAuth extends BaseAuthProvider {
                 'error' => $result['error']
             ]);
             return new \WP_Error('bluesky_session_request_failed', 
-                __('Could not connect to Bluesky server for authentication.', 'datamachine') . ' ' . $result['error']);
+                __('Could not connect to Bluesky server for authentication.', 'data-machine') . ' ' . $result['error']);
         }
 
         $response_code = $result['status_code'];
@@ -142,7 +142,7 @@ class BlueskyAuth extends BaseAuthProvider {
                 'handle' => $handle,
                 'json_error' => json_last_error_msg()
             ]);
-            return new \WP_Error('bluesky_json_decode_error', __('Invalid response from Bluesky server.', 'datamachine'));
+            return new \WP_Error('bluesky_json_decode_error', __('Invalid response from Bluesky server.', 'data-machine'));
         }
 
         if ($response_code !== 200) {
@@ -154,7 +154,7 @@ class BlueskyAuth extends BaseAuthProvider {
                 ]);
                 return new \WP_Error('bluesky_auth_failed_no_message',
                     /* translators: %1$d: HTTP response code */
-                    sprintf(__('Bluesky authentication failed with no error message provided (Code: %1$d)', 'datamachine'), $response_code));
+                    sprintf(__('Bluesky authentication failed with no error message provided (Code: %1$d)', 'data-machine'), $response_code));
             }
             
             $error_message = $session_data['message'];
@@ -165,7 +165,7 @@ class BlueskyAuth extends BaseAuthProvider {
             ]);
             return new \WP_Error('bluesky_auth_failed',
                 /* translators: %1$s: Error message, %2$d: HTTP response code */
-                sprintf(__('Bluesky authentication failed: %1$s (Code: %2$d)', 'datamachine'), $error_message, $response_code));
+                sprintf(__('Bluesky authentication failed: %1$s (Code: %2$d)', 'data-machine'), $error_message, $response_code));
         }
 
         // Use pdsUrl from response if available, otherwise default to bsky.social

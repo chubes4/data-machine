@@ -199,7 +199,7 @@ class ConfigureFlowSteps {
 
         foreach ($flows as $flow) {
             $flow_id = $flow['flow_id'];
-            $flow_name = $flow['flow_name'] ?? __('Unnamed Flow', 'datamachine');
+            $flow_name = $flow['flow_name'] ?? __('Unnamed Flow', 'data-machine');
             $flow_config = $flow['flow_config'] ?? [];
 
             foreach ($flow_config as $flow_step_id => $step_config) {

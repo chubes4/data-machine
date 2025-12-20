@@ -49,8 +49,8 @@ function datamachine_register_settings_admin_page_filters() {
                         'object' => 'datamachineSettings',
                         'data' => [
                             'strings' => [
-                                'saving' => __('Saving...', 'datamachine'),
-                                'clearing' => __('Clearing...', 'datamachine')
+                                'saving' => __('Saving...', 'data-machine'),
+                                'clearing' => __('Clearing...', 'data-machine')
                             ]
                         ]
                     ]
@@ -64,8 +64,8 @@ function datamachine_register_settings_admin_page_filters() {
                             'savedProvider' => $settings['default_provider'] ?? '',
                             'savedModel' => $settings['default_model'] ?? '',
                             'strings' => [
-                                'selectProviderFirst' => __('Select provider first...', 'datamachine'),
-                                'selectModel' => __('Select Model...', 'datamachine')
+                                'selectProviderFirst' => __('Select provider first...', 'data-machine'),
+                                'selectModel' => __('Select Model...', 'data-machine')
                             ]
                         ]
                     ]
@@ -78,8 +78,8 @@ function datamachine_register_settings_admin_page_filters() {
 
 function datamachine_register_settings_page() {
     $hook = add_options_page(
-        __('Data Machine Settings', 'datamachine'),
-        __('Data Machine', 'datamachine'),
+        __('Data Machine Settings', 'data-machine'),
+        __('Data Machine', 'data-machine'),
         'manage_options',
         'datamachine-settings',
         'datamachine_render_settings_page_template'
@@ -96,7 +96,7 @@ function datamachine_register_settings() {
 
 function datamachine_render_settings_page_template() {
     $content = apply_filters('datamachine_render_template', '', 'page/settings-page', [
-        'page_title' => __('Data Machine Settings', 'datamachine')
+        'page_title' => __('Data Machine Settings', 'data-machine')
     ]);
 
     echo wp_kses($content, datamachine_allowed_html());

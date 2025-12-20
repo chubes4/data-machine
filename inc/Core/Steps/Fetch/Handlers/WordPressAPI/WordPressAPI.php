@@ -470,6 +470,6 @@ class WordPressAPI extends FetchHandler {
      * @return string Handler label.
      */
     public static function get_label(): string {
-        return __('REST API Endpoint', 'datamachine');
+        return __('REST API Endpoint', 'data-machine');
     }
 }

@@ -123,7 +123,7 @@ export const useCreateFlow = () => {
 		mutationFn: ( { pipelineId, flowName } ) =>
 			createFlow( pipelineId, flowName ),
 		onSuccess: ( _, { pipelineId } ) => {
-			queryClient.invalidateQueries( [ 'flows', pipelineId ] );
+			queryClient.invalidateQueries( { queryKey: [ 'flows', pipelineId ] } );
 		},
 	} );
 };
@@ -151,7 +151,7 @@ export const useDeleteFlow = () => {
 				return;
 			}
 
-			queryClient.removeQueries( [ 'flows', 'single', flowId ] );
+			queryClient.removeQueries( { queryKey: [ 'flows', 'single', flowId ] } );
 
 			if ( pipelineId ) {
 				queryClient.setQueryData(
@@ -181,7 +181,7 @@ export const useDuplicateFlow = () => {
 			}
 
 			if ( pipelineId ) {
-				queryClient.invalidateQueries( [ 'flows', pipelineId ] );
+				queryClient.invalidateQueries( { queryKey: [ 'flows', pipelineId ] } );
 			}
 		},
 	} );
@@ -192,7 +192,7 @@ export const useRunFlow = () => {
 	return useMutation( {
 		mutationFn: runFlow,
 		onSuccess: ( _, flowId ) => {
-			queryClient.invalidateQueries( [ 'flows', 'single', flowId ] );
+			queryClient.invalidateQueries( { queryKey: [ 'flows', 'single', flowId ] } );
 		},
 	} );
 };

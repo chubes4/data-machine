@@ -23,7 +23,7 @@ if (!defined('WPINC')) {
     
     <!-- Log Configuration Section -->
     <div class="datamachine-log-configuration">
-        <h2><?php esc_html_e('Log Configuration', 'datamachine'); ?></h2>
+        <h2><?php esc_html_e('Log Configuration', 'data-machine'); ?></h2>
         
         <form method="post" action="">
             <?php wp_nonce_field('datamachine_logs_action', 'datamachine_logs_nonce'); ?>
@@ -31,7 +31,7 @@ if (!defined('WPINC')) {
             
             <div class="datamachine-log-level-field">
                 <label for="log_level" class="datamachine-log-level-label">
-                    <?php esc_html_e('Log Level', 'datamachine'); ?>
+                    <?php esc_html_e('Log Level', 'data-machine'); ?>
                 </label>
                 <select id="log_level" name="log_level" class="datamachine-log-level-select">
                     <?php 
@@ -44,58 +44,58 @@ if (!defined('WPINC')) {
 
                 </select>
                 <p class="datamachine-log-level-description">
-                    <?php esc_html_e('Controls what messages are written to the log file. Debug level creates the most verbose logs.', 'datamachine'); ?>
+                    <?php esc_html_e('Controls what messages are written to the log file. Debug level creates the most verbose logs.', 'data-machine'); ?>
                 </p>
             </div>
             
             <button type="submit" class="button button-primary">
-                <?php esc_html_e('Update Log Level', 'datamachine'); ?>
+                <?php esc_html_e('Update Log Level', 'data-machine'); ?>
             </button>
         </form>
     </div>
 
     <!-- Log File Information Section -->
     <div class="datamachine-log-file-info">
-        <h2><?php esc_html_e('Log File Information', 'datamachine'); ?></h2>
+        <h2><?php esc_html_e('Log File Information', 'data-machine'); ?></h2>
         
         <p>
-            <strong><?php esc_html_e('File Location:', 'datamachine'); ?></strong>
+            <strong><?php esc_html_e('File Location:', 'data-machine'); ?></strong>
             <code class="datamachine-log-file-path"><?php echo esc_html($datamachine_log_file_path); ?></code>
         </p>
         
         <p>
-            <strong><?php esc_html_e('Current Size:', 'datamachine'); ?></strong>
+            <strong><?php esc_html_e('Current Size:', 'data-machine'); ?></strong>
             <?php echo esc_html($datamachine_log_file_info['size_formatted']); ?>
         </p>
         
         <div class="datamachine-log-actions">
-            <button type="button" class="button datamachine-clear-logs-btn" data-confirm-message="<?php esc_attr_e('Are you sure you want to clear all logs? This action cannot be undone.', 'datamachine'); ?>">
-                <?php esc_html_e('Clear All Logs', 'datamachine'); ?>
+            <button type="button" class="button datamachine-clear-logs-btn" data-confirm-message="<?php esc_attr_e('Are you sure you want to clear all logs? This action cannot be undone.', 'data-machine'); ?>">
+                <?php esc_html_e('Clear All Logs', 'data-machine'); ?>
             </button>
             
             <button type="button" class="button datamachine-refresh-logs">
-                <?php esc_html_e('Refresh Logs', 'datamachine'); ?>
+                <?php esc_html_e('Refresh Logs', 'data-machine'); ?>
             </button>
             
             <button type="button" class="button datamachine-copy-logs" data-copy-target=".datamachine-log-viewer">
-                <?php esc_html_e('Copy Logs', 'datamachine'); ?>
+                <?php esc_html_e('Copy Logs', 'data-machine'); ?>
             </button>
 
             <button type="button" class="button datamachine-load-full-logs" id="datamachine-load-full-logs-btn" data-nonce="<?php echo esc_attr(wp_create_nonce('datamachine_logs_action')); ?>">
-                <?php esc_html_e('Load Full Log', 'datamachine'); ?>
+                <?php esc_html_e('Load Full Log', 'data-machine'); ?>
             </button>
         </div>
     </div>
 
     <!-- Log Entries Section -->
     <div class="datamachine-recent-logs">
-        <h2 class="datamachine-log-section-title"><?php esc_html_e('Recent Log Entries (Last 200)', 'datamachine'); ?></h2>
+        <h2 class="datamachine-log-section-title"><?php esc_html_e('Recent Log Entries (Last 200)', 'data-machine'); ?></h2>
 
         <div class="datamachine-log-status-message"></div>
 
         <?php if (empty($datamachine_recent_logs)): ?>
             <p class="datamachine-no-logs-message">
-                <?php esc_html_e('No log entries found.', 'datamachine'); ?>
+                <?php esc_html_e('No log entries found.', 'data-machine'); ?>
             </p>
         <?php else: ?>
             <div class="datamachine-log-viewer" data-current-mode="recent">

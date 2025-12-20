@@ -414,6 +414,6 @@ class GoogleSheetsFetch extends FetchHandler {
      * @return string Handler label
      */
     public static function get_label(): string {
-        return __('Google Sheets Fetch', 'datamachine');
+        return __('Google Sheets Fetch', 'data-machine');
     }
 }

@@ -86,7 +86,7 @@ class Providers {
 		} catch (\Exception $e) {
 			return new \WP_Error(
 				'providers_api_error',
-				__('Failed to communicate with AI HTTP Client library.', 'datamachine'),
+				__('Failed to communicate with AI HTTP Client library.', 'data-machine'),
 				['status' => 500]
 			);
 		}

@@ -213,7 +213,7 @@ class Reddit extends FetchHandler {
 			$response_data = json_decode($body, true);
 			if (json_last_error() !== JSON_ERROR_NONE) {
 				/* translators: %s: JSON error message */
-				$error_message = sprintf(__('Invalid JSON from Reddit API: %s', 'datamachine'), json_last_error_msg());
+				$error_message = sprintf(__('Invalid JSON from Reddit API: %s', 'data-machine'), json_last_error_msg());
 				if ($pages_fetched === 1) {
 					$this->log('error', 'Invalid JSON response.', ['pipeline_id' => $pipeline_id, 'error' => $error_message]);
 					return [];

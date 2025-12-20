@@ -30,9 +30,9 @@ class WordPressAPISettings extends FetchHandlerSettings {
         $fields = [
             'endpoint_url' => [
                 'type' => 'text',
-                'label' => __('API Endpoint URL', 'datamachine'),
-                'description' => __('Enter the complete REST API endpoint URL (e.g., https://sxsw.com/wp-json/wp/v2/posts)', 'datamachine'),
-                'placeholder' => __('https://example.com/wp-json/wp/v2/posts', 'datamachine'),
+                'label' => __('API Endpoint URL', 'data-machine'),
+                'description' => __('Enter the complete REST API endpoint URL (e.g., https://sxsw.com/wp-json/wp/v2/posts)', 'data-machine'),
+                'placeholder' => __('https://example.com/wp-json/wp/v2/posts', 'data-machine'),
                 'required' => true,
             ],
         ];

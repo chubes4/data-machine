@@ -40,13 +40,13 @@ class Pipelines {
 					'pipeline_id' => [
 						'required' => false,
 						'type' => 'integer',
-						'description' => __('Pipeline ID to retrieve (omit for all pipelines)', 'datamachine'),
+						'description' => __('Pipeline ID to retrieve (omit for all pipelines)', 'data-machine'),
 						'sanitize_callback' => 'absint',
 					],
 					'fields' => [
 						'required' => false,
 						'type' => 'string',
-						'description' => __('Comma-separated list of fields to return', 'datamachine'),
+						'description' => __('Comma-separated list of fields to return', 'data-machine'),
 						'sanitize_callback' => function($param) {
 							return sanitize_text_field($param);
 						}
@@ -56,13 +56,13 @@ class Pipelines {
 						'type' => 'string',
 						'default' => 'json',
 						'enum' => ['json', 'csv'],
-						'description' => __('Response format (json or csv)', 'datamachine'),
+						'description' => __('Response format (json or csv)', 'data-machine'),
 						'sanitize_callback' => 'sanitize_text_field',
 					],
 					'ids' => [
 						'required' => false,
 						'type' => 'string',
-						'description' => __('Comma-separated pipeline IDs for export', 'datamachine'),
+						'description' => __('Comma-separated pipeline IDs for export', 'data-machine'),
 						'sanitize_callback' => 'sanitize_text_field',
 					]
 				]
@@ -76,7 +76,7 @@ class Pipelines {
 						'required' => false,
 						'type' => 'string',
 						'default' => 'Pipeline',
-						'description' => __('Pipeline name', 'datamachine'),
+						'description' => __('Pipeline name', 'data-machine'),
 						'sanitize_callback' => function($param) {
 							return sanitize_text_field($param);
 						}
@@ -84,18 +84,18 @@ class Pipelines {
 					'steps' => [
 						'required' => false,
 						'type' => 'array',
-						'description' => __('Pipeline steps configuration (for complete mode)', 'datamachine'),
+						'description' => __('Pipeline steps configuration (for complete mode)', 'data-machine'),
 					],
 					'flow_config' => [
 						'required' => false,
 						'type' => 'array',
-						'description' => __('Flow configuration', 'datamachine'),
+						'description' => __('Flow configuration', 'data-machine'),
 					],
 					'batch_import' => [
 						'required' => false,
 						'type' => 'boolean',
 						'default' => false,
-						'description' => __('Enable batch import mode', 'datamachine'),
+						'description' => __('Enable batch import mode', 'data-machine'),
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					],
 					'format' => [
@@ -103,13 +103,13 @@ class Pipelines {
 						'type' => 'string',
 						'default' => 'json',
 						'enum' => ['json', 'csv'],
-						'description' => __('Import format (json or csv)', 'datamachine'),
+						'description' => __('Import format (json or csv)', 'data-machine'),
 						'sanitize_callback' => 'sanitize_text_field',
 					],
 					'data' => [
 						'required' => false,
 						'type' => 'string',
-						'description' => __('CSV data for batch import', 'datamachine'),
+						'description' => __('CSV data for batch import', 'data-machine'),
 						'sanitize_callback' => function($param) {
 							return wp_unslash($param);
 						}
@@ -128,7 +128,7 @@ class Pipelines {
 						'required' => true,
 						'type' => 'integer',
 						'sanitize_callback' => 'absint',
-						'description' => __('Pipeline ID to delete', 'datamachine'),
+						'description' => __('Pipeline ID to delete', 'data-machine'),
 					],
 				]
 			],
@@ -141,13 +141,13 @@ class Pipelines {
 						'required' => true,
 						'type' => 'integer',
 						'sanitize_callback' => 'absint',
-						'description' => __('Pipeline ID to update', 'datamachine'),
+						'description' => __('Pipeline ID to update', 'data-machine'),
 					],
 					'pipeline_name' => [
 						'required' => true,
 						'type' => 'string',
 						'sanitize_callback' => 'sanitize_text_field',
-						'description' => __('New pipeline title', 'datamachine'),
+						'description' => __('New pipeline title', 'data-machine'),
 					],
 				]
 			]
@@ -161,7 +161,7 @@ class Pipelines {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to access pipelines.', 'datamachine'),
+				__('You do not have permission to access pipelines.', 'data-machine'),
 				['status' => 403]
 			);
 		}
@@ -200,7 +200,7 @@ class Pipelines {
 			if (!$csv_content) {
 				return new \WP_Error(
 					'export_failed',
-					__('Failed to generate CSV export.', 'datamachine'),
+					__('Failed to generate CSV export.', 'data-machine'),
 					['status' => 500]
 				);
 			}
@@ -230,7 +230,7 @@ class Pipelines {
 			if (!$pipeline) {
 				return new \WP_Error(
 					'pipeline_not_found',
-					__('Pipeline not found.', 'datamachine'),
+					__('Pipeline not found.', 'data-machine'),
 					['status' => 404]
 				);
 			}
@@ -287,7 +287,7 @@ class Pipelines {
 		if (empty($params) || !isset($params['pipeline_name'])) {
 			return new \WP_Error(
 				'rest_invalid_param',
-				__('Pipeline name is required.', 'datamachine'),
+				__('Pipeline name is required.', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -312,7 +312,7 @@ class Pipelines {
 		if (!$result) {
 			return new \WP_Error(
 				'rest_internal_server_error',
-				__('Failed to create pipeline.', 'datamachine'),
+				__('Failed to create pipeline.', 'data-machine'),
 				['status' => 500]
 			);
 		}
@@ -351,7 +351,7 @@ class Pipelines {
 		if (!$pipeline_id || empty($params['pipeline_name'])) {
 			return new \WP_Error(
 				'rest_invalid_param',
-				__('Pipeline ID and name are required.', 'datamachine'),
+				__('Pipeline ID and name are required.', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -364,7 +364,7 @@ class Pipelines {
 		if (!$success) {
 			return new \WP_Error(
 				'update_failed',
-				__('Failed to save pipeline title', 'datamachine'),
+				__('Failed to save pipeline title', 'data-machine'),
 				['status' => 500]
 			);
 		}
@@ -375,7 +375,7 @@ class Pipelines {
 				'pipeline_id' => $pipeline_id,
 				'pipeline_name' => sanitize_text_field(wp_unslash($params['pipeline_name']))
 			],
-			'message' => __('Pipeline title saved successfully', 'datamachine')
+			'message' => __('Pipeline title saved successfully', 'data-machine')
 		]);
 	}
 

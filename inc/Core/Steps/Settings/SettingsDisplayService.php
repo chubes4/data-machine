@@ -242,7 +242,7 @@ class SettingsDisplayService {
 
         // Handle boolean values for checkbox fields
         if (is_bool($value)) {
-            return $value ? __('True', 'datamachine') : __('False', 'datamachine');
+            return $value ? __('True', 'data-machine') : __('False', 'data-machine');
         }
 
         return $value;

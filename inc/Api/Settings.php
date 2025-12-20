@@ -45,7 +45,7 @@ class Settings {
 			'args' => [
 				'ai_settings' => [
 					'type' => 'object',
-					'description' => __('AI-specific settings', 'datamachine'),
+					'description' => __('AI-specific settings', 'data-machine'),
 				],
 			],
 		]);
@@ -67,12 +67,12 @@ class Settings {
 					'required' => true,
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Tool identifier', 'datamachine'),
+					'description' => __('Tool identifier', 'data-machine'),
 				],
 				'config_data' => [
 					'required' => true,
 					'type' => 'object',
-					'description' => __('Tool configuration data', 'datamachine'),
+					'description' => __('Tool configuration data', 'data-machine'),
 				],
 			],
 		]);
@@ -85,7 +85,7 @@ class Settings {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to manage settings.', 'datamachine'),
+				__('You do not have permission to manage settings.', 'data-machine'),
 				['status' => 403]
 			);
 		}
@@ -103,7 +103,7 @@ class Settings {
 		if (empty($tool_id)) {
 			return new \WP_Error(
 				'missing_tool_id',
-				__('Tool ID is required.', 'datamachine'),
+				__('Tool ID is required.', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -111,7 +111,7 @@ class Settings {
 		if (empty($config_data) || !is_array($config_data)) {
 			return new \WP_Error(
 				'invalid_config_data',
-				__('Valid configuration data is required.', 'datamachine'),
+				__('Valid configuration data is required.', 'data-machine'),
 				['status' => 400]
 			);
 		}
@@ -135,7 +135,7 @@ class Settings {
 			'no_tool_handler',
 			sprintf(
 				/* translators: %s: tool ID */
-				__('No configuration handler found for tool: %s', 'datamachine'),
+				__('No configuration handler found for tool: %s', 'data-machine'),
 				$tool_id
 			),
 			['status' => 500]
@@ -187,7 +187,7 @@ class Settings {
 		if (!$updated && get_option('datamachine_settings') !== $all_settings) {
 			return new \WP_Error(
 				'settings_update_failed',
-				__('Failed to update settings.', 'datamachine'),
+				__('Failed to update settings.', 'data-machine'),
 				['status' => 500]
 			);
 		}
@@ -208,7 +208,7 @@ class Settings {
 		// Add manual option first
 		$frontend_intervals[] = [
 			'value' => 'manual',
-			'label' => __('Manual only', 'datamachine')
+			'label' => __('Manual only', 'data-machine')
 		];
 
 		// Add all PHP-defined intervals

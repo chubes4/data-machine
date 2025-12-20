@@ -1,15 +1,16 @@
 <?php
 /**
  * Plugin Name:     Data Machine
- * Plugin URI:      https://wordpress.org/plugins/datamachine/
+ * Plugin URI:      https://wordpress.org/plugins/data-machine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:           0.6.8
+ * Version:           0.6.9
  * Requires at least: 6.2
  * Requires PHP:     8.2
- * Author:          Chris Huber
+ * Author:          Chris Huber, extrachill
  * Author URI:      https://chubes.net
  * License:         GPL v2 or later
  * License URI:     https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain:     data-machine
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -20,7 +21,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.6.8' );
+define( 'DATAMACHINE_VERSION', '0.6.9' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );

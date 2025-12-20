@@ -190,6 +190,6 @@ class Files extends FetchHandler {
      * @return string Localized handler label
      */
     public static function get_label(): string {
-        return __('File Upload', 'datamachine');
+        return __('File Upload', 'data-machine');
     }
 }

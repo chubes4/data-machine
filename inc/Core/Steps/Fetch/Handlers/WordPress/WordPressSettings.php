@@ -52,34 +52,34 @@ class WordPressSettings extends FetchHandlerSettings {
         $taxonomy_fields = WordPressSettingsHandler::get_taxonomy_fields([
             'field_suffix' => '_filter',
             /* translators: %s: taxonomy label */
-            'first_options' => [0 => esc_html__('All %s', 'datamachine')],
+            'first_options' => [0 => esc_html__('All %s', 'data-machine')],
             /* translators: 1: taxonomy label, 2: taxonomy term label */
-            'description_template' => __('Filter by specific %1$s or fetch from all %2$s.', 'datamachine')
+            'description_template' => __('Filter by specific %1$s or fetch from all %2$s.', 'data-machine')
         ]);
 
         $fields = [
             'source_url' => [
                 'type' => 'text',
-                'label' => __('Specific Post URL', 'datamachine'),
-                'description' => __('Target a specific post by URL. When provided, other filters are ignored.', 'datamachine'),
-                'placeholder' => __('Leave empty for general query', 'datamachine'),
+                'label' => __('Specific Post URL', 'data-machine'),
+                'description' => __('Target a specific post by URL. When provided, other filters are ignored.', 'data-machine'),
+                'placeholder' => __('Leave empty for general query', 'data-machine'),
             ],
             'post_type' => [
                 'type' => 'select',
-                'label' => __('Post Type', 'datamachine'),
-                'description' => __('Select the post type to fetch from the local site.', 'datamachine'),
+                'label' => __('Post Type', 'data-machine'),
+                'description' => __('Select the post type to fetch from the local site.', 'data-machine'),
                 'options' => $post_type_options,
             ],
             'post_status' => [
                 'type' => 'select',
-                'label' => __('Post Status', 'datamachine'),
-                'description' => __('Select the post status to fetch.', 'datamachine'),
+                'label' => __('Post Status', 'data-machine'),
+                'description' => __('Select the post status to fetch.', 'data-machine'),
                 'options' => [
-                    'publish' => __('Published', 'datamachine'),
-                    'draft' => __('Draft', 'datamachine'),
-                    'pending' => __('Pending', 'datamachine'),
-                    'private' => __('Private', 'datamachine'),
-                    'any' => __('Any', 'datamachine'),
+                    'publish' => __('Published', 'data-machine'),
+                    'draft' => __('Draft', 'data-machine'),
+                    'pending' => __('Pending', 'data-machine'),
+                    'private' => __('Private', 'data-machine'),
+                    'any' => __('Any', 'data-machine'),
                 ],
             ],
         ];
@@ -98,8 +98,8 @@ class WordPressSettings extends FetchHandlerSettings {
         return [
             'randomize_selection' => [
                 'type' => 'checkbox',
-                'label' => __('Randomize selection', 'datamachine'),
-                'description' => __('Select a random post instead of most recently modified.', 'datamachine'),
+                'label' => __('Randomize selection', 'data-machine'),
+                'description' => __('Select a random post instead of most recently modified.', 'data-machine'),
             ],
         ];
     }

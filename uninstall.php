@@ -60,7 +60,7 @@ if ( current_user_can( 'delete_plugins' ) || defined( 'WP_UNINSTALL_PLUGIN' ) ) 
 
 // Clear Action Scheduler jobs if available
 if ( function_exists( 'as_unschedule_all_actions' ) ) {
-	as_unschedule_all_actions( '', array(), 'datamachine' );
+	as_unschedule_all_actions( '', array(), 'data-machine' );
 }
 
 // Clear transients

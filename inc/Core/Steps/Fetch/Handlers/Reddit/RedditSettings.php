@@ -30,14 +30,14 @@ class RedditSettings extends FetchHandlerSettings {
         $fields = [
             'subreddit' => [
                 'type' => 'text',
-                'label' => __('Subreddit Name', 'datamachine'),
-                'description' => __('Enter the name of the subreddit (e.g., news, programming) without "r/".', 'datamachine'),
+                'label' => __('Subreddit Name', 'data-machine'),
+                'description' => __('Enter the name of the subreddit (e.g., news, programming) without "r/".', 'data-machine'),
                 'placeholder' => 'news',
             ],
             'sort_by' => [
                 'type' => 'select',
-                'label' => __('Sort By', 'datamachine'),
-                'description' => __('Select how to sort the subreddit posts.', 'datamachine'),
+                'label' => __('Sort By', 'data-machine'),
+                'description' => __('Select how to sort the subreddit posts.', 'data-machine'),
                 'options' => [
                     'hot' => 'Hot',
                     'new' => 'New',
@@ -48,22 +48,22 @@ class RedditSettings extends FetchHandlerSettings {
             ],
             'min_upvotes' => [
                 'type' => 'number',
-                'label' => __('Minimum Upvotes', 'datamachine'),
-                'description' => __('Only process posts with at least this many upvotes (score). Set to 0 to disable filtering.', 'datamachine'),
+                'label' => __('Minimum Upvotes', 'data-machine'),
+                'description' => __('Only process posts with at least this many upvotes (score). Set to 0 to disable filtering.', 'data-machine'),
                 'min' => 0,
                 'max' => 100000,
             ],
             'min_comment_count' => [
                 'type' => 'number',
-                'label' => __('Minimum Comment Count', 'datamachine'),
-                'description' => __('Only process posts with at least this many comments. Set to 0 to disable filtering.', 'datamachine'),
+                'label' => __('Minimum Comment Count', 'data-machine'),
+                'description' => __('Only process posts with at least this many comments. Set to 0 to disable filtering.', 'data-machine'),
                 'min' => 0,
                 'max' => 100000,
             ],
             'comment_count' => [
                 'type' => 'number',
-                'label' => __('Top Comments to Fetch', 'datamachine'),
-                'description' => __('Number of top comments to fetch for each post. Set to 0 to disable fetching comments.', 'datamachine'),
+                'label' => __('Top Comments to Fetch', 'data-machine'),
+                'description' => __('Number of top comments to fetch for each post. Set to 0 to disable fetching comments.', 'data-machine'),
                 'min' => 0,
                 'max' => 100,
             ],

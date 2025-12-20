@@ -299,22 +299,24 @@ class Pipelines {
 		$order = strtoupper( $args['order'] ?? 'DESC' );
 		$per_page = (int) ( $args['per_page'] ?? 20 );
 		$offset = (int) ( $args['offset'] ?? 0 );
+		$is_asc = ( $order === 'ASC' );
 
-		// Validate order direction
-		if ( ! in_array( $order, [ 'ASC', 'DESC' ], true ) ) {
-			$order = 'DESC';
-		}
-
-		// Validate orderby column
-		$allowed_orderby = [ 'pipeline_id', 'pipeline_name', 'created_at', 'updated_at' ];
-		if ( ! in_array( $orderby, $allowed_orderby, true ) ) {
-			$orderby = 'pipeline_id';
-		}
-
-		// $orderby and $order are validated against allowed values above
-		$query = sprintf( 'SELECT * FROM %%i ORDER BY %s %s LIMIT %%d OFFSET %%d', $orderby, $order );
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$results = $this->wpdb->get_results( $this->wpdb->prepare( $query, $this->table_name, $per_page, $offset ), ARRAY_A );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL
+		$results = match ( $orderby ) {
+			'pipeline_name' => $is_asc
+				? $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT * FROM %i ORDER BY pipeline_name ASC LIMIT %d OFFSET %d', $this->table_name, $per_page, $offset ), ARRAY_A )
+				: $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT * FROM %i ORDER BY pipeline_name DESC LIMIT %d OFFSET %d', $this->table_name, $per_page, $offset ), ARRAY_A ),
+			'created_at' => $is_asc
+				? $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT * FROM %i ORDER BY created_at ASC LIMIT %d OFFSET %d', $this->table_name, $per_page, $offset ), ARRAY_A )
+				: $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT * FROM %i ORDER BY created_at DESC LIMIT %d OFFSET %d', $this->table_name, $per_page, $offset ), ARRAY_A ),
+			'updated_at' => $is_asc
+				? $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT * FROM %i ORDER BY updated_at ASC LIMIT %d OFFSET %d', $this->table_name, $per_page, $offset ), ARRAY_A )
+				: $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT * FROM %i ORDER BY updated_at DESC LIMIT %d OFFSET %d', $this->table_name, $per_page, $offset ), ARRAY_A ),
+			default => $is_asc
+				? $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT * FROM %i ORDER BY pipeline_id ASC LIMIT %d OFFSET %d', $this->table_name, $per_page, $offset ), ARRAY_A )
+				: $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT * FROM %i ORDER BY pipeline_id DESC LIMIT %d OFFSET %d', $this->table_name, $per_page, $offset ), ARRAY_A ),
+		};
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL
 
 		foreach ($results as &$pipeline) {
 			if (!empty($pipeline['pipeline_config'])) {

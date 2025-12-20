@@ -27,8 +27,8 @@ function datamachine_register_pipelines_admin_page_filters() {
     // Pure discovery mode - matches actual system usage
     add_filter('datamachine_admin_pages', function($pages) {
         $pages['pipelines'] = [
-            'page_title' => __('Pipelines', 'datamachine'),
-            'menu_title' => __('Pipelines', 'datamachine'),
+            'page_title' => __('Pipelines', 'data-machine'),
+            'menu_title' => __('Pipelines', 'data-machine'),
             'capability' => 'manage_options',
             'position' => 10,
             'templates' => __DIR__ . '/templates/',

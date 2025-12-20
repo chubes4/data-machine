@@ -53,14 +53,14 @@ class Logs {
 					'required' => false,
 					'type' => 'string',
 					'default' => 'full',
-					'description' => __('Content mode: full or recent', 'datamachine'),
+					'description' => __('Content mode: full or recent', 'data-machine'),
 					'enum' => ['full', 'recent']
 				],
 				'limit' => [
 					'required' => false,
 					'type' => 'integer',
 					'default' => 200,
-					'description' => __('Number of recent entries (when mode=recent)', 'datamachine'),
+					'description' => __('Number of recent entries (when mode=recent)', 'data-machine'),
 					'validate_callback' => function($param) {
 						return is_numeric($param) && $param > 0 && $param <= 10000;
 					}
@@ -68,7 +68,7 @@ class Logs {
 				'job_id' => [
 					'required' => false,
 					'type' => 'integer',
-					'description' => __('Filter logs by job ID', 'datamachine'),
+					'description' => __('Filter logs by job ID', 'data-machine'),
 					'validate_callback' => function($param) {
 						return is_numeric($param) && $param > 0;
 					}
@@ -92,7 +92,7 @@ class Logs {
 				'level' => [
 					'required' => true,
 					'type' => 'string',
-					'description' => __('Log level to set', 'datamachine'),
+					'description' => __('Log level to set', 'data-machine'),
 					'validate_callback' => function($param) {
 						$available_levels = datamachine_get_available_log_levels();
 						return array_key_exists($param, $available_levels);
@@ -109,7 +109,7 @@ class Logs {
 		if (!current_user_can('manage_options')) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to manage logs.', 'datamachine'),
+				__('You do not have permission to manage logs.', 'data-machine'),
 				['status' => 403]
 			);
 		}
@@ -128,7 +128,7 @@ class Logs {
 		return rest_ensure_response([
 			'success' => true,
 			'data' => null,
-			'message' => __('Logs cleared successfully.', 'datamachine')
+			'message' => __('Logs cleared successfully.', 'data-machine')
 		]);
  	}
 
@@ -182,7 +182,7 @@ class Logs {
 			'level' => $new_level,
 			'message' => sprintf(
 				/* translators: %s: log level label */
-				esc_html__('Log level updated to %s.', 'datamachine'),
+				esc_html__('Log level updated to %s.', 'data-machine'),
 				$level_display
 			)
 		]);

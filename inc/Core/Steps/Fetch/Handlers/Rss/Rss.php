@@ -405,6 +405,6 @@ class Rss extends FetchHandler {
      * @return string Localized handler label
      */
     public static function get_label(): string {
-        return __('RSS/Atom Feed', 'datamachine');
+        return __('RSS/Atom Feed', 'data-machine');
     }
 }

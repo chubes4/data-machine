@@ -41,18 +41,18 @@ class WordPressSettings extends PublishHandlerSettings {
     private static function get_local_fields(): array {
         // Get standard WordPress publish fields
         $standard_fields = WordPressSettingsHandler::get_standard_publish_fields([
-            'domain' => 'datamachine'
+            'domain' => 'data-machine'
         ]);
 
         // Get dynamic taxonomy fields
         $taxonomy_fields = WordPressSettingsHandler::get_taxonomy_fields([
             'field_suffix' => '_selection',
             'first_options' => [
-                'skip' => esc_html__('Skip', 'datamachine'),
-                'ai_decides' => esc_html__('AI Decides', 'datamachine')
+                'skip' => esc_html__('Skip', 'data-machine'),
+                'ai_decides' => esc_html__('AI Decides', 'data-machine')
             ],
             /* translators: 1: taxonomy label, 2: taxonomy term label */
-            'description_template' => __('Configure %1$s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'datamachine')
+            'description_template' => __('Configure %1$s assignment: Skip to exclude from AI instructions, let AI choose, or select specific %2$s.', 'data-machine')
         ]);
 
         // Merge in dynamic taxonomy fields

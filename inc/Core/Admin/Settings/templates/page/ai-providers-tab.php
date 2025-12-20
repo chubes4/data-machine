@@ -30,11 +30,11 @@ $datamachine_current_keys = apply_filters('chubes_ai_provider_api_keys', null);
                             value="<?php echo esc_attr($datamachine_current_keys[$datamachine_key] ?? ''); ?>"
 
                            class="regular-text"
-                           placeholder="<?php esc_attr_e('Enter API key...', 'datamachine'); ?>" />
+                           placeholder="<?php esc_attr_e('Enter API key...', 'data-machine'); ?>" />
                     <p class="description">
                         <?php
                         /* translators: %s: provider name */
-                        echo esc_html(sprintf(__('API key for %s provider.', 'datamachine'), $datamachine_provider['name'] ?? ucfirst($datamachine_key)));
+                        echo esc_html(sprintf(__('API key for %s provider.', 'data-machine'), $datamachine_provider['name'] ?? ucfirst($datamachine_key)));
                         ?>
                     </p>
                 </td>
@@ -46,6 +46,6 @@ $datamachine_current_keys = apply_filters('chubes_ai_provider_api_keys', null);
 
 <?php if (empty($datamachine_providers)): ?>
 <div class="notice notice-info">
-    <p><?php esc_html_e('No AI providers are currently available.', 'datamachine'); ?></p>
+    <p><?php esc_html_e('No AI providers are currently available.', 'data-machine'); ?></p>
 </div>
 <?php endif; ?>

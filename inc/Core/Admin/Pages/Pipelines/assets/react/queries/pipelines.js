@@ -88,7 +88,7 @@ export const useCreatePipeline = () => {
         );
       }
 
-      queryClient.invalidateQueries(['pipelines']);
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
     },
   });
 };
@@ -98,7 +98,7 @@ export const useUpdatePipelineTitle = () => {
   return useMutation({
     mutationFn: ({ pipelineId, name }) => updatePipelineTitle(pipelineId, name),
     onSuccess: () => {
-      queryClient.invalidateQueries(['pipelines']);
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
     },
   });
 };
@@ -108,7 +108,7 @@ export const useDeletePipeline = () => {
   return useMutation({
     mutationFn: deletePipeline,
     onSuccess: () => {
-      queryClient.invalidateQueries(['pipelines']);
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
     },
   });
 };
@@ -119,7 +119,7 @@ export const useAddPipelineStep = () => {
     mutationFn: ({ pipelineId, stepType, executionOrder }) =>
       addPipelineStep(pipelineId, stepType, executionOrder),
     onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries(['pipelines', pipelineId]);
+      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] });
     },
   });
 };
@@ -129,7 +129,7 @@ export const useDeletePipelineStep = () => {
   return useMutation({
     mutationFn: ({ pipelineId, stepId }) => deletePipelineStep(pipelineId, stepId),
     onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries(['pipelines', pipelineId]);
+      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] });
     },
   });
 };
@@ -139,7 +139,7 @@ export const useReorderPipelineSteps = () => {
   return useMutation({
     mutationFn: ({ pipelineId, steps }) => reorderPipelineSteps(pipelineId, steps),
     onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries(['pipelines', pipelineId]);
+      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] });
     },
   });
 };
@@ -150,7 +150,7 @@ export const useUpdateSystemPrompt = () => {
     mutationFn: ({ stepId, prompt, provider, model, enabledTools, stepType, pipelineId }) =>
       updateSystemPrompt(stepId, prompt, provider, model, enabledTools, stepType, pipelineId),
     onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries(['pipelines', pipelineId]);
+      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] });
     },
   });
 };
@@ -162,7 +162,7 @@ export const useUploadContextFile = () => {
   return useMutation({
     mutationFn: ({ pipelineId, file }) => uploadContextFile(pipelineId, file),
     onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries(['context-files', pipelineId]);
+      queryClient.invalidateQueries({ queryKey: ['context-files', pipelineId] });
     },
   });
 };
@@ -172,7 +172,7 @@ export const useDeleteContextFile = () => {
   return useMutation({
     mutationFn: deleteContextFile,
     onSuccess: () => {
-      queryClient.invalidateQueries(['context-files']);
+      queryClient.invalidateQueries({ queryKey: ['context-files'] });
     },
   });
 };

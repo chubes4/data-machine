@@ -47,7 +47,7 @@ class OAuth2Handler {
      */
     public function verify_state(string $provider_key, string $state): bool {
         $stored_state = get_transient("datamachine_{$provider_key}_oauth_state");
-        $is_valid = wp_verify_nonce($state, "datamachine_{$provider_key}_oauth_state") && $stored_state === $state;
+        $is_valid = wp_verify_nonce($state, "datamachine_{$provider_key}_oauth_state") && $stored_state && hash_equals($stored_state, $state);
 
         if ($is_valid) {
             delete_transient("datamachine_{$provider_key}_oauth_state");
@@ -120,7 +120,7 @@ class OAuth2Handler {
             ]);
 
             $this->redirect_with_error($provider_key, 'denied');
-            return new \WP_Error('oauth_denied', __('OAuth authorization denied.', 'datamachine'));
+            return new \WP_Error('oauth_denied', __('OAuth authorization denied.', 'data-machine'));
         }
 
         // Verify state
@@ -130,7 +130,7 @@ class OAuth2Handler {
             ]);
 
             $this->redirect_with_error($provider_key, 'invalid_state');
-            return new \WP_Error('invalid_state', __('Invalid OAuth state.', 'datamachine'));
+            return new \WP_Error('invalid_state', __('Invalid OAuth state.', 'data-machine'));
         }
 
         // Exchange authorization code for access token
@@ -190,7 +190,7 @@ class OAuth2Handler {
             ]);
 
             $this->redirect_with_error($provider_key, 'storage_failed');
-            return new \WP_Error('storage_failed', __('Failed to store account data.', 'datamachine'));
+            return new \WP_Error('storage_failed', __('Failed to store account data.', 'data-machine'));
         }
 
         do_action('datamachine_log', 'info', 'OAuth2: Authentication successful', [
@@ -229,7 +229,7 @@ class OAuth2Handler {
         if (!$token_data || !isset($token_data['access_token'])) {
             return new \WP_Error(
                 'invalid_token_response',
-                __('Invalid token response.', 'datamachine'),
+                __('Invalid token response.', 'data-machine'),
                 ['response' => $result['data']]
             );
         }

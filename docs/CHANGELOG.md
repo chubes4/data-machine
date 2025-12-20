@@ -5,6 +5,25 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.9] - 2025-12-20
+
+### Improved
+- **WordPress.org Plugin Repository Compliance**: Standardized text domain from `'datamachine'` to `'data-machine'` across entire codebase (~80 files, 200+ occurrences) to align with plugin slug requirement
+- **Database Security Hardening**: Refactored `JobsOperations::get_jobs_for_list_table()` to use WordPress prepared statement parameters (`%i` for table names) instead of manual validation logic
+- **Plugin Architecture**: Updated plugin filename from `datamachine.php` to `data-machine.php` for proper WordPress directory compatibility
+- **Source Code Documentation**: Added comprehensive "Source Code" section in readme.txt documenting React admin interface location, build instructions, and dependencies
+
+### Changed
+- **Plugin Filename**: Main plugin file renamed from `datamachine.php` to `data-machine.php` for WordPress.org compliance (existing installations should verify plugin activation after update)
+- **Build Process**: Updated build.sh to reference new plugin filename and produce `data-machine.zip` output
+- **Action Scheduler**: Updated hook group references from `'datamachine'` to `'data-machine'` for proper scheduled action cleanup
+
+### Technical Details
+- **Text Domain Migration**: Updated 80+ PHP files including API classes, admin pages, settings UI, fetch/publish/update handlers, OAuth providers, and service managers
+- **Database Query Security**: Eliminated manual orderby/order validation in favor of explicit prepared queries for each allowed column (j.pipeline_id, j.flow_id, j.status, j.completed_at, p.pipeline_name, f.flow_name)
+- **Code Quality**: Added proper phpcs directives (WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL) for standards compliance in database operations
+- **Build Validation**: Enhanced build.sh to validate essential files exist and development files are properly excluded from production package
+
 ## [0.6.8] - 2025-12-19
 
 ### Improved

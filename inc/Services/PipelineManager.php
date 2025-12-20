@@ -321,7 +321,7 @@ class PipelineManager {
         if (!current_user_can('manage_options')) {
             return new WP_Error(
                 'rest_forbidden',
-                __('Insufficient permissions', 'datamachine'),
+                __('Insufficient permissions', 'data-machine'),
                 ['status' => 403]
             );
         }
@@ -330,7 +330,7 @@ class PipelineManager {
         if ($pipeline_id <= 0) {
             return new WP_Error(
                 'invalid_pipeline_id',
-                __('Valid pipeline ID is required.', 'datamachine'),
+                __('Valid pipeline ID is required.', 'data-machine'),
                 ['status' => 400]
             );
         }
@@ -339,7 +339,7 @@ class PipelineManager {
         if (!$pipeline) {
             return new WP_Error(
                 'pipeline_not_found',
-                __('Pipeline not found.', 'datamachine'),
+                __('Pipeline not found.', 'data-machine'),
                 ['status' => 404]
             );
         }
@@ -350,7 +350,7 @@ class PipelineManager {
             ]);
             return new WP_Error(
                 'data_integrity_error',
-                __('Pipeline data is corrupted - missing name.', 'datamachine'),
+                __('Pipeline data is corrupted - missing name.', 'data-machine'),
                 ['status' => 500]
             );
         }
@@ -371,7 +371,7 @@ class PipelineManager {
             if (!$success) {
                 return new WP_Error(
                     'flow_deletion_failed',
-                    __('Failed to delete associated flows.', 'datamachine'),
+                    __('Failed to delete associated flows.', 'data-machine'),
                     ['status' => 500]
                 );
             }
@@ -390,7 +390,7 @@ class PipelineManager {
         if (!$success) {
             return new WP_Error(
                 'pipeline_deletion_failed',
-                __('Failed to delete pipeline.', 'datamachine'),
+                __('Failed to delete pipeline.', 'data-machine'),
                 ['status' => 500]
             );
         }
@@ -398,7 +398,7 @@ class PipelineManager {
         return [
             'message' => sprintf(
                 /* translators: 1: pipeline name, 2: number of flows deleted */
-                esc_html__('Pipeline "%1$s" deleted successfully. %2$d flows were also deleted.', 'datamachine'),
+                esc_html__('Pipeline "%1$s" deleted successfully. %2$d flows were also deleted.', 'data-machine'),
                 $pipeline_name,
                 $flow_count
             ),
