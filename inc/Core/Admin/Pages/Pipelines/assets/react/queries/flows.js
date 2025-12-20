@@ -7,7 +7,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
 	fetchFlows,
-	fetchFlow,
 	createFlow,
 	updateFlowTitle,
 	deleteFlow,
@@ -106,16 +105,6 @@ export const useFlows = ( pipelineId ) =>
 		enabled: !! pipelineId,
 	} );
 
-export const useFlow = ( flowId ) =>
-	useQuery( {
-		queryKey: [ 'flows', 'single', flowId ],
-		queryFn: async () => {
-			const response = await fetchFlow( flowId );
-			return response.success ? response.data : null;
-		},
-		enabled: !! flowId,
-	} );
-
 // Mutations
 export const useCreateFlow = () => {
 	const queryClient = useQueryClient();
@@ -188,12 +177,8 @@ export const useDuplicateFlow = () => {
 };
 
 export const useRunFlow = () => {
-	const queryClient = useQueryClient();
 	return useMutation( {
 		mutationFn: runFlow,
-		onSuccess: ( _, flowId ) => {
-			queryClient.invalidateQueries( { queryKey: [ 'flows', 'single', flowId ] } );
-		},
 	} );
 };
 

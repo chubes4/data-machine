@@ -57,6 +57,20 @@ if ( current_user_can( 'delete_plugins' ) || defined( 'WP_UNINSTALL_PLUGIN' ) ) 
     wp_cache_flush();
 }
 
+// Delete files repository (uploads/datamachine-files/)
+$datamachine_upload_dir = wp_upload_dir();
+$datamachine_files_dir  = trailingslashit( $datamachine_upload_dir['basedir'] ) . 'datamachine-files';
+
+if ( is_dir( $datamachine_files_dir ) ) {
+	datamachine_recursive_delete( $datamachine_files_dir );
+}
+
+// Delete log files (uploads/datamachine-logs/)
+$datamachine_logs_dir = trailingslashit( $datamachine_upload_dir['basedir'] ) . 'datamachine-logs';
+
+if ( is_dir( $datamachine_logs_dir ) ) {
+	datamachine_recursive_delete( $datamachine_logs_dir );
+}
 
 // Clear Action Scheduler jobs if available
 if ( function_exists( 'as_unschedule_all_actions' ) ) {
@@ -64,4 +78,30 @@ if ( function_exists( 'as_unschedule_all_actions' ) ) {
 }
 
 // Clear transients
-delete_transient( 'datamachine_activation_notice' ); 
+delete_transient( 'datamachine_activation_notice' );
+
+/**
+ * Recursively delete a directory and its contents.
+ *
+ * @param string $dir Directory path to delete.
+ * @return bool True on success, false on failure.
+ */
+function datamachine_recursive_delete( $dir ) {
+	if ( ! is_dir( $dir ) ) {
+		return false;
+	}
+
+	$files = array_diff( scandir( $dir ), array( '.', '..' ) );
+
+	foreach ( $files as $file ) {
+		$path = trailingslashit( $dir ) . $file;
+
+		if ( is_dir( $path ) ) {
+			datamachine_recursive_delete( $path );
+		} else {
+			wp_delete_file( $path );
+		}
+	}
+
+	return rmdir( $dir );
+}

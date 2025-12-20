@@ -5,6 +5,32 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.10] - 2025-12-20
+
+### Improved
+- **React Query Cache Consistency**: Fixed systematic query invalidation issues across pipeline step mutations (add, delete, reorder) to maintain cache coherency when pipelines and flows are modified
+- **Pipeline Creation UX**: Enhanced `useCreatePipeline` hook with callback support, enabling automatic pipeline selection after creation without manual state management
+- **Code Cleanliness**: Removed unused React hooks and API calls (`useFlow`, `usePipeline`, `fetchFlow`) that were no longer serving any purpose in the application
+- **Plugin Uninstallation**: Added comprehensive cleanup of plugin-generated directories during uninstall (datamachine-files/ and datamachine-logs/ in uploads folder)
+- **Mutation Architecture**: Improved separation of concerns by moving state updates from component callbacks to mutation `onSuccess` handlers
+
+### Changed
+- **Query Invalidation Patterns**: Consolidated single-pipeline queries to full pipeline list invalidation for more predictable cache behavior across all step-related mutations
+- **Callback Handling**: Migrated from manual result handling in components to mutation option callbacks for cleaner, more maintainable code patterns
+- **Plugin Cleanup**: Enhanced uninstall.php with recursive directory deletion helper and proper file cleanup sequence
+
+### Fixed
+- **Cache Invalidation**: Fixed `useAddPipelineStep`, `useDeletePipelineStep`, and `useReorderPipelineSteps` mutations to properly invalidate both pipelines and flows queries
+- **Flow Execution**: Removed unnecessary queryClient invalidation in `useRunFlow` that was invalidating non-existent single flow query
+- **Plugin Hygiene**: Added proper cleanup of temporary files and logs directory when plugin is uninstalled
+
+### Technical Details
+- **React Query**: Query invalidation now uses consistent patterns across all pipeline-related mutations
+- **Mutations**: Enhanced `useCreatePipeline` to accept options object for better extensibility and callback support
+- **Cleanup**: New `datamachine_recursive_delete()` function in uninstall.php handles nested directory removal safely
+- **Code Reduction**: Removed ~30 lines of unused hook and query code
+- **Architecture**: Improved component callback patterns following React best practices for mutation handling
+
 ## [0.6.9] - 2025-12-20
 
 ### Improved

@@ -30,16 +30,6 @@ export const usePipelines = () =>
     },
   });
 
-export const usePipeline = (pipelineId) =>
-  useQuery({
-    queryKey: ['pipelines', pipelineId],
-    queryFn: async () => {
-      const response = await fetchPipelines(pipelineId);
-      return response.success ? response.data : null;
-    },
-    enabled: !!pipelineId,
-  });
-
 export const useContextFiles = (pipelineId) =>
   useQuery({
     queryKey: ['context-files', pipelineId],
@@ -51,7 +41,7 @@ export const useContextFiles = (pipelineId) =>
   });
 
 // Mutations
-export const useCreatePipeline = () => {
+export const useCreatePipeline = (options = {}) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createPipeline,
@@ -79,6 +69,7 @@ export const useCreatePipeline = () => {
     },
     onSuccess: (response, _name, context) => {
       const pipeline = response?.data?.pipeline_data;
+      const pipelineId = response?.data?.pipeline_id;
 
       if (pipeline && context?.optimisticPipelineId) {
         queryClient.setQueryData(['pipelines'], (old = []) =>
@@ -89,6 +80,11 @@ export const useCreatePipeline = () => {
       }
 
       queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+
+      // Call external onSuccess callback with the new pipeline ID after cache is updated
+      if (options.onSuccess && pipelineId) {
+        options.onSuccess(pipelineId);
+      }
     },
   });
 };
@@ -119,7 +115,8 @@ export const useAddPipelineStep = () => {
     mutationFn: ({ pipelineId, stepType, executionOrder }) =>
       addPipelineStep(pipelineId, stepType, executionOrder),
     onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] });
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      queryClient.invalidateQueries({ queryKey: ['flows', pipelineId] });
     },
   });
 };
@@ -129,7 +126,8 @@ export const useDeletePipelineStep = () => {
   return useMutation({
     mutationFn: ({ pipelineId, stepId }) => deletePipelineStep(pipelineId, stepId),
     onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] });
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      queryClient.invalidateQueries({ queryKey: ['flows', pipelineId] });
     },
   });
 };
@@ -139,7 +137,8 @@ export const useReorderPipelineSteps = () => {
   return useMutation({
     mutationFn: ({ pipelineId, steps }) => reorderPipelineSteps(pipelineId, steps),
     onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] });
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      queryClient.invalidateQueries({ queryKey: ['flows', pipelineId] });
     },
   });
 };
@@ -150,7 +149,8 @@ export const useUpdateSystemPrompt = () => {
     mutationFn: ({ stepId, prompt, provider, model, enabledTools, stepType, pipelineId }) =>
       updateSystemPrompt(stepId, prompt, provider, model, enabledTools, stepType, pipelineId),
     onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries({ queryKey: ['pipelines', pipelineId] });
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      queryClient.invalidateQueries({ queryKey: ['flows', pipelineId] });
     },
   });
 };

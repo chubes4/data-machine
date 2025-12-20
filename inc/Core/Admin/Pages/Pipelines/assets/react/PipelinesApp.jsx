@@ -45,7 +45,11 @@ export default function PipelinesApp() {
 	// Fetch handler details for settings modal (skip if already seeded in modalData)
 	const handlerSlug = activeModal === MODAL_TYPES.HANDLER_SETTINGS && !modalData?.handlerDetails ? modalData?.handlerSlug : null;
 	const { data: handlerDetails } = useHandlerDetails(handlerSlug);
-	const createPipelineMutation = useCreatePipeline();
+	const createPipelineMutation = useCreatePipeline({
+		onSuccess: (pipelineId) => {
+			setSelectedPipelineId(pipelineId);
+		},
+	});
 	const updateHandlerMutation = useUpdateFlowHandler();
 
 	// Find selected pipeline from pipelines array
@@ -132,17 +136,14 @@ export default function PipelinesApp() {
 	const handleAddNewPipeline = useCallback( async () => {
 		setIsCreatingPipeline( true );
 		try {
-			const result = await createPipelineMutation.mutateAsync('New Pipeline');
-			if ( result.success && result.data.pipeline_id ) {
-				setSelectedPipelineId( result.data.pipeline_id );
-			}
+			await createPipelineMutation.mutateAsync('New Pipeline');
 		} catch ( error ) {
 			// eslint-disable-next-line no-console
 			console.error( 'Error creating pipeline:', error );
 		} finally {
 			setIsCreatingPipeline( false );
 		}
-	}, [ createPipelineMutation, setSelectedPipelineId ] );
+	}, [ createPipelineMutation ] );
 
 	/**
 	 * Loading state
