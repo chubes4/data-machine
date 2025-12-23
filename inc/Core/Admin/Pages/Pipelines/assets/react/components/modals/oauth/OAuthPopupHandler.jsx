@@ -2,9 +2,11 @@
  * OAuth Popup Handler Component
  *
  * Manages OAuth popup window with message listener for callback communication.
+ * Fetches OAuth authorization URL from REST API before opening popup to ensure
+ * state parameter is properly created server-side.
  */
 
-import { useEffect, useRef } from '@wordpress/element';
+import { useEffect, useRef, useState } from '@wordpress/element';
 import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
@@ -12,20 +14,21 @@ import { __ } from '@wordpress/i18n';
  * OAuth Popup Handler Component
  *
  * @param {Object} props - Component props
- * @param {string} props.oauthUrl - OAuth URL to open in popup
+ * @param {string} props.handlerSlug - Handler slug for fetching OAuth URL
  * @param {Function} props.onSuccess - Success callback with account data
  * @param {Function} props.onError - Error callback with error message
  * @param {boolean} props.disabled - Disabled state
  * @returns {React.ReactElement} OAuth popup button
  */
 export default function OAuthPopupHandler( {
-	oauthUrl,
+	handlerSlug,
 	onSuccess,
 	onError,
 	disabled = false,
 } ) {
 	const popupRef = useRef( null );
 	const messageListenerRef = useRef( null );
+	const [ isLoading, setIsLoading ] = useState( false );
 
 	/**
 	 * Clean up popup and listener on unmount
@@ -50,23 +53,52 @@ export default function OAuthPopupHandler( {
 	/**
 	 * Handle OAuth popup
 	 */
-	const handleOAuthClick = () => {
+	const handleOAuthClick = async () => {
 		// Close existing popup if open
 		if ( popupRef.current && ! popupRef.current.closed ) {
 			popupRef.current.close();
 		}
 
-		// Open OAuth popup
-		const width = 600;
-		const height = 700;
-		const left = window.screen.width / 2 - width / 2;
-		const top = window.screen.height / 2 - height / 2;
+		setIsLoading( true );
 
-		popupRef.current = window.open(
-			oauthUrl,
-			'oauth-window',
-			`width=${ width },height=${ height },left=${ left },top=${ top },toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
-		);
+		try {
+			// Fetch OAuth URL from REST API - this creates the state server-side
+			const response = await wp.apiFetch( {
+				path: `/datamachine/v1/auth/${ handlerSlug }/oauth-url`,
+			} );
+
+			if ( ! response?.success || ! response?.data?.oauth_url ) {
+				throw new Error(
+					response?.message ||
+						__( 'Failed to get authorization URL.', 'datamachine' )
+				);
+			}
+
+			const oauthUrl = response.data.oauth_url;
+
+			// Open OAuth popup
+			const width = 600;
+			const height = 700;
+			const left = window.screen.width / 2 - width / 2;
+			const top = window.screen.height / 2 - height / 2;
+
+			popupRef.current = window.open(
+				oauthUrl,
+				'oauth-window',
+				`width=${ width },height=${ height },left=${ left },top=${ top },toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
+			);
+		} catch ( error ) {
+			if ( onError ) {
+				onError(
+					error?.message ||
+						__( 'Failed to initiate OAuth flow.', 'datamachine' )
+				);
+			}
+			setIsLoading( false );
+			return;
+		}
+
+		setIsLoading( false );
 
 		// Set up message listener
 		messageListenerRef.current = ( event ) => {
@@ -127,9 +159,12 @@ export default function OAuthPopupHandler( {
 		<Button
 			variant="primary"
 			onClick={ handleOAuthClick }
-			disabled={ disabled }
+			disabled={ disabled || isLoading }
+			isBusy={ isLoading }
 		>
-			{ __( 'Connect Account', 'datamachine' ) }
+			{ isLoading
+				? __( 'Connecting...', 'datamachine' )
+				: __( 'Connect Account', 'datamachine' ) }
 		</Button>
 	);
 }

@@ -206,9 +206,9 @@ add_action('datamachine_cleanup_old_files', function() {
 });
 
 /**
- * Schedule cleanup on WordPress init
+ * Schedule cleanup after Action Scheduler is fully initialized
  */
-add_action('init', function() {
+add_action('action_scheduler_init', function() {
     if (!as_next_scheduled_action('datamachine_cleanup_old_files', [], 'datamachine-files')) {
         as_schedule_recurring_action(
             time() + WEEK_IN_SECONDS,

@@ -5,6 +5,21 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.16] - 2025-12-23
+
+### Improved
+- **OAuth Authentication Security** - OAuth authorization URL now fetched from REST API before opening popup to ensure proper server-side state parameter generation
+- **OAuth Authentication UX** - Added loading state with "Connecting..." indicator during OAuth URL fetch
+- **File Cleanup Scheduling Reliability** - Changed from `init` hook to `action_scheduler_init` hook for more consistent scheduling
+
+### Fixed
+- **AI Providers Tab** - Fixed variable name in label `for` attribute causing incorrect HTML ID references
+
+### Technical Details
+- **OAuthPopupHandler Component**: Now calls `/auth/{handler_slug}/oauth-url` endpoint before opening popup, ensuring state parameter is created server-side
+- **Security Enhancement**: Server-side OAuth URL generation improves CSRF protection consistency
+- **Error Handling**: Added try/catch block for OAuth URL fetch with proper error callback
+
 ## [0.6.15] - 2025-12-23
 
 ### Improved

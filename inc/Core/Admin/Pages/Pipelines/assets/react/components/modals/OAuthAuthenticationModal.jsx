@@ -38,10 +38,8 @@ export default function OAuthAuthenticationModal( {
 	const [ isStatusLoading, setIsStatusLoading ] = useState( false );
 	const [ showConfigForm, setShowConfigForm ] = useState( false );
 
-	// Determine auth type and URLs from handler metadata
+	// Determine auth type from handler metadata
 	const authType = handlerInfo.auth_type || 'oauth2'; // oauth2, oauth1, or simple
-	const oauthUrl =
-		handlerInfo.oauth_url || `/datamachine-auth/${ handlerSlug }/`;
 
 	const fetchConnectionStatus = useCallback( async ( { silent = false } = {} ) => {
 		if ( ! handlerSlug ) {
@@ -371,7 +369,7 @@ export default function OAuthAuthenticationModal( {
 						{ authType === 'oauth2' && ! connected && (
 							<div className="datamachine-modal-spacing--mb-16">
 								<OAuthPopupHandler
-									oauthUrl={ oauthUrl }
+									handlerSlug={ handlerSlug }
 									onSuccess={ handleOAuthSuccess }
 									onError={ handleOAuthError }
 									disabled={ apiConfigForm.isSubmitting || disconnectOperation.isLoading || isStatusLoading }

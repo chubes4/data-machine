@@ -19,7 +19,7 @@ $datamachine_current_keys = apply_filters('chubes_ai_provider_api_keys', null);
             <?php if (isset($datamachine_provider['type']) && $datamachine_provider['type'] === 'llm'): ?>
             <tr>
                 <th scope="row">
-                    <label for="ai_provider_keys_<?php echo esc_attr($key); ?>">
+                    <label for="ai_provider_keys_<?php echo esc_attr($datamachine_key); ?>">
                         <?php echo esc_html($datamachine_provider['name'] ?? ucfirst($datamachine_key)); ?>
                     </label>
                 </th>
