@@ -157,15 +157,9 @@ class FacebookAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
      * Handle OAuth callback from Facebook
      */
     public function handle_oauth_callback() {
-        // Validate OAuth state parameter for CSRF protection
-        $state = isset($_GET['state']) ? sanitize_text_field(wp_unslash($_GET['state'])) : '';
-        $stored_state = get_transient('datamachine_facebook_oauth_state');
-
-        if (empty($state) || false === $stored_state || !hash_equals($stored_state, $state)) {
-            wp_die(esc_html__('Invalid or expired OAuth state parameter.', 'data-machine'));
-        }
-
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection via OAuth2Handler
         $config = $this->get_config();
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection via OAuth2Handler
         $facebook_code = isset($_GET['code']) ? sanitize_text_field(wp_unslash($_GET['code'])) : '';
 
         $this->oauth2->handle_callback(

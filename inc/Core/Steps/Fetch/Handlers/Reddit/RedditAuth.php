@@ -89,14 +89,7 @@ class RedditAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
      * Handle OAuth callback from Reddit
      */
     public function handle_oauth_callback() {
-        // Validate OAuth state parameter for CSRF protection
-        $state = isset($_GET['state']) ? sanitize_text_field(wp_unslash($_GET['state'])) : '';
-        $stored_state = get_transient('datamachine_reddit_oauth_state');
-
-        if (empty($state) || false === $stored_state || !hash_equals($stored_state, $state)) {
-            wp_die(esc_html__('Invalid or expired OAuth state parameter.', 'data-machine'));
-        }
-
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- OAuth state parameter provides CSRF protection via OAuth2Handler
         $code = isset($_GET['code']) ? sanitize_text_field(wp_unslash($_GET['code'])) : '';
 
         // Get configuration

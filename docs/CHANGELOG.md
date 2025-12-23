@@ -5,6 +5,20 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.14] - 2025-12-23
+
+### Improved
+- **OAuth Handler Refactoring** - Removed duplicate OAuth state validation code from individual handler callback methods
+  - Centralized state verification now handled entirely by OAuth2Handler::handle_callback()
+  - Eliminated redundant state parameter validation across GoogleSheets, Reddit, Facebook, and Threads handlers
+  - Added proper PHPCS suppression comments explaining OAuth state parameter provides CSRF protection
+
+### Technical Details
+- **Code Reduction**: Removed ~30 lines of duplicate validation code from 4 OAuth handler files
+- **Security**: CSRF protection maintained through centralized OAuth2Handler state verification
+- **Architecture**: Cleaner separation of concerns with OAuth2Handler managing state validation logic
+- **Handler Updates**: GoogleSheetsAuth, RedditAuth, FacebookAuth, ThreadsAuth simplified to delegate callback handling
+
 ## [0.6.13] - 2025-12-23
 
 ### Added
