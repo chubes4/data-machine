@@ -5,6 +5,16 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.17] - 2025-12-23
+
+### Improved
+- **OAuth2 Token Exchange Headers** - Enhanced OAuth2Handler to support custom HTTP headers during token exchange (required for Reddit OAuth authentication which uses Basic Auth instead of standard Authorization header)
+
+### Technical Details
+- **OAuth2Handler::exchange_token()**: Added custom header extraction and merging logic, allowing providers to override default Accept/Content-Type headers via `params['headers']` parameter
+- **Reddit OAuth Support**: Enables proper token exchange for Reddit OAuth provider which requires Basic Authentication header
+- **Backward Compatibility**: Default headers maintained for existing OAuth2 providers; custom headers only used when explicitly provided
+
 ## [0.6.16] - 2025-12-23
 
 ### Improved

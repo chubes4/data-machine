@@ -211,12 +211,22 @@ class OAuth2Handler {
      * @return array|\WP_Error Token data on success, WP_Error on failure.
      */
     private function exchange_token(string $token_url, array $params) {
+        // Extract custom headers if provided (e.g., Reddit requires Basic Auth)
+        $custom_headers = [];
+        if (isset($params['headers']) && is_array($params['headers'])) {
+            $custom_headers = $params['headers'];
+            unset($params['headers']);
+        }
+
+        // Merge default headers with custom headers (custom takes precedence)
+        $headers = array_merge([
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/x-www-form-urlencoded'
+        ], $custom_headers);
+
         $result = HttpClient::post($token_url, [
             'body' => $params,
-            'headers' => [
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/x-www-form-urlencoded'
-            ],
+            'headers' => $headers,
             'context' => 'OAuth2 Token Exchange',
         ]);
 
