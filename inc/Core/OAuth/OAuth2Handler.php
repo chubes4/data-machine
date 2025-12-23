@@ -27,7 +27,7 @@ class OAuth2Handler {
      * @return string Generated state value.
      */
     public function create_state(string $provider_key): string {
-        $state = wp_create_nonce("datamachine_{$provider_key}_oauth_state");
+        $state = bin2hex(random_bytes(32));
         set_transient("datamachine_{$provider_key}_oauth_state", $state, 15 * MINUTE_IN_SECONDS);
 
         do_action('datamachine_log', 'debug', 'OAuth2: Created state nonce', [
@@ -47,7 +47,7 @@ class OAuth2Handler {
      */
     public function verify_state(string $provider_key, string $state): bool {
         $stored_state = get_transient("datamachine_{$provider_key}_oauth_state");
-        $is_valid = wp_verify_nonce($state, "datamachine_{$provider_key}_oauth_state") && $stored_state && hash_equals($stored_state, $state);
+        $is_valid = !empty($state) && $stored_state !== false && hash_equals($stored_state, $state);
 
         if ($is_valid) {
             delete_transient("datamachine_{$provider_key}_oauth_state");

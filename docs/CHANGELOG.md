@@ -5,6 +5,20 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.15] - 2025-12-23
+
+### Improved
+- **OAuth State Generation** - Replaced WordPress nonces with cryptographically secure random bytes for OAuth 2.0 state parameter generation
+  - Changed `create_state()` from `wp_create_nonce()` to `bin2hex(random_bytes(32))` for stronger cryptographic security
+  - Updated `verify_state()` to remove nonce verification, now validates directly against transient storage with hash_equals()
+  - Improved protection against CSRF attacks in OAuth callback flows across all OAuth2 providers
+
+### Technical Details
+- **Security Enhancement**: cryptographically secure 64-character hexadecimal state values (256-bit entropy) vs WordPress nonce limitations
+- **OAuth Providers**: Applies to Google Sheets, Reddit, Facebook, and Threads OAuth authentication flows
+- **Validation**: Simplified state verification logic with direct transient comparison and timing-attack safe hash_equals()
+- **Code Change**: 2 lines modified in OAuth2Handler.php for cleaner, more secure OAuth state management
+
 ## [0.6.14] - 2025-12-23
 
 ### Improved
