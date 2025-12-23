@@ -5,6 +5,17 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.13] - 2025-12-23
+
+### Added
+- **Plugin Activation Redirect** - Users are automatically redirected to the Data Machine admin page after plugin activation for improved onboarding experience
+- Smart redirect handling that skips bulk/network activation to prevent disruption
+
+### Technical Details
+- **New Function**: `datamachine_activation_redirect()` handles activation redirect with proper transient management
+- **UX Enhancement**: 30-second transient timeout ensures redirect only happens immediately after activation
+- **Safety Checks**: Bulk/network activation detection prevents unwanted redirects
+
 ## [0.6.12] - 2025-12-20
 
 ### Improved

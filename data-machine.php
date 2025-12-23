@@ -3,7 +3,7 @@
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/data-machine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:           0.6.12
+ * Version:           0.6.13
  * Requires at least: 6.2
  * Requires PHP:     8.2
  * Author:          Chris Huber, extrachill
@@ -21,7 +21,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.6.12' );
+define( 'DATAMACHINE_VERSION', '0.6.13' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -88,6 +88,26 @@ function datamachine_activate_plugin_defaults() {
 }
 
 add_action('plugins_loaded', 'datamachine_run_datamachine_plugin', 20);
+
+add_action('admin_init', 'datamachine_activation_redirect');
+/**
+ * Redirect to Data Machine admin page after plugin activation.
+ */
+function datamachine_activation_redirect() {
+	if ( ! get_transient( 'datamachine_activation_redirect' ) ) {
+		return;
+	}
+
+	delete_transient( 'datamachine_activation_redirect' );
+
+	// Skip redirect for bulk/network activation
+	if ( isset( $_GET['activate-multi'] ) ) {
+		return;
+	}
+
+	wp_safe_redirect( admin_url( 'admin.php?page=datamachine' ) );
+	exit;
+}
 
 
 /**
@@ -184,6 +204,9 @@ function datamachine_activate_plugin() {
 
 	$timeout = defined( 'MINUTE_IN_SECONDS' ) ? 5 * MINUTE_IN_SECONDS : 5 * 60;
 	set_transient( 'datamachine_activation_notice', true, $timeout );
+
+	// Set redirect flag for activation
+	set_transient( 'datamachine_activation_redirect', true, 30 );
 
 	// Re-schedule any flows with non-manual scheduling
 	datamachine_activate_scheduled_flows();
