@@ -97,12 +97,16 @@ export default function ConfigureStepModal( {
 	const aiDefaults = providersResponse?.defaults || { provider: '', model: '' };
 
 	// Use TanStack Query for tools data
-	const { data: tools } = useTools();
+	const { data: tools, isLoading: isLoadingTools } = useTools();
 
 	/**
-	 * Reset form when modal opens with new config
+	 * Apply defaults when async data loads
 	 */
 	useEffect( () => {
+		if ( isLoadingProviders || isLoadingTools ) {
+			return;
+		}
+
 		formState.reset({
 			provider: currentConfig?.provider || aiDefaults.provider,
 			model: currentConfig?.model || aiDefaults.model,
@@ -110,22 +114,20 @@ export default function ConfigureStepModal( {
 		});
 
 		// Pre-populate with all globally enabled tools for new AI steps
-		if ( ! currentConfig?.enabled_tools ) {
-			if ( tools ) {
-				const availableTools = Object.entries( tools )
-					.filter(
-						( [ id, tool ] ) =>
-							tool.configured && tool.globally_enabled
-					)
-					.map( ( [ id ] ) => id );
-				setSelectedTools( availableTools );
-			}
-		} else {
+		if ( ! currentConfig?.enabled_tools && tools ) {
+			const availableTools = Object.entries( tools )
+				.filter(
+					( [ id, tool ] ) =>
+						tool.configured && tool.globally_enabled
+				)
+				.map( ( [ id ] ) => id );
+			setSelectedTools( availableTools );
+		} else if ( currentConfig?.enabled_tools ) {
 			setSelectedTools( currentConfig.enabled_tools );
 		}
 
 		formState.setError( null );
-	}, [ configKey, aiDefaults.provider, aiDefaults.model, tools ] );
+	}, [ configKey, aiDefaults.provider, aiDefaults.model, tools, isLoadingProviders, isLoadingTools ] );
 
 	/**
 	 * Get provider options
@@ -216,7 +218,7 @@ export default function ConfigureStepModal( {
 					value={ formState.data.provider }
 					options={ providerOptions }
 					onChange={ handleProviderChange }
-					disabled={ isLoadingProviders }
+					disabled={ isLoadingProviders || isLoadingTools }
 					help={ __(
 						'Choose the AI provider for this step.',
 						'datamachine'
@@ -228,7 +230,7 @@ export default function ConfigureStepModal( {
 					value={ formState.data.model }
 					options={ modelOptions }
 					onChange={ (value) => formState.updateField('model', value) }
-					disabled={ ! formState.data.provider }
+					disabled={ isLoadingProviders || isLoadingTools || ! formState.data.provider }
 					help={ __( 'Choose the AI model to use.', 'datamachine' ) }
 				/>
 

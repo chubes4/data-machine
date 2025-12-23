@@ -5,6 +5,25 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.18] - 2025-12-23
+
+### Improved
+- **WordPress Publishing Duplication Prevention** - Added content sanitization to prevent duplicate source attribution and featured image references when AI-generated content is published
+  - Removes AI-generated source links before system adds its own attribution
+  - Removes featured image references from content (figure blocks, img tags, markdown images)
+  - Cleaner published content without redundant elements
+
+### Fixed
+- **AI Step Configuration Loading State** - Fixed race condition where AI step form could initialize before tools data finished loading
+  - Added `isLoadingTools` state tracking to ConfigureStepModal
+  - Form now waits for both providers and tools data before resetting
+  - Dropdowns properly disabled during async data loading
+
+### Technical Details
+- **WordPressPublishHelper**: Added `stripDuplicateSourceAttribution()` with comprehensive regex patterns for duplicate detection
+- **WordPressPublishHelper**: Added `stripFeaturedImageFromContent()` to prevent image duplication in published content
+- **ConfigureStepModal**: Enhanced useEffect with loading state checks to prevent premature form initialization
+
 ## [0.6.17] - 2025-12-23
 
 ### Improved
