@@ -129,11 +129,9 @@ class WordPress extends PublishHandler {
             );
         }
         
-    $content = wp_unslash($parameters['content']);
-    $content = WordPressPublishHelper::stripDuplicateSourceAttribution($content, $engine->getSourceUrl());
-    $content = WordPressPublishHelper::stripFeaturedImageFromContent($content, $engine->getImagePath());
-    $content = WordPressPublishHelper::applySourceAttribution($content, $engine->getSourceUrl(), $handler_config);
-    $content = wp_filter_post_kses($content);
+        $content = wp_unslash($parameters['content']);
+        $content = WordPressPublishHelper::applySourceAttribution($content, $engine->getSourceUrl(), $handler_config);
+        $content = wp_filter_post_kses($content);
         
         $post_data = [
             'post_title' => sanitize_text_field(wp_unslash($parameters['title'])),

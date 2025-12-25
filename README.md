@@ -4,8 +4,8 @@ Contributors: extrachill
 Tags: ai, automation, content, workflow, pipeline, chat
 Requires at least: 6.2
 Tested up to: 6.8
-Requires PHP: 8.0
-Stable tag: 0.6.15
+Requires PHP: 8.2
+Stable tag: 0.6.19
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -30,7 +30,7 @@ AI-first WordPress plugin for content processing workflows with a visual pipelin
 
 ## Requirements
 
-- WordPress 6.2 or higher and PHP 8.0 or higher.
+- WordPress 6.2 or higher and PHP 8.2 or higher.
 - Composer for dependency management and vendor autoloading.
 - Action Scheduler for scheduled flow execution when jobs rely on cron.
 

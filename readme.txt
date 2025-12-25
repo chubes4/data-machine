@@ -3,8 +3,8 @@ Contributors: extrachill
 Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
-Requires PHP: 8.0
-Stable tag: 0.6.18
+Requires PHP: 8.2
+Stable tag: 0.6.19
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,7 +28,7 @@ Data Machine is a powerful WordPress automation plugin that combines AI processi
 **Requirements:**
 
 * WordPress 6.2 or higher
-* PHP 8.0 or higher
+* PHP 8.2 or higher
 * Action Scheduler (woocommerce/action-scheduler)
 * At least one AI provider API key (OpenAI, Anthropic, Google, Grok, or OpenRouter)
 

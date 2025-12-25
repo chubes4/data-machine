@@ -5,6 +5,22 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.19] - 2025-12-24
+
+### Changed
+- **WordPress Publishing Simplification** - Removed content sanitization methods for duplicate prevention (reverts v0.6.18 approach)
+  - Removed `stripDuplicateSourceAttribution()` and `stripFeaturedImageFromContent()` from WordPressPublishHelper
+  - Simplified WordPress publish handler to rely on standard WordPress content sanitization
+  - Fixed indentation in WordPress publish handler
+
+### Fixed
+- **PHP Requirement Documentation** - Corrected PHP requirement from 8.0 to 8.2 across all documentation files
+- **Version Inconsistencies** - Updated composer.json version from 0.6.13 to current 0.6.19
+
+### Technical Details
+- **Code Reduction**: -101 lines removed from WordPressPublishHelper.php
+- **Simplification**: Content attribution and image handling now managed through standard WordPress sanitization only
+
 ## [0.6.18] - 2025-12-23
 
 ### Improved
