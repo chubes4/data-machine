@@ -5,6 +5,15 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.21] - 2025-12-25
+
+### Improved
+- **WordPress Publish Schema Documentation** - Enhanced content field description in WordPress publish handler schema to clarify that source URL attribution and images are handled automatically by the system
+
+### Technical Details
+- **Schema Clarity**: Updated field description to prevent duplicate attribution or image handling in AI-generated content
+- **WordPress Publish Handler**: Single line modified in schema definition for improved user/developer understanding
+
 ## [0.6.20] - 2025-12-25
 
 ### Fixed

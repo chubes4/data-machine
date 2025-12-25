@@ -50,7 +50,7 @@ class WordPress extends PublishHandler {
                         'content' => [
                             'type' => 'string',
                             'required' => true,
-                            'description' => 'The main content of the post in HTML format'
+                            'description' => 'The main content of the post in HTML format. Do not include source URL attribution or images - these are handled automatically by the system.'
                         ]
                     ];
 
