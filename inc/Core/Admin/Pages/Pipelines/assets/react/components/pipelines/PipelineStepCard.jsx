@@ -77,8 +77,8 @@ export default function PipelineStepCard( {
 				const response = await updateSystemPrompt(
 					step.pipeline_step_id,
 					prompt,
-					aiConfig.ai_provider,
-					aiConfig.ai_model,
+					aiConfig.provider,
+					aiConfig.model,
 					[], // enabledTools - not available in inline editing
 					step.step_type,
 					pipelineId

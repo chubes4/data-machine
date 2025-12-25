@@ -28,6 +28,7 @@ export default function ModalManager({
   const baseProps = {
     onClose: closeModal,
     ...modalData,
+    onSuccess: onModalSuccess,
     handlers,
     handlerDetails: modalData.handlerDetails ?? handlerDetails,
     onChangeHandler,

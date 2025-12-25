@@ -4,7 +4,7 @@
  * Modal for configuring AI provider and model for AI steps.
  */
 
-import { useState, useEffect, useMemo, useRef } from '@wordpress/element';
+import { useState, useEffect, useMemo } from '@wordpress/element';
 import {
 	Modal,
 	Button,
@@ -12,8 +12,8 @@ import {
 	TextareaControl,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { updateSystemPrompt } from '../../utils/api';
 import { useProviders, useTools } from '../../queries/config';
+import { useUpdateSystemPrompt } from '../../queries/pipelines';
 import { useFormState } from '../../hooks/useFormState';
 import AIToolsSelector from './configure-step/AIToolsSelector';
 
@@ -41,6 +41,8 @@ export default function ConfigureStepModal( {
 		currentConfig?.enabled_tools || []
 	);
 
+	const updateMutation = useUpdateSystemPrompt();
+
 	const configKey = useMemo(() =>
 		JSON.stringify({
 			provider: currentConfig?.provider,
@@ -67,20 +69,17 @@ export default function ConfigureStepModal( {
 			return null;
 		},
 		onSubmit: async (data) => {
-			const response = await updateSystemPrompt(
-				pipelineStepId,
-				data.systemPrompt,
-				data.provider,
-				data.model,
-				selectedTools,
+			const response = await updateMutation.mutateAsync({
+				stepId: pipelineStepId,
+				prompt: data.systemPrompt,
+				provider: data.provider,
+				model: data.model,
+				enabledTools: selectedTools,
 				stepType,
 				pipelineId
-			);
+			});
 
 			if ( response.success ) {
-				if ( onSuccess ) {
-					onSuccess();
-				}
 				onClose();
 			} else {
 				throw new Error(
@@ -116,10 +115,7 @@ export default function ConfigureStepModal( {
 		// Pre-populate with all globally enabled tools for new AI steps
 		if ( ! currentConfig?.enabled_tools && tools ) {
 			const availableTools = Object.entries( tools )
-				.filter(
-					( [ id, tool ] ) =>
-						tool.configured && tool.globally_enabled
-				)
+				.filter( ( [ id, tool ] ) => tool.globally_enabled )
 				.map( ( [ id ] ) => id );
 			setSelectedTools( availableTools );
 		} else if ( currentConfig?.enabled_tools ) {

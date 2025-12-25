@@ -5,6 +5,23 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.20] - 2025-12-25
+
+### Fixed
+- **Pipeline Step Configuration** - Fixed AI provider property names from `ai_provider`/`ai_model` to `provider`/`model` in PipelineStepCard inline editing
+- **Mutation Pattern** - Migrated ConfigureStepModal from direct API call to useUpdateSystemPrompt mutation for proper React Query integration
+- **Modal Success Callback** - Added onSuccess prop propagation to ModalManager baseProps for consistent modal callback handling
+
+### Improved
+- **Tool Selection Logic** - Removed unnecessary `configured` check from AIToolsSelector, now only filters by `globally_enabled`
+- **Code Cleanliness** - Removed unused `useRef` import from ConfigureStepModal
+- **Success Callback Handling** - Simplified ConfigureStepModal success callback to remove redundant onSuccess check
+
+### Technical Details
+- **React Query Pattern**: ConfigureStepModal now uses mutation with automatic cache invalidation
+- **Data Contract Consistency**: Fixed property name mismatch in PipelineStepCard inline editing
+- **Code Changes**: 3 React components modified with improved mutation patterns and cleaner code
+
 ## [0.6.19] - 2025-12-24
 
 ### Changed
