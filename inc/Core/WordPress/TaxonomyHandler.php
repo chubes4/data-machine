@@ -64,7 +64,7 @@ class TaxonomyHandler {
         }
         $taxonomies = self::getPublicTaxonomies($post_type);
 
-        $this->logTaxonomyOperation('debug', 'Processing taxonomies for post', [
+        do_action('datamachine_log', 'debug', 'Processing taxonomies for post', [
             'post_id' => $post_id,
             'post_type' => $post_type,
             'found_taxonomies' => array_keys($taxonomies)
@@ -78,7 +78,7 @@ class TaxonomyHandler {
             $field_key = "taxonomy_{$taxonomy->name}_selection";
             $selection = $handler_config[$field_key] ?? 'skip';
 
-            $this->logTaxonomyOperation('debug', "Taxonomy check: {$taxonomy->name}", [
+            do_action('datamachine_log', 'debug', "Taxonomy check: {$taxonomy->name}", [
                 'selection' => $selection,
                 'field_key' => $field_key,
                 'param_name' => $this->getParameterName($taxonomy->name),
@@ -233,7 +233,7 @@ class TaxonomyHandler {
         if (!empty($param_value)) {
             $taxonomy_result = $this->assignTaxonomy($post_id, $taxonomy->name, $param_value);
 
-            $this->logTaxonomyOperation('debug', 'WordPress Tool: Applied AI-decided taxonomy', [
+            do_action('datamachine_log', 'debug', 'WordPress Tool: Applied AI-decided taxonomy', [
                 'taxonomy_name' => $taxonomy->name,
                 'parameter_name' => $param_name,
                 'parameter_value' => $param_value,
@@ -301,7 +301,7 @@ class TaxonomyHandler {
             if (is_wp_error($result)) {
                 return $this->createErrorResult($result->get_error_message());
             } else {
-                $this->logTaxonomyOperation('debug', 'WordPress Tool: Applied pre-selected taxonomy', [
+                do_action('datamachine_log', 'debug', 'WordPress Tool: Applied pre-selected taxonomy', [
                     'taxonomy_name' => $taxonomy_name,
                     'term_id' => $term_id,
                     'term_name' => $term_name
@@ -372,7 +372,7 @@ class TaxonomyHandler {
 
         $term_result = wp_insert_term($term_name, $taxonomy_name);
         if (is_wp_error($term_result)) {
-            $this->logTaxonomyOperation('warning', 'Failed to create taxonomy term', [
+            do_action('datamachine_log', 'warning', 'Failed to create taxonomy term', [
                 'taxonomy' => $taxonomy_name,
                 'term_name' => $term_name,
                 'error' => $term_result->get_error_message()
@@ -401,9 +401,5 @@ class TaxonomyHandler {
             'success' => false,
             'error' => $error_message
         ];
-    }
-
-    private function logTaxonomyOperation(string $level, string $message, array $context): void {
-        do_action('datamachine_log', $level, $message, $context);
     }
 }

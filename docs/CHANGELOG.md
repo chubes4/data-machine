@@ -5,6 +5,15 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.22] - 2025-12-26
+
+### Changed
+- **TaxonomyHandler Logging Simplification** - Removed unnecessary `logTaxonomyOperation()` method and replaced with direct `do_action('datamachine_log', ...)` calls for cleaner code
+
+### Technical Details
+- **Code Simplification**: Eliminated 8 lines by removing intermediate logging method abstraction
+- **No Functional Changes**: Logging behavior unchanged; removed unnecessary method wrapper
+
 ## [0.6.21] - 2025-12-25
 
 ### Improved
