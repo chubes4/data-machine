@@ -5,6 +5,20 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.23] - 2025-12-30
+
+### Added
+- **HandlerService** - New centralized service for handler discovery, validation, and lookup across the plugin, improving architectural consistency and reliability
+- **Atomic CreateFlow Configurations** - Enhanced the `CreateFlow` AI tool to support optional `step_configs` during flow creation, enabling the AI to create and fully configure a flow in a single step
+
+### Improved
+- **AI Tool Performance** - Optimized `CreateFlow` tool to utilize `FlowStepManager` and `HandlerService` for more robust step-level configuration and validation
+
+### Technical Details
+- **New Service Layer Component**: Added `inc/Services/HandlerService.php` to centralize handler-related business logic
+- **Tool Logic Refactoring**: Updated `inc/Api/Chat/Tools/CreateFlow.php` to support complex object parameters for atomic flow setup
+- **Atomic Configuration**: AI agents can now provide `handler_slug`, `handler_config`, and `user_message` for multiple steps during `create_flow` tool calls
+
 ## [0.6.22] - 2025-12-26
 
 ### Changed

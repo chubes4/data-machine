@@ -16,6 +16,8 @@ if (!defined('ABSPATH')) {
 
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 use DataMachine\Services\FlowManager;
+use DataMachine\Services\FlowStepManager;
+use DataMachine\Services\HandlerService;
 use DataMachine\Core\Database\Flows\Flows as FlowsDB;
 
 class CreateFlow {
@@ -34,7 +36,7 @@ class CreateFlow {
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
-            'description' => 'Create a new flow instance for an existing pipeline. The flow automatically syncs steps from the pipeline. After creation, use configure_flow_step to set handler configurations for each step.',
+            'description' => 'Create a new flow for a pipeline with optional step configurations. Use api_query GET /pipelines/{id} first to get pipeline_step_ids for step_configs keys. See configure_flow_steps for handler_config field documentation.',
             'parameters' => [
                 'pipeline_id' => [
                     'type' => 'integer',
@@ -50,6 +52,11 @@ class CreateFlow {
                     'type' => 'object',
                     'required' => false,
                     'description' => 'Scheduling configuration: {interval: "manual|hourly|daily|weekly|monthly"} or {interval: "one_time", timestamp: unix_timestamp}'
+                ],
+                'step_configs' => [
+                    'type' => 'object',
+                    'required' => false,
+                    'description' => 'Step configurations keyed by pipeline_step_id. Values: {handler_slug?, handler_config?, user_message?}'
                 ]
             ]
         ];
@@ -118,19 +125,110 @@ class CreateFlow {
         $flow_config = $result['flow_data']['flow_config'] ?? [];
         $flow_step_ids = array_keys($flow_config);
 
+        // Apply step configurations if provided
+        $config_results = ['applied' => [], 'errors' => []];
+        if (!empty($parameters['step_configs'])) {
+            $config_results = $this->applyStepConfigs($result['flow_id'], $parameters['step_configs']);
+        }
+
+        $response_data = [
+            'flow_id' => $result['flow_id'],
+            'flow_name' => $result['flow_name'],
+            'pipeline_id' => $result['pipeline_id'],
+            'synced_steps' => $result['synced_steps'],
+            'flow_step_ids' => $flow_step_ids,
+            'scheduling' => $scheduling_config['interval'],
+        ];
+
+        if (!empty($config_results['applied'])) {
+            $response_data['configured_steps'] = $config_results['applied'];
+        }
+
+        if (!empty($config_results['errors'])) {
+            $response_data['configuration_errors'] = $config_results['errors'];
+        }
+
+        $response_data['message'] = empty($parameters['step_configs'])
+            ? 'Flow created. Use configure_flow_steps to set handler configurations.'
+            : (empty($config_results['errors'])
+                ? 'Flow created and configured.'
+                : 'Flow created with some configuration errors.');
+
         return [
             'success' => true,
-            'data' => [
-                'flow_id' => $result['flow_id'],
-                'flow_name' => $result['flow_name'],
-                'pipeline_id' => $result['pipeline_id'],
-                'synced_steps' => $result['synced_steps'],
-                'flow_step_ids' => $flow_step_ids,
-                'scheduling' => $scheduling_config['interval'],
-                'message' => 'Flow created successfully. Use configure_flow_step with the flow_step_ids to set handler configurations.'
-            ],
+            'data' => $response_data,
             'tool_name' => 'create_flow'
         ];
+    }
+
+    /**
+     * Apply step configurations to a newly created flow.
+     *
+     * @param int $flow_id Flow ID
+     * @param array $step_configs Configs keyed by pipeline_step_id
+     * @return array{applied: array, errors: array}
+     */
+    private function applyStepConfigs(int $flow_id, array $step_configs): array {
+        $flow_step_manager = new FlowStepManager();
+        $handler_service = new HandlerService();
+        $applied = [];
+        $errors = [];
+
+        foreach ($step_configs as $pipeline_step_id => $config) {
+            $flow_step_id = $pipeline_step_id . '_' . $flow_id;
+            $step_applied = false;
+
+            // Apply handler_slug + handler_config if provided
+            if (!empty($config['handler_slug'])) {
+                $validation = $handler_service->validate($config['handler_slug']);
+                if (!$validation['valid']) {
+                    $errors[] = [
+                        'pipeline_step_id' => $pipeline_step_id,
+                        'error' => $validation['error']
+                    ];
+                    continue;
+                }
+
+                $handler_config = $config['handler_config'] ?? [];
+                $success = $flow_step_manager->updateHandler(
+                    $flow_step_id,
+                    $config['handler_slug'],
+                    $handler_config
+                );
+
+                if (!$success) {
+                    $errors[] = [
+                        'pipeline_step_id' => $pipeline_step_id,
+                        'error' => 'Failed to update handler'
+                    ];
+                    continue;
+                }
+                $step_applied = true;
+            }
+
+            // Apply user_message if provided
+            if (!empty($config['user_message'])) {
+                $success = $flow_step_manager->updateUserMessage(
+                    $flow_step_id,
+                    $config['user_message']
+                );
+
+                if (!$success) {
+                    $errors[] = [
+                        'pipeline_step_id' => $pipeline_step_id,
+                        'error' => 'Failed to update user_message'
+                    ];
+                    continue;
+                }
+                $step_applied = true;
+            }
+
+            if ($step_applied) {
+                $applied[] = $flow_step_id;
+            }
+        }
+
+        return ['applied' => $applied, 'errors' => $errors];
     }
 
     private function validateSchedulingConfig(array $config): bool|string {
