@@ -30,10 +30,12 @@ class ConfigureFlowSteps {
         $handler_docs = HandlerDocumentation::buildAllHandlersSections();
 
         $description = 'Configure flow steps with handlers or AI user messages. Supports single-step or bulk pipeline-scoped operations.' . "\n\n"
+            . 'BEFORE CONFIGURING:' . "\n"
+            . '- Query existing flows in the pipeline to learn established patterns' . "\n"
+            . '- Only use handler_config fields documented below - unknown fields are rejected' . "\n\n"
             . 'MODES:' . "\n"
             . '- Single: Provide flow_step_id to configure one step' . "\n"
             . '- Bulk: Provide pipeline_id + (step_type and/or handler_slug) to configure all matching steps across all flows' . "\n\n"
-            . 'IMPORTANT: Only use handler_config fields documented below. Do not invent parameters.' . "\n\n"
             . $handler_docs;
 
         return [
@@ -143,6 +145,18 @@ class ConfigureFlowSteps {
                 ];
             }
 
+            // Validate handler_config fields against schema
+            if (!empty($handler_config)) {
+                $validation_result = $this->validateHandlerConfig($effective_handler_slug, $handler_config);
+                if ($validation_result !== true) {
+                    return [
+                        'success' => false,
+                        'error' => $validation_result,
+                        'tool_name' => 'configure_flow_steps'
+                    ];
+                }
+            }
+
             $handler_success = $flow_step_manager->updateHandler($flow_step_id, $effective_handler_slug, $handler_config);
             if (!$handler_success) {
                 return [
@@ -230,6 +244,16 @@ class ConfigureFlowSteps {
                         continue;
                     }
 
+                    // Validate handler_config fields against schema
+                    $validation_result = $this->validateHandlerConfig($effective_handler_slug, $handler_config);
+                    if ($validation_result !== true) {
+                        $errors[] = [
+                            'flow_step_id' => $flow_step_id,
+                            'error' => $validation_result
+                        ];
+                        continue;
+                    }
+
                     $success = $flow_step_manager->updateHandler($flow_step_id, $effective_handler_slug, $handler_config);
                     if (!$success) {
                         $errors[] = [
@@ -297,6 +321,37 @@ class ConfigureFlowSteps {
         }
 
         return $response;
+    }
+
+    /**
+     * Validate handler_config fields against handler schema.
+     *
+     * @param string $handler_slug Handler slug
+     * @param array $handler_config Configuration to validate
+     * @return true|string True if valid, error message if invalid
+     */
+    private function validateHandlerConfig(string $handler_slug, array $handler_config): bool|string {
+        $all_settings = apply_filters('datamachine_handler_settings', [], $handler_slug);
+        $settings_class = $all_settings[$handler_slug] ?? null;
+
+        if (!$settings_class || !method_exists($settings_class, 'get_fields')) {
+            // No settings class = no validation possible, allow through
+            return true;
+        }
+
+        $valid_fields = array_keys($settings_class::get_fields());
+        $unknown_fields = array_diff(array_keys($handler_config), $valid_fields);
+
+        if (!empty($unknown_fields)) {
+            return sprintf(
+                'Unknown handler_config fields for %s: %s. Valid fields: %s',
+                $handler_slug,
+                implode(', ', $unknown_fields),
+                implode(', ', $valid_fields)
+            );
+        }
+
+        return true;
     }
 }
 

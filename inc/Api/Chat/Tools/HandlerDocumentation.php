@@ -108,7 +108,10 @@ class HandlerDocumentation {
         
         $config_fields = self::getHandlerConfigFields($slug);
         if (!empty($config_fields)) {
-            $entry .= "  handler_config: {" . implode(', ', $config_fields) . "}\n";
+            $entry .= "  handler_config:\n";
+            foreach ($config_fields as $field_info) {
+                $entry .= "    {$field_info}\n";
+            }
         }
         
         if ($requires_auth) {
@@ -122,7 +125,7 @@ class HandlerDocumentation {
      * Get configuration fields for a handler from its settings class.
      *
      * @param string $handler_slug Handler slug
-     * @return array Formatted field list (e.g., ["field (required)", "field?"])
+     * @return array Formatted field list with types and descriptions
      */
     public static function getHandlerConfigFields(string $handler_slug): array {
         $all_settings = apply_filters('datamachine_handler_settings', [], $handler_slug);
@@ -137,11 +140,20 @@ class HandlerDocumentation {
         
         foreach ($fields as $key => $config) {
             $required = $config['required'] ?? false;
+            $type = $config['type'] ?? 'text';
+            $desc = $config['description'] ?? '';
             
-            if ($required) {
-                $formatted[] = "{$key} (required)";
+            // Truncate description if too long
+            if (strlen($desc) > 80) {
+                $desc = substr($desc, 0, 77) . '...';
+            }
+            
+            $required_marker = $required ? ' (required)' : '';
+            
+            if (!empty($desc)) {
+                $formatted[] = "{$key}{$required_marker} ({$type}): {$desc}";
             } else {
-                $formatted[] = "{$key}?";
+                $formatted[] = "{$key}{$required_marker} ({$type})";
             }
         }
         

@@ -36,7 +36,9 @@ class CreateFlow {
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
-            'description' => 'Create a new flow for a pipeline with optional step configurations. Use api_query GET /pipelines/{id} first to get pipeline_step_ids for step_configs keys. See configure_flow_steps for handler_config field documentation.',
+            'description' => 'Create a new flow for a pipeline with optional step configurations.' . "\n\n"
+                . 'BEFORE CREATING: Query existing flows in the pipeline (GET /datamachine/v1/pipelines/{id}) to learn established configuration patterns.' . "\n\n"
+                . 'Use pipeline_step_ids from the pipeline response for step_configs keys. See configure_flow_steps for handler_config field documentation.',
             'parameters' => [
                 'pipeline_id' => [
                     'type' => 'integer',

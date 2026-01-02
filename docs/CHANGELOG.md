@@ -5,6 +5,21 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.24] - 2026-01-02
+
+### Added
+- **Strict Handler Configuration Validation** - Implemented automated schema-based validation for AI tools (`ConfigureFlowSteps`), rejecting unknown `handler_config` fields to improve agent reliability
+- **Enhanced AI Tool Documentation** - Refactored `HandlerDocumentation` utility to include field types and descriptions in tool definitions, providing AI agents with better context for parameter selection
+
+### Improved
+- **AI Directives** - Updated `ChatAgentDirective` with refined guidance on pattern-based discovery, instructing agents to query existing flows before creating new workflows
+- **Tool Logic** - Enhanced `ConfigureFlowSteps` and `CreateFlow` tool descriptions to emphasize pattern discovery and schema compliance
+
+### Technical Details
+- **Validation Logic**: Added `validateHandlerConfig()` method to `inc/Api/Chat/Tools/ConfigureFlowSteps.php` for real-time parameter checking
+- **Documentation Refactoring**: Updated `inc/Api/Chat/Tools/HandlerDocumentation.php` to parse and format field types and truncated descriptions
+- **Directive Updates**: Refined "Discovery" and "Configuration" sections in `inc/Api/Chat/ChatAgentDirective.php`
+
 ## [0.6.23] - 2025-12-30
 
 ### Added
