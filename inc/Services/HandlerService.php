@@ -5,7 +5,7 @@
  * Centralized handler discovery, validation, and lookup.
  *
  * @package DataMachine\Services
- * @since 0.6.19
+ * @since 0.6.25
  */
 
 namespace DataMachine\Services;

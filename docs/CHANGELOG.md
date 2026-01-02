@@ -5,6 +5,22 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.25] - 2026-01-02
+
+### Added
+- **Cross-Pipeline Flow Copying** - Implemented advanced flow duplication that allows copying flows between different pipelines, with automatic step mapping and compatibility validation
+- **CopyFlow Chat Tool** - New AI tool enabling the chat agent to perform complex flow copies with configuration overrides and schedule customization
+- **Step Configuration Overrides** - Support for overriding handler settings and user messages during the flow copy process, enabling rapid creation of variations
+
+### Improved
+- **FlowManager Service** - Enhanced with `copyToPipeline()` method and internal mapping logic for robust flow duplication
+- **Pipeline Compatibility Validation** - Added systematic checks to ensure source and target pipelines have matching step structures before allowing cross-pipeline copies
+
+### Technical Details
+- **New Tool**: Added `inc/Api/Chat/Tools/CopyFlow.php` for conversational flow duplication
+- **Service Enhancement**: Refactored `inc/Services/FlowManager.php` to support cross-pipeline logic and configuration remapping
+- **Validation Logic**: Implemented `validatePipelineCompatibility()` to ensure structural alignment between pipelines
+
 ## [0.6.24] - 2026-01-02
 
 ### Added
