@@ -10,6 +10,7 @@
 
 namespace DataMachine\Services;
 
+use DataMachine\Services\StepTypeService;
 use WP_Error;
 
 defined('ABSPATH') || exit;
@@ -71,8 +72,8 @@ class PipelineStepManager {
             return null;
         }
 
-        $all_step_types = apply_filters('datamachine_step_types', []);
-        $step_type_config = $all_step_types[$step_type] ?? null;
+        $step_type_service = new StepTypeService();
+        $step_type_config = $step_type_service->get($step_type);
 
         if (!$step_type_config) {
             do_action('datamachine_log', 'error', 'Invalid step type for step creation', ['step_type' => $step_type]);
@@ -98,6 +99,9 @@ class PipelineStepManager {
         $success = $this->db_pipelines->update_pipeline($pipeline_id, [
             'pipeline_config' => $pipeline_config
         ]);
+
+        \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
+        do_action('datamachine_chat_pipelines_inventory_cleared');
 
         if (!$success) {
             do_action('datamachine_log', 'error', 'Failed to add step to pipeline', [
@@ -212,6 +216,9 @@ class PipelineStepManager {
             );
         }
 
+        \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
+        do_action('datamachine_chat_pipelines_inventory_cleared');
+
         foreach ($affected_flows as $flow) {
             if (!isset($flow['flow_id']) || empty($flow['flow_id'])) {
                 continue;
@@ -306,6 +313,9 @@ class PipelineStepManager {
             return false;
         }
 
+        \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
+        do_action('datamachine_chat_pipelines_inventory_cleared');
+
         return true;
     }
 
@@ -381,6 +391,9 @@ class PipelineStepManager {
                 ['status' => 500]
             );
         }
+
+        \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
+        do_action('datamachine_chat_pipelines_inventory_cleared');
 
         $flows = $this->db_flows->get_flows_for_pipeline($pipeline_id);
 

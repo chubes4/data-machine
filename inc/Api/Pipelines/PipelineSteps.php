@@ -11,6 +11,7 @@
 namespace DataMachine\Api\Pipelines;
 
 use DataMachine\Services\PipelineStepManager;
+use DataMachine\Services\StepTypeService;
 use WP_REST_Server;
 
 if (!defined('WPINC')) {
@@ -46,9 +47,7 @@ class PipelineSteps {
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_key',
 					'validate_callback' => function( $param ) {
-						$types = apply_filters('datamachine_step_types', []);
-						$valid_step_types = is_array($types) ? array_keys($types) : [];
-						return in_array($param, $valid_step_types, true);
+						return (new StepTypeService())->exists($param);
 					},
 					'description' => __('Step type (supports custom step types)', 'data-machine'),
 				]
@@ -221,8 +220,7 @@ class PipelineSteps {
 			);
 		}
 
-		$all_steps = apply_filters('datamachine_step_types', []);
-		$step_config = $all_steps[$step_type] ?? [];
+		$step_config = (new StepTypeService())->get($step_type) ?? [];
 		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 		$pipeline_steps = $db_pipelines->get_pipeline_config($pipeline_id);
 
@@ -535,6 +533,9 @@ class PipelineSteps {
 				['status' => 500]
 			);
 		}
+
+		\DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
+		do_action('datamachine_chat_pipelines_inventory_cleared');
 
 		$provider_for_log = $step_config_data['provider'] ?? ($existing_config['provider'] ?? null);
 

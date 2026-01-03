@@ -5,6 +5,26 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-01-02
+
+### Added
+- **Modular AI Directive System** - Complete overhaul of AI system prompts into a modular architecture using `DirectiveInterface`, `DirectiveRenderer`, and `DirectiveOutputValidator`
+- **Service Layer Expansion** - Migrated `AuthProviderService` and `StepTypeService` to the OOP services layer for better performance and maintainability
+- **ChatPipelinesDirective** - New specialized directive for handling pipeline-related context in AI conversations
+- **Cross-Pipeline Flow Copying** - (v0.6.25) Implemented advanced flow duplication between different pipelines with automatic step mapping
+
+### Improved
+- **AI Architecture** - Decoupled directive logic from monolithic strings into dedicated classes, improving agent reliability and prompt consistency
+- **PromptBuilder** - Updated to utilize the new modular directive rendering engine
+- **Service Layer Performance** - Enhanced `HandlerService`, `PipelineManager`, and `PipelineStepManager` with standardized patterns
+- **API Response Standardization** - Unified response formats across Chat, Auth, Execute, and Flows endpoints
+
+### Technical Details
+- **New Core Components**: `inc/Engine/AI/Directives/DirectiveInterface.php`, `inc/Engine/AI/Directives/DirectiveRenderer.php`, and `inc/Engine/AI/Directives/DirectiveOutputValidator.php`
+- **New Directives**: Added `inc/Api/Chat/ChatPipelinesDirective.php` for conversational pipeline management
+- **New Services**: Migrated `inc/Services/AuthProviderService.php` and `inc/Services/StepTypeService.php`
+- **Plan Update**: Updated `WP-AI-CLIENT-MIGRATION.md` to target v0.8.0 for native AI client integration
+
 ## [0.6.25] - 2026-01-02
 
 ### Added

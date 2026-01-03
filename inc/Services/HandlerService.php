@@ -2,7 +2,8 @@
 /**
  * Handler Service
  *
- * Centralized handler discovery, validation, and lookup.
+ * Centralized handler discovery, validation, and lookup with request-level caching.
+ * Single source of truth for handler data access throughout the codebase.
  *
  * @package DataMachine\Services
  * @since 0.6.25
@@ -15,13 +16,33 @@ defined('ABSPATH') || exit;
 class HandlerService {
 
     /**
-     * Get all registered handlers, optionally filtered by step type.
+     * Cached handlers by step type.
+     *
+     * @var array<string, array>
+     */
+    private static array $handlers_cache = [];
+
+    /**
+     * Cached handler settings classes.
+     *
+     * @var array<string, object|null>
+     */
+    private static array $settings_cache = [];
+
+    /**
+     * Get all registered handlers, optionally filtered by step type (cached).
      *
      * @param string|null $step_type Step type filter (fetch, publish, update, etc.)
      * @return array Handlers array keyed by slug
      */
     public function getAll(?string $step_type = null): array {
-        return apply_filters('datamachine_handlers', [], $step_type);
+        $cache_key = $step_type ?? '__all__';
+
+        if (!isset(self::$handlers_cache[$cache_key])) {
+            self::$handlers_cache[$cache_key] = apply_filters('datamachine_handlers', [], $step_type);
+        }
+
+        return self::$handlers_cache[$cache_key];
     }
 
     /**
@@ -73,10 +94,42 @@ class HandlerService {
      * Get handler definition by slug.
      *
      * @param string $handler_slug Handler slug
+     * @param string|null $step_type Optional step type filter for more targeted lookup
      * @return array|null Handler definition or null
      */
-    public function get(string $handler_slug): ?array {
-        $handlers = $this->getAll();
+    public function get(string $handler_slug, ?string $step_type = null): ?array {
+        $handlers = $this->getAll($step_type);
         return $handlers[$handler_slug] ?? null;
+    }
+
+    /**
+     * Get settings class instance for a handler (cached).
+     *
+     * @param string $handler_slug Handler slug
+     * @return object|null Settings class instance or null
+     */
+    public function getSettingsClass(string $handler_slug): ?object {
+        if (!array_key_exists($handler_slug, self::$settings_cache)) {
+            $all_settings = apply_filters('datamachine_handler_settings', [], $handler_slug);
+            self::$settings_cache[$handler_slug] = $all_settings[$handler_slug] ?? null;
+        }
+
+        return self::$settings_cache[$handler_slug];
+    }
+
+    /**
+     * Get configuration fields for a handler.
+     *
+     * @param string $handler_slug Handler slug
+     * @return array Field definitions from the handler's settings class
+     */
+    public function getConfigFields(string $handler_slug): array {
+        $settings_class = $this->getSettingsClass($handler_slug);
+
+        if (!$settings_class || !method_exists($settings_class, 'get_fields')) {
+            return [];
+        }
+
+        return $settings_class::get_fields();
     }
 }

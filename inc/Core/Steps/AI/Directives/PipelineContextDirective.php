@@ -21,46 +21,31 @@ namespace DataMachine\Core\Steps\AI\Directives;
 
 defined('ABSPATH') || exit;
 
-class PipelineContextDirective {
+class PipelineContextDirective implements \DataMachine\Engine\AI\Directives\DirectiveInterface {
 
-	/**
-	 * Inject pipeline context files into AI request.
-	 *
-	 * @param array $request AI request array with messages
-	 * @param string $provider_name AI provider name
-	 * @param array $tools Available tools (unused)
-	 * @param string|null $pipeline_step_id Pipeline step ID for context
-	 * @param array $payload Execution payload (unused)
-	 * @return array Modified request with context files added
-	 */
-	public static function inject( $request, $provider_name, $tools, $pipeline_step_id = null, array $payload = [] ): array {
-		if ( ! isset( $request['messages'] ) || ! is_array( $request['messages'] ) ) {
-			return $request;
-		}
-
+	public static function get_outputs(string $provider_name, array $tools, ?string $step_id = null, array $payload = []): array {
+		$pipeline_step_id = $step_id;
 		if ( empty( $pipeline_step_id ) ) {
-			return $request;
+			return [];
 		}
 
-		// Get pipeline ID from step config
 		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 		$step_config = $db_pipelines->get_pipeline_step_config( $pipeline_step_id );
 		$pipeline_id = $step_config['pipeline_id'] ?? null;
 
 		if ( empty( $pipeline_id ) ) {
-			return $request;
+			return [];
 		}
-
-		// Get context files from pipeline config
 
 		$context_files  = $db_pipelines->get_pipeline_context_files( $pipeline_id );
 		$uploaded_files = $context_files['uploaded_files'] ?? [];
 
 		if ( empty( $uploaded_files ) ) {
-			return $request;
+			return [];
 		}
 
-		// Inject each file as a system message
+		$outputs = [];
+
 		foreach ( $uploaded_files as $file_info ) {
 			$file_path = $file_info['persistent_path'] ?? '';
 			$mime_type = $file_info['mime_type'] ?? '';
@@ -78,19 +63,11 @@ class PipelineContextDirective {
 				continue;
 			}
 
-			array_push(
-				$request['messages'],
-				[
-					'role'    => 'system',
-					'content' => [
-						[
-							'type'      => 'file',
-							'file_path' => $file_path,
-							'mime_type' => $mime_type,
-						],
-					],
-				]
-			);
+			$outputs[] = [
+				'type' => 'system_file',
+				'file_path' => $file_path,
+				'mime_type' => $mime_type,
+			];
 		}
 
 		if ( ! empty( $uploaded_files ) ) {
@@ -107,7 +84,7 @@ class PipelineContextDirective {
 			);
 		}
 
-		return $request;
+		return $outputs;
 	}
 }
 

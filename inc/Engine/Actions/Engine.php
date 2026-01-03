@@ -209,8 +209,8 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
             }
 
             $step_type = $flow_step_config['step_type'];
-            $all_steps = apply_filters('datamachine_step_types', []);
-            $step_definition = $all_steps[$step_type] ?? null;
+            $step_type_service = new \DataMachine\Services\StepTypeService();
+            $step_definition = $step_type_service->get($step_type);
 
             if ( ! $step_definition ) {
                 $job_manager->fail($job_id, 'step_execution_failure', [

@@ -17,6 +17,7 @@ if (!defined('ABSPATH')) {
 
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 use DataMachine\Services\FlowStepManager;
+use DataMachine\Services\HandlerService;
 use DataMachine\Core\Database\Flows\Flows as FlowsDB;
 
 class ConfigureFlowSteps {
@@ -331,15 +332,14 @@ class ConfigureFlowSteps {
      * @return true|string True if valid, error message if invalid
      */
     private function validateHandlerConfig(string $handler_slug, array $handler_config): bool|string {
-        $all_settings = apply_filters('datamachine_handler_settings', [], $handler_slug);
-        $settings_class = $all_settings[$handler_slug] ?? null;
+        $handler_service = new HandlerService();
+        $valid_fields = array_keys($handler_service->getConfigFields($handler_slug));
 
-        if (!$settings_class || !method_exists($settings_class, 'get_fields')) {
+        if (empty($valid_fields)) {
             // No settings class = no validation possible, allow through
             return true;
         }
 
-        $valid_fields = array_keys($settings_class::get_fields());
         $unknown_fields = array_diff(array_keys($handler_config), $valid_fields);
 
         if (!empty($unknown_fields)) {

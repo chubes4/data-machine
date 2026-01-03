@@ -2,7 +2,7 @@
 
 ## Migration: `chubes4/ai-http-client` → `wordpress/wp-ai-client`
 
-**Target Version**: Data Machine v0.7.0  
+**Target Version**: Data Machine v0.8.0  
 **Status**: Planning  
 **Approach**: Full Native Integration (no adapter layer)
 

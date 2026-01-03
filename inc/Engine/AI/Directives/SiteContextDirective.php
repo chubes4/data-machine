@@ -17,45 +17,30 @@
 namespace DataMachine\Engine\AI\Directives;
 
 use DataMachine\Core\PluginSettings;
+use DataMachine\Engine\AI\Directives\DirectiveInterface;
 
 defined('ABSPATH') || exit;
 
-class SiteContextDirective {
+class SiteContextDirective implements DirectiveInterface {
 
-    /**
-     * Inject WordPress site context into AI request.
-     *
-     * @param array $request AI request array with messages
-     * @param string $provider_name AI provider name
-     * @param array $tools Available tools (unused)
-     * @param string|null $pipeline_step_id Pipeline step ID (unused)
-     * @param array $payload Execution payload (unused)
-     * @return array Modified request with site context added
-     */
-    public static function inject($request, $provider_name, $tools, $pipeline_step_id = null, array $payload = []): array {
+    public static function get_outputs(string $provider_name, array $tools, ?string $step_id = null, array $payload = []): array {
         if (!self::is_site_context_enabled()) {
-            return $request;
+            return [];
         }
 
-        if (!isset($request['messages']) || !is_array($request['messages'])) {
-            return $request;
-        }
-
-        $context_message = self::generate_site_context();
-
-        if (empty($context_message)) {
+        $context_data = SiteContext::get_context();
+        if (empty($context_data) || !is_array($context_data)) {
             do_action('datamachine_log', 'warning', 'Site Context Directive: Empty context generated');
-            return $request;
+            return [];
         }
 
-        array_push($request['messages'], [
-            'role' => 'system',
-            'content' => $context_message
-        ]);
-
-
-
-        return $request;
+        return [
+            [
+                'type' => 'system_json',
+                'label' => 'WORDPRESS SITE CONTEXT',
+                'data' => $context_data,
+            ],
+        ];
     }
 
     /**
@@ -67,20 +52,6 @@ class SiteContextDirective {
         return PluginSettings::get('site_context_enabled', true);
     }
 
-    /**
-     * Generate WordPress site context for AI models.
-     *
-     * @return string JSON-formatted site context data
-     */
-    public static function generate_site_context(): string {
-        $context_data = SiteContext::get_context();
-
-        $context_message = "WORDPRESS SITE CONTEXT:\n\n";
-        $context_message .= "The following structured data provides comprehensive information about this WordPress site:\n\n";
-        $context_message .= json_encode($context_data, JSON_PRETTY_PRINT);
-
-        return $context_message;
-    }
 }
 
 /**

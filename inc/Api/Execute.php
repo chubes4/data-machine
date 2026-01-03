@@ -7,6 +7,8 @@
 
 namespace DataMachine\Api;
 
+use DataMachine\Services\StepTypeService;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -283,8 +285,8 @@ class Execute {
             return ['valid' => false, 'error' => 'Workflow must have at least one step'];
         }
 
-        $step_types = apply_filters('datamachine_step_types', []);
-        $valid_types = array_keys($step_types);
+        $step_type_service = new StepTypeService();
+        $valid_types = array_keys($step_type_service->getAll());
 
         foreach ($workflow['steps'] as $index => $step) {
             if (!isset($step['type'])) {

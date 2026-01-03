@@ -11,6 +11,8 @@
 namespace DataMachine\Api\Flows;
 
 use DataMachine\Services\FlowStepManager;
+use DataMachine\Services\HandlerService;
+use DataMachine\Services\StepTypeService;
 
 if (!defined('WPINC')) {
 	die;
@@ -85,9 +87,7 @@ class FlowSteps {
 					'type' => 'string',
 					'sanitize_callback' => 'sanitize_key',
 					'validate_callback' => function( $param ) {
-						$types = apply_filters('datamachine_step_types', []);
-						$valid_step_types = is_array($types) ? array_keys($types) : [];
-						return in_array($param, $valid_step_types, true);
+						return (new StepTypeService())->exists($param);
 					},
 					'description' => __('Step type', 'data-machine'),
 				],
@@ -211,15 +211,8 @@ class FlowSteps {
 			);
 		}
 
-		$all_handlers = apply_filters('datamachine_handlers', [], $step_type);
-		$handler_info = null;
-
-		foreach ($all_handlers as $slug => $config) {
-			if ($slug === $handler_slug) {
-				$handler_info = $config;
-				break;
-			}
-		}
+		$handler_service = new HandlerService();
+		$handler_info = $handler_service->get($handler_slug, $step_type);
 
 		if (!$handler_info) {
 			return new \WP_Error(
@@ -340,8 +333,8 @@ class FlowSteps {
 	 * @return array Sanitized handler settings
 	 */
 	private static function process_handler_settings($handler_slug, $params) {
-		$all_settings = apply_filters('datamachine_handler_settings', [], $handler_slug);
-		$handler_settings = $all_settings[$handler_slug] ?? null;
+		$handler_service = new HandlerService();
+		$handler_settings = $handler_service->getSettingsClass($handler_slug);
 
 		if (!$handler_settings || !method_exists($handler_settings, 'sanitize')) {
 			return [];

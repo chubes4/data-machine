@@ -70,8 +70,12 @@ class PipelineManager {
             do_action('datamachine_log', 'error', "Failed to create flow for pipeline {$pipeline_id}");
         }
 
+        \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
+        do_action('datamachine_chat_pipelines_inventory_cleared');
+
         $pipeline = $this->db_pipelines->get_pipeline($pipeline_id);
         $flows = $this->db_flows->get_flows_for_pipeline($pipeline_id);
+
 
         do_action('datamachine_log', 'info', 'Pipeline created successfully', [
             'pipeline_id' => $pipeline_id,
@@ -86,165 +90,6 @@ class PipelineManager {
             'pipeline_data' => $pipeline,
             'flows' => $flows,
             'creation_mode' => 'simple'
-        ];
-    }
-
-    /**
-     * Create a new pipeline with steps (complete mode).
-     *
-     * @param string $name Pipeline name
-     * @param array $steps Array of step configurations
-     * @param array $options Optional settings (flow_config with flow_name, scheduling_config)
-     * @return array|null Complete pipeline data on success, null on failure
-     */
-    public function createWithSteps(string $name, array $steps, array $options = []): ?array {
-        if (!current_user_can('manage_options')) {
-            do_action('datamachine_log', 'error', 'Insufficient permissions for pipeline creation');
-            return null;
-        }
-
-        $pipeline_name = sanitize_text_field(wp_unslash($name));
-        if (empty(trim($pipeline_name))) {
-            do_action('datamachine_log', 'error', 'Cannot create pipeline - missing or empty pipeline name');
-            return null;
-        }
-
-        $all_step_types = apply_filters('datamachine_step_types', []);
-        foreach ($steps as $step) {
-            $step_type = $step['step_type'] ?? '';
-            if (!isset($all_step_types[$step_type])) {
-                do_action('datamachine_log', 'error', 'Invalid step type in complete pipeline creation', [
-                    'step_type' => $step_type,
-                    'available_types' => array_keys($all_step_types)
-                ]);
-                return null;
-            }
-        }
-
-        $pipeline_id = $this->db_pipelines->create_pipeline([
-            'pipeline_name' => $pipeline_name,
-            'pipeline_config' => []
-        ]);
-
-        if (!$pipeline_id) {
-            do_action('datamachine_log', 'error', 'Failed to create pipeline', ['pipeline_name' => $pipeline_name]);
-            return null;
-        }
-
-        $pipeline_config = [];
-        foreach ($steps as $step) {
-            $pipeline_step_id = $pipeline_id . '_' . wp_generate_uuid4();
-            $step_type = $step['step_type'];
-            $step_type_config = $all_step_types[$step_type] ?? [];
-
-            $pipeline_config[$pipeline_step_id] = [
-                'step_type' => $step_type,
-                'execution_order' => $step['execution_order'] ?? 0,
-                'pipeline_step_id' => $pipeline_step_id,
-                'label' => $step['label'] ?? $step_type_config['label'] ?? ucfirst(str_replace('_', ' ', $step_type))
-            ];
-
-            if ($step_type === 'ai') {
-                if (isset($step['provider'])) {
-                    $pipeline_config[$pipeline_step_id]['provider'] = $step['provider'];
-                }
-                if (isset($step['model'])) {
-                    $pipeline_config[$pipeline_step_id]['model'] = $step['model'];
-                    $pipeline_config[$pipeline_step_id]['providers'] = [
-                        $step['provider'] ?? 'openai' => ['model' => $step['model']]
-                    ];
-                }
-                if (isset($step['system_prompt'])) {
-                    $pipeline_config[$pipeline_step_id]['system_prompt'] = sanitize_textarea_field($step['system_prompt']);
-                }
-            }
-        }
-
-        $success = $this->db_pipelines->update_pipeline($pipeline_id, [
-            'pipeline_config' => $pipeline_config
-        ]);
-
-        if (!$success) {
-            do_action('datamachine_log', 'error', 'Failed to update pipeline configuration', ['pipeline_id' => $pipeline_id]);
-            return null;
-        }
-
-        $flow_config_data = $options['flow_config'] ?? [];
-        $flow_name = $flow_config_data['flow_name'] ?? null;
-
-        if (empty($flow_name)) {
-            do_action('datamachine_log', 'error', 'Cannot create flow - missing or empty flow name');
-            return null;
-        }
-
-        $scheduling_config = $flow_config_data['scheduling_config'] ?? ['interval' => 'manual'];
-
-        $flow_id = $this->db_flows->create_flow([
-            'pipeline_id' => $pipeline_id,
-            'flow_name' => $flow_name,
-            'flow_config' => [],
-            'scheduling_config' => $scheduling_config
-        ]);
-
-        if (!$flow_id) {
-            do_action('datamachine_log', 'error', "Failed to create flow for complete pipeline {$pipeline_id}");
-            return null;
-        }
-
-        $flow_config = [];
-        foreach ($pipeline_config as $pipeline_step_id => $step_config) {
-            $flow_step_id = apply_filters('datamachine_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
-            $flow_config[$flow_step_id] = [
-                'flow_step_id' => $flow_step_id,
-                'step_type' => $step_config['step_type'],
-                'pipeline_step_id' => $pipeline_step_id,
-                'pipeline_id' => $pipeline_id,
-                'flow_id' => $flow_id,
-                'execution_order' => $step_config['execution_order'],
-                'handler' => null
-            ];
-        }
-
-        $this->db_flows->update_flow($flow_id, [
-            'flow_config' => $flow_config
-        ]);
-
-        $step_order_map = [];
-        foreach ($pipeline_config as $pipeline_step_id => $step_config) {
-            $step_order_map[$step_config['execution_order']] = $pipeline_step_id;
-        }
-
-        foreach ($steps as $step) {
-            if (isset($step['handler_slug']) && isset($step['handler_config'])) {
-                $execution_order = $step['execution_order'] ?? 0;
-                $pipeline_step_id = $step_order_map[$execution_order] ?? null;
-
-                if ($pipeline_step_id) {
-                    $flow_step_id = apply_filters('datamachine_generate_flow_step_id', '', $pipeline_step_id, $flow_id);
-                    if ($step['handler_slug']) {
-                        $this->flow_step_manager->updateHandler($flow_step_id, $step['handler_slug'], $step['handler_config'] ?? []);
-                    }
-                }
-            }
-        }
-
-        $pipeline = $this->db_pipelines->get_pipeline($pipeline_id);
-        $flows = $this->db_flows->get_flows_for_pipeline($pipeline_id);
-
-        do_action('datamachine_log', 'info', 'Complete pipeline created successfully', [
-            'pipeline_id' => $pipeline_id,
-            'pipeline_name' => $pipeline_name,
-            'flow_id' => $flow_id,
-            'steps_count' => count($pipeline_config),
-            'creation_mode' => 'complete'
-        ]);
-
-        return [
-            'pipeline_id' => $pipeline_id,
-            'pipeline_name' => $pipeline_name,
-            'pipeline_data' => $pipeline,
-            'flows' => $flows,
-            'creation_mode' => 'complete'
         ];
     }
 
@@ -307,6 +152,11 @@ class PipelineManager {
         }
 
         $success = $this->db_pipelines->update_pipeline($pipeline_id, $update_data);
+
+        if ($success) {
+            \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
+            do_action('datamachine_chat_pipelines_inventory_cleared');
+        }
 
         return $success;
     }
@@ -394,6 +244,9 @@ class PipelineManager {
                 ['status' => 500]
             );
         }
+
+        \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
+        do_action('datamachine_chat_pipelines_inventory_cleared');
 
         return [
             'message' => sprintf(

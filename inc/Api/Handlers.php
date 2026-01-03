@@ -11,6 +11,9 @@
 
 namespace DataMachine\Api;
 
+use DataMachine\Services\AuthProviderService;
+use DataMachine\Services\HandlerService;
+use DataMachine\Services\StepTypeService;
 use WP_REST_Server;
 use WP_REST_Request;
 
@@ -46,9 +49,7 @@ class Handlers {
 						if (empty($param)) {
 							return true;
 						}
-						$types = apply_filters('datamachine_step_types', []);
-						$valid_step_types = is_array($types) ? array_keys($types) : [];
-						return in_array($param, $valid_step_types, true);
+						return (new StepTypeService())->exists($param);
 					},
 					'description' => __('Filter handlers by step type (supports custom step types)', 'data-machine')
 				]
@@ -84,19 +85,19 @@ class Handlers {
 		// Get optional step_type filter
 		$step_type = $request->get_param('step_type');
 
-		// Get handlers via filter-based discovery
-		// If step_type provided, filter returns only handlers for that type
+		// Get handlers via cached service
+		// If step_type provided, returns only handlers for that type
 		// If null, returns all handlers across all types
-		$handlers = apply_filters('datamachine_handlers', [], $step_type);
+		$handlers = (new HandlerService())->getAll($step_type);
 
-		// Get auth providers to detect auth types
-		$auth_providers = apply_filters('datamachine_auth_providers', []);
+		// Get auth providers via cached service
+		$auth_service = new AuthProviderService();
 
 		// Enrich handler data with auth_type, auth_fields, and authentication status
 		foreach ($handlers as $slug => &$handler) {
 			$auth_key = $handler['auth_provider_key'] ?? $slug;
-			if ($handler['requires_auth'] && isset($auth_providers[$auth_key])) {
-				$auth_instance = $auth_providers[$auth_key];
+			$auth_instance = $auth_service->get($auth_key);
+			if ($handler['requires_auth'] && $auth_instance) {
 				$auth_type = self::detect_auth_type($auth_instance);
 				$handler['auth_type'] = $auth_type;
 
@@ -162,17 +163,9 @@ class Handlers {
 	public static function handle_get_handler_detail($request) {
 		$handler_slug = $request->get_param('handler_slug');
 
-		// Get basic handler info from all handlers
-		$all_handlers = apply_filters('datamachine_handlers', []);
-		$handler_info = null;
-
-		// Search across all step types to find the handler
-		foreach ($all_handlers as $slug => $config) {
-			if ($slug === $handler_slug) {
-				$handler_info = $config;
-				break;
-			}
-		}
+		// Get handler info via cached service
+		$handler_service = new HandlerService();
+		$handler_info = $handler_service->get($handler_slug);
 
 		if (!$handler_info) {
 			return new \WP_Error(

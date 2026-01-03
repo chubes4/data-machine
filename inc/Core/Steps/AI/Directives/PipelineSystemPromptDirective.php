@@ -17,23 +17,16 @@
 
 namespace DataMachine\Core\Steps\AI\Directives;
 
+use DataMachine\Services\HandlerService;
+
 defined('ABSPATH') || exit;
 
-class PipelineSystemPromptDirective {
-    
-    /**
-     * Inject pipeline system prompt into AI request.
-     *
-     * @param array $request AI request array with messages
-     * @param string $provider_name AI provider name
-     * @param array $tools Available tools (unused)
-     * @param string|null $pipeline_step_id Pipeline step ID for context
-     * @param array $payload Execution payload for context
-     * @return array Modified request with pipeline system prompt added
-     */
-    public static function inject($request, $provider_name, $tools, $pipeline_step_id = null, array $payload = []): array {
-        if (!isset($request['messages']) || !is_array($request['messages'])) {
-            return $request;
+class PipelineSystemPromptDirective implements \DataMachine\Engine\AI\Directives\DirectiveInterface {
+
+    public static function get_outputs(string $provider_name, array $tools, ?string $step_id = null, array $payload = []): array {
+        $pipeline_step_id = $step_id;
+        if (empty($pipeline_step_id) || empty($payload['job_id'])) {
+            return [];
         }
 
         $engine_data = datamachine_get_engine_data($payload['job_id']);
@@ -42,10 +35,9 @@ class PipelineSystemPromptDirective {
         $system_prompt = $step_config['system_prompt'] ?? '';
 
         if (empty($system_prompt)) {
-            return $request;
+            return [];
         }
 
-        // Extract current pipeline step ID for "YOU ARE HERE" context
         $current_flow_step_id = $payload['flow_step_id'] ?? null;
         $current_pipeline_step_id = null;
         if ($current_flow_step_id) {
@@ -53,24 +45,20 @@ class PipelineSystemPromptDirective {
             $current_pipeline_step_id = $flow_parts['pipeline_step_id'] ?? null;
         }
 
-        // Build workflow visualization with current step context
         $workflow_visualization = self::buildWorkflowVisualization($pipeline_step_id, $current_pipeline_step_id, $payload);
 
-        // Construct enhanced message with workflow context
         $content = '';
         if (!empty($workflow_visualization)) {
             $content .= "WORKFLOW: " . $workflow_visualization . "\n\n";
         }
         $content .= "PIPELINE GOALS:\n" . trim($system_prompt);
 
-        array_push($request['messages'], [
-            'role' => 'system',
-            'content' => $content
-        ]);
-
-
-
-        return $request;
+        return [
+            [
+                'type' => 'system_text',
+                'content' => $content,
+            ],
+        ];
     }
 
     /**
@@ -138,9 +126,10 @@ class PipelineSystemPromptDirective {
                 $is_current = ( $current_pipeline_step_id && $step_pipeline_step_id === $current_pipeline_step_id );
                 $workflow_parts[] = $is_current ? 'AI (YOU ARE HERE)' : 'AI';
             } else if ( $handler_slug ) {
-                // Get handler label directly when needed
-                $handlers = apply_filters( 'datamachine_handlers', [], $step_type );
-                $label = strtoupper( $handlers[ $handler_slug ]['label'] ?? 'UNKNOWN' );
+                // Get handler label via cached service
+                $handler_service = new HandlerService();
+                $handler_info = $handler_service->get($handler_slug, $step_type);
+                $label = strtoupper( $handler_info['label'] ?? 'UNKNOWN' );
                 $workflow_parts[] = $label . ' ' . strtoupper( $step_type );
             } else {
                 $workflow_parts[] = strtoupper( $step_type );

@@ -16,6 +16,7 @@ namespace DataMachine\Core\Steps\Publish\Handlers;
 
 use DataMachine\Core\EngineData;
 use DataMachine\Core\HttpClient;
+use DataMachine\Services\AuthProviderService;
 
 defined('ABSPATH') || exit;
 
@@ -172,8 +173,8 @@ abstract class PublishHandler {
      * @return object|null Provider instance or null
      */
     protected function getAuthProvider(string $provider_key): ?object {
-        $providers = apply_filters('datamachine_auth_providers', []);
-        return $providers[$provider_key] ?? null;
+        $auth_service = new AuthProviderService();
+        return $auth_service->get($provider_key);
     }
 
     /**

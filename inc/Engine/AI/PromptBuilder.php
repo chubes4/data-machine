@@ -11,6 +11,10 @@
 
 namespace DataMachine\Engine\AI;
 
+use DataMachine\Engine\AI\Directives\DirectiveInterface;
+use DataMachine\Engine\AI\Directives\DirectiveOutputValidator;
+use DataMachine\Engine\AI\Directives\DirectiveRenderer;
+
 defined('ABSPATH') || exit;
 
 /**
@@ -94,34 +98,48 @@ class PromptBuilder {
 			return $a['priority'] <=> $b['priority'];
 		});
 
-		$request = [
-			'messages' => $this->messages,
-			'tools' => $this->tools
-		];
-
+		$conversation_messages = $this->messages;
+		$directive_outputs = [];
 		$applied_directives = [];
 
 		foreach ($this->directives as $directiveConfig) {
 			$directive = $directiveConfig['directive'];
 			$agentTypes = $directiveConfig['agentTypes'];
 
-			if (in_array('all', $agentTypes) || in_array($agentType, $agentTypes)) {
-				$stepId = $payload['step_id'] ?? null;
-				$directive_class = is_string($directive) ? $directive : get_class($directive);
-				$directive_name = substr($directive_class, strrpos($directive_class, '\\') + 1);
+			if (!in_array('all', $agentTypes) && !in_array($agentType, $agentTypes)) {
+				continue;
+			}
 
-				if (is_string($directive) && class_exists($directive)) {
-					$request = $directive::inject($request, $provider, $this->tools, $stepId, $payload);
-				} elseif (is_object($directive) && method_exists($directive, 'inject')) {
-					$request = $directive->inject($request, $provider, $this->tools, $stepId, $payload);
+			$stepId = $payload['step_id'] ?? null;
+			$directive_class = is_string($directive) ? $directive : get_class($directive);
+			$directive_name = substr($directive_class, strrpos($directive_class, '\\') + 1);
+
+			if (is_string($directive) && class_exists($directive) && is_subclass_of($directive, DirectiveInterface::class)) {
+				$outputs = $directive::get_outputs($provider, $this->tools, $stepId, $payload);
+				if (is_array($outputs) && !empty($outputs)) {
+					$directive_outputs = array_merge($directive_outputs, $outputs);
 				}
-
 				$applied_directives[] = $directive_name;
+				continue;
+			}
+
+			if (is_object($directive) && $directive instanceof DirectiveInterface) {
+				$outputs = $directive->get_outputs($provider, $this->tools, $stepId, $payload);
+				if (is_array($outputs) && !empty($outputs)) {
+					$directive_outputs = array_merge($directive_outputs, $outputs);
+				}
+				$applied_directives[] = $directive_name;
+				continue;
 			}
 		}
 
-		$request['applied_directives'] = $applied_directives;
+		$validated_outputs = DirectiveOutputValidator::validateOutputs($directive_outputs);
+		$directive_messages = DirectiveRenderer::renderMessages($validated_outputs);
 
-		return $request;
+		return [
+			'messages' => array_merge($directive_messages, $conversation_messages),
+			'tools' => $this->tools,
+			'applied_directives' => $applied_directives
+		];
 	}
 }

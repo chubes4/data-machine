@@ -11,11 +11,40 @@
 
 namespace DataMachine\Api\Chat\Tools;
 
+use DataMachine\Services\HandlerService;
+use DataMachine\Services\StepTypeService;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
 class HandlerDocumentation {
+
+    /**
+     * Cached service instances.
+     */
+    private static ?HandlerService $handler_service = null;
+    private static ?StepTypeService $step_type_service = null;
+
+    /**
+     * Get HandlerService instance.
+     */
+    private static function getHandlerService(): HandlerService {
+        if (self::$handler_service === null) {
+            self::$handler_service = new HandlerService();
+        }
+        return self::$handler_service;
+    }
+
+    /**
+     * Get StepTypeService instance.
+     */
+    private static function getStepTypeService(): StepTypeService {
+        if (self::$step_type_service === null) {
+            self::$step_type_service = new StepTypeService();
+        }
+        return self::$step_type_service;
+    }
 
     /**
      * Build documentation for all handlers grouped by step type.
@@ -25,24 +54,19 @@ class HandlerDocumentation {
     public static function buildAllHandlersSections(): string {
         $doc = '';
         $doc .= self::buildStepTypesSection();
-        $doc .= self::buildHandlersSection('fetch', 'FETCH HANDLERS');
-        $doc .= self::buildHandlersSection('publish', 'PUBLISH HANDLERS');
-        $doc .= self::buildHandlersSection('update', 'UPDATE HANDLERS');
-        
-        // Include any custom step types that have handlers
-        $step_types = apply_filters('datamachine_step_types', []);
-        $core_types = ['fetch', 'publish', 'update', 'ai'];
-        
+
+        $step_types = self::getStepTypeService()->getAll();
         foreach ($step_types as $slug => $config) {
-            if (!in_array($slug, $core_types, true)) {
-                $uses_handler = $config['uses_handler'] ?? true;
-                if ($uses_handler) {
-                    $label = strtoupper(str_replace('_', ' ', $slug)) . ' HANDLERS';
-                    $doc .= self::buildHandlersSection($slug, $label);
-                }
+            $uses_handler = $config['uses_handler'] ?? true;
+            if (!$uses_handler) {
+                continue;
             }
+
+            $label = $config['label'] ?? $slug;
+            $section_title = strtoupper($label) . ' HANDLERS (step_type: ' . $slug . ')';
+            $doc .= self::buildHandlersSection($slug, $section_title);
         }
-        
+
         return $doc;
     }
 
@@ -52,7 +76,7 @@ class HandlerDocumentation {
      * @return string Step types section
      */
     public static function buildStepTypesSection(): string {
-        $step_types = apply_filters('datamachine_step_types', []);
+        $step_types = self::getStepTypeService()->getAll();
 
         if (empty($step_types)) {
             return "STEP TYPES:\nNo step types registered.\n\n";
@@ -78,7 +102,7 @@ class HandlerDocumentation {
      * @return string Handler section documentation
      */
     public static function buildHandlersSection(string $step_type, string $section_title): string {
-        $handlers = apply_filters('datamachine_handlers', [], $step_type);
+        $handlers = self::getHandlerService()->getAll($step_type);
         
         if (empty($handlers)) {
             return "";
@@ -122,20 +146,18 @@ class HandlerDocumentation {
     }
 
     /**
-     * Get configuration fields for a handler from its settings class.
+     * Get configuration fields for a handler, formatted for documentation.
      *
      * @param string $handler_slug Handler slug
      * @return array Formatted field list with types and descriptions
      */
     public static function getHandlerConfigFields(string $handler_slug): array {
-        $all_settings = apply_filters('datamachine_handler_settings', [], $handler_slug);
-        $settings_class = $all_settings[$handler_slug] ?? null;
+        $fields = self::getHandlerService()->getConfigFields($handler_slug);
         
-        if (!$settings_class || !method_exists($settings_class, 'get_fields')) {
+        if (empty($fields)) {
             return [];
         }
         
-        $fields = $settings_class::get_fields();
         $formatted = [];
         
         foreach ($fields as $key => $config) {

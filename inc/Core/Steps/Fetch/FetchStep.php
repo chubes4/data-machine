@@ -4,6 +4,7 @@ namespace DataMachine\Core\Steps\Fetch;
 
 use DataMachine\Core\DataPacket;
 use DataMachine\Core\Steps\Step;
+use DataMachine\Services\HandlerService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -182,8 +183,8 @@ class FetchStep extends Step {
      * @return object|null Handler instance or null if not found
      */
     private function get_handler_object(string $handler_name): ?object {
-        $all_handlers = apply_filters('datamachine_handlers', [], 'fetch');
-        $handler_info = $all_handlers[$handler_name] ?? null;
+        $handler_service = new HandlerService();
+        $handler_info = $handler_service->get($handler_name, 'fetch');
 
         if (!$handler_info || !isset($handler_info['class'])) {
             return null;

@@ -17,40 +17,25 @@
 namespace DataMachine\Engine\AI\Directives;
 
 use DataMachine\Core\PluginSettings;
+use DataMachine\Engine\AI\Directives\DirectiveInterface;
 
 defined('ABSPATH') || exit;
 
-class GlobalSystemPromptDirective {
+class GlobalSystemPromptDirective implements DirectiveInterface {
 
-    /**
-     * Inject global system prompt into AI request.
-     *
-     * @param array $request AI request array with messages
-     * @param string $provider_name AI provider name
-     * @param array $tools Available tools (unused)
-     * @param string|null $pipeline_step_id Pipeline step ID (unused)
-     * @param array $payload Execution payload (unused)
-     * @return array Modified request with global system prompt added
-     */
-    public static function inject($request, $provider_name, $tools, $pipeline_step_id = null, array $payload = []): array {
-        if (!isset($request['messages']) || !is_array($request['messages'])) {
-            return $request;
-        }
-
+    public static function get_outputs(string $provider_name, array $tools, ?string $step_id = null, array $payload = []): array {
         $global_prompt = PluginSettings::get('global_system_prompt', '');
 
         if (empty($global_prompt)) {
-            return $request;
+            return [];
         }
 
-        array_push($request['messages'], [
-            'role' => 'system',
-            'content' => trim($global_prompt)
-        ]);
-
-
-
-        return $request;
+        return [
+            [
+                'type' => 'system_text',
+                'content' => trim($global_prompt),
+            ],
+        ];
     }
 }
 

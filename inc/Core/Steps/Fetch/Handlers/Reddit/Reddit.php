@@ -8,6 +8,7 @@ namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;
 
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
+use DataMachine\Services\AuthProviderService;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -46,10 +47,11 @@ class Reddit extends FetchHandler {
 			$this->oauth_reddit = $this->getAuthProvider('reddit');
 
 			if ($this->oauth_reddit === null) {
+				$auth_service = new AuthProviderService();
 				$this->log('error', 'Reddit Handler: Authentication service not available', [
 					'handler' => 'reddit',
 					'missing_service' => 'reddit',
-					'available_providers' => array_keys(apply_filters('datamachine_auth_providers', []))
+					'available_providers' => array_keys($auth_service->getAll())
 				]);
 			}
 		}

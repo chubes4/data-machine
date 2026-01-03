@@ -16,6 +16,7 @@ namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
 use DataMachine\Core\EngineData;
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
+use DataMachine\Services\AuthProviderService;
 
 defined('ABSPATH') || exit;
 
@@ -77,14 +78,14 @@ class Twitter extends PublishHandler {
      */
     private function get_auth() {
         if ($this->auth === null) {
-            $all_auth = apply_filters('datamachine_auth_providers', []);
-            $this->auth = $all_auth['twitter'] ?? null;
+            $auth_service = new AuthProviderService();
+            $this->auth = $auth_service->get('twitter');
 
             if ($this->auth === null) {
                 $this->log('error', 'Twitter Handler: Authentication service not available', [
                     'handler' => 'twitter',
                     'missing_service' => 'twitter',
-                    'available_providers' => array_keys($all_auth)
+                    'available_providers' => array_keys($auth_service->getAll())
                 ]);
             }
         }

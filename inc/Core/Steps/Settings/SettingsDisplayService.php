@@ -11,6 +11,8 @@
 
 namespace DataMachine\Core\Steps\Settings;
 
+use DataMachine\Services\HandlerService;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -45,9 +47,9 @@ class SettingsDisplayService {
             return [];
         }
 
-        // Get handler Settings class
-        $all_handler_settings = apply_filters('datamachine_handler_settings', [], $handler_slug);
-        $handler_settings = $all_handler_settings[$handler_slug] ?? null;
+        // Get handler Settings class via cached service
+        $handler_service = new HandlerService();
+        $handler_settings = $handler_service->getSettingsClass($handler_slug);
 
         if (!$handler_settings || !method_exists($handler_settings, 'get_fields')) {
             return [];
@@ -153,9 +155,9 @@ class SettingsDisplayService {
      * @return array Field state array
      */
     public function getFieldState(string $handler_slug, array $current_settings = []): array {
-        // Get handler Settings class
-        $all_handler_settings = apply_filters('datamachine_handler_settings', [], $handler_slug);
-        $handler_settings = $all_handler_settings[$handler_slug] ?? null;
+        // Get handler Settings class via cached service
+        $handler_service = new HandlerService();
+        $handler_settings = $handler_service->getSettingsClass($handler_slug);
 
         if (!$handler_settings || !method_exists($handler_settings, 'get_fields')) {
             return [];

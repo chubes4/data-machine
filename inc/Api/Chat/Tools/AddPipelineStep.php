@@ -16,6 +16,7 @@ if (!defined('ABSPATH')) {
 
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 use DataMachine\Services\PipelineStepManager;
+use DataMachine\Services\StepTypeService;
 
 class AddPipelineStep {
 	use ToolRegistrationTrait;
@@ -25,8 +26,8 @@ class AddPipelineStep {
 	}
 
 	private static function getValidStepTypes(): array {
-		$step_types = apply_filters('datamachine_step_types', []);
-		return array_keys($step_types);
+		$step_type_service = new StepTypeService();
+		return array_keys($step_type_service->getAll());
 	}
 
 	private function getToolDefinition(): array {

@@ -10,6 +10,7 @@ namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
 
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
+use DataMachine\Services\AuthProviderService;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -49,10 +50,11 @@ class GoogleSheetsFetch extends FetchHandler {
 			$this->auth_service = $this->getAuthProvider('googlesheets');
 
 			if ($this->auth_service === null) {
+				$auth_provider_service = new AuthProviderService();
 				$this->log('error', 'Google Sheets Handler: Authentication service not available', [
 					'handler' => 'googlesheets',
 					'missing_service' => 'googlesheets',
-					'available_providers' => array_keys(apply_filters('datamachine_auth_providers', []))
+					'available_providers' => array_keys($auth_provider_service->getAll())
 				]);
 			}
 		}

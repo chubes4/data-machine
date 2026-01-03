@@ -18,33 +18,17 @@ defined('ABSPATH') || exit;
  * Injects foundational AI agent identity and operational principles
  * into pipeline AI requests.
  */
-class PipelineCoreDirective {
+class PipelineCoreDirective implements \DataMachine\Engine\AI\Directives\DirectiveInterface {
 
-    /**
-     * Inject core directive into AI request.
-     *
-     * @param array $request AI request data
-     * @param string $provider_name AI provider name
-     * @param array $tools Available tools
-     * @param string|null $pipeline_step_id Pipeline step ID
-     * @param array $payload Step payload
-     * @return array Modified request with directive injected
-     */
-    public static function inject($request, $provider_name, $tools, $pipeline_step_id = null, array $payload = []): array {
-        if (!isset($request['messages']) || !is_array($request['messages'])) {
-            return $request;
-        }
-
+    public static function get_outputs(string $provider_name, array $tools, ?string $step_id = null, array $payload = []): array {
         $directive = self::generate_core_directive();
 
-        array_push($request['messages'], [
-            'role' => 'system',
-            'content' => $directive
-        ]);
-
-
-
-        return $request;
+        return [
+            [
+                'type' => 'system_text',
+                'content' => $directive,
+            ],
+        ];
     }
 
     /**

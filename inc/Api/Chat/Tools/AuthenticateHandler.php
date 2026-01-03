@@ -16,6 +16,8 @@ if (!defined('ABSPATH')) {
 }
 
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Services\AuthProviderService;
+use DataMachine\Services\HandlerService;
 
 /**
  * Authenticate Handler Tool
@@ -119,8 +121,9 @@ ACTIONS:
 	 * List all handlers requiring auth.
 	 */
 	private function handleList(): array {
-		$all_handlers = apply_filters('datamachine_handlers', []);
-		$auth_providers = apply_filters('datamachine_auth_providers', []);
+		$handler_service = new HandlerService();
+		$auth_service = new AuthProviderService();
+		$all_handlers = $handler_service->getAll();
 		$result = [];
 
 		foreach ($all_handlers as $slug => $handler) {
@@ -128,12 +131,12 @@ ACTIONS:
 				continue;
 			}
 
-			$auth_instance = $auth_providers[$slug] ?? null;
+			$auth_instance = $auth_service->get($slug);
 			if (!$auth_instance) {
 				continue;
 			}
 
-			$is_authenticated = method_exists($auth_instance, 'is_authenticated') && $auth_instance->is_authenticated();
+			$is_authenticated = $auth_service->isAuthenticated($slug);
 			$auth_type = $this->detectAuthType($auth_instance);
 
 			$info = [
@@ -291,8 +294,8 @@ ACTIONS:
 	// Helpers
 
 	private function getAuthProvider(string $slug) {
-		$providers = apply_filters('datamachine_auth_providers', []);
-		return $providers[$slug] ?? null;
+		$auth_service = new AuthProviderService();
+		return $auth_service->get($slug);
 	}
 
 	private function detectAuthType($instance): string {

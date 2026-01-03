@@ -12,6 +12,7 @@
 namespace DataMachine\Api\Chat\Tools;
 
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Services\StepTypeService;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -26,7 +27,8 @@ class ExecuteWorkflowTool {
 
     private function getToolDefinition(): array {
         $handler_docs = HandlerDocumentation::buildAllHandlersSections();
-        $step_types = apply_filters('datamachine_step_types', []);
+        $step_type_service = new StepTypeService();
+        $step_types = $step_type_service->getAll();
         $type_slugs = !empty($step_types) ? array_keys($step_types) : ['fetch', 'ai', 'publish', 'update'];
         $types_list = implode('|', $type_slugs);
 

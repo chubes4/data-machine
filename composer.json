@@ -1,7 +1,7 @@
 {
   "name": "chubes/datamachine",
   "description": "WordPress plugin for automated data collection, AI processing, and multi-platform publishing",
-  "version": "0.6.22",
+  "version": "0.7.0",
 	"license": "GPL-2.0-or-later",
 	"require": {
 		"php": ">=8.2",
@@ -60,6 +60,9 @@
 			"inc/Api/Chat/Tools/UpdateFlow.php",
 			"inc/Api/Chat/Tools/ConfigurePipelineStep.php",
 			"inc/Api/Chat/Tools/ExecuteWorkflowTool.php",
+			"inc/Api/Chat/Tools/CopyFlow.php",
+			"inc/Api/Chat/Tools/AuthenticateHandler.php",
+			"inc/Api/Chat/Tools/HandlerDocumentation.php",
 			"inc/Core/Steps/AI/Directives/PipelineCoreDirective.php",
 			"inc/Core/Steps/AI/Directives/PipelineSystemPromptDirective.php",
 			"inc/Core/Steps/AI/Directives/PipelineContextDirective.php",

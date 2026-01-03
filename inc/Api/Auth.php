@@ -11,6 +11,8 @@
 
 namespace DataMachine\Api;
 
+use DataMachine\Services\AuthProviderService;
+use DataMachine\Services\HandlerService;
 use WP_REST_Server;
 
 if (!defined('WPINC')) {
@@ -120,8 +122,9 @@ class Auth {
 		}
 
 		// Check if handler exists but doesn't require auth
-		$all_handlers = apply_filters('datamachine_handlers', []);
-		if (isset($all_handlers[$handler_slug]) && ($all_handlers[$handler_slug]['requires_auth'] ?? false) === false) {
+		$handler_service = new HandlerService();
+		$handler_info = $handler_service->get($handler_slug);
+		if ($handler_info && ($handler_info['requires_auth'] ?? false) === false) {
 			return new \WP_Error(
 				'auth_not_required',
 				__('Authentication is not required for this handler', 'data-machine'),
@@ -130,8 +133,8 @@ class Auth {
 		}
 
 		// Validate handler exists and supports authentication
-		$all_auth = apply_filters('datamachine_auth_providers', []);
-		$auth_instance = $all_auth[$handler_slug] ?? null;
+		$auth_service = new AuthProviderService();
+		$auth_instance = $auth_service->get($handler_slug);
 
 		if (!$auth_instance) {
 			return new \WP_Error(
@@ -185,8 +188,9 @@ class Auth {
 		}
 
 		// Check if handler exists and doesn't require auth
-		$all_handlers = apply_filters('datamachine_handlers', []);
-		if (isset($all_handlers[$handler_slug]) && ($all_handlers[$handler_slug]['requires_auth'] ?? false) === false) {
+		$handler_service = new HandlerService();
+		$handler_info = $handler_service->get($handler_slug);
+		if ($handler_info && ($handler_info['requires_auth'] ?? false) === false) {
 			return rest_ensure_response([
 				'success' => true,
 				'data' => [
@@ -198,9 +202,9 @@ class Auth {
 			]);
 		}
 
-		// Get auth provider instance
-		$all_auth = apply_filters('datamachine_auth_providers', []);
-		$auth_instance = $all_auth[$handler_slug] ?? null;
+		// Get auth provider instance via cached service
+		$auth_service = new AuthProviderService();
+		$auth_instance = $auth_service->get($handler_slug);
 
 		if (!$auth_instance) {
 			return new \WP_Error(
@@ -211,7 +215,7 @@ class Auth {
 		}
 
 		// Check authentication status
-		$is_authenticated = $auth_instance->is_authenticated();
+		$is_authenticated = $auth_service->isAuthenticated($handler_slug);
 
 		// Get masked config status regardless of auth state
 		$config_status = [];
@@ -327,9 +331,9 @@ class Auth {
 			);
 		}
 
-		// Get auth provider instance
-		$all_auth = apply_filters('datamachine_auth_providers', []);
-		$auth_instance = $all_auth[$handler_slug] ?? null;
+		// Get auth provider instance via cached service
+		$auth_service = new AuthProviderService();
+		$auth_instance = $auth_service->get($handler_slug);
 
 		if (!$auth_instance) {
 			return new \WP_Error(
@@ -393,8 +397,9 @@ class Auth {
 		}
 
 		// Check if handler exists but doesn't require auth
-		$all_handlers = apply_filters('datamachine_handlers', []);
-		if (isset($all_handlers[$handler_slug]) && ($all_handlers[$handler_slug]['requires_auth'] ?? false) === false) {
+		$handler_service = new HandlerService();
+		$handler_info = $handler_service->get($handler_slug);
+		if ($handler_info && ($handler_info['requires_auth'] ?? false) === false) {
 			return new \WP_Error(
 				'auth_not_required',
 				__('Authentication is not required for this handler', 'data-machine'),
@@ -402,9 +407,9 @@ class Auth {
 			);
 		}
 
-		// Get auth provider instance to validate fields
-		$all_auth = apply_filters('datamachine_auth_providers', []);
-		$auth_instance = $all_auth[$handler_slug] ?? null;
+		// Get auth provider instance via cached service
+		$auth_service = new AuthProviderService();
+		$auth_instance = $auth_service->get($handler_slug);
 
 		if (!$auth_instance || !method_exists($auth_instance, 'get_config_fields')) {
 			return new \WP_Error(

@@ -11,6 +11,7 @@
 
 namespace DataMachine\Api;
 
+use DataMachine\Services\StepTypeService;
 use WP_REST_Server;
 
 if (!defined('ABSPATH')) {
@@ -61,8 +62,8 @@ class StepTypes {
 	 * @return \WP_REST_Response Step types response
 	 */
 	public static function handle_get_step_types() {
-		// Get all registered step types via filter-based discovery
-		$step_types = apply_filters('datamachine_step_types', []);
+		// Get all registered step types via cached service
+		$step_types = (new StepTypeService())->getAll();
 
 		return rest_ensure_response([
 			'success' => true,
@@ -83,9 +84,10 @@ class StepTypes {
 	public static function handle_get_step_type_detail($request) {
 		$step_type = $request->get_param('step_type');
 
-		$step_types = apply_filters('datamachine_step_types', []);
+		$step_type_service = new StepTypeService();
+		$definition = $step_type_service->get($step_type);
 
-		if (!isset($step_types[$step_type])) {
+		if (!$definition) {
 			return new \WP_Error(
 				'step_type_not_found',
 				__('Step type not found', 'data-machine'),
@@ -100,7 +102,7 @@ class StepTypes {
 			'success' => true,
 			'data' => [
 				'step_type' => $step_type,
-				'definition' => $step_types[$step_type],
+				'definition' => $definition,
 				'config' => $config
 			]
 		]);

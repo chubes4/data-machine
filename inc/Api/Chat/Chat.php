@@ -20,6 +20,8 @@ use WP_REST_Server;
 use WP_REST_Request;
 use WP_Error;
 
+require_once __DIR__ . '/ChatPipelinesDirective.php';
+
 if (!defined('ABSPATH')) {
 	exit;
 }

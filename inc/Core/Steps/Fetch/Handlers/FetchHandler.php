@@ -15,6 +15,7 @@ namespace DataMachine\Core\Steps\Fetch\Handlers;
 use DataMachine\Core\FilesRepository\FileStorage;
 use DataMachine\Core\FilesRepository\RemoteFileDownloader;
 use DataMachine\Core\HttpClient;
+use DataMachine\Services\AuthProviderService;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -274,8 +275,8 @@ abstract class FetchHandler {
 	 * @return object|null Provider instance or null
 	 */
 	protected function getAuthProvider( string $provider_key ): ?object {
-		$providers = apply_filters( 'datamachine_auth_providers', [] );
-		return $providers[ $provider_key ] ?? null;
+		$auth_service = new AuthProviderService();
+		return $auth_service->get( $provider_key );
 	}
 
 	/**

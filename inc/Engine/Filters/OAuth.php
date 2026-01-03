@@ -48,8 +48,8 @@ function datamachine_register_oauth_system() {
             wp_die(esc_html('Insufficient permissions for OAuth operations.'));
         }
 
-        $all_auth = apply_filters('datamachine_auth_providers', []);
-        $auth_instance = $all_auth[$provider] ?? null;
+        $auth_service = new \DataMachine\Services\AuthProviderService();
+        $auth_instance = $auth_service->get($provider);
         
         if ($auth_instance && method_exists($auth_instance, 'handle_oauth_callback')) {
             $auth_instance->handle_oauth_callback();

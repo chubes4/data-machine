@@ -12,6 +12,7 @@ namespace DataMachine\Api\Flows;
 
 use DataMachine\Core\Admin\DateFormatter;
 use DataMachine\Services\FlowManager;
+use DataMachine\Services\HandlerService;
 use WP_REST_Server;
 
 if (!defined('WPINC')) {
@@ -459,15 +460,14 @@ class Flows {
 	 * @return array Complete configuration with defaults merged
 	 */
 	private static function merge_handler_defaults(string $handler_slug, array $stored_config): array {
-		// Get handler settings class via filter
-		$all_settings = apply_filters('datamachine_handler_settings', [], $handler_slug);
+		// Get handler settings class via cached service
+		$handler_service = new HandlerService();
+		$settings_class = $handler_service->getSettingsClass($handler_slug);
 
-		if (!isset($all_settings[$handler_slug])) {
+		if (!$settings_class) {
 			// No settings class registered - return stored config as-is
 			return $stored_config;
 		}
-
-		$settings_class = $all_settings[$handler_slug];
 
 		// Get field schema
 		if (!method_exists($settings_class, 'get_fields')) {

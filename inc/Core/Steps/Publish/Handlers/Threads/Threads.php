@@ -14,6 +14,7 @@ namespace DataMachine\Core\Steps\Publish\Handlers\Threads;
 use DataMachine\Core\EngineData;
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
+use DataMachine\Services\AuthProviderService;
 use Exception;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -74,14 +75,14 @@ class Threads extends PublishHandler {
      */
     private function get_auth() {
         if ($this->auth === null) {
-            $all_auth = apply_filters('datamachine_auth_providers', []);
-            $this->auth = $all_auth['threads'] ?? null;
+            $auth_service = new AuthProviderService();
+            $this->auth = $auth_service->get('threads');
 
             if ($this->auth === null) {
                 $this->log('error', 'Threads Handler: Authentication service not available', [
                     'handler' => 'threads',
                     'missing_service' => 'threads',
-                    'available_providers' => array_keys($all_auth)
+                    'available_providers' => array_keys($auth_service->getAll())
                 ]);
             }
         }
