@@ -116,9 +116,6 @@ class Chat {
 		$session_id = wp_generate_uuid4();
 		$table_name = self::get_table_name();
 
-		// Use GMT for expiration to match cleanup logic
-		$expires_at = gmdate('Y-m-d H:i:s', time() + (24 * HOUR_IN_SECONDS));
-
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$result = $wpdb->insert(
 			$table_name,
@@ -129,7 +126,7 @@ class Chat {
 				'metadata' => wp_json_encode($metadata),
 				'provider' => null,
 				'model' => null,
-				'expires_at' => $expires_at
+				'expires_at' => null
 			],
 			['%s', '%d', '%s', '%s', '%s', '%s', '%s']
 		);
@@ -154,7 +151,7 @@ class Chat {
 	 * Retrieve session data
 	 *
 	 * @param string $session_id Session UUID
-	 * @return array|null Session data or null if not found/expired
+	 * @return array|null Session data or null if not found
 	 */
 	public function get_session(string $session_id): ?array {
 		global $wpdb;
@@ -171,23 +168,8 @@ class Chat {
             ARRAY_A
         );
 
-
 		if (!$session) {
 			return null;
-		}
-
-		if (!empty($session['expires_at'])) {
-			try {
-				$expires_timestamp = ( new \DateTime( $session['expires_at'], new \DateTimeZone( 'UTC' ) ) )->getTimestamp();
-				if ($expires_timestamp < time()) {
-					$this->delete_session($session_id);
-					return null;
-				}
-			} catch ( \Exception $e ) {
-				// Invalid date format, treat as expired
-				$this->delete_session($session_id);
-				return null;
-			}
 		}
 
 		$session['messages'] = json_decode($session['messages'], true) ?: [];

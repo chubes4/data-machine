@@ -3,14 +3,16 @@
  *
  * Collapsible right sidebar for chat interface.
  * Manages conversation state and API interactions.
+ * Persists conversation across page refreshes via session storage.
  */
 
-import { useState, useCallback } from '@wordpress/element';
+import { useState, useCallback, useEffect } from '@wordpress/element';
 import { Button } from '@wordpress/components';
 import { close } from '@wordpress/icons';
 import { __ } from '@wordpress/i18n';
 import { useUIStore } from '../../stores/uiStore';
-import { useChatMutation } from '../../queries/chat';
+import { useChatMutation, useChatSession } from '../../queries/chat';
+import { useChatQueryInvalidation } from '../../hooks/useChatQueryInvalidation';
 import ChatMessages from './ChatMessages';
 import ChatInput from './ChatInput';
 
@@ -18,6 +20,21 @@ export default function ChatSidebar() {
 	const { toggleChat, chatSessionId, setChatSessionId, clearChatSession, selectedPipelineId } = useUIStore();
 	const [messages, setMessages] = useState([]);
 	const chatMutation = useChatMutation();
+	const sessionQuery = useChatSession(chatSessionId);
+	const { invalidateFromToolCalls } = useChatQueryInvalidation();
+
+	useEffect(() => {
+		if (sessionQuery.data?.conversation) {
+			setMessages(sessionQuery.data.conversation);
+		}
+	}, [sessionQuery.data]);
+
+	useEffect(() => {
+		if (sessionQuery.error?.message?.includes('not found')) {
+			clearChatSession();
+			setMessages([]);
+		}
+	}, [sessionQuery.error, clearChatSession]);
 
 	const handleSend = useCallback(async (message) => {
 		const userMessage = { role: 'user', content: message };
@@ -37,23 +54,28 @@ export default function ChatSidebar() {
 			if (response.conversation) {
 				setMessages(response.conversation);
 			}
+
+			invalidateFromToolCalls(response.tool_calls, selectedPipelineId);
 		} catch (error) {
+			const errorContent = error.message || __( 'Something went wrong. Check the logs for details.', 'data-machine' );
 			const errorMessage = {
 				role: 'assistant',
-				content: __( 'Something went wrong. Check the logs for details.', 'data-machine' ),
+				content: errorContent,
 			};
 			setMessages((prev) => [...prev, errorMessage]);
 
-			if (error.message?.includes('not found') || error.message?.includes('expired')) {
+			if (error.message?.includes('not found')) {
 				clearChatSession();
 			}
 		}
-	}, [chatSessionId, setChatSessionId, clearChatSession, chatMutation, selectedPipelineId]);
+	}, [chatSessionId, setChatSessionId, clearChatSession, chatMutation, selectedPipelineId, invalidateFromToolCalls]);
 
 	const handleNewConversation = useCallback(() => {
 		clearChatSession();
 		setMessages([]);
 	}, [clearChatSession]);
+
+	const isLoading = chatMutation.isPending || sessionQuery.isLoading;
 
 	return (
 		<aside className="datamachine-chat-sidebar">
@@ -74,15 +96,15 @@ export default function ChatSidebar() {
 					variant="tertiary"
 					onClick={ handleNewConversation }
 					className="datamachine-chat-sidebar__new"
-					disabled={ chatMutation.isPending }
+					disabled={ isLoading }
 				>
 					{ __( 'New conversation', 'data-machine' ) }
 				</Button>
 			</div>
 
-			<ChatMessages messages={ messages } isLoading={ chatMutation.isPending } />
+			<ChatMessages messages={ messages } isLoading={ isLoading } />
 
-			<ChatInput onSend={ handleSend } disabled={ chatMutation.isPending } />
+			<ChatInput onSend={ handleSend } disabled={ isLoading } />
 		</aside>
 	);
 }

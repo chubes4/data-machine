@@ -1,6 +1,17 @@
-# Jobs Management Interface
+# Logs & Jobs Management Interface
 
-Real-time job monitoring and administration interface providing visibility into pipeline execution status, performance metrics, and administrative controls.
+Monitoring and managing pipeline execution status and historical system logs.
+
+## Logs Interface (@since v0.8.0)
+
+The Logs interface provides a centralized, React-based view of system activities with powerful filtering and real-time updates.
+
+**Features:**
+- **Centralized View**: Access all system logs from a single interface.
+- **Filtering**: Filter logs by level (info, warning, error, debug), context (flow ID, pipeline ID, handler), and date range.
+- **Real-time Updates**: Log data stays current via REST API polling or background refetching.
+- **Execution Context**: Deep links from logs to specific flows and jobs for rapid troubleshooting.
+- **Clean Architecture**: Built on the `LogsManager` service and `Logs` REST controller.
 
 ## Jobs Overview
 

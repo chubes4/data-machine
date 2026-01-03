@@ -2,7 +2,7 @@
 
 Data Machine — WordPress plugin for automating content workflows with AI. Visual pipeline builder, chat agent, REST API, and extensibility via handlers and tools.
 
-Version: 0.8.1
+Version: 0.8.2
 
 This file provides a concise, present-tense technical reference for contributors and automated agents. For user-focused docs see datamachine/docs/.
 
@@ -17,7 +17,7 @@ Core architecture
   - `FlowManager` - Flow CRUD operations, duplication, step synchronization
   - `PipelineManager` - Pipeline CRUD operations with complete/simple creation modes
   - `JobManager` - Job execution monitoring and management
-  - `LogsManager` - Centralized log access and filtering
+   - `LogsManager` - Centralized log access and filtering (per-agent logs: `datamachine-pipeline.log`, `datamachine-chat.log`)
   - `ProcessedItemsManager` - Deduplication tracking across workflows
   - `FlowStepManager` - Individual flow step configuration and handler management
   - `PipelineStepManager` - Pipeline step template management
@@ -27,19 +27,12 @@ Core architecture
 - EngineData provides platform-agnostic data access (single source of truth for engine parameters).
 - WordPressPublishHelper provides WordPress-specific publishing operations (image attachment, source attribution).
 - WordPressSettingsResolver provides centralized settings resolution with system defaults override.
-- Handler and Tool registration use standardized traits to auto-register services via WordPress filters.
-
-REST API & Admin
-
-- REST endpoints are available under `/wp-json/datamachine/v1/`. See API Overview documentation for current endpoint details and payloads.
-- Admin UI is built with React and integrates with the REST API. The UI uses server-side caching and client-side state separation for performance.
-
-AI integration
-
-- Tool-first architecture: AI agents call registered tools; ToolManager centralizes discovery and validation.
+- Handler and Tool registration use standardized traits (`HandlerRegistrationTrait`, `StepTypeRegistrationTrait`, `ToolRegistrationTrait`) to auto-register services via WordPress filters.
+- Cache Management: Centralized cache invalidation via `CacheManager` (handlers, step types, tools) and `SiteContext` (site metadata). Admin UI uses TanStack Query for client-side state.
 - Prompt and directive management is centralized via a PromptBuilder with ordered directives (site, pipeline, flow, context).
 - Providers are pluggable and configured by site administrators (OpenAI, Anthropic, Google, Grok, OpenRouter).
 - Universal Engine architecture supports both Pipeline and Chat agents with shared AI infrastructure.
+- Integrated Chat Sidebar: React-based context-aware chat interface in the Pipeline Builder that passes `selected_pipeline_id` for prioritized context.
 - Specialized chat tools provide focused workflow management: AddPipelineStep, ApiQuery, ConfigureFlowSteps, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow.
 
 Database

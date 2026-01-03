@@ -135,6 +135,17 @@ Handler configuration follows a simplified request/response contract:
 
 **Help Integration**: Contextual help tooltips and documentation links throughout interface.
 
+## Integrated Chat Sidebar (@since v0.8.0)
+
+The Pipeline Builder includes a built-in React-based AI assistant accessible via a collapsible right sidebar.
+
+**Features:**
+- **Context Awareness**: Automatically passes the `selected_pipeline_id` to the AI agent, allowing it to provide specific advice and configurations for the active pipeline.
+- **Session Persistence**: Chat conversations are persisted across page refreshes via session storage.
+- **Workflow Automation**: The chat agent can use specialized tools to create pipelines, add steps, configure handlers, and run flows directly from the conversation.
+- **UI Integration**: Toggleable sidebar that integrates seamlessly with the React application state.
+- **Context-Aware Design**: Leverages `selected_pipeline_id` for targeted interactions within the React interface.
+
 ## Performance Optimization
 
 **React-Based Performance**: Component-level optimizations with:

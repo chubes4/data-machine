@@ -21,6 +21,7 @@ Tabbed settings interface providing centralized control over Data Machine system
 **System Behavior**:
 - Job data cleanup on failure toggle (enable for production, disable for debugging failed jobs)
 - Logging level configuration and output management
+- Cache Management (@since v0.8.0): Manual cache clearing for registered handlers, step types, and tools via `CacheManager`.
 - Performance optimization settings
 
 ## Agent Tab

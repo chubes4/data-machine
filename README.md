@@ -5,7 +5,7 @@ Tags: ai, automation, content, workflow, pipeline, chat
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.2
-Stable tag: 0.6.23
+Stable tag: 0.8.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,15 +14,16 @@ AI-first WordPress plugin for content processing workflows with a visual pipelin
 ## Overview
 
 - **Pipeline + Flow architecture** that separates reusable pipeline templates from scheduled flow instances and job executions.
-- **Modern React admin** that relies exclusively on the REST API, TanStack Query, and Zustand for caching, optimistic updates, and client state isolation.
+- **Modern React admin** that relies exclusively on the REST API, TanStack Query, and Zustand for caching, optimistic updates, and client state isolation. Features a collapsible **Integrated Chat Sidebar** for context-aware pipeline automation and a centralized **Logs interface** for real-time monitoring.
 - **Tool-first AI agents** that discover enabling providers, call contextual tools, and persist conversations via a universal engine shared by chat and pipelines.
-- **Services layer** (FlowManager, PipelineManager, JobManager, LogsManager, ProcessedItemsManager, FlowStepManager, PipelineStepManager) that replaces filter indirection with direct method calls for predictable behavior and easier testing.
+- **Services layer** (FlowManager, PipelineManager, JobManager, LogsManager, ProcessedItemsManager, FlowStepManager, PipelineStepManager, CacheManager) that replaces filter indirection with direct method calls for predictable behavior and easier testing.
 - **Global handler tooling** with modular fetch, publish, and update adapters backed by centralized registration traits and field schemas.
+- **Centralized Cache Invalidation** via CacheManager to ensure dynamic handler and step type registrations are immediately reflected across the system. Site context metadata is also cached and automatically invalidated on content changes.
 
 ## Key Features
 
 - **Clean execution pipeline**: Fetch → AI → Publish/Update handlers process normalized data packets while engine parameters remain accessible through centralized filters (`datamachine_engine_data`).
-- **Deduplication tracking** via processed items and job-scoped logging.
+- **Deduplication tracking** via processed items and job-scoped per-agent logging.
 - **Multi-provider AI** support (OpenAI, Anthropic, Google, Grok, OpenRouter) with tool orchestration and directive management through PromptBuilder and RequestBuilder.
 - **Unified tool architecture** covering global search/fetch tools and chat-specific workflow tools such as ApiQuery, CreatePipeline, CreateFlow, ConfigureFlowSteps, ConfigurePipelineStep, RunFlow, UpdateFlow, AddPipelineStep, and ExecuteWorkflow.
 - **HTTP client standardization** with HttpClient for consistent headers, browser simulation, timeout handling, and logging integrations.

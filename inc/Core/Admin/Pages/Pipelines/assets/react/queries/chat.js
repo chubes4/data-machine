@@ -5,7 +5,34 @@
  */
 
 import apiFetch from '@wordpress/api-fetch';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+
+/**
+ * Fetch existing chat session
+ *
+ * @param {string|null} sessionId - Session ID to fetch
+ * @returns {object} TanStack Query object with session data
+ */
+export function useChatSession(sessionId) {
+	return useQuery({
+		queryKey: ['chat-session', sessionId],
+		queryFn: async () => {
+			const response = await apiFetch({
+				path: `/datamachine/v1/chat/${sessionId}`,
+				method: 'GET',
+			});
+
+			if (!response.success) {
+				throw new Error(response.message || 'Failed to fetch session');
+			}
+
+			return response.data;
+		},
+		enabled: !!sessionId,
+		staleTime: Infinity,
+		retry: false,
+	});
+}
 
 /**
  * Send a chat message mutation

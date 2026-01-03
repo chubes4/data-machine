@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.8.1
+Stable tag: 0.8.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -247,7 +247,7 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 
 == Changelog ==
 
-= 0.8.1 =
+= 0.8.2 =
 * Lazy Tool Resolution: Implemented lazy loading for AI tool definitions to prevent WordPress 6.7+ translation errors
 * Service Layer Caching: Added centralized caching to HandlerService and StepTypeService for 2x discovery performance
 * Cache Invalidation System: New CacheManager service with dynamic invalidation hooks for handlers and step types

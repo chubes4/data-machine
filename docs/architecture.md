@@ -57,6 +57,7 @@ $image_url = $engine_data['image_url'] ?? null;
 - **ProcessedItemsManager** - Deduplication tracking across workflows
 - **FlowStepManager** - Individual flow step configuration and handler management
 - **PipelineStepManager** - Pipeline step template management
+- **CacheManager** - Centralized cache invalidation for services, tools, and site context
 
 **Benefits**:
 - **3x Performance Improvement**: Direct method calls eliminate filter indirection
@@ -291,7 +292,7 @@ Complete extension system for custom handlers and tools:
   - ConversationManager for message formatting and conversation utilities
   - RequestBuilder for centralized AI request construction with directive application
   - ToolResultFinder for universal tool result search in data packets
-- Site context injection with automatic cache invalidation (SiteContextDirective in global directives)
+- Site context injection with automatic cache invalidation (`SiteContext::clear_cache()`)
 - Tool result formatting with success/failure messages
 - Clear tool result messaging enabling natural AI agent conversation termination
 

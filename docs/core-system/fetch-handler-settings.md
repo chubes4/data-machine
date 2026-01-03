@@ -126,4 +126,4 @@ All fetch handlers extend FetchHandlerSettings:
 - SettingsHandler - Base settings class
 - PublishHandlerSettings - Publish handler base settings
 - SettingsDisplayService - UI display logic
-- [Centralized Handler Filters](../architecture.md#centralized-handler-filter-system) - Filter integration
+- [Centralized Handler Filters](../architecture.md#centralized-handler-filters) - Filter integration

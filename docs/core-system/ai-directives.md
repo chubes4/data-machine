@@ -14,22 +14,8 @@ Directives are applied in the following priority order (lowest number = highest 
 4. **Priority 30** - Pipeline System Prompt (pipeline instructions)
 5. **Priority 35** - Pipeline Context Files (reference materials)
 6. **Priority 40** - Tool Definitions (available tools and workflow)
-7. **Priority 50** - Site Context (WordPress metadata)
-
-### Directive Registration
-
-All directives register through the universal `datamachine_directives` filter:
-
-```php
-add_filter('datamachine_directives', function($directives) {
-    $directives[] = [
-        'class' => MyDirective::class,
-        'priority' => 25,
-        'agent_types' => ['chat', 'pipeline'] // or ['all']
-    ];
-    return $directives;
-});
-```
+7. **Priority 45** - Chat Pipelines Inventory (pipeline discovery)
+8. **Priority 50** - Site Context (WordPress metadata)
 
 ## Individual Directives
 
@@ -40,6 +26,17 @@ add_filter('datamachine_directives', function($directives) {
 **Purpose**: Defines chat agent identity and capabilities
 
 Provides the foundational system prompt for chat interactions, establishing the agent's role in helping users configure and manage Data Machine workflows.
+
+### ChatPipelinesDirective (Priority 45)
+
+**Location**: `inc/Api/Chat/ChatPipelinesDirective.php`  
+**Agent Types**: Chat only  
+**Purpose**: Injects pipeline inventory and flow summaries
+
+Provides a lightweight inventory of all pipelines, including their configured steps and flow summaries (active handlers).
+
+**Context Awareness**:
+When `selected_pipeline_id` is provided (e.g., from the Integrated Chat Sidebar), the agent prioritizes and expands context for that specific pipeline, enabling it to learn from established configuration patterns and provide targeted assistance.
 
 ### GlobalSystemPromptDirective (Priority 20)
 
@@ -208,11 +205,11 @@ Directives include comprehensive error handling:
 
 ## Agent-Specific Behavior
 
-### Chat Agents
-Receive directives: Core (10), Chat Agent (15), Global Prompt (20), Tools (40), Site Context (50)
-
 ### Pipeline Agents
 Receive directives: Core (10), Global Prompt (20), Pipeline Prompt (30), Pipeline Context (35), Tools (40), Site Context (50)
+
+### Chat Agents
+Receive directives: Core (10), Chat Agent (15), Global Prompt (20), Tools (40), Chat Pipelines (45), Site Context (50)
 
 ### Universal Directives
 Global Prompt (20) and Site Context (50) apply to all agent types, ensuring consistent behavior across the system.

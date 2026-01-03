@@ -1,233 +1,89 @@
-# Logger
+# Logger System
 
-**Location**: `/inc/Engine/Logger.php`
-**Since**: 0.1.0
+**Implementation**: `\DataMachine\Services\LogsManager`
+**Database Table**: `wp_datamachine_logs`
+**Since**: 0.4.0 (Unified Database Logging)
 
 ## Overview
 
-The Logger provides centralized logging utilities for the Data Machine system using Monolog with WordPress integration. It offers configurable log levels, file-based logging, and request-level caching for optimal performance.
+Data Machine uses a centralized database-backed logging system managed by the `LogsManager` service. This provides consistent, performant, and queryable logging across all agents (Pipeline, Chat, etc.).
 
 ## Architecture
 
-**Design Pattern**: Pure functions with static variable caching
-**Integration**: WordPress actions for state modification
-**Log Storage**: File-based logging with configurable levels
+**Design Pattern**: Service-based logging with direct database persistence.
+**Integration**: Custom WordPress action `datamachine_log` for decoupled logging from any component.
+**Log Storage**: Single dedicated database table with columns for level, message, context (JSON), and timestamps.
+**Agent Context**: Automatically captures the executing agent type and associated job/session context.
 
-## Core Functions
+## LogsManager Service
 
-### datamachine_get_monolog_instance()
+The `LogsManager` is the primary interface for interacting with the logging system.
 
-Retrieve Monolog instance with request-level caching.
+### Methods
 
-```php
-function datamachine_get_monolog_instance($force_refresh = false): MonologLogger
-```
+#### `log(string $level, string $message, array $context = [])`
+Records a log entry in the database.
+- **$level**: `info`, `warning`, `error`, `debug`.
+- **$message**: Human-readable log message.
+- **$context**: Array of metadata (e.g., `pipeline_id`, `flow_id`, `job_id`, `session_id`).
 
-**Parameters**:
-- `$force_refresh` (bool): Force recreation of Monolog instance
+#### `get_logs(array $args = [])`
+Retrieves logs with filtering and pagination. Supports filtering by `level`, `context`, `search` string, and date ranges.
 
-**Returns**: Configured Monolog instance
+#### `clear_logs(?int $days = null)`
+Deletes log entries. If `$days` is provided, deletes logs older than that many days.
 
-**Features**:
-- Request-level caching using static variable
-- Configurable log levels from WordPress options
-- Conditional handler creation (only when logging enabled)
+## Log Levels
 
-### Log Level Management
-
-#### datamachine_get_monolog_level()
-
-Convert string log level to Monolog Level constant.
-
-```php
-function datamachine_get_monolog_level(string $level): ?Level
-```
-
-**Supported Levels**:
-- `debug` - Detailed debugging information
-- `info` - General information messages
-- `warning` - Warning conditions
-- `error` - Error conditions (default)
-- `none` - Logging disabled
-
-#### datamachine_get_log_file_path()
-
-Get full path to log file based on WordPress configuration.
-
-```php
-function datamachine_get_log_file_path(): string
-```
-
-**Features**:
-- Uses WordPress `wp_upload_dir()` for proper file paths
-- Creates log directory if needed
-- Handles multisite configurations
-
-## Configuration
-
-### WordPress Options
-
-**datamachine_log_level**: Default log level setting
-- Default: `error`
-- Stored in WordPress options table
-- Configurable via admin interface
-
-### Log File Location
-
-**Default Path**: `/wp-content/uploads/datamachine-logs/datamachine.log`
-- Automatically created if missing
-- Proper file permissions handled
-- Multisite-aware paths
+- **Debug**: Detailed execution flow, AI processing steps, and tool validation logic.
+- **Info**: Successful triggers, job completions, and handler operations.
+- **Warning**: Potential issues, missing optional configuration, or deprecated usage.
+- **Error**: Execution failures, API errors, and critical system issues.
 
 ## Integration
 
 ### Action-Based Logging
 
-The Logger integrates with WordPress actions for state modification:
+Components should ideally use the `datamachine_log` action to ensure loose coupling.
 
 ```php
-// Log messages via action
-do_action('datamachine_log', 'error', 'Error message', ['context' => 'data']);
-
-// Clear logs via action
-do_action('datamachine_clear_logs');
-
-// Set log level via action
-do_action('datamachine_set_log_level', 'warning');
-```
-
-### Handler Integration
-
-All handlers use the centralized logging system:
-
-```php
-// Standard logging pattern across handlers
+// Record an error during pipeline execution
 do_action('datamachine_log', 'error', 'Handler execution failed', [
-    'handler' => 'handler_name',
-    'error' => $error_message,
-    'context' => $context_data
-]);
-```
-
-## Performance Considerations
-
-### Request-Level Caching
-
-- Monolog instance cached per request using static variable
-- Avoids repeated instantiation cost
-- Force refresh available for testing scenarios
-
-### Conditional Handler Creation
-
-- Log handlers only created when logging enabled
-- `none` level prevents handler creation entirely
-- Reduces overhead when logging disabled
-
-### File System Efficiency
-
-- Single log file per installation
-- Efficient file appending via Monolog
-- Automatic log rotation not included (external rotation recommended)
-
-## Error Handling
-
-### Log File Permissions
-
-- Automatic directory creation with proper permissions
-- Graceful fallback if log directory unwritable
-- WordPress file permission handling
-
-### Monolog Exceptions
-
-- Exception handling for log file creation
-- Fallback to error logging if Monolog unavailable
-- Graceful degradation for production stability
-
-## Usage Examples
-
-### Basic Logging
-
-```php
-// Log error with context
-do_action('datamachine_log', 'error', 'Pipeline execution failed', [
+    'handler' => 'twitter',
+    'job_id' => $job_id,
     'pipeline_id' => $pipeline_id,
-    'flow_id' => $flow_id,
     'error' => $exception->getMessage()
 ]);
 
-// Log info message
-do_action('datamachine_log', 'info', 'Pipeline completed successfully', [
-    'pipeline_id' => $pipeline_id,
-    'execution_time' => $execution_time
+// Record info during a chat session
+do_action('datamachine_log', 'info', 'Chat session started', [
+    'session_id' => $session_id,
+    'agent_type' => 'chat'
 ]);
 ```
 
-### Debug Logging
+## Admin Interface
 
-```php
-// Enable debug level temporarily
-do_action('datamachine_set_log_level', 'debug');
+The Data Machine admin UI provides a dedicated **Logs** page built with React. It features:
+- **Real-time Monitoring**: Instant visibility into system activity.
+- **Advanced Filtering**: Filter by severity, specific pipeline/flow IDs, or date ranges.
+- **Search**: Full-text search across log messages and context.
+- **Context Awareness**: Deep links from logs to associated [Jobs](../admin-interface/jobs-management.md) and Flows.
 
-// Log detailed debug information
-do_action('datamachine_log', 'debug', 'Handler execution details', [
-    'handler' => 'handler_name',
-    'config' => $handler_config,
-    'processing_time' => $processing_time
-]);
-```
+## Performance & Maintenance
 
-### Log Management
+### Database Efficiency
+Logs are stored with indexed columns for rapid filtering. Context is stored as a JSON column to allow for flexible metadata without schema changes.
 
-```php
-// Clear all logs
-do_action('datamachine_clear_logs');
+### Automated Cleanup
+The system includes routine cleanup of old logs to prevent table bloat. This can be configured in settings or triggered via the `datamachine_clear_logs` action.
 
-// Check current log level
-$current_level = get_option('datamachine_log_level', 'error');
+## Multisite Support
 
-// Set new log level
-do_action('datamachine_set_log_level', 'warning');
-```
-
-## Security Considerations
-
-### Log File Access
-
-- Log files stored in WordPress uploads directory
-- Respects WordPress file permissions
-- No direct web access to log files
-- Sensitive data filtering in log context
-
-### Log Content
-
-- No passwords or API keys logged
-- User data sanitized before logging
-- Context data limited to non-sensitive information
-- Error messages filtered for security
-
-## Integration with Development
-
-### Debug Mode
-
-Enhanced logging available during development:
-
-```php
-if (defined('WP_DEBUG') && WP_DEBUG) {
-    do_action('datamachine_set_log_level', 'debug');
-}
-```
-
-### Testing
-
-Force refresh available for testing scenarios:
-
-```php
-// Get fresh instance for testing
-$logger = datamachine_get_monolog_instance(true);
-```
+The logging system is multisite-aware, prefixing the `datamachine_logs` table with the site-specific database prefix to ensure log isolation across the network.
 
 ---
 
-**Implementation**: Monolog-based logging with WordPress integration
-**Configuration**: Via WordPress admin interface and options
-**Performance**: Request-level caching and conditional handler creation
+**Implementation**: `inc/Services/LogsManager.php`
+**API Endpoints**: `/wp-json/datamachine/v1/logs`
+**Related**: [Logs API](../api/logs.md)

@@ -411,4 +411,4 @@ Set appropriate max turns based on workflow complexity:
 - Universal Engine Architecture - Overall engine structure
 - Tool Execution Architecture - ToolExecutor details
 - RequestBuilder Pattern - AI request construction
-- [ConversationManager](/docs/core-system/universal-engine.md#conversationmanager) - Message formatting utilities
+- [ConversationManager](universal-engine.md#conversationmanager) - Message formatting utilities

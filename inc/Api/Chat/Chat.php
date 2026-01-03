@@ -41,7 +41,7 @@ class Chat {
 	}
 
 	/**
-	 * Register chat endpoint
+	 * Register chat endpoints
 	 */
 	public static function register_routes() {
 		register_rest_route('datamachine/v1', '/chat', [
@@ -88,6 +88,61 @@ class Chat {
 					'description' => __('Currently selected pipeline ID for context', 'data-machine'),
 					'sanitize_callback' => 'absint'
 				]
+			]
+		]);
+
+		register_rest_route('datamachine/v1', '/chat/(?P<session_id>[a-f0-9-]+)', [
+			'methods' => WP_REST_Server::READABLE,
+			'callback' => [self::class, 'get_session'],
+			'permission_callback' => function() {
+				return current_user_can('manage_options');
+			},
+			'args' => [
+				'session_id' => [
+					'type' => 'string',
+					'required' => true,
+					'description' => __('Session ID', 'data-machine'),
+					'sanitize_callback' => 'sanitize_text_field'
+				]
+			]
+		]);
+	}
+
+	/**
+	 * Get existing chat session
+	 *
+	 * @param WP_REST_Request $request Request object
+	 * @return array|WP_Error Response data or error
+	 */
+	public static function get_session(WP_REST_Request $request) {
+		$session_id = sanitize_text_field($request->get_param('session_id'));
+		$user_id = get_current_user_id();
+
+		$chat_db = new ChatDatabase();
+		$session = $chat_db->get_session($session_id);
+
+		if (!$session) {
+			return new WP_Error(
+				'session_not_found',
+				__('Session not found', 'data-machine'),
+				['status' => 404]
+			);
+		}
+
+		if ((int) $session['user_id'] !== $user_id) {
+			return new WP_Error(
+				'session_access_denied',
+				__('Access denied to this session', 'data-machine'),
+				['status' => 403]
+			);
+		}
+
+		return rest_ensure_response([
+			'success' => true,
+			'data' => [
+				'session_id' => $session['session_id'],
+				'conversation' => $session['messages'],
+				'metadata' => $session['metadata']
 			]
 		]);
 	}
@@ -144,7 +199,7 @@ class Chat {
 			if (!$session) {
 				return new WP_Error(
 					'session_not_found',
-					__('Session not found or expired', 'data-machine'),
+					__('Session not found', 'data-machine'),
 					['status' => 404]
 				);
 			}

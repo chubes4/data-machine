@@ -25,6 +25,7 @@ Send a message to the AI assistant.
 **Parameters**:
 - `message` (string, required): User message to send to AI
 - `session_id` (string, optional): Session ID for conversation continuity (omit to create new session)
+- `selected_pipeline_id` (int, optional): Active pipeline context for prioritized information awareness (@since v0.8.0)
 - `provider` (string, optional): AI provider (`openai`, `anthropic`, `google`, `grok`, `openrouter`) - uses default from settings if not provided
 - `model` (string, optional): Model identifier (e.g., `gpt-4`, `claude-sonnet-4`) - uses default from settings if not provided
 
@@ -184,25 +185,7 @@ Available only to chat AI agents via `datamachine_chat_tools` filter (@since v0.
 - **handler_documentation** (@since v0.7.0) - Discover available handlers and their settings schema
 - **run_flow** (@since v0.4.4) - Execute or schedule flows
 - **update_flow** (@since v0.4.4) - Update flow properties
-
-### Tool Execution
-
-Tools are executed automatically by the AI during conversation:
-
-```json
-{
-  "tool_calls": [
-    {
-      "id": "call_abc123",
-      "type": "function",
-      "function": {
-        "name": "create_pipeline",
-        "arguments": "{\"name\":\"My Pipeline\",\"steps\":[{\"type\":\"fetch\",\"handler\":\"rss\"}]}"
-      }
-    }
-  ]
-}
-```
+- **validate_credentials** (@since v0.8.0) - Test authentication provider credentials during configuration
 
 ## Universal Engine Architecture
 
@@ -246,7 +229,7 @@ The Chat endpoint uses the Universal Engine architecture at `/inc/Engine/AI/` fo
 **Purpose**: Registers chat-specific behavior with Universal Engine
 
 **Chat Pipelines Inventory** (@since v0.7.0):
-The chat agent receives a lightweight inventory of all pipelines, their configured steps (ID, name, type), and flow summaries (ID, name, handlers) as a system JSON message. This grounds the agent in the current system state.
+The chat agent receives a lightweight inventory of all pipelines, their configured steps (ID, name, type), and flow summaries (ID, name, handlers) via the [ChatPipelinesDirective](../core-system/ai-directives.md#chatpipelinesdirective-priority-45). When `selected_pipeline_id` is provided (e.g., from the Integrated Chat Sidebar), the agent prioritizes and expands context for that specific pipeline.
 
 **Tool Enablement** (chat-specific):
 ```php

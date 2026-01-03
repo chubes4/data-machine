@@ -40,7 +40,8 @@ Complete REST API reference for Data Machine
 - StepTypes: Available pipeline step types
 
 ### Monitoring
-- Logs: Log management and debugging
+- [Logs](logs.md)
+- [AI Directives](../core-system/ai-directives.md)
 
 ## Common Patterns
 
@@ -100,4 +101,4 @@ Settings Configuration: Configure API access
 ---
 
 **API Version**: v1
-**Last Updated**: 2025-11-20
+**Last Updated**: 2026-01-03
