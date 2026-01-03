@@ -70,68 +70,58 @@ class WordPress extends UpdateHandler {
         }
         $source_url = $engine->getSourceUrl();
 
-        do_action('datamachine_log', 'debug', 'WordPress Update Tool: Handling tool call', [
-            'parameters' => $parameters,
-            'parameter_keys' => array_keys($parameters),
-            'has_handler_config' => !empty($handler_config),
-            'handler_config_keys' => array_keys($handler_config ?? []),
-            'source_url_from_engine' => $source_url,
-            'engine_data_keys' => array_keys($engine->all())
-        ]);
+        // Build base log context for consistent logging
+        $log_context = ['job_id' => $job_id, 'handler' => 'wordpress_update'];
+
+        do_action('datamachine_log', 'debug', 'WordPress Update: Handling tool call', array_merge($log_context, [
+            'source_url' => $source_url,
+            'has_handler_config' => !empty($handler_config)
+        ]));
 
         if (empty($source_url)) {
-            $error_msg = "source_url parameter is required for WordPress Update handler";
-            do_action('datamachine_log', 'error', $error_msg, [
-                'available_parameters' => array_keys($parameters)
-            ]);
+            do_action('datamachine_log', 'error', 'WordPress Update: source_url is required', $log_context);
 
             return [
                 'success' => false,
-                'error' => $error_msg,
+                'error' => 'source_url parameter is required for WordPress Update handler',
                 'tool_name' => 'wordpress_update'
             ];
         }
 
         $post_id = url_to_postid($source_url);
         if (!$post_id) {
-            $error_msg = "Could not extract valid WordPress post ID from URL: {$source_url}";
-            do_action('datamachine_log', 'error', $error_msg, [
-                'source_url' => $source_url,
-                'extracted_post_id' => $post_id
-            ]);
+            do_action('datamachine_log', 'error', 'WordPress Update: Could not extract post ID from URL', array_merge($log_context, [
+                'source_url' => $source_url
+            ]));
 
             return [
                 'success' => false,
-                'error' => $error_msg,
+                'error' => "Could not extract valid WordPress post ID from URL: {$source_url}",
                 'tool_name' => 'wordpress_update'
             ];
         }
+
+        // Add post_id to log context for remaining logs
+        $log_context['post_id'] = $post_id;
         
         $existing_post = get_post($post_id);
         if (!$existing_post) {
-            $error_msg = "WordPress post with ID {$post_id} does not exist";
-            do_action('datamachine_log', 'error', $error_msg, [
-                'post_id' => $post_id
-            ]);
+            do_action('datamachine_log', 'error', 'WordPress Update: Post does not exist', $log_context);
             
             return [
                 'success' => false,
-                'error' => $error_msg,
+                'error' => "WordPress post with ID {$post_id} does not exist",
                 'tool_name' => 'wordpress_update'
             ];
         }
 
-        // $handler_config is provided by UpdateHandler::handle_tool_call
-        
-        do_action('datamachine_log', 'debug', 'WordPress Update Tool: Using handler configuration', [
-            'post_id' => $post_id,
-            'existing_post_title' => $existing_post->post_title,
-            'existing_post_status' => $existing_post->post_status,
+        do_action('datamachine_log', 'debug', 'WordPress Update: Processing update', array_merge($log_context, [
+            'post_title' => $existing_post->post_title,
             'has_title_update' => !empty($parameters['title']),
             'has_content_update' => !empty($parameters['content']),
             'has_surgical_updates' => !empty($parameters['updates']),
             'has_block_updates' => !empty($parameters['block_updates'])
-        ]);
+        ]));
         
         $post_data = [
             'ID' => $post_id
@@ -160,10 +150,7 @@ class WordPress extends UpdateHandler {
         $has_updates = count($post_data) > 1;
         
         if (!$has_updates) {
-            do_action('datamachine_log', 'info', 'WordPress Update Tool: No updates to apply', [
-                'post_id' => $post_id,
-                'reason' => 'No allowed parameters provided or all updates disabled'
-            ]);
+            do_action('datamachine_log', 'info', 'WordPress Update: No updates to apply', $log_context);
             
             return [
                 'success' => true,
@@ -177,39 +164,31 @@ class WordPress extends UpdateHandler {
             ];
         }
 
-        do_action('datamachine_log', 'debug', 'WordPress Update Tool: Final post data for wp_update_post', [
-            'post_id' => $post_id,
+        do_action('datamachine_log', 'debug', 'WordPress Update: Applying changes', array_merge($log_context, [
             'updating_title' => isset($post_data['post_title']),
-            'updating_content' => isset($post_data['post_content']),
-            'title_length' => isset($post_data['post_title']) ? strlen($post_data['post_title']) : 0,
-            'content_length' => isset($post_data['post_content']) ? strlen($post_data['post_content']) : 0
-        ]);
+            'updating_content' => isset($post_data['post_content'])
+        ]));
 
         $result = wp_update_post($post_data);
 
         if (is_wp_error($result)) {
-            $error_msg = 'WordPress post update failed: ' . $result->get_error_message();
-            do_action('datamachine_log', 'error', $error_msg, [
-                'post_data' => $post_data,
-                'wp_error' => $result->get_error_data()
-            ]);
+            do_action('datamachine_log', 'error', 'WordPress Update: wp_update_post failed', array_merge($log_context, [
+                'error' => $result->get_error_message()
+            ]));
 
             return [
                 'success' => false,
-                'error' => $error_msg,
+                'error' => 'WordPress post update failed: ' . $result->get_error_message(),
                 'tool_name' => 'wordpress_update'
             ];
         }
 
         if ($result === 0) {
-            $error_msg = 'WordPress post update failed: wp_update_post returned 0';
-            do_action('datamachine_log', 'error', $error_msg, [
-                'post_data' => $post_data
-            ]);
+            do_action('datamachine_log', 'error', 'WordPress Update: wp_update_post returned 0', $log_context);
 
             return [
                 'success' => false,
-                'error' => $error_msg,
+                'error' => 'WordPress post update failed: wp_update_post returned 0',
                 'tool_name' => 'wordpress_update'
             ];
         }
@@ -217,12 +196,10 @@ class WordPress extends UpdateHandler {
         $engine_data_array = $engine instanceof EngineData ? $engine->all() : [];
         $taxonomy_results = $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config, $engine_data_array);
 
-        do_action('datamachine_log', 'debug', 'WordPress Update Tool: Post updated successfully', [
-            'post_id' => $post_id,
+        do_action('datamachine_log', 'info', 'WordPress Update: Post updated successfully', array_merge($log_context, [
             'post_url' => get_permalink($post_id),
-            'taxonomy_results' => $taxonomy_results,
-            'updated_fields' => array_keys($post_data)
-        ]);
+            'updated_fields' => array_diff(array_keys($post_data), ['ID'])
+        ]));
 
         return [
             'success' => true,

@@ -100,6 +100,22 @@ class Logs {
 					'validate_callback' => function($param) {
 						return is_numeric($param) && $param > 0;
 					}
+				],
+				'pipeline_id' => [
+					'required' => false,
+					'type' => 'integer',
+					'description' => __('Filter logs by pipeline ID', 'data-machine'),
+					'validate_callback' => function($param) {
+						return is_numeric($param) && $param > 0;
+					}
+				],
+				'flow_id' => [
+					'required' => false,
+					'type' => 'integer',
+					'description' => __('Filter logs by flow ID', 'data-machine'),
+					'validate_callback' => function($param) {
+						return is_numeric($param) && $param > 0;
+					}
 				]
 			]
 		]);
@@ -220,8 +236,10 @@ class Logs {
 		$mode = $request->get_param('mode');
 		$limit = $request->get_param('limit');
 		$job_id = $request->get_param('job_id');
+		$pipeline_id = $request->get_param('pipeline_id');
+		$flow_id = $request->get_param('flow_id');
 
-		$result = LogsManager::getContent($agent_type, $mode, $limit, $job_id);
+		$result = LogsManager::getContent($agent_type, $mode, $limit, $job_id, $pipeline_id, $flow_id);
 
 		if (!$result['success']) {
 			return new \WP_Error(

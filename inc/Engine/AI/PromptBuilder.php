@@ -133,7 +133,11 @@ class PromptBuilder {
 			}
 		}
 
-		$validated_outputs = DirectiveOutputValidator::validateOutputs($directive_outputs);
+		$validation_context = array_filter([
+			'job_id' => $payload['job_id'] ?? null,
+			'flow_step_id' => $payload['flow_step_id'] ?? null,
+		], fn($v) => $v !== null);
+		$validated_outputs = DirectiveOutputValidator::validateOutputs($directive_outputs, $validation_context);
 		$directive_messages = DirectiveRenderer::renderMessages($validated_outputs);
 
 		return [

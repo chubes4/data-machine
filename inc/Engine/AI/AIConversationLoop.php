@@ -60,6 +60,13 @@ class AIConversationLoop {
 		$last_tool_calls = [];
 		$tool_execution_results = [];
 
+		// Build base log context from payload for consistent logging
+		$base_log_context = array_filter([
+			'agent_type' => $agent_type,
+			'job_id' => $payload['job_id'] ?? null,
+			'flow_step_id' => $payload['flow_step_id'] ?? null,
+		], fn($v) => $v !== null);
+
 		do {
 			$turn_count++;
 
@@ -75,12 +82,11 @@ class AIConversationLoop {
 
 			// Handle AI request failure
 			if (!$ai_response['success']) {
-				do_action('datamachine_log', 'error', 'AIConversationLoop: AI request failed', [
-					'agent_type' => $agent_type,
+				do_action('datamachine_log', 'error', 'AIConversationLoop: AI request failed', array_merge($base_log_context, [
 					'turn_count' => $turn_count,
 					'error' => $ai_response['error'] ?? 'Unknown error',
 					'provider' => $ai_response['provider'] ?? 'Unknown'
-				]);
+				]));
 
 				return [
 					'messages' => $messages,
@@ -115,20 +121,18 @@ class AIConversationLoop {
 					$tool_parameters = $tool_call['parameters'] ?? [];
 
 					if (empty($tool_name)) {
-						do_action('datamachine_log', 'warning', 'AIConversationLoop: Tool call missing name', [
-							'agent_type' => $agent_type,
+						do_action('datamachine_log', 'warning', 'AIConversationLoop: Tool call missing name', array_merge($base_log_context, [
 							'turn_count' => $turn_count,
 							'tool_call' => $tool_call
-						]);
+						]));
 						continue;
 					}
 
-					do_action('datamachine_log', 'debug', 'AIConversationLoop: Tool call', [
-						'agent_type' => $agent_type,
+					do_action('datamachine_log', 'debug', 'AIConversationLoop: Tool call', array_merge($base_log_context, [
 						'turn' => $turn_count,
 						'tool' => $tool_name,
 						'params' => $tool_parameters
-					]);
+					]));
 
 					// Validate for duplicate tool calls
 					$validation_result = ConversationManager::validateToolCall(
@@ -141,11 +145,10 @@ class AIConversationLoop {
 						$correction_message = ConversationManager::generateDuplicateToolCallMessage($tool_name);
 						$messages[] = $correction_message;
 
-						do_action('datamachine_log', 'info', 'AIConversationLoop: Duplicate tool call prevented', [
-							'agent_type' => $agent_type,
+						do_action('datamachine_log', 'info', 'AIConversationLoop: Duplicate tool call prevented', array_merge($base_log_context, [
 							'turn_count' => $turn_count,
 							'tool_name' => $tool_name
-						]);
+						]));
 
 						continue;
 					}
@@ -166,12 +169,11 @@ class AIConversationLoop {
 						$payload
 					);
 
-					do_action('datamachine_log', 'debug', 'AIConversationLoop: Tool result', [
-						'agent_type' => $agent_type,
+					do_action('datamachine_log', 'debug', 'AIConversationLoop: Tool result', array_merge($base_log_context, [
 						'turn' => $turn_count,
 						'tool' => $tool_name,
 						'success' => $tool_result['success'] ?? false
-					]);
+					]));
 
 					// Determine if this is a handler tool
 					$tool_def = $tools[$tool_name] ?? null;
@@ -180,11 +182,10 @@ class AIConversationLoop {
 					// Force conversation completion if a handler tool was successfully executed in pipeline mode
 					if ($agent_type === 'pipeline' && $is_handler_tool && ($tool_result['success'] ?? false)) {
 						$conversation_complete = true;
-						do_action('datamachine_log', 'debug', 'AIConversationLoop: Handler tool executed successfully, ending conversation', [
-							'agent_type' => $agent_type,
+						do_action('datamachine_log', 'debug', 'AIConversationLoop: Handler tool executed successfully, ending conversation', array_merge($base_log_context, [
 							'tool_name' => $tool_name,
 							'turn_count' => $turn_count
-						]);
+						]));
 					}
 
 					// Store tool execution result separately for data packet processing
@@ -215,12 +216,11 @@ class AIConversationLoop {
 
 		// Log if max turns reached
 		if ($turn_count >= $max_turns && !$conversation_complete) {
-			do_action('datamachine_log', 'warning', 'AIConversationLoop: Max turns reached', [
-				'agent_type' => $agent_type,
+			do_action('datamachine_log', 'warning', 'AIConversationLoop: Max turns reached', array_merge($base_log_context, [
 				'max_turns' => $max_turns,
 				'final_turn_count' => $turn_count,
 				'still_had_tool_calls' => !empty($last_tool_calls)
-			]);
+			]));
 		}
 
 		$result = [

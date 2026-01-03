@@ -57,18 +57,26 @@ class PipelineStepManager {
      */
     public function add(int $pipeline_id, string $step_type): ?string {
         if (!current_user_can('manage_options')) {
-            do_action('datamachine_log', 'error', 'Insufficient permissions for step creation');
+            do_action('datamachine_log', 'error', 'Insufficient permissions for step creation', [
+                'user_id' => get_current_user_id(),
+                'pipeline_id' => $pipeline_id,
+                'step_type' => $step_type
+            ]);
             return null;
         }
 
         if ($pipeline_id <= 0) {
-            do_action('datamachine_log', 'error', 'Pipeline ID is required for step creation');
+            do_action('datamachine_log', 'error', 'Pipeline ID is required for step creation', [
+                'pipeline_id' => $pipeline_id
+            ]);
             return null;
         }
 
         $step_type = sanitize_text_field(wp_unslash($step_type));
         if (empty($step_type)) {
-            do_action('datamachine_log', 'error', 'Step type is required for step creation');
+            do_action('datamachine_log', 'error', 'Step type is required for step creation', [
+                'pipeline_id' => $pipeline_id
+            ]);
             return null;
         }
 

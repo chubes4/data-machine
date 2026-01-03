@@ -89,9 +89,11 @@ class LogsManager {
      * @param string $mode Content mode: 'full' or 'recent'
      * @param int $limit Number of entries when mode is 'recent'
      * @param int|null $jobId Optional job ID to filter by
+     * @param int|null $pipelineId Optional pipeline ID to filter by
+     * @param int|null $flowId Optional flow ID to filter by
      * @return array Result array with content, metadata, and status
      */
-    public static function getContent(string $agentType, string $mode = 'full', int $limit = 200, ?int $jobId = null): array {
+    public static function getContent(string $agentType, string $mode = 'full', int $limit = 200, ?int $jobId = null, ?int $pipelineId = null, ?int $flowId = null): array {
         if (!AgentType::isValid($agentType)) {
             return [
                 'success' => false,
@@ -126,11 +128,18 @@ class LogsManager {
         $file_content = array_reverse($file_content);
         $total_lines = count($file_content);
 
-        $filtered_lines = null;
+        // Apply filters (AND logic - all filters must match)
+        $has_filters = $jobId !== null || $pipelineId !== null || $flowId !== null;
         if ($jobId !== null) {
             $file_content = self::filterByJobId($file_content, $jobId);
-            $filtered_lines = count($file_content);
         }
+        if ($pipelineId !== null) {
+            $file_content = self::filterByPipelineId($file_content, $pipelineId);
+        }
+        if ($flowId !== null) {
+            $file_content = self::filterByFlowId($file_content, $flowId);
+        }
+        $filtered_lines = $has_filters ? count($file_content) : null;
 
         if ($mode === 'recent') {
             $file_content = array_slice($file_content, 0, $limit);
@@ -148,14 +157,32 @@ class LogsManager {
 
         if ($filtered_lines !== null) {
             $response['filtered_lines'] = $filtered_lines;
-            $response['job_id'] = $jobId;
+            if ($jobId !== null) {
+                $response['job_id'] = $jobId;
+            }
+            if ($pipelineId !== null) {
+                $response['pipeline_id'] = $pipelineId;
+            }
+            if ($flowId !== null) {
+                $response['flow_id'] = $flowId;
+            }
         }
 
-        if ($jobId !== null) {
+        if ($jobId !== null || $pipelineId !== null || $flowId !== null) {
+            $filter_parts = [];
+            if ($jobId !== null) {
+                $filter_parts[] = sprintf('job %d', $jobId);
+            }
+            if ($pipelineId !== null) {
+                $filter_parts[] = sprintf('pipeline %d', $pipelineId);
+            }
+            if ($flowId !== null) {
+                $filter_parts[] = sprintf('flow %d', $flowId);
+            }
             $response['message'] = sprintf(
-                __('Retrieved %1$d log entries for job %2$d.', 'data-machine'),
+                __('Retrieved %1$d log entries for %2$s.', 'data-machine'),
                 count($file_content),
-                $jobId
+                implode(', ', $filter_parts)
             );
         } else {
             $response['message'] = sprintf(
@@ -244,6 +271,44 @@ class LogsManager {
 
         foreach ($lines as $line) {
             if (preg_match('/"job_id"\s*:\s*' . preg_quote($jobId, '/') . '(?:[,\}])/', $line)) {
+                $filtered[] = $line;
+            }
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * Filter log lines by pipeline ID.
+     *
+     * @param array $lines Log file lines
+     * @param int $pipelineId Pipeline ID to filter by
+     * @return array Filtered log lines
+     */
+    private static function filterByPipelineId(array $lines, int $pipelineId): array {
+        $filtered = [];
+
+        foreach ($lines as $line) {
+            if (preg_match('/"pipeline_id"\s*:\s*' . preg_quote($pipelineId, '/') . '(?:[,\}])/', $line)) {
+                $filtered[] = $line;
+            }
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * Filter log lines by flow ID.
+     *
+     * @param array $lines Log file lines
+     * @param int $flowId Flow ID to filter by
+     * @return array Filtered log lines
+     */
+    private static function filterByFlowId(array $lines, int $flowId): array {
+        $filtered = [];
+
+        foreach ($lines as $line) {
+            if (preg_match('/"flow_id"\s*:\s*' . preg_quote($flowId, '/') . '(?:[,\}])/', $line)) {
                 $filtered[] = $line;
             }
         }

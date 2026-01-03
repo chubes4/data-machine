@@ -37,7 +37,10 @@ class PipelineManager {
      */
     public function create(string $name, array $options = []): ?array {
         if (!current_user_can('manage_options')) {
-            do_action('datamachine_log', 'error', 'Insufficient permissions for pipeline creation');
+            do_action('datamachine_log', 'error', 'Insufficient permissions for pipeline creation', [
+                'user_id' => get_current_user_id(),
+                'attempted_name' => $name
+            ]);
             return null;
         }
 
@@ -130,7 +133,10 @@ class PipelineManager {
      */
     public function update(int $pipeline_id, array $data): bool {
         if (!current_user_can('manage_options')) {
-            do_action('datamachine_log', 'error', 'Insufficient permissions for pipeline update');
+            do_action('datamachine_log', 'error', 'Insufficient permissions for pipeline update', [
+                'user_id' => get_current_user_id(),
+                'pipeline_id' => $pipeline_id
+            ]);
             return false;
         }
 

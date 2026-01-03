@@ -91,12 +91,12 @@ class SiteContext {
     }
 
     /**
-     * Get public taxonomies with term and post counts.
+     * Get public taxonomies with metadata and term counts.
      *
-     * Only includes taxonomies with at least one term associated with posts.
-     * Excludes post_format, nav_menu, and link_category.
+     * Returns taxonomy structure without individual term listings to keep
+     * context payload small. Use search_taxonomy_terms tool for term discovery.
      *
-     * @return array Taxonomy labels, terms with counts, hierarchy, post type associations
+     * @return array Taxonomy labels, term counts, hierarchy, post type associations
      */
     private static function get_taxonomies_data(): array {
         $taxonomies_data = [];
@@ -107,34 +107,20 @@ class SiteContext {
                 continue;
             }
 
-            $terms = get_terms([
-                'taxonomy' => $taxonomy->name,
-                'hide_empty' => false,
-                'count' => true,
-                'orderby' => 'count',
-                'order' => 'DESC'
-            ]);
-
-            $term_data = [];
-            if (is_array($terms)) {
-                foreach ($terms as $term) {
-                    if ($term->count > 0) {
-                        $term_data[$term->name] = (int) $term->count;
-                    }
-                }
+            $term_count = wp_count_terms(['taxonomy' => $taxonomy->name, 'hide_empty' => false]);
+            if (is_wp_error($term_count)) {
+                $term_count = 0;
             }
 
-            if (!empty($term_data)) {
-                $taxonomies_data[$taxonomy->name] = [
-                    'label' => $taxonomy->label,
-                    'singular_label' => (is_object($taxonomy->labels) && isset($taxonomy->labels->singular_name))
-                        ? $taxonomy->labels->singular_name
-                        : $taxonomy->label,
-                    'terms' => $term_data,
-                    'hierarchical' => $taxonomy->hierarchical,
-                    'post_types' => $taxonomy->object_type ?? []
-                ];
-            }
+            $taxonomies_data[$taxonomy->name] = [
+                'label' => $taxonomy->label,
+                'singular_label' => (is_object($taxonomy->labels) && isset($taxonomy->labels->singular_name))
+                    ? $taxonomy->labels->singular_name
+                    : $taxonomy->label,
+                'term_count' => (int) $term_count,
+                'hierarchical' => $taxonomy->hierarchical,
+                'post_types' => $taxonomy->object_type ?? []
+            ];
         }
 
         return $taxonomies_data;

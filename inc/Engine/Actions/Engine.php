@@ -132,8 +132,9 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
 
     if (!$first_flow_step_id) {
         do_action('datamachine_log', 'error', 'Flow execution failed - no first step found', [
-            'flow_id' => $flow_id,
-            'job_id' => $job_id
+            'job_id' => $job_id,
+            'pipeline_id' => $pipeline_id,
+            'flow_id' => $flow_id
         ]);
         return false;
     }
@@ -267,14 +268,19 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
                     $cleanup->cleanup_job_data_packets($job_id, $context);
                     do_action('datamachine_log', 'info', 'Pipeline execution completed successfully', [
                         'job_id' => $job_id,
+                        'pipeline_id' => $flow_step_config['pipeline_id'] ?? null,
+                        'flow_id' => $flow_id,
                         'flow_step_id' => $flow_step_id,
                         'final_packet_count' => count($dataPackets)
                     ]);
                 }
             } else {
                 do_action('datamachine_log', 'error', 'Step execution failed - empty data packet', [
+                    'job_id' => $job_id,
+                    'pipeline_id' => $flow_step_config['pipeline_id'] ?? null,
+                    'flow_id' => $flow_id,
                     'flow_step_id' => $flow_step_id,
-                    'class' => $step_class
+                    'step_class' => $step_class
                 ]);
                 $job_manager->fail($job_id, 'step_execution_failure', [
                     'flow_step_id' => $flow_step_id,

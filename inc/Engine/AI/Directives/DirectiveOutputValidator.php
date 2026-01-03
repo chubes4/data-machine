@@ -13,25 +13,32 @@ defined('ABSPATH') || exit;
 
 class DirectiveOutputValidator {
 
-	public static function validateOutputs(array $outputs): array {
+	/**
+	 * Validate directive outputs before rendering.
+	 *
+	 * @param array $outputs Raw directive outputs to validate
+	 * @param array $context Optional execution context (job_id, flow_step_id, etc.)
+	 * @return array Validated outputs
+	 */
+	public static function validateOutputs(array $outputs, array $context = []): array {
 		$validated = [];
 
 		foreach ($outputs as $output) {
 			if (!is_array($output)) {
-				do_action('datamachine_log', 'warning', 'Directive output skipped (not an array)');
+				do_action('datamachine_log', 'warning', 'Directive output skipped (not an array)', $context);
 				continue;
 			}
 
 			$type = $output['type'] ?? null;
 			if (!is_string($type) || $type === '') {
-				do_action('datamachine_log', 'warning', 'Directive output skipped (missing type)');
+				do_action('datamachine_log', 'warning', 'Directive output skipped (missing type)', $context);
 				continue;
 			}
 
 			if ($type === 'system_text') {
 				$content = $output['content'] ?? null;
 				if (!is_string($content)) {
-					do_action('datamachine_log', 'warning', 'Directive output skipped (system_text missing content)');
+					do_action('datamachine_log', 'warning', 'Directive output skipped (system_text missing content)', $context);
 					continue;
 				}
 
@@ -53,12 +60,12 @@ class DirectiveOutputValidator {
 				$data = $output['data'] ?? null;
 
 				if (!is_string($label) || trim($label) === '') {
-					do_action('datamachine_log', 'warning', 'Directive output skipped (system_json missing label)');
+					do_action('datamachine_log', 'warning', 'Directive output skipped (system_json missing label)', $context);
 					continue;
 				}
 
 				if (!is_array($data)) {
-					do_action('datamachine_log', 'warning', 'Directive output skipped (system_json missing data)');
+					do_action('datamachine_log', 'warning', 'Directive output skipped (system_json missing data)', $context);
 					continue;
 				}
 
@@ -76,7 +83,7 @@ class DirectiveOutputValidator {
 				$mime_type = $output['mime_type'] ?? null;
 
 				if (!is_string($file_path) || trim($file_path) === '' || !is_string($mime_type) || trim($mime_type) === '') {
-					do_action('datamachine_log', 'warning', 'Directive output skipped (system_file missing file_path or mime_type)');
+					do_action('datamachine_log', 'warning', 'Directive output skipped (system_file missing file_path or mime_type)', $context);
 					continue;
 				}
 
@@ -89,9 +96,9 @@ class DirectiveOutputValidator {
 				continue;
 			}
 
-			do_action('datamachine_log', 'warning', 'Directive output skipped (unknown type)', [
+			do_action('datamachine_log', 'warning', 'Directive output skipped (unknown type)', array_merge($context, [
 				'type' => $type,
-			]);
+			]));
 		}
 
 		return $validated;

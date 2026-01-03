@@ -5,6 +5,27 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3] - 2026-01-03
+
+### Added
+- **New AI Chat Tools** - Expanded agent capabilities with four new specialized tools:
+  - `ReadLogs` - Allows AI agent to retrieve and analyze execution logs for debugging.
+  - `ManageLogs` - Enables agent to clear logs and manage log levels.
+  - `SearchTaxonomyTerms` - Facilitates discovery of existing WordPress terms for better workflow configuration.
+  - `CreateTaxonomyTerm` - Allows agent to create new terms on-the-fly during workflow setup.
+- **Enhanced Logging System** - Centralized logging in the `Step` base class that automatically injects `job_id`, `pipeline_id`, and `flow_id` context into all step-related logs.
+
+### Improved
+- **Log Filtering API** - Added support for filtering log content by `pipeline_id` and `flow_id` in the REST API and `LogsManager`.
+- **UI State Management** - Implemented optimistic updates for log clearing and a visual "Copied!" feedback state for the log copy button.
+- **Agent Intelligence** - Updated `ChatAgentDirective` with improved guidance for taxonomy discovery and management.
+- **Code Consistency** - Refactored `FetchStep` and `WordPress` handlers to use the improved centralized logging system.
+
+### Technical Details
+- **New Chat Tools**: `inc/Api/Chat/Tools/ReadLogs.php`, `inc/Api/Chat/Tools/ManageLogs.php`, `inc/Api/Chat/Tools/CreateTaxonomyTerm.php`, `inc/Api/Chat/Tools/SearchTaxonomyTerms.php`.
+- **API Enhancements**: `LogsManager::getContent()` and `GET /logs/content` now accept `pipeline_id` and `flow_id` parameters.
+- **Log Context**: Logging now automatically extracts context from `engine->getJobContext()`.
+
 ## [0.8.2] - 2026-01-03
 
 ### Added

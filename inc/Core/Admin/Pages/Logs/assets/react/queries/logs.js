@@ -73,8 +73,30 @@ export const useClearLogs = () => {
 
 	return useMutation( {
 		mutationFn: logsApi.clearLogs,
+		onMutate: async ( agentType ) => {
+			await queryClient.cancelQueries( { queryKey: logsKeys.content( agentType ) } );
+			await queryClient.cancelQueries( { queryKey: logsKeys.metadata( agentType ) } );
+
+			const previousContent = queryClient.getQueryData( logsKeys.content( agentType, 'recent', 200 ) );
+			const previousMetadata = queryClient.getQueryData( logsKeys.metadata( agentType ) );
+
+			queryClient.setQueryData( logsKeys.content( agentType, 'recent', 200 ), ( old ) => ( {
+				...old,
+				content: '',
+				total_lines: 0,
+			} ) );
+			queryClient.setQueryData( logsKeys.metadata( agentType ), ( old ) => ( {
+				...old,
+				log_file: { ...old?.log_file, size_formatted: '0 bytes', size_bytes: 0 },
+			} ) );
+
+			return { previousContent, previousMetadata };
+		},
+		onError: ( err, agentType, context ) => {
+			queryClient.setQueryData( logsKeys.content( agentType, 'recent', 200 ), context.previousContent );
+			queryClient.setQueryData( logsKeys.metadata( agentType ), context.previousMetadata );
+		},
 		onSuccess: ( _, agentType ) => {
-			// Invalidate content and metadata for this agent type
 			queryClient.invalidateQueries( { queryKey: logsKeys.content( agentType ) } );
 			queryClient.invalidateQueries( { queryKey: logsKeys.metadata( agentType ) } );
 		},
@@ -89,8 +111,29 @@ export const useClearAllLogs = () => {
 
 	return useMutation( {
 		mutationFn: logsApi.clearAllLogs,
+		onMutate: async () => {
+			await queryClient.cancelQueries( { queryKey: logsKeys.all } );
+
+			const previousData = queryClient.getQueriesData( { queryKey: logsKeys.all } );
+
+			queryClient.setQueriesData( { queryKey: [ 'logs', 'content' ] }, ( old ) => ( {
+				...old,
+				content: '',
+				total_lines: 0,
+			} ) );
+			queryClient.setQueriesData( { queryKey: [ 'logs', 'metadata' ] }, ( old ) => ( {
+				...old,
+				log_file: { ...old?.log_file, size_formatted: '0 bytes', size_bytes: 0 },
+			} ) );
+
+			return { previousData };
+		},
+		onError: ( err, _, context ) => {
+			context.previousData.forEach( ( [ queryKey, data ] ) => {
+				queryClient.setQueryData( queryKey, data );
+			} );
+		},
 		onSuccess: () => {
-			// Invalidate all log queries
 			queryClient.invalidateQueries( { queryKey: logsKeys.all } );
 		},
 	} );

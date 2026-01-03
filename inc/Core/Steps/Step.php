@@ -167,16 +167,27 @@ abstract class Step {
     /**
      * Centralized logging with consistent context.
      *
+     * Automatically includes job_id, pipeline_id, and flow_id from engine context
+     * to ensure all step logs can be filtered and queried effectively.
+     *
      * @param string $level Log level (debug, info, warning, error)
      * @param string $message Log message
      * @param array $context Additional context data
      * @return void
      */
     protected function log(string $level, string $message, array $context = []): void {
+        $job_context = $this->engine->getJobContext();
+
         $full_context = array_merge([
             'flow_step_id' => $this->flow_step_id,
-            'step_type' => $this->step_type
+            'step_type' => $this->step_type,
+            'job_id' => $job_context['job_id'] ?? $this->job_id,
+            'pipeline_id' => $job_context['pipeline_id'] ?? null,
+            'flow_id' => $job_context['flow_id'] ?? null
         ], $context);
+
+        // Remove null values to keep logs clean
+        $full_context = array_filter($full_context, fn($v) => $v !== null);
 
         do_action('datamachine_log', $level, $message, $full_context);
     }

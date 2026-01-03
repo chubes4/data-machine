@@ -51,7 +51,7 @@ class ChatAgentDirective implements \DataMachine\Engine\AI\Directives\DirectiveI
 			. '- Use pipeline_step_id from the inventory to target steps' . "\n"
 			. '- Unconfigured handler fields use schema defaults automatically' . "\n\n"
 			. '## Site Context' . "\n\n"
-			. 'You receive site context with post types, taxonomies, and terms. Use this to configure workflows correctly.' . "\n\n"
+			. 'You receive site context with post types and taxonomy metadata (labels, term counts, hierarchy). Use `search_taxonomy_terms` to discover existing terms and `create_taxonomy_term` to create new ones.' . "\n\n"
 			. '## Errors' . "\n\n"
 			. 'If you encounter errors, fix them using information from the error message.';
 

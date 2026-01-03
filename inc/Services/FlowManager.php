@@ -32,7 +32,10 @@ class FlowManager {
      */
     public function create(int $pipeline_id, string $name, array $options = []): ?array {
         if (!current_user_can('manage_options')) {
-            do_action('datamachine_log', 'error', 'Insufficient permissions for flow creation');
+            do_action('datamachine_log', 'error', 'Insufficient permissions for flow creation', [
+                'user_id' => get_current_user_id(),
+                'pipeline_id' => $pipeline_id
+            ]);
             return null;
         }
 
@@ -124,7 +127,10 @@ class FlowManager {
      */
     public function delete(int $flow_id): bool {
         if (!current_user_can('manage_options')) {
-            do_action('datamachine_log', 'error', 'Insufficient permissions for flow deletion');
+            do_action('datamachine_log', 'error', 'Insufficient permissions for flow deletion', [
+                'user_id' => get_current_user_id(),
+                'flow_id' => $flow_id
+            ]);
             return false;
         }
 
@@ -193,7 +199,11 @@ class FlowManager {
         array $options = []
     ): array {
         if (!current_user_can('manage_options')) {
-            do_action('datamachine_log', 'error', 'Insufficient permissions for flow copy');
+            do_action('datamachine_log', 'error', 'Insufficient permissions for flow copy', [
+                'user_id' => get_current_user_id(),
+                'source_flow_id' => $source_flow_id,
+                'target_pipeline_id' => $target_pipeline_id
+            ]);
             return ['success' => false, 'error' => 'Insufficient permissions'];
         }
 

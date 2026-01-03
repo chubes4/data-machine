@@ -117,14 +117,6 @@ GET /datamachine/v1/jobs?flow_id={id} - Jobs for specific flow
 GET /datamachine/v1/jobs?status={pending|running|completed|failed} - Filter by status
 GET /datamachine/v1/jobs/{id} - Job details
 
-## Logs
-GET /datamachine/v1/logs/content - Get log content
-GET /datamachine/v1/logs/content?job_id={id} - Logs for specific job
-GET /datamachine/v1/logs/content?mode=recent&limit=100 - Recent logs
-DELETE /datamachine/v1/logs - Clear logs
-PUT /datamachine/v1/logs/level - Set log level
-  data: {level: "debug|info|warning|error"}
-
 ## System
 GET /datamachine/v1/settings - Get plugin settings
 POST /datamachine/v1/settings - Update settings

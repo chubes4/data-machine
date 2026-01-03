@@ -4,6 +4,7 @@
  * Per-tab controls for log level, clear, refresh, and copy.
  */
 
+import { useState } from '@wordpress/element';
 import { Button, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useLogMetadata, useClearLogs, useUpdateLogLevel } from '../queries/logs';
@@ -15,6 +16,7 @@ const LogsControls = ( { agentType, agentLabel } ) => {
 	const { data: metadata, isLoading: metadataLoading } = useLogMetadata( agentType );
 	const clearMutation = useClearLogs();
 	const updateLevelMutation = useUpdateLogLevel();
+	const [ isCopied, setIsCopied ] = useState( false );
 
 	const currentLevel = metadata?.configuration?.current_level || 'error';
 	const availableLevels = metadata?.configuration?.available_levels || {};
@@ -38,6 +40,8 @@ const LogsControls = ( { agentType, agentLabel } ) => {
 		const logViewer = document.querySelector( `.datamachine-log-viewer[data-agent-type="${ agentType }"]` );
 		if ( logViewer ) {
 			navigator.clipboard.writeText( logViewer.textContent || '' );
+			setIsCopied( true );
+			setTimeout( () => setIsCopied( false ), 2000 );
 		}
 	};
 
@@ -76,7 +80,7 @@ const LogsControls = ( { agentType, agentLabel } ) => {
 					variant="secondary"
 					onClick={ handleCopy }
 				>
-					{ __( 'Copy', 'data-machine' ) }
+					{ isCopied ? __( 'Copied!', 'data-machine' ) : __( 'Copy', 'data-machine' ) }
 				</Button>
 				<Button
 					variant="secondary"
