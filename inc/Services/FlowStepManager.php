@@ -15,9 +15,11 @@ defined('ABSPATH') || exit;
 class FlowStepManager {
 
     private \DataMachine\Core\Database\Flows\Flows $db_flows;
+    private HandlerService $handler_service;
 
     public function __construct() {
         $this->db_flows = new \DataMachine\Core\Database\Flows\Flows();
+        $this->handler_service = new HandlerService();
     }
 
     /**
@@ -89,7 +91,8 @@ class FlowStepManager {
 
         $flow_config[$flow_step_id]['handler_slug'] = $handler_slug;
         $existing_handler_config = $flow_config[$flow_step_id]['handler_config'] ?? [];
-        $flow_config[$flow_step_id]['handler_config'] = array_merge($existing_handler_config, $handler_settings);
+        $merged_config = array_merge($existing_handler_config, $handler_settings);
+        $flow_config[$flow_step_id]['handler_config'] = $this->handler_service->applyDefaults($handler_slug, $merged_config);
         $flow_config[$flow_step_id]['enabled'] = true;
 
         $success = $this->db_flows->update_flow($flow_id, [

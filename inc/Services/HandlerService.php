@@ -132,4 +132,40 @@ class HandlerService {
 
         return $settings_class::get_fields();
     }
+
+    /**
+     * Apply handler defaults to configuration.
+     *
+     * Merges schema defaults with provided config. Provided values take precedence.
+     * Keys not in schema are preserved for forward compatibility.
+     *
+     * @param string $handler_slug Handler identifier
+     * @param array $config Provided configuration values
+     * @return array Complete configuration with defaults applied
+     */
+    public function applyDefaults(string $handler_slug, array $config): array {
+        $fields = $this->getConfigFields($handler_slug);
+
+        if (empty($fields)) {
+            return $config;
+        }
+
+        $complete_config = [];
+
+        foreach ($fields as $key => $field_config) {
+            if (array_key_exists($key, $config)) {
+                $complete_config[$key] = $config[$key];
+            } elseif (isset($field_config['default'])) {
+                $complete_config[$key] = $field_config['default'];
+            }
+        }
+
+        foreach ($config as $key => $value) {
+            if (!isset($fields[$key])) {
+                $complete_config[$key] = $value;
+            }
+        }
+
+        return $complete_config;
+    }
 }

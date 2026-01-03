@@ -5,6 +5,22 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-01-02
+
+### Added
+- **AI Context Enrichment** - Enhanced `ChatPipelinesDirective` to include flow summaries (ID, name, and active handlers) in the pipeline inventory, enabling the agent to learn from established configuration patterns.
+- **Centralized Default Application** - Added `HandlerService->applyDefaults()` to provide a single source of truth for merging handler schema defaults with configuration.
+
+### Improved
+- **Chat Agent Directive** - Refined `ChatAgentDirective` with a focus on architecture-aware guidance, emphasizing handler roles and documented configuration patterns.
+- **Flow Update Consistency** - Refactored `FlowStepManager` and `Flows` API to utilize the centralized default application logic, ensuring consistent configuration state across all entry points.
+- **Classmap Cleanup** - Removed legacy/unused tool entries from `composer.json` to streamline the classloader.
+
+### Technical Details
+- **New Service Method**: Added `applyDefaults(string $handler_slug, array $config)` to `inc/Services/HandlerService.php`.
+- **Logic Consolidation**: Removed `merge_handler_defaults()` from `inc/Api/Flows/Flows.php` in favor of `HandlerService`.
+- **Directive Updates**: Significant content revision in `inc/Api/Chat/ChatAgentDirective.php` and context expansion in `inc/Api/Chat/ChatPipelinesDirective.php`.
+
 ## [0.7.0] - 2026-01-02
 
 ### Added

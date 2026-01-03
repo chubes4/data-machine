@@ -43,6 +43,7 @@ class ChatPipelinesDirective implements \DataMachine\Engine\AI\Directives\Direct
         }
 
         $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
         $pipelines = $db_pipelines->get_all_pipelines();
 
         $inventory = [
@@ -78,16 +79,51 @@ class ChatPipelinesDirective implements \DataMachine\Engine\AI\Directives\Direct
                 return ($a['execution_order'] ?? 0) <=> ($b['execution_order'] ?? 0);
             });
 
+            $flows = self::getFlowSummaries($db_flows, $pipeline_id);
+
             $inventory['pipelines'][] = [
                 'pipeline_id' => $pipeline_id,
                 'pipeline_name' => $pipeline_name,
                 'steps' => $steps,
+                'flows' => $flows,
             ];
         }
 
         set_transient(self::CACHE_KEY, $inventory, 0);
 
         return $inventory;
+    }
+
+    /**
+     * Get lightweight flow summaries for a pipeline.
+     *
+     * @param \DataMachine\Core\Database\Flows\Flows $db_flows Flows database instance
+     * @param int $pipeline_id Pipeline ID
+     * @return array Flow summaries with id, name, and handler slugs
+     */
+    private static function getFlowSummaries(\DataMachine\Core\Database\Flows\Flows $db_flows, int $pipeline_id): array {
+        $flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+        $summaries = [];
+
+        foreach ($flows as $flow) {
+            $flow_config = $flow['flow_config'] ?? [];
+            $handlers = [];
+
+            foreach ($flow_config as $step_config) {
+                $handler_slug = $step_config['handler_slug'] ?? null;
+                if ($handler_slug && !in_array($handler_slug, $handlers, true)) {
+                    $handlers[] = $handler_slug;
+                }
+            }
+
+            $summaries[] = [
+                'flow_id' => (int) $flow['flow_id'],
+                'flow_name' => (string) ($flow['flow_name'] ?? ''),
+                'handlers' => $handlers,
+            ];
+        }
+
+        return $summaries;
     }
 }
 

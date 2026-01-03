@@ -319,6 +319,8 @@ class Flows {
 	private static function format_flow_for_response(array $flow): array {
 		$flow_config = $flow['flow_config'] ?? [];
 
+		$handler_service = new HandlerService();
+
 		foreach ($flow_config as $flow_step_id => &$step_data) {
 			if (!isset($step_data['handler_slug'])) {
 				continue;
@@ -334,7 +336,7 @@ class Flows {
 				$step_type
 			);
 
-			$step_data['handler_config'] = self::merge_handler_defaults(
+			$step_data['handler_config'] = $handler_service->applyDefaults(
 				$handler_slug,
 				$step_data['handler_config'] ?? []
 			);
@@ -449,54 +451,4 @@ class Flows {
 
 
 
-	/**
-	 * Merge handler defaults with stored configuration.
-	 *
-	 * Retrieves handler settings schema and merges default values with
-	 * stored configuration. Stored values always take precedence.
-	 *
-	 * @param string $handler_slug Handler identifier
-	 * @param array $stored_config Stored handler configuration
-	 * @return array Complete configuration with defaults merged
-	 */
-	private static function merge_handler_defaults(string $handler_slug, array $stored_config): array {
-		// Get handler settings class via cached service
-		$handler_service = new HandlerService();
-		$settings_class = $handler_service->getSettingsClass($handler_slug);
-
-		if (!$settings_class) {
-			// No settings class registered - return stored config as-is
-			return $stored_config;
-		}
-
-		// Get field schema
-		if (!method_exists($settings_class, 'get_fields')) {
-			return $stored_config;
-		}
-
-		$fields = $settings_class::get_fields();
-
-		// Build complete config: defaults + stored values
-		$complete_config = [];
-
-		foreach ($fields as $key => $field_config) {
-			if (array_key_exists($key, $stored_config)) {
-				// Stored value exists - use it (user's choice)
-				$complete_config[$key] = $stored_config[$key];
-			} elseif (isset($field_config['default'])) {
-				// No stored value - use default from schema
-				$complete_config[$key] = $field_config['default'];
-			}
-			// If neither exists, omit the field entirely
-		}
-
-		// Preserve any stored keys not in schema (forward compatibility)
-		foreach ($stored_config as $key => $value) {
-			if (!isset($fields[$key])) {
-				$complete_config[$key] = $value;
-			}
-		}
-
-		return $complete_config;
-	}
 }

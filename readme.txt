@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.7.0
+Stable tag: 0.7.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -247,7 +247,14 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 
 == Changelog ==
 
-= 0.2.10 =
+= 0.7.1 =
+* Refined ChatAgentDirective with architecture-focused instructions
+* Enhanced ChatPipelinesDirective with flow summaries for improved agent learning
+* Centralized handler configuration default logic into HandlerService
+* Optimized flow update logic to ensure consistent default application
+* Removed legacy tool definitions from composer classmap
+
+= 0.7.0 =
 * Added PluginSettings class for centralized settings access with request-level caching
 * Added EngineData::getPipelineStepConfig() for pipeline step configuration retrieval
 * Migrated 15+ files from scattered get_option() calls to centralized PluginSettings::get()
