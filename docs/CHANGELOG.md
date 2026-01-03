@@ -5,6 +5,22 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2026-01-03
+
+### Added
+- **Chat Persistence Architecture** - Implemented conversation retrieval logic to maintain chat state across page refreshes.
+- **useChatQueryInvalidation Hook** - New React hook for automatic TanStack Query cache invalidation when AI tools modify system state.
+- **REST Chat Retrieval** - New `GET /chat/{session_id}` endpoint for fetching historical conversation turns.
+
+### Improved
+- **Chat Session Management** - Removed 24-hour expiration from `ChatDatabase` to support long-running development sessions.
+- **UI Synchronization** - Enhanced chat sidebar with prioritized reloading and query invalidation for better workflow continuity.
+
+### Technical Details
+- **New Core File**: `inc/Core/Admin/Pages/Pipelines/assets/react/hooks/useChatQueryInvalidation.js`
+- **Session Continuity**: Chat sessions now persist indefinitely in the database until manual deletion.
+- **Data Retrieval**: Integrated `retrieve_session()` method into `Chat` REST API class.
+
 ## [0.8.1] - 2026-01-03
 
 ### Added
