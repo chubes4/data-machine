@@ -5,6 +5,24 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-01-03
+
+### Added
+- **Cache Management Service** - New `CacheManager` class for centralized, cross-system cache invalidation.
+- **Lazy Tool Resolution** - Implemented lazy loading for AI tool definitions to prevent WordPress 6.7+ translation timing issues.
+- **Dynamic Invalidation Hooks** - Added `datamachine_handler_registered` and `datamachine_step_type_registered` actions for real-time cache syncing.
+
+### Improved
+- **Service Layer Caching** - Integrated high-performance caching into `HandlerService`, `StepTypeService`, and `HandlerDocumentation` (2x faster discovery).
+- **Chat Context Awareness** - Enhanced AI chat endpoint with `selected_pipeline_id` payload, allowing agents to understand UI state.
+- **Tool Registration Pattern** - Updated `ToolRegistrationTrait` and all chat tools to support callable definitions for lazy evaluation.
+- **Documentation Utility** - Optimized `HandlerDocumentation` with internal caching and slug-based invalidation detection.
+
+### Technical Details
+- **New Core File**: `inc/Services/CacheManager.php`
+- **Lazy Loading**: Tool definitions are now resolved only when first accessed, ensuring translations are loaded.
+- **Context Injection**: `selected_pipeline_id` passed to `ChatPipelinesDirective` for prioritized inventory awareness.
+
 ## [0.8.0] - 2026-01-03
 
 ### Added

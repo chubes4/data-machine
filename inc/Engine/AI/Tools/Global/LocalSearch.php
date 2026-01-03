@@ -16,7 +16,7 @@ class LocalSearch {
     use ToolRegistrationTrait;
 
     public function __construct() {
-        $this->registerGlobalTool('local_search', $this->getToolDefinition());
+        $this->registerGlobalTool('local_search', [$this, 'getToolDefinition']);
     }
 
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
@@ -110,10 +110,11 @@ class LocalSearch {
 
     /**
      * Get Local Search tool definition.
+     * Called lazily when tool is first accessed to ensure translations are loaded.
      *
      * @return array Tool definition array
      */
-    private function getToolDefinition(): array {
+    public function getToolDefinition(): array {
         return [
             'class' => __CLASS__,
             'method' => 'handle_tool_call',

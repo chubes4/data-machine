@@ -25,15 +25,16 @@ class ApiQuery {
 	use ToolRegistrationTrait;
 
 	public function __construct() {
-		$this->registerTool('chat', 'api_query', $this->getToolDefinition());
+		$this->registerTool('chat', 'api_query', [$this, 'getToolDefinition']);
 	}
 
 	/**
 	 * Get API Query tool definition.
+	 * Called lazily when tool is first accessed to ensure translations are loaded.
 	 *
 	 * @return array Tool definition array
 	 */
-	private function getToolDefinition(): array {
+	public function getToolDefinition(): array {
 		return [
 			'class' => self::class,
 			'method' => 'handle_tool_call',
@@ -331,5 +332,3 @@ DELETE /datamachine/v1/files/{filename} - Delete file
 		return $resource;
 	}
 }
-
-new ApiQuery();

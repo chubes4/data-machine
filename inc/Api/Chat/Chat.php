@@ -81,6 +81,12 @@ class Chat {
 					'required' => false,
 					'description' => __('Model identifier (optional, uses default if not provided)', 'data-machine'),
 					'sanitize_callback' => 'sanitize_text_field'
+				],
+				'selected_pipeline_id' => [
+					'type' => 'integer',
+					'required' => false,
+					'description' => __('Currently selected pipeline ID for context', 'data-machine'),
+					'sanitize_callback' => 'absint'
 				]
 			]
 		]);
@@ -110,6 +116,7 @@ class Chat {
 
 		$provider = sanitize_text_field($provider);
 		$model = sanitize_text_field($model);
+		$selected_pipeline_id = $request->get_param('selected_pipeline_id');
 		$user_id = get_current_user_id();
 
 		// Validate that we have provider and model
@@ -186,7 +193,10 @@ class Chat {
 				$provider,
 				$model,
 				AgentType::CHAT,
-				['session_id' => $session_id],
+				[
+					'session_id' => $session_id,
+					'selected_pipeline_id' => $selected_pipeline_id ?: null,
+				],
 				$max_turns
 			);
 

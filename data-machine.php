@@ -3,7 +3,7 @@
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/data-machine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:           0.8.0
+ * Version:           0.8.1
  * Requires at least: 6.2
  * Requires PHP:     8.2
  * Author:          Chris Huber, extrachill
@@ -21,7 +21,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.8.0' );
+define( 'DATAMACHINE_VERSION', '0.8.1' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -43,6 +43,16 @@ function datamachine_run_datamachine_plugin() {
 	// Set Action Scheduler timeout to 10 minutes (600 seconds) for large tasks
 	add_filter('action_scheduler_timeout_period', function() { return 600; });
 
+	// Initialize translation readiness tracking for lazy tool resolution
+	\DataMachine\Engine\AI\Tools\ToolManager::init();
+
+	// Cache invalidation hooks for dynamic registration
+	add_action('datamachine_handler_registered', function() {
+		\DataMachine\Services\CacheManager::clearHandlerCaches();
+	});
+	add_action('datamachine_step_type_registered', function() {
+		\DataMachine\Services\CacheManager::clearStepTypeCaches();
+	});
 
 	datamachine_register_utility_filters();
 	datamachine_register_admin_filters();
@@ -54,6 +64,9 @@ function datamachine_run_datamachine_plugin() {
 
 	// Load and instantiate all handlers - they self-register via constructors
 	datamachine_load_handlers();
+
+	// Load chat tools - must happen AFTER step types and handlers are registered
+	datamachine_load_chat_tools();
 
     \DataMachine\Api\Execute::register();
     \DataMachine\Api\Pipelines\Pipelines::register();
@@ -134,6 +147,24 @@ function datamachine_load_handlers() {
 
     // Update Handlers
     new \DataMachine\Core\Steps\Update\Handlers\WordPress\WordPress();
+}
+
+/**
+ * Load chat tools - must be called AFTER step types and handlers are registered.
+ * These tools build their descriptions from registered step types and handlers.
+ */
+function datamachine_load_chat_tools() {
+    new \DataMachine\Api\Chat\Tools\ApiQuery();
+    new \DataMachine\Api\Chat\Tools\CreatePipeline();
+    new \DataMachine\Api\Chat\Tools\AddPipelineStep();
+    new \DataMachine\Api\Chat\Tools\CreateFlow();
+    new \DataMachine\Api\Chat\Tools\ConfigureFlowSteps();
+    new \DataMachine\Api\Chat\Tools\RunFlow();
+    new \DataMachine\Api\Chat\Tools\UpdateFlow();
+    new \DataMachine\Api\Chat\Tools\ConfigurePipelineStep();
+    new \DataMachine\Api\Chat\Tools\ExecuteWorkflowTool();
+    new \DataMachine\Api\Chat\Tools\CopyFlow();
+    new \DataMachine\Api\Chat\Tools\AuthenticateHandler();
 }
 
 /**

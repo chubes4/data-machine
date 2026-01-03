@@ -15,7 +15,7 @@ import ChatMessages from './ChatMessages';
 import ChatInput from './ChatInput';
 
 export default function ChatSidebar() {
-	const { toggleChat, chatSessionId, setChatSessionId, clearChatSession } = useUIStore();
+	const { toggleChat, chatSessionId, setChatSessionId, clearChatSession, selectedPipelineId } = useUIStore();
 	const [messages, setMessages] = useState([]);
 	const chatMutation = useChatMutation();
 
@@ -27,6 +27,7 @@ export default function ChatSidebar() {
 			const response = await chatMutation.mutateAsync({
 				message,
 				sessionId: chatSessionId,
+				selectedPipelineId,
 			});
 
 			if (response.session_id && response.session_id !== chatSessionId) {
@@ -47,7 +48,7 @@ export default function ChatSidebar() {
 				clearChatSession();
 			}
 		}
-	}, [chatSessionId, setChatSessionId, clearChatSession, chatMutation]);
+	}, [chatSessionId, setChatSessionId, clearChatSession, chatMutation, selectedPipelineId]);
 
 	const handleNewConversation = useCallback(() => {
 		clearChatSession();

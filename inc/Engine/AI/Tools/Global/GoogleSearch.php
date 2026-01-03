@@ -17,7 +17,7 @@ class GoogleSearch {
 
     public function __construct() {
         $this->registerConfigurationHandlers('google_search');
-        $this->registerGlobalTool('google_search', $this->getToolDefinition());
+        $this->registerGlobalTool('google_search', [$this, 'getToolDefinition']);
     }
 
     /**
@@ -130,10 +130,11 @@ class GoogleSearch {
 
     /**
      * Get Google Search tool definition.
+     * Called lazily when tool is first accessed to ensure translations are loaded.
      *
      * @return array Tool definition array
      */
-    private function getToolDefinition(): array {
+    public function getToolDefinition(): array {
         return [
             'class' => __CLASS__,
             'method' => 'handle_tool_call',

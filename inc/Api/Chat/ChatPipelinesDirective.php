@@ -16,8 +16,9 @@ defined('ABSPATH') || exit;
 class ChatPipelinesDirective implements \DataMachine\Engine\AI\Directives\DirectiveInterface {
 
     public static function get_outputs(string $provider_name, array $tools, ?string $step_id = null, array $payload = []): array {
-        $inventory = self::getPipelinesInventory();
-        if (empty($inventory)) {
+        $selected_pipeline_id = $payload['selected_pipeline_id'] ?? null;
+        $inventory = self::getPipelinesInventory($selected_pipeline_id);
+        if (empty($inventory['pipelines'])) {
             return [];
         }
 
@@ -30,13 +31,14 @@ class ChatPipelinesDirective implements \DataMachine\Engine\AI\Directives\Direct
         ];
     }
 
-    private static function getPipelinesInventory(): array {
+    private static function getPipelinesInventory(?int $selected_pipeline_id = null): array {
 
         $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
         $db_flows = new \DataMachine\Core\Database\Flows\Flows();
         $pipelines = $db_pipelines->get_all_pipelines();
 
         $inventory = [
+            'selected_pipeline_id' => $selected_pipeline_id,
             'pipelines' => []
         ];
 

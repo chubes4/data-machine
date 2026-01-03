@@ -24,10 +24,16 @@ class ConfigureFlowSteps {
     use ToolRegistrationTrait;
 
     public function __construct() {
-        $this->registerTool('chat', 'configure_flow_steps', $this->getToolDefinition());
+        $this->registerTool('chat', 'configure_flow_steps', [$this, 'getToolDefinition']);
     }
 
-    private function getToolDefinition(): array {
+    /**
+     * Get tool definition.
+     * Called lazily when tool is first accessed to ensure translations are loaded.
+     *
+     * @return array Tool definition array
+     */
+    public function getToolDefinition(): array {
         $handler_docs = HandlerDocumentation::buildAllHandlersSections();
 
         $description = 'Configure flow steps with handlers or AI user messages. Supports single-step or bulk pipeline-scoped operations.' . "\n\n"
@@ -354,5 +360,3 @@ class ConfigureFlowSteps {
         return true;
     }
 }
-
-new ConfigureFlowSteps();

@@ -14,13 +14,14 @@ import { useMutation } from '@tanstack/react-query';
  */
 export function useChatMutation() {
 	return useMutation({
-		mutationFn: async ({ message, sessionId }) => {
+		mutationFn: async ({ message, sessionId, selectedPipelineId }) => {
 			const response = await apiFetch({
 				path: '/datamachine/v1/chat',
 				method: 'POST',
 				data: {
 					message,
 					session_id: sessionId || undefined,
+					selected_pipeline_id: selectedPipelineId || undefined,
 				},
 			});
 

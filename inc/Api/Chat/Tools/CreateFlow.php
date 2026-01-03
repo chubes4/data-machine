@@ -24,7 +24,7 @@ class CreateFlow {
     use ToolRegistrationTrait;
 
     public function __construct() {
-        $this->registerTool('chat', 'create_flow', $this->getToolDefinition());
+        $this->registerTool('chat', 'create_flow', [$this, 'getToolDefinition']);
     }
 
     private static function getValidIntervals(): array {
@@ -32,7 +32,13 @@ class CreateFlow {
         return array_merge(['manual', 'one_time'], array_keys($intervals));
     }
 
-    private function getToolDefinition(): array {
+    /**
+     * Get tool definition.
+     * Called lazily when tool is first accessed to ensure translations are loaded.
+     *
+     * @return array Tool definition array
+     */
+    public function getToolDefinition(): array {
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
@@ -259,5 +265,3 @@ class CreateFlow {
         return true;
     }
 }
-
-new CreateFlow();

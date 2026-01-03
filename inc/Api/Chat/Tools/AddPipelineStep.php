@@ -22,7 +22,7 @@ class AddPipelineStep {
 	use ToolRegistrationTrait;
 
 	public function __construct() {
-		$this->registerTool('chat', 'add_pipeline_step', $this->getToolDefinition());
+		$this->registerTool('chat', 'add_pipeline_step', [$this, 'getToolDefinition']);
 	}
 
 	private static function getValidStepTypes(): array {
@@ -30,7 +30,13 @@ class AddPipelineStep {
 		return array_keys($step_type_service->getAll());
 	}
 
-	private function getToolDefinition(): array {
+	/**
+	 * Get tool definition.
+	 * Called lazily when tool is first accessed to ensure translations are loaded.
+	 *
+	 * @return array Tool definition array
+	 */
+	public function getToolDefinition(): array {
 		$valid_types = self::getValidStepTypes();
 		$types_list = !empty($valid_types) ? implode(', ', $valid_types) : 'fetch, ai, publish, update';
 		return [
@@ -124,5 +130,3 @@ class AddPipelineStep {
 		];
 	}
 }
-
-new AddPipelineStep();

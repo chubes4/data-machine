@@ -26,15 +26,16 @@ class AuthenticateHandler {
 	use ToolRegistrationTrait;
 
 	public function __construct() {
-		$this->registerTool('chat', 'authenticate_handler', $this->getToolDefinition());
+		$this->registerTool('chat', 'authenticate_handler', [$this, 'getToolDefinition']);
 	}
 
 	/**
 	 * Get tool definition.
+	 * Called lazily when tool is first accessed to ensure translations are loaded.
 	 *
 	 * @return array Tool definition array
 	 */
-	private function getToolDefinition(): array {
+	public function getToolDefinition(): array {
 		return [
 			'class' => self::class,
 			'method' => 'handle_tool_call',
@@ -312,5 +313,3 @@ ACTIONS:
 		return ['success' => false, 'error' => $msg];
 	}
 }
-
-new AuthenticateHandler();

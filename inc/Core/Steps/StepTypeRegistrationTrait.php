@@ -82,5 +82,7 @@ trait StepTypeRegistrationTrait {
                 return $configs;
             });
         }
+
+        do_action('datamachine_step_type_registered', $slug);
     }
 }

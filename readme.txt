@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.8.0
+Stable tag: 0.8.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -246,6 +246,13 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 5. Chat Interface - Build workflows through conversational AI
 
 == Changelog ==
+
+= 0.8.1 =
+* Lazy Tool Resolution: Implemented lazy loading for AI tool definitions to prevent WordPress 6.7+ translation errors
+* Service Layer Caching: Added centralized caching to HandlerService and StepTypeService for 2x discovery performance
+* Cache Invalidation System: New CacheManager service with dynamic invalidation hooks for handlers and step types
+* Chat Context Enrichment: Enhanced AI chat with selected_pipeline_id for improved agent awareness
+* Refined Tool Registration: Updated all chat tools to support lazy evaluation and dynamic documentation
 
 = 0.8.0 =
 * Integrated Chat Sidebar: New React-based AI chat interface embedded directly into the Pipeline Builder

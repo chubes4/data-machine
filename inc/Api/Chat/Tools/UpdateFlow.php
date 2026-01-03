@@ -19,7 +19,7 @@ class UpdateFlow {
     use ToolRegistrationTrait;
 
     public function __construct() {
-        $this->registerTool('chat', 'update_flow', $this->getToolDefinition());
+        $this->registerTool('chat', 'update_flow', [$this, 'getToolDefinition']);
     }
 
     private static function getValidIntervals(): array {
@@ -27,7 +27,13 @@ class UpdateFlow {
         return array_merge(['manual', 'one_time'], array_keys($intervals));
     }
 
-    private function getToolDefinition(): array {
+    /**
+     * Get tool definition.
+     * Called lazily when tool is first accessed to ensure translations are loaded.
+     *
+     * @return array Tool definition array
+     */
+    public function getToolDefinition(): array {
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
@@ -160,5 +166,3 @@ class UpdateFlow {
         return true;
     }
 }
-
-new UpdateFlow();

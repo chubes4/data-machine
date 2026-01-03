@@ -30,6 +30,23 @@ class HandlerService {
     private static array $settings_cache = [];
 
     /**
+     * Cached config fields by handler slug.
+     *
+     * @var array<string, array>
+     */
+    private static array $config_fields_cache = [];
+
+    /**
+     * Clear all cached data.
+     * Call when handlers are dynamically registered.
+     */
+    public static function clearCache(): void {
+        self::$handlers_cache = [];
+        self::$settings_cache = [];
+        self::$config_fields_cache = [];
+    }
+
+    /**
      * Get all registered handlers, optionally filtered by step type (cached).
      *
      * @param string|null $step_type Step type filter (fetch, publish, update, etc.)
@@ -118,19 +135,28 @@ class HandlerService {
     }
 
     /**
-     * Get configuration fields for a handler.
+     * Get configuration fields for a handler (cached).
      *
      * @param string $handler_slug Handler slug
      * @return array Field definitions from the handler's settings class
      */
     public function getConfigFields(string $handler_slug): array {
+        // Return cached if available
+        if (isset(self::$config_fields_cache[$handler_slug])) {
+            return self::$config_fields_cache[$handler_slug];
+        }
+
         $settings_class = $this->getSettingsClass($handler_slug);
 
         if (!$settings_class || !method_exists($settings_class, 'get_fields')) {
+            self::$config_fields_cache[$handler_slug] = [];
             return [];
         }
 
-        return $settings_class::get_fields();
+        $fields = $settings_class::get_fields();
+        self::$config_fields_cache[$handler_slug] = $fields;
+
+        return $fields;
     }
 
     /**

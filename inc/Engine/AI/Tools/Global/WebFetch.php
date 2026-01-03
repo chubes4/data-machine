@@ -15,7 +15,7 @@ class WebFetch {
     use ToolRegistrationTrait;
 
     public function __construct() {
-        $this->registerGlobalTool('web_fetch', $this->getToolDefinition());
+        $this->registerGlobalTool('web_fetch', [$this, 'getToolDefinition']);
     }
 
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
@@ -92,10 +92,11 @@ class WebFetch {
 
     /**
      * Get Web Fetch tool definition.
+     * Called lazily when tool is first accessed to ensure translations are loaded.
      *
      * @return array Tool definition array
      */
-    private function getToolDefinition(): array {
+    public function getToolDefinition(): array {
         return [
             'class' => __CLASS__,
             'method' => 'handle_tool_call',

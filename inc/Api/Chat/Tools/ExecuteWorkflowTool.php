@@ -22,10 +22,16 @@ class ExecuteWorkflowTool {
     use ToolRegistrationTrait;
 
     public function __construct() {
-        $this->registerTool('chat', 'execute_workflow', $this->getToolDefinition());
+        $this->registerTool('chat', 'execute_workflow', [$this, 'getToolDefinition']);
     }
 
-    private function getToolDefinition(): array {
+    /**
+     * Get tool definition.
+     * Called lazily when tool is first accessed to ensure translations are loaded.
+     *
+     * @return array Tool definition array
+     */
+    public function getToolDefinition(): array {
         $handler_docs = HandlerDocumentation::buildAllHandlersSections();
         $step_type_service = new StepTypeService();
         $step_types = $step_type_service->getAll();
@@ -145,5 +151,3 @@ steps: [
         ];
     }
 }
-
-new ExecuteWorkflowTool();

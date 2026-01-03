@@ -5,6 +5,10 @@
  * Use-case agnostic tool management serving both Chat and Pipeline agents.
  * Handles tool discovery, configuration, enablement, and validation.
  *
+ * Tool definitions support lazy loading via callables to prevent translation
+ * timing issues in WordPress 6.7+. Definitions are only resolved when first
+ * accessed, ensuring translations are available.
+ *
  * @package DataMachine\Engine\AI\Tools
  * @since 0.2.1
  */
@@ -18,16 +22,131 @@ defined('ABSPATH') || exit;
 class ToolManager {
 
     // ============================================
+    // LAZY RESOLUTION CACHE
+    // ============================================
+
+    /**
+     * Resolved tool definition cache.
+     * Stores resolved definitions to avoid repeated callable invocations.
+     *
+     * @var array<string, array>
+     */
+    private static array $resolved_cache = [];
+
+    /**
+     * Flag indicating init hook has fired.
+     * Used to warn about early resolution attempts.
+     *
+     * @var bool
+     */
+    private static bool $translations_ready = false;
+
+    /**
+     * Flag indicating init tracking has been set up.
+     *
+     * @var bool
+     */
+    private static bool $init_tracking_registered = false;
+
+    /**
+     * Initialize translation readiness tracking.
+     * Should be called during plugin initialization.
+     */
+    public static function init(): void {
+        if (self::$init_tracking_registered) {
+            return;
+        }
+
+        self::$init_tracking_registered = true;
+
+        // Check if init has already fired
+        if (did_action('init')) {
+            self::$translations_ready = true;
+            return;
+        }
+
+        // Register for init hook
+        add_action('init', function() {
+            self::$translations_ready = true;
+        }, 1);
+    }
+
+    /**
+     * Clear resolved tool cache.
+     * Call when handlers, step types, or tools are dynamically registered.
+     */
+    public static function clearCache(): void {
+        self::$resolved_cache = [];
+    }
+
+    /**
+     * Resolve a tool definition if it's a callable.
+     *
+     * Handles lazy evaluation of tool definitions. Callables are invoked
+     * and their results cached. Arrays are returned as-is.
+     *
+     * @param string $tool_id Tool identifier for caching
+     * @param mixed $definition Tool definition (array or callable)
+     * @return array Resolved tool definition
+     */
+    private function resolveToolDefinition(string $tool_id, mixed $definition): array {
+        // Return cached if available
+        if (isset(self::$resolved_cache[$tool_id])) {
+            return self::$resolved_cache[$tool_id];
+        }
+
+        // Log warning if resolving before translations ready
+        if (!self::$translations_ready && !did_action('init')) {
+            do_action('datamachine_log', 'warning', 'Tool definition resolved before init hook', [
+                'tool_id' => $tool_id,
+                'current_action' => current_action(),
+                'suggestion' => 'Use callable pattern: [$this, \'getToolDefinition\'] instead of $this->getToolDefinition()'
+            ]);
+        }
+
+        // Resolve callable or use array directly
+        if (is_callable($definition)) {
+            $resolved = $definition();
+        } else {
+            $resolved = $definition;
+        }
+
+        // Ensure result is an array
+        $resolved = is_array($resolved) ? $resolved : [];
+
+        // Cache the resolved definition
+        self::$resolved_cache[$tool_id] = $resolved;
+
+        return $resolved;
+    }
+
+    /**
+     * Resolve all tool definitions in an array.
+     *
+     * @param array $tools Raw tools array (may contain callables)
+     * @return array Resolved tools array
+     */
+    private function resolveAllTools(array $tools): array {
+        $resolved = [];
+        foreach ($tools as $tool_id => $definition) {
+            $resolved[$tool_id] = $this->resolveToolDefinition($tool_id, $definition);
+        }
+        return $resolved;
+    }
+
+    // ============================================
     // TOOL DISCOVERY
     // ============================================
 
     /**
      * Get all global tools (handler-agnostic).
+     * Resolves any callable definitions before returning.
      *
-     * @return array All global tools
+     * @return array All global tools with resolved definitions
      */
     public function get_global_tools(): array {
-        return apply_filters('datamachine_global_tools', []);
+        $raw_tools = apply_filters('datamachine_global_tools', []);
+        return $this->resolveAllTools($raw_tools);
     }
 
     /**
@@ -304,6 +423,7 @@ class ToolManager {
     /**
      * Get all available tools for chat context.
      * Filters out unconfigured and disabled tools.
+     * Resolves any callable definitions before returning.
      *
      * @return array Available tools for chat agents
      */
@@ -319,7 +439,10 @@ class ToolManager {
         }
 
         // Get chat-specific tools (these are always available if registered)
-        $chat_tools = apply_filters('datamachine_chat_tools', []);
+        // Resolve any callable definitions
+        $raw_chat_tools = apply_filters('datamachine_chat_tools', []);
+        $chat_tools = $this->resolveAllTools($raw_chat_tools);
+
         foreach ($chat_tools as $tool_id => $tool_config) {
             if (is_array($tool_config) && !empty($tool_config)) {
                 $available_tools[$tool_id] = $tool_config;

@@ -93,5 +93,8 @@ trait HandlerRegistrationTrait {
         if ($aiToolCallback) {
             add_filter('chubes_ai_tools', $aiToolCallback, 10, 4);
         }
+
+        // Fire action for cache invalidation
+        do_action('datamachine_handler_registered', $slug, $type);
     }
 }

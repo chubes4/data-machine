@@ -15,7 +15,7 @@ class WordPressPostReader {
     use ToolRegistrationTrait;
 
     public function __construct() {
-        $this->registerGlobalTool('wordpress_post_reader', $this->getToolDefinition());
+        $this->registerGlobalTool('wordpress_post_reader', [$this, 'getToolDefinition']);
     }
 
     public function handle_tool_call(array $parameters, array $tool_def = []): array {
@@ -110,10 +110,11 @@ class WordPressPostReader {
 
     /**
      * Get WordPress Post Reader tool definition.
+     * Called lazily when tool is first accessed to ensure translations are loaded.
      *
      * @return array Tool definition array
      */
-    private function getToolDefinition(): array {
+    public function getToolDefinition(): array {
         return [
             'class' => __CLASS__,
             'method' => 'handle_tool_call',

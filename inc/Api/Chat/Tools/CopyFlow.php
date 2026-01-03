@@ -23,10 +23,16 @@ class CopyFlow {
     use ToolRegistrationTrait;
 
     public function __construct() {
-        $this->registerTool('chat', 'copy_flow', $this->getToolDefinition());
+        $this->registerTool('chat', 'copy_flow', [$this, 'getToolDefinition']);
     }
 
-    private function getToolDefinition(): array {
+    /**
+     * Get tool definition.
+     * Called lazily when tool is first accessed to ensure translations are loaded.
+     *
+     * @return array Tool definition array
+     */
+    public function getToolDefinition(): array {
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
@@ -155,5 +161,3 @@ class CopyFlow {
         ];
     }
 }
-
-new CopyFlow();

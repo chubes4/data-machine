@@ -23,6 +23,14 @@ class StepTypeService {
     private static ?array $cache = null;
 
     /**
+     * Clear cached step types.
+     * Call when step types are dynamically registered.
+     */
+    public static function clearCache(): void {
+        self::$cache = null;
+    }
+
+    /**
      * Get all registered step types (cached).
      *
      * @return array Step types array keyed by slug

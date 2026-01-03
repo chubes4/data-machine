@@ -22,7 +22,7 @@ class CreatePipeline {
 	use ToolRegistrationTrait;
 
 	public function __construct() {
-		$this->registerTool('chat', 'create_pipeline', $this->getToolDefinition());
+		$this->registerTool('chat', 'create_pipeline', [$this, 'getToolDefinition']);
 	}
 
 	private static function getValidStepTypes(): array {
@@ -35,7 +35,13 @@ class CreatePipeline {
 		return array_merge(['manual', 'one_time'], array_keys($intervals));
 	}
 
-	private function getToolDefinition(): array {
+	/**
+	 * Get tool definition.
+	 * Called lazily when tool is first accessed to ensure translations are loaded.
+	 *
+	 * @return array Tool definition array
+	 */
+	public function getToolDefinition(): array {
 		$valid_types = self::getValidStepTypes();
 		$types_list = !empty($valid_types) ? implode('|', $valid_types) : 'fetch|ai|publish|update';
 		return [
@@ -226,5 +232,3 @@ class CreatePipeline {
 		return $normalized;
 	}
 }
-
-new CreatePipeline();
