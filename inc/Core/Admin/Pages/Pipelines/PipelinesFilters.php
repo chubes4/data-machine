@@ -53,12 +53,17 @@ function datamachine_register_pipelines_admin_page_filters() {
                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/import-export.css',
                         'deps' => [],
                         'media' => 'all'
+                    ],
+                    'datamachine-chat-sidebar' => [
+                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/chat-sidebar.css',
+                        'deps' => [],
+                        'media' => 'all'
                     ]
                 ],
                 'js' => [
                     // React bundle (only script needed)
                     'datamachine-pipelines-react' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/build/pipelines-react.js',
+                        'file' => 'inc/Core/Admin/assets/build/pipelines-react.js',
                         'deps' => ['wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'wp-dom-ready', 'wp-notices', 'wp-hooks'],
                         'in_footer' => true,
                         'localize' => [

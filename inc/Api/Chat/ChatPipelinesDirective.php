@@ -15,8 +15,6 @@ defined('ABSPATH') || exit;
 
 class ChatPipelinesDirective implements \DataMachine\Engine\AI\Directives\DirectiveInterface {
 
-    private const CACHE_KEY = 'datamachine_chat_pipelines_inventory';
-
     public static function get_outputs(string $provider_name, array $tools, ?string $step_id = null, array $payload = []): array {
         $inventory = self::getPipelinesInventory();
         if (empty($inventory)) {
@@ -32,15 +30,7 @@ class ChatPipelinesDirective implements \DataMachine\Engine\AI\Directives\Direct
         ];
     }
 
-    public static function clear_cache(): void {
-        delete_transient(self::CACHE_KEY);
-    }
-
     private static function getPipelinesInventory(): array {
-        $cached = get_transient(self::CACHE_KEY);
-        if ($cached !== false) {
-            return $cached;
-        }
 
         $db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
         $db_flows = new \DataMachine\Core\Database\Flows\Flows();
@@ -88,8 +78,6 @@ class ChatPipelinesDirective implements \DataMachine\Engine\AI\Directives\Direct
                 'flows' => $flows,
             ];
         }
-
-        set_transient(self::CACHE_KEY, $inventory, 0);
 
         return $inventory;
     }

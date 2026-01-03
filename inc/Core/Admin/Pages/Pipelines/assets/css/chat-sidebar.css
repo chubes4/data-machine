@@ -1,0 +1,243 @@
+/**
+ * Chat Sidebar Styles
+ *
+ * Styles for the collapsible chat sidebar on the Pipelines page.
+ * Width matches Gutenberg sidebar (280px) for native feel.
+ */
+
+/* ===== LAYOUT ===== */
+
+.datamachine-pipelines-layout {
+	display: flex;
+}
+
+.datamachine-pipelines-main {
+	flex: 1;
+	min-width: 0;
+	padding: 20px;
+}
+
+.datamachine-header__right {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+/* ===== CHAT TOGGLE ===== */
+
+.datamachine-chat-toggle {
+	margin-left: 8px;
+}
+
+.datamachine-chat-toggle.is-active {
+	background: #007cba;
+	color: #fff;
+}
+
+/* ===== CHAT SIDEBAR ===== */
+
+.datamachine-chat-sidebar {
+	width: 280px;
+	flex-shrink: 0;
+	border-left: 1px solid #ddd;
+	background: #fff;
+	display: flex;
+	flex-direction: column;
+	height: calc(100vh - 32px);
+	position: sticky;
+	top: 32px;
+}
+
+.datamachine-chat-sidebar__header {
+	padding: 12px 16px;
+	border-bottom: 1px solid #ddd;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-shrink: 0;
+}
+
+.datamachine-chat-sidebar__title {
+	margin: 0;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.datamachine-chat-sidebar__close {
+	padding: 0;
+}
+
+.datamachine-chat-sidebar__actions {
+	padding: 8px 16px;
+	border-bottom: 1px solid #eee;
+	flex-shrink: 0;
+}
+
+.datamachine-chat-sidebar__new {
+	font-size: 12px;
+}
+
+/* ===== CHAT MESSAGES ===== */
+
+.datamachine-chat-messages {
+	flex: 1;
+	overflow-y: auto;
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.datamachine-chat-messages__empty {
+	color: #757575;
+	font-size: 13px;
+	text-align: center;
+	padding: 20px;
+	line-height: 1.5;
+}
+
+/* ===== CHAT MESSAGE ===== */
+
+.datamachine-chat-message {
+	max-width: 90%;
+	padding: 10px 14px;
+	border-radius: 12px;
+	font-size: 13px;
+	line-height: 1.5;
+	word-wrap: break-word;
+}
+
+.datamachine-chat-message--user {
+	background: #007cba;
+	color: #fff;
+	margin-left: auto;
+	border-bottom-right-radius: 4px;
+}
+
+.datamachine-chat-message--assistant {
+	background: #f0f0f0;
+	color: #1e1e1e;
+	margin-right: auto;
+	border-bottom-left-radius: 4px;
+}
+
+.datamachine-chat-message__content {
+	white-space: pre-wrap;
+}
+
+.datamachine-chat-message__tools {
+	margin-top: 8px;
+	font-size: 11px;
+	color: #757575;
+	font-style: italic;
+}
+
+.datamachine-chat-message--user .datamachine-chat-message__tools {
+	color: rgba(255, 255, 255, 0.7);
+}
+
+/* ===== TYPING INDICATOR ===== */
+
+.datamachine-chat-messages__typing {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 10px 14px;
+	background: #f0f0f0;
+	border-radius: 12px;
+	border-bottom-left-radius: 4px;
+	width: fit-content;
+}
+
+.datamachine-typing-dot {
+	width: 8px;
+	height: 8px;
+	background: #757575;
+	border-radius: 50%;
+	animation: datamachine-typing-bounce 1.4s infinite ease-in-out both;
+}
+
+.datamachine-typing-dot:nth-child(1) {
+	animation-delay: -0.32s;
+}
+
+.datamachine-typing-dot:nth-child(2) {
+	animation-delay: -0.16s;
+}
+
+.datamachine-typing-dot:nth-child(3) {
+	animation-delay: 0s;
+}
+
+@keyframes datamachine-typing-bounce {
+	0%, 80%, 100% {
+		transform: scale(0.6);
+		opacity: 0.5;
+	}
+	40% {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+/* ===== CHAT INPUT ===== */
+
+.datamachine-chat-input {
+	padding: 12px;
+	border-top: 1px solid #ddd;
+	display: flex;
+	gap: 8px;
+	align-items: flex-end;
+	flex-shrink: 0;
+}
+
+.datamachine-chat-input__textarea {
+	flex: 1;
+	padding: 8px 12px;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	font-family: inherit;
+	font-size: 13px;
+	line-height: 1.4;
+	resize: none;
+	min-height: 36px;
+	max-height: 120px;
+}
+
+.datamachine-chat-input__textarea:focus {
+	outline: none;
+	border-color: #007cba;
+	box-shadow: 0 0 0 1px #007cba;
+}
+
+.datamachine-chat-input__textarea:disabled {
+	background: #f9f9f9;
+	color: #757575;
+}
+
+.datamachine-chat-input__send {
+	flex-shrink: 0;
+	min-width: 36px;
+	height: 36px;
+	padding: 0;
+}
+
+/* ===== RESPONSIVE ===== */
+
+@media (max-width: 960px) {
+	.datamachine-chat-sidebar {
+		position: fixed;
+		right: 0;
+		top: 32px;
+		z-index: 100;
+		box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+	}
+}
+
+@media (max-width: 600px) {
+	.datamachine-chat-sidebar {
+		width: 100%;
+		top: 46px;
+		height: calc(100vh - 46px);
+	}
+}

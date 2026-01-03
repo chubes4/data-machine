@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.7.1
+Stable tag: 0.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -246,6 +246,16 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 5. Chat Interface - Build workflows through conversational AI
 
 == Changelog ==
+
+= 0.8.0 =
+* Integrated Chat Sidebar: New React-based AI chat interface embedded directly into the Pipeline Builder
+* React Logs Interface: Complete migration of the Logs management page to modern React architecture
+* Added StepTypeRegistrationTrait for standardized step type registration
+* Added AgentContext and AgentType for managing specialized AI personalities
+* Consolidated shared React components and styles into shared admin directory
+* Removed individual filter classes for core steps in favor of trait-based registration
+* Refined PipelineManager and PipelineStepManager with standardized patterns
+* Deleted legacy admin-logs.js and associated PHP templates
 
 = 0.7.1 =
 * Refined ChatAgentDirective with architecture-focused instructions

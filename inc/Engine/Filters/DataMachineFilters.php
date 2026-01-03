@@ -149,9 +149,4 @@ function datamachine_register_utility_filters() {
         ];
     }, 10, 2);
 
-    // Global execution context for directives
-
-
-
-
 }

@@ -4,6 +4,7 @@
  *
  * Core logging implementation for the Data Machine system.
  * Provides centralized logging utilities using Monolog with WordPress integration.
+ * Supports per-agent-type log files and log levels.
  *
  * ARCHITECTURE:
  * - datamachine_log action (DataMachineActions.php): Operations that modify state (write, clear, cleanup, set_level)
@@ -18,50 +19,50 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-// Monolog dependencies
 use Monolog\Logger as MonologLogger;
 use Monolog\Handler\StreamHandler;
 use Monolog\Formatter\LineFormatter;
 use Monolog\Level;
+use DataMachine\Engine\AI\AgentType;
+use DataMachine\Engine\AI\AgentContext;
 
 /**
- * Get Monolog instance with request-level caching.
+ * Get Monolog instance for a specific agent type with request-level caching.
  *
- * Replaces singleton pattern with static variable for performance
- * while maintaining pure function architecture.
- *
+ * @param string $agent_type Agent type (pipeline, chat)
  * @param bool $force_refresh Force recreation of Monolog instance
  * @return MonologLogger Configured Monolog instance
  */
-function datamachine_get_monolog_instance($force_refresh = false) {
-    static $monolog_instance = null;
+function datamachine_get_monolog_instance(string $agent_type = AgentType::PIPELINE, bool $force_refresh = false): MonologLogger {
+    static $monolog_instances = [];
 
-    if ($monolog_instance === null || $force_refresh) {
-        // Get log level from WordPress options
-        $log_level_setting = get_option('datamachine_log_level', 'error');
+    if (!AgentType::isValid($agent_type)) {
+        $agent_type = AgentType::PIPELINE;
+    }
+
+    if (!isset($monolog_instances[$agent_type]) || $force_refresh) {
+        $log_level_setting = datamachine_get_log_level($agent_type);
         $log_level = datamachine_get_monolog_level($log_level_setting);
 
-        // Create Monolog instance
-        $monolog_instance = new MonologLogger('DataMachine');
+        $channel_name = 'DataMachine-' . ucfirst($agent_type);
+        $monolog_instances[$agent_type] = new MonologLogger($channel_name);
 
-        // Add handler only if logging is enabled (not 'none')
         if ($log_level !== null) {
-            $log_file = datamachine_get_log_file_path();
+            $log_file = datamachine_get_log_file_path($agent_type);
             $handler = new StreamHandler($log_file, $log_level);
 
-            // Configure formatter
             $formatter = new LineFormatter(
                 "[%datetime%] [%channel%.%level_name%]: %message% %context% %extra%\n",
                 "Y-m-d H:i:s",
-                true, // Allow inline line breaks
-                true  // Ignore empty context/extra
+                true,
+                true
             );
             $handler->setFormatter($formatter);
-            $monolog_instance->pushHandler($handler);
+            $monolog_instances[$agent_type]->pushHandler($handler);
         }
     }
 
-    return $monolog_instance;
+    return $monolog_instances[$agent_type];
 }
 
 /**
@@ -77,14 +78,39 @@ function datamachine_get_monolog_level(string $level_string): ?Level {
         case 'error':
             return Level::Error;
         case 'none':
-            return null; // No logging
+            return null;
         default:
-            return Level::Debug; // Default to full logging if invalid level
+            return Level::Debug;
     }
 }
 
 /**
+ * Resolve agent type from context, execution context, or default.
+ *
+ * @param array $context Log context array
+ * @return string Resolved agent type
+ */
+function datamachine_resolve_agent_type(array $context = []): string {
+    // Priority 1: Explicit agent_type in context
+    if (isset($context['agent_type']) && AgentType::isValid($context['agent_type'])) {
+        return $context['agent_type'];
+    }
+
+    // Priority 2: Current execution context
+    $execution_context = AgentContext::get();
+    if ($execution_context !== null && AgentType::isValid($execution_context)) {
+        return $execution_context;
+    }
+
+    // Priority 3: Default to pipeline
+    return AgentType::PIPELINE;
+}
+
+/**
  * Log a message using Monolog.
+ *
+ * Routes to the appropriate log file based on agent_type in context,
+ * current AgentContext, or defaults to pipeline.
  *
  * @param Level $level Monolog level
  * @param string|\Stringable $message Message to log
@@ -92,7 +118,8 @@ function datamachine_get_monolog_level(string $level_string): ?Level {
  */
 function datamachine_log_message(Level $level, string|\Stringable $message, array $context = []): void {
     try {
-        datamachine_get_monolog_instance()->log($level, $message, $context);
+        $agent_type = datamachine_resolve_agent_type($context);
+        datamachine_get_monolog_instance($agent_type)->log($level, $message, $context);
     } catch (\Exception $e) {
         // Prevent logging failures from crashing the application
     }
@@ -148,14 +175,26 @@ function datamachine_log_critical(string|\Stringable $message, array $context = 
     datamachine_log_message(Level::Critical, $message, $context);
 }
 
-
-function datamachine_get_log_file_path(): string {
+/**
+ * Get the log file path for a specific agent type.
+ *
+ * @param string $agent_type Agent type (pipeline, chat)
+ * @return string Full path to log file
+ */
+function datamachine_get_log_file_path(string $agent_type = AgentType::PIPELINE): string {
     $upload_dir = wp_upload_dir();
-    return $upload_dir['basedir'] . DATAMACHINE_LOG_FILE;
+    $filename = AgentType::getLogFilename($agent_type);
+    return $upload_dir['basedir'] . DATAMACHINE_LOG_DIR . '/' . $filename;
 }
 
-function datamachine_get_log_file_size(): float {
-    $log_file = datamachine_get_log_file_path();
+/**
+ * Get log file size in megabytes for a specific agent type.
+ *
+ * @param string $agent_type Agent type (pipeline, chat)
+ * @return float File size in MB, 0 if file doesn't exist
+ */
+function datamachine_get_log_file_size(string $agent_type = AgentType::PIPELINE): float {
+    $log_file = datamachine_get_log_file_path($agent_type);
     if (!file_exists($log_file)) {
         return 0;
     }
@@ -163,18 +202,18 @@ function datamachine_get_log_file_size(): float {
 }
 
 /**
- * Get recent log entries.
+ * Get recent log entries for a specific agent type.
  *
+ * @param string $agent_type Agent type (pipeline, chat)
  * @param int $lines Number of lines to retrieve
  * @return array Array of log lines
  */
-function datamachine_get_recent_logs(int $lines = 100): array {
-    $log_file = datamachine_get_log_file_path();
+function datamachine_get_recent_logs(string $agent_type = AgentType::PIPELINE, int $lines = 100): array {
+    $log_file = datamachine_get_log_file_path($agent_type);
     if (!file_exists($log_file)) {
         return ['No log file found.'];
     }
 
-    // Read entire file and get last lines
     $file_content = file($log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     if ($file_content === false) {
         return ['Unable to read log file.'];
@@ -188,9 +227,9 @@ function datamachine_get_recent_logs(int $lines = 100): array {
  *
  * @param int $max_size_mb Maximum log file size in MB
  * @param int $max_age_days Maximum log file age in days
- * @return bool True if cleanup was performed
+ * @return bool True if cleanup was performed on any file
  */
-function datamachine_cleanup_log_files($max_size_mb = 10, $max_age_days = 30): bool {
+function datamachine_cleanup_log_files(int $max_size_mb = 10, int $max_age_days = 30): bool {
     $upload_dir = wp_upload_dir();
     $log_dir = $upload_dir['basedir'] . DATAMACHINE_LOG_DIR;
 
@@ -198,64 +237,114 @@ function datamachine_cleanup_log_files($max_size_mb = 10, $max_age_days = 30): b
         return false;
     }
 
-    $log_file = datamachine_get_log_file_path();
+    $cleaned = false;
+    $max_size_bytes = $max_size_mb * 1024 * 1024;
 
-    if (!file_exists($log_file)) {
+    foreach (AgentType::getAll() as $agent_type => $info) {
+        $log_file = datamachine_get_log_file_path($agent_type);
+
+        if (!file_exists($log_file)) {
+            continue;
+        }
+
+        $size_exceeds = filesize($log_file) > $max_size_bytes;
+        $age_exceeds = (time() - filemtime($log_file)) / DAY_IN_SECONDS > $max_age_days;
+
+        if ($size_exceeds && $age_exceeds) {
+            datamachine_log_debug("Log file cleanup triggered for {$agent_type}: Size and age limits exceeded");
+            if (datamachine_clear_log_file($agent_type)) {
+                $cleaned = true;
+            }
+        }
+    }
+
+    return $cleaned;
+}
+
+/**
+ * Clear a specific agent type's log file.
+ *
+ * @param string $agent_type Agent type (pipeline, chat)
+ * @return bool True on success
+ */
+function datamachine_clear_log_file(string $agent_type): bool {
+    if (!AgentType::isValid($agent_type)) {
         return false;
     }
 
-    $max_size_bytes = $max_size_mb * 1024 * 1024;
-
-    $size_exceeds = filesize($log_file) > $max_size_bytes;
-    $age_exceeds = (time() - filemtime($log_file)) / DAY_IN_SECONDS > $max_age_days;
-
-    if ($size_exceeds && $age_exceeds) {
-        datamachine_log_debug("Log file cleanup triggered: Size and age limits exceeded");
-        return datamachine_clear_log_files();
-    }
-
-    return false;
-}
-
-
-/**
- * Clear log file.
- *
- * @return bool True on success
- */
-function datamachine_clear_log_files(): bool {
-    $log_file = datamachine_get_log_file_path();
-
-    // Ensure directory exists
+    $log_file = datamachine_get_log_file_path($agent_type);
     $log_dir = dirname($log_file);
+
     if (!file_exists($log_dir)) {
         wp_mkdir_p($log_dir);
     }
 
-    // Clear log file contents (creates file if it doesn't exist)
     $clear_result = file_put_contents($log_file, '');
 
     if ($clear_result !== false) {
-        datamachine_log_debug('Log file cleared successfully.');
+        datamachine_log_debug("Log file cleared successfully for agent type: {$agent_type}");
         return true;
     } else {
-        datamachine_log_error('Failed to clear log file.');
+        datamachine_log_error("Failed to clear log file for agent type: {$agent_type}");
         return false;
     }
 }
 
+/**
+ * Clear all agent type log files.
+ *
+ * @return bool True if all files cleared successfully
+ */
+function datamachine_clear_all_log_files(): bool {
+    $success = true;
 
-function datamachine_get_log_level(): string {
-    return get_option('datamachine_log_level', 'error');
+    foreach (AgentType::getAll() as $agent_type => $info) {
+        if (!datamachine_clear_log_file($agent_type)) {
+            $success = false;
+        }
+    }
+
+    return $success;
 }
 
-function datamachine_set_log_level(string $level): bool {
+/**
+ * Get the log level for a specific agent type.
+ *
+ * @param string $agent_type Agent type (pipeline, chat)
+ * @return string Log level (debug, error, none)
+ */
+function datamachine_get_log_level(string $agent_type = AgentType::PIPELINE): string {
+    if (!AgentType::isValid($agent_type)) {
+        $agent_type = AgentType::PIPELINE;
+    }
+    return get_option("datamachine_log_level_{$agent_type}", 'error');
+}
+
+/**
+ * Set the log level for a specific agent type.
+ *
+ * @param string $agent_type Agent type (pipeline, chat)
+ * @param string $level Log level (debug, error, none)
+ * @return bool True on success
+ */
+function datamachine_set_log_level(string $agent_type, string $level): bool {
+    if (!AgentType::isValid($agent_type)) {
+        return false;
+    }
+
     $available_levels = array_keys(datamachine_get_available_log_levels());
     if (!in_array($level, $available_levels)) {
         return false;
     }
 
-    return update_option('datamachine_log_level', $level);
+    $updated = update_option("datamachine_log_level_{$agent_type}", $level);
+
+    // Force refresh of Monolog instance to apply new level
+    if ($updated) {
+        datamachine_get_monolog_instance($agent_type, true);
+    }
+
+    return $updated;
 }
 
 /**

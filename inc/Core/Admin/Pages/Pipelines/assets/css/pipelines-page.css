@@ -12,9 +12,9 @@
 
 /* ===== LAYOUT & CONTAINER CLASSES ===== */
 
-/* Base page container */
+/* Base page container - no padding here, applied to main content instead */
 .datamachine-pipelines-page {
-    padding: 20px;
+    padding: 0;
 }
 
 

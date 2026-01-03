@@ -4,6 +4,7 @@ namespace DataMachine\Core\Steps\Publish;
 
 use DataMachine\Core\DataPacket;
 use DataMachine\Core\Steps\Step;
+use DataMachine\Core\Steps\StepTypeRegistrationTrait;
 use DataMachine\Engine\AI\Tools\ToolResultFinder;
 
 if (!defined('ABSPATH')) {
@@ -17,11 +18,23 @@ if (!defined('ABSPATH')) {
  */
 class PublishStep extends Step {
 
+    use StepTypeRegistrationTrait;
+
     /**
      * Initialize publish step.
      */
     public function __construct() {
         parent::__construct('publish');
+
+        self::registerStepType(
+            slug: 'publish',
+            label: 'Publish',
+            description: 'Publish content to external platforms',
+            class: self::class,
+            position: 30,
+            usesHandler: true,
+            hasPipelineConfig: false
+        );
     }
 
     /**

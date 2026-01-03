@@ -16,6 +16,8 @@ use DataMachine\Core\PluginSettings;
 use DataMachine\Engine\AI\ConversationManager;
 use DataMachine\Engine\AI\AIConversationLoop;
 use DataMachine\Engine\AI\Tools\ToolManager;
+use DataMachine\Engine\AI\AgentType;
+use DataMachine\Engine\AI\AgentContext;
 use WP_REST_Server;
 use WP_REST_Request;
 use WP_Error;
@@ -172,25 +174,33 @@ class Chat {
 		$tool_manager = new ToolManager();
 		$all_tools = $tool_manager->getAvailableToolsForChat();
 
-		// Execute conversation loop with tool execution
-		$loop = new AIConversationLoop();
-		$loop_result = $loop->execute(
-			$messages,
-			$all_tools,
-			$provider,
-			$model,
-			'chat',
-			['session_id' => $session_id],
-			$max_turns
-		);
+		// Set agent context for logging - all logs during this request go to chat log
+		AgentContext::set(AgentType::CHAT);
 
-		// Check for errors
-		if (isset($loop_result['error'])) {
-			return new WP_Error(
-				'chubes_ai_request_failed',
-				$loop_result['error'],
-				['status' => 500]
+		try {
+			// Execute conversation loop with tool execution
+			$loop = new AIConversationLoop();
+			$loop_result = $loop->execute(
+				$messages,
+				$all_tools,
+				$provider,
+				$model,
+				AgentType::CHAT,
+				['session_id' => $session_id],
+				$max_turns
 			);
+
+			// Check for errors
+			if (isset($loop_result['error'])) {
+				return new WP_Error(
+					'chubes_ai_request_failed',
+					$loop_result['error'],
+					['status' => 500]
+				);
+			}
+		} finally {
+			// Clear agent context after request completes
+			AgentContext::clear();
 		}
 
 		// Use final conversation state from loop

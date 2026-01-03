@@ -16,18 +16,25 @@ import {
 	updateUserMessage,
 	updateFlowSchedule,
 } from '../utils/api';
-import { isSameId } from '../utils/ids';
+import { isSameId, normalizeId } from '../utils/ids';
 
 const setFlowInCache = ( queryClient, flow ) => {
 	if ( ! flow?.flow_id ) {
 		return;
 	}
 
-	queryClient.setQueryData( [ 'flows', 'single', flow.flow_id ], flow );
+	const cachedFlowId = normalizeId( flow.flow_id );
+	const cachedPipelineId = normalizeId( flow.pipeline_id );
 
-	if ( flow.pipeline_id ) {
+	if ( ! cachedFlowId ) {
+		return;
+	}
+
+	queryClient.setQueryData( [ 'flows', 'single', cachedFlowId ], flow );
+
+	if ( cachedPipelineId ) {
 		queryClient.setQueryData(
-			[ 'flows', flow.pipeline_id ],
+			[ 'flows', cachedPipelineId ],
 			( oldFlows = [] ) => {
 				if ( ! Array.isArray( oldFlows ) ) {
 					return oldFlows;
@@ -42,24 +49,27 @@ const setFlowInCache = ( queryClient, flow ) => {
 };
 
 const patchFlowInCache = ( queryClient, { pipelineId, flowId, patchFlow } ) => {
-	if ( ! flowId || typeof patchFlow !== 'function' ) {
+	const cachedFlowId = normalizeId( flowId );
+	const cachedPipelineId = normalizeId( pipelineId );
+
+	if ( ! cachedFlowId || typeof patchFlow !== 'function' ) {
 		return;
 	}
 
-	queryClient.setQueryData( [ 'flows', 'single', flowId ], ( oldFlow ) =>
+	queryClient.setQueryData( [ 'flows', 'single', cachedFlowId ], ( oldFlow ) =>
 		oldFlow ? patchFlow( oldFlow ) : oldFlow
 	);
 
-	if ( pipelineId ) {
+	if ( cachedPipelineId ) {
 		queryClient.setQueryData(
-			[ 'flows', pipelineId ],
+			[ 'flows', cachedPipelineId ],
 			( oldFlows = [] ) => {
 				if ( ! Array.isArray( oldFlows ) ) {
 					return oldFlows;
 				}
 
 				return oldFlows.map( ( existingFlow ) =>
-					isSameId( existingFlow.flow_id, flowId )
+					isSameId( existingFlow.flow_id, cachedFlowId )
 						? patchFlow( existingFlow )
 						: existingFlow
 				);
@@ -95,15 +105,18 @@ const patchFlowStepInCache = (
 };
 
 // Queries
-export const useFlows = ( pipelineId ) =>
-	useQuery( {
-		queryKey: [ 'flows', pipelineId ],
+export const useFlows = ( pipelineId ) => {
+	const cachedPipelineId = normalizeId( pipelineId );
+
+	return useQuery( {
+		queryKey: [ 'flows', cachedPipelineId ],
 		queryFn: async () => {
 			const response = await fetchFlows( pipelineId );
 			return response.success ? response.data.flows : [];
 		},
-		enabled: !! pipelineId,
+		enabled: !! cachedPipelineId,
 	} );
+};
 
 // Mutations
 export const useCreateFlow = () => {
@@ -112,7 +125,10 @@ export const useCreateFlow = () => {
 		mutationFn: ( { pipelineId, flowName } ) =>
 			createFlow( pipelineId, flowName ),
 		onSuccess: ( _, { pipelineId } ) => {
-			queryClient.invalidateQueries( { queryKey: [ 'flows', pipelineId ] } );
+			const cachedPipelineId = normalizeId( pipelineId );
+			queryClient.invalidateQueries( {
+				queryKey: [ 'flows', cachedPipelineId ],
+			} );
 		},
 	} );
 };
@@ -140,18 +156,25 @@ export const useDeleteFlow = () => {
 				return;
 			}
 
-			queryClient.removeQueries( { queryKey: [ 'flows', 'single', flowId ] } );
+			const cachedFlowId = normalizeId( flowId );
+			const cachedPipelineId = normalizeId( pipelineId );
 
-			if ( pipelineId ) {
+			if ( cachedFlowId ) {
+				queryClient.removeQueries( {
+					queryKey: [ 'flows', 'single', cachedFlowId ],
+				} );
+			}
+
+			if ( cachedPipelineId ) {
 				queryClient.setQueryData(
-					[ 'flows', pipelineId ],
+					[ 'flows', cachedPipelineId ],
 					( oldFlows = [] ) => {
 						if ( ! Array.isArray( oldFlows ) ) {
 							return oldFlows;
 						}
 
 						return oldFlows.filter(
-							( flow ) => ! isSameId( flow.flow_id, flowId )
+							( flow ) => ! isSameId( flow.flow_id, cachedFlowId )
 						);
 					}
 				);
@@ -169,8 +192,11 @@ export const useDuplicateFlow = () => {
 				return;
 			}
 
-			if ( pipelineId ) {
-				queryClient.invalidateQueries( { queryKey: [ 'flows', pipelineId ] } );
+			const cachedPipelineId = normalizeId( pipelineId );
+			if ( cachedPipelineId ) {
+				queryClient.invalidateQueries( {
+					queryKey: [ 'flows', cachedPipelineId ],
+				} );
 			}
 		},
 	} );
@@ -271,41 +297,45 @@ export const useUpdateUserMessage = () => {
 	return useMutation( {
 		mutationFn: ( { flowStepId, message } ) =>
 			updateUserMessage( flowStepId, message ),
-		onMutate: async ( { pipelineId, flowId, flowStepId, message } ) => {
-			const patches = {
-				pipelineId,
-				flowId,
-				flowStepId,
-				patchStep: ( step ) => ( {
-					...step,
-					user_message: message,
-				} ),
-			};
+			onMutate: async ( { pipelineId, flowId, flowStepId, message } ) => {
+				const patches = {
+					pipelineId,
+					flowId,
+					flowStepId,
+					patchStep: ( step ) => ( {
+						...step,
+						user_message: message,
+					} ),
+				};
 
-			const previousSingle = queryClient.getQueryData( [
-				'flows',
-				'single',
-				flowId,
-			] );
-			const previousList = pipelineId
-				? queryClient.getQueryData( [ 'flows', pipelineId ] )
-				: undefined;
+				const cachedFlowId = normalizeId( flowId );
+				const cachedPipelineId = normalizeId( pipelineId );
+
+				const previousSingle = cachedFlowId
+					? queryClient.getQueryData( [ 'flows', 'single', cachedFlowId ] )
+					: undefined;
+				const previousList = cachedPipelineId
+					? queryClient.getQueryData( [ 'flows', cachedPipelineId ] )
+					: undefined;
 
 			patchFlowStepInCache( queryClient, patches );
 
 			return { previousSingle, previousList };
 		},
 		onError: ( _, { pipelineId, flowId }, context ) => {
-			if ( context?.previousSingle ) {
+			const cachedFlowId = normalizeId( flowId );
+			const cachedPipelineId = normalizeId( pipelineId );
+
+			if ( cachedFlowId && context?.previousSingle ) {
 				queryClient.setQueryData(
-					[ 'flows', 'single', flowId ],
+					[ 'flows', 'single', cachedFlowId ],
 					context.previousSingle
 				);
 			}
 
-			if ( pipelineId && context?.previousList ) {
+			if ( cachedPipelineId && context?.previousList ) {
 				queryClient.setQueryData(
-					[ 'flows', pipelineId ],
+					[ 'flows', cachedPipelineId ],
 					context.previousList
 				);
 			}
@@ -318,29 +348,34 @@ export const useUpdateFlowSchedule = () => {
 	return useMutation( {
 		mutationFn: ( { flowId, schedulingConfig } ) =>
 			updateFlowSchedule( flowId, schedulingConfig ),
-		onSuccess: ( response, { flowId } ) => {
+			onSuccess: ( response, { flowId } ) => {
 			if ( ! response?.success || ! response?.data ) {
 				return;
 			}
 
+			const cachedFlowId = normalizeId( flowId );
+
 			const updatedFlow = response.data;
 			const pipelineId = updatedFlow.pipeline_id;
+			const cachedPipelineId = normalizeId( pipelineId );
 
-			queryClient.setQueryData(
-				[ 'flows', 'single', flowId ],
-				updatedFlow
-			);
-
-			if ( pipelineId ) {
+			if ( cachedFlowId ) {
 				queryClient.setQueryData(
-					[ 'flows', pipelineId ],
+					[ 'flows', 'single', cachedFlowId ],
+					updatedFlow
+				);
+			}
+
+			if ( cachedPipelineId ) {
+				queryClient.setQueryData(
+					[ 'flows', cachedPipelineId ],
 					( oldFlows = [] ) => {
 						if ( ! Array.isArray( oldFlows ) ) {
 							return oldFlows;
 						}
 
 						return oldFlows.map( ( flow ) =>
-							isSameId( flow.flow_id, flowId ) ? updatedFlow : flow
+							isSameId( flow.flow_id, cachedFlowId ) ? updatedFlow : flow
 						);
 					}
 				);

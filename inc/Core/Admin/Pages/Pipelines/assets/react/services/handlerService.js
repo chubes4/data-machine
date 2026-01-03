@@ -1,4 +1,4 @@
-import { queryClient } from '../lib/queryClient';
+import { queryClient } from '@shared/lib/queryClient';
 import { updateFlowHandler } from '../utils/api';
 import createModel from '../models/HandlerFactory';
 

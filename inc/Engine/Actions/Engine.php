@@ -10,6 +10,9 @@
 
 defined('ABSPATH') || exit;
 
+use DataMachine\Engine\AI\AgentType;
+use DataMachine\Engine\AI\AgentContext;
+
 /**
  * Normalize stored configuration blobs into arrays.
  */
@@ -58,6 +61,9 @@ function datamachine_register_execution_engine() {
  * @return bool True on success, false on failure
  */
 add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
+    // Set pipeline agent context for all logging during flow execution
+    AgentContext::set(AgentType::PIPELINE);
+
     $db_flows = new \DataMachine\Core\Database\Flows\Flows();
     $job_manager = new \DataMachine\Services\JobManager();
 
@@ -152,6 +158,9 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
  * @return bool True on success, false on failure
  */
     add_action( 'datamachine_execute_step', function( $job_id, string $flow_step_id, ?array $dataPackets = null ) {
+        // Set pipeline agent context for all logging during step execution
+        AgentContext::set(AgentType::PIPELINE);
+
         $job_id = (int) $job_id;
         $job_manager = new \DataMachine\Services\JobManager();
 

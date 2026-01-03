@@ -70,9 +70,6 @@ class PipelineManager {
             do_action('datamachine_log', 'error', "Failed to create flow for pipeline {$pipeline_id}");
         }
 
-        \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
-        do_action('datamachine_chat_pipelines_inventory_cleared');
-
         $pipeline = $this->db_pipelines->get_pipeline($pipeline_id);
         $flows = $this->db_flows->get_flows_for_pipeline($pipeline_id);
 
@@ -154,8 +151,6 @@ class PipelineManager {
         $success = $this->db_pipelines->update_pipeline($pipeline_id, $update_data);
 
         if ($success) {
-            \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
-            do_action('datamachine_chat_pipelines_inventory_cleared');
         }
 
         return $success;
@@ -244,9 +239,6 @@ class PipelineManager {
                 ['status' => 500]
             );
         }
-
-        \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
-        do_action('datamachine_chat_pipelines_inventory_cleared');
 
         return [
             'message' => sprintf(

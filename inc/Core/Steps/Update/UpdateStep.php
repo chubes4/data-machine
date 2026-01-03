@@ -9,6 +9,7 @@ namespace DataMachine\Core\Steps\Update;
 
 use DataMachine\Core\DataPacket;
 use DataMachine\Core\Steps\Step;
+use DataMachine\Core\Steps\StepTypeRegistrationTrait;
 use DataMachine\Engine\AI\Tools\ToolResultFinder;
 
 if (!defined('ABSPATH')) {
@@ -17,11 +18,23 @@ if (!defined('ABSPATH')) {
 
 class UpdateStep extends Step {
 
+    use StepTypeRegistrationTrait;
+
     /**
      * Initialize update step.
      */
     public function __construct() {
         parent::__construct('update');
+
+        self::registerStepType(
+            slug: 'update',
+            label: 'Update',
+            description: 'Update existing content on external platforms',
+            class: self::class,
+            position: 40,
+            usesHandler: true,
+            hasPipelineConfig: false
+        );
     }
 
     /**

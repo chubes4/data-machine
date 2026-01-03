@@ -4,6 +4,7 @@ namespace DataMachine\Core\Steps\Fetch;
 
 use DataMachine\Core\DataPacket;
 use DataMachine\Core\Steps\Step;
+use DataMachine\Core\Steps\StepTypeRegistrationTrait;
 use DataMachine\Services\HandlerService;
 
 if (!defined('ABSPATH')) {
@@ -17,11 +18,23 @@ if (!defined('ABSPATH')) {
  */
 class FetchStep extends Step {
 
+    use StepTypeRegistrationTrait;
+
     /**
      * Initialize fetch step.
      */
     public function __construct() {
         parent::__construct('fetch');
+
+        self::registerStepType(
+            slug: 'fetch',
+            label: 'Fetch',
+            description: 'Collect data from external sources',
+            class: self::class,
+            position: 10,
+            usesHandler: true,
+            hasPipelineConfig: false
+        );
     }
 
     /**

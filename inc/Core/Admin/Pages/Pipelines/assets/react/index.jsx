@@ -8,7 +8,7 @@ import { render } from '@wordpress/element';
 import domReady from '@wordpress/dom-ready';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { queryClient } from './lib/queryClient';
+import { queryClient } from '@shared/lib/queryClient';
 import PipelinesApp from './PipelinesApp';
 import { HandlerProvider } from './context/HandlerProvider';
 

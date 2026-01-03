@@ -15,7 +15,6 @@
 
 namespace DataMachine\Core\Admin\Pages\Logs;
 
-// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -30,58 +29,6 @@ if (!defined('ABSPATH')) {
  */
 function datamachine_register_logs_admin_page_filters() {
 
-    // Form submission handler for log level updates
-    add_action('admin_init', function() {
-        // Only process on logs page
-        if (!isset($_GET['page']) || $_GET['page'] !== 'datamachine-logs') {
-            return;
-        }
-
-        // Check for form submission
-        if (!isset($_POST['datamachine_logs_action']) || $_POST['datamachine_logs_action'] !== 'update_log_level') {
-            return;
-        }
-
-        $nonce = isset($_POST['datamachine_logs_nonce']) ? sanitize_text_field(wp_unslash($_POST['datamachine_logs_nonce'])) : '';
-
-        // Verify nonce
-        if (!wp_verify_nonce($nonce, 'datamachine_logs_action')) {
-            wp_die(esc_html__('Security check failed.', 'data-machine'));
-        }
-
-        // Check user capability
-        if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have permission to manage logs.', 'data-machine'));
-        }
-
-        // Sanitize and validate log level
-        $log_level = isset($_POST['log_level']) ? sanitize_text_field(wp_unslash($_POST['log_level'])) : '';
-        $available_levels = array_keys(datamachine_get_available_log_levels());
-
-        if (!in_array($log_level, $available_levels)) {
-            add_action('admin_notices', function() {
-                echo '<div class="notice notice-error"><p>' . esc_html__('Invalid log level selected.', 'data-machine') . '</p></div>';
-            });
-            return;
-        }
-
-        // Update log level
-        $updated = datamachine_set_log_level($log_level);
-
-        if ($updated) {
-            add_action('admin_notices', function() use ($log_level) {
-                $level_display = datamachine_get_available_log_levels()[$log_level] ?? ucfirst($log_level);
-                /* translators: %s: Selected log level. */
-                $message = sprintf(esc_html__('Log level updated to %s.', 'data-machine'), esc_html($level_display));
-                echo '<div class="notice notice-success"><p>' . esc_html($message) . '</p></div>';
-            });
-        } else {
-            add_action('admin_notices', function() {
-                echo '<div class="notice notice-error"><p>' . esc_html__('Failed to update log level.', 'data-machine') . '</p></div>';
-            });
-        }
-    });
-
     // Pure discovery mode - matches actual system usage
     add_filter('datamachine_admin_pages', function($pages) {
         $pages['logs'] = [
@@ -92,17 +39,29 @@ function datamachine_register_logs_admin_page_filters() {
             'templates' => __DIR__ . '/templates/',
             'assets' => [
                 'css' => [
-                    'datamachine-admin-logs' => [
-                        'file' => 'inc/Core/Admin/Pages/Logs/assets/css/admin-logs.css',
+                    'wp-components' => [
+                        'file' => null, // Use WordPress core version
+                        'deps' => [],
+                        'media' => 'all'
+                    ],
+                    'datamachine-logs-page' => [
+                        'file' => 'inc/Core/Admin/Pages/Logs/assets/css/logs-page.css',
                         'deps' => [],
                         'media' => 'all'
                     ]
                 ],
                 'js' => [
-                    'datamachine-admin-logs' => [
-                        'file' => 'inc/Core/Admin/Pages/Logs/assets/js/admin-logs.js',
-                        'deps' => ['wp-api-fetch'],
-                        'in_footer' => true
+                    'datamachine-logs-react' => [
+                        'file' => 'inc/Core/Admin/assets/build/logs-react.js',
+                        'deps' => ['wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-dom-ready'],
+                        'in_footer' => true,
+                        'localize' => [
+                            'object' => 'dataMachineLogsConfig',
+                            'data' => [
+                                'restNamespace' => 'datamachine/v1',
+                                'restNonce' => wp_create_nonce('wp_rest'),
+                            ]
+                        ]
                     ]
                 ]
             ]

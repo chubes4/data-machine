@@ -534,9 +534,6 @@ class PipelineSteps {
 			);
 		}
 
-		\DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
-		do_action('datamachine_chat_pipelines_inventory_cleared');
-
 		$provider_for_log = $step_config_data['provider'] ?? ($existing_config['provider'] ?? null);
 
 		return rest_ensure_response([

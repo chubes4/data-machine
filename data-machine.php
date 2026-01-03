@@ -3,7 +3,7 @@
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/data-machine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:           0.7.1
+ * Version:           0.8.0
  * Requires at least: 6.2
  * Requires PHP:     8.2
  * Author:          Chris Huber, extrachill
@@ -21,14 +21,13 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.7.1' );
+define( 'DATAMACHINE_VERSION', '0.8.0' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
 
-// Log file constants
+// Log directory constant (individual log files are per-agent-type)
 define( 'DATAMACHINE_LOG_DIR', '/datamachine-logs' );
-define( 'DATAMACHINE_LOG_FILE', '/datamachine-logs/datamachine.log' );
 
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -49,6 +48,9 @@ function datamachine_run_datamachine_plugin() {
 	datamachine_register_admin_filters();
 	datamachine_register_oauth_system();
 	datamachine_register_core_actions();
+
+	// Load step types - they self-register via constructors
+	datamachine_load_step_types();
 
 	// Load and instantiate all handlers - they self-register via constructors
 	datamachine_load_handlers();
@@ -78,10 +80,15 @@ function datamachine_activate_plugin_defaults() {
 
     $default_settings = [
         'enabled_tools' => array_fill_keys($opt_out_defaults, true),
-        'enabled_admin_pages' => ['pipelines', 'jobs', 'logs', 'settings'],
+        'enabled_pages' => [
+            'pipelines' => true,
+            'jobs' => true,
+            'logs' => true,
+            'settings' => true,
+        ],
         'site_context_enabled' => true,
         'cleanup_job_data_on_failure' => true,
-        'engine_mode' => 'full',
+        'engine_mode' => false,
     ];
 
     add_option('datamachine_settings', $default_settings);
@@ -89,26 +96,19 @@ function datamachine_activate_plugin_defaults() {
 
 add_action('plugins_loaded', 'datamachine_run_datamachine_plugin', 20);
 
-add_action('admin_init', 'datamachine_activation_redirect');
+
+
+
 /**
- * Redirect to Data Machine admin page after plugin activation.
+ * Load and instantiate all step types - they self-register via constructors.
+ * Uses StepTypeRegistrationTrait for standardized registration.
  */
-function datamachine_activation_redirect() {
-	if ( ! get_transient( 'datamachine_activation_redirect' ) ) {
-		return;
-	}
-
-	delete_transient( 'datamachine_activation_redirect' );
-
-	// Skip redirect for bulk/network activation
-	if ( isset( $_GET['activate-multi'] ) ) {
-		return;
-	}
-
-	wp_safe_redirect( admin_url( 'admin.php?page=datamachine' ) );
-	exit;
+function datamachine_load_step_types() {
+    new \DataMachine\Core\Steps\Fetch\FetchStep();
+    new \DataMachine\Core\Steps\Publish\PublishStep();
+    new \DataMachine\Core\Steps\Update\UpdateStep();
+    new \DataMachine\Core\Steps\AI\AIStep();
 }
-
 
 /**
  * Load and instantiate all handlers - they self-register via constructors.
@@ -201,12 +201,6 @@ function datamachine_activate_plugin() {
 	if (!file_exists($log_dir)) {
 		wp_mkdir_p($log_dir);
 	}
-
-	$timeout = defined( 'MINUTE_IN_SECONDS' ) ? 5 * MINUTE_IN_SECONDS : 5 * 60;
-	set_transient( 'datamachine_activation_notice', true, $timeout );
-
-	// Set redirect flag for activation
-	set_transient( 'datamachine_activation_redirect', true, 30 );
 
 	// Re-schedule any flows with non-manual scheduling
 	datamachine_activate_scheduled_flows();

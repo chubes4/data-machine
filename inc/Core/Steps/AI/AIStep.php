@@ -5,9 +5,11 @@ namespace DataMachine\Core\Steps\AI;
 use DataMachine\Core\DataPacket;
 use DataMachine\Core\PluginSettings;
 use DataMachine\Core\Steps\Step;
+use DataMachine\Core\Steps\StepTypeRegistrationTrait;
 use DataMachine\Engine\AI\AIConversationLoop;
 use DataMachine\Engine\AI\ConversationManager;
 use DataMachine\Engine\AI\Tools\ToolExecutor;
+use DataMachine\Engine\AI\AgentType;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -20,11 +22,30 @@ if (!defined('ABSPATH')) {
  */
 class AIStep extends Step {
 
+    use StepTypeRegistrationTrait;
+
     /**
      * Initialize AI step.
      */
     public function __construct() {
         parent::__construct('ai');
+
+        self::registerStepType(
+            slug: 'ai',
+            label: 'AI Agent',
+            description: 'Configure an intelligent agent with custom prompts and tools to process data through any LLM provider (OpenAI, Anthropic, Google, Grok, OpenRouter)',
+            class: self::class,
+            position: 20,
+            usesHandler: false,
+            hasPipelineConfig: true,
+            consumeAllPackets: true,
+            stepSettings: [
+                'config_type' => 'ai_configuration',
+                'modal_type' => 'configure-step',
+                'button_text' => 'Configure',
+                'label' => 'AI Agent Configuration'
+            ]
+        );
     }
 
     /**
@@ -138,7 +159,7 @@ class AIStep extends Step {
             $available_tools,
             $provider_name,
             $pipeline_step_config['model'] ?? $settings['default_model'] ?? '',
-            'pipeline',
+            AgentType::PIPELINE,
             $payload,
             $max_turns
         );

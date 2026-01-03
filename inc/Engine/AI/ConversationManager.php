@@ -278,3 +278,13 @@ class ConversationManager {
         return self::buildConversationMessage('user', $message);
     }
 }
+
+// AI library error logging - universal handler for all AI interactions (pipeline agents, chat agents)
+add_action('chubes_ai_library_error', function($error_data) {
+    do_action('datamachine_log', 'error', 'AI Library Error: ' . $error_data['component'] . ' - ' . $error_data['message'], [
+        'component' => $error_data['component'],
+        'message' => $error_data['message'],
+        'context' => $error_data['context'],
+        'timestamp' => $error_data['timestamp']
+    ]);
+});

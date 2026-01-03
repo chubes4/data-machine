@@ -100,9 +100,6 @@ class PipelineStepManager {
             'pipeline_config' => $pipeline_config
         ]);
 
-        \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
-        do_action('datamachine_chat_pipelines_inventory_cleared');
-
         if (!$success) {
             do_action('datamachine_log', 'error', 'Failed to add step to pipeline', [
                 'pipeline_id' => $pipeline_id,
@@ -216,42 +213,6 @@ class PipelineStepManager {
             );
         }
 
-        \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
-        do_action('datamachine_chat_pipelines_inventory_cleared');
-
-        foreach ($affected_flows as $flow) {
-            if (!isset($flow['flow_id']) || empty($flow['flow_id'])) {
-                continue;
-            }
-            $flow_id = (int) $flow['flow_id'];
-            $flow_config = $flow['flow_config'] ?? [];
-
-            foreach ($flow_config as $flow_step_id => $step_data) {
-                if (isset($step_data['pipeline_step_id']) && $step_data['pipeline_step_id'] === $pipeline_step_id) {
-                    unset($flow_config[$flow_step_id]);
-                }
-            }
-
-            foreach ($flow_config as $flow_step_id => &$flow_step) {
-                if (!isset($flow_step['pipeline_step_id'])) {
-                    continue;
-                }
-                foreach ($updated_steps as $updated_step) {
-                    if ($updated_step['pipeline_step_id'] === $flow_step['pipeline_step_id']) {
-                        $flow_step['execution_order'] = $updated_step['execution_order'];
-                        break;
-                    }
-                }
-            }
-            unset($flow_step);
-
-            $this->db_flows->update_flow($flow_id, [
-                'flow_config' => $flow_config
-            ]);
-        }
-
-        $remaining_step_count = count($this->db_pipelines->get_pipeline_config($pipeline_id));
-
         return [
             'message' => sprintf(
                 /* translators: 1: pipeline name, 2: number of flows affected */
@@ -312,9 +273,6 @@ class PipelineStepManager {
             ]);
             return false;
         }
-
-        \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
-        do_action('datamachine_chat_pipelines_inventory_cleared');
 
         return true;
     }
@@ -391,9 +349,6 @@ class PipelineStepManager {
                 ['status' => 500]
             );
         }
-
-        \DataMachine\Api\Chat\ChatPipelinesDirective::clear_cache();
-        do_action('datamachine_chat_pipelines_inventory_cleared');
 
         $flows = $this->db_flows->get_flows_for_pipeline($pipeline_id);
 

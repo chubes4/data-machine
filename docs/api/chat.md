@@ -175,11 +175,13 @@ Available only to chat AI agents via `datamachine_chat_tools` filter (@since v0.
 
 - **execute_workflow** (@since v0.3.0) - Execute complete multi-step workflows with automatic defaults injection
 - **add_pipeline_step** (@since v0.4.3) - Add steps to existing pipelines
-- **api_query** (@since v0.4.3) - REST API query tool for discovery
+- **api_query** (@since v0.4.3) - REST API query tool for discovery (supports batch requests @since v0.7.0)
 - **configure_flow_step** (@since v0.4.2) - Configure handler and AI messages
 - **configure_pipeline_step** (@since v0.4.4) - Configure pipeline-level AI settings
+- **copy_flow** (@since v0.6.25) - Copy flow to same or different pipeline with optional overrides
 - **create_flow** (@since v0.4.2) - Create flow instances from pipelines
 - **create_pipeline** (@since v0.4.3) - Create pipelines with optional steps
+- **handler_documentation** (@since v0.7.0) - Discover available handlers and their settings schema
 - **run_flow** (@since v0.4.4) - Execute or schedule flows
 - **update_flow** (@since v0.4.4) - Update flow properties
 
@@ -242,6 +244,9 @@ The Chat endpoint uses the Universal Engine architecture at `/inc/Engine/AI/` fo
 
 **File**: `/inc/Api/Chat/ChatFilters.php`
 **Purpose**: Registers chat-specific behavior with Universal Engine
+
+**Chat Pipelines Inventory** (@since v0.7.0):
+The chat agent receives a lightweight inventory of all pipelines, their configured steps (ID, name, type), and flow summaries (ID, name, handlers) as a system JSON message. This grounds the agent in the current system state.
 
 **Tool Enablement** (chat-specific):
 ```php

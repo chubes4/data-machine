@@ -15,6 +15,8 @@ import { useUIStore } from './stores/uiStore';
 import PipelineCard from './components/pipelines/PipelineCard';
 import PipelineSelector from './components/pipelines/PipelineSelector';
 import ModalManager from './components/shared/ModalManager';
+import ChatToggle from './components/chat/ChatToggle';
+import ChatSidebar from './components/chat/ChatSidebar';
 import { MODAL_TYPES } from './utils/constants';
 import { isSameId } from './utils/ids';
 
@@ -32,6 +34,7 @@ export default function PipelinesApp() {
 		closeModal,
 		activeModal,
 		modalData,
+		isChatOpen,
 	} = useUIStore();
 
 	// Check if Zustand has finished hydrating from localStorage
@@ -146,117 +149,126 @@ export default function PipelinesApp() {
 	}, [ createPipelineMutation ] );
 
 	/**
-	 * Loading state
+	 * Fallback: Use first pipeline if selectedPipeline is null
 	 */
-	if ( pipelinesLoading || selectedPipelineLoading || flowsLoading ) {
-		return (
-			<div className="datamachine-pipelines-loading">
-				<Spinner />
-				<p>{ __( 'Loading pipelines...', 'datamachine' ) }</p>
-			</div>
-		);
-	}
+	const displayPipeline = selectedPipeline || pipelines[ 0 ];
 
 	/**
-	 * Error state
+	 * Determine main content based on state
 	 */
-	if ( pipelinesError || selectedPipelineError || flowsError ) {
-		return (
-			<Notice status="error" isDismissible={ false }>
-				<p>{ pipelinesError || selectedPipelineError || flowsError }</p>
-			</Notice>
-		);
-	}
+	const renderMainContent = () => {
+		// Loading state
+		if ( pipelinesLoading || selectedPipelineLoading || flowsLoading ) {
+			return (
+				<div className="datamachine-pipelines-loading">
+					<Spinner />
+					<p>{ __( 'Loading pipelines...', 'datamachine' ) }</p>
+				</div>
+			);
+		}
 
-	/**
-	 * Empty state
-	 */
-	if (pipelines.length === 0) {
-		return (
-			<div className="datamachine-empty-state">
-				<Notice status="info" isDismissible={ false }>
-					<p>
-						{ __(
-							'No pipelines found. Create your first pipeline to get started.',
-							'datamachine'
-						) }
-					</p>
+		// Error state
+		if ( pipelinesError || selectedPipelineError || flowsError ) {
+			return (
+				<Notice status="error" isDismissible={ false }>
+					<p>{ pipelinesError || selectedPipelineError || flowsError }</p>
 				</Notice>
-				<div className="datamachine-empty-state-actions">
+			);
+		}
+
+		// Empty state
+		if ( pipelines.length === 0 ) {
+			return (
+				<div className="datamachine-empty-state">
+					<Notice status="info" isDismissible={ false }>
+						<p>
+							{ __(
+								'No pipelines found. Create your first pipeline to get started, or ask the chat to help you build one.',
+								'datamachine'
+							) }
+						</p>
+					</Notice>
+					<div className="datamachine-empty-state-actions">
+						<Button
+							variant="primary"
+							onClick={ handleAddNewPipeline }
+							disabled={ isCreatingPipeline }
+							isBusy={ isCreatingPipeline }
+						>
+							{ __( 'Create First Pipeline', 'datamachine' ) }
+						</Button>
+					</div>
+				</div>
+			);
+		}
+
+		// Loading pipeline details
+		if ( ! selectedPipeline && selectedPipelineId ) {
+			return (
+				<div className="datamachine-pipelines-loading">
+					<Spinner />
+					<p>{ __( 'Loading pipeline details...', 'datamachine' ) }</p>
+				</div>
+			);
+		}
+
+		// Normal state with pipelines
+		return (
+			<>
+				<PipelineSelector />
+
+				<PipelineCard
+					pipeline={ displayPipeline }
+					flows={ flows }
+				/>
+
+				<ModalManager
+					pipelines={ pipelines }
+					handlers={ handlers }
+					handlerDetails={ handlerDetails }
+					pipelineConfig={ selectedPipeline?.pipeline_config || {} }
+					flows={ flows }
+					onModalSuccess={ handleModalSuccess }
+					onHandlerSelected={ handleHandlerSelected }
+					onChangeHandler={ handleChangeHandler }
+					onOAuthConnect={ handleOAuthConnect }
+					onBackToSettings={ handleBackToSettings }
+				/>
+			</>
+		);
+	};
+
+	/**
+	 * Main render - layout wrapper always present for chat access
+	 */
+	return (
+		<div className="datamachine-pipelines-layout">
+			<div className="datamachine-pipelines-main">
+				{ /* Header with Add Pipeline, Import/Export, and Chat toggle */ }
+				<div className="datamachine-header--flex-space-between">
 					<Button
 						variant="primary"
 						onClick={ handleAddNewPipeline }
 						disabled={ isCreatingPipeline }
 						isBusy={ isCreatingPipeline }
 					>
-						{ __( 'Create First Pipeline', 'datamachine' ) }
+						{ __( 'Add New Pipeline', 'datamachine' ) }
 					</Button>
+					<div className="datamachine-header__right">
+						<Button
+							variant="secondary"
+							onClick={ () => openModal( MODAL_TYPES.IMPORT_EXPORT ) }
+						>
+							{ __( 'Import / Export', 'datamachine' ) }
+						</Button>
+						<ChatToggle />
+					</div>
 				</div>
-			</div>
-		);
-	}
 
-	/**
-	 * If no pipeline selected yet, show loading spinner
-	 */
-	if ( ! selectedPipeline && selectedPipelineId ) {
-		return (
-			<div className="datamachine-pipelines-loading">
-				<Spinner />
-				<p>{ __( 'Loading pipeline details...', 'datamachine' ) }</p>
-			</div>
-		);
-	}
-
-	/**
-	 * Fallback: Use first pipeline if selectedPipeline is null
-	 */
-	const displayPipeline = selectedPipeline || pipelines[ 0 ];
-
-	/**
-	 * Main render
-	 */
-	return (
-		<div className="datamachine-pipelines-react-app">
-			{ /* Header with Add Pipeline and Import/Export buttons */ }
-			<div className="datamachine-header--flex-space-between">
-				<Button
-					variant="primary"
-					onClick={ handleAddNewPipeline }
-					disabled={ isCreatingPipeline }
-					isBusy={ isCreatingPipeline }
-				>
-					{ __( 'Add New Pipeline', 'datamachine' ) }
-				</Button>
-				<Button
-					variant="secondary"
-					onClick={ () => openModal( MODAL_TYPES.IMPORT_EXPORT ) }
-				>
-					{ __( 'Import / Export', 'datamachine' ) }
-				</Button>
+				{ renderMainContent() }
 			</div>
 
-			{ /* Pipeline dropdown selector */ }
-			<PipelineSelector />
-
-			<PipelineCard
-				pipeline={ displayPipeline }
-				flows={ flows }
-			/>
-
-			{ /* Centralized Modal Management */ }
-		<ModalManager
-			pipelines={ pipelines }
-			handlers={ handlers }
-			handlerDetails={ handlerDetails }
-			pipelineConfig={ selectedPipeline?.pipeline_config || {} }
-			flows={ flows }
-			onModalSuccess={ handleModalSuccess }
-			onHandlerSelected={ handleHandlerSelected }
-			onChangeHandler={ handleChangeHandler }
-			onOAuthConnect={ handleOAuthConnect }
-			onBackToSettings={ handleBackToSettings }
-		/>
+			{ isChatOpen && <ChatSidebar /> }
 		</div>
 	);
 }

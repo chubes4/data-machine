@@ -3,7 +3,7 @@
  * LogsManager Service
  *
  * Centralized service for log file operations including reading, clearing,
- * and configuration. Provides direct method access for REST API and internal use.
+ * and configuration. Supports per-agent-type log files and levels.
  *
  * Note: Actual logging (write operations) uses the datamachine_log action hook
  * which remains in DataMachineActions.php for cross-cutting concern flexibility.
@@ -14,6 +14,8 @@
 
 namespace DataMachine\Services;
 
+use DataMachine\Engine\AI\AgentType;
+
 if (!defined('WPINC')) {
     die;
 }
@@ -21,85 +23,93 @@ if (!defined('WPINC')) {
 class LogsManager {
 
     /**
-     * Clear the log file contents.
+     * Clear the log file for a specific agent type.
      *
+     * @param string $agentType Agent type (pipeline, chat)
      * @return bool True on success
      */
-    public static function clear(): bool {
-        $log_file = self::getFilePath();
-
-        $log_dir = dirname($log_file);
-        if (!file_exists($log_dir)) {
-            wp_mkdir_p($log_dir);
-        }
-
-        $result = file_put_contents($log_file, '');
-        return $result !== false;
+    public static function clear(string $agentType): bool {
+        return datamachine_clear_log_file($agentType);
     }
 
     /**
-     * Set the log level.
+     * Clear all agent type log files.
      *
+     * @return bool True if all files cleared successfully
+     */
+    public static function clearAll(): bool {
+        return datamachine_clear_all_log_files();
+    }
+
+    /**
+     * Set the log level for a specific agent type.
+     *
+     * @param string $agentType Agent type (pipeline, chat)
      * @param string $level Log level (debug, error, none)
      * @return bool True on success
      */
-    public static function setLevel(string $level): bool {
-        $available_levels = array_keys(datamachine_get_available_log_levels());
-        if (!in_array($level, $available_levels)) {
-            return false;
-        }
-
-        return update_option('datamachine_log_level', $level);
+    public static function setLevel(string $agentType, string $level): bool {
+        return datamachine_set_log_level($agentType, $level);
     }
 
     /**
-     * Get the current log level.
+     * Get the current log level for a specific agent type.
      *
+     * @param string $agentType Agent type (pipeline, chat)
      * @return string Current log level
      */
-    public static function getLevel(): string {
-        return get_option('datamachine_log_level', 'error');
+    public static function getLevel(string $agentType): string {
+        return datamachine_get_log_level($agentType);
     }
 
     /**
-     * Get the log file path.
+     * Get the log file path for a specific agent type.
      *
+     * @param string $agentType Agent type (pipeline, chat)
      * @return string Absolute path to log file
      */
-    public static function getFilePath(): string {
-        $upload_dir = wp_upload_dir();
-        return $upload_dir['basedir'] . DATAMACHINE_LOG_FILE;
+    public static function getFilePath(string $agentType): string {
+        return datamachine_get_log_file_path($agentType);
     }
 
     /**
-     * Get log file size in megabytes.
+     * Get log file size in megabytes for a specific agent type.
      *
+     * @param string $agentType Agent type (pipeline, chat)
      * @return float File size in MB, 0 if file doesn't exist
      */
-    public static function getFileSize(): float {
-        $log_file = self::getFilePath();
-        if (!file_exists($log_file)) {
-            return 0;
-        }
-        return round(filesize($log_file) / 1024 / 1024, 2);
+    public static function getFileSize(string $agentType): float {
+        return datamachine_get_log_file_size($agentType);
     }
 
     /**
-     * Get log file content with optional filtering.
+     * Get log file content with optional filtering for a specific agent type.
      *
+     * @param string $agentType Agent type (pipeline, chat)
      * @param string $mode Content mode: 'full' or 'recent'
      * @param int $limit Number of entries when mode is 'recent'
      * @param int|null $jobId Optional job ID to filter by
      * @return array Result array with content, metadata, and status
      */
-    public static function getContent(string $mode = 'full', int $limit = 200, ?int $jobId = null): array {
-        $log_file = self::getFilePath();
+    public static function getContent(string $agentType, string $mode = 'full', int $limit = 200, ?int $jobId = null): array {
+        if (!AgentType::isValid($agentType)) {
+            return [
+                'success' => false,
+                'error' => 'invalid_agent_type',
+                'message' => __('Invalid agent type specified.', 'data-machine')
+            ];
+        }
+
+        $log_file = self::getFilePath($agentType);
 
         if (!file_exists($log_file)) {
             return [
-                'success' => false,
-                'error' => 'log_file_not_found',
-                'message' => __('Log file does not exist.', 'data-machine')
+                'success' => true,
+                'content' => '',
+                'total_lines' => 0,
+                'mode' => $mode,
+                'agent_type' => $agentType,
+                'message' => __('No log entries found.', 'data-machine')
             ];
         }
 
@@ -132,7 +142,8 @@ class LogsManager {
             'success' => true,
             'content' => $content,
             'total_lines' => $total_lines,
-            'mode' => $mode
+            'mode' => $mode,
+            'agent_type' => $agentType
         ];
 
         if ($filtered_lines !== null) {
@@ -142,14 +153,12 @@ class LogsManager {
 
         if ($jobId !== null) {
             $response['message'] = sprintf(
-                /* translators: 1: number of log entries, 2: job ID */
                 __('Retrieved %1$d log entries for job %2$d.', 'data-machine'),
                 count($file_content),
                 $jobId
             );
         } else {
             $response['message'] = sprintf(
-                /* translators: 1: number of log entries, 2: log set label */
                 __('Loaded %1$d %2$s log entries.', 'data-machine'),
                 count($file_content),
                 $mode === 'recent' ? 'recent' : 'total'
@@ -160,12 +169,21 @@ class LogsManager {
     }
 
     /**
-     * Get log file metadata and configuration.
+     * Get log file metadata and configuration for a specific agent type.
      *
+     * @param string $agentType Agent type (pipeline, chat)
      * @return array Metadata including file info and configuration
      */
-    public static function getMetadata(): array {
-        $log_file_path = self::getFilePath();
+    public static function getMetadata(string $agentType): array {
+        if (!AgentType::isValid($agentType)) {
+            return [
+                'success' => false,
+                'error' => 'invalid_agent_type',
+                'message' => __('Invalid agent type specified.', 'data-machine')
+            ];
+        }
+
+        $log_file_path = self::getFilePath($agentType);
         $log_file_exists = file_exists($log_file_path);
         $log_file_size = $log_file_exists ? filesize($log_file_path) : 0;
 
@@ -173,11 +191,16 @@ class LogsManager {
             ? size_format($log_file_size, 2)
             : '0 bytes';
 
-        $current_level = self::getLevel();
+        $current_level = self::getLevel($agentType);
         $available_levels = datamachine_get_available_log_levels();
+
+        $agent_types = AgentType::getAll();
+        $agent_info = $agent_types[$agentType] ?? [];
 
         return [
             'success' => true,
+            'agent_type' => $agentType,
+            'agent_label' => $agent_info['label'] ?? ucfirst($agentType),
             'log_file' => [
                 'path' => $log_file_path,
                 'exists' => $log_file_exists,
@@ -188,6 +211,24 @@ class LogsManager {
                 'current_level' => $current_level,
                 'available_levels' => $available_levels
             ]
+        ];
+    }
+
+    /**
+     * Get metadata for all agent types.
+     *
+     * @return array Array of metadata for each agent type
+     */
+    public static function getAllMetadata(): array {
+        $all_metadata = [];
+
+        foreach (AgentType::getAll() as $agentType => $info) {
+            $all_metadata[$agentType] = self::getMetadata($agentType);
+        }
+
+        return [
+            'success' => true,
+            'agent_types' => $all_metadata
         ];
     }
 

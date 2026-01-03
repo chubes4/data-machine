@@ -151,7 +151,7 @@ add_action('init', function() {
 function datamachine_get_enabled_admin_pages() {
     $settings = \DataMachine\Core\PluginSettings::all();
 
-    if (($settings['engine_mode'] ?? false)) {
+    if ($settings['engine_mode'] === true) {
         return [];
     }
 
@@ -208,15 +208,7 @@ function datamachine_store_page_config($page_slug, $page_config) {
  * @param string $page_slug Page slug
  */
 function datamachine_render_admin_page_content($page_config, $page_slug) {
-    // Special handling for logs page to use Logs class render_content method
-    if ($page_slug === 'logs') {
-        // Use Logs class to render content properly
-        $logs_instance = new \DataMachine\Core\Admin\Pages\Logs\Logs();
-        $logs_instance->render_content();
-        return;
-    }
-
-    // Direct template rendering using standardized template name pattern for other pages
+    // Direct template rendering using standardized template name pattern
     $content = apply_filters('datamachine_render_template', '', "page/{$page_slug}-page", [
         'page_slug' => $page_slug,
         'page_config' => $page_config

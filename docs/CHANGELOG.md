@@ -5,6 +5,28 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-01-03
+
+### Added
+- **Integrated Chat Sidebar** - New React-based AI chat interface embedded directly into the Pipeline Builder for real-time conversational workflow assistance.
+- **React Logs Interface** - Complete migration of the Logs management page to a modern React architecture with improved filtering and performance.
+- **Step Type Registration Trait** - Introduced `StepTypeRegistrationTrait` to standardize registration for AI, Fetch, Publish, and Update steps.
+- **AI Agent Context & Types** - New `AgentContext` and `AgentType` classes for managing specialized AI personalities and execution contexts.
+- **Shared Admin UI** - Consolidated React components and styles into `/inc/Core/Admin/shared/` for cross-page reusability.
+
+### Improved
+- **Service Layer Consistency** - Refined `PipelineManager` and `PipelineStepManager` with standardized patterns and error handling.
+- **Webpack Configuration** - Updated to support multiple React entry points (Pipelines and Logs).
+- **Log Management** - Enhanced `LogsManager` and `Logs` API for better filtering and retrieval of execution records.
+
+### Changed
+- **Step Architecture Refactoring** - Removed individual filter classes for core steps in favor of trait-based registration.
+- **Migration Roadmap** - Updated `WP-AI-CLIENT-MIGRATION.md` to target v0.9.0 for native AI client integration.
+
+### Removed
+- **Legacy Logs Assets** - Deleted legacy `admin-logs.js` and associated PHP template logic.
+- **Step Filter Classes** - Removed `AIStepFilters`, `FetchStepFilters`, `PublishStepFilters`, and `UpdateStepFilters`.
+
 ## [0.7.1] - 2026-01-02
 
 ### Added
