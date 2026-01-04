@@ -204,6 +204,22 @@ class Settings {
 			];
 		}
 
+		// Get AI provider keys and mask them for the frontend
+		$raw_keys = apply_filters('chubes_ai_provider_api_keys', null) ?: [];
+		$masked_keys = [];
+		foreach ($raw_keys as $provider => $key) {
+			if (!empty($key)) {
+				// Show first 4 and last 4 characters, mask the middle
+				if (strlen($key) > 12) {
+					$masked_keys[$provider] = substr($key, 0, 4) . '****************' . substr($key, -4);
+				} else {
+					$masked_keys[$provider] = '****************';
+				}
+			} else {
+				$masked_keys[$provider] = '';
+			}
+		}
+
 		return rest_ensure_response([
 			'success' => true,
 			'data' => [
@@ -217,7 +233,7 @@ class Settings {
 					'default_model' => $settings['default_model'] ?? '',
 					'max_turns' => $settings['max_turns'] ?? 12,
 					'enabled_tools' => $settings['enabled_tools'] ?? [],
-					'ai_provider_keys' => apply_filters('chubes_ai_provider_api_keys', []) ?: [],
+					'ai_provider_keys' => $masked_keys,
 				],
 				'admin_pages' => $admin_pages_keyed,
 				'global_tools' => $tools_keyed,
@@ -286,15 +302,21 @@ class Settings {
 			}
 		}
 
-		// Handle AI provider API keys (stored separately)
+		// Handle AI provider API keys (stored separately via filter)
 		if (isset($params['ai_provider_keys']) && is_array($params['ai_provider_keys'])) {
-			$current_keys = apply_filters('chubes_ai_provider_api_keys', []) ?: [];
+			$current_keys = apply_filters('chubes_ai_provider_api_keys', null) ?: [];
 			foreach ($params['ai_provider_keys'] as $provider => $key) {
-				$current_keys[sanitize_key($provider)] = sanitize_text_field($key);
+				$provider_key = sanitize_key($provider);
+				$new_key = sanitize_text_field($key);
+
+				// Only update if the key is not the masked version and not empty
+				// If it contains asterisks, it's the masked version from the frontend
+				if (strpos($new_key, '****') === false) {
+					$current_keys[$provider_key] = $new_key;
+				}
 			}
-			// Trigger the filter to save keys (the AI library handles storage)
-			do_action('chubes_ai_provider_api_keys_update', $current_keys);
-			update_option('chubes_ai_provider_api_keys', $current_keys);
+			// Trigger the filter to save keys
+			apply_filters('chubes_ai_provider_api_keys', $current_keys);
 		}
 
 		// Update the option

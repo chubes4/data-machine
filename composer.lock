@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "13d751fe8814546a9a2643c5dbf70134",
+    "content-hash": "dd9e53c4fe8841506c346c48f54e0090",
     "packages": [
         {
             "name": "abraham/twitteroauth",
@@ -67,16 +67,16 @@
         },
         {
             "name": "chubes4/ai-http-client",
-            "version": "v2.0.8",
+            "version": "v2.0.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/chubes4/ai-http-client.git",
-                "reference": "1f3fc4dcf2c70605cab70672f8adc9ba6dafa02c"
+                "reference": "620e751e01e058384668a4191a9db895fc6451de"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/chubes4/ai-http-client/zipball/1f3fc4dcf2c70605cab70672f8adc9ba6dafa02c",
-                "reference": "1f3fc4dcf2c70605cab70672f8adc9ba6dafa02c",
+                "url": "https://api.github.com/repos/chubes4/ai-http-client/zipball/620e751e01e058384668a4191a9db895fc6451de",
+                "reference": "620e751e01e058384668a4191a9db895fc6451de",
                 "shasum": ""
             },
             "require": {
@@ -123,7 +123,7 @@
                 "issues": "https://github.com/chubes4/ai-http-client/issues",
                 "source": "https://github.com/chubes4/ai-http-client"
             },
-            "time": "2026-01-04T00:13:27+00:00"
+            "time": "2026-01-04T03:25:56+00:00"
         },
         {
             "name": "composer/ca-bundle",
@@ -2119,6 +2119,54 @@
                 }
             ],
             "time": "2025-12-08T11:19:18+00:00"
+        },
+        {
+            "name": "wp-phpunit/wp-phpunit",
+            "version": "6.9.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/wp-phpunit/wp-phpunit.git",
+                "reference": "448dc57a97c7225d2ac6271876682fca4c2ed340"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/wp-phpunit/wp-phpunit/zipball/448dc57a97c7225d2ac6271876682fca4c2ed340",
+                "reference": "448dc57a97c7225d2ac6271876682fca4c2ed340",
+                "shasum": ""
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "__loaded.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "Evan Mattson",
+                    "email": "me@aaemnnost.tv"
+                },
+                {
+                    "name": "WordPress Community",
+                    "homepage": "https://wordpress.org/about/"
+                }
+            ],
+            "description": "WordPress core PHPUnit library",
+            "homepage": "https://github.com/wp-phpunit",
+            "keywords": [
+                "phpunit",
+                "test",
+                "wordpress"
+            ],
+            "support": {
+                "docs": "https://github.com/wp-phpunit/docs",
+                "issues": "https://github.com/wp-phpunit/issues",
+                "source": "https://github.com/wp-phpunit/wp-phpunit"
+            },
+            "time": "2025-12-03T01:19:46+00:00"
         },
         {
             "name": "yoast/phpunit-polyfills",

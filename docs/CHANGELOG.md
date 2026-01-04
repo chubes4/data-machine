@@ -5,6 +5,22 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.7] - 2026-01-04
+
+### Added
+- **AI Provider Key Masking** - Implemented server-side masking for AI provider API keys in the Settings API to improve security.
+- **Key Status Feedback** - Added visual "Saved" badges and improved "Clear" functionality for API keys in the Settings UI.
+- **WP-Unit Testing Suite** - Integrated `wp-phpunit/wp-phpunit` and standard WordPress test bootstrap for better automated testing.
+
+### Improved
+- **Settings UI Robustness** - Improved API key management with better visibility toggling and validation logic to prevent accidental masking overrides.
+- **Dependency Management** - Upgraded `chubes4/ai-http-client` to v2.0.9 for improved HTTP handling.
+
+### Technical Details
+- **API Security**: Refactored `inc/Api/Settings.php` to mask keys before sending to frontend and handle masked inputs during updates.
+- **UI Components**: Enhanced `inc/Core/Admin/Settings/assets/react/components/tabs/ApiKeysTab.jsx` with status indicators and improved interaction states.
+- **Testing Infrastructure**: Added `bin/install-wp-tests.sh`, `tests/bootstrap.php`, and `phpunit.xml.dist` for WordPress-native testing.
+
 ## [0.8.6] - 2026-01-03
 
 ### Added

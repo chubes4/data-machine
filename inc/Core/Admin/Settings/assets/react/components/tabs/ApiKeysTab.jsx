@@ -111,7 +111,7 @@ const ApiKeysTab = () => {
 											value={ currentValue }
 											onChange={ ( e ) => handleKeyChange( key, e.target.value ) }
 											className="regular-text"
-											placeholder="Enter API key..."
+											placeholder={ currentValue.includes( '****' ) ? 'Key configured' : 'Enter API key...' }
 											autoComplete="off"
 										/>
 										<button
@@ -119,9 +119,25 @@ const ApiKeysTab = () => {
 											className="button button-secondary datamachine-toggle-visibility"
 											onClick={ () => toggleKeyVisibility( key ) }
 											aria-label={ isVisible ? 'Hide API key' : 'Show API key' }
+											disabled={ currentValue.includes( '****' ) && ! isVisible }
 										>
 											{ isVisible ? 'Hide' : 'Show' }
 										</button>
+										{ currentValue.includes( '****' ) && (
+											<span className="datamachine-key-status-badge" style={ { marginLeft: '10px', color: '#46b450', fontWeight: 'bold' } }>
+												✓ Saved
+											</span>
+										) }
+										{ currentValue && (
+											<button
+												type="button"
+												className="button button-link-delete"
+												style={ { marginLeft: '10px', color: '#d63638' } }
+												onClick={ () => handleKeyChange( key, '' ) }
+											>
+												Clear
+											</button>
+										) }
 									</div>
 									<p className="description">
 										API key for { providerName } provider.
