@@ -64,7 +64,7 @@ export default function OAuthPopupHandler( {
 		try {
 			// Fetch OAuth URL from REST API - this creates the state server-side
 			const response = await wp.apiFetch( {
-				path: `/datamachine/v1/auth/${ handlerSlug }/oauth-url`,
+				path: `/datamachine/v1/auth/${ handlerSlug }/status`,
 			} );
 
 			if ( ! response?.success || ! response?.data?.oauth_url ) {

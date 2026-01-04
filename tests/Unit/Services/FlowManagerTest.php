@@ -44,6 +44,21 @@ class FlowManagerTest extends WP_UnitTestCase {
 		parent::tear_down();
 	}
 
+	public function test_conversation_manager_does_not_truncate_tool_parameters(): void {
+		$tool_name = 'api_query';
+		$tool_parameters = [
+			'endpoint' => '/datamachine/v1/flows/steps/10_39a2031e-2f86-4e0c-b844-5ee925f4028a_63/config',
+			'method' => 'PATCH',
+		];
+
+		$message = \DataMachine\Engine\AI\ConversationManager::formatToolCallMessage( $tool_name, $tool_parameters, 1 );
+		$this->assertIsArray( $message );
+		$this->assertSame( 'tool_call', $message['metadata']['type'] ?? null );
+		$this->assertSame( $tool_parameters, $message['metadata']['parameters'] ?? null );
+		$this->assertStringNotContainsString( '...', $message['content'] );
+		$this->assertStringContainsString( $tool_parameters['endpoint'], $message['content'] );
+	}
+
 	// -------------------------------------------------------------------------
 	// CREATE TESTS
 	// -------------------------------------------------------------------------

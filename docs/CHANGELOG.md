@@ -5,6 +5,22 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.15] - 2026-01-04
+
+### Improved
+- **Tool Call Extraction** - Refactored `ConversationManager` to prioritize metadata for tool call extraction, improving reliability of tool execution tracking.
+- **Chat UI Word Wrapping** - Enhanced `chat-sidebar.css` with `overflow-wrap: anywhere` for message content and code blocks, preventing layout breaks with long strings.
+- **Chat Input Loading States** - Refined `ChatInput.jsx` and `ChatSidebar.jsx` to properly handle loading states, disabling buttons while maintaining input focus when appropriate.
+
+### Fixed
+- **Tool Parameter Truncation** - Removed aggressive string truncation (50 chars) for tool parameters in `ConversationManager`, ensuring complete data is preserved in conversation history.
+- **OAuth Handler Status** - Standardized `OAuthPopupHandler.jsx` to use the unified `/status` endpoint instead of the redundant `/oauth-url` route.
+
+### Technical Details
+- **Core**: Removed `handle_get_oauth_url` and associated route from `Auth.php`.
+- **Core**: Updated `formatToolCallMessage` and `extractToolCallFromMessage` in `ConversationManager.php` for better metadata handling.
+- **Testing**: Added unit test for non-truncated tool parameters in `FlowManagerTest.php`.
+
 ## [0.8.14] - 2026-01-04
 
 ### Improved

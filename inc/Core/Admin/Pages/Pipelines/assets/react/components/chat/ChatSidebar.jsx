@@ -104,7 +104,7 @@ export default function ChatSidebar() {
 
 			<ChatMessages messages={ messages } isLoading={ isLoading } />
 
-			<ChatInput onSend={ handleSend } disabled={ isLoading } />
+			<ChatInput onSend={ handleSend } isLoading={ isLoading } />
 		</aside>
 	);
 }

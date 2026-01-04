@@ -75,19 +75,7 @@ class Auth {
 			]
 		]);
 
-		register_rest_route('datamachine/v1', '/auth/(?P<handler_slug>[a-zA-Z0-9_\-]+)/oauth-url', [
-			'methods' => 'GET',
-			'callback' => [self::class, 'handle_get_oauth_url'],
-			'permission_callback' => [self::class, 'check_permission'],
-			'args' => [
-				'handler_slug' => [
-					'required' => true,
-					'type' => 'string',
-					'sanitize_callback' => 'sanitize_text_field',
-					'description' => __('Handler identifier', 'data-machine'),
-				],
-			]
-		]);
+
 	}
 
 	/**

@@ -123,6 +123,7 @@
 
 .datamachine-chat-message__content {
 	word-break: break-word;
+	overflow-wrap: anywhere;
 }
 
 .datamachine-chat-message__content p:first-child {
@@ -158,6 +159,7 @@
 	border-radius: 4px;
 	font-size: 0.9em;
 	font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+	overflow-wrap: anywhere;
 }
 
 .datamachine-chat-message--user .datamachine-chat-message__content code {

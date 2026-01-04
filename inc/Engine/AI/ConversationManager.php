@@ -46,11 +46,7 @@ class ConversationManager {
         if (!empty($tool_parameters)) {
             $params_str = [];
             foreach ($tool_parameters as $key => $value) {
-                if (is_string($value) && strlen($value) > 50) {
-                    $params_str[] = "{$key}: " . substr($value, 0, 50) . "...";
-                } else {
-                    $params_str[] = "{$key}: " . (is_string($value) ? $value : json_encode($value));
-                }
+                $params_str[] = "{$key}: " . (is_string($value) ? $value : json_encode($value));
             }
             $message .= " with parameters: " . implode(', ', $params_str);
         }
@@ -216,14 +212,26 @@ class ConversationManager {
         for ($i = count($conversation_messages) - 1; $i >= 0; $i--) {
             $message = $conversation_messages[$i];
 
-            if ($message['role'] === 'assistant' &&
-                isset($message['content']) &&
-                is_string($message['content']) &&
-                strpos($message['content'], 'AI ACTION') === 0) {
-
-                $previous_tool_call = self::extractToolCallFromMessage($message);
-                break;
+            if ($message['role'] !== 'assistant') {
+                continue;
             }
+
+            if (($message['metadata']['type'] ?? null) !== 'tool_call') {
+                continue;
+            }
+
+            $prev_tool_name = $message['metadata']['tool_name'] ?? null;
+            $prev_parameters = $message['metadata']['parameters'] ?? null;
+
+            if (!is_string($prev_tool_name) || !is_array($prev_parameters)) {
+                continue;
+            }
+
+            $previous_tool_call = [
+                'tool_name' => $prev_tool_name,
+                'parameters' => $prev_parameters,
+            ];
+            break;
         }
 
         if (!$previous_tool_call) {
@@ -244,10 +252,24 @@ class ConversationManager {
     /**
      * Extract tool call details from a conversation message.
      *
+     * Prefer metadata when available.
+     *
      * @param array $message Conversation message
      * @return array|null Tool call details or null if not a tool call message
      */
     public static function extractToolCallFromMessage(array $message): ?array {
+        if (($message['metadata']['type'] ?? null) === 'tool_call') {
+            $tool_name = $message['metadata']['tool_name'] ?? null;
+            $parameters = $message['metadata']['parameters'] ?? null;
+
+            if (is_string($tool_name) && is_array($parameters)) {
+                return [
+                    'tool_name' => $tool_name,
+                    'parameters' => $parameters,
+                ];
+            }
+        }
+
         if ($message['role'] !== 'assistant' || !isset($message['content'])) {
             return null;
         }
@@ -271,10 +293,6 @@ class ConversationManager {
                     list($key, $value) = explode(': ', $pair, 2);
                     $key = trim($key);
                     $value = trim($value);
-
-                    if (substr($value, -3) === '...') {
-                        $value = substr($value, 0, -3) . '_truncated_' . time();
-                    }
 
                     $decoded = json_decode($value, true);
                     if (json_last_error() === JSON_ERROR_NONE) {

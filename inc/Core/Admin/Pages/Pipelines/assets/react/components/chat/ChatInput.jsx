@@ -10,18 +10,18 @@ import { Button } from '@wordpress/components';
 import { arrowUp } from '@wordpress/icons';
 import { __ } from '@wordpress/i18n';
 
-export default function ChatInput({ onSend, disabled }) {
+export default function ChatInput({ onSend, isLoading }) {
 	const [message, setMessage] = useState('');
 
 	const handleSubmit = useCallback(() => {
 		const trimmed = message.trim();
-		if (!trimmed || disabled) {
+		if (!trimmed || isLoading) {
 			return;
 		}
 
 		onSend(trimmed);
 		setMessage('');
-	}, [message, disabled, onSend]);
+	}, [message, isLoading, onSend]);
 
 	const handleKeyDown = useCallback((e) => {
 		if (e.key === 'Enter' && !e.shiftKey) {
@@ -38,13 +38,12 @@ export default function ChatInput({ onSend, disabled }) {
 				onChange={ (e) => setMessage(e.target.value) }
 				onKeyDown={ handleKeyDown }
 				placeholder={ __( 'Ask me to build something...', 'data-machine' ) }
-				disabled={ disabled }
 				rows={ 2 }
 			/>
 			<Button
 				icon={ arrowUp }
 				onClick={ handleSubmit }
-				disabled={ disabled || !message.trim() }
+				disabled={ isLoading || !message.trim() }
 				label={ __( 'Send message', 'data-machine' ) }
 				className="datamachine-chat-input__send"
 				variant="primary"
