@@ -167,7 +167,7 @@ The Pipeline Builder includes a built-in React-based AI assistant accessible via
 
 **Validation Feedback**: Real-time validation with specific error messages and correction suggestions.
 
-**Graceful Degradation**: Fallback interfaces when JavaScript disabled or AJAX failures occur.
+**Graceful Degradation**: Fallback interfaces when JavaScript disabled or connectivity issues occur.
 
 **Error Recovery**: Automatic retry mechanisms and user-guided error resolution workflows.
 
@@ -279,7 +279,7 @@ const { data, updateField, handleSubmit, isSubmitting } = useFormState({
 
 **Complete REST API Usage:**
 
-All operations consume REST API endpoints with zero AJAX dependencies:
+All operations consume REST API endpoints with zero jQuery/AJAX dependencies:
 
 *Pipeline Operations:*
 - `GET /datamachine/v1/pipelines` - Fetch pipelines list

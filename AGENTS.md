@@ -2,7 +2,7 @@
 
 Data Machine — WordPress plugin for automating content workflows with AI. Visual pipeline builder, chat agent, REST API, and extensibility via handlers and tools.
 
-Version: 0.8.5
+Version: 0.8.6
 
 This file provides a concise, present-tense technical reference for contributors and automated agents. For user-focused docs see datamachine/docs/.
 
@@ -17,7 +17,7 @@ Core architecture
   - `FlowManager` - Flow CRUD operations, duplication, step synchronization
   - `PipelineManager` - Pipeline CRUD operations with complete/simple creation modes
   - `JobManager` - Job execution monitoring and management
-   - `LogsManager` - Centralized log access and filtering (per-agent logs: `datamachine-pipeline.log`, `datamachine-chat.log`)
+  - **LogsManager** - Centralized log access and filtering (DB-based: `wp_datamachine_logs`)
   - `ProcessedItemsManager` - Deduplication tracking across workflows
   - `FlowStepManager` - Individual flow step configuration and handler management
   - `PipelineStepManager` - Pipeline step template management
@@ -33,7 +33,7 @@ Core architecture
 - Providers are pluggable and configured by site administrators (OpenAI, Anthropic, Google, Grok, OpenRouter).
 - Universal Engine architecture supports both Pipeline and Chat agents with shared AI infrastructure.
 - Integrated Chat Sidebar: React-based context-aware chat interface in the Pipeline Builder that passes `selected_pipeline_id` for prioritized context.
-- Specialized chat tools provide focused workflow management: AddPipelineStep, ApiQuery, ConfigureFlowSteps, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow.
+- Specialized chat tools provide focused workflow management: AddPipelineStep, ApiQuery, AuthenticateHandler, ConfigureFlowSteps, ConfigurePipelineStep, CopyFlow, CreateFlow, CreatePipeline, CreateTaxonomyTerm, ExecuteWorkflowTool, GetHandlerDefaults, ManageLogs, ReadLogs, RunFlow, SearchTaxonomyTerms, SetHandlerDefaults, UpdateFlow.
 
 Database
 
@@ -48,7 +48,7 @@ Security & conventions
 
 Agent guidance (for automated editors)
 
-- Code-first verification: always validate claims against the code before editing docs. Read the relevant implementation files under `datamachine/inc/`, `datamachine/src/`, and `datamachine/docs/`.
+- Code-first verification: always validate claims against the code before editing docs. Read the relevant implementation files under `data-machine/inc/` and `data-machine/docs/`.
 - Make minimal, targeted documentation edits; preserve accurate content and explain assumptions in changelogs.
 - Use present-tense language and remove references to deleted functionality or historical counts.
 - Do not modify source code when aligning documentation unless explicitly authorized.
@@ -57,6 +57,6 @@ Agent guidance (for automated editors)
 
 Where to find more
 
-- User docs: datamachine/docs/
-- Code: datamachine/inc/
-- Admin UI source: datamachine/src/
+- User docs: data-machine/docs/
+- Code: data-machine/inc/
+- Admin UI source: data-machine/inc/Core/Admin/Pages/

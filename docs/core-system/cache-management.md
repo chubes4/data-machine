@@ -48,7 +48,7 @@ The `SiteContext` directive provides cached WordPress site metadata for AI conte
 
 ## TanStack Query Caching
 
-In the admin UI, caching is handled by **TanStack Query**. Mutations (add, delete, reorder) for pipelines, flows, and steps automatically trigger invalidations for the relevant query keys to ensure the UI stays in sync with the server state.
+In the React-based admin UI (Pipelines, Logs, Settings, and Jobs), caching is handled by **TanStack Query**. Mutations (add, delete, update, clear) for pipelines, flows, steps, and jobs automatically trigger invalidations for the relevant query keys to ensure the UI stays in sync with the server state. The Jobs page also utilizes background refetching to maintain real-time status updates without manual page refreshes.
 
 ## Implementation Details
 

@@ -45,7 +45,7 @@ Complete user documentation for Data Machine (v0.6.3), the AI-first WordPress pl
 ### Admin Interface
 - **Pipeline Builder**: React-based page for creating pipelines, configuring steps, and enabling tools.
 - **Settings Configuration**: Provider credentials, tool defaults, and global behavior settings.
-- **Jobs Management**: Job history, log streaming, and failure analysis.
+- **Jobs Management**: React-based job history, log streaming, and failure analysis.
 
 ## Documentation Structure
 ```

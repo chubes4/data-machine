@@ -3,6 +3,7 @@
 **Implementation**: `\DataMachine\Services\LogsManager`
 **Database Table**: `wp_datamachine_logs`
 **Since**: 0.4.0 (Unified Database Logging)
+**React Admin**: `inc/Core/Admin/Pages/Logs/` (@since v0.8.0)
 
 ## Overview
 
@@ -62,13 +63,9 @@ do_action('datamachine_log', 'info', 'Chat session started', [
 ]);
 ```
 
-## Admin Interface
+## React Interface (@since v0.8.0)
 
-The Data Machine admin UI provides a dedicated **Logs** page built with React. It features:
-- **Real-time Monitoring**: Instant visibility into system activity.
-- **Advanced Filtering**: Filter by severity, specific pipeline/flow IDs, or date ranges.
-- **Search**: Full-text search across log messages and context.
-- **Context Awareness**: Deep links from logs to associated [Jobs](../admin-interface/jobs-management.md) and Flows.
+The Data Machine admin UI provides a dedicated **Logs** page built with React. It features real-time monitoring of system activity, powerful filtering by context and severity, and deep links to associated jobs and flows. Built with TanStack Query, the interface ensures that log data stays current with minimal overhead.
 
 ## Performance & Maintenance
 

@@ -160,9 +160,45 @@ class HandlerService {
     }
 
     /**
+     * Option name for handler defaults storage.
+     */
+    const HANDLER_DEFAULTS_OPTION = 'datamachine_handler_defaults';
+
+    /**
+     * Cached site-wide handler defaults.
+     *
+     * @var array|null
+     */
+    private static ?array $site_defaults_cache = null;
+
+    /**
+     * Get site-wide handler defaults.
+     *
+     * @return array Defaults keyed by handler slug
+     */
+    public function getSiteDefaults(): array {
+        if (self::$site_defaults_cache === null) {
+            self::$site_defaults_cache = get_option(self::HANDLER_DEFAULTS_OPTION, []);
+        }
+        return self::$site_defaults_cache;
+    }
+
+    /**
+     * Clear site defaults cache.
+     * Call when defaults are updated.
+     */
+    public static function clearSiteDefaultsCache(): void {
+        self::$site_defaults_cache = null;
+    }
+
+    /**
      * Apply handler defaults to configuration.
      *
-     * Merges schema defaults with provided config. Provided values take precedence.
+     * Priority order (highest to lowest):
+     * 1. Explicitly provided config values
+     * 2. Site-wide handler defaults (from Settings → Handler Defaults)
+     * 3. Schema defaults (from handler field definitions)
+     *
      * Keys not in schema are preserved for forward compatibility.
      *
      * @param string $handler_slug Handler identifier
@@ -176,16 +212,26 @@ class HandlerService {
             return $config;
         }
 
+        // Get site-wide defaults for this handler
+        $site_defaults = $this->getSiteDefaults();
+        $handler_site_defaults = $site_defaults[$handler_slug] ?? [];
+
         $complete_config = [];
 
         foreach ($fields as $key => $field_config) {
             if (array_key_exists($key, $config)) {
+                // 1. Explicit value provided - highest priority
                 $complete_config[$key] = $config[$key];
+            } elseif (array_key_exists($key, $handler_site_defaults)) {
+                // 2. Site-wide default
+                $complete_config[$key] = $handler_site_defaults[$key];
             } elseif (isset($field_config['default'])) {
+                // 3. Schema default
                 $complete_config[$key] = $field_config['default'];
             }
         }
 
+        // Preserve keys not in schema for forward compatibility
         foreach ($config as $key => $value) {
             if (!isset($fields[$key])) {
                 $complete_config[$key] = $value;

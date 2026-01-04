@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.8.4
+Stable tag: 0.8.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -109,7 +109,7 @@ Pipelines are reusable templates that define the structure of a workflow (e.g., 
 
 = Can I use this without the admin interface? =
 
-Yes. Data Machine provides a complete REST API with 16 endpoints. You can execute flows, manage pipelines, and monitor jobs entirely via API calls. The plugin also supports "headless mode" which disables the admin interface.
+Yes. Data Machine provides a complete REST API with 16 endpoints. You can execute flows, manage pipelines, and monitor jobs entirely via API calls. 
 
 = How do I schedule automated workflows? =
 

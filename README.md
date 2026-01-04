@@ -5,7 +5,7 @@ Tags: ai, automation, content, workflow, pipeline, chat
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.2
-Stable tag: 0.8.4
+Stable tag: 0.8.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ AI-first WordPress plugin for content processing workflows with a visual pipelin
 ## Overview
 
 - **Pipeline + Flow architecture** that separates reusable pipeline templates from scheduled flow instances and job executions.
-- **Modern React admin** that relies exclusively on the REST API, TanStack Query, and Zustand for caching, optimistic updates, and client state isolation. Features a collapsible **Integrated Chat Sidebar** for context-aware pipeline automation and a centralized **Logs interface** for real-time monitoring.
+- **Modern React admin** that relies exclusively on the REST API, TanStack Query, and Zustand for caching, optimistic updates, and client state isolation. Page visibility is controlled through the "Admin Pages" settings or the `datamachine_admin_pages` filter. Features a collapsible **Integrated Chat Sidebar** for context-aware pipeline automation, a centralized **Logs interface**, and a **React-based Jobs dashboard** for real-time monitoring.
 - **Tool-first AI agents** that discover enabling providers, call contextual tools, and persist conversations via a universal engine shared by chat and pipelines.
 - **Services layer** (FlowManager, PipelineManager, JobManager, LogsManager, ProcessedItemsManager, FlowStepManager, PipelineStepManager, CacheManager) that replaces filter indirection with direct method calls for predictable behavior and easier testing.
 - **Global handler tooling** with modular fetch, publish, and update adapters backed by centralized registration traits and field schemas.

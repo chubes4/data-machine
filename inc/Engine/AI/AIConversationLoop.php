@@ -108,7 +108,7 @@ class AIConversationLoop {
 
 			// Add AI message to conversation if it has content
 			if (!empty($ai_content)) {
-				$ai_message = ConversationManager::buildConversationMessage('assistant', $ai_content);
+				$ai_message = ConversationManager::buildConversationMessage('assistant', $ai_content, ['type' => 'text']);
 				$messages[] = $ai_message;
 			}
 

@@ -6,7 +6,7 @@ Data Machine REST API supports two authentication methods for secure access.
 
 ### 1. Application Password (Recommended)
 
-**Best For**: External integrations, headless applications, API clients
+**Best For**: External integrations, non-browser applications, API clients
 
 **Setup**:
 1. Navigate to WordPress Admin → Users → Your Profile

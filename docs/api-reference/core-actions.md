@@ -2,7 +2,15 @@
 
 Comprehensive reference for all WordPress actions used by Data Machine for pipeline execution, data processing, and system operations.
 
-**Note**: Since v0.4.0, most core operations use the Services Layer architecture for direct method calls, but these actions remain for extensibility and backward compatibility.
+**Note**: Since v0.4.0, most core operations use the Services Layer architecture (`\DataMachine\Services\`) for direct method calls, replacing filter-based actions for 3x performance improvement. These actions remain primarily for extensibility and backward compatibility.
+
+## Service Manager Integration
+
+Direct service method calls are preferred over actions for system operations:
+- `PipelineManager` -> `create()`, `delete()`, `duplicate()`
+- `FlowManager` -> `create()`, `delete()`, `duplicate()`
+- `JobManager` -> `updateStatus()`, `failJob()`
+- `LogsManager` -> `log()`, `get_logs()`, `clear_logs()`
 
 ## Pipeline Execution Actions
 

@@ -2,94 +2,47 @@
 
 Tabbed settings interface providing centralized control over Data Machine system behavior, integrations, and AI provider configuration.
 
-## Interface Structure
+## Settings Interface (@since v0.8.0)
 
-**Tabbed Navigation**: WordPress native nav-tab-wrapper pattern with three main sections:
-- **Admin Tab**: System behavior and administrative controls
-- **Agent Tab**: AI system configuration and tool management
-- **AI Providers Tab**: API key entry for AI providers (OpenAI, Anthropic, Google, Grok, OpenRouter)
+The Settings interface is a React-based configuration dashboard built with `@wordpress/components`, providing centralized control over Data Machine system behavior.
 
-**Form Integration**: Standard WordPress settings API integration with automatic option persistence and validation.
+**Interface Structure**:
+- **Admin Tab**: System behavior and administrative toggles (Admin Page visibility, Log levels, Cache management).
+- **Agent Tab**: AI system configuration, global prompts, and tool management.
+- **AI Providers Tab**: API key configuration for supported providers (OpenAI, Anthropic, Google, Grok, OpenRouter).
 
 ## Admin Tab
 
-**Engine Mode Controls**:
-- Headless mode toggle (disables admin pages, API-only operation)
-- Admin page enablement toggles for Pipelines, Jobs, and Logs
-- Access control and capability management
+**Admin Interface Controls**:
+- **Admin Page Enablement**: Toggles for Pipelines, Jobs, and Logs. Page visibility is controlled through these settings or via the `datamachine_admin_pages` filter.
+- **Access Control**: Capability management for administrative operations.
 
 **System Behavior**:
-- Job data cleanup on failure toggle (enable for production, disable for debugging failed jobs)
-- Logging level configuration and output management
-- Cache Management (@since v0.8.0): Manual cache clearing for registered handlers, step types, and tools via `CacheManager`.
-- Performance optimization settings
+- **Cleanup Settings**: Toggle job data cleanup on failure.
+- **Logging Level**: Configuration for info, warning, error, and debug output.
+- **Cache Management**: Centralized cache invalidation via `CacheManager` for handlers, step types, and tools.
 
 ## Agent Tab
 
 **Global System Prompt**:
-- Site-wide AI system prompt configuration
-- Inheritance and override behavior for pipeline-specific prompts
-- Template variables and dynamic content injection
+- Centralized configuration for the site-wide AI system prompt.
+- Template variables and dynamic content injection support.
 
 **Site Context Integration**:
-- WordPress site context injection toggle
-- Automatic context data injection (posts, taxonomies, users, theme) for AI awareness
-- Cache management and invalidation settings
-
-**Global Tools Management**:
-- Global enablement toggles for universal AI tools
-- Tool-specific configuration requirements and status
-- Capability validation and setup guidance
-
-**Tool Configuration Interface**:
-- Google Search: API key and Custom Search Engine ID setup
-- Local Search: WordPress-native, always enabled (no configuration required)
-- WebFetch: Web page content retrieval (no configuration required)
-- WordPress Post Reader: Single post analysis (no configuration required)
+- **WordPress Context**: Toggle automatic injection of site metadata (posts, taxonomies, users).
+- **Tool Management**: Global enablement for universal AI tools (Google Search, WebFetch, etc.).
 
 ## AI Providers Tab
 
-**Supported Providers**:
-- OpenAI (GPT models)
-- Anthropic (Claude models)
-- Google (Gemini models)
-- Grok (xAI models)
-- OpenRouter (200+ models from multiple providers)
-
-**Configuration Requirements**:
-- API key entry for each provider
-- Model selection and availability
-- Rate limiting and usage monitoring
-- Provider-specific settings and parameters
-
-## Configuration Management
-
-**Real-Time Validation**: Immediate validation of configuration changes with:
-- API key format validation
-- OAuth connection testing
-- File path and URL verification
-- Permission and capability checking
-
-**Status Indicators**: Visual feedback for configuration state:
-- Green checkmarks for properly configured items
-- Warning icons for missing optional configuration
-- Error indicators for required but missing configuration
-- Loading states during validation processes
+**Authentication & Connectivity**:
+- Secure API key entry for all supported LLM providers.
+- Real-time connection testing and validation.
 
 ## Tool Configuration Modals
 
-**Google Search Setup**:
-- API key input with validation
-- Custom Search Engine ID configuration
-- Search result limits and filtering options
-- Test search functionality with sample queries
-
-
-**Authentication Management**:
-- Centralized OAuth token management
-- Account information display
-- Re-authentication workflows
-- Permission scope validation
+**Standardized Configuration**:
+- **Google Search**: API key and Custom Search Engine ID setup.
+- **OAuth Management**: Centralized OAuth token management and re-authentication workflows within React-based modals.
 
 ## Settings Persistence
 

@@ -357,3 +357,8 @@ self::registerHandler(
 - Fetch Handler - Fetch handler base class
 - Publish Handler - Publish handler base class
 - Settings Handler - Settings base classes
+
+## Related Documentation
+
+- [Handler Defaults System](handler-defaults.md) - Configuration merging logic
+- [Services Layer](services-layer.md) - Architectural overview

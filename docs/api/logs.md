@@ -65,8 +65,4 @@ $logs = $logs_manager->get_logs([
 
 ## React Interface (@since v0.8.0)
 
-The Data Machine admin UI includes a dedicated Logs page built with React that consumes these endpoints to provide:
-- Real-time monitoring of system activity
-- Powerful filtering by context and severity
-- Deep links to associated jobs and flows
-- Visual status indicators for rapid troubleshooting
+The Data Machine admin UI includes a dedicated Logs page built with React that consumes these endpoints to provide real-time monitoring of system activity, powerful filtering by context and severity, and deep links to associated jobs and flows. Status updates are managed via TanStack Query for optimal performance and zero page reloads.

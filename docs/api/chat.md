@@ -175,6 +175,8 @@ Available to all AI agents via `datamachine_global_tools` filter:
 Available only to chat AI agents via `datamachine_chat_tools` filter (@since v0.4.3 specialized tools):
 
 - **execute_workflow** (@since v0.3.0) - Execute complete multi-step workflows with automatic defaults injection
+- **get_handler_defaults** (@since v0.6.25) - Retrieve site-wide handler defaults for reference
+- **set_handler_defaults** (@since v0.6.25) - Update site-wide handler defaults
 - **add_pipeline_step** (@since v0.4.3) - Add steps to existing pipelines
 - **api_query** (@since v0.4.3) - REST API query tool for discovery (supports batch requests @since v0.7.0)
 - **configure_flow_step** (@since v0.4.2) - Configure handler and AI messages

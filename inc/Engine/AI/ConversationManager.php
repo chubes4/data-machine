@@ -20,12 +20,14 @@ class ConversationManager {
      *
      * @param string $role Role identifier (user, assistant, system)
      * @param string $content Message content
-     * @return array Message array with role and content
+     * @param array $metadata Optional metadata for the message (e.g., type, tool_data)
+     * @return array Message array with role, content, and metadata
      */
-    public static function buildConversationMessage(string $role, string $content): array {
+    public static function buildConversationMessage(string $role, string $content, array $metadata = []): array {
         return [
             'role' => $role,
-            'content' => $content
+            'content' => $content,
+            'metadata' => $metadata
         ];
     }
 
@@ -53,7 +55,14 @@ class ConversationManager {
             $message .= " with parameters: " . implode(', ', $params_str);
         }
 
-        return self::buildConversationMessage('assistant', $message);
+        $metadata = [
+            'type' => 'tool_call',
+            'tool_name' => $tool_name,
+            'parameters' => $tool_parameters,
+            'turn' => $turn_count
+        ];
+
+        return self::buildConversationMessage('assistant', $message, $metadata);
     }
 
     /**
@@ -67,17 +76,35 @@ class ConversationManager {
      * @return array Formatted user message
      */
     public static function formatToolResultMessage(string $tool_name, array $tool_result, array $tool_parameters, bool $is_handler_tool = false, int $turn_count = 0): array {
-        $success_message = self::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
+        $human_message = self::generateSuccessMessage($tool_name, $tool_result, $tool_parameters);
 
         if ($turn_count > 0) {
-            $success_message = "TOOL RESPONSE (Turn {$turn_count}): " . $success_message;
+            $content = "TOOL RESPONSE (Turn {$turn_count}): " . $human_message;
+        } else {
+            $content = $human_message;
         }
 
-        if (!$is_handler_tool && !empty($tool_result['data'])) {
-            $success_message .= "\n\n" . json_encode($tool_result['data']);
+        $metadata = [
+            'type' => 'tool_result',
+            'tool_name' => $tool_name,
+            'success' => $tool_result['success'] ?? false,
+            'turn' => $turn_count
+        ];
+
+        if (!empty($tool_result['data'])) {
+            $metadata['tool_data'] = $tool_result['data'];
+            
+            // Still append to content for AI context, but frontend can use metadata to hide it
+            if (!$is_handler_tool) {
+                $content .= "\n\n" . json_encode($tool_result['data']);
+            }
         }
 
-        return self::buildConversationMessage('user', $success_message);
+        if (isset($tool_result['error'])) {
+            $metadata['error'] = $tool_result['error'];
+        }
+
+        return self::buildConversationMessage('user', $content, $metadata);
     }
 
     /**

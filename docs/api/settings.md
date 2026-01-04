@@ -4,6 +4,10 @@
 
 **Base URL**: `/wp-json/datamachine/v1/settings`
 
+## React Interface (@since v0.8.0)
+
+The Settings interface is a React-based configuration dashboard providing centralized control over system behavior, agent configuration, and AI providers. It uses TanStack Query for data fetching and Zustand for UI state management, eliminating all legacy jQuery dependencies.
+
 ## Overview
 
 Settings endpoints manage tool configuration for Data Machine.
@@ -82,6 +86,84 @@ curl -X POST https://example.com/wp-json/datamachine/v1/settings/tools/google_se
 **Supported Tools**:
 - `google_search` - Google Search API configuration (api_key, search_engine_id)
 - Additional tools can register handlers via `datamachine_save_tool_config` action
+
+## Handler Defaults
+
+### GET /settings/handler-defaults
+
+Retrieve all site-wide handler defaults, grouped by step type. Auto-populates from schema defaults on first access.
+
+**Permission**: `manage_options` capability required
+
+**Success Response (200 OK)**:
+
+```json
+{
+  "success": true,
+  "data": {
+    "fetch": {
+      "label": "Fetch Content",
+      "uses_handler": true,
+      "handlers": {
+        "rss": {
+          "label": "RSS Feed",
+          "description": "Fetch content from RSS/Atom feeds",
+          "defaults": {
+            "max_items": 10
+          },
+          "fields": {
+            "max_items": {
+              "type": "number",
+              "label": "Max Items",
+              "default": 10
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### PUT /settings/handler-defaults/{handler_slug}
+
+Update site-wide defaults for a specific handler. These values are used for new flows when fields are not explicitly set.
+
+**Permission**: `manage_options` capability required
+
+**Parameters**:
+- `handler_slug` (string, required): Handler identifier (in URL path)
+- `defaults` (object, required): Default configuration values keyed by field ID
+
+**Example Request**:
+
+```bash
+curl -X PUT https://example.com/wp-json/datamachine/v1/settings/handler-defaults/wordpress_publish \
+  -H "Content-Type: application/json" \
+  -u username:application_password \
+  -d '{
+    "defaults": {
+      "post_status": "publish",
+      "post_author": 1
+    }
+  }'
+```
+
+**Success Response (200 OK)**:
+
+```json
+{
+  "success": true,
+  "data": {
+    "handler_slug": "wordpress_publish",
+    "defaults": {
+      "post_status": "publish",
+      "post_author": 1
+    },
+    "message": "Defaults updated for handler \"wordpress_publish\"."
+  }
+}
+```
 
 ## Tool Configuration
 

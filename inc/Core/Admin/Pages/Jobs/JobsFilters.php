@@ -40,27 +40,29 @@ function datamachine_register_jobs_admin_page_filters() {
             'templates' => __DIR__ . '/templates/',
             'assets' => [
                 'css' => [
-                    'datamachine-core-modal' => [
-                        'file' => 'inc/Core/Admin/Modal/assets/css/core-modal.css',
+                    'wp-components' => [
+                        'file' => null,
                         'deps' => [],
                         'media' => 'all'
                     ],
-                    'datamachine-admin-jobs' => [
-                        'file' => 'inc/Core/Admin/Pages/Jobs/assets/css/admin-jobs.css',
-                        'deps' => ['datamachine-core-modal'],
+                    'datamachine-jobs-page' => [
+                        'file' => 'inc/Core/Admin/Pages/Jobs/assets/css/jobs-page.css',
+                        'deps' => [],
                         'media' => 'all'
                     ]
                 ],
                 'js' => [
-                    'datamachine-jobs-admin' => [
-                        'file' => 'inc/Core/Admin/Pages/Jobs/assets/js/datamachine-jobs.js',
-                        'deps' => ['wp-api-fetch', 'datamachine-modal-manager'],
-                        'in_footer' => true
-                    ],
-                    'datamachine-jobs-modal' => [
-                        'file' => 'inc/Core/Admin/Pages/Jobs/assets/js/jobs-modal.js',
-                        'deps' => ['wp-api-fetch', 'datamachine-modal-manager'],
-                        'in_footer' => true
+                    'datamachine-jobs-react' => [
+                        'file' => 'inc/Core/Admin/assets/build/jobs-react.js',
+                        'deps' => ['wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-dom-ready'],
+                        'in_footer' => true,
+                        'localize' => [
+                            'object' => 'dataMachineJobsConfig',
+                            'data' => [
+                                'restNamespace' => 'datamachine/v1',
+                                'restNonce' => wp_create_nonce('wp_rest'),
+                            ]
+                        ]
                     ]
                 ]
             ]

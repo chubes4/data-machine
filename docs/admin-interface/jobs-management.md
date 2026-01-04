@@ -13,60 +13,39 @@ The Logs interface provides a centralized, React-based view of system activities
 - **Execution Context**: Deep links from logs to specific flows and jobs for rapid troubleshooting.
 - **Clean Architecture**: Built on the `LogsManager` service and `Logs` REST controller.
 
-## Jobs Overview
+## Jobs Interface (@since v0.8.4)
 
-**Job Listing**: Comprehensive table view showing recent jobs with:
-- Job ID for unique identification and tracking
-- Pipeline and Flow name combinations for context
-- Execution status with color-coded indicators
-- Creation timestamp for scheduling analysis
-- Completion timestamp for performance tracking
+The Jobs interface is a fully React-based management dashboard that provides real-time visibility into pipeline executions.
 
-**Status Indicators**: Visual status system using WordPress list table patterns:
-- **Completed**: Green indicator for successful job completion
-- **Failed**: Red indicator for jobs with errors or exceptions
-- **Other**: Default styling for pending, running, or intermediate states
+**Features:**
+- **React-First Architecture**: Built using `@wordpress/components`, TanStack Query, and Zustand for a seamless, SPA-like experience.
+- **Real-Time Monitoring**: Automatic data refetching and status updates via TanStack Query integration.
+- **Job Listing**: Comprehensive table view showing recent jobs with status, timestamps, and execution context.
+- **Administrative Controls**: Centralized modal for bulk cleanup and maintenance operations.
+- **Performance Tracking**: Visual status indicators and duration metrics for every execution.
 
-## Job Data Structure
+## Job Listing
 
-**Core Information**:
-- **Job ID**: Sequential identifier for tracking and reference
-- **Pipeline/Flow**: Combined display showing template and instance names
-- **Status**: Current execution state (completed, failed, running, pending)
-- **Timestamps**: Creation and completion times in readable format
-
-**Performance Metrics**:
-- Execution duration calculation from creation to completion
-- Success/failure rates across pipeline types
-- Processing volume and throughput analysis
+**Comprehensive Table**: The primary view displays recent jobs with:
+- **Job ID**: Unique identification and tracking.
+- **Pipeline & Flow**: Combined context showing the template and specific instance.
+- **Status**: Color-coded indicators reflecting the current state (Completed, Failed, Running, etc.).
+- **Timestamps**: Human-readable creation and completion times.
 
 ## Administrative Controls
 
-**Jobs Admin Modal**: Administrative interface accessible via "Admin" button providing:
-- Bulk job management operations
-- System performance metrics
-- Database maintenance tools
-- Export and reporting capabilities
-
-**Cleanup Operations**: Administrative tools for:
-- Clearing completed jobs beyond retention period
-- Removing failed job data and associated files
-- Processed items tracking maintenance
-- Database optimization and cleanup
+**Jobs Admin Modal**: A React-based modal interface providing:
+- **Clear Processed Items**: Reset deduplication tracking for specific or all flows.
+- **Bulk Job Deletion**: Remove all jobs or only failed jobs from the database.
+- **System Maintenance**: Database optimization and cleanup tools.
 
 ## Job Status Management
 
-**Real-Time Updates**: Live status updates without page refresh showing:
-- Job progression through pipeline steps
-- Current step execution status
-- Error reporting and failure details
-- Completion notifications and results
-
-**Filter and Search**: Interface controls for:
-- Status-based filtering (completed, failed, running)
-- Date range selection for historical analysis
-- Pipeline-specific job filtering
-- Flow instance filtering for targeted monitoring
+**State Synchronization**: Leveraging TanStack Query for:
+- Automatic background refetching of job statuses.
+- Real-time progression tracking through pipeline steps.
+- Error reporting and failure detail visibility.
+- Seamless pagination and per-page control.
 
 ## Error Handling Display
 

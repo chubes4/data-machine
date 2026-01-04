@@ -34,6 +34,7 @@ class UpdateFlow {
      * @return array Tool definition array
      */
     public function getToolDefinition(): array {
+        $intervals = self::getValidIntervals();
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
@@ -49,10 +50,15 @@ class UpdateFlow {
                     'required' => false,
                     'description' => 'New flow title'
                 ],
+                'schedule' => [
+                    'type' => 'object',
+                    'required' => false,
+                    'description' => 'Scheduling configuration. Use {interval: "' . implode('|', $intervals) . '"} or {interval: "one_time", timestamp: unix_timestamp}. Note: "twicedaily" is 12-hour intervals.'
+                ],
                 'scheduling_config' => [
                     'type' => 'object',
                     'required' => false,
-                    'description' => 'Scheduling configuration: {interval: "manual|hourly|daily|weekly|monthly"} or {interval: "one_time", timestamp: unix_timestamp}'
+                    'description' => 'Deprecated: Use "schedule" instead.'
                 ]
             ]
         ];
@@ -71,12 +77,14 @@ class UpdateFlow {
 
         $flow_id = (int) $flow_id;
         $flow_name = $parameters['flow_name'] ?? null;
-        $scheduling_config = $parameters['scheduling_config'] ?? null;
+        
+        // Handle both 'schedule' and 'scheduling_config' (aliased)
+        $scheduling_config = $parameters['schedule'] ?? ($parameters['scheduling_config'] ?? null);
 
         if (empty($flow_name) && empty($scheduling_config)) {
             return [
                 'success' => false,
-                'error' => 'At least one of flow_name or scheduling_config is required',
+                'error' => 'At least one of flow_name or schedule is required',
                 'tool_name' => 'update_flow'
             ];
         }
@@ -135,6 +143,7 @@ class UpdateFlow {
         }
         if (!empty($scheduling_config)) {
             $response_data['scheduling'] = $scheduling_config['interval'];
+            $response_data['scheduling_config'] = $scheduling_config;
         }
 
         return [

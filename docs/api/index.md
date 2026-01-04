@@ -28,7 +28,7 @@ Complete REST API reference for Data Machine
 - ProcessedItems: Manage deduplication tracking
 
 ### AI & Chat
-- Chat: Conversational AI workflow builder
+- Chat: Conversational AI workflow builder (supports AddPipelineStep, ApiQuery, AuthenticateHandler, etc.)
 - Handlers: Available fetch/publish/update handlers
 - Providers: AI provider configuration
 - Tools: AI tool availability

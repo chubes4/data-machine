@@ -11,6 +11,7 @@
 
 namespace DataMachine\Api;
 
+use DataMachine\Services\HandlerService;
 use DataMachine\Services\StepTypeService;
 use WP_REST_Server;
 
@@ -56,18 +57,36 @@ class StepTypes {
 	/**
 	 * Get all registered step types
 	 *
-	 * Returns step type metadata including labels, descriptions, positions, and handler requirements.
+	 * Returns step type metadata including labels, descriptions, positions,
+	 * handler requirements, and handler counts for UI rendering.
 	 *
 	 * @since 0.1.2
 	 * @return \WP_REST_Response Step types response
 	 */
 	public static function handle_get_step_types() {
-		// Get all registered step types via cached service
-		$step_types = (new StepTypeService())->getAll();
+		$step_type_service = new StepTypeService();
+		$handler_service = new HandlerService();
+
+		$step_types = $step_type_service->getAll();
+		$enriched_data = [];
+
+		foreach ($step_types as $slug => $config) {
+			$uses_handler = $config['uses_handler'] ?? true;
+			$handler_count = 0;
+
+			if ($uses_handler) {
+				$handlers = $handler_service->getAll($slug);
+				$handler_count = count($handlers);
+			}
+
+			$enriched_data[$slug] = array_merge($config, [
+				'handler_count' => $handler_count,
+			]);
+		}
 
 		return rest_ensure_response([
 			'success' => true,
-			'data' => $step_types
+			'data' => $enriched_data
 		]);
 	}
 

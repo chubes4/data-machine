@@ -206,6 +206,31 @@ $parameters = ToolParameters::buildParameters(
 ]
 ```
 
+## Handler Configuration Defaults
+
+The system employs a priority-based default application logic via `HandlerService::applyDefaults()`. This ensures consistent configuration across flows while allowing granular overrides.
+
+### Priority Order (Highest to Lowest)
+
+1.  **Explicit Configuration**: Values explicitly provided in the flow step configuration.
+2.  **Site-wide Defaults**: Site-level defaults managed via Settings → Handler Defaults (stored in `datamachine_handler_defaults` option).
+3.  **Schema Defaults**: Default values defined in the handler's settings class field definitions (`get_fields()`).
+
+### Configuration Merging Logic
+
+When a flow step executes, the system merges these layers:
+
+- If a key exists in **Explicit Configuration**, that value is used.
+- Otherwise, if it exists in **Site-wide Defaults**, that value is used.
+- Otherwise, the **Schema Default** is used if defined.
+- Keys not present in the handler's schema are preserved for forward compatibility.
+
+### Benefits
+
+- **Efficiency**: Standard settings (like default post author or image settings) only need to be configured once per site.
+- **Flexibility**: Individual flows can still override site defaults when specific behavior is required.
+- **Stability**: Schema defaults provide a safe fallback for all configuration keys.
+
 ## Handler-Specific Engine Parameters
 
 ### Database Storage by Fetch Handlers

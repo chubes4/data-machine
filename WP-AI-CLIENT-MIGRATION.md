@@ -24,7 +24,7 @@ Migrate Data Machine's AI layer to use `wordpress/wp-ai-client` natively through
 
 - **Full native integration** - Use wp-ai-client types throughout, no adapter/conversion layer
 - **Use wp-ai-client's credential management** (Settings > AI Credentials)
-- **Remove DataMachine's AI Providers tab** from settings
+- **Remove DataMachine's AI Providers tab** from settings (deprecated as of v0.8.0 React migration, planned for removal)
 - **Rewrite core AI classes** to use native wp-ai-client formats
 
 ---

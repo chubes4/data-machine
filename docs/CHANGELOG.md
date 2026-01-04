@@ -5,6 +5,25 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.6] - 2026-01-03
+
+### Added
+- **Handler Defaults System** - Implemented a global configuration system for handler settings, allowing users to define default values across all flows.
+- **New AI Chat Tools** - Added `GetHandlerDefaults` and `SetHandlerDefaults` tools for agent-led configuration management.
+- **Jobs React Page** - Completed migration of the Jobs management interface to React, featuring real-time job status monitoring and improved filtering.
+- **Settings React Page** - Migrated the main Settings interface to React, including consolidated AI provider management and tool toggle controls.
+
+### Improved
+- **Chat Agent Decisiveness** - Refined `ChatAgentDirective` to promote a more decisive, "ACT FIRST" personality for faster workflow configuration.
+- **API Metadata** - Enhanced Step Types and Settings endpoints to provide enriched metadata (handler counts, provider keys) for the new React UI.
+- **Chat Message Structure** - Standardized user message objects in `Chat.php` with explicit type markers for better frontend rendering.
+- **Tool UI Discovery** - Added handler count metadata to Step Types API to improve step selection guidance in the UI.
+
+### Technical Details
+- **UI Migration**: Replaced legacy vanilla JS and CSS in `inc/Core/Admin/Pages/Jobs/` and `inc/Core/Admin/Settings/` with modern React components.
+- **Core Services**: Integrated `HandlerService` and `StepTypeService` more deeply into the API layer for consistent data resolution.
+- **Scheduling**: Refactored `UpdateFlow` chat tool to support a unified `schedule` parameter with interval validation.
+
 ## [0.8.5] - 2026-01-04
 
 ### Added

@@ -151,10 +151,6 @@ add_action('init', function() {
 function datamachine_get_enabled_admin_pages() {
     $settings = \DataMachine\Core\PluginSettings::all();
 
-    if ($settings['engine_mode'] === true) {
-        return [];
-    }
-
     $all_pages = apply_filters('datamachine_admin_pages', []);
 
     if (empty($settings['enabled_pages'])) {

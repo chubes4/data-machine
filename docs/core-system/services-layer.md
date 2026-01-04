@@ -95,6 +95,26 @@ public function delete(int $pipeline_id): array|WP_Error
 - Step validation and error handling
 - Integration with handler registration system
 
+### HandlerService
+
+**Location**: `/inc/Services/HandlerService.php`
+
+**Responsibilities**:
+- Centralized handler discovery and validation
+- Handler settings and schema lookup
+- Site-wide handler defaults management
+- Priority-based configuration merging (Explicit > Site > Schema)
+- Request-level caching for performance
+
+**Key Methods**:
+```php
+public function getAll(?string $step_type = null): array
+public function get(string $handler_slug, ?string $step_type = null): ?array
+public function getConfigFields(string $handler_slug): array
+public function getSiteDefaults(): array
+public function applyDefaults(string $handler_slug, array $config): array
+```
+
 ### PipelineStepManager
 
 **Location**: `/inc/Services/PipelineStepManager.php`
@@ -104,6 +124,15 @@ public function delete(int $pipeline_id): array|WP_Error
 - Step type validation and configuration
 - Step ordering and execution sequence
 - Integration with step type registration
+
+### CacheManager
+
+**Location**: `/inc/Services/CacheManager.php`
+
+**Responsibilities**:
+- Centralized cache invalidation for handlers, step types, and tools
+- Site context metadata caching and automatic invalidation
+- Coordination with TanStack Query for client-side state synchronization
 
 ## Performance Improvements
 
@@ -184,3 +213,8 @@ Planned improvements to the services layer:
 - **Caching Layer**: Built-in intelligent caching
 - **Rate Limiting**: API rate limiting and quota management
 - **Metrics Collection**: Performance monitoring and analytics
+
+## Related Documentation
+
+- [Handler Defaults System](handler-defaults.md) - Configuration merging logic
+- [Handler Registration Trait](handler-registration-trait.md) - Service integration

@@ -12,6 +12,10 @@ Jobs endpoints provide monitoring and management of workflow executions. Jobs re
 
 Requires `manage_options` capability. See Authentication Guide.
 
+## React Interface (@since v0.8.4)
+
+The Jobs interface is a fully React-based management dashboard that provides real-time visibility into pipeline executions. Built using `@wordpress/components`, TanStack Query, and Zustand, it features automatic data refetching, status updates, and centralized administrative controls.
+
 ## Endpoints
 
 ### GET /jobs

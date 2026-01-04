@@ -12,7 +12,7 @@ import { addQueryArgs } from '@wordpress/url';
  * Get REST API configuration from WordPress globals
  */
 const getConfig = () => {
-	const config = window.dataMachineConfig || window.dataMachineLogsConfig || {};
+	const config = window.dataMachineConfig || window.dataMachineLogsConfig || window.dataMachineSettingsConfig || {};
 	return {
 		restNamespace: config.restNamespace || 'datamachine/v1',
 		restNonce: config.restNonce || '',

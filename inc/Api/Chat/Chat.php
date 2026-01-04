@@ -233,7 +233,7 @@ class Chat {
 			$messages = [];
 		}
 
-		$messages[] = ConversationManager::buildConversationMessage('user', $message);
+		$messages[] = ConversationManager::buildConversationMessage('user', $message, ['type' => 'text']);
 
 		// Load available tools using ToolManager (filters out unconfigured/disabled tools)
 		$tool_manager = new ToolManager();

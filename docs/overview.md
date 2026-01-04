@@ -6,7 +6,7 @@
 
 - **Pipelines** are reusable workflow templates that store handler order, tool selections, and AI settings.
 - **Flows** instantiate pipelines with schedule metadata, flow-level overrides, and runtime configuration values stored per flow.
-- **Jobs** track individual flow executions, persist engine parameters, and power the Jobs Management history view.
+- **Jobs** track individual flow executions, persist engine parameters, and power the fully React-based Jobs dashboard for real-time monitoring.
 - **Steps** execute sequentially (Fetch → AI → Publish/Update) with shared base classes that enforce validation, logging, and engine data synchronization.
 
 ## Services Layer
@@ -15,8 +15,9 @@ The services layer (DataMachine\Services) provides direct method calls for core 
 
 - `FlowManager`, `PipelineManager`, `FlowStepManager`, and `PipelineStepManager` handle creation, duplication, synchronization, and ordering.
 - `JobManager` monitors execution outcomes and updates statuses.
-- `LogsManager` aggregates log entries for filtering in the admin UI.
+- `LogsManager` aggregates log entries in the `wp_datamachine_logs` table for filtering in the admin UI.
 - `ProcessedItemsManager` deduplicates content across executions by tracking previously processed identifiers.
+- `CacheManager` provides centralized cache invalidation to ensure dynamic handler and step type registrations are immediately reflected across the system.
 
 Services are the single source of truth for REST endpoints, ensuring validation and sanitization before persisting data or enqueuing jobs.
 
@@ -31,7 +32,7 @@ Services are the single source of truth for REST endpoints, ensuring validation 
 - **Tool-first architecture** enables AI agents (pipeline and chat) to call tools that interact with handlers, external APIs, or workflow metadata.
 - **PromptBuilder + RequestBuilder** apply layered directives via the `datamachine_directives` filter so every request includes identity, context, and site-specific instructions.
 - **Global tools** (Google Search, Local Search, Web Fetch, WordPress Post Reader) are registered under `/inc/Engine/AI/Tools/` and available to all agents.
-- **Chat-specific tools** (ExecuteWorkflow, AddPipelineStep, ApiQuery, ConfigureFlowSteps, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow, ExecuteWorkflow) orchestrate pipeline and flow management within conversations.
+- **Chat-specific tools** (AddPipelineStep, ApiQuery, AuthenticateHandler, ConfigureFlowSteps, ConfigurePipelineStep, CopyFlow, CreateFlow, CreatePipeline, CreateTaxonomyTerm, ExecuteWorkflowTool, GetHandlerDefaults, ManageLogs, ReadLogs, RunFlow, SearchTaxonomyTerms, SetHandlerDefaults, UpdateFlow) orchestrate pipeline and flow management within conversations.
 - **ToolParameters + ToolResultFinder** gather parameter metadata for tools and interpret results inside data packets to keep conversations consistent.
 
 ## Authentication & Security
@@ -49,9 +50,11 @@ Services are the single source of truth for REST endpoints, ensuring validation 
 
 ## Admin Interface
 
-- Completely React-based interface built with WordPress components, TanStack Query for server state (pipelines, flows, handlers), and Zustand for client state (modals, selections).
-- **Pipeline Builder** handles drag-and-drop ordering, handler settings modals, OAuth connection flows, tool selection, and import/export operations.
-- **Job Management** surfaces job history, log streaming, and failure context, all fed by REST responses and standardized log entries.
+- **React-First Architecture**: The entire admin interface is built with React and `@wordpress/components`, utilizing TanStack Query for server state and Zustand for client state management.
+- **Pipeline Builder**: Drag-and-drop workflow configuration, real-time step validation, and integrated tool management.
+- **Job Management**: Fully React-based dashboard for monitoring job history, status progression, and execution metrics with automatic background refetching.
+- **Logs Interface**: Centralized, real-time log streaming and filtering for deep-dive troubleshooting.
+- **Integrated Chat**: Collapsible sidebar for context-aware pipeline automation and AI-driven workflow assistance, using specialized tools to manage the entire ecosystem.
 
 ## Key Capabilities
 

@@ -15,7 +15,8 @@ Services layer architecture with direct method calls for optimal performance.
 ### Database Schema
 - `wp_datamachine_pipelines` - Pipeline templates (reusable)
 - `wp_datamachine_flows` - Flow instances (scheduled + configured)
-- `wp_datamachine_jobs` - Job executions with status tracking and engine_data storage (source_url, image_url)
+- `wp_datamachine_logs` - Centralized system logs for all agent activity (@since v0.4.0)
+- `wp_datamachine_logs` - Centralized system logs for all agent activity (@since v0.4.0)
 - `wp_datamachine_processed_items` - Deduplication tracking per execution
 
 ### Engine Data Architecture
@@ -123,7 +124,7 @@ Data Machine v0.2.0 introduced a universal Engine layer (`/inc/Engine/AI/`) that
 - Handler-specific tools for publish/update operations
 - Global tools for search and analysis (GoogleSearch, LocalSearch, WebFetch, WordPressPostReader)
 - Chat-only tools for workflow building (@since v0.4.3):
-  - ExecuteWorkflow, AddPipelineStep, ApiQuery, ConfigureFlowSteps, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow
+  - AddPipelineStep, ApiQuery, AuthenticateHandler, ConfigureFlowSteps, ConfigurePipelineStep, CopyFlow, CreateFlow, CreatePipeline, CreateTaxonomyTerm, ExecuteWorkflowTool, GetHandlerDefaults, ManageLogs, ReadLogs, RunFlow, SearchTaxonomyTerms, SetHandlerDefaults, UpdateFlow
 - Automatic tool discovery and three-layer enablement system
 
 ### Filter-Based Discovery
@@ -248,27 +249,23 @@ See [HTTP Client](core-system/http-client.md) for implementation details and usa
 
 ### Admin Interface
 
-
-**Modern React Architecture**: The Pipelines admin page uses complete React implementation with zero AJAX dependencies, providing a modern, maintainable frontend.
+**Modern React Architecture**: The entire Data Machine admin interface (Pipelines, Logs, Settings, and Jobs) uses a complete React implementation with zero jQuery or AJAX dependencies.
 
 **React Implementation**:
-- A substantial React-based admin UI built with WordPress components
-- Multiple specialized components organized by responsibility
-- Modern state management using TanStack Query + Zustand
-- Complete REST API integration for all data operations
-- Real-time updates without page reloads
-- Optimistic UI updates for instant feedback
+- A unified React-based admin UI built with `@wordpress/components`.
+- Specialized apps for each page (PipelinesApp, LogsApp, SettingsApp, JobsApp).
+- Modern state management using TanStack Query + Zustand.
+- Complete REST API integration for all data operations.
+- Real-time updates via TanStack Query background refetching.
+- Optimistic UI updates for instant user feedback.
 
 **Component Architecture**:
-- **Core**: PipelinesApp (root), Zustand stores for state management
-- **Cards**: PipelineCard, FlowCard, PipelineStepCard, FlowStepCard
-- **Modals**: ConfigureStepModal, HandlerSettingsModal, OAuthAuthenticationModal, StepSelectionModal, HandlerSelectionModal, FlowScheduleModal, ImportExportModal
-- **Hooks**: usePipelines, useFlows, useStepTypes, useHandlers, useStepSettings, useModal
-
-
+- **Core**: Page-specific App containers, Zustand stores for client state.
+- **Modals**: Centralized `ModalManager` and `ModalSwitch` for routing (Pipelines/Settings).
+- **Queries/API**: Standardized TanStack Query hooks and REST client modules.
 
 **Complete REST API Integration**:
-All admin pages now use REST API architecture with zero AJAX dependencies.
+All admin pages now use REST API architecture with zero jQuery/AJAX dependencies.
 
 **Security Model**: All admin operations require `manage_options` capability with WordPress nonce validation.
 
