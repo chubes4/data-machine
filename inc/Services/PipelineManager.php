@@ -10,6 +10,7 @@
 
 namespace DataMachine\Services;
 
+use DataMachine\Services\StepTypeService;
 use WP_Error;
 
 defined('ABSPATH') || exit;
@@ -90,6 +91,110 @@ class PipelineManager {
             'pipeline_data' => $pipeline,
             'flows' => $flows,
             'creation_mode' => 'simple'
+        ];
+    }
+
+    /**
+     * Create a new pipeline with predefined steps.
+     *
+     * @param string $name Pipeline name
+     * @param array $steps Array of step configurations (each with step_type, and optional label)
+     * @param array $options Optional settings (flow_config with flow_name, scheduling_config)
+     * @return array|null Complete pipeline data on success, null on failure
+     */
+    public function createWithSteps(string $name, array $steps, array $options = []): ?array {
+        if (!current_user_can('manage_options')) {
+            do_action('datamachine_log', 'error', 'Insufficient permissions for pipeline creation with steps', [
+                'user_id' => get_current_user_id(),
+                'attempted_name' => $name
+            ]);
+            return null;
+        }
+
+        $pipeline_name = sanitize_text_field(wp_unslash($name));
+        if (empty(trim($pipeline_name))) {
+            do_action('datamachine_log', 'error', 'Cannot create pipeline - missing or empty pipeline name');
+            return null;
+        }
+
+        // 1. Create base pipeline
+        $pipeline_id = $this->db_pipelines->create_pipeline([
+            'pipeline_name' => $pipeline_name,
+            'pipeline_config' => []
+        ]);
+
+        if (!$pipeline_id) {
+            do_action('datamachine_log', 'error', 'Failed to create pipeline in createWithSteps', ['pipeline_name' => $pipeline_name]);
+            return null;
+        }
+
+        // 2. Process steps
+        $step_type_service = new StepTypeService();
+        $pipeline_config = [];
+        $processed_steps = [];
+
+        foreach ($steps as $index => $step_data) {
+            $step_type = sanitize_text_field($step_data['step_type'] ?? '');
+            if (empty($step_type)) {
+                continue;
+            }
+
+            $step_type_config = $step_type_service->get($step_type);
+            if (!$step_type_config) {
+                continue;
+            }
+
+            $pipeline_step_id = $pipeline_id . '_' . wp_generate_uuid4();
+            $label = sanitize_text_field($step_data['label'] ?? $step_type_config['label'] ?? ucfirst(str_replace('_', ' ', $step_type)));
+
+            $new_step = [
+                'pipeline_step_id' => $pipeline_step_id,
+                'step_type' => $step_type,
+                'execution_order' => $index,
+                'label' => $label
+            ];
+
+            $pipeline_config[$pipeline_step_id] = $new_step;
+            $processed_steps[] = $new_step;
+        }
+
+        // 3. Update pipeline with configuration
+        if (!empty($pipeline_config)) {
+            $this->db_pipelines->update_pipeline($pipeline_id, [
+                'pipeline_config' => $pipeline_config
+            ]);
+        }
+
+        // 4. Create initial flow
+        $flow_config = $options['flow_config'] ?? [];
+        $flow_name = $flow_config['flow_name'] ?? '';
+        $scheduling_config = $flow_config['scheduling_config'] ?? ['interval' => 'manual'];
+
+        $flow_result = $this->flow_manager->create($pipeline_id, $flow_name, [
+            'scheduling_config' => $scheduling_config
+        ]);
+
+        if (!$flow_result) {
+            do_action('datamachine_log', 'error', "Failed to create flow for pipeline {$pipeline_id} in createWithSteps");
+        }
+
+        $pipeline = $this->db_pipelines->get_pipeline($pipeline_id);
+        $flows = $this->db_flows->get_flows_for_pipeline($pipeline_id);
+
+        do_action('datamachine_log', 'info', 'Pipeline created successfully with steps', [
+            'pipeline_id' => $pipeline_id,
+            'pipeline_name' => $pipeline_name,
+            'steps_count' => count($processed_steps),
+            'flow_id' => $flow_result['flow_id'] ?? null,
+            'creation_mode' => 'batch'
+        ]);
+
+        return [
+            'pipeline_id' => $pipeline_id,
+            'pipeline_name' => $pipeline_name,
+            'pipeline_data' => $pipeline,
+            'flows' => $flows,
+            'creation_mode' => 'batch'
         ];
     }
 

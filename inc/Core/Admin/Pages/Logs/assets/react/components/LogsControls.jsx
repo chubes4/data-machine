@@ -32,7 +32,7 @@ const LogsControls = ( { agentType, agentLabel } ) => {
 	};
 
 	const handleRefresh = () => {
-		queryClient.invalidateQueries( { queryKey: logsKeys.content( agentType ) } );
+		queryClient.invalidateQueries( { queryKey: logsKeys.content( agentType, 'recent', 200 ) } );
 		queryClient.invalidateQueries( { queryKey: logsKeys.metadata( agentType ) } );
 	};
 

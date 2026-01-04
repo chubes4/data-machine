@@ -15,8 +15,8 @@ Complete REST API reference for Data Machine
 ## Endpoint Categories
 
 ### Workflow Execution
-- Execute: Trigger flows and ephemeral workflows
-- Flow Scheduling: Flow scheduling integrated into Flows API
+- [Execute](execute.md): Trigger flows and ephemeral workflows
+- [Scheduling Intervals](intervals.md): Available scheduling intervals and configuration
 
 ### Pipeline & Flow Management
 - Pipelines: Create, manage, and export pipeline templates

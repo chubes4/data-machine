@@ -1,74 +1,95 @@
 # Engine Execution System
 
-The Data Machine engine uses a services layer architecture (@since v0.4.0) that orchestrates all pipeline workflows through WordPress Action Scheduler with direct method calls for optimal performance.
-
-**Services Layer Integration**: The execution system now uses dedicated service managers instead of filter-based actions, providing 3x performance improvement through direct method calls while maintaining full backward compatibility with existing WordPress action hooks.
+The Data Machine engine utilizes a four-action execution cycle (@since v0.8.0) that orchestrates all pipeline workflows through WordPress Action Scheduler. 
 
 ## Execution Cycle
 
-### 1. Flow Initiation
+The engine follows a standardized cycle for both database-driven and ephemeral workflows:
 
-**Purpose**: Entry point for all pipeline execution
+1.  **`datamachine_run_flow_now`**: Entry point for execution. Loads configurations and initializes the job.
+2.  **`datamachine_execute_step`**: Performs the actual work of a single step (Fetch, AI, Publish, etc.).
+3.  **`datamachine_schedule_next_step`**: Persists data packets and schedules the next step in the sequence.
+4.  **`datamachine_run_flow_later`**: Handles scheduling logic, queuing the flow for future execution.
 
-**Services Integration**: FlowManager and JobManager handle flow initiation
+## 1. Flow Initiation (`datamachine_run_flow_now`)
+
+**Purpose**: entry point for immediate execution of a workflow.
 
 **Process**:
-1. FlowManager retrieves flow data from database
-2. JobManager creates job record for tracking
-3. Identifies first step (execution_order = 0)
-4. Schedules initial step execution
+1.  **Context Setting**: Sets `AgentContext` to `PIPELINE`.
+2.  **Job Creation**: Uses `JobManager` to create or retrieve a job record.
+3.  **Configuration Loading**: Loads `flow_config` and `pipeline_config`.
+4.  **Snapshotting**: Stores an engine snapshot in `engine_data` for consistency throughout the job.
+5.  **First Step Discovery**: Identifies the step with `execution_order = 0`.
+6.  **Scheduling**: Triggers `datamachine_schedule_next_step` for the first step.
 
 **Usage**:
 ```php
-do_action('datamachine_run_flow_now', $flow_id, 'manual');
+do_action('datamachine_run_flow_now', $flow_id, $job_id);
 ```
 
-### 2. Step Execution
+## 2. Step Execution (`datamachine_execute_step`)
 
-**Purpose**: Core functional pipeline orchestration - processes individual steps
-
-**Services Integration**: JobManager and FlowStepManager handle step execution
+**Purpose**: Processes an individual step within the workflow.
 
 **Parameters**:
-- `$job_id` (string) - Job identifier
-- `$flow_step_id` (string) - Flow step identifier
-- `$data` (array|null) - Data packet or storage reference
+- `$job_id` (int) - Job identifier.
+- `$flow_step_id` (string) - Specific step being executed.
 
 **Process**:
-1. Retrieves data from storage if reference provided
-2. FlowStepManager loads complete flow step configuration
-3. Discovers step class via `datamachine_step_types` filter
-4. Creates step instance and executes with parameters
-5. Uses `StepNavigator` (@since v0.2.1) to determine next step or completes pipeline
+1.  **Data Retrieval**: Loads data packets from `FilesRepository` using the job context.
+2.  **Config Resolution**: Retrieves step configuration from the engine snapshot.
+3.  **Step Dispatch**: Instantiates the appropriate step class (e.g., `AIStep`) and calls `execute()`.
+4.  **Navigation**: Uses `StepNavigator` to determine if a subsequent step exists.
+5.  **Completion/Transition**: If a next step exists, it calls `datamachine_schedule_next_step`. Otherwise, it marks the job as `completed` and cleans up temporary files.
 
-**Step Execution Pattern**:
-```php
-$payload = [
-    'job_id' => $job_id,
-    'flow_step_id' => $flow_step_id,
-    'flow_step_config' => $flow_step_config,
-    'data' => $data,
-    'engine_data' => apply_filters('datamachine_engine_data', [], $job_id)
-];
+## 3. Step Scheduling (`datamachine_schedule_next_step`)
 
-$data = $flow_step->execute($payload);
-```
-
-### 3. Step Scheduling
-
-**Purpose**: Action Scheduler integration for step transitions
-
-**Services Integration**: JobManager handles step scheduling
+**Purpose**: Transitions between steps using Action Scheduler.
 
 **Parameters**:
-- `$job_id` (string) - Job identifier
-- `$flow_step_id` (string) - Next step to execute
-- `$data` (array) - Data packet to pass
+- `$job_id` (int) - Job identifier.
+- `$flow_step_id` (string) - Next step to execute.
+- `$dataPackets` (array) - Content to pass to the next step.
 
 **Process**:
-1. Stores data packet in files repository
-2. Creates lightweight reference for Action Scheduler
-3. Schedules immediate execution of next step
+1.  **Data Persistence**: Stores `$dataPackets` in the `FilesRepository` isolated by flow and job.
+2.  **Background Queuing**: Schedules `datamachine_execute_step` via `as_schedule_single_action()` for immediate background processing.
+
+## 4. Deferred Execution (`datamachine_run_flow_later`)
+
+**Purpose**: Manages future or recurring execution logic via the [Scheduling System](../api/intervals.md).
+
+**Parameters**:
+- `$flow_id` (int) - Flow to schedule.
+- `$interval_or_timestamp` (string|int) - 'manual', a Unix timestamp, or a recurring interval key (e.g., 'every_5_minutes', 'hourly').
+
+**Process**:
+1.  **Cleanup**: Unscheduled any existing actions for the flow using `as_unschedule_action`.
+2.  **Manual Mode**: Simply updates the database configuration without scheduling new actions.
+3.  **Timestamp Mode**: Schedules a one-time `datamachine_run_flow_now` at the specific Unix timestamp using `as_schedule_single_action`.
+4.  **Interval Mode**: Schedules recurring `datamachine_run_flow_now` actions using `as_schedule_recurring_action`.
+5.  **Database Sync**: Updates the flow's `scheduling_config` in the database to reflect the new state.
+
+**Supported Intervals**:
+- `every_5_minutes`
+- `hourly`
+- `every_2_hours`
+- `every_4_hours`
+- `qtrdaily` (Every 6 hours)
+- `twicedaily` (Every 12 hours)
+- `daily`
+- `weekly`
+
+Developers can add custom intervals via the `datamachine_scheduler_intervals` filter.
+
+## Ephemeral Workflows
+
+The engine supports **Ephemeral Workflows** (@since v0.8.0)—workflows executed without being saved to the database. These are triggered via the `/execute` REST endpoint by passing a `workflow` object instead of a `flow_id`.
+
+- **Sentinel Values**: Use `flow_id = 0` and `pipeline_id = 0`.
+- **Dynamic Config**: Configurations are generated on-the-fly from the request and stored in the job's `engine_data` snapshot.
+- **Execution Flow**: Once initialized, they follow the standard `execute_step` → `schedule_next_step` cycle.
 
 ## Step Navigation
 

@@ -18,7 +18,7 @@ Supports the same scheduling options as flow creation:
 
 ```json
 {
-  "interval": "manual|hourly|daily|weekly|monthly|one_time",
+  "interval": "manual|every_5_minutes|hourly|every_2_hours|every_4_hours|qtrdaily|twicedaily|daily|weekly|one_time",
   "timestamp": 1735689600  // Required for one_time
 }
 ```

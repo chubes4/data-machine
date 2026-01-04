@@ -196,10 +196,16 @@ Scheduling configuration defines execution intervals:
 
 **Available Intervals**:
 - `manual` - No automatic execution
+- `one_time` - Execute once at a specific timestamp
+- `every_5_minutes` - Every 5 minutes
 - `hourly` - Every hour
+- `every_2_hours` - Every 2 hours
+- `every_4_hours` - Every 4 hours
+- `qtrdaily` - Every 6 hours
+- `twicedaily` - Twice per day (every 12 hours)
 - `daily` - Once per day
 - `weekly` - Once per week
-- Custom intervals via WordPress cron system
+- Custom intervals via `datamachine_scheduler_intervals` filter
 
 ## Flow Step Configuration
 

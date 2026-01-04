@@ -3,7 +3,7 @@
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/data-machine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:           0.8.8
+ * Version:           0.8.9
  * Requires at least: 6.2
  * Requires PHP:     8.2
  * Author:          Chris Huber, extrachill
@@ -21,7 +21,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.8.8' );
+define( 'DATAMACHINE_VERSION', '0.8.9' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -31,7 +31,42 @@ define( 'DATAMACHINE_LOG_DIR', '/datamachine-logs' );
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+// Load function files that define global functions used by the plugin
+require_once __DIR__ . '/inc/Engine/Filters/DataMachineFilters.php';
+require_once __DIR__ . '/inc/Engine/Filters/Handlers.php';
+require_once __DIR__ . '/inc/Engine/Filters/Admin.php';
+require_once __DIR__ . '/inc/Engine/Logger.php';
+require_once __DIR__ . '/inc/Engine/Filters/OAuth.php';
+require_once __DIR__ . '/inc/Engine/Actions/DataMachineActions.php';
+require_once __DIR__ . '/inc/Engine/Filters/EngineData.php';
+require_once __DIR__ . '/inc/Engine/AI/ConversationManager.php';
+require_once __DIR__ . '/inc/Core/Admin/Modal/ModalFilters.php';
+require_once __DIR__ . '/inc/Core/Admin/AdminRootFilters.php';
+require_once __DIR__ . '/inc/Core/Admin/Pages/Pipelines/PipelinesFilters.php';
+require_once __DIR__ . '/inc/Core/Admin/Settings/SettingsFilters.php';
+require_once __DIR__ . '/inc/Core/Admin/Pages/Logs/LogsFilters.php';
+require_once __DIR__ . '/inc/Core/Admin/Pages/Jobs/JobsFilters.php';
+require_once __DIR__ . '/inc/Core/Steps/StepTypeRegistrationTrait.php';
 require_once __DIR__ . '/inc/Engine/AI/Tools/ToolRegistrationTrait.php';
+require_once __DIR__ . '/inc/Engine/AI/Tools/Global/GoogleSearch.php';
+require_once __DIR__ . '/inc/Engine/AI/Tools/Global/LocalSearch.php';
+require_once __DIR__ . '/inc/Engine/AI/Tools/Global/WebFetch.php';
+require_once __DIR__ . '/inc/Engine/AI/Tools/Global/WordPressPostReader.php';
+require_once __DIR__ . '/inc/Engine/AI/Directives/GlobalSystemPromptDirective.php';
+require_once __DIR__ . '/inc/Engine/AI/Directives/SiteContext.php';
+require_once __DIR__ . '/inc/Engine/AI/Directives/SiteContextDirective.php';
+require_once __DIR__ . '/inc/Engine/AI/RequestBuilder.php';
+require_once __DIR__ . '/inc/Api/Chat/ChatFilters.php';
+require_once __DIR__ . '/inc/Api/Chat/ChatAgentDirective.php';
+require_once __DIR__ . '/inc/Core/Steps/AI/Directives/PipelineCoreDirective.php';
+require_once __DIR__ . '/inc/Core/Steps/AI/Directives/PipelineSystemPromptDirective.php';
+require_once __DIR__ . '/inc/Core/Steps/AI/Directives/PipelineContextDirective.php';
+require_once __DIR__ . '/inc/Core/FilesRepository/FileCleanup.php';
+require_once __DIR__ . '/inc/Api/StepTypes.php';
+require_once __DIR__ . '/inc/Api/Handlers.php';
+require_once __DIR__ . '/inc/Api/Providers.php';
+require_once __DIR__ . '/inc/Api/Tools.php';
+require_once __DIR__ . '/inc/Api/Chat/Chat.php';
 
 if ( ! class_exists( 'ActionScheduler' ) ) {
     require_once __DIR__ . '/vendor/woocommerce/action-scheduler/action-scheduler.php';

@@ -34,7 +34,32 @@ The `scheduling_config` object supports different scheduling types:
 ### Recurring Schedules
 ```json
 {
+  "interval": "every_5_minutes"
+}
+```
+```json
+{
   "interval": "hourly"
+}
+```
+```json
+{
+  "interval": "every_2_hours"
+}
+```
+```json
+{
+  "interval": "every_4_hours"
+}
+```
+```json
+{
+  "interval": "qtrdaily"
+}
+```
+```json
+{
+  "interval": "twicedaily"
 }
 ```
 ```json
@@ -45,11 +70,6 @@ The `scheduling_config` object supports different scheduling types:
 ```json
 {
   "interval": "weekly"
-}
-```
-```json
-{
-  "interval": "monthly"
 }
 ```
 

@@ -6,6 +6,7 @@
 
 - **Pipelines** are reusable workflow templates that store handler order, tool selections, and AI settings.
 - **Flows** instantiate pipelines with schedule metadata, flow-level overrides, and runtime configuration values stored per flow.
+- **Ephemeral Workflows** (@since v0.8.0) are temporary, on-the-fly workflows triggered via the REST API. They skip database persistence for the workflow definition itself, using sentinel values (`flow_id=0`, `pipeline_id=0`) and dynamic configuration stored within the job's engine snapshot.
 - **Jobs** track individual flow executions, persist engine parameters, and power the fully React-based Jobs dashboard for real-time monitoring.
 - **Steps** execute sequentially (Fetch → AI → Publish/Update) with shared base classes that enforce validation, logging, and engine data synchronization.
 
@@ -45,7 +46,7 @@ Services are the single source of truth for REST endpoints, ensuring validation 
 ## Scheduling & Jobs
 
 - **Action Scheduler** drives scheduled flow execution while REST endpoints handle immediate runs.
-- **Flow schedules** support manual runs, single-execution jobs, recurring intervals (hourly/daily/weekly/monthly/custom), and job metadata such as `last_run_status` and `last_run_at`.
+- **Flow schedules** support manual runs, one-time execution, and recurring intervals (from 5 minutes to weekly). See [Scheduling Intervals](api/intervals.md) for available options.
 - **JobManager** updates statuses, emits extensibility actions (`datamachine_update_job_status`), and links jobs to logs and processed items for auditing.
 
 ## Admin Interface

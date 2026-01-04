@@ -83,10 +83,9 @@ const ApiKeysTab = () => {
 
 			<table className="form-table">
 				<tbody>
-					{ llmProviders.map( ( [ key, provider ] ) => {
+					{ llmProviders && llmProviders.map( ( [ key, provider ] ) => {
 						const providerName = provider.name || key.charAt( 0 ).toUpperCase() + key.slice( 1 );
 						const currentValue = apiKeys[ key ] || '';
-						const isVisible = visibleKeys[ key ];
 
 						return (
 							<tr key={ key }>

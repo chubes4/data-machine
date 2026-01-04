@@ -304,7 +304,10 @@ class Settings {
 
 		// Handle AI provider API keys (stored separately via filter)
 		if (isset($params['ai_provider_keys']) && is_array($params['ai_provider_keys'])) {
-			$current_keys = apply_filters('chubes_ai_provider_api_keys', null) ?: [];
+			$current_keys = apply_filters('chubes_ai_provider_api_keys', null);
+			if (!is_array($current_keys)) {
+				$current_keys = [];
+			}
 			foreach ($params['ai_provider_keys'] as $provider => $key) {
 				$provider_key = sanitize_key($provider);
 				$new_key = sanitize_text_field($key);

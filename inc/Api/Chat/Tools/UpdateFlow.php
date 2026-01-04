@@ -22,11 +22,6 @@ class UpdateFlow {
         $this->registerTool('chat', 'update_flow', [$this, 'getToolDefinition']);
     }
 
-    private static function getValidIntervals(): array {
-        $intervals = apply_filters('datamachine_scheduler_intervals', []);
-        return array_merge(['manual', 'one_time'], array_keys($intervals));
-    }
-
     /**
      * Get tool definition.
      * Called lazily when tool is first accessed to ensure translations are loaded.
@@ -34,7 +29,7 @@ class UpdateFlow {
      * @return array Tool definition array
      */
     public function getToolDefinition(): array {
-        $intervals = self::getValidIntervals();
+        $intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
@@ -160,7 +155,7 @@ class UpdateFlow {
             return 'scheduling_config requires an interval property';
         }
 
-        $valid_intervals = self::getValidIntervals();
+        $valid_intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
         if (!in_array($interval, $valid_intervals, true)) {
             return 'Invalid interval. Must be one of: ' . implode(', ', $valid_intervals);
         }

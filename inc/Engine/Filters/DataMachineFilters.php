@@ -46,6 +46,14 @@ datamachine_register_importexport_filters();
  */
 function datamachine_get_default_scheduler_intervals() {
     return [
+        'manual' => [
+            'label' => 'Manual',
+            'seconds' => 0,
+        ],
+        'one_time' => [
+            'label' => 'One Time',
+            'seconds' => 0,
+        ],
         'every_5_minutes' => [
             'label' => 'Every 5 Minutes',
             'seconds' => 300,

@@ -5,6 +5,26 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.9] - 2026-01-04
+
+### Added
+- **Ephemeral Workflows** - Support for temporary workflows that execute without database persistence, utilizing sentinel values and dynamic snapshots.
+- **Batch Pipeline Creation** - New `PipelineManager::createWithSteps()` method for atomic creation of pipelines with multiple predefined steps and flows.
+- **Expanded Scheduling Intervals** - Added high-frequency and periodic intervals: `every_5_minutes`, `every_2_hours`, `every_4_hours`, `qtrdaily`, and `twicedaily`.
+- **Chat Tool UI Enhancements** - New `ToolMessage.jsx` component for better AI tool interaction feedback and expanded interval support in `CreateFlow`/`UpdateFlow` tools.
+
+### Improved
+- **Engine Execution Cycle** - Standardized on a robust four-action cycle (`run_now` → `execute_step` → `schedule_next` → `run_later`) for both database and ephemeral workflows.
+- **REST API Capabilities** - Refactored `Execute` endpoint to support complex ephemeral workflow payloads and provided better job status feedback.
+- **Settings UI Reliability** - Added defensive checks for API key rendering and improved AI provider key synchronization.
+- **Testing Infrastructure** - Adjusted PHPUnit and Polyfills dependencies to v9.6 and v2.0 respectively for better environment compatibility.
+
+### Technical Details
+- **Engine**: Implemented job snapshots in `EngineData` to ensure configuration consistency during long-running background jobs.
+- **Scheduling**: Centralized interval definitions in `datamachine_get_default_scheduler_intervals()` with filter support.
+- **API**: Enhanced `inc/Api/Execute.php` with ephemeral workflow generation logic and better error handling.
+- **Documentation**: Comprehensive updates to API reference docs (execute.md, flows.md, intervals.md) and core system guides (engine-execution.md, ephemeral-workflows.md).
+
 ## [0.8.8] - 2026-01-04
 
 ### Changed

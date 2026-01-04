@@ -27,11 +27,6 @@ class CreateFlow {
         $this->registerTool('chat', 'create_flow', [$this, 'getToolDefinition']);
     }
 
-    private static function getValidIntervals(): array {
-        $intervals = apply_filters('datamachine_scheduler_intervals', []);
-        return array_merge(['manual', 'one_time'], array_keys($intervals));
-    }
-
     /**
      * Get tool definition.
      * Called lazily when tool is first accessed to ensure translations are loaded.
@@ -39,6 +34,7 @@ class CreateFlow {
      * @return array Tool definition array
      */
     public function getToolDefinition(): array {
+        $intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
@@ -59,7 +55,7 @@ class CreateFlow {
                 'scheduling_config' => [
                     'type' => 'object',
                     'required' => false,
-                    'description' => 'Scheduling configuration: {interval: "manual|hourly|daily|weekly|monthly"} or {interval: "one_time", timestamp: unix_timestamp}'
+                    'description' => 'Scheduling configuration: {interval: "' . implode('|', $intervals) . '"} or {interval: "one_time", timestamp: unix_timestamp}'
                 ],
                 'step_configs' => [
                     'type' => 'object',
@@ -250,7 +246,7 @@ class CreateFlow {
             return 'scheduling_config requires an interval property';
         }
 
-        $valid_intervals = self::getValidIntervals();
+        $valid_intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
         if (!in_array($interval, $valid_intervals, true)) {
             return 'Invalid interval. Must be one of: ' . implode(', ', $valid_intervals);
         }

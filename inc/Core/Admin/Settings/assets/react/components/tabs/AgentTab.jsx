@@ -119,9 +119,9 @@ const AgentTab = () => {
 						<td>
 							{ Object.keys( globalTools ).length > 0 ? (
 								<div className="datamachine-tool-config-grid">
-									{ Object.entries( globalTools ).map( ( [ toolName, toolConfig ] ) => {
+									{ globalTools && Object.entries( globalTools ).map( ( [ toolName, toolConfig ] ) => {
 										const isConfigured = toolConfig.is_configured;
-										const isEnabled = formState.enabled_tools[ toolName ] ?? false;
+										const isEnabled = formState.enabled_tools?.[ toolName ] ?? false;
 										const requiresConfig = toolConfig.requires_configuration;
 										const toolLabel = toolConfig.label || toolName.replace( /_/g, ' ' );
 
@@ -172,7 +172,7 @@ const AgentTab = () => {
 								rows="8"
 								cols="70"
 								className="large-text code"
-								value={ formState.global_system_prompt }
+								value={ formState.global_system_prompt || '' }
 								onChange={ ( e ) => handleFieldChange( 'global_system_prompt', e.target.value ) }
 							/>
 							<p className="description">
@@ -191,11 +191,11 @@ const AgentTab = () => {
 									<select
 										id="default_provider"
 										className="regular-text"
-										value={ formState.default_provider }
+										value={ formState.default_provider || '' }
 										onChange={ ( e ) => handleProviderChange( e.target.value ) }
 									>
 										<option value="">Select Provider...</option>
-										{ Object.entries( llmProviders )
+										{ llmProviders && Object.entries( llmProviders )
 											.filter( ( [ , p ] ) => p.type === 'llm' )
 											.map( ( [ key, provider ] ) => (
 												<option key={ key } value={ key }>
@@ -211,14 +211,14 @@ const AgentTab = () => {
 									<select
 										id="default_model"
 										className="regular-text"
-										value={ formState.default_model }
+										value={ formState.default_model || '' }
 										onChange={ ( e ) => handleModelChange( e.target.value ) }
 										disabled={ ! formState.default_provider }
 									>
 										<option value="">
 											{ formState.default_provider ? 'Select Model...' : 'Select provider first...' }
 										</option>
-										{ availableModels.map( ( model ) => (
+										{ Array.isArray( availableModels ) && availableModels.map( ( model ) => (
 											<option key={ model.id || model } value={ model.id || model }>
 												{ model.name || model.id || model }
 											</option>

@@ -58,7 +58,7 @@ const StepTypeAccordion = ( {
 						</p>
 					) : (
 						<div className="datamachine-handlers-list">
-							{ Object.entries( handlers ).map( ( [ handlerSlug, handlerData ] ) => (
+							{ Object.entries( handlers || {} ).map( ( [ handlerSlug, handlerData ] ) => (
 								<div key={ handlerSlug } className="datamachine-handler-item">
 									<button
 										type="button"

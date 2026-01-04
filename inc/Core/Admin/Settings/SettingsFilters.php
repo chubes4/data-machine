@@ -12,9 +12,47 @@ if (!defined('ABSPATH')) {
 }
 
 function datamachine_register_settings_admin_page_filters() {
-    add_action('admin_menu', 'datamachine_register_settings_page');
     add_action('admin_init', 'datamachine_register_settings');
-    add_action('admin_enqueue_scripts', 'datamachine_enqueue_settings_assets');
+
+    add_filter('datamachine_admin_pages', function($pages) {
+        $pages['settings'] = [
+            'page_title' => __('Data Machine Settings', 'data-machine'),
+            'menu_title' => __('Settings', 'data-machine'),
+            'capability' => 'manage_options',
+            'position' => 100,
+            'templates' => DATAMACHINE_PATH . 'inc/Core/Admin/Settings/templates/',
+            'assets' => [
+                'css' => [
+                    'datamachine-settings-react' => [
+                        'file' => 'inc/Core/Admin/assets/build/settings-react.css',
+                        'deps' => ['wp-components'],
+                        'media' => 'all'
+                    ],
+                    'datamachine-settings-page' => [
+                        'file' => 'inc/Core/Admin/Settings/assets/css/settings-page.css',
+                        'deps' => [],
+                        'media' => 'all'
+                    ]
+                ],
+                'js' => [
+                    'datamachine-settings-react' => [
+                        'file' => 'inc/Core/Admin/assets/build/settings-react.js',
+                        'deps' => ['wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch'],
+                        'in_footer' => true,
+                        'localize' => [
+                            'object' => 'dataMachineConfig',
+                            'data' => [
+                                'restNamespace' => 'datamachine/v1',
+                                'restNonce' => wp_create_nonce('wp_rest'),
+                                'adminUrl' => admin_url(),
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+        return $pages;
+    });
 
     add_filter('datamachine_render_template', function($content, $template_name, $data = []) {
         $settings_template_path = DATAMACHINE_PATH . 'inc/Core/Admin/Settings/templates/' . $template_name . '.php';
@@ -26,137 +64,12 @@ function datamachine_register_settings_admin_page_filters() {
         }
         return $content;
     }, 15, 3);
-    
-    add_filter('datamachine_admin_assets', function($assets, $context) {
-        if ($context === 'settings') {
-            $settings = \DataMachine\Core\PluginSettings::all();
-
-            $assets['css'] = [
-                'datamachine-core-modal' => [
-                    'src' => '../Modal/assets/css/core-modal.css',
-                    'deps' => []
-                ],
-                'datamachine-settings-page' => [
-                    'src' => 'assets/css/settings-page.css',
-                    'deps' => ['datamachine-core-modal']
-                ]
-            ];
-            $assets['js'] = [
-                'datamachine-settings-page' => [
-                    'src' => 'assets/js/settings-page.js',
-                    'deps' => ['wp-api-fetch', 'datamachine-modal-manager'],
-                    'localize' => [
-                        'object' => 'datamachineSettings',
-                        'data' => [
-                            'strings' => [
-                                'saving' => __('Saving...', 'data-machine'),
-                                'clearing' => __('Clearing...', 'data-machine')
-                            ]
-                        ]
-                    ]
-                ],
-                'datamachine-agent-tab' => [
-                    'src' => 'assets/js/agent-tab.js',
-                    'deps' => ['wp-api-fetch'],
-                    'localize' => [
-                        'object' => 'datamachineAgentTab',
-                        'data' => [
-                            'savedProvider' => $settings['default_provider'] ?? '',
-                            'savedModel' => $settings['default_model'] ?? '',
-                            'strings' => [
-                                'selectProviderFirst' => __('Select provider first...', 'data-machine'),
-                                'selectModel' => __('Select Model...', 'data-machine')
-                            ]
-                        ]
-                    ]
-                ]
-            ];
-        }
-        return $assets;
-    }, 10, 2);
-}
-
-function datamachine_register_settings_page() {
-    $hook = add_options_page(
-        __('Data Machine Settings', 'data-machine'),
-        __('Data Machine', 'data-machine'),
-        'manage_options',
-        'datamachine-settings',
-        'datamachine_render_settings_page_template'
-    );
-    
-    datamachine_store_settings_hook_suffix($hook);
 }
 
 function datamachine_register_settings() {
     register_setting('datamachine_settings', 'datamachine_settings', [
         'sanitize_callback' => 'datamachine_sanitize_settings'
     ]);
-}
-
-function datamachine_render_settings_page_template() {
-    $content = apply_filters('datamachine_render_template', '', 'page/settings-page', [
-        'page_title' => __('Data Machine Settings', 'data-machine')
-    ]);
-
-    echo wp_kses($content, datamachine_allowed_html());
-}
-
-function datamachine_enqueue_settings_assets($hook) {
-    $settings_hook = datamachine_get_settings_hook_suffix();
-    if ($hook !== $settings_hook) {
-        return;
-    }
-
-    // Load React app
-    $react_js_path = DATAMACHINE_PATH . 'inc/Core/Admin/assets/build/settings-react.js';
-    $react_css_path = DATAMACHINE_PATH . 'inc/Core/Admin/assets/build/settings-react.css';
-    $asset_file = DATAMACHINE_PATH . 'inc/Core/Admin/assets/build/settings-react.asset.php';
-
-    // Get dependencies from asset file (generated by wp-scripts)
-    $asset = file_exists($asset_file) ? require($asset_file) : [
-        'dependencies' => ['wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch'],
-        'version' => DATAMACHINE_VERSION
-    ];
-
-    // Enqueue React CSS if it exists
-    if (file_exists($react_css_path)) {
-        wp_enqueue_style(
-            'datamachine-settings-react',
-            DATAMACHINE_URL . 'inc/Core/Admin/assets/build/settings-react.css',
-            ['wp-components'],
-            filemtime($react_css_path)
-        );
-    }
-
-    // Enqueue settings page CSS
-    $settings_css_path = DATAMACHINE_PATH . 'inc/Core/Admin/Settings/assets/css/settings-page.css';
-    if (file_exists($settings_css_path)) {
-        wp_enqueue_style(
-            'datamachine-settings-page',
-            DATAMACHINE_URL . 'inc/Core/Admin/Settings/assets/css/settings-page.css',
-            [],
-            filemtime($settings_css_path)
-        );
-    }
-
-    // Enqueue React JS
-    if (file_exists($react_js_path)) {
-        wp_enqueue_script(
-            'datamachine-settings-react',
-            DATAMACHINE_URL . 'inc/Core/Admin/assets/build/settings-react.js',
-            $asset['dependencies'],
-            $asset['version'],
-            true
-        );
-
-        // Localize configuration for React app
-        wp_localize_script('datamachine-settings-react', 'dataMachineSettingsConfig', [
-            'restNamespace' => 'datamachine/v1',
-            'restNonce' => wp_create_nonce('wp_rest'),
-            'adminUrl' => admin_url(),
-        ]);
-    }
 }
 
 function datamachine_sanitize_settings($input) {
@@ -261,14 +174,6 @@ function datamachine_sanitize_settings($input) {
     }
 
     return $sanitized;
-}
-
-function datamachine_store_settings_hook_suffix($hook) {
-    update_option('datamachine_settings_hook_suffix', $hook);
-}
-
-function datamachine_get_settings_hook_suffix() {
-    return get_option('datamachine_settings_hook_suffix', '');
 }
 
 datamachine_register_settings_admin_page_filters();

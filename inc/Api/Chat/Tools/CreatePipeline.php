@@ -30,11 +30,6 @@ class CreatePipeline {
 		return array_keys($step_type_service->getAll());
 	}
 
-	private static function getValidIntervals(): array {
-		$intervals = apply_filters('datamachine_scheduler_intervals', []);
-		return array_merge(['manual', 'one_time'], array_keys($intervals));
-	}
-
 	/**
 	 * Get tool definition.
 	 * Called lazily when tool is first accessed to ensure translations are loaded.
@@ -44,6 +39,7 @@ class CreatePipeline {
 	public function getToolDefinition(): array {
 		$valid_types = self::getValidStepTypes();
 		$types_list = !empty($valid_types) ? implode('|', $valid_types) : 'fetch|ai|publish|update';
+		$intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
 		return [
 			'class' => self::class,
 			'method' => 'handle_tool_call',
@@ -67,7 +63,7 @@ class CreatePipeline {
 				'scheduling_config' => [
 					'type' => 'object',
 					'required' => false,
-					'description' => 'Scheduling: {interval: "manual|hourly|daily|weekly|monthly"} or {interval: "one_time", timestamp: unix_timestamp}. Defaults to manual.'
+					'description' => 'Scheduling: {interval: "' . implode('|', $intervals) . '"} or {interval: "one_time", timestamp: unix_timestamp}. Defaults to manual.'
 				]
 			]
 		];
@@ -172,7 +168,7 @@ class CreatePipeline {
 			return 'scheduling_config requires an interval property';
 		}
 
-		$valid_intervals = self::getValidIntervals();
+		$valid_intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
 		if (!in_array($interval, $valid_intervals, true)) {
 			return 'Invalid interval. Must be one of: ' . implode(', ', $valid_intervals);
 		}

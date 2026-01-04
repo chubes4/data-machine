@@ -7,7 +7,6 @@
 
 // Define plugin constants for tests
 define( 'TESTS_PLUGIN_DIR', dirname( __DIR__ ) );
-define( 'DATAMACHINE_VERSION', '0.8.4' );
 
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
 
@@ -28,41 +27,13 @@ if ( ! defined( 'WP_CORE_DIR' ) ) {
 $_phpunit_polyfills_path = getenv( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH' );
 if ( false !== $_phpunit_polyfills_path ) {
 	define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', $_phpunit_polyfills_path );
+} elseif ( file_exists( TESTS_PLUGIN_DIR . '/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php' ) ) {
+	define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', TESTS_PLUGIN_DIR . '/vendor/yoast/phpunit-polyfills' );
 }
 
 if ( ! file_exists( "{$_tests_dir}/includes/functions.php" ) ) {
 	echo "Could not find {$_tests_dir}/includes/functions.php, have you run bin/install-wp-tests.sh ?" . PHP_EOL;
 	exit( 1 );
-}
-
-// Define ABSPATH to prevent libraries from exiting early
-if ( ! defined( 'ABSPATH' ) ) {
-	define( 'ABSPATH', dirname( __DIR__ ) . '/' );
-}
-
-// Minimal mocks for WordPress functions required by libraries during autoloading
-if ( ! function_exists( 'add_action' ) ) {
-	function add_action() {}
-}
-if ( ! function_exists( 'add_filter' ) ) {
-	function add_filter() {}
-}
-if ( ! function_exists( 'plugin_dir_url' ) ) {
-	function plugin_dir_url() { return ''; }
-}
-if ( ! function_exists( 'get_template_directory' ) ) {
-	function get_template_directory() { return ''; }
-}
-if ( ! function_exists( 'get_stylesheet_directory' ) ) {
-	function get_stylesheet_directory() { return ''; }
-}
-
-// Load Composer autoloader
-require_once TESTS_PLUGIN_DIR . '/vendor/autoload.php';
-
-// Define WP_TESTS_PHPUNIT_POLYFILLS_PATH
-if ( ! defined( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH' ) ) {
-	define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', TESTS_PLUGIN_DIR . '/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php' );
 }
 
 // Give access to tests_add_filter() function.
@@ -72,6 +43,9 @@ require_once "{$_tests_dir}/includes/functions.php";
  * Manually load the plugin being tested.
  */
 function _manually_load_plugin() {
+	// Load Composer autoloader
+	require_once TESTS_PLUGIN_DIR . '/vendor/autoload.php';
+
 	// Load the plugin
 	require TESTS_PLUGIN_DIR . '/data-machine.php';
 

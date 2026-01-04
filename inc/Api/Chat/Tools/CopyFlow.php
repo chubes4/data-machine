@@ -33,6 +33,7 @@ class CopyFlow {
      * @return array Tool definition array
      */
     public function getToolDefinition(): array {
+        $intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
@@ -56,7 +57,7 @@ class CopyFlow {
                 'scheduling_config' => [
                     'type' => 'object',
                     'required' => false,
-                    'description' => 'Override schedule config. If not provided, copies source flow schedule. Format: {interval: "manual|hourly|daily|weekly|monthly"}'
+                    'description' => 'Override schedule config. If not provided, copies source flow schedule. Format: {interval: "' . implode('|', $intervals) . '"}'
                 ],
                 'step_config_overrides' => [
                     'type' => 'object',
