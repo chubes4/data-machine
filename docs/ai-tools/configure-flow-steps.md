@@ -17,25 +17,77 @@ The `configure_flow_steps` tool enables configuration of flow steps after creati
 | `pipeline_id` | integer | No* | Pipeline ID for bulk mode |
 | `step_type` | string | No** | Filter by step type (fetch, publish, update, ai) |
 | `handler_slug` | string | No | Handler slug to set (single) or filter by (bulk) |
+| `target_handler_slug` | string | No | Handler to switch TO. When provided, `handler_slug` filters existing handlers (bulk) and `target_handler_slug` sets the new handler. |
+| `field_map` | object | No | Field mappings when switching handlers, e.g. `{"endpoint_url": "source_url"}`. |
 | `handler_config` | object | No*** | Handler config to merge into existing config |
+| `flow_configs` | array | No | Per-flow configurations for bulk mode. Array of `{flow_id: int, handler_config: object}`. |
 | `user_message` | string | No*** | User message/prompt for AI steps |
 
 **Validation Rules:**
 - *One of `flow_step_id` OR `pipeline_id` required
 - **When `pipeline_id` provided, at least one of `step_type` or `handler_slug` required
-- ***At least one of `handler_config` or `user_message` required
+- ***At least one of `handler_config`, `user_message`, or `target_handler_slug` required
+
+## Operational Modes
+
+### Single Mode
+Provide `flow_step_id` to configure a specific step. If `target_handler_slug` is provided, the step will switch handlers.
+
+### Bulk Mode
+Provide `pipeline_id` and filters (`step_type` and/or `handler_slug`) to update multiple flows at once. This is highly efficient for updating credentials, endpoints, or prompts across an entire pipeline.
+
+## Handler Switching & Field Mapping
+
+When switching handlers (using `target_handler_slug`), the tool attempts to preserve existing configuration:
+1. **Explicit Mapping**: Uses `field_map` to map old field names to new ones.
+2. **Auto-Mapping**: Fields with identical names in both handlers are automatically preserved.
+3. **Cleanup**: Fields that do not exist in the target handler and aren't mapped are dropped.
+
+## Configuration Merge Logic
+
+The tool uses a multi-layered merge approach for `handler_config`:
+
+1. **Mapped Base**: Starts with existing config (mapped to new handler if switching).
+2. **Shared Config**: `handler_config` is merged on top (applies to all targeted steps).
+3. **Per-Flow Config**: In bulk mode, `flow_configs` allows overriding shared settings for specific flows (merges on top of Shared Config).
+
+### Bulk Mode: Shared vs. Per-Flow Config
+
+```json
+{
+  "pipeline_id": 42,
+  "handler_slug": "rss",
+  "handler_config": {
+    "timeframe_limit": "24_hours"
+  },
+  "flow_configs": [
+    {
+      "flow_id": 101,
+      "handler_config": { "feed_url": "https://site-a.com/rss" }
+    },
+    {
+      "flow_id": 102,
+      "handler_config": { "feed_url": "https://site-b.com/rss" }
+    }
+  ]
+}
+```
+In this example, all matching steps get `timeframe_limit: "24_hours"`, but each flow receives its specific `feed_url`.
 
 ## Usage Examples
 
-### Single Mode: Configure One Step
+### Single Mode: Switch Handler with Mapping
 
 ```json
 {
   "flow_step_id": "pipeline_step_123_456",
-  "handler_slug": "rss",
+  "handler_slug": "old_handler",
+  "target_handler_slug": "new_handler",
+  "field_map": {
+    "old_url_field": "new_source_field"
+  },
   "handler_config": {
-    "feed_url": "https://example.com/feed.xml",
-    "timeframe_limit": "24_hours"
+    "additional_new_setting": true
   }
 }
 ```

@@ -1,0 +1,88 @@
+<?php
+/**
+ * Tests for tool availability in pipeline-step context.
+ *
+ * @package DataMachine\Tests\Unit\AI\Tools
+ */
+
+namespace DataMachine\Tests\Unit\AI\Tools;
+
+use DataMachine\Core\Database\Pipelines\Pipelines;
+use DataMachine\Engine\AI\Tools\ToolExecutor;
+use WP_UnitTestCase;
+
+class PipelineToolsAvailabilityTest extends WP_UnitTestCase {
+
+	private Pipelines $pipelines;
+
+	public function set_up(): void {
+		parent::set_up();
+		$this->pipelines = new Pipelines();
+	}
+
+	public function test_pipeline_step_tools_respect_enabled_tools(): void {
+		$pipeline_id = $this->pipelines->create_pipeline( [
+			'pipeline_name' => 'Tool Gate Pipeline',
+			'pipeline_config' => [],
+		] );
+
+		$this->assertIsInt( $pipeline_id );
+		$this->assertGreaterThan( 0, $pipeline_id );
+
+		$pipeline_step_id = $pipeline_id . '_test-step-uuid';
+
+		$pipeline_config = [
+			$pipeline_step_id => [
+				'step_type' => 'fetch',
+				'enabled_tools' => [],
+			],
+		];
+
+		$updated = $this->pipelines->update_pipeline( $pipeline_id, [
+			'pipeline_config' => $pipeline_config,
+		] );
+		$this->assertTrue( $updated );
+
+		$tools_without = ToolExecutor::getAvailableTools( null, null, $pipeline_step_id, [] );
+		$this->assertIsArray( $tools_without );
+		$this->assertArrayNotHasKey( 'web_fetch', $tools_without );
+
+		$pipeline_config[ $pipeline_step_id ]['enabled_tools'] = [ 'web_fetch' ];
+		$updated_again = $this->pipelines->update_pipeline( $pipeline_id, [
+			'pipeline_config' => $pipeline_config,
+		] );
+		$this->assertTrue( $updated_again );
+
+		$tools_with = ToolExecutor::getAvailableTools( null, null, $pipeline_step_id, [] );
+		$this->assertIsArray( $tools_with );
+		$this->assertArrayHasKey( 'web_fetch', $tools_with );
+	}
+
+	public function test_pipeline_step_tools_do_not_include_chat_tools(): void {
+		$pipeline_id = $this->pipelines->create_pipeline( [
+			'pipeline_name' => 'No Chat Tools Pipeline',
+			'pipeline_config' => [],
+		] );
+
+		$this->assertIsInt( $pipeline_id );
+		$this->assertGreaterThan( 0, $pipeline_id );
+
+		$pipeline_step_id = $pipeline_id . '_test-step-uuid';
+
+		$pipeline_config = [
+			$pipeline_step_id => [
+				'step_type' => 'fetch',
+				'enabled_tools' => [ 'web_fetch' ],
+			],
+		];
+
+		$updated = $this->pipelines->update_pipeline( $pipeline_id, [
+			'pipeline_config' => $pipeline_config,
+		] );
+		$this->assertTrue( $updated );
+
+		$tools = ToolExecutor::getAvailableTools( null, null, $pipeline_step_id, [] );
+		$this->assertIsArray( $tools );
+		$this->assertArrayNotHasKey( 'update_flow', $tools );
+	}
+}

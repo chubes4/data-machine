@@ -191,15 +191,9 @@ $result = $loop->execute($messages, $tools, $provider, $model, $agent_type, $con
 **Default**: 8 turns
 **Recommended**: 8-12 turns for most workflows
 
-### Turn Tracking
+### Turn tracking
 
-Each turn represents one AI request-response cycle. Tool execution within a turn does not increment the turn count.
-
-```
-Turn 1: AI Request → Tool Call 1 + Tool Call 2 → Results
-Turn 2: AI Request → Tool Call 3 → Result
-Turn 3: AI Request → No Tool Calls (Complete)
-```
+Each turn represents one AI request-response cycle. Tool execution within a turn does not increment the turn count. The loop automatically tags messages with `Turn {N}` prefixes via `ConversationManager` to maintain chronological context for the AI.
 
 ## Tool Execution Integration
 

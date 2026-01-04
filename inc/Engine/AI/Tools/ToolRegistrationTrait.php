@@ -77,6 +77,7 @@ trait ToolRegistrationTrait {
     protected function registerConfigurationHandlers(string $tool_id): void {
         add_filter('datamachine_tool_configured', [$this, 'check_configuration'], 10, 2);
         add_filter('datamachine_get_tool_config', [$this, 'get_configuration'], 10, 2);
+        add_filter('datamachine_get_tool_config_fields', [$this, 'get_config_fields'], 10, 2);
         add_action('datamachine_save_tool_config', [$this, 'save_configuration'], 10, 2);
     }
 }

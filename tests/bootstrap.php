@@ -61,6 +61,9 @@ function _manually_load_plugin() {
 
 	$processed_items = new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
 	$processed_items->create_table();
+
+	// Ensure ToolManager translation readiness tracking is enabled.
+	\DataMachine\Engine\AI\Tools\ToolManager::init();
 }
 
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );

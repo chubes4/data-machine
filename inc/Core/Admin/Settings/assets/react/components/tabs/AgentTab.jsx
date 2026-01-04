@@ -5,7 +5,9 @@
  */
 
 import { useState, useEffect } from '@wordpress/element';
+import { Button } from '@wordpress/components';
 import { useSettings, useUpdateSettings } from '../../queries/settings';
+import ToolConfigModal from '../ToolConfigModal';
 import ProviderModelSelector from '@shared/components/ai/ProviderModelSelector';
 
 const AgentTab = () => {
@@ -22,6 +24,7 @@ const AgentTab = () => {
 	} );
 	const [ hasChanges, setHasChanges ] = useState( false );
 	const [ saveStatus, setSaveStatus ] = useState( null );
+	const [ openToolId, setOpenToolId ] = useState( null );
 
 	useEffect( () => {
 		if ( data?.settings ) {
@@ -101,8 +104,23 @@ const AgentTab = () => {
 
 	const globalTools = data?.global_tools || {};
 
+	const openToolModal = ( toolId ) => {
+		setOpenToolId( toolId );
+	};
+
+	const closeToolModal = () => {
+		setOpenToolId( null );
+	};
+
 	return (
 		<div className="datamachine-agent-tab">
+			{ openToolId && (
+				<ToolConfigModal
+					toolId={ openToolId }
+					isOpen={ Boolean( openToolId ) }
+					onRequestClose={ closeToolModal }
+				/>
+			) }
 			<table className="form-table">
 				<tbody>
 					<tr>
@@ -152,37 +170,31 @@ const AgentTab = () => {
 																	: 'Not Configured' }
 															</span>
 
+															{ toolConfig.requires_configuration && (
+																<Button
+																	variant="secondary"
+																	onClick={ () => openToolModal( toolName ) }
+																>
+																	Configure
+																</Button>
+															) }
+
 															{ isConfigured ? (
 																<label className="datamachine-tool-enabled-toggle">
 																	<input
 																		type="checkbox"
-																		checked={
-																			isEnabled
-																		}
-																		onChange={ (
-																			e
-																		) =>
-																			handleToolToggle(
-																				toolName,
-																				e
-																					.target
-																					.checked
-																			)
-																		}
-																	/>
-																	Enable for
-																	agents
-																</label>
+																		checked={ isEnabled }
+																		onChange={ ( e ) =>
+																		handleToolToggle( toolName, e.target.checked )
+																	}
+																/>
+																Enable for agents
+															</label>
 															) : (
 																<label className="datamachine-tool-enabled-toggle datamachine-tool-disabled">
-																	<input
-																		type="checkbox"
-																		disabled
-																	/>
+																	<input type="checkbox" disabled />
 																	<span className="description">
-																		Configure
-																		to
-																		enable
+																		Configure to enable
 																	</span>
 																</label>
 															) }

@@ -5,6 +5,24 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.16] - 2026-01-04
+
+### Added
+- **Tool Configuration UI** - Introduced a new modal-based configuration interface in the Settings -> Agent tab, allowing users to configure tool-specific settings (e.g., API keys, endpoints) directly for global AI tools.
+- **Tool Configuration API** - Added `GET` and `POST` REST API endpoints for managing tool-specific configurations, including server-side secret masking.
+- **Update Taxonomy Term Tool** - Formally documented and integrated the `update_taxonomy_term` global AI tool, enabling agents to modify existing terms and custom meta (e.g., venue data).
+
+### Improved
+- **ConfigureFlowSteps Tool** - Enhanced the `configure_flow_steps` chat tool to support unique handler settings per flow during bulk pipeline-scoped operations via the new `flow_configs` parameter.
+- **Tool Registration** - Added `get_config_fields` support to `ToolRegistrationTrait`, allowing tools to dynamically define their configuration schemas for the new UI.
+- **Universal Web Scraper** - Expanded engine documentation and handler overviews to include the unified `universal_web_scraper` architecture.
+
+### Technical Details
+- **Frontend**: Created `ToolConfigModal.jsx` and `queries/tools.js` for React-based tool management.
+- **Core**: Added `handle_get_tool_config` and registered routes in `Settings.php`.
+- **Core**: Updated `ToolManager` to support translation readiness and configuration state tracking.
+- **Documentation**: Updated `tools-overview.md`, `fetch-handler.md`, and `handlers-overview.md`.
+
 ## [0.8.15] - 2026-01-04
 
 ### Improved

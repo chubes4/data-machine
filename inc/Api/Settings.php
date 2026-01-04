@@ -59,7 +59,21 @@ class Settings {
 			'permission_callback' => [self::class, 'check_permission'],
 		]);
 
-		// Tool configuration endpoint
+		// Tool configuration endpoints
+		register_rest_route('datamachine/v1', '/settings/tools/(?P<tool_id>[a-zA-Z0-9_-]+)', [
+			'methods' => WP_REST_Server::READABLE,
+			'callback' => [self::class, 'handle_get_tool_config'],
+			'permission_callback' => [self::class, 'check_permission'],
+			'args' => [
+				'tool_id' => [
+					'required' => true,
+					'type' => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+					'description' => __('Tool identifier', 'data-machine'),
+				],
+			],
+		]);
+
 		register_rest_route('datamachine/v1', '/settings/tools/(?P<tool_id>[a-zA-Z0-9_-]+)', [
 			'methods' => 'POST',
 			'callback' => [self::class, 'handle_save_tool_config'],
@@ -119,6 +133,85 @@ class Settings {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Handle get tool configuration request
+	 */
+	public static function handle_get_tool_config($request) {
+		$tool_id = $request->get_param('tool_id');
+
+		if (empty($tool_id)) {
+			return new \WP_Error(
+				'missing_tool_id',
+				__('Tool ID is required.', 'data-machine'),
+				['status' => 400]
+			);
+		}
+
+		$tool_manager = new \DataMachine\Engine\AI\Tools\ToolManager();
+		$global_tools = $tool_manager->get_global_tools();
+		$tool_definition = $global_tools[$tool_id] ?? null;
+
+		if (empty($tool_definition) || !is_array($tool_definition)) {
+			return new \WP_Error(
+				'unknown_tool',
+				sprintf(
+					/* translators: %s: tool ID */
+					__('Unknown tool: %s', 'data-machine'),
+					$tool_id
+				),
+				['status' => 404]
+			);
+		}
+
+		$requires_configuration = $tool_manager->requires_configuration($tool_id);
+		$is_configured = $tool_manager->is_tool_configured($tool_id);
+
+		$fields = [];
+		$config = [];
+
+		if ($requires_configuration) {
+			$fields = apply_filters('datamachine_get_tool_config_fields', [], $tool_id);
+			$config = apply_filters('datamachine_get_tool_config', [], $tool_id);
+
+			if (!is_array($fields)) {
+				$fields = [];
+			}
+			if (!is_array($config)) {
+				$config = [];
+			}
+
+			// Mask configured secrets if UI field expects a secret.
+			foreach ($fields as $field_key => $field) {
+				if (!is_array($field)) {
+					continue;
+				}
+
+				$field_type = $field['type'] ?? '';
+				if (in_array($field_type, ['password', 'secret'], true) && !empty($config[$field_key])) {
+					$value = (string) $config[$field_key];
+					if (strlen($value) > 12) {
+						$config[$field_key] = substr($value, 0, 4) . '****************' . substr($value, -4);
+					} else {
+						$config[$field_key] = '****************';
+					}
+				}
+			}
+		}
+
+		return rest_ensure_response([
+			'success' => true,
+			'data' => [
+				'tool_id' => $tool_id,
+				'label' => $tool_definition['label'] ?? ucfirst(str_replace('_', ' ', $tool_id)),
+				'description' => $tool_definition['description'] ?? '',
+				'requires_configuration' => $requires_configuration,
+				'is_configured' => $is_configured,
+				'fields' => $fields,
+				'config' => $config,
+			]
+		]);
 	}
 
 	/**

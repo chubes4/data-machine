@@ -149,6 +149,7 @@ Different fetch handlers store different engine parameters:
 - **WordPress API**: `source_url` (post link), `image_url` (featured image URL)
 - **WordPress Media**: `source_url` (parent post permalink), `image_url` (media URL)
 - **RSS**: `source_url` (item link), `image_url` (enclosure URL)
+- **Universal Web Scraper**: `source_url` (page URL), `image_url` (detected image)
 - **Google Sheets**: `source_url` (empty), `image_url` (empty)
 - **Files**: `image_url` (public URL for images only)
 
@@ -199,6 +200,7 @@ protected function applyExcludeKeywords(string $text, string $exclude_keywords):
 All fetch handlers extend this base class:
 - RSS Handler
 - Reddit Handler
+- Universal Web Scraper Handler
 - WordPress Local Handler
 - WordPress Media Handler
 - WordPress API Handler

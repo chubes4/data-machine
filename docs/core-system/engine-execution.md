@@ -11,6 +11,14 @@ The engine follows a standardized cycle for both database-driven and ephemeral w
 3.  **`datamachine_schedule_next_step`**: Persists data packets and schedules the next step in the sequence.
 4.  **`datamachine_run_flow_later`**: Handles scheduling logic, queuing the flow for future execution.
 
+## Enhanced Tool Call Reliability
+
+The engine includes built-in safeguards to ensure reliable tool execution during AI multi-turn conversations:
+
+- **Duplicate Call Prevention**: `ConversationManager::validateToolCall()` monitors conversation history to detect if an AI agent attempts to call the same tool with identical parameters in succession. If a duplicate is detected, a correction message is injected into the conversation instead of executing the redundant tool.
+- **Turn Tracking**: Each tool call and response is explicitly tagged with a `Turn {N}` identifier. This helps agents maintain chronological context and prevents "context drift" in complex multi-turn reasoning.
+- **Lazy Tool Loading**: Tools are discovered and loaded lazily via `ToolExecutor::getAvailableTools()`, ensuring that only valid, configured tools are presented to the agent for the current step and handler context.
+
 ## Single Item Execution Model
 
 At its core, the engine is designed for reliability-first processing. Instead of processing batches of items, which can lead to timeouts or cascading failures, the engine processes **exactly one item per job execution cycle**.

@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.8.15
+Stable tag: 0.8.16
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -246,6 +246,14 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 5. Chat Interface - Build workflows through conversational AI
 
 == Changelog ==
+
+= 0.8.16 =
+* Settings: Added new Tool Configuration UI in the Agent tab, allowing users to configure tool-specific settings directly.
+* API: Added new REST API endpoints for retrieving and saving tool-specific configurations.
+* Chat Agent: Enhanced ConfigureFlowSteps tool with support for unique settings per flow in bulk operations.
+* Chat Agent: Documented and integrated the UpdateTaxonomyTerm tool for term modification and venue data management.
+* Core: Improved tool registration with support for dynamic configuration field definitions.
+* Core: Integrated Universal Web Scraper into the engine documentation and handlers overview.
 
 = 0.8.15 =
 * Chat Agent: Improved Tool Call extraction to prioritize metadata, ensuring more reliable tool execution tracking.

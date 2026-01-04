@@ -30,6 +30,13 @@ Available to all AI agents (pipeline + chat) via `datamachine_global_tools` filt
 - **Features**: Complete post content retrieval, optional custom fields inclusion
 - **Use Cases**: Content analysis before WordPress Update operations, detailed post examination after Local Search
 
+**Update Taxonomy Term** (`update_taxonomy_term`) (@since v0.8.0)
+- **Purpose**: Update existing taxonomy terms including core fields and custom meta.
+- **Configuration**: None required
+- **Features**: Modifies name, slug, description, parent, and custom meta (e.g., venue_address).
+- **Use Cases**: Correcting venue details, updating artist bios, managing taxonomy hierarchies.
+- **Documentation**: [Update Taxonomy Term](update-taxonomy-term.md)
+
 
 ### Chat-Specific Tools
 
@@ -56,8 +63,12 @@ Available only to chat AI agents via `datamachine_chat_tools` filter. These spec
 **ConfigureFlowSteps** (`configure_flow_steps`) (@since v0.4.2)
 - **Purpose**: Configure handler settings and AI user messages for flow steps, supporting both single-step and bulk pipeline-scoped operations
 - **Configuration**: None required
-- **Features**: Single mode for individual steps, bulk mode for all matching steps across all flows in a pipeline, merge behavior for handler_config
-- **Use Cases**: Setting up fetch/publish/update handlers, customizing AI prompts, bulk configuration changes across pipelines
+- **Features**: 
+  - **Single mode**: Configure individual steps.
+  - **Bulk mode**: Configure matching steps across all flows in a pipeline.
+  - **Handler Switching**: Use `target_handler_slug` to switch handlers with optional `field_map` for data migration.
+  - **Per-Flow Config**: Support for unique settings per flow in bulk mode via `flow_configs`.
+- **Use Cases**: Setting up fetch/publish/update handlers, customizing AI prompts, bulk configuration changes across pipelines, migrating handlers.
 
 **ConfigurePipelineStep** (`configure_pipeline_step`) (@since v0.4.4)
 - **Purpose**: Configure pipeline-level AI settings including system prompt, provider, model, and enabled tools
