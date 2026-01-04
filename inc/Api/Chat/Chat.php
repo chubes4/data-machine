@@ -158,11 +158,42 @@ class Chat {
 		// Set agent context for logging - all logs during this request go to chat log
 		AgentContext::set(AgentType::CHAT);
 
-		$session_id = $request->get_param('session_id');
-		$message = $request->get_param('message');
-		$selected_pipeline_id = (int) $request->get_param('selected_pipeline_id');
+		// Get provider and model with defaults
+		$provider = $request->get_param('provider');
+		$model = $request->get_param('model');
+		$max_turns = PluginSettings::get('max_turns', 12);
 
+		if (empty($provider)) {
+			$provider = PluginSettings::get('default_provider', '');
+		}
+		if (empty($model)) {
+			$model = PluginSettings::get('default_model', '');
+		}
+
+		$provider = sanitize_text_field($provider);
+		$model = sanitize_text_field($model);
+
+		$session_id = $request->get_param('session_id');
+		$selected_pipeline_id = (int) $request->get_param('selected_pipeline_id');
 		$user_id = get_current_user_id();
+
+		// Validate that we have provider and model
+		if (empty($provider)) {
+			return new WP_Error(
+				'provider_required',
+				__('AI provider is required. Please set a default provider in Data Machine settings or provide one in the request.', 'data-machine'),
+				['status' => 400]
+			);
+		}
+
+		if (empty($model)) {
+			return new WP_Error(
+				'model_required',
+				__('AI model is required. Please set a default model in Data Machine settings or provide one in the request.', 'data-machine'),
+				['status' => 400]
+			);
+		}
+
 		$chat_db = new ChatDatabase();
 
 		if ($session_id) {

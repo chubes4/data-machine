@@ -5,6 +5,20 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.5] - 2026-01-04
+
+### Added
+- **Chat API Validation** - Added strict provider and model validation to the Chat REST API.
+- **AI Default Fallbacks** - Implemented automatic fallbacks to system-default provider and model settings in the chat endpoint.
+
+### Improved
+- **AI Architecture Roadmap** - Updated migration documentation to reflect a temporary pause in `wp-ai-client` integration due to dynamic API key requirements.
+- **Dependency Management** - Upgraded `chubes4/ai-http-client` to v2.0.8.
+
+### Technical Details
+- **Chat API**: Enhanced `inc/Api/Chat/Chat.php` with sanitized provider/model extraction and `WP_Error` feedback for missing configurations.
+- **Migration**: Updated `WP-AI-CLIENT-MIGRATION.md` with critical blocker details regarding custom storage locations.
+
 ## [0.8.4] - 2026-01-03
 
 ### Added
