@@ -8,7 +8,7 @@
 		"monolog/monolog": "^3.9",
 		"abraham/twitteroauth": "^8.1",
 		"woocommerce/action-scheduler": "^3.9",
-		"chubes4/ai-http-client": "^2.0.7"
+		"chubes4/ai-http-client": "^2.0.8"
 	},
 	"require-dev": {
 		"phpunit/phpunit": "^12.0",
