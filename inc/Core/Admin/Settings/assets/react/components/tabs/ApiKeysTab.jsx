@@ -1,7 +1,7 @@
 /**
  * ApiKeysTab Component
  *
- * AI provider API key configuration with masked password inputs.
+ * AI provider API key configuration.
  */
 
 import { useState, useEffect } from '@wordpress/element';
@@ -15,7 +15,6 @@ const ApiKeysTab = () => {
 	const [ apiKeys, setApiKeys ] = useState( {} );
 	const [ hasChanges, setHasChanges ] = useState( false );
 	const [ saveStatus, setSaveStatus ] = useState( null );
-	const [ visibleKeys, setVisibleKeys ] = useState( {} );
 
 	useEffect( () => {
 		if ( data?.settings?.ai_provider_keys ) {
@@ -30,13 +29,6 @@ const ApiKeysTab = () => {
 			[ providerKey ]: value,
 		} ) );
 		setHasChanges( true );
-	};
-
-	const toggleKeyVisibility = ( providerKey ) => {
-		setVisibleKeys( ( prev ) => ( {
-			...prev,
-			[ providerKey ]: ! prev[ providerKey ],
-		} ) );
 	};
 
 	const handleSave = async () => {
@@ -104,44 +96,15 @@ const ApiKeysTab = () => {
 									</label>
 								</th>
 								<td>
-									<div className="datamachine-api-key-field">
-										<input
-											type={ isVisible ? 'text' : 'password' }
-											id={ `ai_provider_keys_${ key }` }
-											value={ currentValue }
-											onChange={ ( e ) => handleKeyChange( key, e.target.value ) }
-											className="regular-text"
-											placeholder={ currentValue.includes( '****' ) ? 'Key configured' : 'Enter API key...' }
-											autoComplete="off"
-										/>
-										<button
-											type="button"
-											className="button button-secondary datamachine-toggle-visibility"
-											onClick={ () => toggleKeyVisibility( key ) }
-											aria-label={ isVisible ? 'Hide API key' : 'Show API key' }
-											disabled={ currentValue.includes( '****' ) && ! isVisible }
-										>
-											{ isVisible ? 'Hide' : 'Show' }
-										</button>
-										{ currentValue.includes( '****' ) && (
-											<span className="datamachine-key-status-badge" style={ { marginLeft: '10px', color: '#46b450', fontWeight: 'bold' } }>
-												✓ Saved
-											</span>
-										) }
-										{ currentValue && (
-											<button
-												type="button"
-												className="button button-link-delete"
-												style={ { marginLeft: '10px', color: '#d63638' } }
-												onClick={ () => handleKeyChange( key, '' ) }
-											>
-												Clear
-											</button>
-										) }
-									</div>
-									<p className="description">
-										API key for { providerName } provider.
-									</p>
+									<input
+										type="text"
+										id={ `ai_provider_keys_${ key }` }
+										value={ currentValue }
+										onChange={ ( e ) => handleKeyChange( key, e.target.value ) }
+										className="regular-text"
+										placeholder="Enter API key..."
+										autoComplete="off"
+									/>
 								</td>
 							</tr>
 						);

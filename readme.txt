@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.8.7
+Stable tag: 0.8.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -246,6 +246,16 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 5. Chat Interface - Build workflows through conversational AI
 
 == Changelog ==
+
+= 0.8.8 =
+* Settings UI Optimization: Simplified AI provider API key configuration while maintaining server-side security.
+* Autoloading Refactor: Migrated to pure PSR-4 autoloading by removing manual file inclusion in composer.json.
+* Testing Suite Improvements: Enhanced test bootstrap with better environment mocks and autoloader prioritization.
+
+= 0.8.7 =
+* AI Provider Key Masking: Implemented server-side masking for AI provider API keys in the Settings API.
+* Key Status Feedback: Added visual "Saved" badges and improved "Clear" functionality for API keys.
+* WP-Unit Testing Suite: Integrated wp-phpunit/wp-phpunit and standard WordPress test bootstrap.
 
 = 0.8.4 =
 * New AI Chat Tools: Expanded agent capabilities with ReadLogs, ManageLogs, SearchTaxonomyTerms, and CreateTaxonomyTerm tools

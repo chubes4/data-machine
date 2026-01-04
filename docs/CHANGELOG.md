@@ -5,6 +5,16 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.8] - 2026-01-04
+
+### Changed
+- **Settings UI Optimization** - Simplified AI provider API key configuration by reverting masking in the React frontend while maintaining server-side security.
+- **Autoloading Refactor** - Removed manual file loading in `composer.json` in favor of standardized PSR-4 autoloading for improved performance and cleaner dependency management.
+- **Composer Configuration** - Updated Composer settings and scripts for better development workflow.
+
+### Fixed
+- **Testing Bootstrap** - Enhanced `tests/bootstrap.php` with improved mock functions and environment definitions to ensure consistent unit testing across environments.
+
 ## [0.8.7] - 2026-01-04
 
 ### Added
