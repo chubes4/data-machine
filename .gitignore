@@ -57,6 +57,7 @@ wp-content/plugins/hello.php
 
 # Admin React build assets
 inc/Core/Admin/Pages/*/assets/build/
+inc/Core/Admin/assets/build/
 
 # Development planning
 plan.md
