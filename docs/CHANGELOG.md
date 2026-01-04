@@ -5,6 +5,17 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.14] - 2026-01-04
+
+### Improved
+- **ConfigureFlowSteps Chat Tool** - Added support for handler switching with automated field mapping, enabling AI agents to migrate flow step configurations between different handlers while preserving compatible settings.
+- **Bulk Flow Configuration** - Enhanced the `configure_flow_steps` tool to support per-flow configuration overrides in bulk mode, allowing for granular adjustments across multiple flows in a single operation.
+
+### Technical Details
+- **Core**: Added `target_handler_slug` and `field_map` parameters to `ConfigureFlowSteps.php` for intelligent handler migration.
+- **Core**: Added `flow_configs` parameter to `ConfigureFlowSteps.php` for per-flow overrides in bulk operations.
+- **Core**: Standardized `flow_id` handling to integer types across configuration methods.
+
 ## [0.8.13] - 2026-01-04
 
 ### Added
