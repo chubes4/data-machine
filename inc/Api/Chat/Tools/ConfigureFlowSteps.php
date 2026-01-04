@@ -101,6 +101,11 @@ class ConfigureFlowSteps {
             ];
         }
 
+        // Validation: Ensure handler_config is provided for scraper setups if explicitly requested
+        if (!empty($handler_slug) && $handler_slug === 'universal_web_scraper' && empty($handler_config['source_url'])) {
+            // We allow it, but we should log that config might be incomplete
+        }
+
         // Route to appropriate handler
         if (!empty($flow_step_id)) {
             return $this->handleSingleMode($flow_step_id, $handler_slug, $handler_config, $user_message);

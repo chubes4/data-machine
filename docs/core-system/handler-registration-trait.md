@@ -28,7 +28,8 @@ protected static function registerHandler(
     bool $requires_auth = false,
     ?string $auth_class = null,
     ?string $settings_class = null,
-    ?callable $tools_callback = null
+    ?callable $tools_callback = null,
+    ?string $authProviderKey = null
 ): void
 ```
 
@@ -43,6 +44,7 @@ protected static function registerHandler(
 - **$auth_class**: Fully qualified auth class name (required if requires_auth=true)
 - **$settings_class**: Fully qualified settings class name
 - **$tools_callback**: Callback for AI tool registration
+- **$authProviderKey**: Optional auth provider key override for shared authentication. When set, the handler metadata includes `auth_provider_key`, and the auth provider is registered under this key.
 
 ## Filters Registered
 
@@ -69,10 +71,15 @@ add_filter('datamachine_handlers', function($handlers) {
 
 Authentication provider registration (conditional on `requires_auth=true`).
 
+Auth providers are keyed by **provider key**, not necessarily the handler slug.
+
+- Default: `provider_key === handler_slug`
+- Shared auth: pass `$authProviderKey` to `registerHandler()` and use that as the provider key
+
 ```php
 // Only registered if requires_auth is true
-add_filter('datamachine_auth_providers', function($providers) {
-    $providers[$handler_slug] = $auth_class;
+add_filter('datamachine_auth_providers', function($providers) use ($provider_key) {
+    $providers[$provider_key] = new $auth_class();
     return $providers;
 });
 ```

@@ -250,8 +250,11 @@ class FlowManager {
         $new_flow_name = $flow_name ?? sprintf('Copy of %s', $source_flow['flow_name']);
         $new_flow_name = sanitize_text_field($new_flow_name);
 
-        // Determine scheduling config
-        $scheduling_config = $options['scheduling_config'] ?? $source_flow['scheduling_config'] ?? ['interval' => 'manual'];
+        // Determine scheduling config (copy interval only)
+        $requested_scheduling_config = $options['scheduling_config'] ?? ($source_flow['scheduling_config'] ?? []);
+        $scheduling_config = $this->getIntervalOnlySchedulingConfig(
+            is_array($requested_scheduling_config) ? $requested_scheduling_config : []
+        );
 
         // Create the new flow
         $flow_data = [
@@ -328,13 +331,30 @@ class FlowManager {
         ];
     }
 
-    /**
-     * Validate that two pipelines have compatible step structures.
-     *
-     * @param array $source_config Source pipeline config
-     * @param array $target_config Target pipeline config
-     * @return array{compatible: bool, error?: string}
-     */
+     /**
+      * Get an interval-only scheduling config for copied flows.
+      *
+      * Copied flows intentionally do not inherit run history metadata.
+      */
+     private function getIntervalOnlySchedulingConfig(array $scheduling_config): array {
+         $interval = $scheduling_config['interval'] ?? 'manual';
+ 
+         if (!is_string($interval) || $interval === '') {
+             $interval = 'manual';
+         }
+ 
+         return [
+             'interval' => $interval,
+         ];
+     }
+ 
+     /**
+      * Validate that two pipelines have compatible step structures.
+      *
+      * @param array $source_config Source pipeline config
+      * @param array $target_config Target pipeline config
+      * @return array{compatible: bool, error?: string}
+      */
     private function validatePipelineCompatibility(array $source_config, array $target_config): array {
         $source_steps = $this->getOrderedStepTypes($source_config);
         $target_steps = $this->getOrderedStepTypes($target_config);

@@ -89,7 +89,6 @@ class FlowStepManager {
             ];
         }
 
-        // Use provided slug or existing one
         $effective_slug = !empty($handler_slug) ? $handler_slug : ($flow_config[$flow_step_id]['handler_slug'] ?? null);
 
         if (empty($effective_slug)) {
@@ -97,8 +96,19 @@ class FlowStepManager {
             return false;
         }
 
+        // If switching handlers, strip legacy config fields that don't belong to the new handler
+        if ($effective_slug !== ($flow_config[$flow_step_id]['handler_slug'] ?? '')) {
+            $valid_fields = array_keys($this->handler_service->getConfigFields($effective_slug));
+            if (!empty($valid_fields)) {
+                $existing_handler_config = array_intersect_key($flow_config[$flow_step_id]['handler_config'] ?? [], array_flip($valid_fields));
+            } else {
+                $existing_handler_config = [];
+            }
+        } else {
+            $existing_handler_config = $flow_config[$flow_step_id]['handler_config'] ?? [];
+        }
+
         $flow_config[$flow_step_id]['handler_slug'] = $effective_slug;
-        $existing_handler_config = $flow_config[$flow_step_id]['handler_config'] ?? [];
         $merged_config = array_merge($existing_handler_config, $handler_settings);
         $flow_config[$flow_step_id]['handler_config'] = $this->handler_service->applyDefaults($effective_slug, $merged_config);
         $flow_config[$flow_step_id]['enabled'] = true;

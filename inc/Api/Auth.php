@@ -134,7 +134,7 @@ class Auth {
 
 		// Validate handler exists and supports authentication
 		$auth_service = new AuthProviderService();
-		$auth_instance = $auth_service->get($handler_slug);
+		$auth_instance = $auth_service->getForHandler($handler_slug);
 
 		if (!$auth_instance) {
 			return new \WP_Error(
@@ -204,136 +204,8 @@ class Auth {
 
 		// Get auth provider instance via cached service
 		$auth_service = new AuthProviderService();
-		$auth_instance = $auth_service->get($handler_slug);
+		$auth_instance = $auth_service->getForHandler($handler_slug);
 
-		if (!$auth_instance) {
-			return new \WP_Error(
-				'auth_provider_not_found',
-				__('Authentication provider not found', 'data-machine'),
-				['status' => 404]
-			);
-		}
-
-		// Check authentication status
-		$is_authenticated = $auth_service->isAuthenticated($handler_slug);
-
-		// Get masked config status regardless of auth state
-		$config_status = [];
-		$raw_config = [];
-		
-		if (method_exists($auth_instance, 'get_config')) {
-			$raw_config = $auth_instance->get_config();
-		} elseif (method_exists($auth_instance, 'get_account')) {
-			$raw_config = $auth_instance->get_account();
-		}
-
-		if (!empty($raw_config) && is_array($raw_config)) {
-			foreach ($raw_config as $key => $value) {
-				if (!empty($value) && is_string($value)) {
-					$length = strlen($value);
-					// Simple masking: show last 4 chars if long enough
-					if ($length > 8) {
-						$config_status[$key] = str_repeat('•', $length - 4) . substr($value, -4);
-					} else {
-						$config_status[$key] = '••••••••';
-					}
-				}
-			}
-		}
-
-		if ($is_authenticated) {
-			// Get account details for success response
-			$account_details = null;
-			if (method_exists($auth_instance, 'get_account_details')) {
-				$account_details = $auth_instance->get_account_details();
-			}
-
-			return rest_ensure_response([
-				'success' => true,
-				'data' => [
-					'authenticated' => true,
-					'account_details' => $account_details,
-					'config_status' => $config_status,
-					'handler_slug' => $handler_slug
-				]
-			]);
-		} else {
-			// Check for recent OAuth errors stored in transients
-			$error_transient = get_transient('datamachine_oauth_error_' . $handler_slug);
-			$success_transient = get_transient('datamachine_oauth_success_' . $handler_slug);
-
-			if ($error_transient) {
-				// Clear the error transient since we're handling it
-				delete_transient('datamachine_oauth_error_' . $handler_slug);
-
-				return rest_ensure_response([
-					'success' => true,
-					'data' => [
-						'authenticated' => false,
-						'error' => true,
-						'error_code' => 'oauth_failed',
-						'error_message' => $error_transient,
-						'config_status' => $config_status,
-						'handler_slug' => $handler_slug
-					]
-				]);
-			} elseif ($success_transient) {
-				// Clear the success transient and re-check auth status
-				delete_transient('datamachine_oauth_success_' . $handler_slug);
-
-				// Force re-check authentication status as success transient might indicate completion
-				$is_authenticated = $auth_instance->is_authenticated();
-
-				if ($is_authenticated) {
-					$account_details = null;
-					if (method_exists($auth_instance, 'get_account_details')) {
-						$account_details = $auth_instance->get_account_details();
-					}
-
-					return rest_ensure_response([
-						'success' => true,
-						'data' => [
-							'authenticated' => true,
-							'account_details' => $account_details,
-							'config_status' => $config_status,
-							'handler_slug' => $handler_slug
-						]
-					]);
-				}
-			}
-
-			// Still not authenticated, continue polling
-			return rest_ensure_response([
-				'success' => true,
-				'data' => [
-					'authenticated' => false,
-					'error' => false,
-					'config_status' => $config_status,
-					'handler_slug' => $handler_slug
-				]
-			]);
-		}
-	}
-
-	/**
-	 * Handle request to get OAuth authorization URL
-	 *
-	 * GET /datamachine/v1/auth/{handler_slug}/oauth-url
-	 */
-	public static function handle_get_oauth_url($request) {
-		$handler_slug = sanitize_text_field($request->get_param('handler_slug'));
-
-		if (empty($handler_slug)) {
-			return new \WP_Error(
-				'missing_handler',
-				__('Handler slug is required', 'data-machine'),
-				['status' => 400]
-			);
-		}
-
-		// Get auth provider instance via cached service
-		$auth_service = new AuthProviderService();
-		$auth_instance = $auth_service->get($handler_slug);
 
 		if (!$auth_instance) {
 			return new \WP_Error(
@@ -409,7 +281,7 @@ class Auth {
 
 		// Get auth provider instance via cached service
 		$auth_service = new AuthProviderService();
-		$auth_instance = $auth_service->get($handler_slug);
+		$auth_instance = $auth_service->getForHandler($handler_slug);
 
 		if (!$auth_instance || !method_exists($auth_instance, 'get_config_fields')) {
 			return new \WP_Error(

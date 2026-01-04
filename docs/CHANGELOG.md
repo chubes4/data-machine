@@ -5,6 +5,22 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.12] - 2026-01-04
+
+### Added
+- **Shared Authentication Support** - Handlers can now share credentials by declaring an `auth_provider_key` during registration. This allows multiple publish destinations (e.g., Facebook and Threads) to use a single set of Meta credentials.
+- **Enhanced Flow Summaries** - Added `settings_summary` to flow steps in the REST API, providing a clean string representation of configuration for UI overviews.
+
+### Improved
+- **Flow Duplication Logic** - Refined `FlowManager` to ensure only scheduling intervals are copied during flow duplication, preventing run history and status metadata from leaking into new flows.
+- **Handler Configuration Switching** - The system now automatically strips legacy configuration fields when switching handlers in a flow step, preventing configuration bloat and potential conflicts.
+- **Venue Field Handling** - Improved `SettingsDisplayService` to suppress manual venue fields in summaries when a primary venue taxonomy term is selected.
+
+### Technical Details
+- **Services**: Updated `AuthProviderService` to support provider key resolution via handler metadata.
+- **Frontend**: Renamed the localized settings object to `dataMachineSettingsConfig` to prevent collisions with other Data Machine components.
+- **Testing**: Enhanced `tests/bootstrap.php` with support for the `datamachine-events` extension and additional database table initialization for jobs and processed items.
+
 ## [0.8.11] - 2026-01-04
 
 ### Added

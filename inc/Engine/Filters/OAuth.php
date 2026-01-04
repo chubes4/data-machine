@@ -50,6 +50,10 @@ function datamachine_register_oauth_system() {
 
         $auth_service = new \DataMachine\Services\AuthProviderService();
         $auth_instance = $auth_service->get($provider);
+
+        if (!$auth_instance) {
+            $auth_instance = $auth_service->getForHandler($provider);
+        }
         
         if ($auth_instance && method_exists($auth_instance, 'handle_oauth_callback')) {
             $auth_instance->handle_oauth_callback();

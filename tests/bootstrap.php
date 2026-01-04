@@ -49,9 +49,18 @@ function _manually_load_plugin() {
 	// Load the plugin
 	require TESTS_PLUGIN_DIR . '/data-machine.php';
 
+	// Load Data Machine Events extension for integration tests
+	if ( file_exists( TESTS_PLUGIN_DIR . '/../datamachine-events/datamachine-events.php' ) ) {
+		require TESTS_PLUGIN_DIR . '/../datamachine-events/datamachine-events.php';
+	}
+
 	// Create database tables for testing
 	\DataMachine\Core\Database\Pipelines\Pipelines::create_table();
 	\DataMachine\Core\Database\Flows\Flows::create_table();
+	\DataMachine\Core\Database\Jobs\Jobs::create_table();
+
+	$processed_items = new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
+	$processed_items->create_table();
 }
 
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );

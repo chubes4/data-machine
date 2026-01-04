@@ -21,6 +21,10 @@ Handlers can declare whether they require authentication via the `requires_auth`
 - PUT `/auth/{handler_slug}` - Returns success without requiring credentials
 - DELETE `/auth/{handler_slug}` - Returns success without disconnection operations
 
+## Provider Key Resolution
+
+Auth endpoints accept `{handler_slug}` in the URL, but internally they resolve the auth provider via the handler's `auth_provider_key` (from the Handlers registry). This supports shared authentication across multiple handlers (for example, one set of Meta credentials used by multiple publish destinations).
+
 ## Endpoints
 
 ### GET /auth/{handler_slug}/status

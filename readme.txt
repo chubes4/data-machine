@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.8.11
+Stable tag: 0.8.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -246,6 +246,14 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 5. Chat Interface - Build workflows through conversational AI
 
 == Changelog ==
+
+= 0.8.12 =
+* Core: Implemented Shared Authentication support, allowing handlers to share credentials via a centralized provider key.
+* Flows: Refined flow duplication to ensure only scheduling intervals are copied, excluding run history and status metadata.
+* Services: Added automatic configuration cleaning when switching handlers in a flow step to prevent legacy field leakage.
+* API: Added settings_summary to flow steps for improved UI overview display.
+* Settings: Renamed admin localization object to dataMachineSettingsConfig to prevent collisions.
+* Testing: Enhanced test bootstrap with support for the datamachine-events extension and improved database table setup.
 
 = 0.8.11 =
 * API: Added PATCH /flows/steps/{id}/config endpoint for incremental configuration updates.

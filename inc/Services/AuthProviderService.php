@@ -16,6 +16,33 @@ defined('ABSPATH') || exit;
 class AuthProviderService {
 
     /**
+     * Resolve the auth provider key for a handler slug.
+     *
+     * Handlers can share authentication by setting `auth_provider_key` during
+     * registration (see HandlerRegistrationTrait). This method centralizes the
+     * mapping so callers do not assume provider key === handler slug.
+     *
+     * @param string $handler_slug Handler slug.
+     * @return string Provider key to use for lookups.
+     */
+    public function resolveProviderKey(string $handler_slug): string {
+        $handler = (new HandlerService())->get($handler_slug);
+
+        if (!is_array($handler)) {
+            return $handler_slug;
+        }
+
+        $auth_provider_key = $handler['auth_provider_key'] ?? null;
+
+        if (!is_string($auth_provider_key) || $auth_provider_key === '') {
+            return $handler_slug;
+        }
+
+        return $auth_provider_key;
+    }
+
+
+    /**
      * Cached auth providers.
      *
      * @var array|null
@@ -36,14 +63,25 @@ class AuthProviderService {
     }
 
     /**
-     * Get auth provider instance by handler slug.
+     * Get auth provider instance by provider key.
      *
-     * @param string $handler_slug Handler slug (e.g., 'twitter', 'reddit')
+     * @param string $provider_key Provider key (e.g., 'facebook', 'reddit')
      * @return object|null Auth provider instance or null
      */
-    public function get(string $handler_slug): ?object {
+    public function get(string $provider_key): ?object {
         $providers = $this->getAll();
-        return $providers[$handler_slug] ?? null;
+        return $providers[$provider_key] ?? null;
+    }
+
+    /**
+     * Get auth provider instance from a handler slug.
+     *
+     * @param string $handler_slug Handler slug.
+     * @return object|null Auth provider instance or null.
+     */
+    public function getForHandler(string $handler_slug): ?object {
+        $provider_key = $this->resolveProviderKey($handler_slug);
+        return $this->get($provider_key);
     }
 
     /**
@@ -53,7 +91,7 @@ class AuthProviderService {
      * @return bool True if auth provider exists
      */
     public function exists(string $handler_slug): bool {
-        return $this->get($handler_slug) !== null;
+        return $this->getForHandler($handler_slug) !== null;
     }
 
     /**
@@ -63,7 +101,7 @@ class AuthProviderService {
      * @return bool True if authenticated
      */
     public function isAuthenticated(string $handler_slug): bool {
-        $provider = $this->get($handler_slug);
+        $provider = $this->getForHandler($handler_slug);
 
         if (!$provider || !method_exists($provider, 'is_authenticated')) {
             return false;
@@ -79,7 +117,7 @@ class AuthProviderService {
      * @return array Status array with exists, authenticated, and provider keys
      */
     public function getStatus(string $handler_slug): array {
-        $provider = $this->get($handler_slug);
+        $provider = $this->getForHandler($handler_slug);
 
         if (!$provider) {
             return [

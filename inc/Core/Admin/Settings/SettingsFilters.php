@@ -23,11 +23,6 @@ function datamachine_register_settings_admin_page_filters() {
             'templates' => DATAMACHINE_PATH . 'inc/Core/Admin/Settings/templates/',
             'assets' => [
                 'css' => [
-                    'datamachine-settings-react' => [
-                        'file' => 'inc/Core/Admin/assets/build/settings-react.css',
-                        'deps' => ['wp-components'],
-                        'media' => 'all'
-                    ],
                     'datamachine-settings-page' => [
                         'file' => 'inc/Core/Admin/Settings/assets/css/settings-page.css',
                         'deps' => [],
@@ -40,7 +35,7 @@ function datamachine_register_settings_admin_page_filters() {
                         'deps' => ['wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch'],
                         'in_footer' => true,
                         'localize' => [
-                            'object' => 'dataMachineConfig',
+                            'object' => 'dataMachineSettingsConfig',
                             'data' => [
                                 'restNamespace' => 'datamachine/v1',
                                 'restNonce' => wp_create_nonce('wp_rest'),

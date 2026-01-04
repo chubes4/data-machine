@@ -132,7 +132,7 @@ ACTIONS:
 				continue;
 			}
 
-			$auth_instance = $auth_service->get($slug);
+			$auth_instance = $auth_service->getForHandler($slug);
 			if (!$auth_instance) {
 				continue;
 			}
@@ -296,7 +296,7 @@ ACTIONS:
 
 	private function getAuthProvider(string $slug) {
 		$auth_service = new AuthProviderService();
-		return $auth_service->get($slug);
+		return $auth_service->getForHandler($slug);
 	}
 
 	private function detectAuthType($instance): string {

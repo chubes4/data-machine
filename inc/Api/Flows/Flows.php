@@ -340,6 +340,16 @@ class Flows {
 				$handler_slug,
 				$step_data['handler_config'] ?? []
 			);
+
+			// Map display settings to a clean string for UI summaries
+			if (!empty($step_data['settings_display']) && is_array($step_data['settings_display'])) {
+				$display_parts = array_map(function($setting) {
+					return sprintf('%s: %s', $setting['label'], $setting['display_value']);
+				}, $step_data['settings_display']);
+				$step_data['settings_summary'] = implode(' | ', $display_parts);
+			} else {
+				$step_data['settings_summary'] = '';
+			}
 		}
 		unset($step_data);
 

@@ -72,10 +72,23 @@ class SettingsDisplayService {
         $acronyms = $this->getAcronymMappings();
         $settings_display = [];
 
+        // Check if we have a primary venue selected to suppress manual fields in summary
+        $has_primary_venue = !empty($current_settings['venue']);
+        $venue_manual_fields = [
+            'venue_name', 'venue_address', 'venue_city', 'venue_state', 
+            'venue_zip', 'venue_country', 'venue_phone', 'venue_website', 
+            'venue_capacity'
+        ];
+
         // Iterate through fields to respect Settings class order
         foreach ($fields as $key => $field_config) {
             // Check if this field has a value in current settings
             if (!isset($current_settings[$key])) {
+                continue;
+            }
+
+            // Suppress manual venue fields if a primary venue term is selected
+            if ($has_primary_venue && in_array($key, $venue_manual_fields, true)) {
                 continue;
             }
 
