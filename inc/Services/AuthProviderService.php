@@ -57,6 +57,14 @@ class AuthProviderService {
     private static ?array $cache = null;
 
     /**
+     * Clear cached auth providers.
+     * Call when handlers are dynamically registered.
+     */
+    public static function clearCache(): void {
+        self::$cache = null;
+    }
+
+    /**
      * Get all registered auth providers (cached).
      *
      * @return array Auth providers array keyed by handler slug

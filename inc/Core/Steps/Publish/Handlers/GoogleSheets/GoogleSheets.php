@@ -66,17 +66,17 @@ class GoogleSheets extends PublishHandler {
             },
             'googlesheets'
         );
-
-        // Use shared auth provider via base class method
-        $this->auth = $this->getAuthProvider('googlesheets');
     }
 
     /**
-     * Get Google Sheets auth handler - internal implementation.
-     * 
-     * @return GoogleSheetsAuth
+     * Lazy-load auth provider when needed.
+     *
+     * @return \DataMachine\Core\OAuth\Providers\GoogleSheetsAuth|null
      */
-    private function get_auth() {
+    private function get_auth(): ?object {
+        if ($this->auth === null) {
+            $this->auth = $this->getAuthProvider('googlesheets');
+        }
         return $this->auth;
     }
 
@@ -132,7 +132,7 @@ class GoogleSheets extends PublishHandler {
         }
 
         // Get authenticated service
-        $sheets_service = $this->auth->get_service();
+        $sheets_service = $this->get_auth()->get_service();
         if (is_wp_error($sheets_service)) {
             return $this->errorResponse(
                 'Google Sheets authentication failed: ' . $sheets_service->get_error_message(),

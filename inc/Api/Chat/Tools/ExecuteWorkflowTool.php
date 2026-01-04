@@ -43,16 +43,6 @@ class ExecuteWorkflowTool {
 IMPORTANT: Only use handler_config keys listed in the handler documentation below.
 
 ' . $handler_docs . '
-TAXONOMY CONFIGURATION (wordpress_publish handler):
-For each taxonomy, use key: taxonomy_{taxonomy_name}_selection
-Values:
-- "skip": Don\'t assign this taxonomy
-- "ai_decides": AI assigns based on content at runtime
-- "Term Name": Pre-select this term (use exact term name from site context)
-
-Example: taxonomy_category_selection: "ai_decides"
-Example: taxonomy_location_selection: "Charleston"
-
 WORKFLOW PATTERNS:
 - Content syndication: fetch → ai → publish
 - Content enhancement: fetch → ai → update

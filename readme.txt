@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.8.16
+Stable tag: 0.8.17
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -246,6 +246,12 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 5. Chat Interface - Build workflows through conversational AI
 
 == Changelog ==
+
+= 0.8.17 =
+* Google Sheets: Refactored authentication to lazy-load the auth provider only when needed, improving performance and avoiding unnecessary API calls.
+* API: Added `AuthProviderService::clearCache()` and integrated it into the centralized `CacheManager` to ensure auth provider caches are synchronized during dynamic registration.
+* Chat Agent: Simplified `ExecuteWorkflowTool` documentation by removing redundant taxonomy configuration examples, relying on the unified handler documentation instead.
+* Core: Standardized auth provider cache invalidation across the plugin lifecycle.
 
 = 0.8.16 =
 * Settings: Added new Tool Configuration UI in the Agent tab, allowing users to configure tool-specific settings directly.

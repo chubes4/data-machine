@@ -34,6 +34,7 @@ class CacheManager {
      */
     public static function clearHandlerCaches(): void {
         HandlerService::clearCache();
+        AuthProviderService::clearCache();
 
         if (class_exists('\DataMachine\Api\Chat\Tools\HandlerDocumentation')) {
             \DataMachine\Api\Chat\Tools\HandlerDocumentation::clearCache();

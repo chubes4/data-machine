@@ -5,6 +5,18 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.17] - 2026-01-04
+
+### Improved
+- **Google Sheets Lazy Auth** - Refactored `GoogleSheets` publish handler to lazy-load its authentication provider only when an execution is actually triggered, reducing initialization overhead.
+- **Auth Provider Caching** - Added `clearCache()` to `AuthProviderService` and integrated it into `CacheManager::clearHandlerCaches()` for robust synchronization during dynamic handler registration.
+- **Tool Documentation Cleanup** - Simplified the `execute_workflow` chat tool documentation by removing redundant taxonomy configuration sections, improving prompt clarity.
+
+### Technical Details
+- **Core**: Added `AuthProviderService::clearCache()` to manage static cache state.
+- **Core**: Updated `CacheManager::clearHandlerCaches()` to include auth provider invalidation.
+- **Handlers**: Updated `GoogleSheets.php` with `get_auth()` lazy-loader.
+
 ## [0.8.16] - 2026-01-04
 
 ### Added
