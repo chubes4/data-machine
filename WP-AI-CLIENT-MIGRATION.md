@@ -3,8 +3,16 @@
 ## Migration: `chubes4/ai-http-client` → `wordpress/wp-ai-client`
 
 **Target Version**: Data Machine v0.9.0  
-**Status**: Planning  
+**Status**: PAUSED (Blocking Issue)  
 **Approach**: Full Native Integration (no adapter layer)
+
+---
+
+## CRITICAL BLOCKER
+
+**Migration is paused until `wordpress/wp-ai-client` supports custom API key storage locations.**
+
+Current Constraint: `wp-ai-client` defaults to its own internal settings storage. Data Machine requires the ability to point the client to its own encrypted settings/options table or provide keys dynamically at runtime to maintain architectural consistency and security standards.
 
 ---
 
