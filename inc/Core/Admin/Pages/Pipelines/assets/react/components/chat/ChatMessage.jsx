@@ -6,6 +6,7 @@
  */
 
 import { __ } from '@wordpress/i18n';
+import ReactMarkdown from 'react-markdown';
 
 export default function ChatMessage({ message }) {
 	const { role, content, tool_calls } = message;
@@ -22,7 +23,7 @@ export default function ChatMessage({ message }) {
 	return (
 		<div className={ `datamachine-chat-message datamachine-chat-message--${ role }` }>
 			<div className="datamachine-chat-message__content">
-				{ content }
+				<ReactMarkdown>{ content }</ReactMarkdown>
 			</div>
 			{ isAssistant && toolNames.length > 0 && (
 				<div className="datamachine-chat-message__tools">

@@ -35,6 +35,7 @@ class CreateFlow {
      */
     public function getToolDefinition(): array {
         $intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
+        $valid_scheduling = array_merge(['manual', 'one_time'], $intervals);
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
@@ -55,7 +56,7 @@ class CreateFlow {
                 'scheduling_config' => [
                     'type' => 'object',
                     'required' => false,
-                    'description' => 'Scheduling configuration: {interval: "' . implode('|', $intervals) . '"} or {interval: "one_time", timestamp: unix_timestamp}'
+                    'description' => 'Scheduling configuration: {interval: "' . implode('|', $valid_scheduling) . '"} or {interval: "one_time", timestamp: unix_timestamp}'
                 ],
                 'step_configs' => [
                     'type' => 'object',
@@ -246,7 +247,8 @@ class CreateFlow {
             return 'scheduling_config requires an interval property';
         }
 
-        $valid_intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
+        $intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
+        $valid_intervals = array_merge(['manual', 'one_time'], $intervals);
         if (!in_array($interval, $valid_intervals, true)) {
             return 'Invalid interval. Must be one of: ' . implode(', ', $valid_intervals);
         }

@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.8.8
+Stable tag: 0.8.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -246,6 +246,18 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 5. Chat Interface - Build workflows through conversational AI
 
 == Changelog ==
+
+= 0.8.10 =
+* Chat Agent UI: Integrated react-markdown for rich text rendering in the chat sidebar.
+* Chat Agent Styling: Added comprehensive CSS for headers, lists, and code blocks in chat messages.
+* Scheduling Refinement: Separated recurring intervals from manual and one-time scheduling logic for improved reliability.
+* AI Tools: Updated CreateFlow, UpdateFlow, CopyFlow, and CreatePipeline tools with explicit non-recurring scheduling support.
+* Maintenance: Cleaned up stale React build assets and updated build configurations.
+
+= 0.8.9 =
+* Ephemeral Workflows: Support for temporary workflows that execute without database persistence.
+* Expanded Scheduling: Added every_5_minutes, every_2_hours, every_4_hours, qtrdaily, and twicedaily intervals.
+* Chat Tool UI: New ToolMessage.jsx component and expanded interval support in tools.
 
 = 0.8.8 =
 * Settings UI Optimization: Simplified AI provider API key configuration while maintaining server-side security.

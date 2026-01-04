@@ -3,7 +3,7 @@
  * Scheduler Intervals Filter
  *
  * Defines available scheduling intervals for flow execution.
- * Single source of truth for all interval options.
+ * Single source of truth for all recurring interval options.
  *
  * @package DataMachine\Engine\Filters
  * @since 0.8.9
@@ -18,14 +18,6 @@ defined('ABSPATH') || exit;
  */
 function datamachine_get_default_scheduler_intervals(): array {
     return [
-        'manual' => [
-            'label' => 'Manual',
-            'seconds' => 0,
-        ],
-        'one_time' => [
-            'label' => 'One Time',
-            'seconds' => 0,
-        ],
         'every_5_minutes' => [
             'label' => 'Every 5 Minutes',
             'seconds' => 300,
@@ -64,7 +56,7 @@ function datamachine_get_default_scheduler_intervals(): array {
         ],
         'monthly' => [
             'label' => 'Monthly',
-            'seconds' => MONTH_IN_SECONDS,
+            'seconds' => DAY_IN_SECONDS * 30,
         ],
     ];
 }

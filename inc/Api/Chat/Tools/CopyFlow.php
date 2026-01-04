@@ -34,6 +34,7 @@ class CopyFlow {
      */
     public function getToolDefinition(): array {
         $intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
+        $valid_scheduling = array_merge(['manual', 'one_time'], $intervals);
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
@@ -57,7 +58,7 @@ class CopyFlow {
                 'scheduling_config' => [
                     'type' => 'object',
                     'required' => false,
-                    'description' => 'Override schedule config. If not provided, copies source flow schedule. Format: {interval: "' . implode('|', $intervals) . '"}'
+                    'description' => 'Override schedule config. If not provided, copies source flow schedule. Format: {interval: "' . implode('|', $valid_scheduling) . '"}'
                 ],
                 'step_config_overrides' => [
                     'type' => 'object',

@@ -40,6 +40,7 @@ class CreatePipeline {
 		$valid_types = self::getValidStepTypes();
 		$types_list = !empty($valid_types) ? implode('|', $valid_types) : 'fetch|ai|publish|update';
 		$intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
+		$valid_scheduling = array_merge(['manual', 'one_time'], $intervals);
 		return [
 			'class' => self::class,
 			'method' => 'handle_tool_call',
@@ -63,7 +64,7 @@ class CreatePipeline {
 				'scheduling_config' => [
 					'type' => 'object',
 					'required' => false,
-					'description' => 'Scheduling: {interval: "' . implode('|', $intervals) . '"} or {interval: "one_time", timestamp: unix_timestamp}. Defaults to manual.'
+					'description' => 'Scheduling: {interval: "' . implode('|', $valid_scheduling) . '"} or {interval: "one_time", timestamp: unix_timestamp}. Defaults to manual.'
 				]
 			]
 		];
@@ -168,7 +169,8 @@ class CreatePipeline {
 			return 'scheduling_config requires an interval property';
 		}
 
-		$valid_intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
+		$intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
+		$valid_intervals = array_merge(['manual', 'one_time'], $intervals);
 		if (!in_array($interval, $valid_intervals, true)) {
 			return 'Invalid interval. Must be one of: ' . implode(', ', $valid_intervals);
 		}

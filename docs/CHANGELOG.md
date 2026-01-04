@@ -5,6 +5,22 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.10] - 2026-01-04
+
+### Added
+- **Markdown Support in Chat** - Integrated `react-markdown` for rich text rendering of AI responses, including headers, lists, and formatted code blocks.
+- **Enhanced Chat Styling** - Added comprehensive CSS for the chat sidebar to properly render Markdown elements with distinct styling for user and assistant messages.
+
+### Improved
+- **Scheduling Architecture** - Decoupled recurring intervals from `manual` and `one_time` scheduling logic in `SchedulerIntervals.php`, providing a cleaner single source of truth for background tasks.
+- **AI Tool Reliability** - Updated `CreateFlow`, `UpdateFlow`, `CopyFlow`, and `CreatePipeline` chat tools to explicitly support the full range of scheduling options including non-recurring modes.
+- **Build Process** - Cleaned up stale React build assets and updated `.gitignore` to prevent tracking of unnecessary build artifacts.
+
+### Technical Details
+- **Frontend**: Added `react-markdown` dependency to `package.json` and updated `ChatMessage.jsx`.
+- **CSS**: Refactored `chat-sidebar.css` with dedicated styles for Markdown-rendered HTML elements.
+- **Core**: Refined `datamachine_get_default_scheduler_intervals()` to focus on recurring tasks while maintaining tool-level support for manual/one-time execution.
+
 ## [0.8.9] - 2026-01-04
 
 ### Added

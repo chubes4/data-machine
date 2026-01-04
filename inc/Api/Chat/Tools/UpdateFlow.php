@@ -30,6 +30,7 @@ class UpdateFlow {
      */
     public function getToolDefinition(): array {
         $intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
+        $valid_scheduling = array_merge(['manual', 'one_time'], $intervals);
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
@@ -48,7 +49,7 @@ class UpdateFlow {
                 'schedule' => [
                     'type' => 'object',
                     'required' => false,
-                    'description' => 'Scheduling configuration. Use {interval: "' . implode('|', $intervals) . '"} or {interval: "one_time", timestamp: unix_timestamp}. Note: "twicedaily" is 12-hour intervals.'
+                    'description' => 'Scheduling configuration. Use {interval: "' . implode('|', $valid_scheduling) . '"} or {interval: "one_time", timestamp: unix_timestamp}. Note: "twicedaily" is 12-hour intervals.'
                 ],
                 'scheduling_config' => [
                     'type' => 'object',
@@ -155,7 +156,8 @@ class UpdateFlow {
             return 'scheduling_config requires an interval property';
         }
 
-        $valid_intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
+        $intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
+        $valid_intervals = array_merge(['manual', 'one_time'], $intervals);
         if (!in_array($interval, $valid_intervals, true)) {
             return 'Invalid interval. Must be one of: ' . implode(', ', $valid_intervals);
         }
