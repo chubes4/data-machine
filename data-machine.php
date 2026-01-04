@@ -32,6 +32,7 @@ define( 'DATAMACHINE_LOG_DIR', '/datamachine-logs' );
 require_once __DIR__ . '/vendor/autoload.php';
 
 // Load function files that define global functions used by the plugin
+require_once __DIR__ . '/inc/Engine/Filters/SchedulerIntervals.php';
 require_once __DIR__ . '/inc/Engine/Filters/DataMachineFilters.php';
 require_once __DIR__ . '/inc/Engine/Filters/Handlers.php';
 require_once __DIR__ . '/inc/Engine/Filters/Admin.php';
