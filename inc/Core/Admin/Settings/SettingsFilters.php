@@ -75,27 +75,12 @@ function datamachine_register_settings() {
 function datamachine_sanitize_settings($input) {
     $sanitized = [];
 
-    // Ensure defaults for missing arrays during activation
-    if (!isset($input['enabled_pages']) || !is_array($input['enabled_pages'])) {
-        $input['enabled_pages'] = [];
-    }
-
     if (!isset($input['enabled_tools']) || !is_array($input['enabled_tools'])) {
         $input['enabled_tools'] = [];
     }
 
     if (!isset($input['ai_provider_keys']) || !is_array($input['ai_provider_keys'])) {
         $input['ai_provider_keys'] = [];
-    }
-
-    // Enabled admin pages (array-safe)
-    $sanitized['enabled_pages'] = [];
-    if (!empty($input['enabled_pages']) && is_array($input['enabled_pages'])) {
-        foreach ($input['enabled_pages'] as $slug => $value) {
-            if ($value) {
-                $sanitized['enabled_pages'][sanitize_key($slug)] = true;
-            }
-        }
     }
 
     // Enabled tools (array-safe)

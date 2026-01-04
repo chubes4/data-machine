@@ -101,24 +101,6 @@ class ConfigureFlowSteps {
             ];
         }
 
-        // Validation: At least one of handler_config or user_message required
-        if (empty($handler_config) && empty($user_message)) {
-            return [
-                'success' => false,
-                'error' => 'At least one of handler_config or user_message is required',
-                'tool_name' => 'configure_flow_steps'
-            ];
-        }
-
-        // Validation: When pipeline_id provided, need step_type or handler_slug
-        if (!empty($pipeline_id) && empty($step_type) && empty($handler_slug)) {
-            return [
-                'success' => false,
-                'error' => 'When using pipeline_id (bulk mode), at least one of step_type or handler_slug is required',
-                'tool_name' => 'configure_flow_steps'
-            ];
-        }
-
         // Route to appropriate handler
         if (!empty($flow_step_id)) {
             return $this->handleSingleMode($flow_step_id, $handler_slug, $handler_config, $user_message);

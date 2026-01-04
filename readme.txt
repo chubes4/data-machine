@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.8.10
+Stable tag: 0.8.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -246,6 +246,13 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 5. Chat Interface - Build workflows through conversational AI
 
 == Changelog ==
+
+= 0.8.11 =
+* API: Added PATCH /flows/steps/{id}/config endpoint for incremental configuration updates.
+* API: Added GET /pipelines/{id} endpoint for single pipeline retrieval.
+* Settings: Simplified admin page management by removing "Enabled Pages" (all pages now enabled by default).
+* Core: Centralized scheduler intervals in SchedulerIntervals.php.
+* Tools: Improved ConfigureFlowSteps tool with more flexible bulk and single-step configuration logic.
 
 = 0.8.10 =
 * Chat Agent UI: Integrated react-markdown for rich text rendering in the chat sidebar.

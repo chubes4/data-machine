@@ -5,6 +5,25 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.11] - 2026-01-04
+
+### Added
+- **Incremental Flow Step Config** - New `PATCH /flows/steps/{id}/config` REST endpoint for updating handler slugs and configuration without full state replacement.
+- **Pipeline Retrieval API** - New `GET /pipelines/{id}` REST endpoint for retrieving individual pipeline details.
+- **Centralized Scheduler Intervals** - Introduced `SchedulerIntervals.php` to provide a single source of truth for all background task intervals.
+
+### Improved
+- **FlowStepManager Service** - Enhanced `updateHandler` to support optional handler slugs, allowing for configuration-only updates.
+- **ConfigureFlowSteps Chat Tool** - Refined validation logic and parameter handling for more reliable AI-led configuration.
+
+### Changed
+- **Admin Page Management** - Removed the "Enabled Pages" setting; all registered admin pages (Pipelines, Jobs, Logs, Settings) are now enabled by default to simplify onboarding.
+
+### Technical Details
+- **API**: Updated `FlowSteps.php` and `Pipelines.php` with new REST routes.
+- **Service**: Modified `inc/Services/FlowStepManager.php` to handle merged handler settings.
+- **Settings**: Cleaned up `SettingsFilters.php`, `Settings.php`, and `GeneralTab.jsx` to remove legacy page toggling logic.
+
 ## [0.8.10] - 2026-01-04
 
 ### Added

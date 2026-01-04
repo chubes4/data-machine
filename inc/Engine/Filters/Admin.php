@@ -61,8 +61,8 @@ function datamachine_register_admin_filters() {
  * @since 0.1.0
  */
 function datamachine_register_admin_menu() {
-    // Get enabled admin pages based on settings (includes Engine Mode check)
-    $registered_pages = datamachine_get_enabled_admin_pages();
+    // Get all registered admin pages
+    $registered_pages = apply_filters('datamachine_admin_pages', []);
     
     // Only create Data Machine menu if pages are available and not in Engine Mode
     if (empty($registered_pages)) {

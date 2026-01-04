@@ -12,7 +12,6 @@ const GeneralTab = () => {
 	const updateMutation = useUpdateSettings();
 
 	const [ formState, setFormState ] = useState( {
-		enabled_pages: {},
 		cleanup_job_data_on_failure: true,
 		file_retention_days: 7,
 	} );
@@ -22,24 +21,12 @@ const GeneralTab = () => {
 	useEffect( () => {
 		if ( data?.settings ) {
 			setFormState( {
-				enabled_pages: data.settings.enabled_pages || {},
 				cleanup_job_data_on_failure: data.settings.cleanup_job_data_on_failure ?? true,
 				file_retention_days: data.settings.file_retention_days ?? 7,
 			} );
 			setHasChanges( false );
 		}
 	}, [ data ] );
-
-	const handlePageToggle = ( slug, enabled ) => {
-		setFormState( ( prev ) => ( {
-			...prev,
-			enabled_pages: {
-				...prev.enabled_pages,
-				[ slug ]: enabled,
-			},
-		} ) );
-		setHasChanges( true );
-	};
 
 	const handleCleanupToggle = ( enabled ) => {
 		setFormState( ( prev ) => ( {
@@ -88,42 +75,10 @@ const GeneralTab = () => {
 		);
 	}
 
-	const adminPages = data?.admin_pages || {};
-
 	return (
 		<div className="datamachine-general-tab">
 			<table className="form-table">
 				<tbody>
-					<tr>
-						<th scope="row">Admin Pages</th>
-						<td>
-							{ Object.keys( adminPages ).length > 0 ? (
-								<fieldset>
-									{ Object.entries( adminPages ).map( ( [ slug, pageConfig ] ) => {
-										const pageTitle = pageConfig.menu_title || pageConfig.page_title || slug;
-										const isEnabled = formState.enabled_pages[ slug ] ?? true;
-
-										return (
-											<label key={ slug } className="datamachine-settings-page-item">
-												<input
-													type="checkbox"
-													checked={ isEnabled }
-													onChange={ ( e ) => handlePageToggle( slug, e.target.checked ) }
-												/>
-												{ pageTitle }
-											</label>
-										);
-									} ) }
-									<p className="description">
-										Unchecked pages will not appear in the WordPress admin menu.
-									</p>
-								</fieldset>
-							) : (
-								<p>No admin pages are currently registered.</p>
-							) }
-						</td>
-					</tr>
-
 					<tr>
 						<th scope="row">Clean up job data on failure</th>
 						<td>

@@ -48,11 +48,11 @@ class FlowStepManager {
      * Update handler configuration for a flow step.
      *
      * @param string $flow_step_id Flow step ID (format: pipeline_step_id_flow_id)
-     * @param string $handler_slug Handler slug to set
+     * @param string $handler_slug Handler slug to set (optional, uses existing if empty)
      * @param array $handler_settings Handler configuration settings
      * @return bool Success status
      */
-    public function updateHandler(string $flow_step_id, string $handler_slug, array $handler_settings = []): bool {
+    public function updateHandler(string $flow_step_id, string $handler_slug = '', array $handler_settings = []): bool {
         $parts = apply_filters('datamachine_split_flow_step_id', null, $flow_step_id);
         if (!$parts) {
             do_action('datamachine_log', 'error', 'Invalid flow_step_id format for handler update', ['flow_step_id' => $flow_step_id]);
@@ -89,10 +89,18 @@ class FlowStepManager {
             ];
         }
 
-        $flow_config[$flow_step_id]['handler_slug'] = $handler_slug;
+        // Use provided slug or existing one
+        $effective_slug = !empty($handler_slug) ? $handler_slug : ($flow_config[$flow_step_id]['handler_slug'] ?? null);
+
+        if (empty($effective_slug)) {
+            do_action('datamachine_log', 'error', 'No handler slug available for flow step update', ['flow_step_id' => $flow_step_id]);
+            return false;
+        }
+
+        $flow_config[$flow_step_id]['handler_slug'] = $effective_slug;
         $existing_handler_config = $flow_config[$flow_step_id]['handler_config'] ?? [];
         $merged_config = array_merge($existing_handler_config, $handler_settings);
-        $flow_config[$flow_step_id]['handler_config'] = $this->handler_service->applyDefaults($handler_slug, $merged_config);
+        $flow_config[$flow_step_id]['handler_config'] = $this->handler_service->applyDefaults($effective_slug, $merged_config);
         $flow_config[$flow_step_id]['enabled'] = true;
 
         $success = $this->db_flows->update_flow($flow_id, [

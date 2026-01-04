@@ -113,6 +113,72 @@ class FlowSteps {
 				],
 			]
 		]);
+
+		register_rest_route('datamachine/v1', '/flows/steps/(?P<flow_step_id>[A-Za-z0-9_\-]+)/config', [
+			'methods' => 'PATCH',
+			'callback' => [self::class, 'handle_patch_flow_step_config'],
+			'permission_callback' => [self::class, 'check_permission'],
+			'args' => [
+				'flow_step_id' => [
+					'required' => true,
+					'type' => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+					'description' => __('Flow step ID (composite key: pipeline_step_id_flow_id)', 'data-machine'),
+				],
+				'handler_slug' => [
+					'required' => false,
+					'type' => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+					'description' => __('Handler identifier', 'data-machine'),
+				],
+				'handler_config' => [
+					'required' => false,
+					'type' => 'object',
+					'description' => __('Handler configuration settings to merge', 'data-machine'),
+				],
+				'user_message' => [
+					'required' => false,
+					'type' => 'string',
+					'sanitize_callback' => 'sanitize_textarea_field',
+					'description' => __('User message for AI step', 'data-machine'),
+				],
+			]
+		]);
+	}
+
+	/**
+	 * Handle flow step configuration patch
+	 *
+	 * PATCH /datamachine/v1/flows/steps/{flow_step_id}/config
+	 */
+	public static function handle_patch_flow_step_config($request) {
+		$flow_step_id = sanitize_text_field($request->get_param('flow_step_id'));
+		$handler_slug = $request->get_param('handler_slug');
+		$handler_config = $request->get_param('handler_config') ?: [];
+		$user_message = $request->get_param('user_message');
+
+		$manager = new FlowStepManager();
+
+		if ($handler_slug !== null || !empty($handler_config)) {
+			// If handler_slug is provided, we use it. If not, manager uses existing.
+			$slug = $handler_slug ?: '';
+			$success = $manager->updateHandler($flow_step_id, $slug, $handler_config);
+			if (!$success) {
+				return new \WP_Error('handler_update_failed', __('Failed to update handler config', 'data-machine'), ['status' => 500]);
+			}
+		}
+
+		if ($user_message !== null) {
+			$success = $manager->updateUserMessage($flow_step_id, $user_message);
+			if (!$success) {
+				return new \WP_Error('user_message_update_failed', __('Failed to update user message', 'data-machine'), ['status' => 500]);
+			}
+		}
+
+		return rest_ensure_response([
+			'success' => true,
+			'message' => __('Flow step updated successfully', 'data-machine')
+		]);
 	}
 
 	/**

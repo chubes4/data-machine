@@ -120,6 +120,19 @@ class Pipelines {
 
 		register_rest_route('datamachine/v1', '/pipelines/(?P<pipeline_id>\d+)', [
 			[
+				'methods' => WP_REST_Server::READABLE,
+				'callback' => [self::class, 'handle_get_pipelines'],
+				'permission_callback' => [self::class, 'check_permission'],
+				'args' => [
+					'pipeline_id' => [
+						'required' => true,
+						'type' => 'integer',
+						'sanitize_callback' => 'absint',
+						'description' => __('Pipeline ID to retrieve', 'data-machine'),
+					],
+				]
+			],
+			[
 				'methods' => WP_REST_Server::DELETABLE,
 				'callback' => [self::class, 'handle_delete_pipeline'],
 				'permission_callback' => [self::class, 'check_permission'],

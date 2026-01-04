@@ -180,16 +180,6 @@ class Settings {
 	public static function handle_get_settings($request) {
 		$settings = PluginSettings::all();
 
-		// Get admin pages for enabled_pages configuration (keyed by slug for frontend)
-		$admin_pages = apply_filters('datamachine_admin_pages', []);
-		$admin_pages_keyed = [];
-		foreach ($admin_pages as $slug => $config) {
-			$admin_pages_keyed[$slug] = [
-				'menu_title' => $config['menu_title'] ?? null,
-				'page_title' => $config['page_title'] ?? ucfirst($slug),
-			];
-		}
-
 		// Get global tools for agent tab (keyed by tool name for frontend)
 		$tool_manager = new \DataMachine\Engine\AI\Tools\ToolManager();
 		$global_tools = $tool_manager->get_global_tools();
@@ -224,7 +214,6 @@ class Settings {
 			'success' => true,
 			'data' => [
 				'settings' => [
-					'enabled_pages' => $settings['enabled_pages'] ?? [],
 					'cleanup_job_data_on_failure' => $settings['cleanup_job_data_on_failure'] ?? true,
 					'file_retention_days' => $settings['file_retention_days'] ?? 7,
 					'global_system_prompt' => $settings['global_system_prompt'] ?? '',
@@ -235,7 +224,6 @@ class Settings {
 					'enabled_tools' => $settings['enabled_tools'] ?? [],
 					'ai_provider_keys' => $masked_keys,
 				],
-				'admin_pages' => $admin_pages_keyed,
 				'global_tools' => $tools_keyed,
 			]
 		]);
@@ -254,15 +242,6 @@ class Settings {
 		$params = $request->get_json_params();
 
 		// Handle each setting type
-		if (isset($params['enabled_pages'])) {
-			$all_settings['enabled_pages'] = [];
-			foreach ($params['enabled_pages'] as $slug => $enabled) {
-				if ($enabled) {
-					$all_settings['enabled_pages'][sanitize_key($slug)] = true;
-				}
-			}
-		}
-
 		if (isset($params['cleanup_job_data_on_failure'])) {
 			$all_settings['cleanup_job_data_on_failure'] = (bool) $params['cleanup_job_data_on_failure'];
 		}
