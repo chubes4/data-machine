@@ -1,16 +1,16 @@
 # Data Machine Architecture
 
-Data Machine is an AI-first WordPress plugin that uses a Pipeline+Flow architecture for automated content processing and publication. It provides multi-provider AI integration with tool-first design patterns.
+Data Machine is an AI-first WordPress plugin that uses a Pipeline+Flow architecture for automated content processing and publication. It provides multi-provider AI integration with tool-first design patterns, centered around a reliability-first **Single Item Execution Model**.
 
 ## Core Components
 
 ### Pipeline+Flow System
 - **Pipelines**: Reusable templates containing step configurations
 - **Flows**: Configured instances of pipelines with scheduling
-- **Jobs**: Individual executions of flows with status tracking
+- **Jobs**: Individual executions of flows with status tracking, each processing exactly one item
 
 ### Execution Engine
-Services layer architecture with direct method calls for optimal performance.
+Services layer architecture with direct method calls for optimal performance. The engine implements a four-action execution cycle that processes exactly one item per job to ensure maximum reliability and isolation.
 
 ### Database Schema
 - `wp_datamachine_pipelines` - Pipeline templates (reusable)

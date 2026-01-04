@@ -12,6 +12,10 @@ The `PublishHandler` class (`/inc/Core/Steps/Publish/Handlers/PublishHandler.php
 
 ## Core Functionality
 
+### Single Item Execution Model
+
+In alignment with the **Single Item Execution Model**, publish handlers focus on processing the single data packet passed through the pipeline. This reliability-first approach ensures that each content publication is handled as an isolated transaction.
+
 ### Engine Data Retrieval
 
 Access data stored by fetch handlers:

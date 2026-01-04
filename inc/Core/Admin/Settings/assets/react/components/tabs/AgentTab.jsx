@@ -4,12 +4,12 @@
  * AI agent settings including tools, system prompt, provider/model, and conversation limits.
  */
 
-import { useState, useEffect, useMemo } from '@wordpress/element';
-import { useSettings, useUpdateSettings, useAIProviders } from '../../queries/settings';
+import { useState, useEffect } from '@wordpress/element';
+import { useSettings, useUpdateSettings } from '../../queries/settings';
+import ProviderModelSelector from '@shared/components/ai/ProviderModelSelector';
 
 const AgentTab = () => {
 	const { data, isLoading, error } = useSettings();
-	const { data: providers, isLoading: providersLoading } = useAIProviders();
 	const updateMutation = useUpdateSettings();
 
 	const [ formState, setFormState ] = useState( {
@@ -36,14 +36,6 @@ const AgentTab = () => {
 			setHasChanges( false );
 		}
 	}, [ data ] );
-
-	const availableModels = useMemo( () => {
-		if ( ! providers || ! formState.default_provider ) {
-			return [];
-		}
-		const provider = providers[ formState.default_provider ];
-		return provider?.models || [];
-	}, [ providers, formState.default_provider ] );
 
 	const handleToolToggle = ( toolName, enabled ) => {
 		setFormState( ( prev ) => {
@@ -90,7 +82,7 @@ const AgentTab = () => {
 		}
 	};
 
-	if ( isLoading || providersLoading ) {
+	if ( isLoading ) {
 		return (
 			<div className="datamachine-agent-tab-loading">
 				<span className="spinner is-active"></span>
@@ -108,7 +100,6 @@ const AgentTab = () => {
 	}
 
 	const globalTools = data?.global_tools || {};
-	const llmProviders = providers || {};
 
 	return (
 		<div className="datamachine-agent-tab">
@@ -119,42 +110,87 @@ const AgentTab = () => {
 						<td>
 							{ Object.keys( globalTools ).length > 0 ? (
 								<div className="datamachine-tool-config-grid">
-									{ globalTools && Object.entries( globalTools ).map( ( [ toolName, toolConfig ] ) => {
-										const isConfigured = toolConfig.is_configured;
-										const isEnabled = formState.enabled_tools?.[ toolName ] ?? false;
-										const requiresConfig = toolConfig.requires_configuration;
-										const toolLabel = toolConfig.label || toolName.replace( /_/g, ' ' );
+									{ globalTools &&
+										Object.entries( globalTools ).map(
+											( [ toolName, toolConfig ] ) => {
+												const isConfigured =
+													toolConfig.is_configured;
+												const isEnabled =
+													formState.enabled_tools?.[
+														toolName
+													] ?? false;
+												const toolLabel =
+													toolConfig.label ||
+													toolName.replace(
+														/_/g,
+														' '
+													);
 
-										return (
-											<div key={ toolName } className="datamachine-tool-config-item">
-												<h4>{ toolLabel }</h4>
-												{ toolConfig.description && (
-													<p className="description">{ toolConfig.description }</p>
-												) }
-												<div className="datamachine-tool-controls">
-													<span className={ `datamachine-config-status ${ isConfigured ? 'configured' : 'not-configured' }` }>
-														{ isConfigured ? 'Configured' : 'Not Configured' }
-													</span>
+												return (
+													<div
+														key={ toolName }
+														className="datamachine-tool-config-item"
+													>
+														<h4>{ toolLabel }</h4>
+														{ toolConfig.description && (
+															<p className="description">
+																{
+																	toolConfig.description
+																}
+															</p>
+														) }
+														<div className="datamachine-tool-controls">
+															<span
+																className={ `datamachine-config-status ${
+																	isConfigured
+																		? 'configured'
+																		: 'not-configured'
+																}` }
+															>
+																{ isConfigured
+																	? 'Configured'
+																	: 'Not Configured' }
+															</span>
 
-													{ isConfigured ? (
-														<label className="datamachine-tool-enabled-toggle">
-															<input
-																type="checkbox"
-																checked={ isEnabled }
-																onChange={ ( e ) => handleToolToggle( toolName, e.target.checked ) }
-															/>
-															Enable for agents
-														</label>
-													) : (
-														<label className="datamachine-tool-enabled-toggle datamachine-tool-disabled">
-															<input type="checkbox" disabled />
-															<span className="description">Configure to enable</span>
-														</label>
-													) }
-												</div>
-											</div>
-										);
-									} ) }
+															{ isConfigured ? (
+																<label className="datamachine-tool-enabled-toggle">
+																	<input
+																		type="checkbox"
+																		checked={
+																			isEnabled
+																		}
+																		onChange={ (
+																			e
+																		) =>
+																			handleToolToggle(
+																				toolName,
+																				e
+																					.target
+																					.checked
+																			)
+																		}
+																	/>
+																	Enable for
+																	agents
+																</label>
+															) : (
+																<label className="datamachine-tool-enabled-toggle datamachine-tool-disabled">
+																	<input
+																		type="checkbox"
+																		disabled
+																	/>
+																	<span className="description">
+																		Configure
+																		to
+																		enable
+																	</span>
+																</label>
+															) }
+														</div>
+													</div>
+												);
+											}
+										) }
 								</div>
 							) : (
 								<p>No global tools are currently available.</p>
@@ -164,7 +200,9 @@ const AgentTab = () => {
 
 					<tr>
 						<th scope="row">
-							<label htmlFor="global_system_prompt">Global System Prompt</label>
+							<label htmlFor="global_system_prompt">
+								Global System Prompt
+							</label>
 						</th>
 						<td>
 							<textarea
@@ -173,11 +211,18 @@ const AgentTab = () => {
 								cols="70"
 								className="large-text code"
 								value={ formState.global_system_prompt || '' }
-								onChange={ ( e ) => handleFieldChange( 'global_system_prompt', e.target.value ) }
+								onChange={ ( e ) =>
+									handleFieldChange(
+										'global_system_prompt',
+										e.target.value
+									)
+								}
 							/>
 							<p className="description">
-								Primary system message that sets the tone and overall behavior for all AI agents.
-								This is the first and most important instruction that influences every AI response in your workflows.
+								Primary system message that sets the tone and
+								overall behavior for all AI agents. This is the
+								first and most important instruction that
+								influences every AI response in your workflows.
 							</p>
 						</td>
 					</tr>
@@ -186,49 +231,20 @@ const AgentTab = () => {
 						<th scope="row">Default AI Provider &amp; Model</th>
 						<td>
 							<div className="datamachine-ai-provider-model-settings">
-								<div className="datamachine-provider-field">
-									<label htmlFor="default_provider">Default AI Provider</label>
-									<select
-										id="default_provider"
-										className="regular-text"
-										value={ formState.default_provider || '' }
-										onChange={ ( e ) => handleProviderChange( e.target.value ) }
-									>
-										<option value="">Select Provider...</option>
-										{ llmProviders && Object.entries( llmProviders )
-											.filter( ( [ , p ] ) => p.type === 'llm' )
-											.map( ( [ key, provider ] ) => (
-												<option key={ key } value={ key }>
-													{ provider.name || key }
-												</option>
-											) )
-										}
-									</select>
-								</div>
-
-								<div className="datamachine-model-field">
-									<label htmlFor="default_model">Default AI Model</label>
-									<select
-										id="default_model"
-										className="regular-text"
-										value={ formState.default_model || '' }
-										onChange={ ( e ) => handleModelChange( e.target.value ) }
-										disabled={ ! formState.default_provider }
-									>
-										<option value="">
-											{ formState.default_provider ? 'Select Model...' : 'Select provider first...' }
-										</option>
-										{ Array.isArray( availableModels ) && availableModels.map( ( model ) => (
-											<option key={ model.id || model } value={ model.id || model }>
-												{ model.name || model.id || model }
-											</option>
-										) ) }
-									</select>
-								</div>
+								<ProviderModelSelector
+									provider={ formState.default_provider }
+									model={ formState.default_model }
+									onProviderChange={ handleProviderChange }
+									onModelChange={ handleModelChange }
+									applyDefaults={ false }
+									providerLabel="Default AI Provider"
+									modelLabel="Default AI Model"
+								/>
 							</div>
 							<p className="description">
-								Set the default AI provider and model for new AI steps and chat requests.
-								These can be overridden on a per-step or per-request basis.
+								Set the default AI provider and model for new AI
+								steps and chat requests. These can be overridden
+								on a per-step or per-request basis.
 							</p>
 						</td>
 					</tr>
@@ -242,13 +258,20 @@ const AgentTab = () => {
 										type="checkbox"
 										id="site_context_enabled"
 										checked={ formState.site_context_enabled }
-										onChange={ ( e ) => handleFieldChange( 'site_context_enabled', e.target.checked ) }
+										onChange={ ( e ) =>
+											handleFieldChange(
+												'site_context_enabled',
+												e.target.checked
+											)
+										}
 									/>
-									Include WordPress site context in AI requests
+									Include WordPress site context in AI
+									requests
 								</label>
 								<p className="description">
-									Automatically provides site information (post types, taxonomies, user stats)
-									to AI agents for better context awareness.
+									Automatically provides site information
+									(post types, taxonomies, user stats) to AI
+									agents for better context awareness.
 								</p>
 							</fieldset>
 						</td>
@@ -256,21 +279,38 @@ const AgentTab = () => {
 
 					<tr>
 						<th scope="row">
-							<label htmlFor="max_turns">Maximum conversation turns</label>
+							<label htmlFor="max_turns">
+								Maximum conversation turns
+							</label>
 						</th>
 						<td>
 							<input
 								type="number"
 								id="max_turns"
 								value={ formState.max_turns }
-								onChange={ ( e ) => handleFieldChange( 'max_turns', Math.max( 1, Math.min( 50, parseInt( e.target.value, 10 ) || 1 ) ) ) }
+								onChange={ ( e ) =>
+									handleFieldChange(
+										'max_turns',
+										Math.max(
+											1,
+											Math.min(
+												50,
+												parseInt(
+													e.target.value,
+													10
+												) || 1
+											)
+										)
+									)
+								}
 								min="1"
 								max="50"
 								className="small-text"
 							/>
 							<p className="description">
-								Maximum number of conversation turns allowed for AI agents (1-50).
-								Applies to both pipeline and chat conversations.
+								Maximum number of conversation turns allowed for
+								AI agents (1-50). Applies to both pipeline and
+								chat conversations.
 							</p>
 						</td>
 					</tr>
@@ -288,15 +328,21 @@ const AgentTab = () => {
 				</button>
 
 				{ hasChanges && saveStatus !== 'saving' && (
-					<span className="datamachine-unsaved-indicator">Unsaved changes</span>
+					<span className="datamachine-unsaved-indicator">
+						Unsaved changes
+					</span>
 				) }
 
 				{ saveStatus === 'saved' && (
-					<span className="datamachine-saved-indicator">Settings saved!</span>
+					<span className="datamachine-saved-indicator">
+						Settings saved!
+					</span>
 				) }
 
 				{ saveStatus === 'error' && (
-					<span className="datamachine-error-indicator">Error saving settings</span>
+					<span className="datamachine-error-indicator">
+						Error saving settings
+					</span>
 				) }
 			</div>
 		</div>

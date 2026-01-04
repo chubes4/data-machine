@@ -12,12 +12,12 @@ The `Step` class (`/inc/Core/Steps/Step.php`) is the abstract base class for all
 
 ## Core Properties
 
-The base `Step` class provides access to all essential pipeline execution data:
+The base `Step` class provides access to all essential pipeline execution data, supporting the **Single Item Execution Model** by providing a standardized interface for processing a single unit of work:
 
 ```php
 protected int $job_id;              // Current job ID
 protected string $flow_step_id;     // Flow-specific step identifier
-protected array $dataPackets;       // Data packets from previous steps
+protected array $dataPackets;       // Data packets from previous steps (typically containing one primary item)
 protected array $flow_step_config;  // Step configuration
 protected array $engine_data;       // Engine data from database storage
 ```
@@ -31,7 +31,7 @@ abstract protected function executeStep(): array;
 ```
 
 This method should:
-- Process the current data packets
+- Process the current data packet (following the Single Item Execution Model)
 - Perform step-specific logic
 - Return updated data packets array
 - Use `DataPacket` class for standardized packet creation

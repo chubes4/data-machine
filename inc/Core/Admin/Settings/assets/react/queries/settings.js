@@ -2,6 +2,7 @@
  * Settings Query Hooks
  *
  * TanStack Query hooks for settings API operations.
+ * Provider queries have been moved to @shared/queries/providers.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -45,34 +46,5 @@ export const useUpdateSettings = () => {
 		onSuccess: () => {
 			queryClient.invalidateQueries( { queryKey: SETTINGS_KEY } );
 		},
-	} );
-};
-
-/**
- * Fetch AI providers with their models
- *
- * Returns providers in format: { provider_key: { label, models: [{ id, name }] } }
- */
-export const useAIProviders = () => {
-	return useQuery( {
-		queryKey: [ 'ai-providers' ],
-		queryFn: async () => {
-			const response = await client.get( '/providers' );
-			if ( ! response.success ) {
-				throw new Error( response.message || 'Failed to fetch AI providers' );
-			}
-			// Transform to format expected by settings tabs
-			// Add type: 'llm' for compatibility with existing filters
-			const providers = {};
-			for ( const [ key, provider ] of Object.entries( response.data.providers || {} ) ) {
-				providers[ key ] = {
-					...provider,
-					name: provider.label,
-					type: 'llm',
-				};
-			}
-			return providers;
-		},
-		staleTime: 10 * 60 * 1000, // 10 minutes - providers don't change often
 	} );
 };

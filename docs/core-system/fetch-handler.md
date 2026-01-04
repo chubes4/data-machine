@@ -12,6 +12,10 @@ The `FetchHandler` class (`/inc/Core/Steps/Fetch/Handlers/FetchHandler.php`) is 
 
 ## Core Functionality
 
+### Single Item Execution Model
+
+All fetch handlers implement the **Single Item Execution Model**, processing exactly one item per job execution. This ensures that failures are isolated to individual items and prevents batch processing timeouts.
+
 ### Deduplication Management
 
 Automatic deduplication tracking to prevent processing the same items multiple times:

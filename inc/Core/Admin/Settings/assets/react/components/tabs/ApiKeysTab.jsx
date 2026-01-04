@@ -5,11 +5,12 @@
  */
 
 import { useState, useEffect } from '@wordpress/element';
-import { useSettings, useUpdateSettings, useAIProviders } from '../../queries/settings';
+import { useSettings, useUpdateSettings } from '../../queries/settings';
+import { useProviders } from '@shared/queries/providers';
 
 const ApiKeysTab = () => {
 	const { data, isLoading, error } = useSettings();
-	const { data: providers, isLoading: providersLoading } = useAIProviders();
+	const { data: providersData, isLoading: providersLoading } = useProviders();
 	const updateMutation = useUpdateSettings();
 
 	const [ apiKeys, setApiKeys ] = useState( {} );
@@ -61,11 +62,10 @@ const ApiKeysTab = () => {
 		);
 	}
 
-	const llmProviders = Object.entries( providers || {} ).filter(
-		( [ , provider ] ) => provider.type === 'llm'
-	);
+	const providers = providersData?.providers || {};
+	const providerEntries = Object.entries( providers );
 
-	if ( llmProviders.length === 0 ) {
+	if ( providerEntries.length === 0 ) {
 		return (
 			<div className="datamachine-api-keys-tab">
 				<div className="notice notice-info">
@@ -78,19 +78,24 @@ const ApiKeysTab = () => {
 	return (
 		<div className="datamachine-api-keys-tab">
 			<p className="description">
-				Configure API keys for AI providers. Keys are stored securely and used for AI operations.
+				Configure API keys for AI providers. Keys are stored securely
+				and used for AI operations.
 			</p>
 
 			<table className="form-table">
 				<tbody>
-					{ llmProviders && llmProviders.map( ( [ key, provider ] ) => {
-						const providerName = provider.name || key.charAt( 0 ).toUpperCase() + key.slice( 1 );
+					{ providerEntries.map( ( [ key, provider ] ) => {
+						const providerName =
+							provider.label ||
+							key.charAt( 0 ).toUpperCase() + key.slice( 1 );
 						const currentValue = apiKeys[ key ] || '';
 
 						return (
 							<tr key={ key }>
 								<th scope="row">
-									<label htmlFor={ `ai_provider_keys_${ key }` }>
+									<label
+										htmlFor={ `ai_provider_keys_${ key }` }
+									>
 										{ providerName }
 									</label>
 								</th>
@@ -99,7 +104,12 @@ const ApiKeysTab = () => {
 										type="text"
 										id={ `ai_provider_keys_${ key }` }
 										value={ currentValue }
-										onChange={ ( e ) => handleKeyChange( key, e.target.value ) }
+										onChange={ ( e ) =>
+											handleKeyChange(
+												key,
+												e.target.value
+											)
+										}
 										className="regular-text"
 										placeholder="Enter API key..."
 										autoComplete="off"
@@ -122,15 +132,21 @@ const ApiKeysTab = () => {
 				</button>
 
 				{ hasChanges && saveStatus !== 'saving' && (
-					<span className="datamachine-unsaved-indicator">Unsaved changes</span>
+					<span className="datamachine-unsaved-indicator">
+						Unsaved changes
+					</span>
 				) }
 
 				{ saveStatus === 'saved' && (
-					<span className="datamachine-saved-indicator">Settings saved!</span>
+					<span className="datamachine-saved-indicator">
+						Settings saved!
+					</span>
 				) }
 
 				{ saveStatus === 'error' && (
-					<span className="datamachine-error-indicator">Error saving settings</span>
+					<span className="datamachine-error-indicator">
+						Error saving settings
+					</span>
 				) }
 			</div>
 		</div>

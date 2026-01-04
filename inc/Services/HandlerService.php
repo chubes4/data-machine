@@ -231,13 +231,6 @@ class HandlerService {
             }
         }
 
-        // Preserve keys not in schema for forward compatibility
-        foreach ($config as $key => $value) {
-            if (!isset($fields[$key])) {
-                $complete_config[$key] = $value;
-            }
-        }
-
         return $complete_config;
     }
 }

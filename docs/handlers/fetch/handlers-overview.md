@@ -215,12 +215,13 @@ if (empty($required_setting)) {
 
 ## Performance Considerations
 
-### Single Item Strategy
+### Single Item Execution Model
 
-Most handlers return exactly one item per execution:
-- Finds first eligible unprocessed item
-- Marks as processed immediately
-- Returns single DataPacket or empty array
+All fetch handlers follow the system-wide **Single Item Execution Model**:
+- Finds first eligible unprocessed item.
+- Marks as processed immediately to prevent concurrency issues.
+- Returns exactly one DataPacket (or an empty array if no new content exists).
+- Ensures job-level isolation and reliability.
 
 ### Memory Optimization
 

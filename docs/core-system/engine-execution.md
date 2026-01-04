@@ -1,6 +1,6 @@
 # Engine Execution System
 
-The Data Machine engine utilizes a four-action execution cycle (@since v0.8.0) that orchestrates all pipeline workflows through WordPress Action Scheduler. 
+The Data Machine engine utilizes a four-action execution cycle (@since v0.8.0) that orchestrates all pipeline workflows through WordPress Action Scheduler. This system implements a **Single Item Execution Model**, processing exactly one item per job execution to ensure maximum reliability and isolation.
 
 ## Execution Cycle
 
@@ -10,6 +10,15 @@ The engine follows a standardized cycle for both database-driven and ephemeral w
 2.  **`datamachine_execute_step`**: Performs the actual work of a single step (Fetch, AI, Publish, etc.).
 3.  **`datamachine_schedule_next_step`**: Persists data packets and schedules the next step in the sequence.
 4.  **`datamachine_run_flow_later`**: Handles scheduling logic, queuing the flow for future execution.
+
+## Single Item Execution Model
+
+At its core, the engine is designed for reliability-first processing. Instead of processing batches of items, which can lead to timeouts or cascading failures, the engine processes **exactly one item per job execution cycle**.
+
+- **Isolation**: Each item is processed in its own job context. A failure in one item does not affect others.
+- **Reliability**: Minimizes memory usage and execution time per step.
+- **Traceability**: Every processed item is linked to a specific job and log history.
+- **Consistency**: Steps (Fetch, AI, Publish) are built with the expectation of receiving and returning a single primary data packet.
 
 ## 1. Flow Initiation (`datamachine_run_flow_now`)
 

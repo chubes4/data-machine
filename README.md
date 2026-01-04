@@ -22,7 +22,7 @@ AI-first WordPress plugin for content processing workflows with a visual pipelin
 
 ## Key Features
 
-- **Clean execution pipeline**: Fetch → AI → Publish/Update handlers process normalized data packets while engine parameters remain accessible through centralized filters (`datamachine_engine_data`).
+- **Clean execution pipeline**: Reliability-first **Single Item Execution Model** where Fetch → AI → Publish/Update handlers process exactly one normalized data packet per job execution cycle. Engine parameters remain accessible through centralized filters (`datamachine_engine_data`).
 - **Deduplication tracking** via processed items and job-scoped per-agent logging.
 - **Multi-provider AI** support (OpenAI, Anthropic, Google, Grok, OpenRouter) with tool orchestration and directive management through PromptBuilder and RequestBuilder.
 - **Unified tool architecture** covering global search/fetch tools and chat-specific workflow tools such as ApiQuery, CreatePipeline, CreateFlow, ConfigureFlowSteps, ConfigurePipelineStep, RunFlow, UpdateFlow, AddPipelineStep, and ExecuteWorkflow.

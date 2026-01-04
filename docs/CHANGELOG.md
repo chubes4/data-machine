@@ -5,6 +5,22 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.13] - 2026-01-04
+
+### Added
+- **UpdateTaxonomyTerm AI Tool** - New specialized chat tool enabling AI agents to update existing taxonomy terms, including core fields and custom meta (e.g., venue data).
+- **Single Item Execution Model** - Formally introduced the reliability-first execution model where jobs process exactly one item per cycle to ensure isolation and prevent timeouts.
+
+### Improved
+- **AI Model Selection UI** - Refactored AI provider and model selection into a shared `ProviderModelSelector` component used across both Pipeline and Settings interfaces.
+- **Query Optimization** - Decoupled provider queries from tool queries in the Pipeline interface for better performance.
+- **Architectural Alignment** - Comprehensive updates to technical documentation aligning core components with the Single Item Execution Model.
+
+### Technical Details
+- **Frontend**: Migrated `ConfigureStepModal.jsx` and `AgentTab.jsx` to use the standardized `ProviderModelSelector`.
+- **Core**: Added `inc/Api/Chat/Tools/UpdateTaxonomyTerm.php` and registered it in the main plugin file.
+- **Docs**: Significant updates to `architecture.md`, `engine-execution.md`, and handler documentation.
+
 ## [0.8.12] - 2026-01-04
 
 ### Added
