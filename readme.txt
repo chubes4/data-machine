@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.8.3
+Stable tag: 0.8.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -246,6 +246,14 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 5. Chat Interface - Build workflows through conversational AI
 
 == Changelog ==
+
+= 0.8.4 =
+* New AI Chat Tools: Expanded agent capabilities with ReadLogs, ManageLogs, SearchTaxonomyTerms, and CreateTaxonomyTerm tools
+* Enhanced Logging System: Centralized logging in the Step base class with automatic job/pipeline/flow context injection
+* Improved Log Filtering: Added support for filtering log content by pipeline_id and flow_id in the REST API and Logs interface
+* UI State Management: Implemented optimistic updates for log clearing and visual feedback for log copy actions
+* Agent Intelligence: Improved taxonomy discovery and management guidance in ChatAgentDirective
+* Code Consistency: Refactored FetchStep and WordPress handlers to use the improved centralized logging system
 
 = 0.8.2 =
 * Lazy Tool Resolution: Implemented lazy loading for AI tool definitions to prevent WordPress 6.7+ translation errors

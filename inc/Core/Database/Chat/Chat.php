@@ -57,10 +57,6 @@ class Chat {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta($sql);
-
-		do_action('datamachine_log', 'info', 'Chat sessions table created or verified', [
-			'table_name' => $table_name
-		]);
 	}
 
 	/**
@@ -134,14 +130,16 @@ class Chat {
 		if ($result === false) {
 			do_action('datamachine_log', 'error', 'Failed to create chat session', [
 				'user_id' => $user_id,
-				'error' => $wpdb->last_error
+				'error' => $wpdb->last_error,
+				'agent_type' => \DataMachine\Engine\AI\AgentType::CHAT
 			]);
 			return '';
 		}
 
 		do_action('datamachine_log', 'debug', 'Chat session created', [
 			'session_id' => $session_id,
-			'user_id' => $user_id
+			'user_id' => $user_id,
+			'agent_type' => \DataMachine\Engine\AI\AgentType::CHAT
 		]);
 
 		return $session_id;
@@ -228,7 +226,8 @@ class Chat {
 		if ($result === false) {
 			do_action('datamachine_log', 'error', 'Failed to update chat session', [
 				'session_id' => $session_id,
-				'error' => $wpdb->last_error
+				'error' => $wpdb->last_error,
+				'agent_type' => \DataMachine\Engine\AI\AgentType::CHAT
 			]);
 			return false;
 		}
@@ -257,13 +256,15 @@ class Chat {
 		if ($result === false) {
 			do_action('datamachine_log', 'error', 'Failed to delete chat session', [
 				'session_id' => $session_id,
-				'error' => $wpdb->last_error
+				'error' => $wpdb->last_error,
+				'agent_type' => \DataMachine\Engine\AI\AgentType::CHAT
 			]);
 			return false;
 		}
 
 		do_action('datamachine_log', 'debug', 'Chat session deleted', [
-			'session_id' => $session_id
+			'session_id' => $session_id,
+			'agent_type' => \DataMachine\Engine\AI\AgentType::CHAT
 		]);
 
 		return true;
@@ -291,7 +292,8 @@ class Chat {
 
 		if ($deleted > 0) {
 			do_action('datamachine_log', 'info', 'Cleaned up expired chat sessions', [
-				'deleted_count' => $deleted
+				'deleted_count' => $deleted,
+				'agent_type' => \DataMachine\Engine\AI\AgentType::CHAT
 			]);
 		}
 
