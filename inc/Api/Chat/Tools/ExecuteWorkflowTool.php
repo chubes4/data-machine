@@ -32,39 +32,23 @@ class ExecuteWorkflowTool {
      * @return array Tool definition array
      */
     public function getToolDefinition(): array {
-        $handler_docs = HandlerDocumentation::buildAllHandlersSections();
         $step_type_service = new StepTypeService();
         $step_types = $step_type_service->getAll();
         $type_slugs = !empty($step_types) ? array_keys($step_types) : ['fetch', 'ai', 'publish', 'update'];
         $types_list = implode('|', $type_slugs);
 
-        $description = 'Execute a content automation workflow.
+        $description = 'Execute an ephemeral workflow (not saved to database).
 
-IMPORTANT: Only use handler_config keys listed in the handler documentation below.
+STEP FORMAT: {type: "' . $types_list . '", handler_slug, handler_config, user_message?, system_prompt?}
 
-' . $handler_docs . '
-WORKFLOW PATTERNS:
-- Content syndication: fetch → ai → publish
-- Content enhancement: fetch → ai → update
-- Event import: event_import → ai → event_upsert
-- Multi-platform: fetch → ai → publish → ai → publish
-
-STEP FORMAT:
-{
-  "type": "' . $types_list . '",
-  "handler_slug": "handler_slug",
-  "handler_config": {...},
-  "user_message": "...",
-  "system_prompt": "..."
-}
+Use api_query GET /datamachine/v1/handlers/{slug} for handler_config fields.
 
 EXAMPLE:
-steps: [
-  {"type": "fetch", "handler_slug": "rss", "handler_config": {"feed_url": "https://example.com/feed"}},
-  {"type": "ai", "user_message": "Summarize this content for social media"},
-  {"type": "publish", "handler_slug": "wordpress_publish", "handler_config": {"post_type": "post", "post_status": "draft"}}
-]
-';
+[
+  {"type": "fetch", "handler_slug": "rss", "handler_config": {"feed_url": "..."}},
+  {"type": "ai", "user_message": "Summarize for social media"},
+  {"type": "publish", "handler_slug": "wordpress_publish", "handler_config": {"post_type": "post"}}
+]';
 
         return [
             'class' => self::class,
@@ -74,7 +58,7 @@ steps: [
                 'steps' => [
                     'type' => 'array',
                     'required' => true,
-                    'description' => 'Array of step objects. Each step requires: type, handler_slug (for non-AI steps), handler_config. AI steps use user_message instead.'
+                    'description' => 'Step objects: {type, handler_slug, handler_config}. AI steps: {type: "ai", user_message}.'
                 ]
             ]
         ];

@@ -42,7 +42,7 @@ class AddPipelineStep {
 		return [
 			'class' => self::class,
 			'method' => 'handle_tool_call',
-			'description' => 'Add a step to an existing pipeline. The step is automatically synced to all flows on that pipeline. Use this instead of make_api_request for adding steps.',
+			'description' => 'Add a step to a pipeline. Automatically syncs to all flows on that pipeline.',
 			'parameters' => [
 				'pipeline_id' => [
 					'type' => 'integer',

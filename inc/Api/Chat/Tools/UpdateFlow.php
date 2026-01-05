@@ -29,17 +29,15 @@ class UpdateFlow {
      * @return array Tool definition array
      */
     public function getToolDefinition(): array {
-        $intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
-        $valid_scheduling = array_merge(['manual', 'one_time'], $intervals);
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
-            'description' => 'Update flow-level properties including title and scheduling configuration.',
+            'description' => 'Update flow title and/or scheduling.',
             'parameters' => [
                 'flow_id' => [
                     'type' => 'integer',
                     'required' => true,
-                    'description' => 'Flow ID to update'
+                    'description' => 'Flow ID'
                 ],
                 'flow_name' => [
                     'type' => 'string',
@@ -49,12 +47,7 @@ class UpdateFlow {
                 'schedule' => [
                     'type' => 'object',
                     'required' => false,
-                    'description' => 'Scheduling configuration. Use {interval: "' . implode('|', $valid_scheduling) . '"} or {interval: "one_time", timestamp: unix_timestamp}. Note: "twicedaily" is 12-hour intervals.'
-                ],
-                'scheduling_config' => [
-                    'type' => 'object',
-                    'required' => false,
-                    'description' => 'Deprecated: Use "schedule" instead.'
+                    'description' => 'Schedule: {interval: value}. Valid intervals:' . "\n" . SchedulingDocumentation::getIntervalsJson()
                 ]
             ]
         ];
@@ -73,9 +66,7 @@ class UpdateFlow {
 
         $flow_id = (int) $flow_id;
         $flow_name = $parameters['flow_name'] ?? null;
-        
-        // Handle both 'schedule' and 'scheduling_config' (aliased)
-        $scheduling_config = $parameters['schedule'] ?? ($parameters['scheduling_config'] ?? null);
+        $scheduling_config = $parameters['schedule'] ?? null;
 
         if (empty($flow_name) && empty($scheduling_config)) {
             return [

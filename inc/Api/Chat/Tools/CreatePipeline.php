@@ -39,32 +39,30 @@ class CreatePipeline {
 	public function getToolDefinition(): array {
 		$valid_types = self::getValidStepTypes();
 		$types_list = !empty($valid_types) ? implode('|', $valid_types) : 'fetch|ai|publish|update';
-		$intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
-		$valid_scheduling = array_merge(['manual', 'one_time'], $intervals);
 		return [
 			'class' => self::class,
 			'method' => 'handle_tool_call',
-			'description' => 'Create a new pipeline with optional predefined steps. IMPORTANT: This tool automatically creates a flow - do NOT call create_flow afterward. For AI steps, include provider, model, and system_prompt in the step definition.',
+			'description' => 'Create a pipeline with optional steps. Automatically creates a flow - do NOT call create_flow afterward.',
 			'parameters' => [
 				'pipeline_name' => [
 					'type' => 'string',
 					'required' => true,
-					'description' => 'Name for the new pipeline'
+					'description' => 'Pipeline name'
 				],
 				'steps' => [
 					'type' => 'array',
 					'required' => false,
-					'description' => "Array of step definitions in execution order. Each step: {step_type: \"{$types_list}\", handler_slug: \"handler_slug\", handler_config: {...}}. For AI steps, also include: provider, model, system_prompt. Handler details can be configured later with configure_flow_step."
+					'description' => "Steps in execution order: {step_type: \"{$types_list}\", handler_slug, handler_config}. AI steps: add provider, model, system_prompt."
 				],
 				'flow_name' => [
 					'type' => 'string',
 					'required' => false,
-					'description' => 'Name for the automatically created flow (defaults to pipeline_name)'
+					'description' => 'Flow name (defaults to pipeline_name)'
 				],
 				'scheduling_config' => [
 					'type' => 'object',
 					'required' => false,
-					'description' => 'Scheduling: {interval: "' . implode('|', $valid_scheduling) . '"} or {interval: "one_time", timestamp: unix_timestamp}. Defaults to manual.'
+					'description' => 'Schedule: {interval: value}. Valid intervals:' . "\n" . SchedulingDocumentation::getIntervalsJson()
 				]
 			]
 		];

@@ -33,37 +33,35 @@ class CopyFlow {
      * @return array Tool definition array
      */
     public function getToolDefinition(): array {
-        $intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
-        $valid_scheduling = array_merge(['manual', 'one_time'], $intervals);
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
-            'description' => 'Copy an existing flow to the same or different pipeline. Cross-pipeline copies require compatible step structures (same step types in same order). Copies all handler configurations, user messages, and schedule. Use step_config_overrides to modify specific steps - handler_config values are merged with source.',
+            'description' => 'Copy a flow to the same or different pipeline. Cross-pipeline requires compatible step structures. Copies handlers, messages, and schedule.',
             'parameters' => [
                 'source_flow_id' => [
                     'type' => 'integer',
                     'required' => true,
-                    'description' => 'ID of the flow to copy'
+                    'description' => 'Flow ID to copy'
                 ],
                 'target_pipeline_id' => [
                     'type' => 'integer',
                     'required' => true,
-                    'description' => 'ID of the destination pipeline'
+                    'description' => 'Destination pipeline ID'
                 ],
                 'flow_name' => [
                     'type' => 'string',
                     'required' => true,
-                    'description' => 'Name for the new flow'
+                    'description' => 'New flow name'
                 ],
                 'scheduling_config' => [
                     'type' => 'object',
                     'required' => false,
-                    'description' => 'Override schedule config. If not provided, copies source flow schedule. Format: {interval: "' . implode('|', $valid_scheduling) . '"}'
+                    'description' => 'Override schedule (defaults to source). Format: {interval: value}. Valid intervals:' . "\n" . SchedulingDocumentation::getIntervalsJson()
                 ],
                 'step_config_overrides' => [
                     'type' => 'object',
                     'required' => false,
-                    'description' => 'Override step configurations. Keys: step_type (fetch, ai, update) or execution_order (0, 1, 2). Values: {handler_slug?, handler_config?, user_message?}. handler_config is merged with source config.'
+                    'description' => 'Override steps by step_type or execution_order: {handler_slug?, handler_config?, user_message?}'
                 ]
             ]
         ];

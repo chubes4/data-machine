@@ -5,6 +5,19 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.5] - 2026-01-05
+
+### Improved
+- **Scheduling Documentation Centralization** - Created `SchedulingDocumentation` class to provide JSON-formatted scheduling interval documentation for chat tools, eliminating duplicate interval definitions across multiple tools
+- **Chat Tool Descriptions** - Simplified and streamlined tool descriptions across chat tools (AddPipelineStep, ApiQuery, CopyFlow, CreateFlow, CreatePipeline, ExecuteWorkflowTool, UpdateFlow) for improved AI agent comprehension
+- **ApiQuery Tool** - Removed verbose documentation and examples, focusing on key endpoints for better discoverability
+- **ExecuteWorkflowTool** - Removed embedded handler documentation to reduce prompt overhead; now uses `api_query` tool for handler config discovery
+
+### Technical Details
+- **New Utility**: Added `inc/Api/Chat/Tools/SchedulingDocumentation.php` (67 lines) with cached JSON interval output
+- **Code Reduction**: Net -80 lines across 7 modified tools through documentation simplification and centralized interval management
+- **Parameter Cleanup**: Removed deprecated `scheduling_config` parameter from UpdateFlow tool (use `schedule` instead)
+
 ## [0.9.4] - 2026-01-05
 
 ### Fixed

@@ -65,51 +65,24 @@ class ApiQuery {
 	}
 
 	/**
-	 * Build comprehensive API documentation for the tool description.
+	 * Build API documentation for the tool description.
 	 *
 	 * @return string API documentation
 	 */
 	private function buildApiDocumentation(): string {
-		return 'Query Data Machine REST API for discovery and monitoring (read-only).
+		return 'Query Data Machine REST API (read-only).
 
 MODES:
-- Single: Use endpoint + method params
-- Batch: Use requests array for multiple requests
+- Single: {endpoint, method, data?}
+- Batch: {requests: [{endpoint, method, data?, key?}, ...]}
 
-BATCH EXAMPLE:
-{
-  "requests": [
-    {"endpoint": "/datamachine/v1/handlers", "method": "GET"},
-    {"endpoint": "/datamachine/v1/pipelines", "method": "GET"}
-  ]
-}
-
-ENDPOINTS:
-
-## Discovery
-GET /datamachine/v1/handlers - List all handlers
-GET /datamachine/v1/handlers?step_type={fetch|publish|update} - Filter by type
-GET /datamachine/v1/handlers/{slug} - Handler details and config schema
-GET /datamachine/v1/providers - List AI providers and models
-GET /datamachine/v1/tools - List available AI tools
-
-## Pipelines
-GET /datamachine/v1/pipelines - List all pipelines
-GET /datamachine/v1/pipelines/{id} - Pipeline details with steps and flows
-
-## Flows
-GET /datamachine/v1/flows - List all flows
-GET /datamachine/v1/flows/{id} - Flow details
-
-## Jobs
-GET /datamachine/v1/jobs - List all jobs
-GET /datamachine/v1/jobs?flow_id={id} - Jobs for specific flow
-GET /datamachine/v1/jobs?status={pending|running|completed|failed} - Filter by status
-GET /datamachine/v1/jobs/{id} - Job details
-
-## Files
-GET /datamachine/v1/files - List uploaded files
-';
+KEY ENDPOINTS:
+/datamachine/v1/handlers - List handlers (filter: ?step_type=fetch|publish|update)
+/datamachine/v1/handlers/{slug} - Handler config schema
+/datamachine/v1/pipelines - List pipelines
+/datamachine/v1/pipelines/{id} - Pipeline with flows
+/datamachine/v1/flows/{id} - Flow details
+/datamachine/v1/jobs - List jobs (filter: ?flow_id, ?status)';
 	}
 
 	/**

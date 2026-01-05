@@ -34,34 +34,30 @@ class CreateFlow {
      * @return array Tool definition array
      */
     public function getToolDefinition(): array {
-        $intervals = array_keys(apply_filters('datamachine_scheduler_intervals', []));
-        $valid_scheduling = array_merge(['manual', 'one_time'], $intervals);
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
-            'description' => 'Create a new flow for a pipeline with optional step configurations.' . "\n\n"
-                . 'BEFORE CREATING: Query existing flows in the pipeline (GET /datamachine/v1/pipelines/{id}) to learn established configuration patterns.' . "\n\n"
-                . 'Use pipeline_step_ids from the pipeline response for step_configs keys. See configure_flow_steps for handler_config field documentation.',
+            'description' => 'Create a new flow for a pipeline with optional step configurations. Query existing flows first to learn established patterns. Use pipeline_step_ids from the pipeline response for step_configs keys.',
             'parameters' => [
                 'pipeline_id' => [
                     'type' => 'integer',
                     'required' => true,
-                    'description' => 'ID of the pipeline to create a flow for'
+                    'description' => 'Pipeline ID'
                 ],
                 'flow_name' => [
                     'type' => 'string',
                     'required' => false,
-                    'description' => 'Name for the flow (defaults to "Flow")'
+                    'description' => 'Flow name (defaults to "Flow")'
                 ],
                 'scheduling_config' => [
                     'type' => 'object',
                     'required' => false,
-                    'description' => 'Scheduling configuration: {interval: "' . implode('|', $valid_scheduling) . '"} or {interval: "one_time", timestamp: unix_timestamp}'
+                    'description' => 'Schedule: {interval: value}. Valid intervals:' . "\n" . SchedulingDocumentation::getIntervalsJson()
                 ],
                 'step_configs' => [
                     'type' => 'object',
                     'required' => false,
-                    'description' => 'Step configurations keyed by pipeline_step_id. Values: {handler_slug?, handler_config?, user_message?}'
+                    'description' => 'Step configurations keyed by pipeline_step_id: {handler_slug?, handler_config?, user_message?}'
                 ]
             ]
         ];
