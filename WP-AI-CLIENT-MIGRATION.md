@@ -2,7 +2,7 @@
 
 ## Migration: `chubes4/ai-http-client` → `wordpress/wp-ai-client`
 
-**Target Version**: Data Machine v0.9.0  
+**Target Version**: Data Machine v1.0.0  
 **Status**: PAUSED (Blocking Issue)  
 **Approach**: Full Native Integration (no adapter layer)
 
@@ -882,7 +882,7 @@ In `inc/Core/Admin/Settings/SettingsFilters.php`:
 ## Changelog Entry
 
 ```markdown
-## [0.7.0] - YYYY-MM-DD
+## [1.0.0] - YYYY-MM-DD
 
 ### Breaking Changes
 - **AI Provider Migration**: API keys must be re-entered in Settings > AI Credentials
