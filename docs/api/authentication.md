@@ -4,6 +4,8 @@ Data Machine REST API supports two authentication methods for secure access.
 
 ## Authentication Methods
 
+This page describes authentication options, but it does not replace WordPress’s own authentication documentation.
+
 ### 1. Application Password (Recommended)
 
 **Best For**: External integrations, non-browser applications, API clients
@@ -98,7 +100,7 @@ curl -u username:app_password \
   https://example.com/wp-json/datamachine/v1/pipelines
 ```
 
-## Common Authentication Errors
+## Authentication errors
 
 **403 Forbidden**:
 ```json

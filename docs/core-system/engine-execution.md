@@ -11,14 +11,9 @@ The engine follows a standardized cycle for both database-driven and ephemeral w
 3.  **`datamachine_schedule_next_step`**: Persists data packets and schedules the next step in the sequence.
 4.  **`datamachine_run_flow_later`**: Handles scheduling logic, queuing the flow for future execution.
 
-## Enhanced Tool Call Reliability
+## Tool execution
 
-The engine includes built-in safeguards to ensure reliable tool execution during AI multi-turn conversations:
-
-- **Duplicate Call Prevention**: `ConversationManager::validateToolCall()` monitors conversation history to detect if an AI agent attempts to call the same tool with identical parameters in succession. If a duplicate is detected, a correction message is injected into the conversation instead of executing the redundant tool.
-- **Turn Tracking**: Each tool call and response is explicitly tagged with a `Turn {N}` identifier. This helps agents maintain chronological context and prevents "context drift" in complex multi-turn reasoning.
-- **Lazy Tool Loading**: Tools are discovered and loaded lazily via `ToolExecutor::getAvailableTools()`, ensuring that only valid, configured tools are presented to the agent for the current step and handler context.
-
+The pipeline engine executes step-specific tools through the AI tool system (tool discovery via filters and cached resolution in `ToolManager`).
 ## Single Item Execution Model
 
 At its core, the engine is designed for reliability-first processing. Instead of processing batches of items, which can lead to timeouts or cascading failures, the engine processes **exactly one item per job execution cycle**.
@@ -143,21 +138,10 @@ if ($next_flow_step_id) {
 
 ### Files Repository
 
-**Purpose**: Flow-isolated data packet storage with UUID-based organization
+Step data is persisted per-job using `FilesRepository` (`FileStorage` + `FileRetrieval`) under the `datamachine-files` uploads directory.
 
-**Key Methods**:
-- `store_data_packet($data, $job_id, $flow_step_id)` - Store with reference
-- `retrieve_data_packet($reference)` - Retrieve by reference
-- `cleanup_job_data_packets($job_id)` - Clean completed jobs
-- `is_data_reference($data)` - Detect storage references
+See [FilesRepository](files-repository.md) for the current directory structure and component responsibilities.
 
-**Directory Structure**:
-```
-wp-content/uploads/datamachine/files/
-└── {flow_id}/
-    └── {job_id}/
-        └── {uuid}.json
-```
 
 ## Step Discovery
 

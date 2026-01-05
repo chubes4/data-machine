@@ -10,7 +10,7 @@ The Tools endpoint provides information about registered AI tools and their conf
 
 ## Authentication
 
-Requires `manage_options` capability. See Authentication Guide documentation.
+This endpoint is public (`permission_callback` returns true), so it does not require authentication. It returns global tool metadata suitable for UI discovery.
 
 ## Endpoints
 
@@ -18,7 +18,7 @@ Requires `manage_options` capability. See Authentication Guide documentation.
 
 Retrieve registered AI tools and configuration status.
 
-**Permission**: `manage_options` capability required
+**Permission**: Public
 
 **Purpose**: Discover available AI tools and check configuration requirements
 
@@ -36,50 +36,24 @@ curl https://example.com/wp-json/datamachine/v1/tools \
 ```json
 {
   "success": true,
-  "tools": {
+  "data": {
     "google_search": {
       "label": "Google Search",
       "configured": true,
       "chat_enabled": false,
       "description": "Search the web using Google Custom Search API"
-    },
-    "local_search": {
-      "label": "Local Search",
-      "configured": true,
-      "chat_enabled": false,
-      "description": "Search WordPress content locally"
-    },
-    "web_fetch": {
-      "label": "Web Fetch",
-      "configured": true,
-      "chat_enabled": false,
-      "description": "Fetch content from web pages"
-    },
-    "wordpress_post_reader": {
-      "label": "WordPress Post Reader",
-      "configured": true,
-      "chat_enabled": false,
-      "description": "Read and analyze WordPress post content"
-    },
-    "create_pipeline": {
-      "label": "Create Pipeline",
-      "configured": true,
-      "chat_enabled": true,
-      "description": "Create a new pipeline with optional steps"
-    },
-    "run_flow": {
-      "label": "Run Flow",
-      "configured": true,
-      "chat_enabled": true,
-      "description": "Execute or schedule a flow"
     }
   }
 }
 ```
 
+Notes:
+- The response payload is under `data`.
+- This endpoint returns global tools (UI discovery). Chat-only tools are registered on the chat agent and are not guaranteed to appear here.
+
 **Response Fields**:
 - `success` (boolean): Request success status
-- `tools` (object): Object of tool definitions keyed by tool ID
+- `data` (object): Object of tool definitions keyed by tool ID
 
 **Tool Definition Fields**:
 - `label` (string): Human-readable tool name
@@ -454,10 +428,10 @@ async function canUseGoogleSearch() {
 
 ## Related Documentation
 
-- Chat Endpoint - Conversational AI with tools
-- Settings Endpoints - Tool configuration
-- Providers Endpoint - AI provider information
-- Authentication - Auth methods
+- [Chat](chat.md)
+- [Settings](settings.md)
+- [Providers](providers.md)
+- [Authentication](authentication.md)
 
 ---
 

@@ -4,13 +4,19 @@ Internal REST API query tool for chat agents providing discovery, monitoring, an
 
 ## Overview
 
-The `api_query` tool enables AI agents to interact directly with the Data Machine REST API for comprehensive system management. This specialized tool provides structured access to all API endpoints with detailed documentation for each operation.
+The `api_query` tool enables chat agents to query the Data Machine REST API (via `rest_do_request`) for discovery and monitoring. It supports single requests and batch requests.
 
 ## Parameters
 
+### Single request
+
 - **endpoint** (string, required): REST API endpoint path (e.g., `/datamachine/v1/handlers`)
-- **method** (string, required): HTTP method - GET, POST, PUT, PATCH, or DELETE
-- **data** (object, optional): Request body data for POST/PUT/PATCH requests
+- **method** (string, optional): HTTP method (defaults to `GET`)
+- **data** (object, optional): Request body data for `POST`, `PUT`, or `PATCH`
+
+### Batch requests
+
+- **requests** (array): Array of requests: `{ endpoint, method, data?, key? }`. If `key` is omitted, a key is derived from the endpoint path.
 
 ## Available Endpoints
 
@@ -34,7 +40,7 @@ The `api_query` tool enables AI agents to interact directly with the Data Machin
 ### Jobs & Monitoring
 - `GET /datamachine/v1/jobs` - List all jobs
 - `GET /datamachine/v1/jobs?flow_id={id}` - Jobs for specific flow
-- `GET /datamachine/v1/jobs?status={pending|running|completed|failed|completed_no_items}` - Filter by status
+- `GET /datamachine/v1/jobs?status={pending|running|completed|failed|completed_no_items}` - Filter by status (includes `completed_no_items`).
 - `GET /datamachine/v1/jobs/{id}` - Job details
 
 ### Logs
@@ -88,15 +94,34 @@ The `api_query` tool enables AI agents to interact directly with the Data Machin
 
 ## Response Format
 
-All responses follow a consistent structure:
+### Single request response
 
 ```json
 {
   "success": true,
-  "data": {
-    // Response data varies by endpoint
-  },
+  "data": { /* response body */ },
   "status": 200,
+  "tool_name": "api_query"
+}
+```
+
+### Batch request response
+
+```json
+{
+  "success": true,
+  "batch": true,
+  "data": {
+    "handlers": { /* ... */ },
+    "pipelines": { /* ... */ }
+  },
+  "errors": {
+    "jobs": "Missing endpoint"
+  },
+  "partial": true,
+  "request_count": 3,
+  "success_count": 2,
+  "error_count": 1,
   "tool_name": "api_query"
 }
 ```

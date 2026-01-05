@@ -5,6 +5,17 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.3] - 2026-01-05
+
+### Added
+- **AssignTaxonomyTerm Tool** - New AI chat tool for assigning taxonomy terms to one or more posts with append or replace modes
+- **MergeTaxonomyTerms Tool** - New AI chat tool for merging duplicate taxonomy terms with post reassignment, optional metadata merging, and source term deletion
+
+### Technical Details
+- **New Tools**: Added inc/Api/Chat/Tools/AssignTaxonomyTerm.php (190 lines) and MergeTaxonomyTerms.php (260 lines)
+- **Taxonomy Validation**: Both tools leverage TaxonomyHandler for system taxonomy checks and term resolution
+- **Meta Merging**: MergeTaxonomyTerms includes smart metadata merging that only fills empty target values
+
 ## [0.9.2] - 2026-01-05
 
 ### Fixed

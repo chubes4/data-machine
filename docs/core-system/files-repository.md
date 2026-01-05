@@ -21,15 +21,18 @@ The FilesRepository is a modular component system for file operations in the Dat
 use DataMachine\Core\FilesRepository\DirectoryManager;
 
 $dir_manager = new DirectoryManager();
-$flow_dir = $dir_manager->get_flow_directory($flow_id);
-$job_dir = $dir_manager->get_job_directory($job_id);
+$pipeline_dir = $dir_manager->get_pipeline_directory($pipeline_id);
+$flow_dir = $dir_manager->get_flow_directory($pipeline_id, $flow_id);
+$job_dir = $dir_manager->get_job_directory($pipeline_id, $flow_id, $job_id);
 ```
 
 **Key Methods**:
-- `get_flow_directory($flow_id)`: Get flow-specific directory
-- `get_job_directory($job_id)`: Get job-specific directory
-- `ensure_directory_exists($path)`: Create directory if it doesn't exist
-- `get_repository_base()`: Get base repository directory
+- `get_pipeline_directory($pipeline_id)`: Get pipeline directory
+- `get_flow_directory($pipeline_id, $flow_id)`: Get flow directory
+- `get_job_directory($pipeline_id, $flow_id, $job_id)`: Get job directory
+- `get_flow_files_directory($pipeline_id, $flow_id)`: Get flow file storage directory
+- `get_pipeline_context_directory($pipeline_id, $pipeline_name)`: Get pipeline context directory
+- `ensure_directory_exists($directory)`: Create directory if it does not exist
 
 ### FileStorage
 
@@ -45,10 +48,13 @@ $file_content = $storage->get_file_content($filename, $job_id);
 ```
 
 **Key Methods**:
-- `store_file($content, $filename, $job_id)`: Store file in job directory
-- `get_file_content($filename, $job_id)`: Retrieve file content
-- `get_file_path($filename, $job_id)`: Get full file path
-- `delete_job_files($job_id)`: Clean up job files
+- `store_file($source_path, $filename, $context)`: Copy a local file into flow file storage
+- `store_pipeline_file($pipeline_id, $pipeline_name, $file_data)`: Store a pipeline context file
+- `get_all_files($context)`: List files for a flow
+- `get_pipeline_files($pipeline_id, $pipeline_name)`: List pipeline context files
+- `delete_file($filename, $context)`: Delete a stored file
+- `store_data_packet($data, $job_id, $context)`: Persist step data for a job
+- `retrieve_data_packet($reference)`: Read a persisted data packet
 
 ### FileCleanup
 
@@ -171,19 +177,20 @@ if ($result['success']) {
 
 ## Directory Structure
 
-Files are organized in flow-isolated directories:
+Files are organized under the `datamachine-files` uploads directory, grouped by pipeline then flow:
 
 ```
 wp-content/uploads/datamachine-files/
-├── flow_123/
-│   ├── job_456/
-│   │   ├── image1.jpg
-│   │   └── document.pdf
-│   └── job_789/
-│       └── image2.png
-└── flow_124/
-    └── job_101/
-        └── data.json
+└── pipeline-5/
+    ├── context/
+    │   └── example.pdf
+    └── flow-42/
+        ├── flow-42-files/
+        │   ├── image1.jpg
+        │   └── document.pdf
+        └── jobs/
+            └── job-123/
+                └── data.json
 ```
 
 ## Scheduled Cleanup

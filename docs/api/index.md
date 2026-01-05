@@ -2,7 +2,7 @@
 
 Complete REST API reference for Data Machine
 
-## Quick Start
+## Overview
 
 **Base URL**: `/wp-json/datamachine/v1/`
 
@@ -19,29 +19,30 @@ Complete REST API reference for Data Machine
 - [Scheduling Intervals](intervals.md): Available scheduling intervals and configuration
 
 ### Pipeline & Flow Management
-- Pipelines: Create, manage, and export pipeline templates
-- Flows: Create, duplicate, and delete flow instances
-- Jobs: Monitor and manage job executions
+- [Pipelines](pipelines.md)
+- [Flows](flows.md)
+- [Jobs](jobs.md)
 
 ### Content & Data
-- Files: Upload files for pipeline processing
-- ProcessedItems: Manage deduplication tracking
+- [Files](files.md)
+- [Processed Items](processed-items.md)
 
 ### AI & Chat
-- Chat: Conversational AI workflow builder (supports AddPipelineStep, ApiQuery, AuthenticateHandler, etc.)
-- Handlers: Available fetch/publish/update handlers
-- Providers: AI provider configuration
-- Tools: AI tool availability
+- [Chat](chat.md)
+- [Handlers](handlers.md)
+- [Providers](providers.md)
+- [Tools](tools.md)
 
 ### Configuration
-- Settings: Tool configuration and cache management
-- Users: User preferences
-- Auth: OAuth account management
-- StepTypes: Available pipeline step types
+- [Settings](settings.md)
+- [Users](users.md)
+- [Auth](auth.md)
+- [Step Types](step-types.md)
 
 ### Monitoring
 - [Logs](logs.md)
 - [AI Directives](../core-system/ai-directives.md)
+- [Jobs](jobs.md)
 
 ## Common Patterns
 
@@ -52,7 +53,7 @@ Data Machine supports two authentication methods:
 1. **Application Password** (Recommended for external integrations)
 2. **Cookie Authentication** (WordPress admin sessions)
 
-See Authentication Guide documentation for detailed setup instructions.
+See [Authentication](authentication.md).
 
 ### Error Handling
 
@@ -93,10 +94,10 @@ For detailed implementation patterns, see Core Actions and Core Filters document
 
 ## Related Documentation
 
-REST API Authentication: Detailed authentication guide
-Error Handling: Complete error reference
-Engine Execution: Understanding workflow execution
-Settings Configuration: Configure API access
+- [Authentication](authentication.md)
+- [Errors](errors.md)
+- [Engine Execution](../core-system/engine-execution.md)
+- [Settings](settings.md)
 
 ---
 

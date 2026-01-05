@@ -18,32 +18,15 @@ You can retrieve a list of currently flagged flows via the following endpoint:
 `GET /wp-json/datamachine/v1/flows/problems`
 
 ### AI Chat Agent
-The chat agent can help you identify and troubleshoot problem flows using the `get_problem_flows` tool. 
+The chat agent can list problem flows via the `get_problem_flows` tool.
 
-**Example prompt:**
-> "Are there any problem flows currently flagged?"
+## Notes
 
-## Common Causes & Solutions
+A problem flow is a signal based on consecutive job statuses; the underlying cause depends on the specific handler/provider configuration and the upstream source.
 
-### Consecutive Failures
-*   **Authentication Issues**: OAuth tokens may have expired or been revoked. Use the `AuthenticateHandler` tool or visit the handler settings to reconnect.
-*   **Handler Configuration**: The source URL (RSS feed, API endpoint) may be invalid or down.
-*   **Provider Limits**: You may have reached rate limits or exhausted credits with your AI provider (OpenAI, Anthropic, etc.).
+## Adjusting the threshold
 
-### Consecutive No Items
-*   **Deduplication**: The system is working correctly and has already processed all available items from the source.
-*   **Fetch Settings**: The `max_items` or date filters in your fetch handler might be too restrictive.
-*   **Source Inactivity**: The source feed or site simply hasn't updated recently.
-
-## Adjusting Thresholds
-
-If you find that flows are being flagged too quickly (e.g., a feed that only updates once a week), you can increase the threshold in the **Settings** panel or via the API:
-
-```json
-{
-  "problem_flow_threshold": 5
-}
-```
+`problem_flow_threshold` is stored in plugin settings and can be updated via the Settings endpoint.
 
 ## Resetting Metrics
 The `consecutive_failures` and `consecutive_no_items` counters are automatically reset to 0 as soon as the flow completes a successful execution with status `completed` (meaning at least one item was processed).

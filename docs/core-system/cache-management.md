@@ -12,11 +12,13 @@ The system relies on WordPress actions to trigger cache clearing. When a new han
 
 ### Invalidation Hooks
 
-The following hooks are integrated in `data-machine.php`:
+Cache invalidation is triggered by ecosystem registration actions (hooked by the plugin bootstrap):
 
-- `datamachine_handler_registered`: Clears handler-related caches. Triggered by `HandlerRegistrationTrait::register_handler()`.
-- `datamachine_step_type_registered`: Clears step type-related caches. Triggered by `StepTypeRegistrationTrait::register_step_type()`.
-- `datamachine_tool_registered`: Clears tool-related caches. Triggered by `ToolRegistrationTrait::register_tool()`.
+- `datamachine_handler_registered`: Clears handler + auth provider caches (and related tool caches).
+- `datamachine_step_type_registered`: Clears step type caches (and related tool caches).
+- `datamachine_tool_registered`: Clears tool definition caches.
+
+The cache manager clears caches via `HandlerService::clearCache()`, `AuthProviderService::clearCache()`, `StepTypeService::clearCache()`, and `ToolManager::clearCache()`.
 
 ## CacheManager Methods
 

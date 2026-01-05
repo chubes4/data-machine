@@ -1,6 +1,6 @@
 # Data Machine Documentation
 
-Complete user documentation for Data Machine (v0.6.3), the AI-first WordPress plugin that combines a visual pipeline builder, conversational chat agent, REST API, and handler/tool extensibility under a single workflow engine.
+Complete user documentation for Data Machine, the AI-first WordPress plugin that combines a visual pipeline builder, conversational chat agent, REST API, and handler/tool extensibility under a single workflow engine.
 
 ## Quick Navigation
 

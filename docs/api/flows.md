@@ -8,11 +8,11 @@
 
 ## Overview
 
-Flow endpoints manage flow instances - configured, scheduled executions of pipeline templates. Flows represent the instance layer of the Pipeline+Flow architecture. Directory-based structure (@since v0.2.0) organizes flow management and step configuration operations.
+Flow endpoints manage flow instances (configured and scheduled executions of pipeline templates).
 
 ## Authentication
 
-Requires `manage_options` capability. See Authentication Guide.
+Requires `manage_options` capability. See [Authentication](authentication.md).
 
 ## Endpoints
 
@@ -37,15 +37,18 @@ curl https://example.com/wp-json/datamachine/v1/flows/problems \
 ```json
 {
   "success": true,
-  "flows": [
-    {
-      "flow_id": 42,
-      "flow_name": "Broken RSS Flow",
-      "consecutive_failures": 5,
-      "consecutive_no_items": 0,
-      "last_error": "Connection timed out"
-    }
-  ]
+  "data": {
+    "problem_flows": [
+      {
+        "flow_id": 42,
+        "flow_name": "Broken RSS Flow",
+        "consecutive_failures": 5,
+        "consecutive_no_items": 0
+      }
+    ],
+    "total": 1,
+    "threshold": 3
+  }
 }
 ```
 
@@ -79,31 +82,23 @@ curl -X POST https://example.com/wp-json/datamachine/v1/flows \
 ```json
 {
   "success": true,
-  "flow_id": 42,
-  "flow_name": "My Custom Flow",
-  "pipeline_id": 5,
-  "synced_steps": 3,
-  "flow_data": {
+  "data": {
     "flow_id": 42,
     "pipeline_id": 5,
     "flow_name": "My Custom Flow",
-    "flow_config": "{}",
-    "scheduling_config": "{\"interval\":\"daily\"}"
+    "flow_config": {},
+    "scheduling_config": {}
   }
 }
 ```
 
 **Response Fields**:
-- `success` (boolean): Request success status
-- `flow_id` (integer): Newly created flow ID
-- `flow_name` (string): Flow name
-- `pipeline_id` (integer): Parent pipeline ID
-- `synced_steps` (integer): Number of steps synced from pipeline
-- `flow_data` (object): Complete flow record
+- `success` (boolean)
+- `data` (object): Created flow payload
 
 ### DELETE /flows/{flow_id}
 
-Delete a flow and all associated jobs.
+Delete a flow.
 
 **Permission**: `manage_options` capability required
 
@@ -122,17 +117,13 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/flows/42 \
 ```json
 {
   "success": true,
-  "flow_id": 42,
-  "message": "Flow deleted successfully.",
-  "deleted_jobs": 5
+  "data": {"flow_id": 42}
 }
 ```
 
 **Response Fields**:
-- `success` (boolean): Request success status
-- `flow_id` (integer): Deleted flow ID
-- `message` (string): Confirmation message
-- `deleted_jobs` (integer): Number of associated jobs deleted
+- `success` (boolean)
+- `data.flow_id` (integer): Deleted flow ID
 
 **Error Response (404 Not Found)**:
 
@@ -328,9 +319,15 @@ curl https://example.com/wp-json/datamachine/v1/flows/steps/flow_step_id_123/con
 }
 ```
 
-## Common Workflows
+## Related endpoints
 
-### Create and Execute Flow
+- [Execute](execute.md) for running flows or ephemeral workflows.
+- [Jobs](jobs.md) for monitoring executions.
+- [Settings](settings.md) for `problem_flow_threshold`.
+
+---
+
+## Related Documentation
 
 ```bash
 # 1. Create flow
@@ -436,14 +433,13 @@ const deletedJobs = await deleteFlow(flowId);
 
 ## Related Documentation
 
-- Pipelines Endpoints - Pipeline template management
-- Execute Endpoint - Flow execution
-- Jobs Endpoints - Job monitoring
-- Authentication - Auth methods
+- [Pipelines](pipelines.md)
+- [Execute](execute.md)
+- [Jobs](jobs.md)
+- [Authentication](authentication.md)
 
 ---
 
 **Base URL**: `/wp-json/datamachine/v1/flows`
 **Permission**: `manage_options` capability required
-**Implementation**: `/inc/Api/Flows/` directory (Flows.php, FlowSteps.php)
-**Version**: Directory structure introduced in v0.2.1
+**Implementation**: `/inc/Api/Flows/` (Flows.php, FlowSteps.php)
