@@ -33,7 +33,7 @@ class ConfigurePipelineStep {
         return [
             'class' => self::class,
             'method' => 'handle_tool_call',
-            'description' => 'Configure pipeline-level AI step settings including system prompt, provider, model, and enabled tools. Use this for AI steps after creating a pipeline. For flow-level settings (handler, handler_config, user_message), use configure_flow_step instead.',
+            'description' => 'Configure pipeline-level AI step settings including system prompt, provider, model, and enabled tools. Use this for AI steps after creating a pipeline. For flow-level settings (handler, handler_config, user_message), use configure_flow_steps instead.',
             'parameters' => [
                 'pipeline_step_id' => [
                     'type' => 'string',
@@ -53,7 +53,7 @@ class ConfigurePipelineStep {
                 'model' => [
                     'type' => 'string',
                     'required' => false,
-                    'description' => 'AI model identifier (e.g., "claude-sonnet-4-20250514", "gpt-4o")'
+                    'description' => 'AI model identifier (e.g., "claude-sonnet-4", "gpt-4o")'
                 ],
                 'enabled_tools' => [
                     'type' => 'array',

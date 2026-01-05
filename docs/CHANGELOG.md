@@ -5,7 +5,23 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.5] - 2026-01-05
+## [0.9.6] - 2026-01-05
+
+### Fixed
+- **Tool Name Consistency** - Corrected references from `configure_flow_step` to `configure_flow_steps` across AddPipelineStep, ConfigurePipelineStep, and CreatePipeline tools
+- **ApiQuery Parameter Naming** - Fixed UpdateFlow tool parameter from `schedule` to `scheduling_config` for consistency with codebase patterns
+- **Chat Tool Response Format** - Added `tool_name` to AuthenticateHandler success/error responses for consistent tool identification
+
+### Improved
+- **ApiQuery Tool Simplification** - Streamlined to GET-only read operations, removed method and data parameters to enforce separation of discovery and mutation operations
+- **Tool Description Clarity** - Updated ApiQuery documentation to clearly direct mutation operations to focused tools, reducing AI agent confusion
+- **Parameter Documentation** - Enhanced ConfigureFlowSteps flow_step_id parameter description with clear format specification
+
+### Technical Details
+- **ApiQuery Refactoring**: Removed HTTP method support (POST/PUT/PATCH/DELETE), simplified request handling to GET-only mode
+- **Code Reduction**: ApiQuery simplified by ~60 lines through parameter removal and logic simplification
+- **Naming Standardization**: Unified tool references across 4 chat tools for better developer experience
+
 
 ### Improved
 - **Scheduling Documentation Centralization** - Created `SchedulingDocumentation` class to provide JSON-formatted scheduling interval documentation for chat tools, eliminating duplicate interval definitions across multiple tools

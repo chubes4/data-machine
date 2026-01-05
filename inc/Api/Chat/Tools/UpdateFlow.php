@@ -44,7 +44,7 @@ class UpdateFlow {
                     'required' => false,
                     'description' => 'New flow title'
                 ],
-                'schedule' => [
+                'scheduling_config' => [
                     'type' => 'object',
                     'required' => false,
                     'description' => 'Schedule: {interval: value}. Valid intervals:' . "\n" . SchedulingDocumentation::getIntervalsJson()
@@ -66,12 +66,12 @@ class UpdateFlow {
 
         $flow_id = (int) $flow_id;
         $flow_name = $parameters['flow_name'] ?? null;
-        $scheduling_config = $parameters['schedule'] ?? null;
+        $scheduling_config = $parameters['scheduling_config'] ?? null;
 
         if (empty($flow_name) && empty($scheduling_config)) {
             return [
                 'success' => false,
-                'error' => 'At least one of flow_name or schedule is required',
+                'error' => 'At least one of flow_name or scheduling_config is required',
                 'tool_name' => 'update_flow'
             ];
         }

@@ -45,20 +45,10 @@ class ApiQuery {
 					'required' => false,
 					'description' => 'Single mode: REST API endpoint path (e.g., /datamachine/v1/handlers)'
 				],
-				'method' => [
-					'type' => 'string',
-					'required' => false,
-					'description' => 'Single mode: HTTP method (GET, POST, PUT, PATCH, DELETE)'
-				],
-				'data' => [
-					'type' => 'object',
-					'required' => false,
-					'description' => 'Single mode: Request body data for POST/PUT/PATCH requests'
-				],
 				'requests' => [
 					'type' => 'array',
 					'required' => false,
-					'description' => 'Batch mode: Array of requests. Each request: {endpoint: string, method: string, data?: object, key?: string}. Results keyed by endpoint name or custom key.'
+					'description' => 'Batch mode: Array of {endpoint, key?}. Results keyed by endpoint or custom key.'
 				]
 			]
 		];
@@ -70,19 +60,19 @@ class ApiQuery {
 	 * @return string API documentation
 	 */
 	private function buildApiDocumentation(): string {
-		return 'Query Data Machine REST API (read-only).
+		return 'Query Data Machine REST API (GET only). For mutations, use focused tools: create_flow, update_flow, configure_flow_steps, etc.
 
 MODES:
-- Single: {endpoint, method, data?}
-- Batch: {requests: [{endpoint, method, data?, key?}, ...]}
+- Single: {endpoint}
+- Batch: {requests: [{endpoint, key?}, ...]}
 
 KEY ENDPOINTS:
-/datamachine/v1/handlers - List handlers (filter: ?step_type=fetch|publish|update)
+/datamachine/v1/handlers - List handlers (?step_type=fetch|publish|update)
 /datamachine/v1/handlers/{slug} - Handler config schema
 /datamachine/v1/pipelines - List pipelines
 /datamachine/v1/pipelines/{id} - Pipeline with flows
 /datamachine/v1/flows/{id} - Flow details
-/datamachine/v1/jobs - List jobs (filter: ?flow_id, ?status)';
+/datamachine/v1/jobs - List jobs (?flow_id, ?status)';
 	}
 
 	/**
@@ -110,8 +100,6 @@ KEY ENDPOINTS:
 	 */
 	private function handleSingleRequest(array $parameters): array {
 		$endpoint = $parameters['endpoint'] ?? '';
-		$method = strtoupper($parameters['method'] ?? 'GET');
-		$data = $parameters['data'] ?? [];
 
 		if (empty($endpoint)) {
 			return [
@@ -121,7 +109,7 @@ KEY ENDPOINTS:
 			];
 		}
 
-		$result = $this->executeSingleRequest($endpoint, $method, $data);
+		$result = $this->executeSingleRequest($endpoint, 'GET', []);
 
 		return array_merge($result, ['tool_name' => 'api_query']);
 	}
@@ -147,8 +135,6 @@ KEY ENDPOINTS:
 
 		foreach ($requests as $index => $req) {
 			$endpoint = $req['endpoint'] ?? '';
-			$method = strtoupper($req['method'] ?? 'GET');
-			$data = $req['data'] ?? [];
 
 			// Determine result key
 			$key = $req['key'] ?? $this->extractKeyFromEndpoint($endpoint);
@@ -164,7 +150,7 @@ KEY ENDPOINTS:
 				continue;
 			}
 
-			$result = $this->executeSingleRequest($endpoint, $method, $data);
+			$result = $this->executeSingleRequest($endpoint, 'GET', []);
 
 			if ($result['success']) {
 				$results[$key] = $result['data'];
@@ -196,35 +182,23 @@ KEY ENDPOINTS:
 	}
 
 	/**
-	 * Execute a single REST API request.
+	 * Execute a single GET request.
 	 *
 	 * @param string $endpoint API endpoint path
-	 * @param string $method   HTTP method
-	 * @param array  $data     Request body data
+	 * @param string $method   HTTP method (always GET)
+	 * @param array  $data     Unused, kept for signature compatibility
 	 * @return array Result with success, data/error, status
 	 */
-	private function executeSingleRequest(string $endpoint, string $method, array $data = []): array {
-		$allowed_methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
-		if (!in_array($method, $allowed_methods, true)) {
-			return [
-				'success' => false,
-				'error' => 'Invalid HTTP method. Allowed: GET, POST, PUT, PATCH, DELETE'
-			];
-		}
-
+	private function executeSingleRequest(string $endpoint, string $method = 'GET', array $data = []): array {
 		$parsed = wp_parse_url($endpoint);
 		$path = $parsed['path'] ?? $endpoint;
 		$query_string = $parsed['query'] ?? '';
 
-		$request = new \WP_REST_Request($method, $path);
+		$request = new \WP_REST_Request('GET', $path);
 
 		if (!empty($query_string)) {
 			parse_str($query_string, $query_params);
 			$request->set_query_params($query_params);
-		}
-
-		if (!empty($data) && in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
-			$request->set_body_params($data);
 		}
 
 		$response = rest_do_request($request);

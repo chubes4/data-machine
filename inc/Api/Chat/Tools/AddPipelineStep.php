@@ -124,7 +124,7 @@ class AddPipelineStep {
 				'step_type' => $step_type,
 				'flows_updated' => count($flows),
 				'flow_step_ids' => $flow_step_ids,
-				'message' => "Step '{$step_type}' added to pipeline. Use configure_flow_step with the flow_step_ids to set handler configuration."
+				'message' => "Step '{$step_type}' added to pipeline. Use configure_flow_steps with the flow_step_ids to set handler configuration."
 			],
 			'tool_name' => 'add_pipeline_step'
 		];

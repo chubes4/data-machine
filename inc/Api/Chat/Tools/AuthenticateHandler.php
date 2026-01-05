@@ -306,10 +306,10 @@ ACTIONS:
 	}
 
 	private function success(array $data): array {
-		return ['success' => true] + $data;
+		return ['success' => true, 'tool_name' => 'authenticate_handler'] + $data;
 	}
 
 	private function error(string $msg): array {
-		return ['success' => false, 'error' => $msg];
+		return ['success' => false, 'error' => $msg, 'tool_name' => 'authenticate_handler'];
 	}
 }

@@ -149,8 +149,8 @@ class CreatePipeline {
 				'flow_step_ids' => $flow_step_ids,
 				'scheduling' => $scheduling_config['interval'],
 				'message' => empty($steps)
-					? "Pipeline and flow (ID: {$flow_id}) created. Do NOT call create_flow - a flow already exists. Use add_pipeline_step to add steps, then configure_flow_step to configure handlers."
-					: "Pipeline and flow (ID: {$flow_id}) created with " . count($steps) . " steps. Do NOT call create_flow - a flow already exists. Use configure_flow_step with the flow_step_ids to set handler configurations."
+					? "Pipeline and flow (ID: {$flow_id}) created. Do NOT call create_flow - a flow already exists. Use add_pipeline_step to add steps, then configure_flow_steps to configure handlers."
+					: "Pipeline and flow (ID: {$flow_id}) created with " . count($steps) . " steps. Do NOT call create_flow - a flow already exists. Use configure_flow_steps with the flow_step_ids to set handler configurations."
 			],
 			'tool_name' => 'create_pipeline'
 		];

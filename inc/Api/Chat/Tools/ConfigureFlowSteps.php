@@ -60,7 +60,7 @@ class ConfigureFlowSteps {
                 'flow_step_id' => [
                     'type' => 'string',
                     'required' => false,
-                    'description' => 'Flow step ID for single-step mode (e.g., "pipeline_step_123_42")'
+                    'description' => 'Flow step ID for single-step mode (format: {pipeline_step_id}_{flow_id})'
                 ],
                 'pipeline_id' => [
                     'type' => 'integer',
