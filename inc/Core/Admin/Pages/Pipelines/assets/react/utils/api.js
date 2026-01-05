@@ -48,6 +48,7 @@ const request = async ( path, method = 'GET', data = undefined, params = {}, ext
 			success: response.success,
 			data: response.data,
 			message: response.message || '',
+			...response,
 		};
 	} catch ( error ) {
 		console.error( `API Request Error [${ method } ${ path }]:`, error );
