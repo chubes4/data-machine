@@ -71,9 +71,12 @@
 	padding: 8px 16px;
 	border-bottom: 1px solid #eee;
 	flex-shrink: 0;
+	display: flex;
+	gap: 8px;
 }
 
-.datamachine-chat-sidebar__new {
+.datamachine-chat-sidebar__new,
+.datamachine-chat-sidebar__copy {
 	font-size: 12px;
 }
 
@@ -176,6 +179,21 @@
 
 .datamachine-chat-message--user .datamachine-chat-message__tools {
 	color: rgba(255, 255, 255, 0.7);
+}
+
+.datamachine-chat-message__timestamp {
+	display: none;
+	font-size: 10px;
+	color: #999;
+	margin-top: 4px;
+}
+
+.datamachine-chat-message:hover .datamachine-chat-message__timestamp {
+	display: block;
+}
+
+.datamachine-chat-message--user .datamachine-chat-message__timestamp {
+	color: rgba(255, 255, 255, 0.6);
 }
 
 /* ===== TYPING INDICATOR ===== */
@@ -335,6 +353,18 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.datamachine-tool-message__timestamp {
+	display: none;
+	font-size: 10px;
+	color: #999;
+	margin-left: auto;
+	flex-shrink: 0;
+}
+
+.datamachine-tool-message__toggle:hover .datamachine-tool-message__timestamp {
+	display: block;
 }
 
 .datamachine-tool-message__details {

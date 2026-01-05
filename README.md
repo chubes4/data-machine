@@ -5,7 +5,7 @@ Tags: ai, automation, content, workflow, pipeline, chat
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 8.2
-Stable tag: 0.8.17
+Stable tag: 0.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,7 +25,8 @@ AI-first WordPress plugin for content processing workflows with a visual pipelin
 - **Clean execution pipeline**: Reliability-first **Single Item Execution Model** where Fetch → AI → Publish/Update handlers process exactly one normalized data packet per job execution cycle. Engine parameters remain accessible through centralized filters (`datamachine_engine_data`).
 - **Deduplication tracking** via processed items and job-scoped per-agent logging.
 - **Multi-provider AI** support (OpenAI, Anthropic, Google, Grok, OpenRouter) with tool orchestration and directive management through PromptBuilder and RequestBuilder.
-- **Unified tool architecture** covering global search/fetch tools and chat-specific workflow tools such as ApiQuery, CreatePipeline, CreateFlow, ConfigureFlowSteps, ConfigurePipelineStep, RunFlow, UpdateFlow, AddPipelineStep, and ExecuteWorkflow.
+- **Unified tool architecture** covering global search/fetch tools and chat-specific workflow tools. Focused Tools (CreatePipeline, RunFlow, etc.) handle mutation while ApiQuery provides read-only discovery.
+- **Granular Job Monitoring**: Real-time status tracking including `completed_no_items` to differentiate between empty fetches and failures. Automated "Problem Flow" flagging based on consecutive failures or empty results.
 - **HTTP client standardization** with HttpClient for consistent headers, browser simulation, timeout handling, and logging integrations.
 - **Extension-ready systems** using WordPress filters for handlers, tools, authentication providers, and step types.
 

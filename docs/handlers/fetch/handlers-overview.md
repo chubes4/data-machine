@@ -27,10 +27,10 @@ Fetch handlers retrieve content from various sources and convert it into standar
 ### External Sources
 
 **Universal Web Scraper** (`universal_web_scraper`) (@since v0.8.0)
-- **Purpose**: High-performance, multi-extractor web content retrieval for events and structured data.
+- **Purpose**: High-performance, multi-extractor web content retrieval for events and structured data. [See detailed documentation](universal-web-scraper.md).
 - **Authentication**: Varies by site (Public API, API Key, or None)
-- **Data Source**: External websites via specialized extractors (Ticketmaster, Eventbrite, Dice.fm, etc.)
-- **Key Features**: Consolidates multiple legacy handlers into a unified architecture. Replaces standalone `GoogleCalendar` and `WordPressEventsAPI` handlers. Supports dynamic site-specific extraction logic.
+- **Data Source**: External websites via specialized extractors (AEG/AXS, Squarespace, Wix, JSON-LD, etc.)
+- **Key Features**: Consolidates multiple legacy handlers into a unified architecture. Replaces standalone `GoogleCalendar` and `WordPressEventsAPI` handlers. Supports multi-layered extraction with AI fallback and automated pagination.
 
 **RSS** (`rss`)
 - **Purpose**: Fetch content from RSS/Atom feeds

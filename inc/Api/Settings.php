@@ -309,6 +309,9 @@ class Settings {
 				'settings' => [
 					'cleanup_job_data_on_failure' => $settings['cleanup_job_data_on_failure'] ?? true,
 					'file_retention_days' => $settings['file_retention_days'] ?? 7,
+					'problem_flow_threshold' => $settings['problem_flow_threshold'] ?? 3,
+					'flows_per_page' => $settings['flows_per_page'] ?? 20,
+					'jobs_per_page' => $settings['jobs_per_page'] ?? 50,
 					'global_system_prompt' => $settings['global_system_prompt'] ?? '',
 					'site_context_enabled' => $settings['site_context_enabled'] ?? false,
 					'default_provider' => $settings['default_provider'] ?? '',
@@ -342,6 +345,21 @@ class Settings {
 		if (isset($params['file_retention_days'])) {
 			$days = absint($params['file_retention_days']);
 			$all_settings['file_retention_days'] = max(1, min(90, $days));
+		}
+
+		if (isset($params['problem_flow_threshold'])) {
+			$threshold = absint($params['problem_flow_threshold']);
+			$all_settings['problem_flow_threshold'] = max(1, min(10, $threshold));
+		}
+
+		if (isset($params['flows_per_page'])) {
+			$flows_per_page = absint($params['flows_per_page']);
+			$all_settings['flows_per_page'] = max(5, min(100, $flows_per_page));
+		}
+
+		if (isset($params['jobs_per_page'])) {
+			$jobs_per_page = absint($params['jobs_per_page']);
+			$all_settings['jobs_per_page'] = max(5, min(100, $jobs_per_page));
 		}
 
 		if (isset($params['global_system_prompt'])) {

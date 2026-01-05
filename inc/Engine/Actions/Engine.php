@@ -275,18 +275,39 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
                     ]);
                 }
             } else {
-                do_action('datamachine_log', 'error', 'Step execution failed - empty data packet', [
-                    'job_id' => $job_id,
-                    'pipeline_id' => $flow_step_config['pipeline_id'] ?? null,
-                    'flow_id' => $flow_id,
-                    'flow_step_id' => $flow_step_id,
-                    'step_class' => $step_class
-                ]);
-                $job_manager->fail($job_id, 'step_execution_failure', [
-                    'flow_step_id' => $flow_step_id,
-                    'class' => $step_class,
-                    'reason' => 'empty_data_packet_returned'
-                ]);
+                // Check if this is a fetch step with processed items history
+                // If so, empty result means "no new items" not "failure"
+                $is_fetch_step = ($step_type === 'fetch');
+                $processed_items_manager = new \DataMachine\Services\ProcessedItemsManager();
+                $has_history = $processed_items_manager->hasProcessedItems($flow_step_id);
+
+                if ($is_fetch_step && $has_history) {
+                    // Flow has processed items before - this is "no new items", not a failure
+                    $job_manager->updateStatus($job_id, 'completed_no_items', 'complete');
+                    do_action('datamachine_log', 'info', 'Flow completed with no new items to process', [
+                        'job_id' => $job_id,
+                        'pipeline_id' => $flow_step_config['pipeline_id'] ?? null,
+                        'flow_id' => $flow_id,
+                        'flow_step_id' => $flow_step_id,
+                        'step_type' => $step_type
+                    ]);
+                } else {
+                    // First run with no items, or non-fetch step failed
+                    do_action('datamachine_log', 'error', 'Step execution failed - empty data packet', [
+                        'job_id' => $job_id,
+                        'pipeline_id' => $flow_step_config['pipeline_id'] ?? null,
+                        'flow_id' => $flow_id,
+                        'flow_step_id' => $flow_step_id,
+                        'step_class' => $step_class,
+                        'step_type' => $step_type,
+                        'has_history' => $has_history
+                    ]);
+                    $job_manager->fail($job_id, 'step_execution_failure', [
+                        'flow_step_id' => $flow_step_id,
+                        'class' => $step_class,
+                        'reason' => 'empty_data_packet_returned'
+                    ]);
+                }
             }
 
             return $step_success;

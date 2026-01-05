@@ -20,7 +20,7 @@ class HttpClient {
     private const VALID_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
     private const SUCCESS_CODES = [
-        'GET' => [200],
+        'GET' => [200, 202],
         'POST' => [200, 201, 202],
         'PUT' => [200, 201, 204],
         'PATCH' => [200, 204],
@@ -154,8 +154,16 @@ class HttpClient {
         $default_headers = $browser_mode
             ? [
                 'User-Agent' => self::BROWSER_USER_AGENT,
-                'Accept' => 'application/json, text/plain, */*',
-                'Accept-Language' => 'en-US,en;q=0.9'
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                'Accept-Language' => 'en-US,en;q=0.9',
+                'Cache-Control' => 'no-cache',
+                'Pragma' => 'no-cache',
+                'Upgrade-Insecure-Requests' => '1',
+                'Sec-Fetch-Dest' => 'document',
+                'Sec-Fetch-Mode' => 'navigate',
+                'Sec-Fetch-Site' => 'none',
+                'Sec-Fetch-User' => '?1',
+                'Connection' => 'keep-alive',
             ]
             : [
                 'User-Agent' => $default_user_agent

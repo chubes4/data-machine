@@ -83,6 +83,21 @@ curl -X POST https://example.com/wp-json/datamachine/v1/settings/tools/google_se
 }
 ```
 
+### Global Settings
+
+- `problem_flow_threshold` (integer): Number of consecutive failures or "no items" results before a flow is flagged as a problem flow. Default: `3`.
+
+**Example Request**:
+
+```bash
+curl -X POST https://example.com/wp-json/datamachine/v1/settings \
+  -H "Content-Type: application/json" \
+  -u username:application_password \
+  -d '{
+    "problem_flow_threshold": 5
+  }'
+```
+
 **Supported Tools**:
 - `google_search` - Google Search API configuration (api_key, search_engine_id)
 - Additional tools can register handlers via `datamachine_save_tool_config` action

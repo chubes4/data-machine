@@ -233,9 +233,22 @@ $payload = [
 
 - `pending` - Created but not started
 - `running` - Currently executing
-- `completed` - Successfully finished
-- `failed` - Error occurred
-- `completed_no_items` - Finished with no items processed
+- `completed` - Successfully finished (items processed)
+- `completed_no_items` - Finished successfully but no new items were found to process
+- `failed` - Actual execution error occurred
+
+### Flow Monitoring & Problem Flows
+
+The engine tracks execution metrics to identify "Problem Flows" that may require administrative attention:
+
+- **Metrics**: Each flow tracks `consecutive_failures` and `consecutive_no_items`.
+- **Threshold**: The `problem_flow_threshold` setting (default: 3) determines when a flow is flagged.
+- **Monitoring**: 
+    - **REST API**: `GET /datamachine/v1/flows/problems` returns flagged flows.
+    - **AI Tools**: `get_problem_flows` allows agents to identify and troubleshoot these flows.
+- **Reset**: Metrics are reset upon the next successful `completed` execution.
+
+**See**: [Troubleshooting Problem Flows](troubleshooting-problem-flows.md) for detailed guidance.
 
 ### Job Operations
 

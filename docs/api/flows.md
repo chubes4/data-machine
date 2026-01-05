@@ -16,6 +16,39 @@ Requires `manage_options` capability. See Authentication Guide.
 
 ## Endpoints
 
+### GET /flows/problems
+
+Retrieve flows flagged as "problem flows" based on consecutive failures or no items found.
+
+**Permission**: `manage_options` capability required
+
+**Parameters**:
+- `threshold` (integer, optional): Override the site-wide `problem_flow_threshold` for this query.
+
+**Example Request**:
+
+```bash
+curl https://example.com/wp-json/datamachine/v1/flows/problems \
+  -u username:application_password
+```
+
+**Success Response (200 OK)**:
+
+```json
+{
+  "success": true,
+  "flows": [
+    {
+      "flow_id": 42,
+      "flow_name": "Broken RSS Flow",
+      "consecutive_failures": 5,
+      "consecutive_no_items": 0,
+      "last_error": "Connection timed out"
+    }
+  ]
+}
+```
+
 ### POST /flows
 
 Create a new flow from an existing pipeline.

@@ -141,6 +141,113 @@ class Flows {
         return $flows;
     }
 
+    /**
+     * Get paginated flows for a pipeline
+     *
+     * @param int $pipeline_id Pipeline ID
+     * @param int $per_page    Number of flows per page
+     * @param int $offset      Offset for pagination
+     * @return array Flows array
+     */
+    public function get_flows_for_pipeline_paginated(int $pipeline_id, int $per_page = 20, int $offset = 0): array {
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $flows = $this->wpdb->get_results(
+            $this->wpdb->prepare(
+                "SELECT * FROM %i WHERE pipeline_id = %d ORDER BY flow_id ASC LIMIT %d OFFSET %d",
+                $this->table_name,
+                $pipeline_id,
+                $per_page,
+                $offset
+            ),
+            ARRAY_A
+        );
+
+        if ($flows === null) {
+            return [];
+        }
+
+        foreach ($flows as &$flow) {
+            $flow['flow_config'] = json_decode($flow['flow_config'], true) ?: [];
+            $flow['scheduling_config'] = json_decode($flow['scheduling_config'], true) ?: [];
+        }
+
+        return $flows;
+    }
+
+    /**
+     * Count total flows for a pipeline
+     *
+     * @param int $pipeline_id Pipeline ID
+     * @return int Total count
+     */
+    public function count_flows_for_pipeline(int $pipeline_id): int {
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $count = $this->wpdb->get_var(
+            $this->wpdb->prepare(
+                "SELECT COUNT(*) FROM %i WHERE pipeline_id = %d",
+                $this->table_name,
+                $pipeline_id
+            )
+        );
+
+        return (int) ($count ?? 0);
+    }
+
+    /**
+     * Get flows with consecutive failures or consecutive no-items at or above threshold.
+     *
+     * Returns flows that either:
+     * - Have consecutive_failures >= threshold (something is broken)
+     * - Have consecutive_no_items >= threshold (source is slow/exhausted)
+     *
+     * @param int $threshold Minimum consecutive count to include
+     * @return array Problem flows with pipeline info and both counters
+     */
+    public function get_problem_flows(int $threshold = 3): array {
+        $pipelines_table = $this->wpdb->prefix . 'datamachine_pipelines';
+
+        // Query flows and join with pipelines for names
+        // Filter by consecutive_failures OR consecutive_no_items in scheduling_config JSON
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        $query = $this->wpdb->prepare(
+            "SELECT f.flow_id, f.pipeline_id, f.flow_name, f.scheduling_config, p.pipeline_name
+             FROM %i f
+             LEFT JOIN %i p ON f.pipeline_id = p.pipeline_id
+             WHERE JSON_EXTRACT(f.scheduling_config, '$.consecutive_failures') >= %d
+                OR JSON_EXTRACT(f.scheduling_config, '$.consecutive_no_items') >= %d
+             ORDER BY JSON_EXTRACT(f.scheduling_config, '$.consecutive_failures') DESC,
+                      JSON_EXTRACT(f.scheduling_config, '$.consecutive_no_items') DESC",
+            $this->table_name,
+            $pipelines_table,
+            $threshold,
+            $threshold
+        );
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $results = $this->wpdb->get_results($query, ARRAY_A);
+
+        if ($results === null) {
+            return [];
+        }
+
+        $problem_flows = [];
+        foreach ($results as $row) {
+            $scheduling_config = json_decode($row['scheduling_config'], true) ?: [];
+
+            $problem_flows[] = [
+                'flow_id' => (int) $row['flow_id'],
+                'flow_name' => $row['flow_name'],
+                'pipeline_id' => (int) $row['pipeline_id'],
+                'pipeline_name' => $row['pipeline_name'] ?? 'Unknown',
+                'consecutive_failures' => (int) ($scheduling_config['consecutive_failures'] ?? 0),
+                'consecutive_no_items' => (int) ($scheduling_config['consecutive_no_items'] ?? 0),
+                'last_run_at' => $scheduling_config['last_run_at'] ?? null,
+                'last_run_status' => $scheduling_config['last_run_status'] ?? null,
+            ];
+        }
+
+        return $problem_flows;
+    }
 
     /**
      * Update a flow
@@ -341,23 +448,46 @@ class Flows {
     }
 
     /**
-     * Update the last run time for a flow
+     * Update the last run time for a flow.
+     *
+     * Tracks two counters:
+     * - consecutive_failures: increments on 'failed', resets on 'completed' or 'completed_no_items'
+     * - consecutive_no_items: increments on 'completed_no_items', resets on 'completed'
+     *
+     * @param int         $flow_id   Flow ID
+     * @param string|null $timestamp Timestamp (defaults to current time)
+     * @param string|null $status    Job status ('completed', 'failed', 'completed_no_items')
+     * @return bool Success
      */
     public function update_flow_last_run(int $flow_id, ?string $timestamp = null, ?string $status = null): bool {
         if ($timestamp === null) {
             $timestamp = current_time('mysql', true);
         }
-        
-        
+
         $current_config = $this->get_flow_scheduling($flow_id);
         if ($current_config === null) {
             return false;
         }
-        
+
         $current_config['last_run_at'] = $timestamp;
 
         if ($status !== null) {
             $current_config['last_run_status'] = $status;
+
+            if ($status === 'completed') {
+                // Success with items - reset both counters
+                $current_config['consecutive_failures'] = 0;
+                $current_config['consecutive_no_items'] = 0;
+            } elseif ($status === 'completed_no_items') {
+                // No new items - reset failures, increment no_items
+                $current_config['consecutive_failures'] = 0;
+                $current_no_items = $current_config['consecutive_no_items'] ?? 0;
+                $current_config['consecutive_no_items'] = $current_no_items + 1;
+            } elseif ($status === 'failed') {
+                // Failure - increment failures, leave no_items alone
+                $current_failures = $current_config['consecutive_failures'] ?? 0;
+                $current_config['consecutive_failures'] = $current_failures + 1;
+            }
         }
 
         return $this->update_flow_scheduling($flow_id, $current_config);

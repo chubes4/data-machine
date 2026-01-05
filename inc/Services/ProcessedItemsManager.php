@@ -33,6 +33,19 @@ class ProcessedItemsManager {
     }
 
     /**
+     * Check if a flow step has any processed items history.
+     *
+     * Used to determine if a flow has ever successfully processed items,
+     * which helps distinguish "no new items" from "first run with nothing".
+     *
+     * @param string $flowStepId Flow step ID (composite: pipeline_step_id_flow_id)
+     * @return bool True if any processed items exist
+     */
+    public function hasProcessedItems(string $flowStepId): bool {
+        return $this->db_processed_items->has_processed_items($flowStepId);
+    }
+
+    /**
      * Add a processed item record.
      *
      * @param string $flowStepId Flow step ID

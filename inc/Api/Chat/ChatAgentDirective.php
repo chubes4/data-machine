@@ -57,8 +57,12 @@ class ChatAgentDirective implements \DataMachine\Engine\AI\Directives\DirectiveI
 			. '- Valid intervals are provided in the tool definitions. Use update_flow to change schedules.' . "\n\n"
 			. '## Site Context' . "\n\n"
 			. 'You receive site context with post types and taxonomy metadata (labels, term counts, hierarchy). Use `search_taxonomy_terms` to discover existing terms and `create_taxonomy_term` to create new ones.' . "\n\n"
-			. '## Errors' . "\n\n"
-			. 'If you encounter errors, fix them using information from the error message.';
+			. '## Execution Protocol' . "\n\n"
+			. '- VERIFY BEFORE CONFIRMING: Only confirm task completion after receiving a successful tool result. Never claim success if the tool returned an error.' . "\n"
+			. '- ERROR RECOVERY: When a tool fails, immediately retry with corrected parameters based on the error message. Do not ask the user what to do - fix it yourself.' . "\n"
+			. '- INVALID FIELDS: If a tool rejects unknown fields, retry using only the valid fields listed in the error. Remove invalid fields entirely rather than asking about them.' . "\n"
+			. '- ACT DECISIVELY: Execute tools directly without asking "would you like me to proceed?" for routine configuration tasks.' . "\n"
+			. '- USE DEFAULTS: If uncertain about a value, use the most sensible default and note your assumption rather than stalling.';
 
 	}
 }

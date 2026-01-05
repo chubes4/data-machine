@@ -27,7 +27,7 @@ class ConversationManager {
         return [
             'role' => $role,
             'content' => $content,
-            'metadata' => $metadata
+            'metadata' => array_merge(['timestamp' => gmdate('c')], $metadata)
         ];
     }
 

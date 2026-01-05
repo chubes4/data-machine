@@ -2,7 +2,7 @@
 
 Data Machine — WordPress plugin for automating content workflows with AI. Visual pipeline builder, chat agent, REST API, and extensibility via handlers and tools.
 
-Version: 0.8.18
+Version: 0.9.0
 
 This file provides a concise, present-tense technical reference for contributors and automated agents. For user-focused docs see datamachine/docs/.
 
@@ -33,8 +33,12 @@ Core architecture
 - Prompt and directive management is centralized via a PromptBuilder with ordered directives (site, pipeline, flow, context).
 - Providers are pluggable and configured by site administrators (OpenAI, Anthropic, Google, Grok, OpenRouter).
 - Universal Engine architecture supports both Pipeline and Chat agents with shared AI infrastructure.
+- Universal Web Scraper Architecture: A multi-layered system in `datamachine-events` that prioritizes structured data extraction (Schema.org JSON-LD/Microdata and 17+ specialized extractors) before falling back to AI-enhanced HTML section parsing. It coordinates fetching, pagination, and normalization via a centralized `StructuredDataProcessor`.
 - Integrated Chat Sidebar: React-based context-aware chat interface in the Pipeline Builder that passes `selected_pipeline_id` for prioritized context.
 - Specialized chat tools provide focused workflow management: AddPipelineStep, ApiQuery, AuthenticateHandler, ConfigureFlowSteps, ConfigurePipelineStep, CopyFlow, CreateFlow, CreatePipeline, CreateTaxonomyTerm, ExecuteWorkflowTool, GetHandlerDefaults, ManageLogs, ReadLogs, RunFlow, SearchTaxonomyTerms, SetHandlerDefaults, UpdateFlow.
+- Focused Tools Strategy: Mutation operations (creation, deletion, duplication) are handled by specialized Focused Tools. The `ApiQuery` tool is strictly read-only for discovery and monitoring.
+- Job Status Logic: Jobs use `completed_no_items` to distinguish between a successful execution that found no new items versus an actual `failed` execution.
+- Flow Monitoring: Flows track `consecutive_failures` and `consecutive_no_items` in their scheduling configuration. Problem flows exceeding the `problem_flow_threshold` (default 3) are monitored via the `get_problem_flows` tool and `/flows/problems` endpoint.
 
 Database
 

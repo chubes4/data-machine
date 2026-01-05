@@ -5,7 +5,8 @@ Complete user documentation for Data Machine (v0.6.3), the AI-first WordPress pl
 ## Quick Navigation
 
 ### Core Concepts
-- **Overview**: System goals, Pipeline+Flow architecture, and high-level data separation patterns.
+- **Engine Execution**: Breakdown of the four-action execution cycle, Single Item Execution Model, and job status logic.
+- **Troubleshooting Problem Flows**: Automated monitoring of consecutive failures/no-items and how to resolve them.
 - **Architecture**: End-to-end breakdown of execution engine, services layer, and handler infrastructure.
 - **Database Schema**: Tables that persist pipelines, flows, jobs, and processed items.
 - **Changelog**: Historical summary of notable releases and architectural changes.
@@ -55,6 +56,8 @@ docs/
 ├── CHANGELOG.md                       # Semantic changelog for releases
 ├── core-system/                       # Engine, services, and core infrastructure pieces
 │   ├── ai-directives.md               # AI directive system and priority hierarchy
+│   ├── engine-execution.md            # Execution cycle and Single Item Execution Model
+│   ├── troubleshooting-problem-flows.md # Monitoring consecutive failures and no-items
 │   ├── http-client.md                 # Centralized HTTP client architecture
 │   ├── import-export.md               # Pipeline import/export functionality
 │   └── [other core system docs...]

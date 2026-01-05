@@ -8,7 +8,7 @@
 
 import { useState, useCallback, useEffect } from '@wordpress/element';
 import { Button } from '@wordpress/components';
-import { close } from '@wordpress/icons';
+import { close, copy } from '@wordpress/icons';
 import { __ } from '@wordpress/i18n';
 import { useUIStore } from '../../stores/uiStore';
 import { useChatMutation, useChatSession } from '../../queries/chat';
@@ -16,9 +16,27 @@ import { useChatQueryInvalidation } from '../../hooks/useChatQueryInvalidation';
 import ChatMessages from './ChatMessages';
 import ChatInput from './ChatInput';
 
+function formatChatAsMarkdown(messages) {
+	return messages
+		.filter((msg) => {
+			const type = msg.metadata?.type;
+			return msg.role === 'user' || (msg.role === 'assistant' && type !== 'tool_call');
+		})
+		.map((msg) => {
+			const timestamp = msg.metadata?.timestamp
+				? new Date(msg.metadata.timestamp).toLocaleString()
+				: '';
+			const role = msg.role === 'user' ? 'User' : 'Assistant';
+			const timestampStr = timestamp ? ` (${timestamp})` : '';
+			return `**${role}${timestampStr}:**\n${msg.content}`;
+		})
+		.join('\n\n---\n\n');
+}
+
 export default function ChatSidebar() {
 	const { toggleChat, chatSessionId, setChatSessionId, clearChatSession, selectedPipelineId } = useUIStore();
 	const [messages, setMessages] = useState([]);
+	const [isCopied, setIsCopied] = useState(false);
 	const chatMutation = useChatMutation();
 	const sessionQuery = useChatSession(chatSessionId);
 	const { invalidateFromToolCalls } = useChatQueryInvalidation();
@@ -75,6 +93,13 @@ export default function ChatSidebar() {
 		setMessages([]);
 	}, [clearChatSession]);
 
+	const handleCopyChat = useCallback(() => {
+		const markdown = formatChatAsMarkdown(messages);
+		navigator.clipboard.writeText(markdown);
+		setIsCopied(true);
+		setTimeout(() => setIsCopied(false), 2000);
+	}, [messages]);
+
 	const isLoading = chatMutation.isPending || sessionQuery.isLoading;
 
 	return (
@@ -99,6 +124,15 @@ export default function ChatSidebar() {
 					disabled={ isLoading }
 				>
 					{ __( 'New conversation', 'data-machine' ) }
+				</Button>
+				<Button
+					variant="tertiary"
+					onClick={ handleCopyChat }
+					className="datamachine-chat-sidebar__copy"
+					disabled={ messages.length === 0 }
+					icon={ copy }
+				>
+					{ isCopied ? __( 'Copied!', 'data-machine' ) : __( 'Copy', 'data-machine' ) }
 				</Button>
 			</div>
 

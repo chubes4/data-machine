@@ -15,6 +15,12 @@ function formatToolName(name) {
 		.join(' ');
 }
 
+function formatTimestamp(isoString) {
+	if (!isoString) return null;
+	const date = new Date(isoString);
+	return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 function prettyPrintContent(content) {
 	// Try to extract and format JSON from content
 	try {
@@ -51,6 +57,12 @@ export default function ToolMessage({ tools }) {
 		(t) => t.toolResult?.metadata?.success !== false
 	);
 
+	// Get timestamp from first tool call or result
+	const timestamp = formatTimestamp(
+		tools[0]?.toolCall?.metadata?.timestamp ||
+		tools[0]?.toolResult?.metadata?.timestamp
+	);
+
 	return (
 		<div className="datamachine-tool-message">
 			<button
@@ -70,6 +82,11 @@ export default function ToolMessage({ tools }) {
 				<span className="datamachine-tool-message__name">
 					{toolNames.join(', ')}
 				</span>
+				{ timestamp && (
+					<span className="datamachine-tool-message__timestamp">
+						{ timestamp }
+					</span>
+				) }
 			</button>
 
 			{isExpanded && (

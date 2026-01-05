@@ -25,21 +25,16 @@ The `api_query` tool enables AI agents to interact directly with the Data Machin
 ### Pipelines (Read-Only)
 - `GET /datamachine/v1/pipelines` - List all pipelines
 - `GET /datamachine/v1/pipelines/{id}` - Get pipeline details with steps and flows
-- `DELETE /datamachine/v1/pipelines/{id}` - Delete pipeline
 
-### Pipeline Steps
-- `DELETE /datamachine/v1/pipelines/{id}/steps/{step_id}` - Remove step
-
-### Flows
+### Flows (Read-Only)
 - `GET /datamachine/v1/flows` - List all flows
 - `GET /datamachine/v1/flows/{id}` - Get flow details
-- `DELETE /datamachine/v1/flows/{id}` - Delete flow
-- `POST /datamachine/v1/flows/{id}/duplicate` - Duplicate flow
+- `GET /datamachine/v1/flows/problems` - List flows flagged for review due to consecutive failures/no items
 
 ### Jobs & Monitoring
 - `GET /datamachine/v1/jobs` - List all jobs
 - `GET /datamachine/v1/jobs?flow_id={id}` - Jobs for specific flow
-- `GET /datamachine/v1/jobs?status={pending|running|completed|failed}` - Filter by status
+- `GET /datamachine/v1/jobs?status={pending|running|completed|failed|completed_no_items}` - Filter by status
 - `GET /datamachine/v1/jobs/{id}` - Job details
 
 ### Logs
@@ -122,4 +117,4 @@ This tool complements specialized workflow tools by providing comprehensive API 
 - Troubleshooting workflow issues
 - Administrative operations
 
-Use specialized tools like `create_pipeline`, `add_pipeline_step`, and `configure_flow_step` for workflow construction, reserving `api_query` for monitoring and management operations.
+Use specialized Focused Tools like `create_pipeline`, `delete_flow`, `add_pipeline_step`, and `configure_flow_step` for mutation operations. `api_query` is strictly read-only for discovery, monitoring, and management operations.

@@ -14,6 +14,8 @@ const GeneralTab = () => {
 	const [ formState, setFormState ] = useState( {
 		cleanup_job_data_on_failure: true,
 		file_retention_days: 7,
+		flows_per_page: 20,
+		jobs_per_page: 50,
 	} );
 	const [ hasChanges, setHasChanges ] = useState( false );
 	const [ saveStatus, setSaveStatus ] = useState( null );
@@ -23,6 +25,8 @@ const GeneralTab = () => {
 			setFormState( {
 				cleanup_job_data_on_failure: data.settings.cleanup_job_data_on_failure ?? true,
 				file_retention_days: data.settings.file_retention_days ?? 7,
+				flows_per_page: data.settings.flows_per_page ?? 20,
+				jobs_per_page: data.settings.jobs_per_page ?? 50,
 			} );
 			setHasChanges( false );
 		}
@@ -41,6 +45,24 @@ const GeneralTab = () => {
 		setFormState( ( prev ) => ( {
 			...prev,
 			file_retention_days: value,
+		} ) );
+		setHasChanges( true );
+	};
+
+	const handleFlowsPerPageChange = ( count ) => {
+		const value = Math.max( 5, Math.min( 100, parseInt( count, 10 ) || 20 ) );
+		setFormState( ( prev ) => ( {
+			...prev,
+			flows_per_page: value,
+		} ) );
+		setHasChanges( true );
+	};
+
+	const handleJobsPerPageChange = ( count ) => {
+		const value = Math.max( 5, Math.min( 100, parseInt( count, 10 ) || 50 ) );
+		setFormState( ( prev ) => ( {
+			...prev,
+			jobs_per_page: value,
 		} ) );
 		setHasChanges( true );
 	};
@@ -116,6 +138,46 @@ const GeneralTab = () => {
 								<p className="description">
 									Automatically delete repository files older than this many days.
 									Includes Reddit images, Files handler uploads, and other temporary workflow files.
+								</p>
+							</fieldset>
+						</td>
+					</tr>
+
+					<tr>
+						<th scope="row">Flows per page</th>
+						<td>
+							<fieldset>
+								<input
+									type="number"
+									id="flows_per_page"
+									value={ formState.flows_per_page }
+									onChange={ ( e ) => handleFlowsPerPageChange( e.target.value ) }
+									min="5"
+									max="100"
+									className="small-text"
+								/>
+								<p className="description">
+									Number of flows to display per page in the Pipeline Builder.
+								</p>
+							</fieldset>
+						</td>
+					</tr>
+
+					<tr>
+						<th scope="row">Jobs per page</th>
+						<td>
+							<fieldset>
+								<input
+									type="number"
+									id="jobs_per_page"
+									value={ formState.jobs_per_page }
+									onChange={ ( e ) => handleJobsPerPageChange( e.target.value ) }
+									min="5"
+									max="100"
+									className="small-text"
+								/>
+								<p className="description">
+									Number of jobs to display per page in the Jobs admin.
 								</p>
 							</fieldset>
 						</td>

@@ -5,6 +5,47 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-01-04
+
+### Added
+- **Troubleshooting Problem Flows System** - Complete flow monitoring and diagnostics system for production workflows:
+  - **GetProblemFlows Chat Tool** - AI agent can identify and troubleshoot failing/idle flows
+  - **`completed_no_items` Job Status** - Distinguishes "no new items" from actual "failures"
+  - **Flow Monitoring Counters** - Automatically tracks `consecutive_failures` and `consecutive_no_items` in scheduling configuration
+  - **`/flows/problems` REST API** - Retrieve flows exceeding threshold with pipeline context and status history
+  - **Configurable Thresholds** - `problem_flow_threshold` setting (default: 3) via Settings API
+  - **Smart Counter Reset** - Resets on successful runs, increments based on failure/no-items status
+  - **Troubleshooting Documentation** - Comprehensive guide for diagnosing flow issues (auth, configuration, source exhaustion)
+- **Universal Web Scraper Architecture** (`datamachine-events`) - High-performance multi-layered event data extraction:
+  - **17+ Specialized Extractors** - Platform-specific extraction (AEG/AXS, Red Rocks, Squarespace, Wix, WordPress, Timely, etc.)
+  - **Schema.org Support** - JSON-LD and Microdata structured data extraction
+  - **AI-Enhanced HTML Fallback** - Identifies candidate sections and passes to AI for structured parsing
+  - **Centralized Processing** - `StructuredDataProcessor` for venue overrides, engine data storage, deduplication
+  - **Smart Captcha Handling** - Dual-mode header strategy for bot detection
+  - **Automatic Pagination** - Up to 20 pages with integrated deduplication
+  - **Single Item Execution Model** - Processes exactly one event per cycle for isolation and reliability
+
+### Improved
+- **Jobs API Filtering** - Enhanced `get_jobs_count()` and `get_jobs_for_list_table()` with flow_id, pipeline_id, and status filters
+- **Jobs Query Security** - Refactored to use prepared statements with column whitelist instead of match statements
+- **Engine Execution Logic** - Smart distinction between "no new items" and "first run with nothing" for fetch steps
+- **ProcessedItems Manager** - Added `hasProcessedItems()` method for flow history checking
+- **Database Operations** - Added `has_processed_items()` in ProcessedItems for first-run detection
+- **Flow Scheduling Tracking** - `update_flow_last_run()` now manages consecutive failure/no-items counters with proper reset logic
+
+### Technical Details
+- **New Tool**: `inc/Api/Chat/Tools/GetProblemFlows.php` (139 lines)
+- **Database Method**: `Flows::get_problem_flows()` with JSON_EXTRACT for counter filtering
+- **Flow Logic**: Counter increment/reset on `completed`, `completed_no_items`, `failed` statuses
+- **API Endpoint**: `GET /flows/problems` with customizable threshold parameter
+- **Documentation**: `docs/core-system/troubleshooting-problem-flows.md` (50 lines)
+- **Extension Docs**: `docs/handlers/fetch/universal-web-scraper.md` (75 lines)
+- **Engine Enhancement**: `Engine.php` checks processed items history before marking empty fetch as failure
+- **Jobs Operations**: Refactored from match statements to prepared queries with column validation
+
+### Notes
+This release marks a new era of Data Machine with systematic flow monitoring and troubleshooting capabilities. The problem flow system enables production-grade reliability by automatically identifying and flagging flows that need attention, while the universal web scraper provides enterprise-grade event extraction from virtually any website.
+
 ## [0.8.18] - 2026-01-04
 
 ### Added

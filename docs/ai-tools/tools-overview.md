@@ -55,10 +55,10 @@ Available only to chat AI agents via `datamachine_chat_tools` filter. These spec
 - **Use Cases**: Incrementally building pipelines through conversation
 
 **ApiQuery** (`api_query`) (@since v0.4.3)
-- **Purpose**: REST API query tool with comprehensive endpoint documentation for discovery, monitoring, and troubleshooting
+- **Purpose**: Strictly read-only REST API query tool for discovery, monitoring, and troubleshooting
 - **Configuration**: None required
-- **Features**: Complete API endpoint catalog with usage examples
-- **Use Cases**: System monitoring, handler discovery, job status checking, configuration verification
+- **Features**: Complete API endpoint catalog with usage examples. Mutation operations are restricted.
+- **Use Cases**: System monitoring, handler discovery, job status checking, configuration verification.
 
 **ConfigureFlowSteps** (`configure_flow_steps`) (@since v0.4.2)
 - **Purpose**: Configure handler settings and AI user messages for flow steps, supporting both single-step and bulk pipeline-scoped operations

@@ -81,6 +81,23 @@ class Flows {
 					'sanitize_callback' => 'absint',
 					'description' => __('Optional pipeline ID to filter flows', 'data-machine'),
 				],
+				'per_page' => [
+					'required' => false,
+					'type' => 'integer',
+					'default' => 20,
+					'minimum' => 1,
+					'maximum' => 100,
+					'sanitize_callback' => 'absint',
+					'description' => __('Number of flows per page', 'data-machine'),
+				],
+				'offset' => [
+					'required' => false,
+					'type' => 'integer',
+					'default' => 0,
+					'minimum' => 0,
+					'sanitize_callback' => 'absint',
+					'description' => __('Offset for pagination', 'data-machine'),
+				],
 			]
 		]);
 
@@ -147,6 +164,20 @@ class Flows {
 					'type' => 'integer',
 					'sanitize_callback' => 'absint',
 					'description' => __('Source flow ID to duplicate', 'data-machine'),
+				],
+			]
+		]);
+
+		register_rest_route('datamachine/v1', '/flows/problems', [
+			'methods' => WP_REST_Server::READABLE,
+			'callback' => [self::class, 'handle_get_problem_flows'],
+			'permission_callback' => [self::class, 'check_permission'],
+			'args' => [
+				'threshold' => [
+					'required' => false,
+					'type' => 'integer',
+					'sanitize_callback' => 'absint',
+					'description' => __('Minimum consecutive failures (defaults to problem_flow_threshold setting)', 'data-machine'),
 				],
 			]
 		]);
@@ -248,15 +279,19 @@ class Flows {
 	}
 
 	/**
-	 * Handle flows retrieval request
+	 * Handle flows retrieval request with pagination support
 	 */
 	public static function handle_get_flows($request) {
 		$pipeline_id = $request->get_param('pipeline_id');
+		$per_page = $request->get_param('per_page') ?? 20;
+		$offset = $request->get_param('offset') ?? 0;
 
 		if ($pipeline_id) {
-			// Get flows for specific pipeline
 			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-			$flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+
+			$flows = $db_flows->get_flows_for_pipeline_paginated($pipeline_id, $per_page, $offset);
+			$total = $db_flows->count_flows_for_pipeline($pipeline_id);
+
 			$formatted_flows = array_map([self::class, 'format_flow_for_response'], $flows);
 
 			return rest_ensure_response([
@@ -264,11 +299,14 @@ class Flows {
 				'data' => [
 					'pipeline_id' => $pipeline_id,
 					'flows' => $formatted_flows
-				]
+				],
+				'total' => $total,
+				'per_page' => $per_page,
+				'offset' => $offset
 			]);
 		}
 
-		// Get all flows across all pipelines
+		// Get all flows across all pipelines (no pagination for this case)
 		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
 		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
 		$all_pipelines = $db_pipelines->get_pipelines_list();
@@ -459,6 +497,32 @@ class Flows {
 		]);
 	}
 
+	/**
+	 * Handle problem flows retrieval request.
+	 *
+	 * Returns flows with consecutive failures at or above the threshold.
+	 *
+	 * GET /datamachine/v1/flows/problems
+	 */
+	public static function handle_get_problem_flows($request) {
+		$threshold = $request->get_param('threshold');
 
+		// Use setting if threshold not provided
+		if ($threshold === null || $threshold <= 0) {
+			$threshold = \DataMachine\Core\PluginSettings::get('problem_flow_threshold', 3);
+		}
+
+		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+		$problem_flows = $db_flows->get_problem_flows((int) $threshold);
+
+		return rest_ensure_response([
+			'success' => true,
+			'data' => [
+				'problem_flows' => $problem_flows,
+				'total' => count($problem_flows),
+				'threshold' => (int) $threshold
+			]
+		]);
+	}
 
 }

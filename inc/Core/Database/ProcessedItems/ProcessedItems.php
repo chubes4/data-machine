@@ -46,6 +46,22 @@ class ProcessedItems {
     }
 
     /**
+     * Checks if a flow step has any processed items history.
+     *
+     * Used to determine if a flow has ever successfully processed items,
+     * which helps distinguish "no new items" from "first run with nothing".
+     *
+     * @param string $flow_step_id The ID of the flow step (composite: pipeline_step_id_flow_id).
+     * @return bool True if any processed items exist for this flow step.
+     */
+    public function has_processed_items( string $flow_step_id ): bool {
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE flow_step_id = %s LIMIT 1", $this->table_name, $flow_step_id ) );
+
+        return $count > 0;
+    }
+
+    /**
      * Adds a record indicating an item has been processed.
      *
      * @param string $flow_step_id   The ID of the flow step (composite: pipeline_step_id_flow_id).
