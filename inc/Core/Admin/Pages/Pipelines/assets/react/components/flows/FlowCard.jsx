@@ -160,18 +160,24 @@ function FlowCardContent( props ) {
 					);
 
 					if ( pipelineId ) {
-						queryClient.setQueryData(
-							[ 'flows', pipelineId ],
-							( oldFlows = [] ) => {
-								if ( ! Array.isArray( oldFlows ) ) {
-									return oldFlows;
+						queryClient.setQueriesData(
+							{ queryKey: [ 'flows', pipelineId ], exact: false },
+							( oldData ) => {
+								if (
+									! oldData?.flows ||
+									! Array.isArray( oldData.flows )
+								) {
+									return oldData;
 								}
 
-								return oldFlows.map( ( existingFlow ) =>
-									isSameId( existingFlow.flow_id, flowId )
-										? updatedFlow
-										: existingFlow
-								);
+								return {
+									...oldData,
+									flows: oldData.flows.map( ( existingFlow ) =>
+										isSameId( existingFlow.flow_id, flowId )
+											? updatedFlow
+											: existingFlow
+									),
+								};
 							}
 						);
 					}

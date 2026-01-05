@@ -5,6 +5,18 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.4] - 2026-01-05
+
+### Fixed
+- **React Query Cache Invalidation** - Enhanced cache management to handle all paginated queries instead of exact matches only
+- **Flow Deletion Total Count** - Fixed `total` count decrement when deleting flows from paginated lists
+- **Cache Context Restoration** - Improved error recovery in `useUpdateUserMessage` with proper paginated query context handling
+
+### Technical Details
+- **Frontend**: Updated `setFlowInCache`, `patchFlowInCache`, and `useDeleteFlow` in `/inc/Core/Admin/Pages/Pipelines/assets/react/queries/flows.js` to use `setQueriesData` with `{ exact: false }` for broader cache updates
+- **Data Structure**: Improved data structure handling to support both simple arrays and paginated responses with `{ flows: [...], total: n }` format
+- **FlowCard**: Updated cache mutation in `/inc/Core/Admin/Pages/Pipelines/assets/react/components/flows/FlowCard.jsx` to use `setQueriesData` with consistent data structure handling
+
 ## [0.9.3] - 2026-01-05
 
 ### Added
