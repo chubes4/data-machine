@@ -5,16 +5,20 @@
  */
 
 import { useState, useCallback } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import JobsHeader from './components/JobsHeader';
 import JobsTable from './components/JobsTable';
-import JobsPagination from './components/JobsPagination';
+import Pagination from '@shared/components/Pagination';
 import JobsAdminModal from './components/modals/JobsAdminModal';
 import { useJobs } from './queries/jobs';
+import { useSettings } from '@shared/queries/settings';
 
 const JobsApp = () => {
 	const [ isModalOpen, setIsModalOpen ] = useState( false );
 	const [ page, setPage ] = useState( 1 );
-	const [ perPage, setPerPage ] = useState( 50 );
+
+	const { data: settingsData } = useSettings();
+	const perPage = settingsData?.settings?.jobs_per_page ?? 50;
 
 	const { data, isLoading, isError, error } = useJobs( { page, perPage } );
 
@@ -28,11 +32,6 @@ const JobsApp = () => {
 		setPage( newPage );
 	}, [] );
 
-	const handlePerPageChange = useCallback( ( newPerPage ) => {
-		setPerPage( newPerPage );
-		setPage( 1 );
-	}, [] );
-
 	return (
 		<div className="datamachine-jobs-app">
 			<JobsHeader onOpenModal={ openModal } />
@@ -44,13 +43,13 @@ const JobsApp = () => {
 				error={ error }
 			/>
 
-			{ ! isLoading && ! isError && jobs.length > 0 && (
-				<JobsPagination
+			{ ! isLoading && ! isError && (
+				<Pagination
 					page={ page }
 					perPage={ perPage }
 					total={ total }
 					onPageChange={ handlePageChange }
-					onPerPageChange={ handlePerPageChange }
+					itemLabel={ __( 'jobs', 'data-machine' ) }
 				/>
 			) }
 

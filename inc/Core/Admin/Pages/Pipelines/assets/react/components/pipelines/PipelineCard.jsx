@@ -22,9 +22,20 @@ import { MODAL_TYPES } from '../../utils/constants';
  * @param {Object} props - Component props
  * @param {Object} props.pipeline - Pipeline data
  * @param {Array} props.flows - Associated flows
+ * @param {number} props.flowsTotal - Total number of flows
+ * @param {number} props.flowsPage - Current page
+ * @param {number} props.flowsPerPage - Items per page
+ * @param {Function} props.onFlowsPageChange - Page change handler
  * @returns {React.ReactElement} Pipeline card
  */
-export default function PipelineCard( { pipeline, flows } ) {
+export default function PipelineCard( {
+	pipeline,
+	flows,
+	flowsTotal = 0,
+	flowsPage = 1,
+	flowsPerPage = 20,
+	onFlowsPageChange,
+} ) {
 	// Use mutations
 	const deleteStepMutation = useDeletePipelineStep();
 	const { openModal } = useUIStore();
@@ -144,6 +155,10 @@ export default function PipelineCard( { pipeline, flows } ) {
 						pipelineId={ pipeline.pipeline_id }
 						flows={ flows }
 						pipelineConfig={ pipeline.pipeline_config || {} }
+						total={ flowsTotal }
+						page={ flowsPage }
+						perPage={ flowsPerPage }
+						onPageChange={ onFlowsPageChange }
 					/>
 				</CardBody>
 			</Card>

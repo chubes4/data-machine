@@ -110,44 +110,7 @@
 	color: #646970;
 }
 
-/* Pagination */
-.datamachine-jobs-pagination {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-top: 15px;
-	padding: 10px 0;
-	flex-wrap: wrap;
-	gap: 15px;
-}
 
-.datamachine-jobs-pagination-info {
-	color: #50575e;
-	font-size: 13px;
-}
-
-.datamachine-jobs-pagination-controls {
-	display: flex;
-	align-items: center;
-	gap: 15px;
-}
-
-.datamachine-jobs-pagination-controls .components-select-control {
-	min-width: 80px;
-}
-
-.datamachine-jobs-pagination-buttons {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.datamachine-jobs-pagination-current {
-	font-size: 13px;
-	color: #50575e;
-	min-width: 50px;
-	text-align: center;
-}
 
 /* Modal Styles */
 .datamachine-jobs-admin-modal {
@@ -227,20 +190,6 @@
 		flex-direction: column;
 		align-items: flex-start;
 		gap: 15px;
-	}
-
-	.datamachine-jobs-pagination {
-		flex-direction: column;
-		align-items: stretch;
-	}
-
-	.datamachine-jobs-pagination-controls {
-		flex-direction: column;
-		align-items: stretch;
-	}
-
-	.datamachine-jobs-pagination-buttons {
-		justify-content: center;
 	}
 
 	.datamachine-col-created,

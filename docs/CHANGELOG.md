@@ -5,6 +5,26 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-01-04
+
+### Added
+- **Shared Pagination Component** - Reusable Pagination component for consistent UI across admin pages
+- **Flows Pagination** - Added pagination support to Pipelines > Flows section for better performance with large flow lists
+- **Settings-based Page Limits** - Configurable per-page limits for jobs (jobs_per_page) and flows (flows_per_page) via Settings API
+
+### Improved
+- **Code Deduplication** - Removed duplicate JobsPagination component (~74 lines) and CSS styles (~50 lines)
+- **API Consistency** - Flows API now supports standard pagination parameters (per_page, offset)
+- **React Query Optimization** - Paginated flows queries reduce initial payload for pipelines with many flows
+- **Shared Architecture** - Extracted pagination logic to /inc/Core/Admin/shared/ for cross-page reusability
+
+### Technical Details
+- **Shared Components**: Created @shared/components/Pagination and @shared/styles/pagination.css
+- **React Refactoring**: Migrated JobsApp and PipelinesApp to use shared pagination
+- **Query Enhancement**: Updated useFlows hook to return paginated data structure
+- **API Enhancement**: fetchFlows() accepts {page, perPage} options with offset calculation
+- **Settings Integration**: New settings.js query hook for retrieving per-page configuration
+
 ## [0.9.0] - 2026-01-04
 
 ### Added

@@ -5,11 +5,12 @@
  * @pattern Container - Fetches all pipeline-related data and manages global state
  */
 
-import { useEffect, useCallback, useState } from '@wordpress/element';
+import { useEffect, useCallback, useState, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Spinner, Notice, Button } from '@wordpress/components';
 import { usePipelines, useCreatePipeline } from './queries/pipelines';
 import { useFlows, useUpdateFlowHandler } from './queries/flows';
+import { useSettings } from '@shared/queries/settings';
 import { useHandlers, useHandlerDetails } from './queries/handlers';
 import { useUIStore } from './stores/uiStore';
 import PipelineCard from './components/pipelines/PipelineCard';
@@ -40,9 +41,26 @@ export default function PipelinesApp() {
 	// Check if Zustand has finished hydrating from localStorage
 	const hasHydrated = useUIStore.persist.hasHydrated();
 
+	// Flows pagination state
+	const [ flowsPage, setFlowsPage ] = useState( 1 );
+
+	// Reset page when pipeline changes
+	useEffect( () => {
+		setFlowsPage( 1 );
+	}, [ selectedPipelineId ] );
+
 	// Data from TanStack Query
 	const { data: pipelines = [], isLoading: pipelinesLoading, error: pipelinesError } = usePipelines();
-	const { data: flows = [], isLoading: flowsLoading, error: flowsError } = useFlows(selectedPipelineId);
+	const { data: settingsData } = useSettings();
+	const flowsPerPage = settingsData?.settings?.flows_per_page ?? 20;
+
+	const { data: flowsData, isLoading: flowsLoading, error: flowsError } = useFlows(
+		selectedPipelineId,
+		{ page: flowsPage, perPage: flowsPerPage }
+	);
+	const flows = useMemo( () => flowsData?.flows ?? [], [ flowsData ] );
+	const flowsTotal = flowsData?.total ?? 0;
+
 	const { data: handlers = {} } = useHandlers();
 
 	// Fetch handler details for settings modal (skip if already seeded in modalData)
@@ -220,6 +238,10 @@ export default function PipelinesApp() {
 				<PipelineCard
 					pipeline={ displayPipeline }
 					flows={ flows }
+					flowsTotal={ flowsTotal }
+					flowsPage={ flowsPage }
+					flowsPerPage={ flowsPerPage }
+					onFlowsPageChange={ setFlowsPage }
 				/>
 
 				<ModalManager

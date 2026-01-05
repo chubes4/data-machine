@@ -105,14 +105,22 @@ const patchFlowStepInCache = (
 };
 
 // Queries
-export const useFlows = ( pipelineId ) => {
+export const useFlows = ( pipelineId, { page = 1, perPage = 20 } = {} ) => {
 	const cachedPipelineId = normalizeId( pipelineId );
 
 	return useQuery( {
-		queryKey: [ 'flows', cachedPipelineId ],
+		queryKey: [ 'flows', cachedPipelineId, { page, perPage } ],
 		queryFn: async () => {
-			const response = await fetchFlows( pipelineId );
-			return response.success ? response.data.flows : [];
+			const response = await fetchFlows( pipelineId, { page, perPage } );
+			if ( ! response.success ) {
+				return { flows: [], total: 0, perPage, offset: 0 };
+			}
+			return {
+				flows: response.data.flows || [],
+				total: response.total || 0,
+				perPage: response.per_page || perPage,
+				offset: response.offset || 0,
+			};
 		},
 		enabled: !! cachedPipelineId,
 	} );

@@ -39,9 +39,14 @@ function datamachine_register_pipelines_admin_page_filters() {
                         'deps' => [],
                         'media' => 'all'
                     ],
+                    'datamachine-shared-pagination' => [
+                        'file' => 'inc/Core/Admin/shared/styles/pagination.css',
+                        'deps' => [],
+                        'media' => 'all'
+                    ],
                     'datamachine-pipelines-page' => [
                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/pipelines-page.css',
-                        'deps' => [],
+                        'deps' => ['datamachine-shared-pagination'],
                         'media' => 'all'
                     ],
                      'datamachine-pipelines-modal' => [

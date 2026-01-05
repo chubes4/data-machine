@@ -6,9 +6,18 @@ import { useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import FlowCard from './FlowCard';
 import EmptyFlowCard from './EmptyFlowCard';
+import Pagination from '@shared/components/Pagination';
 import { useCreateFlow } from '../../queries/flows';
 
-export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
+export default function FlowsSection( {
+	pipelineId,
+	flows,
+	pipelineConfig,
+	total = 0,
+	page = 1,
+	perPage = 20,
+	onPageChange,
+} ) {
 	// Use mutations
 	const createFlowMutation = useCreateFlow();
 
@@ -82,7 +91,7 @@ export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
 				<h3 className="datamachine-flows-section__title">
 					{ __( 'Flows', 'datamachine' ) }{ ' ' }
 					<span className="datamachine-flows-section__count">
-						({ flows.length })
+						({ total })
 					</span>
 				</h3>
 			</div>
@@ -103,6 +112,14 @@ export default function FlowsSection( { pipelineId, flows, pipelineConfig } ) {
 					onAddFlow={ handleAddFlow }
 				/>
 			</div>
+
+			<Pagination
+				page={ page }
+				perPage={ perPage }
+				total={ total }
+				onPageChange={ onPageChange }
+				itemLabel={ __( 'flows', 'datamachine' ) }
+			/>
 		</div>
 	);
 }

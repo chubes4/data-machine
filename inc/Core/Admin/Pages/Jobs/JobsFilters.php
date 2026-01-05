@@ -45,9 +45,14 @@ function datamachine_register_jobs_admin_page_filters() {
                         'deps' => [],
                         'media' => 'all'
                     ],
+                    'datamachine-shared-pagination' => [
+                        'file' => 'inc/Core/Admin/shared/styles/pagination.css',
+                        'deps' => [],
+                        'media' => 'all'
+                    ],
                     'datamachine-jobs-page' => [
                         'file' => 'inc/Core/Admin/Pages/Jobs/assets/css/jobs-page.css',
-                        'deps' => [],
+                        'deps' => ['datamachine-shared-pagination'],
                         'media' => 'all'
                     ]
                 ],
