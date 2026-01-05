@@ -5,6 +5,25 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.18] - 2026-01-04
+
+### Added
+- **Delete File Tool** - New `delete_file` chat tool for removing uploaded files by filename
+- **Delete Flow Tool** - New `delete_flow` chat tool for deleting flows by ID
+- **Delete Pipeline Tool** - New `delete_pipeline` chat tool for deleting pipelines and all associated flows
+- **Delete Pipeline Step Tool** - New `delete_pipeline_step` chat tool for removing steps from pipelines (affects all flows)
+- **Reorder Pipeline Steps Tool** - New `reorder_pipeline_steps` chat tool for reordering steps within pipelines
+
+### Improved
+- **ApiQuery Tool** - Refined documentation to focus on read-only operations (discovery and monitoring)
+- **Tool Architecture** - Added specialized deletion and reordering tools for better AI agent workflow management
+
+### Technical Details
+- **Chat Tools**: Added 5 new tools following ToolRegistrationTrait pattern
+- **API Integration**: All new tools wrap existing REST API endpoints
+- **Code Addition**: +467 lines across 5 new tool files
+- **Consistency**: Aligned ApiQuery documentation with new specialized deletion tools
+
 ## [0.8.17] - 2026-01-04
 
 ### Improved

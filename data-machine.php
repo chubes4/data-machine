@@ -3,7 +3,7 @@
  * Plugin Name:     Data Machine
  * Plugin URI:      https://wordpress.org/plugins/data-machine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
- * Version:           0.8.17
+ * Version:           0.8.18
  * Requires at least: 6.2
  * Requires PHP:     8.2
  * Author:          Chris Huber, extrachill
@@ -21,7 +21,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.8.17' );
+define( 'DATAMACHINE_VERSION', '0.8.18' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -207,6 +207,11 @@ function datamachine_load_chat_tools() {
     new \DataMachine\Api\Chat\Tools\UpdateTaxonomyTerm();
     new \DataMachine\Api\Chat\Tools\GetHandlerDefaults();
     new \DataMachine\Api\Chat\Tools\SetHandlerDefaults();
+    new \DataMachine\Api\Chat\Tools\DeleteFile();
+    new \DataMachine\Api\Chat\Tools\DeleteFlow();
+    new \DataMachine\Api\Chat\Tools\DeletePipeline();
+    new \DataMachine\Api\Chat\Tools\DeletePipelineStep();
+    new \DataMachine\Api\Chat\Tools\ReorderPipelineSteps();
 }
 
 /**

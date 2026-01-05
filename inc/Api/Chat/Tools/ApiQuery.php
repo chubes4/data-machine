@@ -70,18 +70,17 @@ class ApiQuery {
 	 * @return string API documentation
 	 */
 	private function buildApiDocumentation(): string {
-		return 'Query Data Machine REST API for discovery, monitoring, and troubleshooting.
+		return 'Query Data Machine REST API for discovery and monitoring (read-only).
 
 MODES:
-- Single: Use endpoint + method params for one request
-- Batch: Use requests array for multiple requests in one call (faster)
+- Single: Use endpoint + method params
+- Batch: Use requests array for multiple requests
 
 BATCH EXAMPLE:
 {
   "requests": [
     {"endpoint": "/datamachine/v1/handlers", "method": "GET"},
-    {"endpoint": "/datamachine/v1/pipelines", "method": "GET"},
-    {"endpoint": "/datamachine/v1/providers", "method": "GET"}
+    {"endpoint": "/datamachine/v1/pipelines", "method": "GET"}
   ]
 }
 
@@ -91,40 +90,25 @@ ENDPOINTS:
 GET /datamachine/v1/handlers - List all handlers
 GET /datamachine/v1/handlers?step_type={fetch|publish|update} - Filter by type
 GET /datamachine/v1/handlers/{slug} - Handler details and config schema
-GET /datamachine/v1/auth/{handler}/status - Check OAuth connection status
 GET /datamachine/v1/providers - List AI providers and models
 GET /datamachine/v1/tools - List available AI tools
 
-## Pipelines (read-only - use create_pipeline tool for creation)
+## Pipelines
 GET /datamachine/v1/pipelines - List all pipelines
-GET /datamachine/v1/pipelines/{id} - Get pipeline details with steps and flows
-DELETE /datamachine/v1/pipelines/{id} - Delete pipeline
+GET /datamachine/v1/pipelines/{id} - Pipeline details with steps and flows
 
-## Pipeline Steps (use add_pipeline_step tool for adding)
-DELETE /datamachine/v1/pipelines/{id}/steps/{step_id} - Remove step
-PUT /datamachine/v1/pipelines/{id}/steps/reorder - Reorder steps
-  data: {step_order: [{pipeline_step_id: "...", execution_order: 0}, ...]}
-
-## Flows (use create_flow and configure_flow_step tools)
+## Flows
 GET /datamachine/v1/flows - List all flows
-GET /datamachine/v1/flows/{id} - Get flow details
-DELETE /datamachine/v1/flows/{id} - Delete flow
-POST /datamachine/v1/flows/{id}/duplicate - Duplicate flow
+GET /datamachine/v1/flows/{id} - Flow details
 
-## Jobs & Monitoring
+## Jobs
 GET /datamachine/v1/jobs - List all jobs
 GET /datamachine/v1/jobs?flow_id={id} - Jobs for specific flow
 GET /datamachine/v1/jobs?status={pending|running|completed|failed} - Filter by status
 GET /datamachine/v1/jobs/{id} - Job details
 
-## System
-GET /datamachine/v1/settings - Get plugin settings
-POST /datamachine/v1/settings - Update settings
-
 ## Files
 GET /datamachine/v1/files - List uploaded files
-POST /datamachine/v1/files - Upload file
-DELETE /datamachine/v1/files/{filename} - Delete file
 ';
 	}
 
