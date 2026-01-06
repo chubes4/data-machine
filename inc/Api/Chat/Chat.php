@@ -269,6 +269,16 @@ class Chat {
 	 * @return array|WP_Error Response data or error
 	 */
 	public static function handle_chat(WP_REST_Request $request) {
+		$request_id = $request->get_header('X-Request-ID');
+		if ($request_id) {
+			$request_id = sanitize_text_field($request_id);
+			$cache_key = 'datamachine_chat_request_' . $request_id;
+			$cached_response = get_transient($cache_key);
+			if ($cached_response !== false) {
+				return rest_ensure_response($cached_response);
+			}
+		}
+
 		$message = sanitize_textarea_field(wp_unslash($request->get_param('message')));
 		// Set agent context for logging - all logs during this request go to chat log
 		AgentContext::set(AgentType::CHAT);
@@ -428,9 +438,15 @@ class Chat {
 			$response_data['warning'] = $loop_result['warning'];
 		}
 
-		return rest_ensure_response([
+		$response = [
 			'success' => true,
 			'data' => $response_data
-		]);
+		];
+
+		if ($request_id) {
+			set_transient($cache_key, $response, 60);
+		}
+
+		return rest_ensure_response($response);
 	}
 }

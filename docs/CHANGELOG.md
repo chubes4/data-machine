@@ -5,6 +5,16 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.10] - 2026-01-06
+
+### Added
+- **Chat request idempotency support** - `inc/Api/Chat/Chat.php` accepts `X-Request-ID` and caches the REST response in a 60s transient to avoid duplicate AI runs when the client re-sends the same request.
+
+### Improved
+- **Chat UI double-submit hardening** - `inc/Core/Admin/Pages/Pipelines/assets/react/components/chat/ChatInput.jsx` adds a lightweight submit cooldown to prevent rapid-fire Enter submissions; `inc/Core/Admin/Pages/Pipelines/assets/react/components/chat/ChatSidebar.jsx` prevents concurrent "create new session" requests.
+- **Chat request headers** - `inc/Core/Admin/Pages/Pipelines/assets/react/queries/chat.js` generates a request UUID and sends it as `X-Request-ID` with chat POST requests.
+- **WordPress Post Reader tool contract** - `inc/Engine/AI/Tools/Global/WordPressPostReader.php` clarifies that `source_url` must be a WordPress permalink/shortlink and explicitly rejects REST API URLs.
+
 ## [0.9.9] - 2026-01-06
 
 ### Changed

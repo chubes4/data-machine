@@ -119,13 +119,13 @@ class WordPressPostReader {
             'class' => __CLASS__,
             'method' => 'handle_tool_call',
             'name' => 'WordPress Post Reader',
-            'description' => 'Read full content and metadata from a specific WordPress post by URL for detailed analysis. Use after Local Search when you need complete post content instead of excerpts. Essential for content analysis before WordPress Update operations. Provides title, content, author, date, categories, tags, and featured image data.',
+            'description' => 'Read full content and metadata from a specific WordPress post by permalink URL. Use after Local Search when you need complete post content instead of excerpts. Accepts standard WordPress permalinks (e.g., /post-slug/) or shortlinks (?p=123). Does NOT accept REST API URLs (/wp-json/...). Essential for content analysis before WordPress Update operations.',
             'requires_config' => false,
             'parameters' => [
                 'source_url' => [
                     'type' => 'string',
                     'required' => true,
-                    'description' => 'WordPress post URL to retrieve content from (use URLs from Local Search results)'
+                    'description' => 'WordPress permalink URL (e.g., https://site.com/post-slug/ or https://site.com/?p=123). Do not use REST API URLs.'
                 ],
                 'include_meta' => [
                     'type' => 'boolean',

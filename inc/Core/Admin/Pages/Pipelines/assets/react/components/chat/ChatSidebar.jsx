@@ -6,7 +6,7 @@
  * Persists conversation across page refreshes via session storage.
  */
 
-import { useState, useCallback, useEffect } from '@wordpress/element';
+import { useState, useCallback, useEffect, useRef } from '@wordpress/element';
 import { Button } from '@wordpress/components';
 import { close, copy } from '@wordpress/icons';
 import { __ } from '@wordpress/i18n';
@@ -43,6 +43,7 @@ export default function ChatSidebar() {
 	const chatMutation = useChatMutation();
 	const sessionQuery = useChatSession(chatSessionId);
 	const { invalidateFromToolCalls } = useChatQueryInvalidation();
+	const isCreatingSessionRef = useRef(false);
 
 	useEffect(() => {
 		if (sessionQuery.data?.conversation) {
@@ -58,6 +59,14 @@ export default function ChatSidebar() {
 	}, [sessionQuery.error, clearChatSession]);
 
 	const handleSend = useCallback(async (message) => {
+		const isNewSession = !chatSessionId;
+		if (isNewSession && isCreatingSessionRef.current) {
+			return;
+		}
+		if (isNewSession) {
+			isCreatingSessionRef.current = true;
+		}
+
 		const userMessage = { role: 'user', content: message };
 		setMessages((prev) => [...prev, userMessage]);
 
@@ -87,6 +96,10 @@ export default function ChatSidebar() {
 
 			if (error.message?.includes('not found')) {
 				clearChatSession();
+			}
+		} finally {
+			if (isNewSession) {
+				isCreatingSessionRef.current = false;
 			}
 		}
 	}, [chatSessionId, setChatSessionId, clearChatSession, chatMutation, selectedPipelineId, invalidateFromToolCalls]);

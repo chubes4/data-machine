@@ -5,19 +5,27 @@
  * Supports Enter to send, Shift+Enter for newline.
  */
 
-import { useState, useCallback } from '@wordpress/element';
+import { useState, useCallback, useRef } from '@wordpress/element';
 import { Button } from '@wordpress/components';
 import { arrowUp } from '@wordpress/icons';
 import { __ } from '@wordpress/i18n';
 
+const SUBMIT_COOLDOWN_MS = 300;
+
 export default function ChatInput({ onSend, isLoading }) {
 	const [message, setMessage] = useState('');
+	const isSubmittingRef = useRef(false);
 
 	const handleSubmit = useCallback(() => {
 		const trimmed = message.trim();
-		if (!trimmed || isLoading) {
+		if (!trimmed || isLoading || isSubmittingRef.current) {
 			return;
 		}
+
+		isSubmittingRef.current = true;
+		setTimeout(() => {
+			isSubmittingRef.current = false;
+		}, SUBMIT_COOLDOWN_MS);
 
 		onSend(trimmed);
 		setMessage('');
