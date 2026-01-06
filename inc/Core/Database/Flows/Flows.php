@@ -2,6 +2,8 @@
 
 namespace DataMachine\Core\Database\Flows;
 
+use DataMachine\Core\JobStatus;
+
 /**
  * Flows Database Class
  *
@@ -450,13 +452,13 @@ class Flows {
     /**
      * Update the last run time for a flow.
      *
-     * Tracks two counters:
-     * - consecutive_failures: increments on 'failed', resets on 'completed' or 'completed_no_items'
-     * - consecutive_no_items: increments on 'completed_no_items', resets on 'completed'
+     * Tracks two counters using JobStatus for categorization:
+     * - consecutive_failures: increments on failure, resets on success
+     * - consecutive_no_items: increments on completed_no_items, resets on completed
      *
      * @param int         $flow_id   Flow ID
      * @param string|null $timestamp Timestamp (defaults to current time)
-     * @param string|null $status    Job status ('completed', 'failed', 'completed_no_items')
+     * @param string|null $status    Job status (any JobStatus, may be compound like "agent_skipped - reason")
      * @return bool Success
      */
     public function update_flow_last_run(int $flow_id, ?string $timestamp = null, ?string $status = null): bool {
@@ -473,17 +475,22 @@ class Flows {
 
         if ($status !== null) {
             $current_config['last_run_status'] = $status;
+            $jobStatus = JobStatus::fromString($status);
 
-            if ($status === 'completed') {
+            if ($jobStatus->isCompleted()) {
                 // Success with items - reset both counters
                 $current_config['consecutive_failures'] = 0;
                 $current_config['consecutive_no_items'] = 0;
-            } elseif ($status === 'completed_no_items') {
-                // No new items - reset failures, increment no_items
+            } elseif ($jobStatus->shouldResetFailureCount()) {
+                // Success status (completed_no_items, agent_skipped) - reset failures
                 $current_config['consecutive_failures'] = 0;
-                $current_no_items = $current_config['consecutive_no_items'] ?? 0;
-                $current_config['consecutive_no_items'] = $current_no_items + 1;
-            } elseif ($status === 'failed') {
+
+                if ($jobStatus->shouldIncrementNoItemsCount()) {
+                    // completed_no_items - increment no_items counter
+                    $current_no_items = $current_config['consecutive_no_items'] ?? 0;
+                    $current_config['consecutive_no_items'] = $current_no_items + 1;
+                }
+            } elseif ($jobStatus->isFailure()) {
                 // Failure - increment failures, leave no_items alone
                 $current_failures = $current_config['consecutive_failures'] ?? 0;
                 $current_config['consecutive_failures'] = $current_failures + 1;

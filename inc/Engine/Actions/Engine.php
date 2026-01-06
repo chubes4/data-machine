@@ -10,6 +10,7 @@
 
 defined('ABSPATH') || exit;
 
+use DataMachine\Core\JobStatus;
 use DataMachine\Engine\AI\AgentType;
 use DataMachine\Engine\AI\AgentContext;
 
@@ -262,7 +263,9 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
                 if ( $next_flow_step_id ) {
                     do_action('datamachine_schedule_next_step', $job_id, $next_flow_step_id, $dataPackets);
                 } else {
-                    $job_manager->updateStatus($job_id, 'completed', 'complete');
+                    // Check for status override from tools (e.g., skip_item sets agent_skipped)
+                    $final_status = $engine->get('job_status') ?? JobStatus::COMPLETED;
+                    $job_manager->updateStatus($job_id, $final_status, 'complete');
                     $cleanup = new \DataMachine\Core\FilesRepository\FileCleanup();
                     $context = datamachine_get_file_context($flow_id);
                     $cleanup->cleanup_job_data_packets($job_id, $context);
@@ -271,7 +274,8 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
                         'pipeline_id' => $flow_step_config['pipeline_id'] ?? null,
                         'flow_id' => $flow_id,
                         'flow_step_id' => $flow_step_id,
-                        'final_packet_count' => count($dataPackets)
+                        'final_packet_count' => count($dataPackets),
+                        'final_status' => $final_status
                     ]);
                 }
             } else {
@@ -283,7 +287,7 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
 
                 if ($is_fetch_step && $has_history) {
                     // Flow has processed items before - this is "no new items", not a failure
-                    $job_manager->updateStatus($job_id, 'completed_no_items', 'complete');
+                    $job_manager->updateStatus($job_id, JobStatus::COMPLETED_NO_ITEMS, 'complete');
                     do_action('datamachine_log', 'info', 'Flow completed with no new items to process', [
                         'job_id' => $job_id,
                         'pipeline_id' => $flow_step_config['pipeline_id'] ?? null,

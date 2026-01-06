@@ -5,6 +5,9 @@
  * Provides common functionality for all fetch handlers including config extraction,
  * deduplication, engine data storage, data packet creation, filtering, and logging.
  *
+ * Also registers the skip_item tool available to all fetch-type handlers, allowing
+ * the pipeline agent to explicitly skip items that don't meet processing criteria.
+ *
  * @package    Data_Machine
  * @subpackage Core\Steps\Fetch\Handlers
  * @since      0.2.1
@@ -15,6 +18,7 @@ namespace DataMachine\Core\Steps\Fetch\Handlers;
 use DataMachine\Core\FilesRepository\FileStorage;
 use DataMachine\Core\FilesRepository\RemoteFileDownloader;
 use DataMachine\Core\HttpClient;
+use DataMachine\Core\Steps\Fetch\Tools\SkipItemTool;
 use DataMachine\Services\AuthProviderService;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -350,5 +354,76 @@ abstract class FetchHandler {
 	 */
 	protected function httpDelete(string $url, array $options = []): array {
 		return $this->httpRequest('DELETE', $url, $options);
+	}
+
+	/**
+	 * Initialize FetchHandler static functionality.
+	 *
+	 * Registers the skip_item tool filter for all fetch-type handlers.
+	 * Called during plugin bootstrap after handlers are loaded.
+	 *
+	 * @since 0.9.7
+	 */
+	public static function init(): void {
+		add_filter('chubes_ai_tools', [self::class, 'registerSkipItemTool'], 10, 4);
+	}
+
+	/**
+	 * Register skip_item tool for fetch-type handlers.
+	 *
+	 * The skip_item tool is available when the previous step (before the AI step)
+	 * is a fetch-type handler. This allows the AI to explicitly skip items that
+	 * don't meet processing criteria (e.g., non-music events).
+	 *
+	 * @param array       $tools          Current tools array
+	 * @param string|null $handler_slug   Handler slug being queried
+	 * @param array       $handler_config Handler configuration
+	 * @param array       $engine_data    Engine data snapshot
+	 * @return array Modified tools array
+	 * @since 0.9.7
+	 */
+	public static function registerSkipItemTool(array $tools, ?string $handler_slug = null, array $handler_config = [], array $engine_data = []): array {
+		if (empty($handler_slug)) {
+			return $tools;
+		}
+
+		// Check if this handler_slug is a fetch-type or event_import-type handler
+		$fetch_handlers = apply_filters('datamachine_handlers', [], 'fetch');
+		$event_import_handlers = apply_filters('datamachine_handlers', [], 'event_import');
+		$all_fetch_handlers = array_merge($fetch_handlers, $event_import_handlers);
+
+		if (!isset($all_fetch_handlers[$handler_slug])) {
+			return $tools;
+		}
+
+		// Register skip_item tool with handler association
+		$tools['skip_item'] = self::getSkipItemToolDefinition($handler_slug, $handler_config);
+
+		return $tools;
+	}
+
+	/**
+	 * Get the skip_item tool definition.
+	 *
+	 * @param string $handler_slug   Handler slug to associate with
+	 * @param array  $handler_config Handler configuration
+	 * @return array Tool definition
+	 * @since 0.9.7
+	 */
+	private static function getSkipItemToolDefinition(string $handler_slug, array $handler_config): array {
+		return [
+			'class' => SkipItemTool::class,
+			'method' => 'handle_tool_call',
+			'handler' => $handler_slug,
+			'description' => 'Skip processing this item. Use when the item does not meet criteria for this flow (e.g., not a music event, wrong location, irrelevant content). The item will be marked as processed and will not be refetched on subsequent runs.',
+			'parameters' => [
+				'reason' => [
+					'type' => 'string',
+					'description' => 'Brief explanation of why this item is being skipped (e.g., "not a music event", "comedy show", "wrong location")',
+					'required' => true
+				]
+			],
+			'handler_config' => $handler_config
+		];
 	}
 }

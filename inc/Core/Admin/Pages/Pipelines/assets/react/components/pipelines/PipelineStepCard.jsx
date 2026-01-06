@@ -15,7 +15,7 @@ import {
 import { __ } from '@wordpress/i18n';
 import { updateSystemPrompt } from '../../utils/api';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
-import { useStepTypes } from '../../queries/config';
+import { useStepTypes, useTools } from '../../queries/config';
 
 /**
  * Pipeline Step Card Component
@@ -37,6 +37,7 @@ export default function PipelineStepCard( {
 } ) {
 	// Use TanStack Query for data
 	const { data: stepTypes = {} } = useStepTypes();
+	const { data: toolsData = {} } = useTools();
 	const stepTypeInfo = stepTypes?.[ step.step_type ] || {};
 	const canConfigure = stepTypeInfo.has_pipeline_config === true;
 	const aiConfig =
@@ -171,17 +172,30 @@ export default function PipelineStepCard( {
 				{ /* AI Configuration Display */ }
 				{ aiConfig && (
 					<div className="datamachine-ai-config-display datamachine-step-card-ai-config">
-						<div className="datamachine-step-card-ai-label">
-							<strong>
-								{ __( 'AI Provider:', 'datamachine' ) }
-							</strong>{ ' ' }
-							{ aiConfig.provider || 'Not configured' }
-							{ ' | ' }
-							<strong>
-								{ __( 'Model:', 'datamachine' ) }
-							</strong>{ ' ' }
-							{ aiConfig.model || 'Not configured' }
-						</div>
+					<div className="datamachine-step-card-ai-label">
+						<strong>
+							{ __( 'AI Provider:', 'datamachine' ) }
+						</strong>{ ' ' }
+						{ aiConfig.provider || 'Not configured' }
+						{ ' | ' }
+						<strong>
+							{ __( 'Model:', 'datamachine' ) }
+						</strong>{ ' ' }
+						{ aiConfig.model || 'Not configured' }
+					</div>
+					<div className="datamachine-step-card-tools-label">
+						<strong>
+							{ __( 'Tools:', 'datamachine' ) }
+						</strong>{ ' ' }
+						{ aiConfig.enabled_tools?.length > 0
+							? aiConfig.enabled_tools
+									.map(
+										( toolId ) =>
+											toolsData[ toolId ]?.label || toolId
+									)
+									.join( ', ' )
+							: __( 'No tools enabled', 'datamachine' ) }
+					</div>
 
 						<TextareaControl
 							label={ __( 'System Prompt', 'datamachine' ) }

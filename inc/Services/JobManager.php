@@ -10,6 +10,7 @@
 
 namespace DataMachine\Services;
 
+use DataMachine\Core\JobStatus;
 use DataMachine\Core\PluginSettings;
 
 defined('ABSPATH') || exit;
@@ -100,24 +101,27 @@ class JobManager {
      * Automatically selects the appropriate database method based on
      * context and status transitions (start_job, complete_job, or update_job_status).
      *
+     * Supports compound statuses like "agent_skipped - reason" via JobStatus.
+     *
      * @param int $job_id Job ID to update
-     * @param string $new_status New job status
+     * @param string $new_status New job status (may be compound like "agent_skipped - reason")
      * @param string $context Update context ('start', 'complete', 'update')
      * @param string|null $old_status Previous job status for transition logic
      * @return bool Success status
      */
     public function updateStatus(int $job_id, string $new_status, string $context = 'update', ?string $old_status = null): bool {
         $success = false;
+        $status = JobStatus::fromString($new_status);
 
-        if ($context === 'start' || ($new_status === 'processing' && $old_status === 'pending')) {
+        if ($context === 'start' || ($new_status === JobStatus::PROCESSING && $old_status === JobStatus::PENDING)) {
             $success = $this->db_jobs->start_job($job_id, $new_status);
-        } elseif ($context === 'complete' || in_array($new_status, ['completed', 'failed', 'completed_no_items'], true)) {
+        } elseif ($context === 'complete' || $status->isFinal()) {
             $success = $this->db_jobs->complete_job($job_id, $new_status);
         } else {
             $success = $this->db_jobs->update_job_status($job_id, $new_status);
         }
 
-        if ($new_status === 'failed' && $success) {
+        if ($status->shouldCleanupProcessedItems() && $success) {
             $this->processed_items_manager->deleteForJob($job_id);
         }
 
@@ -139,7 +143,7 @@ class JobManager {
      * Complete a job (sets completion timestamp).
      *
      * @param int $job_id Job ID
-     * @param string $status Final status ('completed', 'failed', 'completed_no_items')
+     * @param string $status Final status (any JobStatus final status, may be compound)
      * @return bool Success status
      */
     public function complete(int $job_id, string $status): bool {
@@ -158,7 +162,7 @@ class JobManager {
      * @return bool True on success, false on database failure
      */
     public function fail(int $job_id, string $reason, array $context_data = []): bool {
-        $success = $this->db_jobs->complete_job($job_id, 'failed');
+        $success = $this->db_jobs->complete_job($job_id, JobStatus::FAILED);
 
         if (!$success) {
             do_action('datamachine_log', 'error', 'Failed to mark job as failed in database', [

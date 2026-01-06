@@ -14,6 +14,8 @@
 
 namespace DataMachine\Core\Database\Jobs;
 
+use DataMachine\Core\JobStatus;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
@@ -69,15 +71,15 @@ class JobsStatus {
      * Update the status and completed_at time for a job.
      * Also updates the last_run_at field in the related flow if possible.
      *
+     * Accepts compound statuses like "agent_skipped - reason" via JobStatus validation.
+     *
      * @param int    $job_id       The job ID.
-     * @param string $status       The final status ('complete' or 'failed').
+     * @param string $status       The final status (any JobStatus final status, may be compound).
      * @return bool True on success, false on failure.
      */
     public function complete_job( int $job_id, string $status ): bool {
-        // Update validation to include all final statuses
-        $valid_statuses = ['completed', 'failed', 'completed_no_items'];
-
-        if ( empty( $job_id ) || !in_array( $status, $valid_statuses ) ) {
+        // Validate using JobStatus - supports compound statuses like "agent_skipped - reason"
+        if ( empty( $job_id ) || !JobStatus::isStatusFinal( $status ) ) {
             return false;
         }
 

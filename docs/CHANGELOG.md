@@ -5,6 +5,22 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.7] - 2026-01-05
+
+### Added
+- **JobStatus Value Object** - Centralized job status management in `inc/Core/JobStatus.php` with support for compound statuses like `agent_skipped - reason`.
+- **SkipItemTool** - New AI tool for fetch-type handlers allowing agents to explicitly skip items that don't meet processing criteria.
+- **Tools Display in Pipeline Builder** - Added a "Tools" label to the Pipeline Step Card to show enabled AI tools for each step.
+
+### Improved
+- **Job Monitoring** - Enhanced `JobManager`, `Engine`, and `Flows` to use `JobStatus` for more granular status tracking and consecutive failure/no-items monitoring.
+- **Date Formatting** - Updated `DateFormatter` to support localized display of skipped reasons and other compound statuses.
+
+### Technical Details
+- **Compound Status Support**: Implemented base status and reason parsing in `JobStatus` for better diagnostic visibility in logs and UI.
+- **Tool Registration**: Automated `skip_item` tool registration for all fetch-type handlers via `FetchHandler::init()`.
+- **Code Consolidation**: Replaced scattered status strings with `JobStatus` constants across core services.
+
 ## [0.9.6] - 2026-01-05
 
 ### Fixed

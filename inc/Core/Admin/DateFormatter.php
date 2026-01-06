@@ -10,6 +10,8 @@
 
 namespace DataMachine\Core\Admin;
 
+use DataMachine\Core\JobStatus;
+
 defined('ABSPATH') || exit;
 
 class DateFormatter {
@@ -18,9 +20,10 @@ class DateFormatter {
 	 * Format a MySQL datetime string for display.
 	 *
 	 * Uses WordPress timezone and date/time format settings.
+	 * Supports compound statuses like "agent_skipped - reason" via JobStatus.
 	 *
 	 * @param string|null $mysql_datetime MySQL datetime string (Y-m-d H:i:s)
-	 * @param string|null $status Run status ('completed', 'failed', 'completed_no_items')
+	 * @param string|null $status Run status (any JobStatus, may be compound)
 	 * @return string Formatted datetime string
 	 */
 	public static function format_for_display( ?string $mysql_datetime, ?string $status = null ): string {
@@ -38,10 +41,21 @@ class DateFormatter {
 		$time_format = get_option( 'time_format' );
 		$display = wp_date( "{$date_format} {$time_format}", $timestamp );
 
-		if ( $status === 'failed' ) {
-			$display .= ' ' . __( '(error)', 'data-machine' );
-		} elseif ( $status === 'completed_no_items' ) {
-			$display .= ' ' . __( '(no items)', 'data-machine' );
+		if ( $status !== null ) {
+			$jobStatus = JobStatus::fromString( $status );
+
+			if ( $jobStatus->isFailure() ) {
+				$display .= ' ' . __( '(error)', 'data-machine' );
+			} elseif ( $jobStatus->isCompletedNoItems() ) {
+				$display .= ' ' . __( '(no items)', 'data-machine' );
+			} elseif ( $jobStatus->isAgentSkipped() ) {
+				$reason = $jobStatus->getReason();
+				if ( $reason ) {
+					$display .= ' ' . sprintf( __( '(skipped: %s)', 'data-machine' ), $reason );
+				} else {
+					$display .= ' ' . __( '(skipped)', 'data-machine' );
+				}
+			}
 		}
 
 		return $display;
