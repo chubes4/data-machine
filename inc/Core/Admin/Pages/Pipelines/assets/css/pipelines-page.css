@@ -754,3 +754,11 @@
     max-width: 300px;
 }
 
+/* Pipeline selector width constraints - desktop only */
+@media screen and (min-width: 783px) {
+    .datamachine-pipeline-selector {
+        min-width: 200px;
+        max-width: 400px;
+        width: auto;
+    }
+}

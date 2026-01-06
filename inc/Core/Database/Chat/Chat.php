@@ -318,7 +318,7 @@ class Chat {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$sessions = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT session_id, title, messages, created_at, updated_at FROM %i WHERE user_id = %d ORDER BY updated_at DESC LIMIT %d OFFSET %d',
+				'SELECT * FROM %i WHERE user_id = %d ORDER BY updated_at DESC LIMIT %d OFFSET %d',
 				$table_name,
 				$user_id,
 				$limit,
@@ -333,7 +333,7 @@ class Chat {
 
 		$result = [];
 		foreach ($sessions as $session) {
-			$messages = json_decode($session['messages'], true) ?: [];
+			$messages = json_decode($session['messages'] ?? '[]', true) ?: [];
 			$first_message = '';
 			foreach ($messages as $msg) {
 				if (($msg['role'] ?? '') === 'user') {
@@ -344,11 +344,11 @@ class Chat {
 
 			$result[] = [
 				'session_id' => $session['session_id'],
-				'title' => $session['title'],
+				'title' => $session['title'] ?? null,
 				'first_message' => mb_substr($first_message, 0, 100),
 				'message_count' => count($messages),
-				'created_at' => $session['created_at'],
-				'updated_at' => $session['updated_at'],
+				'created_at' => $session['created_at'] ?? null,
+				'updated_at' => $session['updated_at'] ?? $session['created_at'] ?? null,
 			];
 		}
 

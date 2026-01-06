@@ -5,6 +5,12 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.9] - 2026-01-06
+
+### Changed
+- **Chat session list query** - `inc/Core/Database/Chat/Chat.php` updates the sessions query to `SELECT *` and adds null-safe handling for `messages`, `title`, `created_at`, and `updated_at` when assembling the sessions list response.
+- **Pipelines UI styling** - `inc/Core/Admin/Pages/Pipelines/assets/css/pipelines-page.css` constrains the `.datamachine-pipeline-selector` width on desktop breakpoints.
+
 ## [0.9.8] - 2026-01-06
 
 ### Added

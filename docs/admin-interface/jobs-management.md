@@ -2,16 +2,22 @@
 
 Monitoring and managing pipeline execution status and historical system logs.
 
-## Logs Interface (@since v0.8.0)
+## Logs Interface
 
-The Logs interface provides a centralized, React-based view of system activities with powerful filtering and real-time updates.
+The Logs interface is a separate React admin page implemented under `inc/Core/Admin/Pages/Logs/assets/react/`.
 
-**Features:**
-- **Centralized View**: Access all system logs from a single interface.
-- **Filtering**: Filter logs by level (info, warning, error, debug), context (flow ID, pipeline ID, handler), and date range.
-- **Real-time Updates**: Log data stays current via REST API polling or background refetching.
-- **Execution Context**: Deep links from logs to specific flows and jobs for rapid troubleshooting.
-- **Clean Architecture**: Built on the `LogsManager` service and `Logs` REST controller.
+**Architecture (as implemented):**
+- Uses TanStack Query hooks in `inc/Core/Admin/Pages/Logs/assets/react/queries/logs.js`.
+- Calls REST endpoints via `inc/Core/Admin/Pages/Logs/assets/react/api/logs.js` which uses the shared REST client (`@shared/utils/api`).
+
+**REST endpoints used by the UI:**
+- `GET /logs/agent-types` (available agent types)
+- `GET /logs?agent_type=...` (metadata)
+- `GET /logs/content?agent_type=...&mode=recent|full&limit=...` (log content)
+- `DELETE /logs?agent_type=...` (clear logs; supports `agent_type=all`)
+- `PUT /logs/level` (set log level per agent type)
+
+Document UI-specific filtering controls and deep links only if they are present in the current React components.
 
 ## Jobs Interface
 

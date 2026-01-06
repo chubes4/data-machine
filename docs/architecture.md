@@ -254,13 +254,13 @@ See [HTTP Client](core-system/http-client.md) for implementation details and usa
 **React Implementation**:
 - A unified React-based admin UI built with `@wordpress/components`.
 - Specialized apps for each page (PipelinesApp, LogsApp, SettingsApp, JobsApp).
-- Modern state management using TanStack Query + Zustand.
+- Modern state management using TanStack Query for server state (and a small Zustand store on the Pipelines page for UI state).
 - Complete REST API integration for all data operations.
 - Real-time updates via TanStack Query background refetching.
 - Optimistic UI updates for instant user feedback.
 
 **Component Architecture**:
-- **Core**: Page-specific App containers, Zustand stores for client state.
+- **Core**: Page-specific App containers; UI state is either local React state or (for Pipelines) a small Zustand store.
 - **Modals**: Centralized `ModalManager` and `ModalSwitch` for routing (Pipelines/Settings).
 - **Queries/API**: Standardized TanStack Query hooks and REST client modules.
 

@@ -51,10 +51,11 @@ Services are the single source of truth for REST endpoints, ensuring validation 
 
 ## Admin Interface
 
-- **React-First Architecture**: The entire admin interface is built with React and `@wordpress/components`, utilizing TanStack Query for server state and Zustand for client state management.
-- **Pipeline Builder**: Drag-and-drop workflow configuration, real-time step validation, and integrated tool management.
-- **Job Management**: Fully React-based dashboard for monitoring job history, status progression, and execution metrics with automatic background refetching.
-- **Logs Interface**: Centralized, real-time log streaming and filtering for deep-dive troubleshooting.
+- **React-First Architecture**: Admin pages are React apps built with `@wordpress/components` and TanStack Query for server state.
+- **Client UI state**: The Pipelines page uses a small Zustand store for UI state (pipeline selection, modals, chat sidebar). Other pages may use local React state.
+- **Pipeline Builder**: Visual pipeline/flow configuration with modal-driven step and handler settings.
+- **Job Management**: React dashboard for job history with server-driven pagination and admin cleanup modal.
+- **Logs Interface**: React logs viewer with filtering controls and REST-backed content loading.
 - **Integrated Chat**: Collapsible sidebar for context-aware pipeline automation and AI-driven workflow assistance, using specialized tools to manage the entire ecosystem.
 
 ## Key Capabilities
