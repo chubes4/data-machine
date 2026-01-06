@@ -257,6 +257,9 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
 
             $step_success = ! empty( $dataPackets );
 
+            // Refresh engine data to capture any changes made during step execution (e.g., job_status from skip_item)
+            $engine = new \DataMachine\Core\EngineData(datamachine_get_engine_data($job_id), $job_id);
+
             // Check for status override from tools (e.g., skip_item sets agent_skipped)
             // If set, complete the job immediately without scheduling next step
             $status_override = $engine->get('job_status');

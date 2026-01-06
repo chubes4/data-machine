@@ -5,6 +5,17 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.11] - 2026-01-06
+
+### Added
+- **LocalSearch fallback search strategies** - `inc/Engine/AI/Tools/Global/LocalSearch.php` adds a title-only query mode (`title_only=true`) and automatic fallbacks (title matching and comma/semicolon split queries) when a standard WordPress search returns no results.
+
+### Changed
+- **Jobs table schema supports compound statuses** - `inc/Core/Database/Jobs/Jobs.php` expands the `datamachine_jobs.status` column size from `varchar(20)` to `varchar(100)` and includes an upgrade path that alters the column on existing installs.
+
+### Fixed
+- **Engine refresh captures tool-set job status** - `inc/Engine/Actions/Engine.php` refreshes `EngineData` after step execution so tools like `skip_item` can reliably set `job_status` before the job is finalized.
+
 ## [0.9.10] - 2026-01-06
 
 ### Added

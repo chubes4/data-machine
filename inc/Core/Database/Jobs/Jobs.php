@@ -88,7 +88,7 @@ class Jobs {
             job_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             pipeline_id bigint(20) unsigned NOT NULL,
             flow_id bigint(20) unsigned NOT NULL,
-            status varchar(20) NOT NULL,
+            status varchar(100) NOT NULL,
             engine_data longtext NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             completed_at datetime NULL DEFAULT NULL,
@@ -99,6 +99,27 @@ class Jobs {
         ) $charset_collate;";
 
         dbDelta( $sql );
+
+        // Migrate existing tables: expand status column from varchar(20) to varchar(100)
+        // This handles compound statuses like "agent_skipped - reason text"
+        // Safe to run multiple times - only executes if column is smaller than 100
+        $column_info = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS 
+                 WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'status'",
+                DB_NAME,
+                $table_name
+            )
+        );
+
+        if ($column_info && (int) $column_info->CHARACTER_MAXIMUM_LENGTH < 100) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
+            $wpdb->query("ALTER TABLE {$table_name} MODIFY status varchar(100) NOT NULL");
+            do_action('datamachine_log', 'info', 'Migrated jobs.status column to varchar(100)', [
+                'table_name' => $table_name,
+                'previous_size' => $column_info->CHARACTER_MAXIMUM_LENGTH
+            ]);
+        }
 
         do_action('datamachine_log', 'debug', 'Created jobs database table with pipeline+flow architecture', [
             'table_name' => $table_name,
