@@ -5,8 +5,10 @@
  * Includes tool usage indicators for assistant messages.
  */
 
+import { lazy, Suspense } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import ReactMarkdown from 'react-markdown';
+
+const ReactMarkdown = lazy( () => import( 'react-markdown' ) );
 
 function formatTimestamp(isoString) {
 	if (!isoString) return null;
@@ -30,7 +32,9 @@ export default function ChatMessage({ message }) {
 	return (
 		<div className={ `datamachine-chat-message datamachine-chat-message--${ role }` }>
 			<div className="datamachine-chat-message__content">
-				<ReactMarkdown>{ content }</ReactMarkdown>
+				<Suspense fallback={ <div>{ content }</div> }>
+					<ReactMarkdown>{ content }</ReactMarkdown>
+				</Suspense>
 			</div>
 			{ isAssistant && toolNames.length > 0 && (
 				<div className="datamachine-chat-message__tools">

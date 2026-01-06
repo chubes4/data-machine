@@ -2,7 +2,7 @@
  * ChatSidebar Component
  *
  * Collapsible right sidebar for chat interface.
- * Manages conversation state and API interactions.
+ * Manages conversation state, session switching, and API interactions.
  * Persists conversation across page refreshes via session storage.
  */
 
@@ -15,6 +15,8 @@ import { useChatMutation, useChatSession } from '../../queries/chat';
 import { useChatQueryInvalidation } from '../../hooks/useChatQueryInvalidation';
 import ChatMessages from './ChatMessages';
 import ChatInput from './ChatInput';
+import ChatSessionSwitcher from './ChatSessionSwitcher';
+import ChatSessionList from './ChatSessionList';
 
 function formatChatAsMarkdown(messages) {
 	return messages
@@ -37,6 +39,7 @@ export default function ChatSidebar() {
 	const { toggleChat, chatSessionId, setChatSessionId, clearChatSession, selectedPipelineId } = useUIStore();
 	const [messages, setMessages] = useState([]);
 	const [isCopied, setIsCopied] = useState(false);
+	const [view, setView] = useState('chat'); // 'chat' | 'sessions'
 	const chatMutation = useChatMutation();
 	const sessionQuery = useChatSession(chatSessionId);
 	const { invalidateFromToolCalls } = useChatQueryInvalidation();
@@ -91,6 +94,25 @@ export default function ChatSidebar() {
 	const handleNewConversation = useCallback(() => {
 		clearChatSession();
 		setMessages([]);
+		setView('chat');
+	}, [clearChatSession]);
+
+	const handleSelectSession = useCallback((sessionId) => {
+		setChatSessionId(sessionId);
+		setView('chat');
+	}, [setChatSessionId]);
+
+	const handleShowMore = useCallback(() => {
+		setView('sessions');
+	}, []);
+
+	const handleBackToChat = useCallback(() => {
+		setView('chat');
+	}, []);
+
+	const handleSessionDeleted = useCallback(() => {
+		clearChatSession();
+		setMessages([]);
 	}, [clearChatSession]);
 
 	const handleCopyChat = useCallback(() => {
@@ -116,29 +138,38 @@ export default function ChatSidebar() {
 				/>
 			</header>
 
-			<div className="datamachine-chat-sidebar__actions">
-				<Button
-					variant="tertiary"
-					onClick={ handleNewConversation }
-					className="datamachine-chat-sidebar__new"
-					disabled={ isLoading }
-				>
-					{ __( 'New conversation', 'data-machine' ) }
-				</Button>
-				<Button
-					variant="tertiary"
-					onClick={ handleCopyChat }
-					className="datamachine-chat-sidebar__copy"
-					disabled={ messages.length === 0 }
-					icon={ copy }
-				>
-					{ isCopied ? __( 'Copied!', 'data-machine' ) : __( 'Copy', 'data-machine' ) }
-				</Button>
-			</div>
+			{view === 'chat' ? (
+				<>
+					<div className="datamachine-chat-sidebar__actions">
+						<ChatSessionSwitcher
+							currentSessionId={chatSessionId}
+							onSelectSession={handleSelectSession}
+							onNewConversation={handleNewConversation}
+							onShowMore={handleShowMore}
+						/>
+						<Button
+							variant="tertiary"
+							onClick={ handleCopyChat }
+							className="datamachine-chat-sidebar__copy"
+							disabled={ messages.length === 0 }
+							icon={ copy }
+						>
+							{ isCopied ? __( 'Copied!', 'data-machine' ) : __( 'Copy', 'data-machine' ) }
+						</Button>
+					</div>
 
-			<ChatMessages messages={ messages } isLoading={ isLoading } />
+					<ChatMessages messages={ messages } isLoading={ isLoading } />
 
-			<ChatInput onSend={ handleSend } isLoading={ isLoading } />
+					<ChatInput onSend={ handleSend } isLoading={ isLoading } />
+				</>
+			) : (
+				<ChatSessionList
+					currentSessionId={chatSessionId}
+					onSelectSession={handleSelectSession}
+					onBack={handleBackToChat}
+					onSessionDeleted={handleSessionDeleted}
+				/>
+			)}
 		</aside>
 	);
 }

@@ -5,6 +5,26 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.8] - 2026-01-06
+
+### Added
+- **Persistent Chat Session Listing/Deletion** - New REST endpoints `GET /datamachine/v1/chat/sessions` (paginated) and `DELETE /datamachine/v1/chat/{session_id}` with user ownership enforcement.
+- **Automatic Chat Session Titles** - New `ChatTitleGenerator` generates titles from the first user message (AI-generated when possible, with deterministic truncation fallback) and stores `title`, `provider`, and `model` per session.
+- **Chat Sessions UI Components** - New React components for switching sessions (`ChatSessionSwitcher.jsx`) and browsing session history (`ChatSessionList.jsx`).
+
+### Improved
+- **Chat Session DB Contract** - `datamachine_chat_sessions` records now persist `title`, `provider`, and `model`, and expose `updated_at` ordering for recent sessions.
+- **RunFlow Tool Behavior** - Tool definition and handler enforce: omit `timestamp` for immediate execution; support `count` (1–10) for multiple immediate runs; reject `timestamp` with `count > 1`.
+- **Pipeline Builder Chat Sidebar** - UI and React Query layer updated to handle multiple sessions and improved message/session loading flows.
+- **Settings UI (General Tab)** - Added/updated global settings fields in React (`GeneralTab.jsx`) and settings REST contract to support them.
+
+### Fixed
+- **Job Status Naming in Docs/Tools** - Consistently use `processing` for running jobs across docs and tool descriptions.
+
+### Technical Details
+- **New Chat session queries**: Added query/mutation helpers in `inc/Core/Admin/Pages/Pipelines/assets/react/queries/chat.js` for sessions list, session delete, and session switching.
+- **Database methods**: Expanded `inc/Core/Database/Chat/Chat.php` with `get_user_sessions()` / `get_user_session_count()` and session update semantics.
+
 ## [0.9.7] - 2026-01-05
 
 ### Added

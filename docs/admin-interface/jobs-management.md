@@ -13,23 +13,25 @@ The Logs interface provides a centralized, React-based view of system activities
 - **Execution Context**: Deep links from logs to specific flows and jobs for rapid troubleshooting.
 - **Clean Architecture**: Built on the `LogsManager` service and `Logs` REST controller.
 
-## Jobs Interface (@since v0.8.4)
+## Jobs Interface
 
-The Jobs interface is a fully React-based management dashboard that provides real-time visibility into pipeline executions.
+The Jobs interface is a React-based admin dashboard that lists recent job executions from the Data Machine engine.
 
-**Features:**
-- **React-First Architecture**: Built using `@wordpress/components`, TanStack Query, and Zustand for a seamless, SPA-like experience.
-- **Real-Time Monitoring**: Automatic data refetching and status updates via TanStack Query integration.
-- **Job Listing**: Comprehensive table view showing recent jobs with status, timestamps, and execution context.
-- **Administrative Controls**: Centralized modal for bulk cleanup and maintenance operations.
-- **Performance Tracking**: Visual status indicators and duration metrics for every execution.
+**Architecture:**
+- **TanStack Query** for server state (`useJobs` in `inc/Core/Admin/Pages/Jobs/assets/react/queries/jobs.js`).
+- **Local React state** for UI-only state like pagination and admin modal open/close (`inc/Core/Admin/Pages/Jobs/assets/react/JobsApp.jsx`).
+- Settings (such as `jobs_per_page`) are read via the shared settings query (`useSettings`).
+
+**Features (implemented):**
+- **Job listing** table with server-driven pagination.
+- **Administrative controls** via `JobsAdminModal.jsx` (clear jobs, clear processed items).
 
 ## Job Listing
 
 **Comprehensive Table**: The primary view displays recent jobs with:
 - **Job ID**: Unique identification and tracking.
 - **Pipeline & Flow**: Combined context showing the template and specific instance.
-- **Status**: Color-coded indicators reflecting the current state (Completed, Failed, Running, etc.).
+- **Status**: Reflects the current state (for example `processing`, `completed`, `failed`, `completed_no_items`, `agent_skipped - {reason}`).
 - **Timestamps**: Human-readable creation and completion times.
 
 ## Administrative Controls
@@ -63,17 +65,7 @@ The Jobs interface is a fully React-based management dashboard that provides rea
 
 ## Performance Monitoring
 
-**Execution Metrics**: Performance data visualization:
-- Average job execution time by pipeline type
-- Success rate percentages over time periods
-- Peak usage times and scheduling patterns
-- Resource utilization and system load impact
-
-**Historical Analysis**: Trend analysis capabilities:
-- Job volume over time with graphical representation
-- Failure rate trends and pattern identification
-- Performance degradation detection
-- Capacity planning and scaling recommendations
+The Jobs UI surfaces per-job timestamps and basic duration context when provided by the API. It does not implement trend analytics or charting in the current React code.
 
 ## Database Integration
 
@@ -103,16 +95,7 @@ The Jobs interface is a fully React-based management dashboard that provides rea
 
 ## Integration Points
 
-**Pipeline Interface**: Direct links to pipeline management:
-- Quick access to modify associated pipelines
-- Flow configuration links from job context
-- One-click pipeline execution from job history
-
-**Logging Integration**: Connection to system logging:
-- Detailed log access for specific jobs
-- Log level filtering and search capabilities
-- Export functionality for external analysis
-- Real-time log streaming for active jobs
+The Jobs UI is focused on listing and cleanup operations. Any deep-linking to related Pipelines/Flows and any log streaming behavior should be considered implementation-dependent and verified against the current React components before documenting.
 
 ## Administrative Features
 

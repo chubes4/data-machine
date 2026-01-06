@@ -4,9 +4,13 @@
 
 **Base URL**: `/wp-json/datamachine/v1/settings`
 
-## React Interface (@since v0.8.0)
+## React Interface
 
-The Settings interface is a React-based configuration dashboard providing centralized control over system behavior, agent configuration, and AI providers. It uses TanStack Query for data fetching and Zustand for UI state management, eliminating all legacy jQuery dependencies.
+The Settings page is a React admin interface built with `@wordpress/element` and `@wordpress/components`.
+
+- Data fetching and mutations use TanStack Query.
+- UI state is local React state (active tab persisted to `localStorage`).
+- REST calls use a shared `@wordpress/api-fetch` wrapper that reads `window.dataMachineSettingsConfig` (or other page configs) for the REST namespace and nonce.
 
 ## Overview
 

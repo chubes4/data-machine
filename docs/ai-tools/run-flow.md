@@ -22,6 +22,8 @@ Omit the `timestamp` parameter entirely for immediate background execution:
 }
 ```
 
+Note: don’t send `timestamp: null`—the tool treats a missing `timestamp` as immediate.
+
 ### Scheduled Execution
 Provide a future Unix timestamp for delayed execution:
 
@@ -37,8 +39,7 @@ Provide a future Unix timestamp for delayed execution:
 ### Immediate Execution
 ```json
 {
-  "flow_id": 456,
-  "timestamp": null
+  "flow_id": 456
 }
 ```
 
@@ -90,8 +91,10 @@ For scheduled execution:
 ## Job Status Values
 
 - `pending`: Queued for execution
-- `running`: Currently executing
+- `processing`: Currently executing
 - `completed`: Finished successfully
+- `completed_no_items`: Finished successfully but no new items are found to process
+- `agent_skipped`: Finished intentionally without processing the current item (supports compound statuses like `agent_skipped - {reason}`)
 - `failed`: Execution failed with errors
 
 ## Integration

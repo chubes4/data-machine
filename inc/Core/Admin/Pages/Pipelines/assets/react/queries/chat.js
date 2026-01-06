@@ -5,7 +5,7 @@
  */
 
 import apiFetch from '@wordpress/api-fetch';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 /**
  * Fetch existing chat session
@@ -40,6 +40,8 @@ export function useChatSession(sessionId) {
  * @returns {object} TanStack Query mutation object
  */
 export function useChatMutation() {
+	const queryClient = useQueryClient();
+
 	return useMutation({
 		mutationFn: async ({ message, sessionId, selectedPipelineId }) => {
 			const response = await apiFetch({
@@ -57,6 +59,62 @@ export function useChatMutation() {
 			}
 
 			return response.data;
+		},
+		onSuccess: () => {
+			// Invalidate sessions list to reflect new/updated session
+			queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
+		},
+	});
+}
+
+/**
+ * Fetch list of chat sessions for current user
+ *
+ * @param {number} limit - Maximum sessions to return
+ * @returns {object} TanStack Query object with sessions data
+ */
+export function useChatSessions(limit = 20) {
+	return useQuery({
+		queryKey: ['chat-sessions', limit],
+		queryFn: async () => {
+			const response = await apiFetch({
+				path: `/datamachine/v1/chat/sessions?limit=${limit}`,
+				method: 'GET',
+			});
+
+			if (!response.success) {
+				throw new Error(response.message || 'Failed to fetch sessions');
+			}
+
+			return response.data;
+		},
+		staleTime: 30000, // 30 seconds
+	});
+}
+
+/**
+ * Delete a chat session mutation
+ *
+ * @returns {object} TanStack Query mutation object
+ */
+export function useDeleteChatSession() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (sessionId) => {
+			const response = await apiFetch({
+				path: `/datamachine/v1/chat/${sessionId}`,
+				method: 'DELETE',
+			});
+
+			if (!response.success) {
+				throw new Error(response.message || 'Failed to delete session');
+			}
+
+			return response.data;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
 		},
 	});
 }

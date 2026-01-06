@@ -14,6 +14,8 @@ const GeneralTab = () => {
 	const [ formState, setFormState ] = useState( {
 		cleanup_job_data_on_failure: true,
 		file_retention_days: 7,
+		chat_retention_days: 90,
+		chat_ai_titles_enabled: true,
 		flows_per_page: 20,
 		jobs_per_page: 50,
 	} );
@@ -25,6 +27,8 @@ const GeneralTab = () => {
 			setFormState( {
 				cleanup_job_data_on_failure: data.settings.cleanup_job_data_on_failure ?? true,
 				file_retention_days: data.settings.file_retention_days ?? 7,
+				chat_retention_days: data.settings.chat_retention_days ?? 90,
+				chat_ai_titles_enabled: data.settings.chat_ai_titles_enabled ?? true,
 				flows_per_page: data.settings.flows_per_page ?? 20,
 				jobs_per_page: data.settings.jobs_per_page ?? 50,
 			} );
@@ -45,6 +49,23 @@ const GeneralTab = () => {
 		setFormState( ( prev ) => ( {
 			...prev,
 			file_retention_days: value,
+		} ) );
+		setHasChanges( true );
+	};
+
+	const handleChatRetentionChange = ( days ) => {
+		const value = Math.max( 1, Math.min( 365, parseInt( days, 10 ) || 90 ) );
+		setFormState( ( prev ) => ( {
+			...prev,
+			chat_retention_days: value,
+		} ) );
+		setHasChanges( true );
+	};
+
+	const handleChatAiTitlesToggle = ( enabled ) => {
+		setFormState( ( prev ) => ( {
+			...prev,
+			chat_ai_titles_enabled: enabled,
 		} ) );
 		setHasChanges( true );
 	};
@@ -138,6 +159,46 @@ const GeneralTab = () => {
 								<p className="description">
 									Automatically delete repository files older than this many days.
 									Includes Reddit images, Files handler uploads, and other temporary workflow files.
+								</p>
+							</fieldset>
+						</td>
+					</tr>
+
+					<tr>
+						<th scope="row">Chat session retention (days)</th>
+						<td>
+							<fieldset>
+								<input
+									type="number"
+									id="chat_retention_days"
+									value={ formState.chat_retention_days }
+									onChange={ ( e ) => handleChatRetentionChange( e.target.value ) }
+									min="1"
+									max="365"
+									className="small-text"
+								/>
+								<p className="description">
+									Automatically delete chat sessions with no activity older than this many days.
+								</p>
+							</fieldset>
+						</td>
+					</tr>
+
+					<tr>
+						<th scope="row">AI-generated chat titles</th>
+						<td>
+							<fieldset>
+								<label htmlFor="chat_ai_titles_enabled">
+									<input
+										type="checkbox"
+										id="chat_ai_titles_enabled"
+										checked={ formState.chat_ai_titles_enabled }
+										onChange={ ( e ) => handleChatAiTitlesToggle( e.target.checked ) }
+									/>
+									Use AI to generate descriptive titles for chat sessions
+								</label>
+								<p className="description">
+									Disable to reduce API costs. Titles will use the first message instead.
 								</p>
 							</fieldset>
 						</td>

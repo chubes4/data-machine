@@ -23,6 +23,7 @@ use WP_REST_Request;
 use WP_Error;
 
 require_once __DIR__ . '/ChatPipelinesDirective.php';
+require_once __DIR__ . '/ChatTitleGenerator.php';
 
 if (!defined('ABSPATH')) {
 	exit;
@@ -104,6 +105,120 @@ class Chat {
 					'description' => __('Session ID', 'data-machine'),
 					'sanitize_callback' => 'sanitize_text_field'
 				]
+			]
+		]);
+
+		register_rest_route('datamachine/v1', '/chat/(?P<session_id>[a-f0-9-]+)', [
+			'methods' => WP_REST_Server::DELETABLE,
+			'callback' => [self::class, 'delete_session'],
+			'permission_callback' => function() {
+				return current_user_can('manage_options');
+			},
+			'args' => [
+				'session_id' => [
+					'type' => 'string',
+					'required' => true,
+					'description' => __('Session ID', 'data-machine'),
+					'sanitize_callback' => 'sanitize_text_field'
+				]
+			]
+		]);
+
+		register_rest_route('datamachine/v1', '/chat/sessions', [
+			'methods' => WP_REST_Server::READABLE,
+			'callback' => [self::class, 'list_sessions'],
+			'permission_callback' => function() {
+				return current_user_can('manage_options');
+			},
+			'args' => [
+				'limit' => [
+					'type' => 'integer',
+					'required' => false,
+					'default' => 20,
+					'description' => __('Maximum sessions to return', 'data-machine'),
+					'sanitize_callback' => 'absint'
+				],
+				'offset' => [
+					'type' => 'integer',
+					'required' => false,
+					'default' => 0,
+					'description' => __('Pagination offset', 'data-machine'),
+					'sanitize_callback' => 'absint'
+				]
+			]
+		]);
+	}
+
+	/**
+	 * List all chat sessions for current user
+	 *
+	 * @param WP_REST_Request $request Request object
+	 * @return array|WP_Error Response data or error
+	 */
+	public static function list_sessions(WP_REST_Request $request) {
+		$user_id = get_current_user_id();
+		$limit = min(100, max(1, (int) $request->get_param('limit')));
+		$offset = max(0, (int) $request->get_param('offset'));
+
+		$chat_db = new ChatDatabase();
+		$sessions = $chat_db->get_user_sessions($user_id, $limit, $offset);
+		$total = $chat_db->get_user_session_count($user_id);
+
+		return rest_ensure_response([
+			'success' => true,
+			'data' => [
+				'sessions' => $sessions,
+				'total' => $total,
+				'limit' => $limit,
+				'offset' => $offset
+			]
+		]);
+	}
+
+	/**
+	 * Delete a chat session
+	 *
+	 * @param WP_REST_Request $request Request object
+	 * @return array|WP_Error Response data or error
+	 */
+	public static function delete_session(WP_REST_Request $request) {
+		$session_id = sanitize_text_field($request->get_param('session_id'));
+		$user_id = get_current_user_id();
+
+		$chat_db = new ChatDatabase();
+		$session = $chat_db->get_session($session_id);
+
+		if (!$session) {
+			return new WP_Error(
+				'session_not_found',
+				__('Session not found', 'data-machine'),
+				['status' => 404]
+			);
+		}
+
+		if ((int) $session['user_id'] !== $user_id) {
+			return new WP_Error(
+				'session_access_denied',
+				__('Access denied to this session', 'data-machine'),
+				['status' => 403]
+			);
+		}
+
+		$deleted = $chat_db->delete_session($session_id);
+
+		if (!$deleted) {
+			return new WP_Error(
+				'session_delete_failed',
+				__('Failed to delete session', 'data-machine'),
+				['status' => 500]
+			);
+		}
+
+		return rest_ensure_response([
+			'success' => true,
+			'data' => [
+				'session_id' => $session_id,
+				'deleted' => true
 			]
 		]);
 	}
@@ -195,6 +310,7 @@ class Chat {
 		}
 
 		$chat_db = new ChatDatabase();
+		$is_new_session = false;
 
 		if ($session_id) {
 			$session = $chat_db->get_session($session_id);
@@ -231,6 +347,7 @@ class Chat {
 			}
 
 			$messages = [];
+			$is_new_session = true;
 		}
 
 		$messages[] = ConversationManager::buildConversationMessage('user', $message, ['type' => 'text']);
@@ -286,6 +403,16 @@ class Chat {
 		);
 
 		if (!$update_success) {
+		}
+
+		// Schedule title generation for new sessions after first exchange
+		if ($is_new_session && function_exists('as_schedule_single_action')) {
+			as_schedule_single_action(
+				time(),
+				'datamachine_generate_chat_title',
+				[$session_id],
+				'datamachine-chat'
+			);
 		}
 
 		$response_data = [

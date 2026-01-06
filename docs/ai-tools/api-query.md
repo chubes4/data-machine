@@ -40,7 +40,7 @@ The `api_query` tool enables chat agents to query the Data Machine REST API (via
 ### Jobs & Monitoring
 - `GET /datamachine/v1/jobs` - List all jobs
 - `GET /datamachine/v1/jobs?flow_id={id}` - Jobs for specific flow
-- `GET /datamachine/v1/jobs?status={pending|running|completed|failed|completed_no_items}` - Filter by status (includes `completed_no_items`).
+- `GET /datamachine/v1/jobs?status={pending|processing|completed|failed|completed_no_items|agent_skipped}` - Filter by status.
 - `GET /datamachine/v1/jobs/{id}` - Job details
 
 ### Logs
@@ -51,7 +51,7 @@ The `api_query` tool enables chat agents to query the Data Machine REST API (via
 
 ### System
 - `GET /datamachine/v1/settings` - Get plugin settings
-- `POST /datamachine/v1/settings` - Update settings
+- `PATCH /datamachine/v1/settings` - Update settings (partial)
 
 ### Files
 - `GET /datamachine/v1/files` - List uploaded files
@@ -142,4 +142,4 @@ This tool complements specialized workflow tools by providing comprehensive API 
 - Troubleshooting workflow issues
 - Administrative operations
 
-Use specialized Focused Tools like `create_pipeline`, `delete_flow`, `add_pipeline_step`, and `configure_flow_step` for mutation operations. `api_query` is strictly read-only for discovery, monitoring, and management operations.
+Use specialized Focused Tools like `create_pipeline`, `delete_flow`, `add_pipeline_step`, and `configure_flow_step` for mutation operations. `api_query` is strictly read-only for discovery and monitoring.

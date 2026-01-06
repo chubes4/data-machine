@@ -17,8 +17,6 @@
     padding: 0;
 }
 
-
-
 /* Header layouts */
 .datamachine-header--flex-space-between {
     display: flex;
@@ -45,7 +43,7 @@
 }
 
 .datamachine-spacing--margin-bottom-20 {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
 }
 
 .datamachine-spacing--margin-bottom-24 {
@@ -138,10 +136,6 @@
 
 /* Status badges - base moved to root.css */
 
-/* Info boxes removed - will be recreated with proper naming */
-
-
-
 /* Pipeline cards */
 .datamachine-pipeline-card {
     background: #fff;
@@ -150,9 +144,6 @@
     margin-bottom: 16px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-
-
-
 
 
 /* ===== COMPONENT: PIPELINE HEADER ===== */
@@ -192,8 +183,6 @@
     padding: 20px;
 }
 
-
-
 /* Pipeline steps - horizontal scrolling flex layout */
 .datamachine-pipeline-steps {
     display: flex;
@@ -215,92 +204,6 @@
     overflow: hidden;
     position: relative;
 }
-
-
-
-/* AI Prompt Display and Editing */
-.datamachine-prompt-display {
-    margin-top: 8px;
-}
-
-/* AI prompt textarea styling */
-.datamachine-ai-prompt-input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: var(--datamachine-border-radius);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
-    resize: vertical;
-    min-height: 100px;
-    background: #fff;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
-
-.datamachine-ai-prompt-input:focus {
-    outline: none;
-    border-color: #007cba;
-    box-shadow: 0 0 0 1px #007cba;
-}
-
-.datamachine-ai-prompt-input::placeholder {
-    color: #999;
-    font-style: italic;
-}
-
-/* User message styling for flow step cards */
-.datamachine-user-message-display {
-    margin-top: 8px;
-}
-
-.datamachine-user-message-input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: var(--datamachine-border-radius);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: 12px;
-    line-height: 1.4;
-    resize: vertical;
-    min-height: 60px;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    box-sizing: border-box;
-}
-
-.datamachine-user-message-input:focus {
-    outline: none;
-    border-color: #007cba;
-    box-shadow: 0 0 0 1px #007cba;
-}
-
-.datamachine-user-message-input::placeholder {
-    color: #999;
-    font-style: italic;
-}
-
-
-
-
-.datamachine-step-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-}
-
-
-.datamachine-step-title {
-    font-weight: 600;
-    color: #333;
-}
-
-
-
-
-
-
-
 
 /* ===== COMPONENT: FLOW CARD ===== */
 
@@ -548,15 +451,6 @@
 	max-width: 300px;
 }
 
-/* ===== COMPONENT: FLOW FOOTER ===== */
-
-.datamachine-flow-footer {
-	padding: 8px 16px;
-	border-top: 1px solid var(--datamachine-border-1);
-	background: var(--datamachine-bg-light);
-	border-radius: var(--datamachine-border-radius);
-}
-
 /* ===== COMPONENT: FLOWS SECTION ===== */
 
 .datamachine-flows-section__header {
@@ -586,22 +480,6 @@
 	gap: 20px;
 }
 
-/* Flow steps section */
-.datamachine-flow-steps-section {
-	padding: 20px;
-}
-
-.datamachine-flow-steps-header {
-    margin-bottom: 12px;
-}
-
-.datamachine-flow-steps-header h5 {
-    margin: 0;
-    color: #555;
-    font-size: 14px;
-    font-weight: 600;
-}
-
 /* Handler settings display */
 .datamachine-handler-settings-display {
     margin-top: 8px;
@@ -620,21 +498,6 @@
 
 .datamachine-handler-settings-display div {
     background: #f0f0f0;
-}
-
-
-
-
-.datamachine-flow-meta {
-    padding: 8px 16px;
-    border-top: 1px solid #eee;
-    background: #f9f9f9;
-}
-
-/* Flow footer meta items */
-.datamachine-flow-meta-item {
-    font-size: 12px;
-    color: #757575;
 }
 
 
@@ -708,10 +571,6 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-}
-
-.datamachine-step-add-button {
-    margin: 0;
 }
 
 /* Delete button styling - WordPress standard */
@@ -793,66 +652,6 @@
     height: 14px;
     font-size: 14px;
 }
-/* Page-level pipeline header with dropdown and add button */
-.datamachine-pipeline-page-header {
-    display: flex;
-    align-items: center;
-    gap: var(--datamachine-spacing-md);
-    margin: 15px 0;
-    flex-wrap: wrap;
-}
-
-/* Pipeline selection dropdown */
-.datamachine-pipeline-dropdown {
-    min-width: 200px;
-    max-width: 300px;
-    flex-grow: 1;
-    font-size: 14px;
-    line-height: 1.4;
-    padding: 6px 8px;
-    border: 1px solid var(--datamachine-border-1);
-    border-radius: var(--datamachine-border-radius);
-    background: #fff;
-}
-
-.datamachine-pipeline-dropdown:focus {
-    border-color: #007cba;
-    box-shadow: 0 0 0 1px #007cba;
-    outline: none;
-}
-
-/* Responsive behavior for smaller screens */
-@media screen and (max-width: 782px) {
-    .datamachine-pipeline-page-header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .datamachine-pipeline-dropdown {
-        max-width: none;
-        margin-bottom: var(--datamachine-spacing-sm);
-    }
-}
-
-/* Pipeline selector width constraints - desktop only */
-@media screen and (min-width: 783px) {
-    .datamachine-pipeline-selector {
-        min-width: 200px;
-        max-width: 400px;
-        width: auto;
-    }
-}
-
-/* Loading state for pipeline switching */
-.datamachine-pipeline-loading {
-    padding: 20px;
-    text-align: center;
-    color: var(--datamachine-color-text-muted);
-    font-style: italic;
-}
-
-/* Auto-save status indicator styles removed for silent auto-save */
-
 
 /* Drag & Drop Styling */
 
@@ -863,45 +662,6 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     border-color: #0073aa;
     transition: all 0.2s ease;
-}
-
-/* Dragging state */
-.datamachine-dragging .datamachine-step-card {
-    cursor: grabbing;
-    transform: rotate(3deg);
-    opacity: 0.8;
-    z-index: 1000;
-}
-
-/* Drag placeholder styling */
-.datamachine-step-drag-placeholder {
-    border: 2px dashed #0073aa;
-    background: rgba(0, 115, 170, 0.1);
-    border-radius: var(--datamachine-border-radius);
-    opacity: 0.7;
-    width: 150px;
-    height: 100px;
-    margin: 20px 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.datamachine-step-drag-placeholder::before {
-    content: "Drop here";
-    color: #0073aa;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-/* Sortable UI adjustments */
-.ui-sortable-helper {
-    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
-}
-
-/* Prevent text selection during drag */
-.ui-sortable-helper * {
-    user-select: none;
 }
 
 /* ===== UTILITY CLASSES ===== */
@@ -945,91 +705,6 @@
     outline: 2px solid transparent;
 }
 
-/* === Flow Reordering Controls === */
-
-/* Flow reorder controls container */
-.datamachine-flow-reorder-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    margin-right: 8px;
-}
-
-
-
-/* === Flow Actions === */
-
-/* Flow actions container */
-.datamachine-flow-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-/* Duplicate flow button styling - neutral gray style */
-.datamachine-duplicate-flow-btn {
-    background: #fff;
-    border-color: #7e8993;
-    color: #7e8993;
-    position: relative;
-    font-size: 12px;
-}
-
-.datamachine-duplicate-flow-btn:hover,
-.datamachine-duplicate-flow-btn:focus {
-    background: #f8f9fa;
-    border-color: #646970;
-    color: #646970;
-    box-shadow: 0 0 0 1px #646970;
-}
-
-.datamachine-duplicate-flow-btn:disabled {
-    background: #f0f0f1;
-    border-color: var(--datamachine-border-1);
-    color: #a7aaad;
-    cursor: not-allowed;
-}
-
-/* Duplicated flow highlight animation */
-.datamachine-flow-duplicated {
-    border-color: #00a32a;
-    background: #f0f8f1;
-    box-shadow: 0 2px 8px rgba(0, 163, 42, 0.15);
-    animation: datamachine-duplicate-highlight 2s ease-in-out;
-}
-
-@keyframes datamachine-duplicate-highlight {
-    0% {
-        border-color: #00a32a;
-        background: #f0f8f1;
-        box-shadow: 0 2px 8px rgba(0, 163, 42, 0.15);
-    }
-    50% {
-        border-color: #00a32a;
-        background: #f0f8f1;
-        box-shadow: 0 4px 12px rgba(0, 163, 42, 0.25);
-    }
-    100% {
-        border-color: #ddd;
-        background: #fff;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-}
-
-/* Responsive flow actions - stack on small screens */
-@media (max-width: 600px) {
-    .datamachine-flow-actions {
-        flex-wrap: wrap;
-        gap: 6px;
-    }
-
-    .datamachine-flow-actions .button-small {
-        font-size: 11px;
-        padding: 2px 8px;
-        min-height: 28px;
-    }
-}
-
 /* ===== PIPELINE STEP CARD ===== */
 /**
  * WordPress Components Overrides
@@ -1049,7 +724,8 @@
     margin-top: 12px;
 }
 
-.datamachine-step-card-ai-label {
+.datamachine-step-card-ai-label,
+.datamachine-step-card-tools-label {
     font-size: 12px;
     color: #757575;
     margin-bottom: 8px;
@@ -1076,10 +752,5 @@
     flex: 0 0 auto;
     min-width: 300px;
     max-width: 300px;
-}
-
-/* ===== STEP SELECTION MODAL ===== */
-.datamachine-step-selection-section {
-    margin-bottom: 16px;
 }
 

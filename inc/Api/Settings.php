@@ -309,6 +309,8 @@ class Settings {
 				'settings' => [
 					'cleanup_job_data_on_failure' => $settings['cleanup_job_data_on_failure'] ?? true,
 					'file_retention_days' => $settings['file_retention_days'] ?? 7,
+					'chat_retention_days' => $settings['chat_retention_days'] ?? 90,
+					'chat_ai_titles_enabled' => $settings['chat_ai_titles_enabled'] ?? true,
 					'problem_flow_threshold' => $settings['problem_flow_threshold'] ?? 3,
 					'flows_per_page' => $settings['flows_per_page'] ?? 20,
 					'jobs_per_page' => $settings['jobs_per_page'] ?? 50,
@@ -345,6 +347,15 @@ class Settings {
 		if (isset($params['file_retention_days'])) {
 			$days = absint($params['file_retention_days']);
 			$all_settings['file_retention_days'] = max(1, min(90, $days));
+		}
+
+		if (isset($params['chat_retention_days'])) {
+			$days = absint($params['chat_retention_days']);
+			$all_settings['chat_retention_days'] = max(1, min(365, $days));
+		}
+
+		if (isset($params['chat_ai_titles_enabled'])) {
+			$all_settings['chat_ai_titles_enabled'] = (bool) $params['chat_ai_titles_enabled'];
 		}
 
 		if (isset($params['problem_flow_threshold'])) {

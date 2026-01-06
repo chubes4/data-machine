@@ -170,11 +170,9 @@ class MyStep {
         $job_id = $payload['job_id'];
         $flow_step_id = $payload['flow_step_id'];
         $data = $payload['data'] ?? [];
-        $flow_step_config = $payload['flow_step_config'] ?? [];
-        $engine_data = $payload['engine_data'] ?? [];
 
-        $source_url = $engine_data['source_url'] ?? null;
-        $image_url = $engine_data['image_url'] ?? null;
+        // EngineData value object (not a raw array)
+        $engine = $payload['engine'];
 
         array_unshift($data, [
             'type' => 'my_step',
@@ -198,9 +196,8 @@ Engine now delivers a documented payload array to every step:
 $payload = [
     'job_id' => $job_id,
     'flow_step_id' => $flow_step_id,
-    'flow_step_config' => $flow_step_config,
     'data' => $data,
-    'engine_data' => apply_filters('datamachine_engine_data', [], $job_id)
+    'engine' => $engine_data
 ];
 ```
 
@@ -216,9 +213,10 @@ $payload = [
 ### Job Status
 
 - `pending` - Created but not started
-- `running` - Currently executing
+- `processing` - Currently executing
 - `completed` - Successfully finished (items processed)
-- `completed_no_items` - Finished successfully but no new items were found to process
+- `completed_no_items` - Finished successfully but no new items are found to process
+- `agent_skipped` - Finished intentionally without processing the current item (supports compound statuses like `agent_skipped - {reason}`)
 - `failed` - Actual execution error occurred
 
 ### Flow Monitoring & Problem Flows

@@ -12,9 +12,9 @@ Jobs endpoints provide monitoring and management of workflow executions. Jobs re
 
 Requires `manage_options` capability. See Authentication Guide.
 
-## React Interface (@since v0.8.4)
+## React Interface
 
-The Jobs interface is a fully React-based management dashboard that provides real-time visibility into pipeline executions. Built using `@wordpress/components`, TanStack Query, and Zustand, it features automatic data refetching, status updates, and centralized administrative controls.
+The Jobs interface is a React-based management dashboard built on `@wordpress/components` and TanStack Query.
 
 ## Endpoints
 
@@ -31,7 +31,7 @@ Retrieve jobs with filtering, sorting, and pagination.
 - `offset` (integer, optional): Offset for pagination (default: 0)
 - `pipeline_id` (integer, optional): Filter by pipeline ID
 - `flow_id` (integer, optional): Filter by flow ID
-- `status` (string, optional): Filter by job status (`completed`, `failed`, `running`, etc.)
+- `status` (string, optional): Filter by job status (`completed`, `failed`, `processing`, etc.)
 
 **Example Requests**:
 
@@ -58,7 +58,7 @@ curl https://example.com/wp-json/datamachine/v1/jobs?pipeline_id=5 \
 ```json
 {
   "success": true,
-  "jobs": [
+  "data": [
     {
       "job_id": 1523,
       "flow_id": 42,
@@ -86,7 +86,7 @@ curl https://example.com/wp-json/datamachine/v1/jobs?pipeline_id=5 \
 
 **Response Fields**:
 - `success` (boolean): Request success status
-- `jobs` (array): Array of job objects
+- `data` (array): Array of job objects
 - `total` (integer): Total number of jobs matching filters
 - `per_page` (integer): Number of jobs per page
 - `offset` (integer): Pagination offset
@@ -95,16 +95,17 @@ curl https://example.com/wp-json/datamachine/v1/jobs?pipeline_id=5 \
 - `job_id` (integer): Unique job identifier
 - `flow_id` (integer): Associated flow ID
 - `pipeline_id` (integer): Associated pipeline ID
-- `status` (string): Job status (`completed`, `failed`, `running`, `completed_no_items`)
+- `status` (string): Job status (`pending`, `processing`, `completed`, `failed`, `completed_no_items`, `agent_skipped`, etc.)
 - `started_at` (string): Job start timestamp
 - `completed_at` (string|null): Job completion timestamp
 - `error_message` (string|null): Error message if failed
 
 **Job Statuses**:
 - `pending` - Job queued but not started
-- `running` - Currently executing
+- `processing` - Currently executing
 - `completed` - Successfully completed
-- `completed_no_items` - Completed with no items to process
+- `completed_no_items` - Completed successfully but no new items are found to process
+- `agent_skipped` - Completed intentionally without processing the current item (supports compound statuses like `agent_skipped - {reason}`)
 - `failed` - Execution failed with error
 
 ### DELETE /jobs
@@ -203,9 +204,9 @@ response = requests.get(url, params=params, auth=auth)
 
 if response.status_code == 200:
     data = response.json()
-    print(f"Found {len(data['jobs'])} failed jobs")
+    print(f"Found {len(data['data'])} failed jobs")
 
-    for job in data['jobs']:
+    for job in data['data']: 
         print(f"Job {job['job_id']}: {job['error_message']}")
 else:
     print(f"Error: {response.json()['message']}")
@@ -232,12 +233,12 @@ async function getJobStats(flowId) {
     auth: jobAPI.auth
   });
 
-  const jobs = response.data.jobs;
+  const jobs = response.data.data;
   const stats = {
     total: jobs.length,
     completed: jobs.filter(j => j.status === 'completed').length,
     failed: jobs.filter(j => j.status === 'failed').length,
-    running: jobs.filter(j => j.status === 'running').length
+    processing: jobs.filter(j => j.status === 'processing').length
   };
 
   return stats;
@@ -283,7 +284,7 @@ $response = wp_remote_get($url . '?' . $params, [
 if (!is_wp_error($response)) {
     $data = json_decode(wp_remote_retrieve_body($response), true);
 
-    foreach ($data['jobs'] as $job) {
+    foreach ($data['data'] as $job) {
         error_log(sprintf(
             'Job %d failed: %s',
             $job['job_id'],
@@ -329,10 +330,10 @@ curl -X DELETE https://example.com/wp-json/datamachine/v1/jobs \
 
 ## Related Documentation
 
-- Execute Endpoint - Flow execution
-- Flows Endpoints - Flow management
-- ProcessedItems Endpoints - Deduplication tracking
-- Logs Endpoints - Detailed execution logs
+- [Execute](execute.md) - Flow execution
+- [Flows](flows.md) - Flow management
+- [Processed Items](processed-items.md) - Deduplication tracking
+- [Logs](logs.md) - Detailed execution logs
 
 ---
 

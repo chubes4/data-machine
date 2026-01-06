@@ -54,11 +54,7 @@ function datamachine_register_pipelines_admin_page_filters() {
                          'deps' => [],
                          'media' => 'all'
                      ],
-                     'datamachine-import-export' => [
-                        'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/import-export.css',
-                        'deps' => [],
-                        'media' => 'all'
-                    ],
+
                     'datamachine-chat-sidebar' => [
                         'file' => 'inc/Core/Admin/Pages/Pipelines/assets/css/chat-sidebar.css',
                         'deps' => [],

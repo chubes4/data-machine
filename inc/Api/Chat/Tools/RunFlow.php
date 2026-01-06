@@ -39,10 +39,15 @@ class RunFlow {
                     'required' => true,
                     'description' => 'Flow ID to execute'
                 ],
+                'count' => [
+                    'type' => 'integer',
+                    'required' => false,
+                    'description' => 'Number of times to run the flow (1-10, default 1). Each run spawns an independent job. Use this to process multiple items from a source.'
+                ],
                 'timestamp' => [
                     'type' => 'integer',
                     'required' => false,
-                    'description' => 'ONLY for scheduled execution: a future Unix timestamp. OMIT this parameter entirely for immediate execution.'
+                    'description' => 'ONLY for scheduled execution: a future Unix timestamp. OMIT this parameter entirely for immediate execution. Cannot be combined with count > 1.'
                 ]
             ]
         ];
@@ -60,50 +65,91 @@ class RunFlow {
         }
 
         $flow_id = (int) $flow_id;
+        $count = $parameters['count'] ?? 1;
+        $count = max(1, min(10, (int) $count));
         $timestamp = $parameters['timestamp'] ?? null;
         $execution_type = 'immediate';
 
         if (!empty($timestamp) && is_numeric($timestamp) && (int) $timestamp > time()) {
             $timestamp = (int) $timestamp;
             $execution_type = 'delayed';
+            
+            if ($count > 1) {
+                return [
+                    'success' => false,
+                    'error' => 'Cannot schedule multiple runs with a timestamp. Use count only for immediate execution.',
+                    'tool_name' => 'run_flow'
+                ];
+            }
         } else {
             $timestamp = null;
         }
 
-        $body_params = ['flow_id' => $flow_id];
-        if ($timestamp !== null) {
-            $body_params['timestamp'] = $timestamp;
+        $jobs = [];
+        $flow_name = null;
+
+        for ($i = 0; $i < $count; $i++) {
+            $body_params = ['flow_id' => $flow_id];
+            if ($timestamp !== null) {
+                $body_params['timestamp'] = $timestamp;
+            }
+
+            $request = new \WP_REST_Request('POST', '/datamachine/v1/execute');
+            $request->set_body_params($body_params);
+
+            $response = rest_do_request($request);
+            $data = $response->get_data();
+            $status = $response->get_status();
+
+            if ($status >= 400) {
+                $error_message = $data['message'] ?? 'Failed to execute flow';
+                if (empty($jobs)) {
+                    return [
+                        'success' => false,
+                        'error' => $error_message,
+                        'tool_name' => 'run_flow'
+                    ];
+                }
+                break;
+            }
+
+            if (isset($data['data']['job_id'])) {
+                $jobs[] = $data['data']['job_id'];
+            }
+            if ($flow_name === null && isset($data['data']['flow_name'])) {
+                $flow_name = $data['data']['flow_name'];
+            }
         }
 
-        $request = new \WP_REST_Request('POST', '/datamachine/v1/execute');
-        $request->set_body_params($body_params);
-
-        $response = rest_do_request($request);
-        $data = $response->get_data();
-        $status = $response->get_status();
-
-        if ($status >= 400) {
-            $error_message = $data['message'] ?? 'Failed to execute flow';
-            return [
-                'success' => false,
-                'error' => $error_message,
-                'tool_name' => 'run_flow'
+        if ($count === 1) {
+            $response_data = [
+                'flow_id' => $flow_id,
+                'execution_type' => $execution_type,
+                'message' => $execution_type === 'immediate'
+                    ? 'Flow queued for immediate background execution. It will start within seconds. Use job_id to check status.'
+                    : 'Flow scheduled for delayed background execution at the specified time.'
             ];
-        }
-
-        $response_data = [
-            'flow_id' => $flow_id,
-            'execution_type' => $execution_type,
-            'message' => $execution_type === 'immediate'
-                ? 'Flow queued for immediate background execution. It will start within seconds. Use job_id to check status.'
-                : 'Flow scheduled for delayed background execution at the specified time.'
-        ];
-
-        if (isset($data['data']['job_id'])) {
-            $response_data['job_id'] = $data['data']['job_id'];
-        }
-        if (isset($data['data']['flow_name'])) {
-            $response_data['flow_name'] = $data['data']['flow_name'];
+            if (!empty($jobs)) {
+                $response_data['job_id'] = $jobs[0];
+            }
+            if ($flow_name !== null) {
+                $response_data['flow_name'] = $flow_name;
+            }
+        } else {
+            $response_data = [
+                'flow_id' => $flow_id,
+                'execution_type' => $execution_type,
+                'count' => count($jobs),
+                'job_ids' => $jobs,
+                'message' => sprintf(
+                    'Queued %d jobs for flow "%s". Each job will process one item independently.',
+                    count($jobs),
+                    $flow_name ?? "ID {$flow_id}"
+                )
+            ];
+            if ($flow_name !== null) {
+                $response_data['flow_name'] = $flow_name;
+            }
         }
 
         return [

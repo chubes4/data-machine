@@ -41,6 +41,7 @@ class Chat {
         $sql = "CREATE TABLE {$table_name} (
             session_id VARCHAR(50) NOT NULL,
             user_id BIGINT(20) UNSIGNED NOT NULL,
+            title VARCHAR(100) NULL COMMENT 'AI-generated or truncated first message title',
             messages LONGTEXT NOT NULL COMMENT 'JSON array of conversation messages',
             metadata LONGTEXT NULL COMMENT 'JSON object for session metadata',
             provider VARCHAR(50) NULL COMMENT 'AI provider (anthropic, openai, etc)',
@@ -51,6 +52,7 @@ class Chat {
             PRIMARY KEY  (session_id),
             KEY user_id (user_id),
             KEY created_at (created_at),
+            KEY updated_at (updated_at),
             KEY expires_at (expires_at)
         ) {$charset_collate};";
 
@@ -299,4 +301,176 @@ class Chat {
 
 		return (int) $deleted;
 	}
+
+	/**
+	 * Get all sessions for a user
+	 *
+	 * @param int $user_id WordPress user ID
+	 * @param int $limit Maximum sessions to return
+	 * @param int $offset Pagination offset
+	 * @return array Array of session data
+	 */
+	public function get_user_sessions(int $user_id, int $limit = 20, int $offset = 0): array {
+		global $wpdb;
+
+		$table_name = self::get_table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$sessions = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT session_id, title, messages, created_at, updated_at FROM %i WHERE user_id = %d ORDER BY updated_at DESC LIMIT %d OFFSET %d',
+				$table_name,
+				$user_id,
+				$limit,
+				$offset
+			),
+			ARRAY_A
+		);
+
+		if (!$sessions) {
+			return [];
+		}
+
+		$result = [];
+		foreach ($sessions as $session) {
+			$messages = json_decode($session['messages'], true) ?: [];
+			$first_message = '';
+			foreach ($messages as $msg) {
+				if (($msg['role'] ?? '') === 'user') {
+					$first_message = $msg['content'] ?? '';
+					break;
+				}
+			}
+
+			$result[] = [
+				'session_id' => $session['session_id'],
+				'title' => $session['title'],
+				'first_message' => mb_substr($first_message, 0, 100),
+				'message_count' => count($messages),
+				'created_at' => $session['created_at'],
+				'updated_at' => $session['updated_at'],
+			];
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Get total session count for a user
+	 *
+	 * @param int $user_id WordPress user ID
+	 * @return int Total session count
+	 */
+	public function get_user_session_count(int $user_id): int {
+		global $wpdb;
+
+		$table_name = self::get_table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$count = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE user_id = %d',
+				$table_name,
+				$user_id
+			)
+		);
+
+		return (int) $count;
+	}
+
+	/**
+	 * Update session title
+	 *
+	 * @param string $session_id Session UUID
+	 * @param string $title New title
+	 * @return bool Success
+	 */
+	public function update_title(string $session_id, string $title): bool {
+		global $wpdb;
+
+		$table_name = self::get_table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$result = $wpdb->update(
+			$table_name,
+			['title' => $title],
+			['session_id' => $session_id],
+			['%s'],
+			['%s']
+		);
+
+		if ($result === false) {
+			do_action('datamachine_log', 'error', 'Failed to update chat session title', [
+				'session_id' => $session_id,
+				'error' => $wpdb->last_error,
+				'agent_type' => \DataMachine\Engine\AI\AgentType::CHAT
+			]);
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Cleanup old sessions based on retention period
+	 *
+	 * @param int $retention_days Days to retain sessions
+	 * @return int Number of deleted sessions
+	 */
+	public function cleanup_old_sessions(int $retention_days): int {
+		global $wpdb;
+
+		$table_name = self::get_table_name();
+		$cutoff_date = gmdate('Y-m-d H:i:s', strtotime("-{$retention_days} days"));
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				'DELETE FROM %i WHERE updated_at < %s',
+				$table_name,
+				$cutoff_date
+			)
+		);
+
+		if ($deleted > 0) {
+			do_action('datamachine_log', 'info', 'Cleaned up old chat sessions', [
+				'deleted_count' => $deleted,
+				'retention_days' => $retention_days,
+				'cutoff_date' => $cutoff_date,
+				'agent_type' => \DataMachine\Engine\AI\AgentType::CHAT
+			]);
+		}
+
+		return (int) $deleted;
+	}
 }
+
+/**
+ * Register scheduled cleanup action for old chat sessions
+ */
+add_action('datamachine_cleanup_chat_sessions', function() {
+	$chat_db = new Chat();
+	$retention_days = \DataMachine\Core\PluginSettings::get('chat_retention_days', 90);
+
+	$deleted_count = $chat_db->cleanup_old_sessions($retention_days);
+
+	do_action('datamachine_log', 'debug', 'Chat sessions cleanup completed', [
+		'sessions_deleted' => $deleted_count,
+		'retention_days' => $retention_days
+	]);
+});
+
+/**
+ * Schedule chat session cleanup after Action Scheduler is initialized
+ */
+add_action('action_scheduler_init', function() {
+	if (!as_next_scheduled_action('datamachine_cleanup_chat_sessions', [], 'datamachine-chat')) {
+		as_schedule_recurring_action(
+			time() + DAY_IN_SECONDS,
+			DAY_IN_SECONDS,
+			'datamachine_cleanup_chat_sessions',
+			[],
+			'datamachine-chat'
+		);
+	}
+});

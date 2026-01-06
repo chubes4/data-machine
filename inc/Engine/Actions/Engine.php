@@ -256,16 +256,31 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
             $payload['data'] = $dataPackets;
 
             $step_success = ! empty( $dataPackets );
-            if ( $step_success ) {
+
+            // Check for status override from tools (e.g., skip_item sets agent_skipped)
+            // If set, complete the job immediately without scheduling next step
+            $status_override = $engine->get('job_status');
+            if ($status_override) {
+                $job_manager->updateStatus($job_id, $status_override, 'complete');
+                $cleanup = new \DataMachine\Core\FilesRepository\FileCleanup();
+                $context = datamachine_get_file_context($flow_id);
+                $cleanup->cleanup_job_data_packets($job_id, $context);
+                do_action('datamachine_log', 'info', 'Pipeline execution completed with status override', [
+                    'job_id' => $job_id,
+                    'pipeline_id' => $flow_step_config['pipeline_id'] ?? null,
+                    'flow_id' => $flow_id,
+                    'flow_step_id' => $flow_step_id,
+                    'final_status' => $status_override,
+                    'override_source' => 'engine_data'
+                ]);
+            } elseif ( $step_success ) {
                 $navigator = new \DataMachine\Engine\StepNavigator();
                 $next_flow_step_id = $navigator->get_next_flow_step_id($flow_step_id, $payload);
 
                 if ( $next_flow_step_id ) {
                     do_action('datamachine_schedule_next_step', $job_id, $next_flow_step_id, $dataPackets);
                 } else {
-                    // Check for status override from tools (e.g., skip_item sets agent_skipped)
-                    $final_status = $engine->get('job_status') ?? JobStatus::COMPLETED;
-                    $job_manager->updateStatus($job_id, $final_status, 'complete');
+                    $job_manager->updateStatus($job_id, JobStatus::COMPLETED, 'complete');
                     $cleanup = new \DataMachine\Core\FilesRepository\FileCleanup();
                     $context = datamachine_get_file_context($flow_id);
                     $cleanup->cleanup_job_data_packets($job_id, $context);
@@ -275,7 +290,7 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
                         'flow_id' => $flow_id,
                         'flow_step_id' => $flow_step_id,
                         'final_packet_count' => count($dataPackets),
-                        'final_status' => $final_status
+                        'final_status' => JobStatus::COMPLETED
                     ]);
                 }
             } else {

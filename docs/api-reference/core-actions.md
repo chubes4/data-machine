@@ -103,7 +103,7 @@ do_action('datamachine_mark_item_processed', $flow_step_id, 'wordpress_local', $
 
 **Parameters**:
 - `$job_id` (string) - Job identifier
-- `$status` (string) - New status ('pending', 'running', 'completed', 'failed', 'completed_no_items')
+- `$status` (string) - New status ('pending', 'processing', 'completed', 'failed', 'completed_no_items', 'agent_skipped' or compound `agent_skipped - {reason}`)
 - `$message` (string, optional) - Status message
 
 **Usage**:

@@ -16,12 +16,15 @@ Requires `manage_options` capability. See Authentication Guide.
 
 ### POST /files
 
-Upload a file for pipeline processing.
+Upload a file for flow processing (`flow_step_id`) or pipeline context (`pipeline_id`).
 
 **Permission**: `manage_options` capability required
 
 **Parameters**:
-- `flow_step_id` (string, required): Flow step ID to associate with upload
+- `flow_step_id` (string, optional): Flow step ID for flow-level files
+- `pipeline_id` (integer, optional): Pipeline ID for pipeline context files
+
+Exactly one of `flow_step_id` or `pipeline_id` is required.
 - `file` (file, required): File to upload (multipart/form-data)
 
 **File Restrictions**:
@@ -32,9 +35,16 @@ Upload a file for pipeline processing.
 **Example Request**:
 
 ```bash
+# Flow scope
 curl -X POST https://example.com/wp-json/datamachine/v1/files \
   -u username:application_password \
   -F "flow_step_id=abc-123_42" \
+  -F "file=@/path/to/document.pdf"
+
+# Pipeline context scope
+curl -X POST https://example.com/wp-json/datamachine/v1/files \
+  -u username:application_password \
+  -F "pipeline_id=5" \
   -F "file=@/path/to/document.pdf"
 ```
 
@@ -43,11 +53,11 @@ curl -X POST https://example.com/wp-json/datamachine/v1/files \
 ```json
 {
   "success": true,
-  "file_info": {
+  "data": {
     "filename": "document_1234567890.pdf",
     "size": 1048576,
     "modified": 1704153600,
-    "url": "https://example.com/wp-content/uploads/data-machine-files/abc-123_42/document_1234567890.pdf"
+    "url": "https://example.com/wp-content/uploads/datamachine-files/5/My%20Pipeline/42/document_1234567890.pdf"
   },
   "message": "File \"document.pdf\" uploaded successfully."
 }
@@ -55,12 +65,48 @@ curl -X POST https://example.com/wp-json/datamachine/v1/files \
 
 **Response Fields**:
 - `success` (boolean): Request success status
-- `file_info` (object): Uploaded file information
+- `data` (object): Uploaded file information
   - `filename` (string): Timestamped filename
   - `size` (integer): File size in bytes
   - `modified` (integer): Unix timestamp of upload
   - `url` (string): Public URL to access file
 - `message` (string): Success confirmation
+
+### GET /files
+
+List files in a flow scope (`flow_step_id`) or pipeline context scope (`pipeline_id`).
+
+**Success Response (200 OK)**:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "name": "document_1234567890.pdf",
+      "size": 1048576,
+      "modified": 1704153600,
+      "url": "https://example.com/wp-content/uploads/datamachine-files/.../document_1234567890.pdf"
+    }
+  ]
+}
+```
+
+### DELETE /files/{filename}
+
+Delete a file in a flow scope (`flow_step_id`) or pipeline context scope (`pipeline_id`).
+
+**Success Response (200 OK)**:
+
+```json
+{
+  "success": true,
+  "data": {
+    "deleted": true,
+    "filename": "document_1234567890.pdf"
+  }
+}
+```
 
 ## Error Responses
 
@@ -84,22 +130,32 @@ curl -X POST https://example.com/wp-json/datamachine/v1/files \
 }
 ```
 
-### 400 Bad Request - Missing Parameters
+### 400 Bad Request - Missing Scope
 
 ```json
 {
-  "code": "missing_required_param",
-  "message": "Missing required parameter: flow_step_id",
+  "code": "missing_scope",
+  "message": "Must provide either flow_step_id or pipeline_id.",
   "data": {"status": 400}
 }
 ```
 
-### 400 Bad Request - No File Uploaded
+### 400 Bad Request - Conflicting Scope
 
 ```json
 {
-  "code": "no_file_uploaded",
-  "message": "No file was uploaded.",
+  "code": "conflicting_scope",
+  "message": "Cannot provide both flow_step_id and pipeline_id.",
+  "data": {"status": 400}
+}
+```
+
+### 400 Bad Request - Missing File
+
+```json
+{
+  "code": "missing_file",
+  "message": "File upload is required.",
   "data": {"status": 400}
 }
 ```
@@ -108,10 +164,13 @@ curl -X POST https://example.com/wp-json/datamachine/v1/files \
 
 ### Directory Structure
 
-Files are stored in flow-isolated directories:
+Files are stored under the `datamachine-files` uploads directory.
 
-```
-wp-content/uploads/data-machine-files/
+- **Flow scope**: files are grouped by pipeline + flow.
+- **Pipeline scope**: context files are grouped by pipeline.
+
+See [FilesRepository](../core-system/files-repository.md) for the current directory structure.
+wp-content/uploads/datamachine-files/
 └── {flow_step_id}/
     ├── document_1234567890.pdf
     ├── image_1234567891.jpg
@@ -188,7 +247,7 @@ with open('/path/to/document.pdf', 'rb') as f:
 
 if response.status_code == 201:
     result = response.json()
-    print(f"File uploaded: {result['file_info']['url']}")
+    print(f"File uploaded: {result['data']['url']}")
 else:
     print(f"Upload failed: {response.json()['message']}")
 ```
@@ -217,7 +276,7 @@ async function uploadFile(filePath, flowStepId) {
     }
   );
 
-  return response.data.file_info.url;
+   return response.data.data.url;
 }
 
 // Usage

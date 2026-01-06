@@ -10,7 +10,7 @@ Complete REST API reference for Data Machine
 
 **Permissions**: Most endpoints require `manage_options` capability
 
-**Implementation**: All endpoints in `/datamachine/inc/Api/` using services layer for direct method calls, with automatic registration via `rest_api_init`
+**Implementation**: All endpoints are implemented in `data-machine/inc/Api/` using the services layer for direct method calls, with automatic registration via `rest_api_init`
 
 ## Endpoint Categories
 
@@ -73,7 +73,7 @@ Endpoints returning lists support pagination parameters:
 
 ## Implementation Guide
 
-All endpoints are implemented in `/datamachine/inc/Api/` using the services layer architecture for direct method calls, with automatic registration via `rest_api_init`:
+All endpoints are implemented in `data-machine/inc/Api/` using the services layer architecture for direct method calls, with automatic registration via `rest_api_init`: 
 
 ```php
 // Example endpoint registration using services layer
