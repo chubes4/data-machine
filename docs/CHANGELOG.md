@@ -5,6 +5,18 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.12] - 2026-01-06
+
+### Improved
+- **ApiQuery tool error reporting** - `inc/Api/Chat/Tools/ApiQuery.php` now provides specific error messages and HTTP status codes for failed requests, improving diagnostic visibility for AI agents.
+
+### Fixed
+- **Flow selection dropdown in Jobs UI** - `inc/Core/Admin/Pages/Jobs/assets/react/queries/jobs.js` corrects the data path (`response.data.flows`) for fetching flows, fixing the empty dropdown in the Jobs filter.
+
+### Refined
+- **Chat Sidebar UI tool result labeling** - `inc/Core/Admin/Pages/Pipelines/assets/react/components/chat/ChatSidebar.jsx` now explicitly labels tool results with name and success/failure status, and filters redundant assistant tool-call messages for a cleaner conversation history.
+- **Duplicate tool call handling** - `inc/Engine/AI/AIConversationLoop.php` and `inc/Engine/AI/ConversationManager.php` now treat duplicate tool calls as failed tool results rather than user correction messages, improving consistency in the conversation loop.
+
 ## [0.9.11] - 2026-01-06
 
 ### Added

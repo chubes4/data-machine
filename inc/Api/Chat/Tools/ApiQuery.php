@@ -171,6 +171,9 @@ KEY ENDPOINTS:
 
 		if (!empty($errors)) {
 			$response['errors'] = $errors;
+			$response['error'] = count($errors) === 1
+				? reset($errors)
+				: 'Multiple requests failed: ' . implode(', ', array_keys($errors));
 			// Partial success if some requests succeeded
 			if (!empty($results)) {
 				$response['success'] = true;
@@ -210,10 +213,22 @@ KEY ENDPOINTS:
 			];
 		}
 
+		$data = $response->get_data();
+		$status = $response->get_status();
+
+		if ($status >= 400) {
+			$error_message = $data['message'] ?? 'Request failed with status ' . $status;
+			return [
+				'success' => false,
+				'error' => $error_message,
+				'status' => $status
+			];
+		}
+
 		return [
 			'success' => true,
-			'data' => $response->get_data(),
-			'status' => $response->get_status()
+			'data' => $data,
+			'status' => $status
 		];
 	}
 

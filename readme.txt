@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.9.11
+Stable tag: 0.9.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -247,7 +247,13 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 
 == Changelog ==
 
-= 0.8.17 =
+= 0.9.12 =
+* Improved: ApiQuery tool error reporting with specific error messages for HTTP failures.
+* Fixed: Flow selection dropdown in Jobs UI (data path correction).
+* Refined: Chat Sidebar UI now explicitly labels tool results and filters redundant assistant tool calls.
+* Refined: AI conversation loop now treats duplicate tool calls as tool failures rather than user messages.
+
+= 0.9.11 =
 * Google Sheets: Refactored authentication to lazy-load the auth provider only when needed, improving performance and avoiding unnecessary API calls.
 * API: Added `AuthProviderService::clearCache()` and integrated it into the centralized `CacheManager` to ensure auth provider caches are synchronized during dynamic registration.
 * Chat Agent: Simplified `ExecuteWorkflowTool` documentation by removing redundant taxonomy configuration examples, relying on the unified handler documentation instead.

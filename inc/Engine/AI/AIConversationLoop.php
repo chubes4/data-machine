@@ -142,7 +142,7 @@ class AIConversationLoop {
 					);
 
 					if ($validation_result['is_duplicate']) {
-						$correction_message = ConversationManager::generateDuplicateToolCallMessage($tool_name);
+						$correction_message = ConversationManager::generateDuplicateToolCallMessage($tool_name, $turn_count);
 						$messages[] = $correction_message;
 
 						do_action('datamachine_log', 'info', 'AIConversationLoop: Duplicate tool call prevented', array_merge($base_log_context, [

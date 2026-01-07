@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 PLUGIN_FILE="data-machine.php"
-BUILD_DIR="dist"
+BUILD_DIR="build"
 TEMP_DIR="$BUILD_DIR/temp"
 BUILDIGNORE_FILE=".buildignore"
 

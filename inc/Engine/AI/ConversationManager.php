@@ -311,16 +311,19 @@ class ConversationManager {
     }
 
     /**
-     * Generate a user message for duplicate tool call prevention.
+     * Generate a tool result message for duplicate tool call prevention.
      *
      * @param string $tool_name Tool name that was duplicated
-     * @return array Formatted user message
+     * @param int $turn_count Current conversation turn
+     * @return array Formatted tool result message
      */
-    public static function generateDuplicateToolCallMessage(string $tool_name): array {
-        $tool_display = ucwords(str_replace('_', ' ', $tool_name));
-        $message = "You just called the {$tool_display} tool with the exact same parameters as your previous action. Please try a different approach or use different parameters instead.";
+    public static function generateDuplicateToolCallMessage(string $tool_name, int $turn_count = 0): array {
+        $tool_result = [
+            'success' => false,
+            'error' => 'Duplicate tool call - same parameters as previous action. Try a different approach.',
+        ];
 
-        return self::buildConversationMessage('user', $message);
+        return self::formatToolResultMessage($tool_name, $tool_result, [], false, $turn_count);
     }
 }
 

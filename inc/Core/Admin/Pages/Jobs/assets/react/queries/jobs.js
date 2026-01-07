@@ -89,7 +89,7 @@ export const useFlowsForDropdown = ( pipelineId ) =>
 			if ( ! response.success ) {
 				throw new Error( response.message || 'Failed to fetch flows' );
 			}
-			return response.flows || [];
+			return response.data?.flows || [];
 		},
 		enabled: !! pipelineId,
 		staleTime: 5 * 60 * 1000,
