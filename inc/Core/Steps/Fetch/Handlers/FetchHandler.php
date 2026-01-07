@@ -90,14 +90,18 @@ abstract class FetchHandler {
 	 * Extract flow ID from handler config
 	 *
 	 * @param array $handler_config Handler configuration
-	 * @return int Flow ID
+	 * @return int|string Flow ID or 'direct' for direct execution
 	 * @throws \InvalidArgumentException If flow_id is missing
 	 */
-	protected function getFlowId( array $handler_config ): int {
-		if (!isset($handler_config['flow_id']) || empty($handler_config['flow_id'])) {
+	protected function getFlowId( array $handler_config ): int|string {
+		if (!array_key_exists('flow_id', $handler_config)) {
 			throw new \InvalidArgumentException('Flow ID is required in handler configuration');
 		}
-		return (int) $handler_config['flow_id'];
+		$flow_id = $handler_config['flow_id'];
+		if ($flow_id === 'direct') {
+			return 'direct';
+		}
+		return (int) $flow_id;
 	}
 
 	/**

@@ -326,8 +326,8 @@ class Execute {
                 'handler_config' => $step['handler_config'] ?? [],
                 'user_message' => $step['user_message'] ?? '',
                 'enabled_tools' => $step['enabled_tools'] ?? [],
-                'pipeline_id' => 0,  // Sentinel value for ephemeral workflows
-                'flow_id' => 0       // Sentinel value for ephemeral workflows
+                'pipeline_id' => 'direct',
+                'flow_id' => 'direct'
             ];
 
             // Pipeline config (AI settings only)

@@ -33,11 +33,15 @@ class JobsOperations {
      */
     public function create_job(array $job_data): int|false {
 
-        $pipeline_id = absint($job_data['pipeline_id'] ?? 0);
-        $flow_id = absint($job_data['flow_id'] ?? 0);
+        $raw_pipeline_id = $job_data['pipeline_id'] ?? 0;
+        $raw_flow_id = $job_data['flow_id'] ?? 0;
 
-        // Validate execution mode: allow direct execution (0,0) or database flow (>0,>0)
-        $is_direct_execution = ($pipeline_id === 0 && $flow_id === 0);
+        // Direct execution uses 'direct' string or 0 - stored as 0 in database
+        $is_direct_execution = ($raw_pipeline_id === 'direct' || $raw_flow_id === 'direct' || ($raw_pipeline_id === 0 && $raw_flow_id === 0));
+        
+        $pipeline_id = $is_direct_execution ? 0 : absint($raw_pipeline_id);
+        $flow_id = $is_direct_execution ? 0 : absint($raw_flow_id);
+
         $is_database_flow = ($pipeline_id > 0 && $flow_id > 0);
 
         if (!$is_direct_execution && !$is_database_flow) {

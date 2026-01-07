@@ -83,8 +83,20 @@ KEY ENDPOINTS:
 	 * @return array Tool execution result
 	 */
 	public function handle_tool_call(array $parameters, array $tool_def = []): array {
+		// Validate at least one mode is specified
+		$has_endpoint = !empty($parameters['endpoint']);
+		$has_requests = !empty($parameters['requests']) && is_array($parameters['requests']);
+
+		if (!$has_endpoint && !$has_requests) {
+			return [
+				'success' => false,
+				'error' => 'Either endpoint (single mode) or requests (batch mode) parameter is required. For external URLs, use web_fetch tool instead - api_query is for internal Data Machine REST API only.',
+				'tool_name' => 'api_query'
+			];
+		}
+
 		// Batch mode: requests array provided
-		if (!empty($parameters['requests']) && is_array($parameters['requests'])) {
+		if ($has_requests) {
 			return $this->handleBatchRequest($parameters['requests']);
 		}
 

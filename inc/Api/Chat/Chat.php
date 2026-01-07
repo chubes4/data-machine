@@ -380,6 +380,19 @@ class Chat {
 
 		$messages[] = ConversationManager::buildConversationMessage('user', $message, ['type' => 'text']);
 
+		// Persist user message immediately so it survives navigation away from page
+		$chat_db->update_session(
+			$session_id,
+			$messages,
+			[
+				'status' => 'processing',
+				'started_at' => current_time('mysql', true),
+				'message_count' => count($messages),
+			],
+			$provider,
+			$model
+		);
+
 		// Load available tools using ToolManager (filters out unconfigured/disabled tools)
 		$tool_manager = new ToolManager();
 		$all_tools = $tool_manager->getAvailableToolsForChat();
@@ -402,12 +415,61 @@ class Chat {
 
 			// Check for errors
 			if (isset($loop_result['error'])) {
+				// Update session with error status before returning
+				$chat_db->update_session(
+					$session_id,
+					$messages,
+					[
+						'status' => 'error',
+						'error_message' => $loop_result['error'],
+						'last_activity' => current_time('mysql', true),
+						'message_count' => count($messages),
+					],
+					$provider,
+					$model
+				);
+
+				do_action('datamachine_log', 'error', 'Chat AI loop returned error', [
+					'session_id' => $session_id,
+					'error' => $loop_result['error'],
+					'agent_type' => AgentType::CHAT
+				]);
+
 				return new WP_Error(
 					'chubes_ai_request_failed',
 					$loop_result['error'],
 					['status' => 500]
 				);
 			}
+		} catch (\Throwable $e) {
+			// Log the error
+			do_action('datamachine_log', 'error', 'Chat AI loop failed with exception', [
+				'session_id' => $session_id,
+				'error' => $e->getMessage(),
+				'file' => $e->getFile(),
+				'line' => $e->getLine(),
+				'agent_type' => AgentType::CHAT
+			]);
+
+			// Update session with error status
+			$chat_db->update_session(
+				$session_id,
+				$messages,
+				[
+					'status' => 'error',
+					'error_message' => $e->getMessage(),
+					'last_activity' => current_time('mysql', true),
+					'message_count' => count($messages),
+				],
+				$provider,
+				$model
+			);
+
+			return new WP_Error(
+				'chat_error',
+				$e->getMessage(),
+				['status' => 500]
+			);
 		} finally {
 			// Clear agent context after request completes
 			AgentContext::clear();
@@ -418,6 +480,7 @@ class Chat {
 		$final_content = $loop_result['final_content'];
 
 		$metadata = [
+			'status' => 'completed',
 			'last_activity' => current_time('mysql', true),
 			'message_count' => count($messages)
 		];

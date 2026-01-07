@@ -5,6 +5,18 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.16] - 2026-01-07
+
+### Improved
+- **Chat session durability** - `inc/Api/Chat/Chat.php` now persists the user message immediately (status `processing`) and records failures as session status `error` with `error_message` when the AI loop returns an error or throws.
+- **Chat completion status** - `inc/Api/Chat/Chat.php` now includes `status=completed` in the final session metadata.
+- **ApiQuery parameter validation** - `inc/Api/Chat/Tools/ApiQuery.php` now requires either `endpoint` (single mode) or `requests` (batch mode) and returns a clear error directing external URLs to `web_fetch`.
+
+### Changed
+- **Direct execution identifiers** - `inc/Api/Execute.php` now marks direct execution jobs with `pipeline_id='direct'` and `flow_id='direct'` in engine configs (stored as `0` in the DB).
+- **Job creation direct-mode normalization** - `inc/Core/Database/Jobs/JobsOperations.php` treats `'direct'` (or `0,0`) as direct execution and stores IDs as `0` while still rejecting mixed/invalid pipeline/flow ID combinations.
+- **FetchHandler flow ID typing** - `inc/Core/Steps/Fetch/Handlers/FetchHandler.php` now supports `flow_id='direct'` in handler configs and returns `int|string` from `getFlowId()`.
+
 ## [0.9.15] - 2026-01-07
 
 ### Improved

@@ -2,14 +2,14 @@
 
 Data Machine — WordPress plugin for automating content workflows with AI. Visual pipeline builder, chat agent, REST API, and extensibility via handlers and tools.
 
-Version: 0.9.15
+Version: 0.9.16
 
 This file provides a concise, present-tense technical reference for contributors and automated agents. For user-focused docs see datamachine/docs/.
 
 Engine & execution
 
 - The engine executes flows via a four-action cycle (@since v0.8.0): `datamachine_run_flow_now` → `datamachine_execute_step` → `datamachine_schedule_next_step`. `datamachine_run_flow_later` handles deferred/recurring scheduling.
-- The system supports ephemeral workflows (@since v0.8.0) that execute without database persistence, using sentinel values (`flow_id=0`, `pipeline_id=0`) and dynamic configuration stored in the job's engine snapshot.
+- The system supports direct execution (@since v0.8.0) for ephemeral workflows that execute without database persistence. Use `flow_id='direct'` and/or `pipeline_id='direct'` to trigger direct execution mode. Configuration is stored dynamically in the job's engine snapshot.
 - Scheduling is handled via WordPress Action Scheduler using the `data-machine` group.
 
 Core architecture
