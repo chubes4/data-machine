@@ -103,7 +103,21 @@ class WordPressPublishHelper {
         }
 
         $sanitized_url = esc_url($source_url);
+        $has_blocks = self::contentHasBlocks($content);
+
+        // Match attribution format to existing content to avoid mixed HTML/block markup.
+        if ($has_blocks) {
+            return $content . "\n\n<!-- wp:paragraph -->\n<p><strong>Source:</strong> <a href=\"{$sanitized_url}\">{$sanitized_url}</a></p>\n<!-- /wp:paragraph -->";
+        }
+
         return $content . "\n\n<p><strong>Source:</strong> <a href=\"{$sanitized_url}\">{$sanitized_url}</a></p>";
+    }
+
+    /**
+     * Determine whether the content already contains Gutenberg block markup.
+     */
+    private static function contentHasBlocks(string $content): bool {
+        return strpos($content, '<!-- wp:') !== false;
     }
 
     /**

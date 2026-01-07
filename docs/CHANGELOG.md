@@ -5,6 +5,17 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.13] - 2026-01-06
+
+### Improved
+- **Block-aware Source Attribution** - `inc/Core/WordPress/WordPressPublishHelper.php` now detects if content contains Gutenberg blocks and appends source attribution using proper `<!-- wp:paragraph -->` markup when necessary, preventing mixed HTML/block validation errors.
+
+### Fixed
+- **Build exclusions** - `.buildignore` updated to use `/build/` pattern for better directory matching.
+
+### Added
+- **Unit tests for WordPressPublishHelper** - `tests/Unit/WordPress/WordPressPublishHelperTest.php` provides coverage for the new block-aware attribution logic.
+
 ## [0.9.12] - 2026-01-06
 
 ### Improved

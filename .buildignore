@@ -10,7 +10,7 @@
 build.sh
 .buildignore
 node_modules/**/build/
-dist/
+/build/
 
 # Testing
 tests/
