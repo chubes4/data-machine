@@ -8,13 +8,17 @@ import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 const getStatusClass = ( status ) => {
-	if ( status === 'failed' ) {
-		return 'datamachine-job-status--failed';
+	if ( ! status ) {
+		return 'datamachine-status--neutral';
 	}
-	if ( status === 'completed' ) {
-		return 'datamachine-job-status--completed';
+	const baseStatus = status.split( ' - ' )[ 0 ];
+	if ( baseStatus === 'failed' ) {
+		return 'datamachine-status--error';
 	}
-	return 'datamachine-job-status--other';
+	if ( baseStatus === 'completed' ) {
+		return 'datamachine-status--success';
+	}
+	return 'datamachine-status--neutral';
 };
 
 const formatStatus = ( status ) => {

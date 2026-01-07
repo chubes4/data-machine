@@ -26,6 +26,12 @@
     /* Colors - Brand */
     --datamachine-blue: #0073aa;
 
+    /* Colors - Status */
+    --datamachine-color-success: #00a32a;
+    --datamachine-color-error: #d63638;
+    --datamachine-color-warning: #ffb900;
+    --datamachine-color-neutral: #646970;
+
     /* Spacing Scale: 8px, 12px, 16px, 24px, 40px */
     --datamachine-spacing-xs: 8px;
     --datamachine-spacing-sm: 12px;
@@ -94,4 +100,24 @@
 /* Hidden utility - used across all pages */
 .datamachine-hidden {
     display: none;
+}
+
+/* Status Utility Classes - for job status, flow status, etc. */
+.datamachine-status--success {
+    color: var(--datamachine-color-success);
+    font-weight: 500;
+}
+
+.datamachine-status--error {
+    color: var(--datamachine-color-error);
+    font-weight: 500;
+}
+
+.datamachine-status--warning {
+    color: var(--datamachine-color-warning);
+    font-weight: 500;
+}
+
+.datamachine-status--neutral {
+    color: var(--datamachine-color-neutral);
 }

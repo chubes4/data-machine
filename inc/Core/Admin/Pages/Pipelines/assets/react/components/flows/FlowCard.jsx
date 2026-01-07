@@ -344,6 +344,7 @@ function FlowCardContent( props ) {
 						last_run_display:
 							optimisticLastRunDisplay ||
 							currentFlowData.last_run_display,
+						last_run_status: currentFlowData.last_run_status,
 						next_run_display: currentFlowData.next_run_display,
 					} }
 				/>

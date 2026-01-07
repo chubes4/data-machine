@@ -8,6 +8,39 @@
 import { __ } from '@wordpress/i18n';
 
 /**
+ * Get CSS class for job status.
+ *
+ * @param {string|null} status - Job status string (may be compound like "agent_skipped - reason")
+ * @returns {string} CSS class name
+ */
+const getStatusClass = ( status ) => {
+	if ( ! status ) {
+		return '';
+	}
+	const baseStatus = status.split( ' - ' )[ 0 ];
+	if ( baseStatus === 'failed' ) {
+		return 'datamachine-status--error';
+	}
+	if ( baseStatus === 'completed' ) {
+		return 'datamachine-status--success';
+	}
+	return 'datamachine-status--neutral';
+};
+
+/**
+ * Format status for display.
+ *
+ * @param {string|null} status - Job status string
+ * @returns {string|null} Formatted status or null
+ */
+const formatStatus = ( status ) => {
+	if ( ! status ) {
+		return null;
+	}
+	return status.charAt( 0 ).toUpperCase() + status.slice( 1 ).replace( /_/g, ' ' );
+};
+
+/**
  * Flow Footer Component
  *
  * @param {Object} props - Component props
@@ -15,16 +48,20 @@ import { __ } from '@wordpress/i18n';
  * @param {Object} props.scheduling - Scheduling display data
  * @param {string} props.scheduling.interval - Schedule interval
  * @param {string} props.scheduling.last_run_display - Pre-formatted last run display
+ * @param {string} props.scheduling.last_run_status - Job status from last run
  * @param {string} props.scheduling.next_run_display - Pre-formatted next run display
  * @returns {React.ReactElement} Flow footer
  */
 export default function FlowFooter( { flowId, scheduling } ) {
-	const { interval, last_run_display, next_run_display } = scheduling || {};
+	const { interval, last_run_display, last_run_status, next_run_display } =
+		scheduling || {};
 
 	const scheduleDisplay =
 		interval && interval !== 'manual'
 			? interval
 			: __( 'Manual', 'datamachine' );
+
+	const formattedStatus = formatStatus( last_run_status );
 
 	return (
 		<div className="datamachine-flow-footer">
@@ -41,6 +78,11 @@ export default function FlowFooter( { flowId, scheduling } ) {
 			<div className="datamachine-flow-meta-item">
 				<strong>{ __( 'Last Run:', 'datamachine' ) }</strong>{ ' ' }
 				{ last_run_display || __( 'Never', 'datamachine' ) }
+				{ formattedStatus && (
+					<span className={ getStatusClass( last_run_status ) }>
+						{ ' ' }({ formattedStatus })
+					</span>
+				) }
 			</div>
 
 			{ interval && interval !== 'manual' && (

@@ -95,20 +95,12 @@
 	width: 140px;
 }
 
-/* Job Status Colors */
-.datamachine-job-status--failed {
-	color: #d63638;
-	font-weight: 500;
-}
-
-.datamachine-job-status--completed {
-	color: #00a32a;
-	font-weight: 500;
-}
-
-.datamachine-job-status--other {
-	color: #646970;
-}
+/* Job Status Colors - now using shared classes from root.css:
+ * .datamachine-status--success
+ * .datamachine-status--error
+ * .datamachine-status--warning
+ * .datamachine-status--neutral
+ */
 
 
 

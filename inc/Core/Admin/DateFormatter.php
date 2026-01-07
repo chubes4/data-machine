@@ -20,10 +20,10 @@ class DateFormatter {
 	 * Format a MySQL datetime string for display.
 	 *
 	 * Uses WordPress timezone and date/time format settings.
-	 * Supports compound statuses like "agent_skipped - reason" via JobStatus.
+	 * Returns only the formatted timestamp - status display is handled by frontend.
 	 *
 	 * @param string|null $mysql_datetime MySQL datetime string (Y-m-d H:i:s)
-	 * @param string|null $status Run status (any JobStatus, may be compound)
+	 * @param string|null $status Unused, kept for backward compatibility
 	 * @return string Formatted datetime string
 	 */
 	public static function format_for_display( ?string $mysql_datetime, ?string $status = null ): string {
@@ -39,26 +39,8 @@ class DateFormatter {
 
 		$date_format = get_option( 'date_format' );
 		$time_format = get_option( 'time_format' );
-		$display = wp_date( "{$date_format} {$time_format}", $timestamp );
 
-		if ( $status !== null ) {
-			$jobStatus = JobStatus::fromString( $status );
-
-			if ( $jobStatus->isFailure() ) {
-				$display .= ' ' . __( '(error)', 'data-machine' );
-			} elseif ( $jobStatus->isCompletedNoItems() ) {
-				$display .= ' ' . __( '(no items)', 'data-machine' );
-			} elseif ( $jobStatus->isAgentSkipped() ) {
-				$reason = $jobStatus->getReason();
-				if ( $reason ) {
-					$display .= ' ' . sprintf( __( '(skipped: %s)', 'data-machine' ), $reason );
-				} else {
-					$display .= ' ' . __( '(skipped)', 'data-machine' );
-				}
-			}
-		}
-
-		return $display;
+		return wp_date( "{$date_format} {$time_format}", $timestamp );
 	}
 
 	/**

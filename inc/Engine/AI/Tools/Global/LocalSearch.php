@@ -31,7 +31,7 @@ class LocalSearch {
         if (empty($parameters['query'])) {
             return [
                 'success' => false,
-                'error' => 'Local Search tool call missing required query parameter',
+                'error' => 'Local Search requires a query parameter. Extract a search term from the data packet (title, keywords, or relevant text) and provide it as the query parameter. Example: {"query": "Article Title Here"}',
                 'tool_name' => 'local_search'
             ];
         }

@@ -5,6 +5,18 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.15] - 2026-01-07
+
+### Improved
+- **Admin status display unification** - `inc/Core/Admin/assets/css/root.css` adds shared status utility classes (success/error/warning/neutral) and `inc/Core/Admin/Pages/Jobs/assets/react/components/JobsTable.jsx` now applies them based on the base job status (including compound statuses).
+- **Flow last-run status visibility** - `inc/Core/Admin/Pages/Pipelines/assets/react/components/flows/FlowFooter.jsx` now displays the last run job status next to the last-run timestamp.
+- **LocalSearch missing-query guidance** - `inc/Engine/AI/Tools/Global/LocalSearch.php` now returns a more actionable error message when `query` is missing.
+
+### Changed
+- **DateFormatter status suffix removal** - `inc/Core/Admin/DateFormatter.php` now returns only formatted timestamps and no longer appends status-specific suffixes.
+- **Jobs page status CSS** - `inc/Core/Admin/Pages/Jobs/assets/css/jobs-page.css` removes job-status color classes in favor of the shared status utilities.
+- **Dependency update** - `composer.lock` updates `chubes4/ai-http-client` from `v2.0.10` to `v2.0.11`.
+
 ## [0.9.14] - 2026-01-07
 
 ### Improved
