@@ -91,6 +91,9 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
         }
     }
 
+    // Transition job from pending to processing
+    $job_manager->start($job_id);
+
     $flow_config = $flow['flow_config'] ?? [];
 
     // Load pipeline config

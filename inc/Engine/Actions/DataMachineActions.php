@@ -17,6 +17,7 @@
  * - datamachine_execute_step: Core step execution engine for Action Scheduler pipeline processing
  * - datamachine_schedule_next_step: Central pipeline step scheduling eliminating Action Scheduler duplication
  * - datamachine_mark_item_processed: Universal processed item marking across all handlers
+ * - datamachine_fail_job: Central job failure handling with cleanup and logging
  * - datamachine_log: Central logging operations eliminating logger service discovery
  *
  * SERVICE MANAGERS (Direct method calls, no action hooks):
@@ -88,7 +89,22 @@ function datamachine_register_core_actions() {
         
         return $success;
     }, 10, 4);
-    
+
+    // Central job failure hook - routes to JobManager::fail() for consistent failure handling
+    add_action('datamachine_fail_job', function($job_id, $reason, $context_data = []) {
+        $job_id = (int) $job_id;
+
+        if (empty($job_id) || $job_id <= 0) {
+            do_action('datamachine_log', 'error', 'datamachine_fail_job called without valid job_id', [
+                'job_id' => $job_id,
+                'reason' => $reason
+            ]);
+            return false;
+        }
+
+        $job_manager = new \DataMachine\Services\JobManager();
+        return $job_manager->fail($job_id, $reason, $context_data);
+    }, 10, 3);
     
     // Central logging hook - eliminates logger service discovery across all components  
     add_action('datamachine_log', function($operation, $param2 = null, $param3 = null, &$result = null) {

@@ -5,6 +5,15 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.14] - 2026-01-07
+
+### Improved
+- **Chat sessions table name hardening** - `inc/Core/Database/Chat/Chat.php` now centralizes table name sanitization/escaping and uses an identifier placeholder (`%i`) for safer table-name interpolation.
+- **Engine data packet retrieval** - `inc/Engine/Actions/Engine.php` now retrieves step input packets via `FileRetrieval::retrieve_data_by_job_id()` using file context derived from the step’s `flow_id`.
+
+### Fixed
+- **Core action parameter validation** - `inc/Engine/Actions/DataMachineActions.php` now validates required params and `job_id` for `datamachine_mark_item_processed` (and logs clearer errors) before writing processed items.
+
 ## [0.9.13] - 2026-01-06
 
 ### Improved

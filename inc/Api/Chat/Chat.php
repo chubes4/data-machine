@@ -343,21 +343,39 @@ class Chat {
 
 			$messages = $session['messages'];
 		} else {
-			$session_id = $chat_db->create_session($user_id, [
-				'started_at' => current_time('mysql', true),
-				'message_count' => 0
-			]);
+			// Check for recent pending session to prevent duplicates from timeout retries
+			// This handles the case where Cloudflare times out but PHP continues executing,
+			// creating orphaned sessions. On retry, we reuse the pending session.
+			$pending_session = $chat_db->get_recent_pending_session($user_id, 600); // 10 minute window
 
-			if (empty($session_id)) {
-				return new WP_Error(
-					'session_creation_failed',
-					__('Failed to create chat session', 'data-machine'),
-					['status' => 500]
-				);
+			if ($pending_session) {
+				$session_id = $pending_session['session_id'];
+				$messages = $pending_session['messages'];
+				$is_new_session = false;
+
+				do_action('datamachine_log', 'info', 'Chat: Reusing pending session (deduplication)', [
+					'session_id' => $session_id,
+					'user_id' => $user_id,
+					'original_created_at' => $pending_session['created_at'],
+					'agent_type' => AgentType::CHAT
+				]);
+			} else {
+				$session_id = $chat_db->create_session($user_id, [
+					'started_at' => current_time('mysql', true),
+					'message_count' => 0
+				]);
+
+				if (empty($session_id)) {
+					return new WP_Error(
+						'session_creation_failed',
+						__('Failed to create chat session', 'data-machine'),
+						['status' => 500]
+					);
+				}
+
+				$messages = [];
+				$is_new_session = true;
 			}
-
-			$messages = [];
-			$is_new_session = true;
 		}
 
 		$messages[] = ConversationManager::buildConversationMessage('user', $message, ['type' => 'text']);

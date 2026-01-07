@@ -379,6 +379,55 @@ class Chat {
 	}
 
 	/**
+	 * Find a recent pending session for deduplication
+	 *
+	 * Returns the most recent session that:
+	 * - Belongs to this user
+	 * - Was created within the threshold (default 10 minutes)
+	 * - Has 0 messages (no AI response yet - orphaned from timeout)
+	 *
+	 * This prevents duplicate sessions when requests timeout at Cloudflare
+	 * but PHP continues executing. On retry, we reuse the pending session
+	 * instead of creating a new one.
+	 *
+	 * @since 0.9.8
+	 * @param int $user_id WordPress user ID
+	 * @param int $seconds Lookback window in seconds (default 600 = 10 minutes)
+	 * @return array|null Session data or null if none found
+	 */
+	public function get_recent_pending_session(int $user_id, int $seconds = 600): ?array {
+		global $wpdb;
+
+		$table_name = self::get_table_name();
+		$cutoff_time = gmdate('Y-m-d H:i:s', time() - $seconds);
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$session = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM %i 
+				WHERE user_id = %d 
+				AND created_at >= %s 
+				AND (messages = '[]' OR messages = '' OR messages IS NULL)
+				ORDER BY created_at DESC 
+				LIMIT 1",
+				$table_name,
+				$user_id,
+				$cutoff_time
+			),
+			ARRAY_A
+		);
+
+		if (!$session) {
+			return null;
+		}
+
+		$session['messages'] = json_decode($session['messages'], true) ?: [];
+		$session['metadata'] = json_decode($session['metadata'], true) ?: [];
+
+		return $session;
+	}
+
+	/**
 	 * Update session title
 	 *
 	 * @param string $session_id Session UUID
@@ -443,6 +492,49 @@ class Chat {
 
 		return (int) $deleted;
 	}
+
+	/**
+	 * Cleanup orphaned sessions from timeout failures
+	 *
+	 * Deletes sessions that:
+	 * - Are older than the threshold (default 1 hour)
+	 * - Have 0 messages (empty - orphaned from request timeouts)
+	 *
+	 * These sessions were created when requests timed out at Cloudflare
+	 * before the AI could respond. They serve no purpose and clutter the UI.
+	 *
+	 * @since 0.9.8
+	 * @param int $hours Hours threshold for orphaned sessions (default 1)
+	 * @return int Number of deleted sessions
+	 */
+	public function cleanup_orphaned_sessions(int $hours = 1): int {
+		global $wpdb;
+
+		$table_name = self::get_table_name();
+		$cutoff_time = gmdate('Y-m-d H:i:s', time() - ($hours * 3600));
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM %i 
+				WHERE created_at < %s 
+				AND (messages = '[]' OR messages = '' OR messages IS NULL)",
+				$table_name,
+				$cutoff_time
+			)
+		);
+
+		if ($deleted > 0) {
+			do_action('datamachine_log', 'info', 'Cleaned up orphaned chat sessions', [
+				'deleted_count' => $deleted,
+				'hours_threshold' => $hours,
+				'cutoff_time' => $cutoff_time,
+				'agent_type' => \DataMachine\Engine\AI\AgentType::CHAT
+			]);
+		}
+
+		return (int) $deleted;
+	}
 }
 
 /**
@@ -464,6 +556,7 @@ add_action('datamachine_cleanup_chat_sessions', function() {
  * Schedule chat session cleanup after Action Scheduler is initialized
  */
 add_action('action_scheduler_init', function() {
+	// Daily cleanup of old sessions
 	if (!as_next_scheduled_action('datamachine_cleanup_chat_sessions', [], 'datamachine-chat')) {
 		as_schedule_recurring_action(
 			time() + DAY_IN_SECONDS,
