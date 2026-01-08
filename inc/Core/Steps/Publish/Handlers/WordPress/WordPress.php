@@ -130,8 +130,19 @@ class WordPress extends PublishHandler {
         }
         
         $content = wp_unslash($parameters['content']);
-        $content = WordPressPublishHelper::applySourceAttribution($content, $engine->getSourceUrl(), $handler_config);
         $content = wp_filter_post_kses($content);
+        
+        if (empty(trim(wp_strip_all_tags($content)))) {
+            return $this->errorResponse(
+                'Content was empty after sanitization',
+                [
+                    'original_content_length' => strlen($parameters['content']),
+                    'sanitized_content_length' => strlen($content)
+                ]
+            );
+        }
+        
+        $content = WordPressPublishHelper::applySourceAttribution($content, $engine->getSourceUrl(), $handler_config);
         
         $post_data = [
             'post_title' => sanitize_text_field(wp_unslash($parameters['title'])),

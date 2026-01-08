@@ -5,6 +5,11 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] - 2026-01-08
+
+### Fixed
+- **WordPress publish empty-content guard** - `inc/Core/Steps/Publish/Handlers/WordPress/WordPress.php` now validates that `content` is not empty after `wp_filter_post_kses()` sanitization and returns a structured error response when sanitization strips everything, preventing accidental publication of empty posts.
+
 ## [0.10.0] - 2026-01-08
 
 ### Added
