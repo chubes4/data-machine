@@ -235,8 +235,6 @@ class FlowManagerTest extends WP_UnitTestCase {
 		$original = $this->flow_manager->create( $this->test_pipeline_id, 'Original Flow', [
 			'scheduling_config' => [
 				'interval' => 'hourly',
-				'last_run_at' => '2020-01-01 00:00:00',
-				'last_run_status' => 'success',
 			],
 		] );
 		$original_id = $original['flow_id'];
@@ -251,8 +249,6 @@ class FlowManagerTest extends WP_UnitTestCase {
 
 		$copied_flow = $this->flow_manager->get( $duplicated['new_flow_id'] );
 		$this->assertEquals( 'hourly', $copied_flow['scheduling_config']['interval'] );
-		$this->assertArrayNotHasKey( 'last_run_at', $copied_flow['scheduling_config'] );
-		$this->assertArrayNotHasKey( 'last_run_status', $copied_flow['scheduling_config'] );
 	}
 
 	/**

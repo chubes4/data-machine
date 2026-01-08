@@ -8,6 +8,7 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPress;
 
+use DataMachine\Core\ExecutionContext;
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
 use WP_Query;
@@ -41,39 +42,23 @@ class WordPress extends FetchHandler {
 	 * Fetch WordPress posts with timeframe and keyword filtering.
 	 * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
 	 */
-	protected function executeFetch(
-		int $pipeline_id,
-		array $config,
-		?string $flow_step_id,
-		int $flow_id,
-		?string $job_id
-	): array {
-		if (empty($pipeline_id)) {
-			$this->log('error', 'Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-			return [];
-		}
-
-		if ($flow_step_id === null) {
-			$this->log('debug', 'WordPress fetch called without flow_step_id - processed items tracking disabled');
-		}
-
-		$user_id = get_current_user_id();
-		return $this->fetch_local_data($pipeline_id, $config, $user_id, $flow_step_id, $job_id);
+	protected function executeFetch( array $config, ExecutionContext $context ): array {
+		return $this->fetch_local_data($config, $context);
 	}
 
     /**
      * Fetch WordPress content with convergence pattern for URL-specific and query-based access.
      */
-    private function fetch_local_data(int $pipeline_id, array $config, int $user_id, ?string $flow_step_id = null, ?string $job_id = null): array {
+    private function fetch_local_data(array $config, ExecutionContext $context): array {
         $source_url = sanitize_url($config['source_url'] ?? '');
 
         // URL-specific access
         if (!empty($source_url)) {
             $post_id = url_to_postid($source_url);
             if ($post_id > 0) {
-                return $this->process_single_post($post_id, $flow_step_id, $job_id);
+                return $this->process_single_post($post_id, $context);
             } else {
-                $this->log('warning', 'Could not extract post ID from URL', [
+                $context->log('warning', 'WordPress: Could not extract post ID from URL', [
                     'source_url' => $source_url
                 ]);
                 return [];
@@ -152,7 +137,7 @@ class WordPress extends FetchHandler {
         }
         foreach ($posts as $post) {
             $post_id = $post->ID;
-            if ($this->isItemProcessed((string) $post_id, $flow_step_id)) {
+            if ($context->isItemProcessed((string) $post_id)) {
                 continue;
             }
 
@@ -163,7 +148,7 @@ class WordPress extends FetchHandler {
                 }
             }
 
-            return $this->process_single_post($post_id, $flow_step_id, $job_id);
+            return $this->process_single_post($post_id, $context);
         }
         return [];
     }
@@ -172,22 +157,18 @@ class WordPress extends FetchHandler {
     /**
      * Process single post with engine data storage via datamachine_engine_data filter.
      */
-    private function process_single_post(int $post_id, ?string $flow_step_id, ?string $job_id): array {
+    private function process_single_post(int $post_id, ExecutionContext $context): array {
         $post = get_post($post_id);
 
         if (!$post || $post->post_status === 'trash') {
-            $this->log('warning', 'Post not found or trashed', [
-                'post_id' => $post_id,
-                'flow_step_id' => $flow_step_id
-            ]);
+            $context->log('warning', 'WordPress: Post not found or trashed', ['post_id' => $post_id]);
             return [];
         }
 
-        $this->markItemProcessed((string) $post_id, $flow_step_id, $job_id);
+        $context->markItemProcessed((string) $post_id);
 
         $title = $post->post_title ?: 'N/A';
         $content = $post->post_content ?: '';
-        $image_url = $this->extract_image_url($post_id);
         $site_name = get_bloginfo('name') ?: 'Local WordPress';
 
         // Include featured image file_info if present for AI vision analysis
@@ -205,7 +186,7 @@ class WordPress extends FetchHandler {
                     'file_size' => $file_size
                 ];
 
-                $this->log('debug', 'Including featured image file_info for AI processing', [
+                $context->log('debug', 'WordPress: Including featured image file_info for AI processing', [
                     'post_id' => $post_id,
                     'featured_image_id' => $featured_image_id,
                     'file_path' => $file_path,
@@ -259,7 +240,7 @@ class WordPress extends FetchHandler {
             $image_file_path = $file_info['file_path'];
         }
 
-        $this->storeEngineData($job_id, [
+        $context->storeEngineData([
             'source_url' => get_permalink($post_id) ?: '',
             'image_file_path' => $image_file_path
         ]);

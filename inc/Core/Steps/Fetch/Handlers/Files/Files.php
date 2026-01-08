@@ -8,6 +8,7 @@
  */
 namespace DataMachine\Core\Steps\Fetch\Handlers\Files;
 
+use DataMachine\Core\ExecutionContext;
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
@@ -40,31 +41,14 @@ class Files extends FetchHandler {
 	 * Process uploaded files with universal image handling.
 	 * For images: stores image_file_path via datamachine_engine_data filter.
 	 */
-	protected function executeFetch(
-		int $pipeline_id,
-		array $config,
-		?string $flow_step_id,
-		int $flow_id,
-		?string $job_id
-	): array {
+	protected function executeFetch( array $config, ExecutionContext $context ): array {
 		$storage = $this->getFileStorage();
 		$uploaded_files = $config['uploaded_files'] ?? [];
 
         if (empty($uploaded_files)) {
-            // Build context with fallback names (no database queries)
-            $context = [
-                'pipeline_id' => $pipeline_id,
-                'pipeline_name' => "pipeline-{$pipeline_id}",
-                'flow_id' => $flow_id,
-                'flow_name' => "flow-{$flow_id}"
-            ];
-
-            $repo_files = $storage->get_all_files($context);
+            $repo_files = $storage->get_all_files($context->getFileContext());
             if (empty($repo_files)) {
-                $this->log('debug', 'No files available in repository.', [
-                    'pipeline_id' => $pipeline_id,
-                    'flow_step_id' => $flow_step_id
-                ]);
+                $context->log('debug', 'Files: No files available in repository.');
                 return [];
             }
 
@@ -79,15 +63,15 @@ class Files extends FetchHandler {
             }, $repo_files);
         }
 
-        $next_file = $this->find_next_unprocessed_file($flow_step_id, ['uploaded_files' => $uploaded_files], $job_id);
+        $next_file = $this->find_next_unprocessed_file($context, $uploaded_files);
 
         if (!$next_file) {
-            $this->log('debug', 'No unprocessed files available.', ['pipeline_id' => $pipeline_id]);
+            $context->log('debug', 'Files: No unprocessed files available.');
             return [];
         }
 
         if (!file_exists($next_file['persistent_path'])) {
-            $this->log('error', 'File not found.', ['pipeline_id' => $pipeline_id, 'file_path' => $next_file['persistent_path']]);
+            $context->log('error', 'Files: File not found.', ['file_path' => $next_file['persistent_path']]);
             return [];
         }
 
@@ -122,27 +106,16 @@ class Files extends FetchHandler {
             'file_info' => $file_info
         ];
 
-        // Generate public URL for image files (for WordPress featured images, etc.)
-        $file_url = '';
-        if (strpos($mime_type, 'image/') === 0) {
-            // For image files, convert file path to public URL
-            $upload_dir = wp_upload_dir();
-            $file_url = str_replace($upload_dir['basedir'], $upload_dir['baseurl'], $next_file['persistent_path']);
-        }
-
         // Store file path in engine_data via centralized filter
         $engine_data = ['source_url' => ''];
         if (strpos($mime_type, 'image/') === 0) {
             $engine_data['image_file_path'] = $next_file['persistent_path'];
         }
-        $this->storeEngineData($job_id, $engine_data);
+        $context->storeEngineData($engine_data);
 
-        $this->log('debug', 'Found unprocessed file for processing.', [
-            'pipeline_id' => $pipeline_id,
-            'flow_step_id' => $flow_step_id,
+        $context->log('debug', 'Files: Found unprocessed file for processing.', [
             'file_path' => $file_identifier,
-            'is_image' => !empty($file_url),
-            'public_url' => $file_url
+            'is_image' => strpos($mime_type, 'image/') === 0
         ]);
 
         return $raw_data;
@@ -151,9 +124,7 @@ class Files extends FetchHandler {
     /**
      * Find the next unprocessed file for a flow step.
      */
-    private function find_next_unprocessed_file(?string $flow_step_id, array $config, ?string $job_id = null): ?array {
-        $uploaded_files = $config['uploaded_files'] ?? [];
-
+    private function find_next_unprocessed_file(ExecutionContext $context, array $uploaded_files): ?array {
         if (empty($uploaded_files)) {
             return null;
         }
@@ -161,18 +132,12 @@ class Files extends FetchHandler {
         foreach ($uploaded_files as $file) {
             $file_identifier = $file['persistent_path'];
 
-            $is_processed = $this->isItemProcessed($file_identifier, $flow_step_id);
-
-            $this->log('debug', 'Checking file processed status', [
-                'flow_step_id' => $flow_step_id,
-                'file_identifier' => basename($file_identifier),
-                'is_processed' => $is_processed
-            ]);
-
-            if (!$is_processed) {
-                $this->markItemProcessed($file_identifier, $flow_step_id, $job_id);
-                return $file;
+            if ($context->isItemProcessed($file_identifier)) {
+                continue;
             }
+
+            $context->markItemProcessed($file_identifier);
+            return $file;
         }
 
         return null;

@@ -17,9 +17,10 @@ if (!defined('ABSPATH')) {
 class FlowScheduling {
 
     /**
-     * Handle scheduling configuration updates for a flow
+     * Handle scheduling configuration updates for a flow.
      *
-     * Preserves last_run_at and last_run_status when updating schedule configuration.
+     * scheduling_config now only contains scheduling data (interval, timestamps).
+     * Execution status (last_run, status, counters) is derived from jobs table.
      *
      * @param int $flow_id Flow ID
      * @param array $scheduling_config Scheduling configuration
@@ -28,7 +29,7 @@ class FlowScheduling {
     public static function handle_scheduling_update($flow_id, $scheduling_config) {
         $db_flows = new \DataMachine\Core\Database\Flows\Flows();
 
-        // Get current flow to validate it exists
+        // Validate flow exists
         $flow = $db_flows->get_flow($flow_id);
         if (!$flow) {
             return new \WP_Error(
@@ -36,16 +37,6 @@ class FlowScheduling {
                 "Flow {$flow_id} not found",
                 ['status' => 404]
             );
-        }
-
-        // Preserve existing last_run data before updating schedule
-        $existing_config = $db_flows->get_flow_scheduling($flow_id);
-        $preserved_data = [];
-        if (!empty($existing_config['last_run_at'])) {
-            $preserved_data['last_run_at'] = $existing_config['last_run_at'];
-        }
-        if (!empty($existing_config['last_run_status'])) {
-            $preserved_data['last_run_status'] = $existing_config['last_run_status'];
         }
 
         $interval = $scheduling_config['interval'] ?? null;
@@ -56,8 +47,7 @@ class FlowScheduling {
                 as_unschedule_action('datamachine_run_flow_now', [$flow_id], 'data-machine');
             }
 
-            $scheduling_data = array_merge(['interval' => 'manual'], $preserved_data);
-            $db_flows->update_flow_scheduling($flow_id, $scheduling_data);
+            $db_flows->update_flow_scheduling($flow_id, ['interval' => 'manual']);
             return true;
         }
 
@@ -87,12 +77,11 @@ class FlowScheduling {
                 'data-machine'
             );
 
-            $scheduling_data = array_merge([
+            $db_flows->update_flow_scheduling($flow_id, [
                 'interval' => 'one_time',
                 'timestamp' => $timestamp,
                 'scheduled_time' => wp_date('c', $timestamp)
-            ], $preserved_data);
-            $db_flows->update_flow_scheduling($flow_id, $scheduling_data);
+            ]);
             return true;
         }
 
@@ -129,12 +118,11 @@ class FlowScheduling {
             'data-machine'
         );
 
-        $scheduling_data = array_merge([
+        $db_flows->update_flow_scheduling($flow_id, [
             'interval' => $interval,
             'interval_seconds' => $interval_seconds,
             'first_run' => wp_date('c', time() + $interval_seconds)
-        ], $preserved_data);
-        $db_flows->update_flow_scheduling($flow_id, $scheduling_data);
+        ]);
         return true;
     }
 }

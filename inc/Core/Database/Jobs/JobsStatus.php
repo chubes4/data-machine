@@ -69,12 +69,11 @@ class JobsStatus {
 
     /**
      * Update the status and completed_at time for a job.
-     * Also updates the last_run_at field in the related flow if possible.
      *
      * Accepts compound statuses like "agent_skipped - reason" via JobStatus validation.
      *
-     * @param int    $job_id       The job ID.
-     * @param string $status       The final status (any JobStatus final status, may be compound).
+     * @param int    $job_id The job ID.
+     * @param string $status The final status (any JobStatus final status, may be compound).
      * @return bool True on success, false on failure.
      */
     public function complete_job( int $job_id, string $status ): bool {
@@ -83,49 +82,21 @@ class JobsStatus {
             return false;
         }
 
-        // Get job details once for both operations
-        $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
-        $job = $db_jobs->get_job($job_id);
-        if (!$job) {
-            return false;
-        }
-
-        // Update job status
         $update_data = [
             'status' => $status,
-            'completed_at' => current_time( 'mysql', 1 ), // GMT time
+            'completed_at' => current_time( 'mysql', 1 ),
         ];
-        $format = ['%s', '%s'];
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
         $updated = $this->wpdb->update(
             $this->table_name,
             $update_data,
             ['job_id' => $job_id],
-            $format, // Format for data
-            ['%d']  // Format for WHERE
+            ['%s', '%s'],
+            ['%d']
         );
 
-        if ( false === $updated ) {
-            return false;
-        }
-
-        // Update flow last_run_at using existing services if available
-        $db_flows = new \DataMachine\Core\Database\Flows\Flows();
-        if (!empty($job['flow_id'])) {
-            // Update flow's last_run_at and last_run_status in scheduling configuration
-            $flow_updated = $db_flows->update_flow_last_run($job['flow_id'], current_time('mysql', 1), $status);
-            
-            // Log flow update failure if logger available
-            if (!$flow_updated) {
-                do_action('datamachine_log', 'warning', 'Failed to update flow last_run_at', [
-                    'job_id' => $job_id,
-                    'flow_id' => $job['flow_id']
-                ]);
-            }
-        }
-
-        return true;
+        return $updated !== false;
     }
 
     /**

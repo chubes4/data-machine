@@ -2,8 +2,6 @@
 
 namespace DataMachine\Core\Database\Flows;
 
-use DataMachine\Core\JobStatus;
-
 /**
  * Flows Database Class
  *
@@ -202,27 +200,33 @@ class Flows {
      * - Have consecutive_failures >= threshold (something is broken)
      * - Have consecutive_no_items >= threshold (source is slow/exhausted)
      *
+     * Consecutive counts are computed from job history (single source of truth).
+     *
      * @param int $threshold Minimum consecutive count to include
      * @return array Problem flows with pipeline info and both counters
      */
     public function get_problem_flows(int $threshold = 3): array {
+        $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
         $pipelines_table = $this->wpdb->prefix . 'datamachine_pipelines';
 
-        // Query flows and join with pipelines for names
-        // Filter by consecutive_failures OR consecutive_no_items in scheduling_config JSON
+        // Get problem flow IDs with counts from jobs table
+        $problem_flow_ids = $db_jobs->get_problem_flow_ids($threshold);
+
+        if (empty($problem_flow_ids)) {
+            return [];
+        }
+
+        // Get flow and pipeline details for these flows
+        $flow_id_list = array_keys($problem_flow_ids);
+        $placeholders = implode(',', array_fill(0, count($flow_id_list), '%d'));
+
         // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $query = $this->wpdb->prepare(
-            "SELECT f.flow_id, f.pipeline_id, f.flow_name, f.scheduling_config, p.pipeline_name
+            "SELECT f.flow_id, f.pipeline_id, f.flow_name, p.pipeline_name
              FROM %i f
              LEFT JOIN %i p ON f.pipeline_id = p.pipeline_id
-             WHERE JSON_EXTRACT(f.scheduling_config, '$.consecutive_failures') >= %d
-                OR JSON_EXTRACT(f.scheduling_config, '$.consecutive_no_items') >= %d
-             ORDER BY JSON_EXTRACT(f.scheduling_config, '$.consecutive_failures') DESC,
-                      JSON_EXTRACT(f.scheduling_config, '$.consecutive_no_items') DESC",
-            $this->table_name,
-            $pipelines_table,
-            $threshold,
-            $threshold
+             WHERE f.flow_id IN ($placeholders)",
+            array_merge([$this->table_name, $pipelines_table], $flow_id_list)
         );
 
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
@@ -234,19 +238,29 @@ class Flows {
 
         $problem_flows = [];
         foreach ($results as $row) {
-            $scheduling_config = json_decode($row['scheduling_config'], true) ?: [];
+            $flow_id = (int) $row['flow_id'];
+            $counts = $problem_flow_ids[$flow_id];
+            $latest_job = $counts['latest_job'];
 
             $problem_flows[] = [
-                'flow_id' => (int) $row['flow_id'],
+                'flow_id' => $flow_id,
                 'flow_name' => $row['flow_name'],
                 'pipeline_id' => (int) $row['pipeline_id'],
                 'pipeline_name' => $row['pipeline_name'] ?? 'Unknown',
-                'consecutive_failures' => (int) ($scheduling_config['consecutive_failures'] ?? 0),
-                'consecutive_no_items' => (int) ($scheduling_config['consecutive_no_items'] ?? 0),
-                'last_run_at' => $scheduling_config['last_run_at'] ?? null,
-                'last_run_status' => $scheduling_config['last_run_status'] ?? null,
+                'consecutive_failures' => $counts['consecutive_failures'],
+                'consecutive_no_items' => $counts['consecutive_no_items'],
+                'last_run_at' => $latest_job['created_at'] ?? null,
+                'last_run_status' => $latest_job['status'] ?? null,
             ];
         }
+
+        // Sort by consecutive_failures DESC, then consecutive_no_items DESC
+        usort($problem_flows, function($a, $b) {
+            if ($a['consecutive_failures'] !== $b['consecutive_failures']) {
+                return $b['consecutive_failures'] - $a['consecutive_failures'];
+            }
+            return $b['consecutive_no_items'] - $a['consecutive_no_items'];
+        });
 
         return $problem_flows;
     }
@@ -384,25 +398,39 @@ class Flows {
     }
 
     /**
-     * Get flows ready for execution based on scheduling
+     * Get flows ready for execution based on scheduling.
+     *
+     * Uses jobs table to determine last run time (single source of truth).
      */
     public function get_flows_ready_for_execution(): array {
         
         $current_time = current_time('mysql', true);
         
+        // Get all non-manual flows
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-        $flows = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual' AND (JSON_EXTRACT(scheduling_config, '$.last_run_at') IS NULL OR JSON_EXTRACT(scheduling_config, '$.last_run_at') < %s) ORDER BY flow_id ASC", $this->table_name, $current_time ), ARRAY_A );
+        $flows = $this->wpdb->get_results( $this->wpdb->prepare( 
+            "SELECT * FROM %i WHERE JSON_EXTRACT(scheduling_config, '$.interval') != 'manual' ORDER BY flow_id ASC", 
+            $this->table_name 
+        ), ARRAY_A );
         
-        if ($flows === null) {
+        if ($flows === null || empty($flows)) {
             return [];
         }
+
+        // Batch query latest jobs for all flows
+        $flow_ids = array_column($flows, 'flow_id');
+        $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
+        $latest_jobs = $db_jobs->get_latest_jobs_by_flow_ids(array_map('intval', $flow_ids));
         
         $ready_flows = [];
         
         foreach ($flows as $flow) {
             $scheduling_config = json_decode($flow['scheduling_config'], true);
+            $flow_id = (int) $flow['flow_id'];
+            $latest_job = $latest_jobs[$flow_id] ?? null;
+            $last_run_at = $latest_job['created_at'] ?? null;
             
-            if ($this->is_flow_ready_for_execution($scheduling_config, $current_time)) {
+            if ($this->is_flow_ready_for_execution($scheduling_config, $current_time, $last_run_at)) {
                 $flow['flow_config'] = json_decode($flow['flow_config'], true);
                 $flow['scheduling_config'] = $scheduling_config;
                 $ready_flows[] = $flow;
@@ -418,9 +446,13 @@ class Flows {
     }
 
     /**
-     * Check if a flow is ready for execution based on its scheduling configuration
+     * Check if a flow is ready for execution based on its scheduling configuration.
+     *
+     * @param array       $scheduling_config Scheduling configuration
+     * @param string      $current_time      Current time in MySQL format
+     * @param string|null $last_run_at       Last run time from jobs table (null if never run)
      */
-    private function is_flow_ready_for_execution(array $scheduling_config, string $current_time): bool {
+    private function is_flow_ready_for_execution(array $scheduling_config, string $current_time, ?string $last_run_at = null): bool {
         if (!isset($scheduling_config['interval'])) {
             return false;
         }
@@ -428,8 +460,6 @@ class Flows {
         if ($scheduling_config['interval'] === 'manual') {
             return false;
         }
-        
-        $last_run_at = $scheduling_config['last_run_at'] ?? null;
         
         if ($last_run_at === null) {
             return true; // Never run before
@@ -447,57 +477,6 @@ class Flows {
         }
         
         return false;
-    }
-
-    /**
-     * Update the last run time for a flow.
-     *
-     * Tracks two counters using JobStatus for categorization:
-     * - consecutive_failures: increments on failure, resets on success
-     * - consecutive_no_items: increments on completed_no_items, resets on completed
-     *
-     * @param int         $flow_id   Flow ID
-     * @param string|null $timestamp Timestamp (defaults to current time)
-     * @param string|null $status    Job status (any JobStatus, may be compound like "agent_skipped - reason")
-     * @return bool Success
-     */
-    public function update_flow_last_run(int $flow_id, ?string $timestamp = null, ?string $status = null): bool {
-        if ($timestamp === null) {
-            $timestamp = current_time('mysql', true);
-        }
-
-        $current_config = $this->get_flow_scheduling($flow_id);
-        if ($current_config === null) {
-            return false;
-        }
-
-        $current_config['last_run_at'] = $timestamp;
-
-        if ($status !== null) {
-            $current_config['last_run_status'] = $status;
-            $jobStatus = JobStatus::fromString($status);
-
-            if ($jobStatus->isCompleted()) {
-                // Success with items - reset both counters
-                $current_config['consecutive_failures'] = 0;
-                $current_config['consecutive_no_items'] = 0;
-            } elseif ($jobStatus->shouldResetFailureCount()) {
-                // Success status (completed_no_items, agent_skipped) - reset failures
-                $current_config['consecutive_failures'] = 0;
-
-                if ($jobStatus->shouldIncrementNoItemsCount()) {
-                    // completed_no_items - increment no_items counter
-                    $current_no_items = $current_config['consecutive_no_items'] ?? 0;
-                    $current_config['consecutive_no_items'] = $current_no_items + 1;
-                }
-            } elseif ($jobStatus->isFailure()) {
-                // Failure - increment failures, leave no_items alone
-                $current_failures = $current_config['consecutive_failures'] ?? 0;
-                $current_config['consecutive_failures'] = $current_failures + 1;
-            }
-        }
-
-        return $this->update_flow_scheduling($flow_id, $current_config);
     }
 
 	/**

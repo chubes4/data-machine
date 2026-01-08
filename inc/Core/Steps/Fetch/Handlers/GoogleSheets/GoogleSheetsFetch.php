@@ -8,6 +8,7 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
 
+use DataMachine\Core\ExecutionContext;
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
 use DataMachine\Services\AuthProviderService;
@@ -51,7 +52,7 @@ class GoogleSheetsFetch extends FetchHandler {
 
 			if ($this->auth_service === null) {
 				$auth_provider_service = new AuthProviderService();
-				$this->log('error', 'Google Sheets Handler: Authentication service not available', [
+				do_action('datamachine_log', 'error', 'Google Sheets Handler: Authentication service not available', [
 					'handler' => 'googlesheets',
 					'missing_service' => 'googlesheets',
 					'available_providers' => array_keys($auth_provider_service->getAll())
@@ -65,22 +66,11 @@ class GoogleSheetsFetch extends FetchHandler {
 	 * Fetch Google Sheets data as structured rows.
 	 * No engine data stored (no URLs for spreadsheet data).
 	 */
-	protected function executeFetch(
-		int $pipeline_id,
-		array $config,
-		?string $flow_step_id,
-		int $flow_id,
-		?string $job_id
-	): array {
-		if (empty($pipeline_id)) {
-			$this->log('error', 'Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-			return [];
-		}
-        
+	protected function executeFetch( array $config, ExecutionContext $context ): array {
         // Configuration validation
         $spreadsheet_id = trim($config['spreadsheet_id'] ?? '');
         if (empty($spreadsheet_id)) {
-            $this->log('error', 'Spreadsheet ID is required.', ['pipeline_id' => $pipeline_id]);
+            $context->log('error', 'GoogleSheets: Spreadsheet ID is required.');
             return [];
         }
 
@@ -91,15 +81,14 @@ class GoogleSheetsFetch extends FetchHandler {
         // Get Google Sheets authentication service
         $auth_service = $this->get_auth_service();
         if (!$auth_service) {
-            $this->log('error', 'Google Sheets authentication not configured', ['pipeline_id' => $pipeline_id]);
+            $context->log('error', 'GoogleSheets: Authentication not configured');
             return [];
         }
 
         // Get authenticated access token
         $access_token = $auth_service->get_service();
         if (is_wp_error($access_token)) {
-            $this->log('error', 'Authentication failed.', [
-                'pipeline_id' => $pipeline_id,
+            $context->log('error', 'GoogleSheets: Authentication failed.', [
                 'error' => $access_token->get_error_message()
             ]);
             return [];
@@ -109,11 +98,10 @@ class GoogleSheetsFetch extends FetchHandler {
         $range_param = urlencode($worksheet_name);
         $api_url = "https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheet_id}/values/{$range_param}";
 
-        $this->log('debug', 'Fetching spreadsheet data.', [
+        $context->log('debug', 'GoogleSheets: Fetching spreadsheet data.', [
             'spreadsheet_id' => $spreadsheet_id,
             'worksheet_name' => $worksheet_name,
-            'processing_mode' => $processing_mode,
-            'pipeline_id' => $pipeline_id
+            'processing_mode' => $processing_mode
         ]);
 
         $result = $this->httpGet($api_url, [
@@ -125,8 +113,7 @@ class GoogleSheetsFetch extends FetchHandler {
         ]);
 
         if (!$result['success']) {
-            $this->log('error', 'Failed to fetch data.', [
-                'pipeline_id' => $pipeline_id,
+            $context->log('error', 'GoogleSheets: Failed to fetch data.', [
                 'error' => $result['error'],
                 'spreadsheet_id' => $spreadsheet_id
             ]);
@@ -140,8 +127,7 @@ class GoogleSheetsFetch extends FetchHandler {
             $error_data = json_decode($response_body, true);
             $error_message = $error_data['error']['message'] ?? 'Unknown API error';
 
-            $this->log('error', 'API request failed.', [
-                'pipeline_id' => $pipeline_id,
+            $context->log('error', 'GoogleSheets: API request failed.', [
                 'status_code' => $response_code,
                 'error_message' => $error_message,
                 'spreadsheet_id' => $spreadsheet_id
@@ -151,15 +137,14 @@ class GoogleSheetsFetch extends FetchHandler {
 
         $sheet_data = json_decode($response_body, true);
         if (empty($sheet_data['values'])) {
-            $this->log('debug', 'No data found in specified range.', ['pipeline_id' => $pipeline_id]);
+            $context->log('debug', 'GoogleSheets: No data found in specified range.');
             return [];
         }
 
         $rows = $sheet_data['values'];
-        $this->log('debug', 'Retrieved spreadsheet data.', [
+        $context->log('debug', 'GoogleSheets: Retrieved spreadsheet data.', [
             'total_rows' => count($rows),
-            'processing_mode' => $processing_mode,
-            'pipeline_id' => $pipeline_id
+            'processing_mode' => $processing_mode
         ]);
 
         // Process header row if present
@@ -169,43 +154,41 @@ class GoogleSheetsFetch extends FetchHandler {
         if ($has_header_row && !empty($rows)) {
             $headers = array_map('trim', $rows[0]);
             $data_start_index = 1;
-            $this->log('debug', 'Using header row.', [
-                'headers' => $headers,
-                'pipeline_id' => $pipeline_id
+            $context->log('debug', 'GoogleSheets: Using header row.', [
+                'headers' => $headers
             ]);
         }
 
         // Process based on mode
         switch ($processing_mode) {
             case 'full_spreadsheet':
-                return $this->process_full_spreadsheet($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id);
+                return $this->process_full_spreadsheet($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $context);
             
             case 'by_column':
-                return $this->process_by_column($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id);
+                return $this->process_by_column($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $context);
             
             case 'by_row':
             default:
-                return $this->process_by_row($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id);
+                return $this->process_by_row($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $context);
         }
     }
 
     /**
      * Process entire spreadsheet as single data packet.
      */
-    private function process_full_spreadsheet($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id) {
+    private function process_full_spreadsheet($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, ExecutionContext $context) {
         $sheet_identifier = $spreadsheet_id . '_' . $worksheet_name . '_full';
 
         // Check if already processed
-        if ($this->isItemProcessed($sheet_identifier, $flow_step_id)) {
-            $this->log('debug', 'Full spreadsheet already processed.', [
-                'sheet_identifier' => $sheet_identifier,
-                'pipeline_id' => $pipeline_id
+        if ($context->isItemProcessed($sheet_identifier)) {
+            $context->log('debug', 'GoogleSheets: Full spreadsheet already processed.', [
+                'sheet_identifier' => $sheet_identifier
             ]);
             return [];
         }
 
         // Mark as processed
-        $this->markItemProcessed($sheet_identifier, $flow_step_id, $job_id);
+        $context->markItemProcessed($sheet_identifier);
 
         // Build data for all rows
         $all_data = [];
@@ -246,14 +229,13 @@ class GoogleSheetsFetch extends FetchHandler {
         ];
 
         // Store empty engine data for downstream handlers
-        $this->storeEngineData($job_id, [
+        $context->storeEngineData([
             'source_url' => '',
             'image_url' => ''
         ]);
 
-        $this->log('debug', 'Processed full spreadsheet.', [
-            'total_rows' => count($all_data),
-            'pipeline_id' => $pipeline_id
+        $context->log('debug', 'GoogleSheets: Processed full spreadsheet.', [
+            'total_rows' => count($all_data)
         ]);
 
         return $raw_data;
@@ -262,7 +244,7 @@ class GoogleSheetsFetch extends FetchHandler {
     /**
      * Process spreadsheet rows individually with deduplication.
      */
-    private function process_by_row($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id) {
+    private function process_by_row($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, ExecutionContext $context) {
         // Find next unprocessed row
         for ($i = $data_start_index; $i < count($rows); $i++) {
             $row = $rows[$i];
@@ -275,12 +257,12 @@ class GoogleSheetsFetch extends FetchHandler {
             $row_identifier = $spreadsheet_id . '_' . $worksheet_name . '_row_' . ($i + 1);
 
             // Check if already processed
-            if ($this->isItemProcessed($row_identifier, $flow_step_id)) {
+            if ($context->isItemProcessed($row_identifier)) {
                 continue;
             }
 
             // Mark as processed
-            $this->markItemProcessed($row_identifier, $flow_step_id, $job_id);
+            $context->markItemProcessed($row_identifier);
 
             // Build row data
             $row_data = [];
@@ -313,31 +295,30 @@ class GoogleSheetsFetch extends FetchHandler {
             ];
 
             // Store empty engine data via centralized filter
-            $this->storeEngineData($job_id, [
+            $context->storeEngineData([
                 'source_url' => '',
                 'image_url' => ''
             ]);
 
-            $this->log('debug', 'Processed row.', [
-                'row_number' => $i + 1,
-                'pipeline_id' => $pipeline_id
+            $context->log('debug', 'GoogleSheets: Processed row.', [
+                'row_number' => $i + 1
             ]);
 
             return $raw_data;
         }
 
         // No unprocessed rows found
-        $this->log('debug', 'No unprocessed rows found.', ['pipeline_id' => $pipeline_id]);
+        $context->log('debug', 'GoogleSheets: No unprocessed rows found.');
         return [];
     }
 
      /**
       * Process spreadsheet columns individually with deduplication.
       */
-     private function process_by_column($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $flow_step_id, $job_id, $pipeline_id) {
-         if (empty($rows)) {
-             return [];
-         }
+      private function process_by_column($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, ExecutionContext $context) {
+          if (empty($rows)) {
+              return [];
+          }
 
         // Determine max columns
         $max_cols = 0;
@@ -351,7 +332,7 @@ class GoogleSheetsFetch extends FetchHandler {
             $column_identifier = $spreadsheet_id . '_' . $worksheet_name . '_col_' . $column_letter;
 
             // Check if already processed
-            if ($this->isItemProcessed($column_identifier, $flow_step_id)) {
+            if ($context->isItemProcessed($column_identifier)) {
                 continue;
             }
 
@@ -371,7 +352,7 @@ class GoogleSheetsFetch extends FetchHandler {
             }
 
             // Mark as processed
-            $this->markItemProcessed($column_identifier, $flow_step_id, $job_id);
+            $context->markItemProcessed($column_identifier);
 
             $metadata = [
                 'source_type' => 'googlesheets_fetch',
@@ -391,22 +372,21 @@ class GoogleSheetsFetch extends FetchHandler {
             ];
 
             // Store empty engine data via centralized filter
-            $this->storeEngineData($job_id, [
+            $context->storeEngineData([
                 'source_url' => '',
                 'image_url' => ''
             ]);
 
-            $this->log('debug', 'Processed column.', [
+            $context->log('debug', 'GoogleSheets: Processed column.', [
                 'column_letter' => $column_letter,
-                'column_header' => $column_header,
-                'pipeline_id' => $pipeline_id
+                'column_header' => $column_header
             ]);
 
             return $raw_data;
         }
 
         // No unprocessed columns found
-        $this->log('debug', 'No unprocessed columns found.', ['pipeline_id' => $pipeline_id]);
+        $context->log('debug', 'GoogleSheets: No unprocessed columns found.');
         return [];
     }
 

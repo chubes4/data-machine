@@ -11,6 +11,7 @@
 namespace DataMachine\Api\Flows;
 
 use DataMachine\Core\Admin\DateFormatter;
+use DataMachine\Core\Database\Jobs\Jobs;
 use DataMachine\Services\FlowManager;
 use DataMachine\Services\HandlerService;
 use WP_REST_Server;
@@ -286,13 +287,23 @@ class Flows {
 		$per_page = $request->get_param('per_page') ?? 20;
 		$offset = $request->get_param('offset') ?? 0;
 
+		$db_jobs = new Jobs();
+
 		if ($pipeline_id) {
 			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
 
 			$flows = $db_flows->get_flows_for_pipeline_paginated($pipeline_id, $per_page, $offset);
 			$total = $db_flows->count_flows_for_pipeline($pipeline_id);
 
-			$formatted_flows = array_map([self::class, 'format_flow_for_response'], $flows);
+			// Batch query latest jobs for all flows
+			$flow_ids = array_column($flows, 'flow_id');
+			$latest_jobs = $db_jobs->get_latest_jobs_by_flow_ids($flow_ids);
+
+			$formatted_flows = array_map(function($flow) use ($latest_jobs) {
+				$flow_id = (int) $flow['flow_id'];
+				$latest_job = $latest_jobs[$flow_id] ?? null;
+				return self::format_flow_for_response($flow, $latest_job);
+			}, $flows);
 
 			return rest_ensure_response([
 				'success' => true,
@@ -314,8 +325,15 @@ class Flows {
 
 		foreach ($all_pipelines as $pipeline) {
 			$pipeline_flows = $db_flows->get_flows_for_pipeline($pipeline['pipeline_id']);
+
+			// Batch query latest jobs for this pipeline's flows
+			$flow_ids = array_column($pipeline_flows, 'flow_id');
+			$latest_jobs = $db_jobs->get_latest_jobs_by_flow_ids($flow_ids);
+
 			foreach ($pipeline_flows as $flow) {
-				$all_flows[] = self::format_flow_for_response($flow);
+				$flow_id = (int) $flow['flow_id'];
+				$latest_job = $latest_jobs[$flow_id] ?? null;
+				$all_flows[] = self::format_flow_for_response($flow, $latest_job);
 			}
 		}
 
@@ -343,7 +361,12 @@ class Flows {
 			);
 		}
 
-		$flow_payload = self::format_flow_for_response($flow);
+		// Get latest job for this flow
+		$db_jobs = new Jobs();
+		$jobs = $db_jobs->get_jobs_for_flow($flow_id);
+		$latest_job = $jobs[0] ?? null;
+
+		$flow_payload = self::format_flow_for_response($flow, $latest_job);
 
 		return rest_ensure_response([
 			'success' => true,
@@ -352,9 +375,12 @@ class Flows {
 	}
 
 	/**
-	 * Format a flow record with handler config and scheduling metadata
+	 * Format a flow record with handler config and scheduling metadata.
+	 *
+	 * @param array      $flow       Flow data from database
+	 * @param array|null $latest_job Latest job for this flow (optional, for batch efficiency)
 	 */
-	private static function format_flow_for_response(array $flow): array {
+	private static function format_flow_for_response(array $flow, ?array $latest_job = null): array {
 		$flow_config = $flow['flow_config'] ?? [];
 
 		$handler_service = new HandlerService();
@@ -392,10 +418,13 @@ class Flows {
 		unset($step_data);
 
 		$scheduling_config = $flow['scheduling_config'] ?? [];
-
 		$flow_id = $flow['flow_id'] ?? null;
-		$last_run_at = $scheduling_config['last_run_at'] ?? null;
-		$last_run_status = $scheduling_config['last_run_status'] ?? null;
+
+		// Derive execution status from jobs table (single source of truth)
+		$last_run_at = $latest_job['created_at'] ?? null;
+		$last_run_status = $latest_job['status'] ?? null;
+		$is_running = $latest_job && $latest_job['completed_at'] === null;
+
 		$next_run = self::get_next_run_time($flow_id);
 
 		return [
@@ -407,6 +436,7 @@ class Flows {
 			'last_run' => $last_run_at,
 			'last_run_status' => $last_run_status,
 			'last_run_display' => DateFormatter::format_for_display($last_run_at, $last_run_status),
+			'is_running' => $is_running,
 			'next_run' => $next_run,
 			'next_run_display' => DateFormatter::format_for_display($next_run),
 		];
@@ -488,7 +518,12 @@ class Flows {
 			);
 		}
 
-		$flow_payload = self::format_flow_for_response($flow);
+		// Get latest job for this flow
+		$db_jobs = new Jobs();
+		$jobs = $db_jobs->get_jobs_for_flow($flow_id);
+		$latest_job = $jobs[0] ?? null;
+
+		$flow_payload = self::format_flow_for_response($flow, $latest_job);
 
 		return rest_ensure_response([
 			'success' => true,

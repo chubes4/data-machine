@@ -5,6 +5,27 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-01-08
+
+### Added
+- **ExecutionContext** - New `inc/Core/ExecutionContext.php` centralizes flow vs direct execution context, deduplication checks, engine snapshot access, file context, and handler-scoped logging helpers.
+
+### Changed
+- **Flows scheduling contract** - `inc/Api/Flows/Flows.php` now delegates schedule updates to `inc/Api/Flows/FlowScheduling.php` and standardizes manual/one-time/recurring scheduling updates.
+- **Flow status metadata sourcing** - Flow list/response metadata now derives last-run status/running state and next scheduled run from jobs history + Action Scheduler rather than flow row fields.
+- **Job status finalization** - `inc/Core/Database/Jobs/JobsStatus.php` now validates completion using `JobStatus::isStatusFinal()` (supports compound statuses).
+- **Fetch handler execution context** - `inc/Core/Steps/Fetch/Handlers/FetchHandler.php` and fetch handlers (Files/RSS/Reddit/Google Sheets/WordPress*) now consume `ExecutionContext` for consistent engine data access (e.g. `source_url`, `image_file_path`) and direct-mode compatibility.
+
+### Improved
+- **Flows UI status display** - `inc/Core/Admin/Pages/Pipelines/assets/react/components/flows/FlowCard.jsx` and `inc/Core/Admin/Pages/Pipelines/assets/react/components/flows/FlowFooter.jsx` now display a "Running" state and refine last-run status styling.
+
+### Fixed
+- **Direct execution job IDs** - `inc/Api/Execute.php` now creates direct execution jobs with `pipeline_id='direct'` and `flow_id='direct'` for consistent downstream handling.
+- **Direct execution file context** - `inc/Api/Files.php` now supports `flow_id='direct'` in `get_file_context()`.
+
+### Testing
+- Updated `tests/Unit/Services/FlowManagerTest.php` to reflect the new flow metadata and scheduling behavior.
+
 ## [0.9.16] - 2026-01-07
 
 ### Improved

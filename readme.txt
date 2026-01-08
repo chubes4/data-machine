@@ -4,7 +4,7 @@ Tags: ai, automation, content, workflow, pipeline
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 8.2
-Stable tag: 0.9.16
+Stable tag: 0.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -247,7 +247,7 @@ Users must configure at least one AI provider to use Data Machine's workflow aut
 
 == Changelog ==
 
-= 0.9.16 =
+= 0.10.0 =
 * Improved: WordPress source attribution now detects Gutenberg blocks and uses proper block markup for the attribution paragraph to avoid mixed content.
 * Fixed: Updated .buildignore to ensure local /build/ directories are properly excluded while preserving necessary assets.
 * Testing: Added unit tests for WordPress source attribution logic.

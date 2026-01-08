@@ -190,10 +190,10 @@ class Execute {
         // Get database service
         $db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
 
-        // Create job record
+        // Create job record for direct execution
         $job_id = $db_jobs->create_job([
-            'pipeline_id' => null,
-            'flow_id' => null
+            'pipeline_id' => 'direct',
+            'flow_id' => 'direct'
         ]);
 
         if (!$job_id) {

@@ -33,10 +33,10 @@ function datamachine_normalize_engine_config($config): array {
 /**
  * Get file context array from flow ID
  *
- * @param int $flow_id Flow ID
+ * @param int|string $flow_id Flow ID or 'direct' for ephemeral workflows
  * @return array Context array with pipeline/flow metadata
  */
-function datamachine_get_file_context(int $flow_id): array {
+function datamachine_get_file_context(int|string $flow_id): array {
     return \DataMachine\Api\Files::get_file_context($flow_id);
 }
 
@@ -73,13 +73,6 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
         do_action('datamachine_log', 'error', 'Flow execution failed - flow not found', ['flow_id' => $flow_id]);
         return false;
     }
-
-    $scheduling_config = $flow['scheduling_config'] ?? [];
-    if (is_string($scheduling_config)) {
-        $scheduling_config = json_decode($scheduling_config, true) ?: [];
-    }
-    $scheduling_config['last_run_at'] = current_time('mysql', true);
-    $db_flows->update_flow_scheduling($flow_id, $scheduling_config);
 
     $pipeline_id = (int)$flow['pipeline_id'];
 

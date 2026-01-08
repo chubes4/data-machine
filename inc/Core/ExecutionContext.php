@@ -1,0 +1,400 @@
+<?php
+/**
+ * Execution Context
+ *
+ * Encapsulates execution mode and provides a unified interface for all handler types.
+ * Centralizes deduplication, engine data access, file storage context, and logging.
+ *
+ * Supports two execution modes:
+ * - 'direct': Direct execution without database persistence (CLI tools, ephemeral workflows)
+ * - 'flow': Standard flow-based execution with full pipeline/flow context
+ *
+ * In direct mode, pipeline_id and flow_id are set to the string 'direct' for consistent
+ * end-to-end traceability throughout the system.
+ *
+ * @package DataMachine\Core
+ * @since 0.9.16
+ */
+
+namespace DataMachine\Core;
+
+use DataMachine\Services\ProcessedItemsManager;
+use DataMachine\Core\FilesRepository\RemoteFileDownloader;
+
+defined('ABSPATH') || exit;
+
+class ExecutionContext {
+
+	public const MODE_DIRECT = 'direct';
+	public const MODE_FLOW = 'flow';
+
+	private string $mode;
+	private int|string|null $pipeline_id;
+	private int|string|null $flow_id;
+	private ?string $flow_step_id;
+	private ?string $job_id;
+	private string $handler_type;
+	private ?EngineData $engine = null;
+
+	/**
+	 * Private constructor - use factory methods.
+	 */
+	private function __construct(
+		string $mode,
+		int|string|null $pipeline_id,
+		int|string|null $flow_id,
+		?string $flow_step_id,
+		?string $job_id,
+		string $handler_type = ''
+	) {
+		$this->mode = $mode;
+		$this->pipeline_id = $pipeline_id;
+		$this->flow_id = $flow_id;
+		$this->flow_step_id = $flow_step_id;
+		$this->job_id = $job_id;
+		$this->handler_type = $handler_type;
+	}
+
+	/**
+	 * Factory: Direct execution mode.
+	 *
+	 * Use for CLI tools, ephemeral workflows, and testing.
+	 * Deduplication is disabled, no database persistence required.
+	 * Sets pipeline_id and flow_id to 'direct' for consistent traceability.
+	 *
+	 * @param string $handler_type Handler type identifier for logging
+	 * @return self
+	 */
+	public static function direct(string $handler_type = ''): self {
+		return new self(
+			self::MODE_DIRECT,
+			'direct',
+			'direct',
+			'direct_' . wp_generate_uuid4(),
+			null,
+			$handler_type
+		);
+	}
+
+	/**
+	 * Factory: Flow-based execution.
+	 *
+	 * Standard execution mode with full pipeline/flow context.
+	 *
+	 * @param int $pipeline_id Pipeline ID
+	 * @param int $flow_id Flow ID
+	 * @param string $flow_step_id Flow step ID for deduplication
+	 * @param string|null $job_id Job ID for engine data storage
+	 * @param string $handler_type Handler type identifier
+	 * @return self
+	 */
+	public static function fromFlow(
+		int $pipeline_id,
+		int $flow_id,
+		string $flow_step_id,
+		?string $job_id,
+		string $handler_type = ''
+	): self {
+		return new self(
+			self::MODE_FLOW,
+			$pipeline_id,
+			$flow_id,
+			$flow_step_id,
+			$job_id,
+			$handler_type
+		);
+	}
+
+	/**
+	 * Factory: Create from handler config array.
+	 *
+	 * Provides backward compatibility with existing config structures.
+	 * Automatically detects direct execution mode from 'direct' sentinel values.
+	 *
+	 * @param array $config Handler configuration array
+	 * @param string|null $job_id Job ID
+	 * @param string $handler_type Handler type identifier
+	 * @return self
+	 */
+	public static function fromConfig(array $config, ?string $job_id = null, string $handler_type = ''): self {
+		$flow_id = $config['flow_id'] ?? null;
+		$pipeline_id = $config['pipeline_id'] ?? null;
+
+		if ($flow_id === 'direct' || $pipeline_id === 'direct') {
+			return new self(
+				self::MODE_DIRECT,
+				'direct',
+				'direct',
+				$config['flow_step_id'] ?? 'direct_' . wp_generate_uuid4(),
+				$job_id,
+				$handler_type
+			);
+		}
+
+		return self::fromFlow(
+			(int) $pipeline_id,
+			(int) $flow_id,
+			$config['flow_step_id'] ?? '',
+			$job_id,
+			$handler_type
+		);
+	}
+
+	/**
+	 * Check if this is direct execution mode.
+	 *
+	 * @return bool
+	 */
+	public function isDirect(): bool {
+		return $this->mode === self::MODE_DIRECT;
+	}
+
+	/**
+	 * Check if this is flow-based execution mode.
+	 *
+	 * @return bool
+	 */
+	public function isFlow(): bool {
+		return $this->mode === self::MODE_FLOW;
+	}
+
+	/**
+	 * Get execution mode.
+	 *
+	 * @return string 'direct' or 'flow'
+	 */
+	public function getMode(): string {
+		return $this->mode;
+	}
+
+	/**
+	 * Check if an item has been processed.
+	 *
+	 * In direct mode, always returns false (no deduplication).
+	 *
+	 * @param string $item_id Item identifier
+	 * @return bool True if already processed
+	 */
+	public function isItemProcessed(string $item_id): bool {
+		if ($this->isDirect() || !$this->flow_step_id) {
+			return false;
+		}
+		$manager = new ProcessedItemsManager();
+		return $manager->hasBeenProcessed($this->flow_step_id, $this->handler_type, $item_id);
+	}
+
+	/**
+	 * Mark an item as processed.
+	 *
+	 * In direct mode, does nothing (no deduplication tracking).
+	 *
+	 * @param string $item_id Item identifier
+	 */
+	public function markItemProcessed(string $item_id): void {
+		if ($this->isDirect() || !$this->flow_step_id) {
+			return;
+		}
+		do_action(
+			'datamachine_mark_item_processed',
+			$this->flow_step_id,
+			$this->handler_type,
+			$item_id,
+			$this->job_id
+		);
+	}
+
+	/**
+	 * Get EngineData instance.
+	 *
+	 * Lazily instantiated on first access.
+	 *
+	 * @return EngineData
+	 */
+	public function getEngine(): EngineData {
+		if ($this->engine === null) {
+			$data = $this->job_id ? datamachine_get_engine_data((int) $this->job_id) : [];
+			$this->engine = new EngineData($data, $this->job_id);
+		}
+		return $this->engine;
+	}
+
+	/**
+	 * Store data in engine snapshot.
+	 *
+	 * @param array $data Data to merge into engine snapshot
+	 */
+	public function storeEngineData(array $data): void {
+		if ($this->job_id) {
+			datamachine_merge_engine_data((int) $this->job_id, $data);
+			// Invalidate cached engine so next getEngine() fetches fresh data
+			$this->engine = null;
+		}
+	}
+
+	/**
+	 * Get source URL from engine data.
+	 *
+	 * @return string|null
+	 */
+	public function getSourceUrl(): ?string {
+		return $this->getEngine()->getSourceUrl();
+	}
+
+	/**
+	 * Get image file path from engine data.
+	 *
+	 * @return string|null
+	 */
+	public function getImagePath(): ?string {
+		return $this->getEngine()->getImagePath();
+	}
+
+	/**
+	 * Get storage path for files.
+	 *
+	 * @return string
+	 */
+	public function getStoragePath(): string {
+		if ($this->isDirect()) {
+			return 'direct';
+		}
+		return "pipeline-{$this->pipeline_id}/flow-{$this->flow_id}";
+	}
+
+	/**
+	 * Get file context for downloads.
+	 *
+	 * In direct mode, returns 'direct' for IDs and names for consistent traceability.
+	 *
+	 * @return array Context array with pipeline/flow metadata
+	 */
+	public function getFileContext(): array {
+		if ($this->isDirect()) {
+			return [
+				'pipeline_id' => 'direct',
+				'pipeline_name' => 'direct',
+				'flow_id' => 'direct',
+				'flow_name' => 'direct',
+			];
+		}
+		return [
+			'pipeline_id' => $this->pipeline_id,
+			'pipeline_name' => "pipeline-{$this->pipeline_id}",
+			'flow_id' => $this->flow_id,
+			'flow_name' => "flow-{$this->flow_id}",
+		];
+	}
+
+	/**
+	 * Download a remote file to flow-isolated storage.
+	 *
+	 * @param string $url File URL
+	 * @param string $filename Target filename
+	 * @param array $options Optional download options
+	 * @return array|null Download result or null on failure
+	 */
+	public function downloadFile(string $url, string $filename, array $options = []): ?array {
+		$downloader = new RemoteFileDownloader();
+		return $downloader->download_remote_file($url, $filename, $this->getFileContext(), $options);
+	}
+
+	/**
+	 * Log message with automatic execution context.
+	 *
+	 * @param string $level Log level (debug, info, warning, error)
+	 * @param string $message Log message
+	 * @param array $extra Additional context
+	 */
+	public function log(string $level, string $message, array $extra = []): void {
+		$context = array_merge([
+			'execution_mode' => $this->mode,
+			'pipeline_id' => $this->pipeline_id,
+			'flow_id' => $this->flow_id,
+		], $extra);
+
+		if ($this->handler_type) {
+			$context['handler'] = $this->handler_type;
+		}
+
+		do_action('datamachine_log', $level, $message, $context);
+	}
+
+	/**
+	 * Get pipeline ID.
+	 *
+	 * Returns 'direct' in direct execution mode.
+	 *
+	 * @return int|string|null
+	 */
+	public function getPipelineId(): int|string|null {
+		return $this->pipeline_id;
+	}
+
+	/**
+	 * Get flow ID.
+	 *
+	 * Returns 'direct' in direct execution mode.
+	 *
+	 * @return int|string|null
+	 */
+	public function getFlowId(): int|string|null {
+		return $this->flow_id;
+	}
+
+	/**
+	 * Get flow step ID.
+	 *
+	 * @return string|null
+	 */
+	public function getFlowStepId(): ?string {
+		return $this->flow_step_id;
+	}
+
+	/**
+	 * Get job ID.
+	 *
+	 * @return string|null
+	 */
+	public function getJobId(): ?string {
+		return $this->job_id;
+	}
+
+	/**
+	 * Get handler type.
+	 *
+	 * @return string
+	 */
+	public function getHandlerType(): string {
+		return $this->handler_type;
+	}
+
+	/**
+	 * Create a new context with a different handler type.
+	 *
+	 * Useful when delegating to sub-handlers.
+	 *
+	 * @param string $handler_type New handler type
+	 * @return self New context instance
+	 */
+	public function withHandlerType(string $handler_type): self {
+		$clone = clone $this;
+		$clone->handler_type = $handler_type;
+		$clone->engine = null; // Reset cached engine
+		return $clone;
+	}
+
+	/**
+	 * Create a new context with a job ID.
+	 *
+	 * Useful when job is created after context.
+	 *
+	 * @param string $job_id Job ID
+	 * @return self New context instance
+	 */
+	public function withJobId(string $job_id): self {
+		$clone = clone $this;
+		$clone->job_id = $job_id;
+		$clone->engine = null; // Reset cached engine
+		return $clone;
+	}
+}

@@ -8,6 +8,7 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPressMedia;
 
+use DataMachine\Core\ExecutionContext;
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
 use WP_Query;
@@ -41,39 +42,14 @@ class WordPressMedia extends FetchHandler {
 	 * Fetch WordPress media attachments with parent content integration.
 	 * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
 	 */
-	protected function executeFetch(
-		int $pipeline_id,
-		array $config,
-		?string $flow_step_id,
-		int $flow_id,
-		?string $job_id
-	): array {
-		if (empty($pipeline_id)) {
-			$this->log('error', 'Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-			return [];
-		}
-
-		// Handle null flow_step_id gracefully - skip processed items tracking when flow context missing
-		if ($flow_step_id === null) {
-			$this->log('debug', 'WordPress Media fetch called without flow_step_id - processed items tracking disabled');
-		}
-
-		$user_id = get_current_user_id();
-		return $this->fetch_media_data($pipeline_id, $config, $user_id, $flow_step_id, $job_id);
+	protected function executeFetch( array $config, ExecutionContext $context ): array {
+		return $this->fetch_media_data($config, $context);
 	}
 
     /**
      * Fetch media data from local WordPress installation.
-     *
-     * @param int   $pipeline_id Module ID for tracking processed items.
-     * @param array $config Configuration array.
-     * @param int   $user_id User ID for context.
-     * @param string|null $flow_step_id Flow step ID for processed items tracking.
-     * @param string|null $job_id Job ID for processed items tracking.
-     * @return array Array of item data packets.
-     * @throws Exception If data cannot be retrieved.
      */
-    private function fetch_media_data(int $pipeline_id, array $config, int $user_id, ?string $flow_step_id = null, ?string $job_id = null): array {
+    private function fetch_media_data(array $config, ExecutionContext $context): array {
         // Media-specific configuration
         $file_types = $config['file_types'] ?? ['image'];
         $include_parent_content = !empty($config['include_parent_content']);
@@ -148,7 +124,7 @@ class WordPressMedia extends FetchHandler {
         // Find first unprocessed media item
         foreach ($posts as $post) {
             $post_id = $post->ID;
-            if ($this->isItemProcessed((string) $post_id, $flow_step_id)) {
+            if ($context->isItemProcessed((string) $post_id)) {
                 continue;
             }
 
@@ -161,7 +137,7 @@ class WordPressMedia extends FetchHandler {
             }
 
             // Found first eligible item - mark as processed and return
-            $this->markItemProcessed((string) $post_id, $flow_step_id, $job_id);
+            $context->markItemProcessed((string) $post_id);
 
             // Extract media data using universal pattern (identical to all other handlers)
             $post_id = $post->ID;
@@ -216,8 +192,8 @@ class WordPressMedia extends FetchHandler {
 
             // Prepare raw data for DataPacket creation
             $raw_data = [
-                'title' => $content_data['title'],
-                'content' => $content_data['content'],
+                'title' => $content_data['title'] ?? '',
+                'content' => $content_data['content'] ?? '',
                 'metadata' => $metadata,
                 'file_info' => $file_info
             ];
@@ -232,7 +208,7 @@ class WordPressMedia extends FetchHandler {
                 $image_file_path = $file_info['file_path'];
             }
 
-            $this->storeEngineData($job_id, [
+            $context->storeEngineData([
                 'source_url' => $source_url,
                 'image_file_path' => $image_file_path
             ]);

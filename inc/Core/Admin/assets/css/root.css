@@ -121,3 +121,8 @@
 .datamachine-status--neutral {
     color: var(--datamachine-color-neutral);
 }
+
+.datamachine-status--running {
+    color: var(--datamachine-color-primary);
+    font-weight: 500;
+}

@@ -74,20 +74,31 @@ All fetch handlers extend `FetchHandler` base class (`/inc/Core/Steps/Fetch/Hand
 All fetch handlers implement the same public interface:
 
 ```php
-public function get_fetch_data(int $pipeline_id, array $handler_config, ?string $job_id = null): array
+public function get_fetch_data(int|string $pipeline_id, array $handler_config, ?string $job_id = null): array
 ```
 
-Internally, the base class calls:
+Internally, the base class creates an `ExecutionContext` and calls:
 ```php
-abstract protected function executeFetch(int $pipeline_id, array $config, ?string $flow_step_id, int $flow_id, ?string $job_id): array
+abstract protected function executeFetch(array $config, ExecutionContext $context): array
 ```
 
 **Parameters**:
-- `$pipeline_id` - Pipeline context for processed items tracking
-- `$handler_config` - Handler-specific configuration
-- `$job_id` - Job identifier for deduplication tracking
+- `$pipeline_id` - Pipeline ID or `'direct'` for direct execution mode
+- `$handler_config` - Handler-specific configuration (must include `flow_id`, `flow_step_id`, `pipeline_id`)
+- `$job_id` - Job identifier for deduplication tracking and engine data storage
 
-**Return**: Array with `processed_items` key containing DataPackets
+**ExecutionContext provides**:
+- `$context->getPipelineId()` - Returns `int|string` (numeric ID or `'direct'`)
+- `$context->getFlowId()` - Returns `int|string` (numeric ID or `'direct'`)
+- `$context->getJobId()` - Returns `?string`
+- `$context->isItemProcessed($id)` - Check deduplication (always false in direct mode)
+- `$context->markItemProcessed($id)` - Mark item processed (no-op in direct mode)
+- `$context->log($level, $message, $extra)` - Contextual logging
+- `$context->storeEngineData($data)` - Store data for downstream steps
+- `$context->getFileContext()` - Get file storage context array
+- `$context->isDirect()` - Check if running in direct execution mode
+
+**Return**: Array of DataPacket objects
 
 ### Clean DataPacket Format (AI-visible)
 

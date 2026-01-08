@@ -430,11 +430,24 @@ class Files {
     }
 
     /**
-     * Get file context array from flow ID
+     * Get file context array from flow ID.
+     *
+     * Supports both database flows (numeric ID) and direct execution ('direct').
+     *
+     * @param int|string $flow_id Flow ID or 'direct' for ephemeral workflows
+     * @return array Context array with pipeline_id and flow_id
      */
-    public static function get_file_context(int $flow_id): array {
+    public static function get_file_context(int|string $flow_id): array {
+        // Direct execution mode - no database lookup needed
+        if ($flow_id === 'direct') {
+            return [
+                'pipeline_id' => 'direct',
+                'flow_id' => 'direct'
+            ];
+        }
+
         $db_flows = new \DataMachine\Core\Database\Flows\Flows();
-        $flow_data = $db_flows->get_flow($flow_id);
+        $flow_data = $db_flows->get_flow((int) $flow_id);
 
         if (!isset($flow_data['pipeline_id']) || empty($flow_data['pipeline_id'])) {
             throw new \InvalidArgumentException('Flow data missing required pipeline_id');

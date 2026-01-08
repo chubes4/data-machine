@@ -8,6 +8,7 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\WordPressAPI;
 
+use DataMachine\Core\ExecutionContext;
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
 
@@ -47,31 +48,16 @@ class WordPressAPI extends FetchHandler {
 	 * Fetch WordPress posts via REST API with timeframe and keyword filtering.
 	 * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
 	 */
-	protected function executeFetch(
-		int $pipeline_id,
-		array $config,
-		?string $flow_step_id,
-		int $flow_id,
-		?string $job_id
-	): array {
-		if (empty($pipeline_id)) {
-			$this->log('error', 'Missing pipeline ID.', ['pipeline_id' => $pipeline_id]);
-			return [];
-		}
-
-		if ($flow_step_id === null) {
-			$this->log('debug', 'WordPress API fetch called without flow_step_id - processed items tracking disabled');
-		}
-
+	protected function executeFetch( array $config, ExecutionContext $context ): array {
 		// Configuration validation
 		$endpoint_url = trim($config['endpoint_url'] ?? '');
 		if (empty($endpoint_url)) {
-			$this->log('error', 'Endpoint URL is required.', ['pipeline_id' => $pipeline_id]);
+			$context->log('error', 'WordPressAPI: Endpoint URL is required.');
 			return [];
 		}
 
 		if (!filter_var($endpoint_url, FILTER_VALIDATE_URL)) {
-			$this->log('error', 'Invalid endpoint URL format.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
+			$context->log('error', 'WordPressAPI: Invalid endpoint URL format.', ['endpoint_url' => $endpoint_url]);
 			return [];
 		}
 
@@ -80,7 +66,7 @@ class WordPressAPI extends FetchHandler {
 		$search = trim($config['search'] ?? '');
 
 		// Fetch from API endpoint
-		$item = $this->fetch_from_endpoint($pipeline_id, $endpoint_url, $timeframe_limit, $search, $flow_step_id, $flow_id, $job_id);
+		$item = $this->fetch_from_endpoint($endpoint_url, $timeframe_limit, $search, $context);
 
 		return $item ?: [];
 	}
@@ -90,21 +76,12 @@ class WordPressAPI extends FetchHandler {
      *
      * Makes HTTP request to provided endpoint URL and processes response.
      * Returns first unprocessed item with automatic deduplication tracking.
-     *
-     * @param int $pipeline_id Pipeline execution identifier
-     * @param string $endpoint_url Complete API endpoint URL
-     * @param string $timeframe_limit Timeframe filter setting
-     * @param string $search Search term filter
-     * @param string|null $flow_step_id Flow step ID for deduplication tracking
-     * @param int $flow_id Flow ID for remote file download context
-     * @param string|null $job_id Job ID for item tracking
-     * @return array Array containing single eligible item data packet or empty array
      */
-    private function fetch_from_endpoint(int $pipeline_id, string $endpoint_url, string $timeframe_limit, string $search, ?string $flow_step_id = null, int $flow_id = 0, ?string $job_id = null): array {
+    private function fetch_from_endpoint(string $endpoint_url, string $timeframe_limit, string $search, ExecutionContext $context): array {
         // WordPress REST APIs - try server-side search, fallback to client-side
         if (strpos($endpoint_url, '/wp-json/') !== false && !empty($search)) {
             $endpoint_url = add_query_arg('search', $search, $endpoint_url);
-            $this->log('debug', 'Added server-side search parameter to WordPress endpoint', [
+            $context->log('debug', 'WordPressAPI: Added server-side search parameter to WordPress endpoint', [
                 'search_term' => $search,
                 'modified_url' => $endpoint_url
             ]);
@@ -113,8 +90,7 @@ class WordPressAPI extends FetchHandler {
         $result = $this->httpGet($endpoint_url, ['context' => 'REST API']);
 
         if (!$result['success']) {
-            $this->log('error', 'Failed to fetch from endpoint.', [
-                'pipeline_id' => $pipeline_id,
+            $context->log('error', 'WordPressAPI: Failed to fetch from endpoint.', [
                 'error' => $result['error'],
                 'endpoint_url' => $endpoint_url
             ]);
@@ -123,15 +99,14 @@ class WordPressAPI extends FetchHandler {
 
         $response_data = $result['data'];
         if (empty($response_data)) {
-            $this->log('error', 'Empty response from endpoint.', ['pipeline_id' => $pipeline_id, 'endpoint_url' => $endpoint_url]);
+            $context->log('error', 'WordPressAPI: Empty response from endpoint.', ['endpoint_url' => $endpoint_url]);
             return [];
         }
 
         // Parse JSON response
         $items = json_decode($response_data, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->log('error', 'Invalid JSON response.', [
-                'pipeline_id' => $pipeline_id,
+            $context->log('error', 'WordPressAPI: Invalid JSON response.', [
                 'json_error' => json_last_error_msg(),
                 'endpoint_url' => $endpoint_url
             ]);
@@ -151,12 +126,12 @@ class WordPressAPI extends FetchHandler {
 
             $unique_id = md5($endpoint_url . '_' . $item_id);
 
-            if ($this->isItemProcessed($unique_id, $flow_step_id)) {
+            if ($context->isItemProcessed($unique_id)) {
                 continue;
             }
 
             // Found first eligible item - mark as processed
-            $this->markItemProcessed($unique_id, $flow_step_id, $job_id);
+            $context->markItemProcessed($unique_id);
 
             // Extract item data flexibly
             $title = $this->extract_title($item);
@@ -185,7 +160,7 @@ class WordPressAPI extends FetchHandler {
             // Download remote image if present
             $file_info = null;
             $download_result = null;
-            if (!empty($image_url) && $flow_step_id) {
+            if (!empty($image_url)) {
                 // Generate filename from URL
                 $url_path = wp_parse_url($image_url, PHP_URL_PATH);
                 $extension = $url_path ? pathinfo($url_path, PATHINFO_EXTENSION) : 'jpg';
@@ -194,7 +169,7 @@ class WordPressAPI extends FetchHandler {
                 }
                 $filename = 'wp_api_image_' . time() . '_' . sanitize_file_name(basename($url_path ?: 'image')) . '.' . $extension;
 
-                $download_result = $this->downloadRemoteFile($image_url, $filename, $pipeline_id, $flow_id);
+                $download_result = $context->downloadFile($image_url, $filename);
 
                 if ($download_result) {
                     $file_check = wp_check_filetype($filename);
@@ -206,14 +181,14 @@ class WordPressAPI extends FetchHandler {
                         'file_size' => $download_result['size']
                     ];
 
-                    $this->log('debug', 'Downloaded remote image for AI processing', [
+                    $context->log('debug', 'WordPressAPI: Downloaded remote image for AI processing', [
                         'item_id' => $unique_id,
                         'source_url' => $image_url,
                         'local_path' => $download_result['path'],
                         'file_size' => $download_result['size']
                     ]);
                 } else {
-                    $this->log('warning', 'Failed to download remote image', [
+                    $context->log('warning', 'WordPressAPI: Failed to download remote image', [
                         'item_id' => $unique_id,
                         'image_url' => $image_url
                     ]);
@@ -252,7 +227,7 @@ class WordPressAPI extends FetchHandler {
                 $image_file_path = $download_result['path'];
             }
 
-            $this->storeEngineData($job_id, [
+            $context->storeEngineData([
                 'source_url' => $source_link,
                 'image_file_path' => $image_file_path
             ]);

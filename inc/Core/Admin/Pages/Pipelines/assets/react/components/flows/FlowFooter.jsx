@@ -11,9 +11,13 @@ import { __ } from '@wordpress/i18n';
  * Get CSS class for job status.
  *
  * @param {string|null} status - Job status string (may be compound like "agent_skipped - reason")
+ * @param {boolean} isRunning - Whether the job is currently running
  * @returns {string} CSS class name
  */
-const getStatusClass = ( status ) => {
+const getStatusClass = ( status, isRunning = false ) => {
+	if ( isRunning ) {
+		return 'datamachine-status--running';
+	}
 	if ( ! status ) {
 		return '';
 	}
@@ -49,19 +53,28 @@ const formatStatus = ( status ) => {
  * @param {string} props.scheduling.interval - Schedule interval
  * @param {string} props.scheduling.last_run_display - Pre-formatted last run display
  * @param {string} props.scheduling.last_run_status - Job status from last run
+ * @param {boolean} props.scheduling.is_running - Whether a job is currently running
  * @param {string} props.scheduling.next_run_display - Pre-formatted next run display
  * @returns {React.ReactElement} Flow footer
  */
 export default function FlowFooter( { flowId, scheduling } ) {
-	const { interval, last_run_display, last_run_status, next_run_display } =
-		scheduling || {};
+	const {
+		interval,
+		last_run_display,
+		last_run_status,
+		is_running,
+		next_run_display,
+	} = scheduling || {};
 
 	const scheduleDisplay =
 		interval && interval !== 'manual'
 			? interval
 			: __( 'Manual', 'datamachine' );
 
-	const formattedStatus = formatStatus( last_run_status );
+	// When running, show "Running" status; otherwise format the job status
+	const displayStatus = is_running
+		? __( 'Running', 'datamachine' )
+		: formatStatus( last_run_status );
 
 	return (
 		<div className="datamachine-flow-footer">
@@ -78,9 +91,9 @@ export default function FlowFooter( { flowId, scheduling } ) {
 			<div className="datamachine-flow-meta-item">
 				<strong>{ __( 'Last Run:', 'datamachine' ) }</strong>{ ' ' }
 				{ last_run_display || __( 'Never', 'datamachine' ) }
-				{ formattedStatus && (
-					<span className={ getStatusClass( last_run_status ) }>
-						{ ' ' }({ formattedStatus })
+				{ displayStatus && (
+					<span className={ getStatusClass( last_run_status, is_running ) }>
+						{ ' ' }({ displayStatus })
 					</span>
 				) }
 			</div>

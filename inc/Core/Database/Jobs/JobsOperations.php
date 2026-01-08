@@ -25,32 +25,37 @@ class JobsOperations {
      * Create a new job record.
      *
      * Supports two execution modes:
-     * - Direct execution: pipeline_id=0, flow_id=0 (chat/API workflows without saved pipeline/flow)
-     * - Database flow: pipeline_id>0, flow_id>0 (saved pipelines and flows)
+     * - Direct execution: pipeline_id='direct', flow_id='direct' (chat/API workflows without saved pipeline/flow)
+     * - Database flow: pipeline_id and flow_id are numeric strings (saved pipelines and flows)
+     *
+     * Validation is strict: null values are rejected. Callers must explicitly pass 'direct'
+     * for ephemeral workflows or valid numeric IDs for database flows.
      *
      * @param array $job_data Job data with pipeline_id and flow_id
      * @return int|false Job ID on success, false on failure
      */
     public function create_job(array $job_data): int|false {
 
-        $raw_pipeline_id = $job_data['pipeline_id'] ?? 0;
-        $raw_flow_id = $job_data['flow_id'] ?? 0;
+        $pipeline_id = $job_data['pipeline_id'] ?? null;
+        $flow_id = $job_data['flow_id'] ?? null;
 
-        // Direct execution uses 'direct' string or 0 - stored as 0 in database
-        $is_direct_execution = ($raw_pipeline_id === 'direct' || $raw_flow_id === 'direct' || ($raw_pipeline_id === 0 && $raw_flow_id === 0));
+        // Direct execution: both must be explicitly 'direct'
+        $is_direct_execution = ($pipeline_id === 'direct' && $flow_id === 'direct');
         
-        $pipeline_id = $is_direct_execution ? 0 : absint($raw_pipeline_id);
-        $flow_id = $is_direct_execution ? 0 : absint($raw_flow_id);
-
-        $is_database_flow = ($pipeline_id > 0 && $flow_id > 0);
+        // Database flow: both must be valid numeric IDs > 0
+        $is_database_flow = (is_numeric($pipeline_id) && (int) $pipeline_id > 0 && is_numeric($flow_id) && (int) $flow_id > 0);
 
         if (!$is_direct_execution && !$is_database_flow) {
-            do_action('datamachine_log', 'error', 'Invalid job data: mixed or invalid IDs', [
+            do_action('datamachine_log', 'error', 'Invalid job data: must provide both IDs as "direct" or both as valid numeric IDs', [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id
             ]);
             return false;
         }
+
+        // Normalize to string for database storage
+        $pipeline_id = $is_direct_execution ? 'direct' : (string) absint($pipeline_id);
+        $flow_id = $is_direct_execution ? 'direct' : (string) absint($flow_id);
         
         $data = [
             'pipeline_id' => $pipeline_id,
@@ -58,13 +63,13 @@ class JobsOperations {
             'status' => 'pending'
         ];
         
-        $format = ['%d', '%d', '%s'];
+        $format = ['%s', '%s', '%s'];
         
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
         $inserted = $this->wpdb->insert($this->table_name, $data, $format);
         
         if (false === $inserted) {
-            do_action('datamachine_log', 'error', 'Failed to insert pipeline+flow-based job', [
+            do_action('datamachine_log', 'error', 'Failed to insert job', [
                 'pipeline_id' => $pipeline_id,
                 'flow_id' => $flow_id,
                 'db_error' => $this->wpdb->last_error
@@ -99,8 +104,8 @@ class JobsOperations {
      * Get jobs count with optional filtering.
      *
      * @param array $args Filter arguments:
-     *                    - flow_id: Filter by flow ID (optional)
-     *                    - pipeline_id: Filter by pipeline ID (optional)
+     *                    - flow_id: Filter by flow ID or 'direct' (optional)
+     *                    - pipeline_id: Filter by pipeline ID or 'direct' (optional)
      *                    - status: Filter by status (optional)
      * @return int Total count
      */
@@ -110,13 +115,13 @@ class JobsOperations {
         $where_values = [];
 
         if (!empty($args['flow_id'])) {
-            $where_clauses[] = 'flow_id = %d';
-            $where_values[] = (int) $args['flow_id'];
+            $where_clauses[] = 'flow_id = %s';
+            $where_values[] = (string) $args['flow_id'];
         }
 
         if (!empty($args['pipeline_id'])) {
-            $where_clauses[] = 'pipeline_id = %d';
-            $where_values[] = (int) $args['pipeline_id'];
+            $where_clauses[] = 'pipeline_id = %s';
+            $where_values[] = (string) $args['pipeline_id'];
         }
 
         if (!empty($args['status'])) {
@@ -182,13 +187,13 @@ class JobsOperations {
         $where_values = [];
 
         if (!empty($args['flow_id'])) {
-            $where_clauses[] = 'j.flow_id = %d';
-            $where_values[] = (int) $args['flow_id'];
+            $where_clauses[] = 'j.flow_id = %s';
+            $where_values[] = (string) $args['flow_id'];
         }
 
         if (!empty($args['pipeline_id'])) {
-            $where_clauses[] = 'j.pipeline_id = %d';
-            $where_values[] = (int) $args['pipeline_id'];
+            $where_clauses[] = 'j.pipeline_id = %s';
+            $where_values[] = (string) $args['pipeline_id'];
         }
 
         if (!empty($args['status'])) {
@@ -203,12 +208,13 @@ class JobsOperations {
 
         // Build the full query
         // Note: orderby is validated above, so safe to interpolate
+        // For direct execution jobs, LEFT JOINs will return NULL for pipeline_name/flow_name
         // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $query = $this->wpdb->prepare(
             "SELECT j.*, p.pipeline_name, f.flow_name
              FROM %i j
-             LEFT JOIN %i p ON j.pipeline_id = p.pipeline_id
-             LEFT JOIN %i f ON j.flow_id = f.flow_id
+             LEFT JOIN %i p ON j.pipeline_id = CAST(p.pipeline_id AS CHAR)
+             LEFT JOIN %i f ON j.flow_id = CAST(f.flow_id AS CHAR)
              {$where_sql}
              ORDER BY {$orderby} {$order}
              LIMIT %d OFFSET %d",
@@ -260,17 +266,77 @@ class JobsOperations {
 
     /**
      * Get all jobs for a flow.
+     *
+     * @param int|string $flow_id Flow ID or 'direct'
+     * @return array Jobs for the flow
      */
-    public function get_jobs_for_flow(int $flow_id): array {
+    public function get_jobs_for_flow(int|string $flow_id): array {
         
-        if ($flow_id <= 0) {
+        if (empty($flow_id)) {
+            return [];
+        }
+
+        // Skip if numeric and <= 0 (but allow 'direct' string)
+        if (is_numeric($flow_id) && (int) $flow_id <= 0) {
             return [];
         }
         
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-        $results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE flow_id = %d ORDER BY created_at DESC", $this->table_name, $flow_id ), ARRAY_A );
+        $results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i WHERE flow_id = %s ORDER BY created_at DESC", $this->table_name, (string) $flow_id ), ARRAY_A );
         
         return $results ?: [];
+    }
+
+    /**
+     * Get the latest job for each flow in a batch.
+     *
+     * Uses a subquery to efficiently get the most recent job per flow_id.
+     *
+     * @param array $flow_ids Array of flow IDs to query (numeric IDs only, not 'direct')
+     * @return array Map of [flow_id => job_row] for flows that have jobs
+     */
+    public function get_latest_jobs_by_flow_ids(array $flow_ids): array {
+        if (empty($flow_ids)) {
+            return [];
+        }
+
+        // Filter to numeric IDs only (this method is for database flows, not direct execution)
+        $flow_ids = array_filter($flow_ids, fn($id) => is_numeric($id) && (int) $id > 0);
+        $flow_ids = array_map(fn($id) => (string) $id, $flow_ids);
+
+        if (empty($flow_ids)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($flow_ids), '%s'));
+
+        // Subquery to get max job_id per flow, then join to get full row
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $query = $this->wpdb->prepare(
+            "SELECT j.* FROM %i j
+             INNER JOIN (
+                 SELECT flow_id, MAX(job_id) as max_job_id
+                 FROM %i
+                 WHERE flow_id IN ($placeholders)
+                 GROUP BY flow_id
+             ) latest ON j.job_id = latest.max_job_id",
+            array_merge([$this->table_name, $this->table_name], $flow_ids)
+        );
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $results = $this->wpdb->get_results($query, ARRAY_A);
+
+        if (!$results) {
+            return [];
+        }
+
+        // Key by flow_id for easy lookup (keep as string for consistency)
+        $jobs_by_flow = [];
+        foreach ($results as $job) {
+            $jobs_by_flow[$job['flow_id']] = $job;
+        }
+
+        return $jobs_by_flow;
     }
     
     /**
@@ -346,5 +412,85 @@ class JobsOperations {
         }
 
         return [];
+    }
+
+    /**
+     * Get consecutive status counts for a flow from job history.
+     *
+     * Counts consecutive failures and consecutive no_items from the most recent jobs.
+     *
+     * @param int|string $flow_id Flow ID to analyze (numeric or 'direct')
+     * @return array ['consecutive_failures' => int, 'consecutive_no_items' => int, 'latest_job' => array|null]
+     */
+    public function get_consecutive_counts_for_flow(int|string $flow_id): array {
+        $jobs = $this->get_jobs_for_flow($flow_id);
+
+        $result = [
+            'consecutive_failures' => 0,
+            'consecutive_no_items' => 0,
+            'latest_job' => $jobs[0] ?? null,
+        ];
+
+        if (empty($jobs)) {
+            return $result;
+        }
+
+        // Count consecutive failures from most recent
+        foreach ($jobs as $job) {
+            if ($job['status'] === 'failed') {
+                $result['consecutive_failures']++;
+            } else {
+                break;
+            }
+        }
+
+        // Count consecutive no_items from most recent (reset count)
+        foreach ($jobs as $job) {
+            if ($job['status'] === 'completed_no_items') {
+                $result['consecutive_no_items']++;
+            } else {
+                break;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get flows with consecutive failures or no_items above threshold.
+     *
+     * This is the authoritative source for problem flow detection,
+     * computing counts directly from job history.
+     * Only checks database flows (numeric IDs), not direct execution jobs.
+     *
+     * @param int $threshold Minimum consecutive count to flag as problem
+     * @return array Array of [flow_id => counts_array] for problem flows
+     */
+    public function get_problem_flow_ids(int $threshold = 3): array {
+        // Get all numeric flow IDs that have jobs (excludes 'direct')
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $query = $this->wpdb->prepare(
+            "SELECT DISTINCT flow_id FROM %i WHERE flow_id != 'direct' AND flow_id REGEXP '^[0-9]+$'",
+            $this->table_name
+        );
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $flow_ids = $this->wpdb->get_col($query);
+
+        if (empty($flow_ids)) {
+            return [];
+        }
+
+        $problem_flows = [];
+
+        foreach ($flow_ids as $flow_id) {
+            $counts = $this->get_consecutive_counts_for_flow($flow_id);
+
+            if ($counts['consecutive_failures'] >= $threshold || $counts['consecutive_no_items'] >= $threshold) {
+                $problem_flows[$flow_id] = $counts;
+            }
+        }
+
+        return $problem_flows;
     }
 }

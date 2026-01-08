@@ -63,9 +63,9 @@ CREATE TABLE wp_datamachine_flows (
 ```sql
 CREATE TABLE wp_datamachine_jobs (
     job_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-    pipeline_id bigint(20) unsigned NOT NULL,
-    flow_id bigint(20) unsigned NOT NULL,
-    status varchar(20) NOT NULL,
+    pipeline_id varchar(20) NOT NULL,
+    flow_id varchar(20) NOT NULL,
+    status varchar(100) NOT NULL,
     engine_data longtext NULL,
     created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at datetime NULL DEFAULT NULL,
@@ -78,9 +78,9 @@ CREATE TABLE wp_datamachine_jobs (
 
 **Fields**:
 - `job_id` - Auto-increment primary key
-- `pipeline_id` - Reference to source pipeline
-- `flow_id` - Reference to flow that created this job
-- `status` - Current execution status
+- `pipeline_id` - Reference to source pipeline, or `'direct'` for direct execution mode
+- `flow_id` - Reference to flow that created this job, or `'direct'` for direct execution mode
+- `status` - Current execution status (varchar(100) supports compound statuses like `agent_skipped - reason`)
 - `engine_data` - Engine parameters (source_url, image_url) stored by fetch handlers for downstream use
 - `created_at` - Job creation timestamp
 - `completed_at` - Completion timestamp
