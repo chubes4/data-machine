@@ -3,7 +3,7 @@
  *
  * Scrollable container for chat message history.
  * Auto-scrolls to bottom on new messages.
- * Groups tool messages by turn into collapsible elements.
+ * Groups tool messages by exchange into collapsible elements.
  */
 
 import { useRef, useEffect } from '@wordpress/element';
@@ -12,76 +12,70 @@ import ChatMessage from './ChatMessage';
 import ToolMessage from './ToolMessage';
 
 /**
- * Group tool messages by turn number.
- * Returns array of { turn, tools: [{toolCall, toolResult}, ...] }
+ * Pair consecutive tool_call and tool_result messages by tool name.
+ * Returns array of { toolCall, toolResult } pairs.
  */
-function groupToolMessagesByTurn(messages) {
-	const turnGroups = {};
+function pairToolMessages(toolMessages) {
+	const pairs = [];
+	const callsByName = {};
 
-	messages.forEach((msg) => {
+	toolMessages.forEach((msg) => {
 		const type = msg.metadata?.type;
-		const turn = msg.metadata?.turn;
 		const toolName = msg.metadata?.tool_name;
 
-		if ((type === 'tool_call' || type === 'tool_result') && turn) {
-			if (!turnGroups[turn]) {
-				turnGroups[turn] = {};
-			}
-
-			// Key by tool name within each turn
-			if (!turnGroups[turn][toolName]) {
-				turnGroups[turn][toolName] = { toolCall: null, toolResult: null };
-			}
-
-			if (type === 'tool_call') {
-				turnGroups[turn][toolName].toolCall = msg;
-			} else {
-				turnGroups[turn][toolName].toolResult = msg;
-			}
+		if (type === 'tool_call') {
+			callsByName[toolName] = { toolCall: msg, toolResult: null };
+		} else if (type === 'tool_result' && callsByName[toolName]) {
+			callsByName[toolName].toolResult = msg;
+			pairs.push(callsByName[toolName]);
+			delete callsByName[toolName];
 		}
 	});
 
-	// Convert to array format
-	return Object.entries(turnGroups).map(([turn, tools]) => ({
-		turn: parseInt(turn, 10),
-		tools: Object.values(tools),
-	}));
+	// Handle any orphaned calls (shouldn't happen but be safe)
+	Object.values(callsByName).forEach((pair) => pairs.push(pair));
+
+	return pairs;
 }
 
 /**
  * Build display items array with regular messages and tool groups in order.
+ * Uses position-based grouping to keep tools within their exchange.
  */
 function buildDisplayItems(messages) {
 	const items = [];
-	const toolGroups = groupToolMessagesByTurn(messages);
-	const toolGroupsByTurn = {};
-	toolGroups.forEach((g) => {
-		toolGroupsByTurn[g.turn] = g;
-	});
-
-	const processedTurns = new Set();
+	let toolBuffer = [];
 
 	messages.forEach((msg) => {
 		const type = msg.metadata?.type;
-		const turn = msg.metadata?.turn;
+		const isToolMessage = type === 'tool_call' || type === 'tool_result';
 
-		// Skip tool messages - they'll be rendered via ToolMessage
-		if (type === 'tool_call' || type === 'tool_result') {
-			// Insert tool group at position of first tool_call for this turn
-			if (type === 'tool_call' && turn && !processedTurns.has(turn)) {
-				processedTurns.add(turn);
-				if (toolGroupsByTurn[turn]) {
-					items.push({ type: 'tool_group', data: toolGroupsByTurn[turn] });
-				}
+		if (isToolMessage) {
+			toolBuffer.push(msg);
+		} else {
+			// Flush any accumulated tools before this message
+			if (toolBuffer.length > 0) {
+				items.push({
+					type: 'tool_group',
+					data: { tools: pairToolMessages(toolBuffer) },
+				});
+				toolBuffer = [];
 			}
-			return;
-		}
 
-		// Regular user/assistant messages
-		if (msg.role === 'user' || msg.role === 'assistant') {
-			items.push({ type: 'message', data: msg });
+			// Add the regular message
+			if (msg.role === 'user' || msg.role === 'assistant') {
+				items.push({ type: 'message', data: msg });
+			}
 		}
 	});
+
+	// Flush any remaining tools at end
+	if (toolBuffer.length > 0) {
+		items.push({
+			type: 'tool_group',
+			data: { tools: pairToolMessages(toolBuffer) },
+		});
+	}
 
 	return items;
 }
@@ -112,7 +106,7 @@ export default function ChatMessages({ messages, isLoading }) {
 				if (item.type === 'tool_group') {
 					return (
 						<ToolMessage
-							key={`tool-${item.data.turn}`}
+							key={`tool-group-${index}`}
 							tools={item.data.tools}
 						/>
 					);

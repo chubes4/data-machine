@@ -7,14 +7,6 @@
 import apiFetch from '@wordpress/api-fetch';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-function generateRequestId() {
-	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-		const r = (Math.random() * 16) | 0;
-		const v = c === 'x' ? r : (r & 0x3) | 0x8;
-		return v.toString(16);
-	});
-}
-
 /**
  * Fetch existing chat session
  *
@@ -51,9 +43,7 @@ export function useChatMutation() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async ({ message, sessionId, selectedPipelineId }) => {
-			const requestId = generateRequestId();
-
+		mutationFn: async ({ message, sessionId, selectedPipelineId, requestId }) => {
 			const response = await apiFetch({
 				path: '/datamachine/v1/chat',
 				method: 'POST',

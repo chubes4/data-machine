@@ -18,6 +18,14 @@ import ChatInput from './ChatInput';
 import ChatSessionSwitcher from './ChatSessionSwitcher';
 import ChatSessionList from './ChatSessionList';
 
+function generateRequestId() {
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+		const r = (Math.random() * 16) | 0;
+		const v = c === 'x' ? r : (r & 0x3) | 0x8;
+		return v.toString(16);
+	});
+}
+
 function formatChatAsMarkdown(messages) {
 	return messages
 		.filter((msg) => {
@@ -82,6 +90,9 @@ export default function ChatSidebar() {
 			isCreatingSessionRef.current = true;
 		}
 
+		// Generate request ID once per send - survives retries for deduplication
+		const requestId = generateRequestId();
+
 		const userMessage = { role: 'user', content: message };
 		setMessages((prev) => [...prev, userMessage]);
 
@@ -90,6 +101,7 @@ export default function ChatSidebar() {
 				message,
 				sessionId: chatSessionId,
 				selectedPipelineId,
+				requestId,
 			});
 
 			if (response.session_id && response.session_id !== chatSessionId) {

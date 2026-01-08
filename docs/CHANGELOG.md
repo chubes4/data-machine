@@ -5,6 +5,12 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.2] - 2026-01-08
+
+### Changed
+- **Chat tool message grouping** - `inc/Core/Admin/Pages/Pipelines/assets/react/components/chat/ChatMessages.jsx` now groups tool call/result messages within a single exchange using position-based buffering and pairs tool calls/results by tool name for display.
+- **Chat request id propagation** - `inc/Core/Admin/Pages/Pipelines/assets/react/components/chat/ChatSidebar.jsx` now generates a `requestId` once per send and passes it into the request; `inc/Core/Admin/Pages/Pipelines/assets/react/queries/chat.js` now accepts `requestId` from the caller rather than generating it internally.
+
 ## [0.10.1] - 2026-01-08
 
 ### Fixed
