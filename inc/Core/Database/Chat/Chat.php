@@ -46,11 +46,14 @@ class Chat {
             metadata LONGTEXT NULL COMMENT 'JSON object for session metadata',
             provider VARCHAR(50) NULL COMMENT 'AI provider (anthropic, openai, etc)',
             model VARCHAR(100) NULL COMMENT 'AI model identifier',
+            agent_type VARCHAR(20) NOT NULL DEFAULT 'chat' COMMENT 'Agent type: chat, cli',
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             expires_at DATETIME NULL COMMENT 'Auto-cleanup timestamp',
             PRIMARY KEY  (session_id),
             KEY user_id (user_id),
+            KEY agent_type (agent_type),
+            KEY user_agent (user_id, agent_type),
             KEY created_at (created_at),
             KEY updated_at (updated_at),
             KEY expires_at (expires_at)
@@ -104,11 +107,16 @@ class Chat {
 	/**
 	 * Create new chat session
 	 *
-	 * @param int   $user_id  WordPress user ID
-	 * @param array $metadata Optional session metadata
+	 * @param int    $user_id    WordPress user ID
+	 * @param array  $metadata   Optional session metadata
+	 * @param string $agent_type Agent type (chat, cli)
 	 * @return string Session ID (UUID)
 	 */
-	public function create_session(int $user_id, array $metadata = []): string {
+	public function create_session(
+		int $user_id,
+		array $metadata = [],
+		string $agent_type = \DataMachine\Engine\AI\AgentType::CHAT
+	): string {
 		global $wpdb;
 
 		$session_id = wp_generate_uuid4();
@@ -124,16 +132,17 @@ class Chat {
 				'metadata' => wp_json_encode($metadata),
 				'provider' => null,
 				'model' => null,
+				'agent_type' => $agent_type,
 				'expires_at' => null
 			],
-			['%s', '%d', '%s', '%s', '%s', '%s', '%s']
+			['%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s']
 		);
 
 		if ($result === false) {
 			do_action('datamachine_log', 'error', 'Failed to create chat session', [
 				'user_id' => $user_id,
 				'error' => $wpdb->last_error,
-				'agent_type' => \DataMachine\Engine\AI\AgentType::CHAT
+				'agent_type' => $agent_type
 			]);
 			return '';
 		}
@@ -141,7 +150,7 @@ class Chat {
 		do_action('datamachine_log', 'debug', 'Chat session created', [
 			'session_id' => $session_id,
 			'user_id' => $user_id,
-			'agent_type' => \DataMachine\Engine\AI\AgentType::CHAT
+			'agent_type' => $agent_type
 		]);
 
 		return $session_id;
@@ -305,12 +314,18 @@ class Chat {
 	/**
 	 * Get all sessions for a user
 	 *
-	 * @param int $user_id WordPress user ID
-	 * @param int $limit Maximum sessions to return
-	 * @param int $offset Pagination offset
+	 * @param int    $user_id    WordPress user ID
+	 * @param int    $limit      Maximum sessions to return
+	 * @param int    $offset     Pagination offset
+	 * @param string $agent_type Agent type filter (chat, cli)
 	 * @return array Array of session data
 	 */
-	public function get_user_sessions(int $user_id, int $limit = 20, int $offset = 0): array {
+	public function get_user_sessions(
+		int $user_id,
+		int $limit = 20,
+		int $offset = 0,
+		string $agent_type = \DataMachine\Engine\AI\AgentType::CHAT
+	): array {
 		global $wpdb;
 
 		$table_name = self::get_table_name();
@@ -318,9 +333,10 @@ class Chat {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$sessions = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT * FROM %i WHERE user_id = %d ORDER BY updated_at DESC LIMIT %d OFFSET %d',
+				'SELECT * FROM %i WHERE user_id = %d AND agent_type = %s ORDER BY updated_at DESC LIMIT %d OFFSET %d',
 				$table_name,
 				$user_id,
+				$agent_type,
 				$limit,
 				$offset
 			),
@@ -358,10 +374,14 @@ class Chat {
 	/**
 	 * Get total session count for a user
 	 *
-	 * @param int $user_id WordPress user ID
+	 * @param int    $user_id    WordPress user ID
+	 * @param string $agent_type Agent type filter (chat, cli)
 	 * @return int Total session count
 	 */
-	public function get_user_session_count(int $user_id): int {
+	public function get_user_session_count(
+		int $user_id,
+		string $agent_type = \DataMachine\Engine\AI\AgentType::CHAT
+	): int {
 		global $wpdb;
 
 		$table_name = self::get_table_name();
@@ -369,9 +389,10 @@ class Chat {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$count = $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE user_id = %d',
+				'SELECT COUNT(*) FROM %i WHERE user_id = %d AND agent_type = %s',
 				$table_name,
-				$user_id
+				$user_id,
+				$agent_type
 			)
 		);
 
@@ -385,17 +406,23 @@ class Chat {
 	 * - Belongs to this user
 	 * - Was created within the threshold (default 10 minutes)
 	 * - Has 0 messages (no AI response yet - orphaned from timeout)
+	 * - Matches the specified agent type
 	 *
 	 * This prevents duplicate sessions when requests timeout at Cloudflare
 	 * but PHP continues executing. On retry, we reuse the pending session
 	 * instead of creating a new one.
 	 *
 	 * @since 0.9.8
-	 * @param int $user_id WordPress user ID
-	 * @param int $seconds Lookback window in seconds (default 600 = 10 minutes)
+	 * @param int    $user_id    WordPress user ID
+	 * @param int    $seconds    Lookback window in seconds (default 600 = 10 minutes)
+	 * @param string $agent_type Agent type filter (chat, cli)
 	 * @return array|null Session data or null if none found
 	 */
-	public function get_recent_pending_session(int $user_id, int $seconds = 600): ?array {
+	public function get_recent_pending_session(
+		int $user_id,
+		int $seconds = 600,
+		string $agent_type = \DataMachine\Engine\AI\AgentType::CHAT
+	): ?array {
 		global $wpdb;
 
 		$table_name = self::get_table_name();
@@ -404,14 +431,16 @@ class Chat {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$session = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT * FROM %i 
-				WHERE user_id = %d 
-				AND created_at >= %s 
+				"SELECT * FROM %i
+				WHERE user_id = %d
+				AND agent_type = %s
+				AND created_at >= %s
 				AND (messages = '[]' OR messages = '' OR messages IS NULL)
-				ORDER BY created_at DESC 
+				ORDER BY created_at DESC
 				LIMIT 1",
 				$table_name,
 				$user_id,
+				$agent_type,
 				$cutoff_time
 			),
 			ARRAY_A

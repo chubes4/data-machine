@@ -16,6 +16,23 @@ defined('ABSPATH') || exit;
 
 class DateFormatter {
 
+	private static ?string $date_format = null;
+	private static ?string $time_format = null;
+
+	private static function get_date_format(): string {
+		if ( self::$date_format === null ) {
+			self::$date_format = get_option( 'date_format' );
+		}
+		return self::$date_format;
+	}
+
+	private static function get_time_format(): string {
+		if ( self::$time_format === null ) {
+			self::$time_format = get_option( 'time_format' );
+		}
+		return self::$time_format;
+	}
+
 	/**
 	 * Format a MySQL datetime string for display.
 	 *
@@ -37,8 +54,8 @@ class DateFormatter {
 			return __( 'Invalid date', 'data-machine' );
 		}
 
-		$date_format = get_option( 'date_format' );
-		$time_format = get_option( 'time_format' );
+		$date_format = self::get_date_format();
+		$time_format = self::get_time_format();
 
 		return wp_date( "{$date_format} {$time_format}", $timestamp );
 	}
@@ -60,7 +77,7 @@ class DateFormatter {
 			return __( 'Invalid date', 'data-machine' );
 		}
 
-		$date_format = get_option( 'date_format' );
+		$date_format = self::get_date_format();
 		return wp_date( $date_format, $timestamp );
 	}
 
@@ -81,7 +98,7 @@ class DateFormatter {
 			return '';
 		}
 
-		$time_format = get_option( 'time_format' );
+		$time_format = self::get_time_format();
 		return wp_date( $time_format, $timestamp );
 	}
 
@@ -96,9 +113,9 @@ class DateFormatter {
 			return __( 'Never', 'data-machine' );
 		}
 
-		$date_format = get_option( 'date_format' );
-		$time_format = get_option( 'time_format' );
-		
+		$date_format = self::get_date_format();
+		$time_format = self::get_time_format();
+
 		return wp_date( "{$date_format} {$time_format}", $timestamp );
 	}
 }

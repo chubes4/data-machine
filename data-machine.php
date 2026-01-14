@@ -31,6 +31,11 @@ define( 'DATAMACHINE_LOG_DIR', '/datamachine-logs' );
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+// WP-CLI integration
+if (defined('WP_CLI') && WP_CLI) {
+	require_once __DIR__ . '/inc/Cli/Bootstrap.php';
+}
+
 // Load function files that define global functions used by the plugin
 require_once __DIR__ . '/inc/Engine/Filters/SchedulerIntervals.php';
 require_once __DIR__ . '/inc/Engine/Filters/DataMachineFilters.php';

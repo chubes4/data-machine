@@ -96,6 +96,10 @@ class JobsStatus {
             ['%d']
         );
 
+        if ( $updated !== false ) {
+            do_action( 'datamachine_job_complete', $job_id, $status );
+        }
+
         return $updated !== false;
     }
 

@@ -451,7 +451,7 @@ $events_query = new WP_Query([
 
 When adding REST endpoints, update documentation:
 
-**AGENTS.md**:
+**CLAUDE.md**:
 ```markdown
 ## REST API Integration
 
@@ -604,7 +604,7 @@ register_rest_route('datamachine-yourextension/v1', '/endpoint', [
 ```
 
 **Step 4: Document Integration**
-- Update extension AGENTS.md
+- Update extension CLAUDE.md
 - Add REST API examples to README
 - Document authentication requirements
 

@@ -105,6 +105,12 @@ function datamachine_register_core_actions() {
         $job_manager = new \DataMachine\Services\JobManager();
         return $job_manager->fail($job_id, $reason, $context_data);
     }, 10, 3);
+
+    // Update flow health cache when jobs complete - enables efficient problem flow detection
+    add_action( 'datamachine_job_complete', function( $job_id, $status ) {
+        $jobs_ops = new \DataMachine\Core\Database\Jobs\JobsOperations();
+        $jobs_ops->update_flow_health_cache( $job_id, $status );
+    }, 10, 2 );
     
     // Central logging hook - eliminates logger service discovery across all components  
     add_action('datamachine_log', function($operation, $param2 = null, $param3 = null, &$result = null) {

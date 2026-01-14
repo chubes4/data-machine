@@ -415,59 +415,15 @@ class JobsOperations {
     }
 
     /**
-     * Get consecutive status counts for a flow from job history.
-     *
-     * Counts consecutive failures and consecutive no_items from the most recent jobs.
-     *
-     * @param int|string $flow_id Flow ID to analyze (numeric or 'direct')
-     * @return array ['consecutive_failures' => int, 'consecutive_no_items' => int, 'latest_job' => array|null]
-     */
-    public function get_consecutive_counts_for_flow(int|string $flow_id): array {
-        $jobs = $this->get_jobs_for_flow($flow_id);
-
-        $result = [
-            'consecutive_failures' => 0,
-            'consecutive_no_items' => 0,
-            'latest_job' => $jobs[0] ?? null,
-        ];
-
-        if (empty($jobs)) {
-            return $result;
-        }
-
-        // Count consecutive failures from most recent
-        foreach ($jobs as $job) {
-            if ($job['status'] === 'failed') {
-                $result['consecutive_failures']++;
-            } else {
-                break;
-            }
-        }
-
-        // Count consecutive no_items from most recent (reset count)
-        foreach ($jobs as $job) {
-            if ($job['status'] === 'completed_no_items') {
-                $result['consecutive_no_items']++;
-            } else {
-                break;
-            }
-        }
-
-        return $result;
-    }
-
-    /**
      * Get flows with consecutive failures or no_items above threshold.
      *
-     * This is the authoritative source for problem flow detection,
-     * computing counts directly from job history.
+     * Uses cached flow health data when available.
      * Only checks database flows (numeric IDs), not direct execution jobs.
      *
-     * @param int $threshold Minimum consecutive count to flag as problem
-     * @return array Array of [flow_id => counts_array] for problem flows
+     * @param int $threshold Minimum consecutive count to flag as problem.
+     * @return array Array of [flow_id => counts_array] for problem flows.
      */
-    public function get_problem_flow_ids(int $threshold = 3): array {
-        // Get all numeric flow IDs that have jobs (excludes 'direct')
+    public function get_problem_flow_ids( int $threshold = 3 ): array {
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
         $query = $this->wpdb->prepare(
             "SELECT DISTINCT flow_id FROM %i WHERE flow_id != 'direct' AND flow_id REGEXP '^[0-9]+$'",
@@ -475,22 +431,156 @@ class JobsOperations {
         );
 
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-        $flow_ids = $this->wpdb->get_col($query);
+        $flow_ids = $this->wpdb->get_col( $query );
 
-        if (empty($flow_ids)) {
+        if ( empty( $flow_ids ) ) {
             return [];
         }
 
         $problem_flows = [];
 
-        foreach ($flow_ids as $flow_id) {
-            $counts = $this->get_consecutive_counts_for_flow($flow_id);
+        foreach ( $flow_ids as $flow_id ) {
+            $counts = $this->get_flow_health( $flow_id );
 
-            if ($counts['consecutive_failures'] >= $threshold || $counts['consecutive_no_items'] >= $threshold) {
-                $problem_flows[$flow_id] = $counts;
+            if ( $counts['consecutive_failures'] >= $threshold || $counts['consecutive_no_items'] >= $threshold ) {
+                $problem_flows[ $flow_id ] = $counts;
             }
         }
 
         return $problem_flows;
+    }
+
+    /**
+     * Get recent jobs for a flow (limited).
+     *
+     * @param int|string $flow_id Flow ID.
+     * @param int        $limit   Max jobs to return.
+     * @return array Recent jobs, newest first.
+     */
+    public function get_recent_jobs_for_flow( int|string $flow_id, int $limit = 10 ): array {
+        if ( empty( $flow_id ) ) {
+            return [];
+        }
+
+        if ( is_numeric( $flow_id ) && (int) $flow_id <= 0 ) {
+            return [];
+        }
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+        $results = $this->wpdb->get_results(
+            $this->wpdb->prepare(
+                "SELECT * FROM %i WHERE flow_id = %s ORDER BY created_at DESC LIMIT %d",
+                $this->table_name,
+                (string) $flow_id,
+                $limit
+            ),
+            ARRAY_A
+        );
+
+        return $results ?: [];
+    }
+
+    /**
+     * Get cached flow health or compute if missing.
+     *
+     * @param int|string $flow_id Flow ID.
+     * @return array Counts array.
+     */
+    public function get_flow_health( int|string $flow_id ): array {
+        $cached = $this->get_flow_health_cache( $flow_id );
+        if ( $cached !== false ) {
+            return $cached;
+        }
+
+        $counts = $this->compute_consecutive_counts( $flow_id );
+        $this->set_flow_health_cache( $flow_id, $counts );
+
+        return $counts;
+    }
+
+    /**
+     * Update flow health cache when a job completes.
+     *
+     * Called via datamachine_job_complete hook.
+     *
+     * @param int    $job_id Job ID that completed.
+     * @param string $status Final status.
+     */
+    public function update_flow_health_cache( int $job_id, string $status ): void {
+        $job = $this->get_job( $job_id );
+        if ( ! $job ) {
+            return;
+        }
+
+        $flow_id = $job['flow_id'];
+
+        // Skip direct execution jobs
+        if ( $flow_id === 'direct' || ! is_numeric( $flow_id ) ) {
+            return;
+        }
+
+        // Compute fresh counts and cache
+        $counts = $this->compute_consecutive_counts( $flow_id );
+        $this->set_flow_health_cache( $flow_id, $counts );
+    }
+
+    /**
+     * Get flow health from transient cache.
+     *
+     * @param int|string $flow_id Flow ID.
+     * @return array|false Cached counts or false if not cached.
+     */
+    private function get_flow_health_cache( int|string $flow_id ): array|false {
+        return get_transient( "datamachine_flow_health_{$flow_id}" );
+    }
+
+    /**
+     * Set flow health in transient cache.
+     *
+     * @param int|string $flow_id Flow ID.
+     * @param array      $counts  Counts to cache.
+     */
+    private function set_flow_health_cache( int|string $flow_id, array $counts ): void {
+        set_transient( "datamachine_flow_health_{$flow_id}", $counts, DAY_IN_SECONDS );
+    }
+
+    /**
+     * Compute consecutive counts from recent job history.
+     *
+     * @param int|string $flow_id Flow ID.
+     * @return array Counts array.
+     */
+    private function compute_consecutive_counts( int|string $flow_id ): array {
+        $jobs = $this->get_recent_jobs_for_flow( $flow_id, 10 );
+
+        $result = [
+            'consecutive_failures'  => 0,
+            'consecutive_no_items'  => 0,
+            'latest_job'            => $jobs[0] ?? null,
+        ];
+
+        if ( empty( $jobs ) ) {
+            return $result;
+        }
+
+        // Count consecutive failures from most recent
+        foreach ( $jobs as $job ) {
+            if ( $job['status'] === 'failed' ) {
+                $result['consecutive_failures']++;
+            } else {
+                break;
+            }
+        }
+
+        // Count consecutive no_items from most recent
+        foreach ( $jobs as $job ) {
+            if ( $job['status'] === 'completed_no_items' ) {
+                $result['consecutive_no_items']++;
+            } else {
+                break;
+            }
+        }
+
+        return $result;
     }
 }

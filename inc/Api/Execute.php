@@ -47,6 +47,11 @@ class Execute {
                     'type' => 'integer',
                     'required' => false,
                     'description' => 'Unix timestamp for delayed execution'
+                ],
+                'initial_data' => [
+                    'type' => 'object',
+                    'required' => false,
+                    'description' => 'Initial engine data to merge before workflow execution'
                 ]
             ]
         ]);
@@ -62,6 +67,7 @@ class Execute {
         $flow_id = $request->get_param('flow_id');
         $workflow = $request->get_param('workflow');
         $timestamp = $request->get_param('timestamp');
+        $initial_data = $request->get_param('initial_data');
 
         // Validate: must have flow_id OR workflow
         if (!$flow_id && !$workflow) {
@@ -86,7 +92,7 @@ class Execute {
         }
 
         // Ephemeral workflow execution
-        return self::execute_ephemeral_workflow($workflow, $timestamp);
+        return self::execute_ephemeral_workflow($workflow, $timestamp, $initial_data);
     }
 
     /**
@@ -171,8 +177,12 @@ class Execute {
 
     /**
      * Execute ephemeral workflow with optional delayed execution
+     *
+     * @param array      $workflow     Workflow structure with steps.
+     * @param int|null   $timestamp    Optional Unix timestamp for delayed execution.
+     * @param array|null $initial_data Optional initial engine data to merge before execution.
      */
-    private static function execute_ephemeral_workflow($workflow, $timestamp) {
+    private static function execute_ephemeral_workflow($workflow, $timestamp, $initial_data = null) {
 
         // Validate workflow structure
         $validation = self::validate_workflow($workflow);
@@ -204,11 +214,17 @@ class Execute {
             );
         }
 
-        // Store configs in engine_data
-        $db_jobs->store_engine_data($job_id, [
+        // Build engine data with configs and optional initial data
+        $engine_data = [
             'flow_config' => $configs['flow_config'],
             'pipeline_config' => $configs['pipeline_config']
-        ]);
+        ];
+
+        if (!empty($initial_data) && is_array($initial_data)) {
+            $engine_data = array_merge($engine_data, $initial_data);
+        }
+
+        $db_jobs->store_engine_data($job_id, $engine_data);
 
         // Find first step
         $first_step_id = self::get_first_step_id($configs['flow_config']);

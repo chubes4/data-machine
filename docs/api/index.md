@@ -29,6 +29,7 @@ Complete REST API reference for Data Machine
 
 ### AI & Chat
 - [Chat](chat.md)
+- [Chat Sessions](chat-sessions.md)
 - [Handlers](handlers.md)
 - [Providers](providers.md)
 - [Tools](tools.md)

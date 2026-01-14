@@ -19,6 +19,7 @@
 	"autoload": {
 		"psr-4": {
 			"DataMachine\\Api\\": "inc/Api/",
+			"DataMachine\\Cli\\": "inc/Cli/",
 			"DataMachine\\Core\\": "inc/Core/",
 			"DataMachine\\Engine\\": "inc/Engine/",
 			"DataMachine\\Services\\": "inc/Services/"

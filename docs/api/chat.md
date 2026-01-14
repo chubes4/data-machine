@@ -8,6 +8,8 @@
 
 The Chat endpoint provides a conversational AI interface for building and executing Data Machine workflows through natural language interaction with multi-turn conversation support.
 
+In addition to sending messages, it also supports listing, retrieving, and deleting persisted chat sessions.
+
 ## Authentication
 
 Requires `manage_options` capability. See Authentication Guide.
@@ -120,6 +122,8 @@ curl -X POST https://example.com/wp-json/datamachine/v1/chat \
 
 ### Session Storage
 
+Chat sessions are stored in the `wp_datamachine_chat_sessions` table.
+
 **Implementation**: `inc/Core/Database/Chat/Chat.php`
 
 **Database Table**: `wp_datamachine_chat_sessions`
@@ -127,9 +131,9 @@ curl -X POST https://example.com/wp-json/datamachine/v1/chat \
 **Features**:
 - Persistent conversation history
 - User-scoped sessions (users can only access their own)
-- 24-hour session expiration
 - Message count tracking
 - Provider and model tracking
+- Agent type tracking (`agent_type`: `chat`, `cli`)
 
 ### Session Security
 
@@ -144,7 +148,7 @@ curl -X POST https://example.com/wp-json/datamachine/v1/chat \
 ```json
 {
   "code": "session_not_found",
-  "message": "Session not found or expired",
+  "message": "Session not found",
   "data": {"status": 404}
 }
 ```
@@ -540,4 +544,4 @@ AI: [Guides through configuration, saves settings]
 **Permission**: `manage_options` capability required
 **Implementation**: `inc/Api/Chat/Chat.php`
 **Session Storage**: `wp_datamachine_chat_sessions` table
-**Session Expiration**: 24 hours
+**Session Expiration**: Not enforced by default (table supports an `expires_at` column for optional cleanup)

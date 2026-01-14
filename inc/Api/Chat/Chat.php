@@ -144,6 +144,16 @@ class Chat {
 					'default' => 0,
 					'description' => __('Pagination offset', 'data-machine'),
 					'sanitize_callback' => 'absint'
+				],
+				'agent_type' => [
+					'type' => 'string',
+					'required' => false,
+					'default' => \DataMachine\Engine\AI\AgentType::CHAT,
+					'description' => __('Agent type filter (chat, cli)', 'data-machine'),
+					'sanitize_callback' => 'sanitize_text_field',
+					'validate_callback' => function($param) {
+						return \DataMachine\Engine\AI\AgentType::isValid($param);
+					}
 				]
 			]
 		]);
@@ -159,10 +169,11 @@ class Chat {
 		$user_id = get_current_user_id();
 		$limit = min(100, max(1, (int) $request->get_param('limit')));
 		$offset = max(0, (int) $request->get_param('offset'));
+		$agent_type = $request->get_param('agent_type');
 
 		$chat_db = new ChatDatabase();
-		$sessions = $chat_db->get_user_sessions($user_id, $limit, $offset);
-		$total = $chat_db->get_user_session_count($user_id);
+		$sessions = $chat_db->get_user_sessions($user_id, $limit, $offset, $agent_type);
+		$total = $chat_db->get_user_session_count($user_id, $agent_type);
 
 		return rest_ensure_response([
 			'success' => true,
@@ -170,7 +181,8 @@ class Chat {
 				'sessions' => $sessions,
 				'total' => $total,
 				'limit' => $limit,
-				'offset' => $offset
+				'offset' => $offset,
+				'agent_type' => $agent_type
 			]
 		]);
 	}

@@ -26,6 +26,7 @@ Requires WordPress authentication with `manage_options` capability.
 ### Execution Control
 
 - `timestamp` (integer, optional): Unix timestamp for delayed one-time execution. If omitted, execution is immediate.
+- `initial_data` (object, optional): Initial engine data to merge into the job's stored `engine_data` before execution.
 
 ## Trigger Logic
 

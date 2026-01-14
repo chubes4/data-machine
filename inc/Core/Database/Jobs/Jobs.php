@@ -80,8 +80,8 @@ class Jobs {
         return $this->operations->get_job($job_id);
     }
 
-    public function get_consecutive_counts_for_flow(int|string $flow_id): array {
-        return $this->operations->get_consecutive_counts_for_flow($flow_id);
+    public function get_flow_health(int|string $flow_id): array {
+        return $this->operations->get_flow_health($flow_id);
     }
 
     public function get_problem_flow_ids(int $threshold = 3): array {

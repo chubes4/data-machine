@@ -2,17 +2,65 @@
 
 ## Migration: `chubes4/ai-http-client` → `wordpress/wp-ai-client`
 
-**Target Version**: Data Machine v1.0.0  
-**Status**: PAUSED (Blocking Issue)  
+**Target Version**: Data Machine v1.0.0
+**Status**: PAUSED (Multiple Blocking Issues)
 **Approach**: Full Native Integration (no adapter layer)
+**Decision**: Continue using custom `ai-http-client` until WordPress resolves blockers
 
 ---
 
-## CRITICAL BLOCKER
+## CRITICAL BLOCKERS
 
-**Migration is paused until `wordpress/wp-ai-client` supports custom API key storage locations.**
+Migration is paused due to **two blocking issues** with WordPress core AI products:
 
-Current Constraint: `wp-ai-client` defaults to its own internal settings storage. Data Machine requires the ability to point the client to its own encrypted settings/options table or provide keys dynamically at runtime to maintain architectural consistency and security standards.
+### Blocker 1: wp-ai-client Custom API Key Storage
+
+**Status**: PAUSED
+**WordPress Issue**: [#44 - Custom credential storage](https://github.com/WordPress/wp-ai-client/issues/44)
+
+`wp-ai-client` defaults to its own internal settings storage. Data Machine requires the ability to point the client to its own encrypted settings/options table or provide keys dynamically at runtime to maintain architectural consistency and security standards.
+
+### Blocker 2: Abilities API Static Schema Requirement
+
+**Status**: BLOCKING
+**Verified**: 2026-01-14 against WordPress 6.9 core code
+
+The WordPress Abilities API does **not support dynamic `input_schema`**. This was verified directly against WordPress core:
+
+```php
+// wp-includes/abilities-api/class-wp-ability.php, lines 293-297
+if ( isset( $args['input_schema'] ) && ! is_array( $args['input_schema'] ) ) {
+    throw new InvalidArgumentException(
+        __( 'The ability properties should provide a valid `input_schema` definition.' )
+    );
+}
+```
+
+**Impact on Data Machine**: Handler tools (WordPress Publish, Event Upsert) use dynamic "AI Decides" logic where taxonomy parameters vary based on user configuration:
+
+```php
+// Example: TaxonomyHandler dynamically builds tool parameters
+$taxonomy_parameters = TaxonomyHandler::getTaxonomyToolParameters($handler_config);
+```
+
+Without dynamic schema support, handler tools cannot be registered as abilities without losing the flexible taxonomy assignment feature.
+
+**Proposed Solution**: Open GitHub issue on `wordpress/abilities-api` requesting support for schema callbacks. See [Appendix A](#appendix-a-abilities-api-feature-request) for full issue draft.
+
+---
+
+## Current Architecture (Retained)
+
+Until both blockers are resolved, Data Machine continues using:
+
+| Component | Solution |
+|-----------|----------|
+| AI Provider | `chubes4/ai-http-client` (stable, multi-provider) |
+| Tool Registration | `ToolRegistrationTrait` + WordPress filters |
+| Dynamic Schemas | `getTaxonomyToolParameters()` at runtime |
+| API Key Storage | Data Machine encrypted settings |
+
+This architecture is **stable and reliable**. No migration pressure exists.
 
 ---
 
@@ -932,3 +980,137 @@ If critical issues discovered:
 3. `composer remove wordpress/wp-ai-client`
 
 Keep pre-migration branch for 30 days.
+
+---
+
+## Appendix A: Abilities API Feature Request
+
+### Issue: Support Dynamic input_schema (Schema Callbacks)
+
+**Repository**: `wordpress/abilities-api` (or `wordpress/wordpress-develop`)
+
+---
+
+#### Summary
+
+The WordPress 6.9 Abilities API requires static `input_schema` definitions at registration time. This proposal adds support for dynamic schema generation via callbacks, enabling context-aware abilities.
+
+#### Problem
+
+Many real-world abilities have parameters that vary based on execution context:
+
+1. **Configuration-dependent parameters** - An "upsert post" ability where taxonomy fields depend on user configuration (some taxonomies preset, others AI-selectable)
+
+2. **Role-based parameters** - Administrators see different parameters than editors
+
+3. **Multi-step workflows** - Later steps have parameters dependent on earlier step outputs
+
+4. **Multi-tenant applications** - Schema varies by site/tenant configuration
+
+Currently, developers must either:
+- Register abilities with overly permissive schemas (`additionalProperties: true`), losing type safety
+- Register multiple ability variants, causing registration explosion
+- Skip the Abilities API entirely for dynamic use cases
+
+#### Proposed Solution
+
+Allow `input_schema` to be a callable that receives execution context:
+
+```php
+wp_register_ability('myplugin/upsert-content', [
+    'label'       => __('Upsert Content', 'myplugin'),
+    'description' => __('Create or update content with context-aware fields', 'myplugin'),
+    'category'    => 'content',
+
+    // NEW: Schema callback for dynamic generation
+    'input_schema' => function(array $context): array {
+        $schema = [
+            'type' => 'object',
+            'properties' => [
+                'title' => ['type' => 'string', 'description' => 'Content title'],
+            ],
+            'required' => ['title'],
+        ];
+
+        // Add taxonomy parameters based on configuration
+        $config = get_option('myplugin_taxonomy_config', []);
+        foreach ($config as $taxonomy => $mode) {
+            if ($mode === 'user_selects') {
+                $schema['properties'][$taxonomy] = [
+                    'type' => 'array',
+                    'items' => ['type' => 'string'],
+                    'description' => "Terms for {$taxonomy} taxonomy",
+                ];
+            }
+        }
+
+        return $schema;
+    },
+
+    'execute_callback'    => 'myplugin_upsert_content',
+    'permission_callback' => fn() => current_user_can('edit_posts'),
+]);
+```
+
+#### Context Parameter
+
+The `$context` array passed to schema callbacks could include:
+
+```php
+$context = [
+    'user_id'     => get_current_user_id(),
+    'user_roles'  => wp_get_current_user()->roles,
+    'request'     => $request,  // WP_REST_Request if via REST
+    'source'      => 'rest' | 'cli' | 'mcp' | 'internal',
+    'meta'        => [],  // Caller-provided context
+];
+```
+
+#### Backwards Compatibility
+
+- Static `input_schema` arrays continue to work unchanged
+- Schema callbacks are opt-in
+- REST API schema endpoints could cache or show "dynamic" indicator
+
+#### Use Cases
+
+1. **AI Tool Calling** - MCP and AI agents benefit from context-aware tool schemas
+2. **Form Builders** - Conditional fields based on user selections
+3. **Multi-tenant SaaS** - Per-tenant ability customization
+4. **Workflow Engines** - Pipeline steps with data-dependent parameters
+5. **Role-based UX** - Different parameters for different capability levels
+
+#### Alternatives Considered
+
+| Alternative | Drawback |
+|-------------|----------|
+| Multiple ability registrations | Registration explosion, maintenance burden |
+| Permissive schemas + runtime validation | Loses type safety, poor developer experience |
+| Plugin-level abstraction | Inconsistent patterns, no ecosystem benefit |
+
+#### Related
+
+- WordPress MCP integration (abilities exposed as tools)
+- Block bindings API (context-aware attributes)
+- Interactivity API (dynamic state)
+
+---
+
+**Labels**: `Feature Request`, `Abilities API`, `REST API`
+
+---
+
+## Appendix B: Blocker Resolution Timeline
+
+| Blocker | Issue | Status | Next Action |
+|---------|-------|--------|-------------|
+| wp-ai-client credential storage | [#44](https://github.com/WordPress/wp-ai-client/issues/44) | Open | Monitor for resolution |
+| Abilities API dynamic schemas | Not yet filed | Pending | File issue with above draft |
+
+**Migration can proceed when**: Both blockers are resolved in WordPress core.
+
+**Until then**: Continue using `chubes4/ai-http-client` which provides:
+- Multi-provider support (OpenAI, Anthropic, Google, Grok, OpenRouter)
+- Custom API key storage via `chubes_ai_http_shared_api_keys` filter
+- Dynamic tool schemas via runtime generation
+- Stable, production-tested reliability
