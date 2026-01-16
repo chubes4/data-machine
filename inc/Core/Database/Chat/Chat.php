@@ -405,7 +405,7 @@ class Chat {
 	 * Returns the most recent session that:
 	 * - Belongs to this user
 	 * - Was created within the threshold (default 10 minutes)
-	 * - Has 0 messages (no AI response yet - orphaned from timeout)
+	 * - Has 0 messages OR is actively processing (user message added but no AI response)
 	 * - Matches the specified agent type
 	 *
 	 * This prevents duplicate sessions when requests timeout at Cloudflare
@@ -435,13 +435,17 @@ class Chat {
 				WHERE user_id = %d
 				AND agent_type = %s
 				AND created_at >= %s
-				AND (messages = '[]' OR messages = '' OR messages IS NULL)
+				AND (
+					(messages = '[]' OR messages = '' OR messages IS NULL)
+					OR (metadata LIKE %s)
+				)
 				ORDER BY created_at DESC
 				LIMIT 1",
 				$table_name,
 				$user_id,
 				$agent_type,
-				$cutoff_time
+				$cutoff_time,
+				'%"status":"processing"%'
 			),
 			ARRAY_A
 		);
