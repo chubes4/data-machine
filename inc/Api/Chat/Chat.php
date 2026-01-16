@@ -358,7 +358,7 @@ class Chat {
 			// Check for recent pending session to prevent duplicates from timeout retries
 			// This handles the case where Cloudflare times out but PHP continues executing,
 			// creating orphaned sessions. On retry, we reuse the pending session.
-			$pending_session = $chat_db->get_recent_pending_session($user_id, 600); // 10 minute window
+			$pending_session = $chat_db->get_recent_pending_session($user_id, 600, AgentType::CHAT);
 
 			if ($pending_session) {
 				$session_id = $pending_session['session_id'];
@@ -375,7 +375,7 @@ class Chat {
 				$session_id = $chat_db->create_session($user_id, [
 					'started_at' => current_time('mysql', true),
 					'message_count' => 0
-				]);
+				], AgentType::CHAT);
 
 				if (empty($session_id)) {
 					return new WP_Error(

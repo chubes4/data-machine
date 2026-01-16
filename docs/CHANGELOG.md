@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+- Fixed: Pass explicit agent_type in chat session creation and API queries to fix session listing and creation errors
+
 ## [0.11.0] - 2026-01-15
 
 - Add WP-CLI agent command for chat interactions.

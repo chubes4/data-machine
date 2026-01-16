@@ -74,14 +74,15 @@ export function useChatMutation() {
  * Fetch list of chat sessions for current user
  *
  * @param {number} limit - Maximum sessions to return
+ * @param {string} agentType - Agent type filter (chat, cli)
  * @returns {object} TanStack Query object with sessions data
  */
-export function useChatSessions(limit = 20) {
+export function useChatSessions(limit = 20, agentType = 'chat') {
 	return useQuery({
-		queryKey: ['chat-sessions', limit],
+		queryKey: ['chat-sessions', limit, agentType],
 		queryFn: async () => {
 			const response = await apiFetch({
-				path: `/datamachine/v1/chat/sessions?limit=${limit}`,
+				path: `/datamachine/v1/chat/sessions?limit=${limit}&agent_type=${agentType}`,
 				method: 'GET',
 			});
 
