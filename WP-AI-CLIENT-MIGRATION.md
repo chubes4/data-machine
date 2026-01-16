@@ -20,12 +20,16 @@ Migration is paused due to **two blocking issues** with WordPress core AI produc
 
 `wp-ai-client` defaults to its own internal settings storage. Data Machine requires the ability to point the client to its own encrypted settings/options table or provide keys dynamically at runtime to maintain architectural consistency and security standards.
 
-### Blocker 2: Abilities API Static Schema Requirement
+### Blocker 2: Abilities API - Handler Tool Incompatibility
 
-**Status**: BLOCKING
+Handler tools in Data Machine are fundamentally incompatible with the Abilities API due to **two distinct architectural mismatches**:
+
+#### 2a: Static Schema Requirement
+
+**Status**: GitHub issue filed
 **Verified**: 2026-01-14 against WordPress 6.9 core code
 
-The WordPress Abilities API does **not support dynamic `input_schema`**. This was verified directly against WordPress core:
+The Abilities API requires static `input_schema` at registration time:
 
 ```php
 // wp-includes/abilities-api/class-wp-ability.php, lines 293-297
@@ -36,16 +40,34 @@ if ( isset( $args['input_schema'] ) && ! is_array( $args['input_schema'] ) ) {
 }
 ```
 
-**Impact on Data Machine**: Handler tools (WordPress Publish, Event Upsert) use dynamic "AI Decides" logic where taxonomy parameters vary based on user configuration:
+Handler tools use dynamic "AI Decides" logic where taxonomy parameters vary based on user configuration:
 
 ```php
-// Example: TaxonomyHandler dynamically builds tool parameters
+// Schema generated at execution time based on handler config
 $taxonomy_parameters = TaxonomyHandler::getTaxonomyToolParameters($handler_config);
 ```
 
-Without dynamic schema support, handler tools cannot be registered as abilities without losing the flexible taxonomy assignment feature.
+The schema isn't "optional parameters" - the *existence* of parameters depends on configuration. If "Category" is preset, the AI shouldn't see a `category` parameter at all.
 
-**Proposed Solution**: Open GitHub issue on `wordpress/abilities-api` requesting support for schema callbacks. See [Appendix A](#appendix-a-abilities-api-feature-request) for full issue draft.
+#### 2b: Ephemeral Context-Scoped Tools (Separate Issue)
+
+**Status**: Not yet raised - fundamentally different concern
+
+The Abilities API assumes global registration at boot time with "predictable and stable schema that can be discovered statelessly." Handler tools are the opposite:
+
+| Abilities API Assumption | Handler Tool Reality |
+|--------------------------|---------------------|
+| Register once at `init` | Only exists during step execution |
+| Globally available | Scoped to specific pipeline step |
+| Stateless discovery | Stateful - depends on execution context |
+| Single configuration | Parallel executions may have different configs |
+
+Even if WordPress adds dynamic schema callbacks (solving 2a), handler tools still cannot use Abilities API because:
+- No mechanism to register an ability scoped to a specific execution context
+- No way to have it disappear after execution completes
+- No support for parallel executions with different tool configurations
+
+**Conclusion**: Handler tools require Data Machine's current architecture. Only globally-available chat tools with static schemas could potentially migrate to Abilities API.
 
 ---
 
@@ -1102,15 +1124,25 @@ $context = [
 
 ## Appendix B: Blocker Resolution Timeline
 
-| Blocker | Issue | Status | Next Action |
-|---------|-------|--------|-------------|
-| wp-ai-client credential storage | [#44](https://github.com/WordPress/wp-ai-client/issues/44) | Open | Monitor for resolution |
-| Abilities API dynamic schemas | Not yet filed | Pending | File issue with above draft |
+| Blocker | Issue | Status | Impact |
+|---------|-------|--------|--------|
+| wp-ai-client credential storage | [#44](https://github.com/WordPress/wp-ai-client/issues/44) | Open | Blocks wp-ai-client adoption |
+| Abilities API dynamic schemas | Filed | Awaiting response | Blocks chat tools with config-dependent schemas |
+| Abilities API context-scoped tools | Not filed | Architectural gap | Handler tools fundamentally incompatible |
 
-**Migration can proceed when**: Both blockers are resolved in WordPress core.
+### Migration Scope (Revised)
+
+| Tool Type | Abilities API Compatible? | Reason |
+|-----------|---------------------------|--------|
+| Chat tools (static schema) | Yes, when Blocker 1 resolved | Globally available, fixed schema |
+| Chat tools (config-dependent) | Requires Blocker 2a | Schema depends on settings |
+| Handler tools | **No - architectural mismatch** | Ephemeral, step-scoped, stateful |
+
+**Key Insight**: Handler tools will NEVER migrate to Abilities API regardless of dynamic schema support. They require execution-context scoping that the Abilities API fundamentally does not provide.
 
 **Until then**: Continue using `chubes4/ai-http-client` which provides:
 - Multi-provider support (OpenAI, Anthropic, Google, Grok, OpenRouter)
 - Custom API key storage via `chubes_ai_http_shared_api_keys` filter
 - Dynamic tool schemas via runtime generation
+- Ephemeral context-scoped tool registration
 - Stable, production-tested reliability

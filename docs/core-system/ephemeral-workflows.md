@@ -11,14 +11,14 @@ When a direct execution workflow is triggered via the `/execute` REST endpoint, 
 3.  **Direct Execution Mode**: Sets `flow_id = 'direct'` and `pipeline_id = 'direct'` within these configurations. The string `'direct'` explicitly indicates direct execution mode, bypassing normal flow/pipeline lookup.
 4.  **Job Initialization**: Creates a standard Job record. Even though the workflow is ephemeral, the **Job** and its **Logs** are still persisted for monitoring and debugging.
 5.  **Snapshotting**: The dynamically generated configurations are stored in the Job's `engine_data` snapshot. This ensures the workflow definition remains consistent even if it doesn't exist in the `wp_datamachine_flows` table.
-6.  **Standard Execution**: The job enters the standard execution cycle: `datamachine_schedule_next_step` → `datamachine_execute_step`.
+6.  **Standard Execution**: The job enters the standard execution cycle: `datamachine_run_flow_now` → `datamachine_execute_step` → `datamachine_schedule_next_step`.
 
 ## Use Cases
 
 - **AI Chatbot Execution**: When the Data Machine chat agent suggests a sequence of actions, it can trigger them immediately as a direct execution workflow.
 - **External Triggers**: Programmatically trigger a specific sequence of steps from an external script without cluttering the WordPress database with temporary pipelines.
 - **Testing**: Quickly test a new combination of handlers and prompts without going through the Pipeline Builder UI.
-- **CLI Tools**: Run handlers directly from WP-CLI commands for debugging and validation.
+- **CLI Tools**: Use the `wp datamachine agent` WP-CLI command to run the chat agent directly for debugging and validation.
 
 ## Limitations
 
