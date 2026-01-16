@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.11.0] - 2026-01-15
+
+- Add WP-CLI agent command for chat interactions.
+- Chat sessions table now records agent_type for chat and CLI sessions.
+
 ## [0.10.3] - 2026-01-15
 
 - Docs: clarify direct execution cycle and WP-CLI agent usage.
