@@ -78,11 +78,11 @@ class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
      * @return string|\WP_Error Access token or error
      */
     public function get_service() {
-        do_action('datamachine_log', 'debug', 'Attempting to get authenticated Google Sheets access token.');
+        do_action('datamachine_log', 'debug', 'Attempting to get authenticated Google Sheets access token.', ['agent_type' => 'system']);
 
         $credentials = $this->get_account();
         if (empty($credentials) || empty($credentials['access_token']) || empty($credentials['refresh_token'])) {
-            do_action('datamachine_log', 'error', 'Missing Google Sheets credentials in options.');
+            do_action('datamachine_log', 'error', 'Missing Google Sheets credentials in options.', ['agent_type' => 'system']);
             return new \WP_Error('googlesheets_missing_credentials', __('Google Sheets credentials not found. Please authenticate.', 'data-machine'));
         }
 
@@ -92,7 +92,7 @@ class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
         // Check if access token needs refreshing (Google-specific logic)
         $expires_at = $credentials['expires_at'] ?? 0;
         if (time() >= $expires_at - 300) { // Refresh 5 minutes before expiry
-            do_action('datamachine_log', 'debug', 'Google Sheets access token expired, attempting refresh.');
+            do_action('datamachine_log', 'debug', 'Google Sheets access token expired, attempting refresh.', ['agent_type' => 'system']);
 
             $refreshed_token = $this->refresh_access_token($refresh_token);
             if (is_wp_error($refreshed_token)) {
@@ -102,7 +102,7 @@ class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
             return $refreshed_token;
         }
 
-        do_action('datamachine_log', 'debug', 'Successfully retrieved valid Google Sheets access token.');
+        do_action('datamachine_log', 'debug', 'Successfully retrieved valid Google Sheets access token.', ['agent_type' => 'system']);
         return $access_token;
     }
 
@@ -118,7 +118,7 @@ class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
         $client_secret = $config['client_secret'] ?? '';
 
         if (empty($client_id) || empty($client_secret)) {
-            do_action('datamachine_log', 'error', 'Missing Google OAuth client credentials.');
+            do_action('datamachine_log', 'error', 'Missing Google OAuth client credentials.', ['agent_type' => 'system']);
             return new \WP_Error('googlesheets_missing_oauth_config', __('Google OAuth configuration is incomplete.', 'data-machine'));
         }
 
@@ -134,6 +134,7 @@ class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         if (!$result['success']) {
             do_action('datamachine_log', 'error', 'Google token refresh request failed.', [
+                'agent_type' => 'system',
                 'error' => $result['error']
             ]);
             return new \WP_Error('googlesheets_refresh_failed', __('Failed to refresh Google Sheets access token.', 'data-machine'));
@@ -144,6 +145,7 @@ class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         if ($response_code !== 200) {
             do_action('datamachine_log', 'error', 'Google token refresh failed.', [
+                'agent_type' => 'system',
                 'response_code' => $response_code,
                 'response_body' => $response_body
             ]);
@@ -152,14 +154,14 @@ class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         $token_data = json_decode($response_body, true);
         if (empty($token_data['access_token'])) {
-            do_action('datamachine_log', 'error', 'Invalid token refresh response from Google.');
+            do_action('datamachine_log', 'error', 'Invalid token refresh response from Google.', ['agent_type' => 'system']);
             return new \WP_Error('googlesheets_invalid_refresh_response', __('Invalid response from Google during token refresh.', 'data-machine'));
         }
 
         // Update stored credentials
         $this->update_credentials($token_data['access_token'], $refresh_token, $token_data['expires_in'] ?? 3600);
 
-        do_action('datamachine_log', 'debug', 'Successfully refreshed Google Sheets access token.');
+        do_action('datamachine_log', 'debug', 'Successfully refreshed Google Sheets access token.', ['agent_type' => 'system']);
         return $token_data['access_token'];
     }
 
@@ -192,6 +194,7 @@ class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 
         if (empty($client_id)) {
             do_action('datamachine_log', 'error', 'Google Sheets OAuth Error: Client ID not configured.', [
+                'agent_type' => 'system',
                 'handler' => 'googlesheets',
                 'operation' => 'get_authorization_url'
             ]);
@@ -228,7 +231,7 @@ class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
         $client_secret = $config['client_secret'] ?? '';
 
         if (empty($client_id) || empty($client_secret)) {
-            do_action('datamachine_log', 'error', 'Google Sheets OAuth Error: Missing configuration');
+            do_action('datamachine_log', 'error', 'Google Sheets OAuth Error: Missing configuration', ['agent_type' => 'system']);
             wp_safe_redirect(add_query_arg([
                 'page' => 'datamachine-settings',
                 'auth_error' => 'missing_config',

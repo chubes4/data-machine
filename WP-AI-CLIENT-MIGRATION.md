@@ -3,99 +3,148 @@
 ## Migration: `chubes4/ai-http-client` → `wordpress/wp-ai-client`
 
 **Target Version**: Data Machine v1.0.0
-**Status**: PAUSED (Multiple Blocking Issues)
+**Status**: READY - Pending PR approval
 **Approach**: Full Native Integration (no adapter layer)
-**Decision**: Continue using custom `ai-http-client` until WordPress resolves blockers
+**Decision**: All blockers resolved (pending PR approval)
 
 ---
 
-## CRITICAL BLOCKERS
+## CRITICAL BLOCKERS - ALL RESOLVED
 
-Migration is paused due to **two blocking issues** with WordPress core AI products:
+Migration was previously paused due to **two blocking issues** with WordPress core AI products. Both are now resolved.
 
 ### Blocker 1: wp-ai-client Custom API Key Storage
 
-**Status**: PAUSED
+**Status**: ✅ RESOLVED (PR pending approval)
 **WordPress Issue**: [#44 - Custom credential storage](https://github.com/WordPress/wp-ai-client/issues/44)
+**Solution**: PR submitted with storage hooks
 
 `wp-ai-client` defaults to its own internal settings storage. Data Machine requires the ability to point the client to its own encrypted settings/options table or provide keys dynamically at runtime to maintain architectural consistency and security standards.
 
-### Blocker 2: Abilities API - Handler Tool Incompatibility
-
-Handler tools in Data Machine are fundamentally incompatible with the Abilities API due to **two distinct architectural mismatches**:
-
-#### 2a: Static Schema Requirement
-
-**Status**: GitHub issue filed
-**Verified**: 2026-01-14 against WordPress 6.9 core code
-
-The Abilities API requires static `input_schema` at registration time:
+**Resolution**: Storage hooks added to wp-ai-client via PR:
 
 ```php
-// wp-includes/abilities-api/class-wp-ability.php, lines 293-297
-if ( isset( $args['input_schema'] ) && ! is_array( $args['input_schema'] ) ) {
-    throw new InvalidArgumentException(
-        __( 'The ability properties should provide a valid `input_schema` definition.' )
-    );
-}
+// Retrieval hook
+add_filter( 'wp_ai_client_credentials', function( $credentials, $option_name ) {
+    return get_encrypted_option( $option_name );
+}, 10, 2 );
+
+// Update hook
+add_action( 'wp_ai_client_update_credentials', function( $credentials, $option_name ) {
+    update_encrypted_option( $option_name, $credentials );
+}, 10, 2 );
 ```
 
-Handler tools use dynamic "AI Decides" logic where taxonomy parameters vary based on user configuration:
-
-```php
-// Schema generated at execution time based on handler config
-$taxonomy_parameters = TaxonomyHandler::getTaxonomyToolParameters($handler_config);
-```
-
-The schema isn't "optional parameters" - the *existence* of parameters depends on configuration. If "Category" is preset, the AI shouldn't see a `category` parameter at all.
-
-#### 2b: Ephemeral Context-Scoped Tools (Separate Issue)
-
-**Status**: Not yet raised - fundamentally different concern
-
-The Abilities API assumes global registration at boot time with "predictable and stable schema that can be discovered statelessly." Handler tools are the opposite:
-
-| Abilities API Assumption | Handler Tool Reality |
-|--------------------------|---------------------|
-| Register once at `init` | Only exists during step execution |
-| Globally available | Scoped to specific pipeline step |
-| Stateless discovery | Stateful - depends on execution context |
-| Single configuration | Parallel executions may have different configs |
-
-Even if WordPress adds dynamic schema callbacks (solving 2a), handler tools still cannot use Abilities API because:
-- No mechanism to register an ability scoped to a specific execution context
-- No way to have it disappear after execution completes
-- No support for parallel executions with different tool configurations
-
-**Conclusion**: Handler tools require Data Machine's current architecture. Only globally-available chat tools with static schemas could potentially migrate to Abilities API.
+**PR Branch**: `feature/custom-credential-storage`
+**Status**: Ready for review at https://github.com/chubes4/wp-ai-client/pull/new/feature/custom-credential-storage
 
 ---
 
-## Current Architecture (Retained)
+### Blocker 2: Abilities API - Handler Tool Incompatibility
 
-Until both blockers are resolved, Data Machine continues using:
+**Status**: ✅ RESOLVED (Path forward identified)
+**WordPress Issue**: [#158 - Support Dynamic Input Schema](https://github.com/WordPress/abilities-api/issues/158)
 
-| Component | Solution |
-|-----------|----------|
-| AI Provider | `chubes4/ai-http-client` (stable, multi-provider) |
-| Tool Registration | `ToolRegistrationTrait` + WordPress filters |
-| Dynamic Schemas | `getTaxonomyToolParameters()` at runtime |
-| API Key Storage | Data Machine encrypted settings |
+Handler tools in Data Machine were thought to be incompatible with Abilities API. After discussion with @justlevine (Abilities API maintainer), it was clarified that:
 
-This architecture is **stable and reliable**. No migration pressure exists.
+1. **Abilities API is for stable, stateless function primitives** - not a tool registration system
+2. **Dynamic schemas are not supported** - Abilities API requires static schemas at registration time
+3. **For dynamic schema tools, bypass Abilities API** - use `using_function_declarations()` directly
+
+**Resolution**: Data Machine will use a hybrid approach:
+
+| Tool Type | Path |
+|-----------|--------|
+| **Chat tools with static schemas** | Use Abilities API + wp-ai-client |
+| **Chat tools with dynamic schemas** | Use `using_function_declarations()` directly, bypass Abilities API |
+| **Handler tools (always dynamic)** | Use `using_function_declarations()` directly, bypass Abilities API |
+
+**Key Insight from discussion**:
+> "I want to take this a step further and suggest you invert the mental model even more and think of `Abilities` as a primitive, similar to actions and filters. They're not a transport or wrapper for writing tools (or other agentic/non-AI protocols or tooling) but **a stable function shape** those tools can call reliably."
+
+This means wp-ai-client exposes `using_function_declarations()` method that directly accepts `FunctionDeclaration[]` without going through Abilities API - exactly what we need for dynamic schemas.
+
+---
+
+## Updated Architecture Decision
+
+### Hybrid Approach
+
+Data Machine will use two parallel paths for tool registration:
+
+#### Path 1: Abilities API (for static schemas)
+
+**Use Case**: Chat tools with fixed, predictable schemas
+**Benefits**:
+- Standardized WordPress API for discoverability
+- Consistent with broader WordPress AI ecosystem
+- REST API endpoints for tool discovery
+- Consistent capabilities and permissions model
+
+**Implementation**:
+```php
+// Chat tools registered via Abilities API
+wp_register_ability( 'datamachine/create-content', [
+    'label' => 'Create Content',
+    'description' => 'Create new content using AI',
+    'input_schema' => [ /* static schema */ ],
+    'execute_callback' => 'DataMachine\\Handlers\\CreateContentHandler::execute',
+] );
+```
+
+#### Path 2: Direct Function Declarations (for dynamic schemas)
+
+**Use Case**: Handler tools and chat tools with configuration-dependent schemas
+**Benefits**:
+- Full control over schema generation
+- No registration limitations
+- Context-aware parameter building
+- Per-execution scoping
+
+**Implementation**:
+```php
+// Handler tools use wp-ai-client directly
+use WordPress\AI_Client\AI_Client;
+
+function execute_handler_tool( $messages, $handler_config ) {
+    // Build declarations at runtime based on config
+    $declarations = HandlerToolRegistry::buildDeclarations( $handler_config );
+
+    // Use direct function declaration API, bypassing Abilities API
+    $result = AI_Client::prompt()
+        ->usingFunctionDeclarations( ...$declarations )
+        ->withHistory( ...$messages )
+        ->generateTextResult();
+
+    return $result;
+}
+```
+
+---
+
+## Current Architecture
+
+During migration, Data Machine uses:
+
+| Component | Current Solution | Post-Migration Solution |
+|-----------|-----------------|----------------------|
+| AI Provider | `chubes4/ai-http-client` | `wordpress/wp-ai-client` with custom storage hooks |
+| Tool Registration | `ToolRegistrationTrait` + WordPress filters | Hybrid: Abilities API for static, direct declarations for dynamic |
+| Dynamic Schemas | `getTaxonomyToolParameters()` at runtime | `using_function_declarations()` with runtime schema generation |
+| API Key Storage | Data Machine encrypted settings | `wp_ai_client_credentials` filter pointing to encrypted storage |
 
 ---
 
 ## Executive Summary
 
-Migrate Data Machine's AI layer to use `wordpress/wp-ai-client` natively throughout the codebase. This is a full integration - DataMachine will use wp-ai-client's data structures (`Message`, `FunctionDeclaration`, `FunctionCall`, `FunctionResponse`, `GenerativeAiResult`) internally rather than converting at boundaries.
+Migrate Data Machine's AI layer to use `wordpress/wp-ai-client` natively throughout the codebase. DataMachine will use wp-ai-client's data structures (`Message`, `FunctionDeclaration`, `FunctionCall`, `FunctionResponse`, `GenerativeAiResult`) internally rather than converting at boundaries.
 
 ### Key Decisions
 
 - **Full native integration** - Use wp-ai-client types throughout, no adapter/conversion layer
-- **Use wp-ai-client's credential management** (Settings > AI Credentials)
+- **Custom credential storage** - Use `wp_ai_client_credentials` and `wp_ai_client_update_credentials` hooks to maintain encrypted storage
+- **Hybrid tool registration** - Use Abilities API for static schemas, `using_function_declarations()` for dynamic schemas
 - **Remove DataMachine's AI Providers tab** from settings (deprecated as of v0.8.0 React migration, planned for removal)
-- **Rewrite core AI classes** to use native wp-ai-client formats
 
 ---
 
@@ -145,6 +194,23 @@ composer remove chubes4/ai-http-client
 composer require wordpress/wp-ai-client:^0.2
 ```
 
+### 1.3 Register Credential Storage Hooks
+
+In Data Machine's initialization code (e.g., in main plugin file):
+
+```php
+// Register custom credential storage for wp-ai-client
+add_filter( 'wp_ai_client_credentials', function( $credentials, $option_name ) {
+    // Retrieve from Data Machine's encrypted storage
+    return DataMachine\Core\PluginSettings::get_encrypted_option( $option_name, [] );
+}, 10, 2 );
+
+add_action( 'wp_ai_client_update_credentials', function( $credentials, $option_name ) {
+    // Save to Data Machine's encrypted storage
+    DataMachine\Core\PluginSettings::update_encrypted_option( $option_name, $credentials );
+}, 10, 2 );
+```
+
 ---
 
 ## Phase 2: Rewrite ConversationManager
@@ -186,7 +252,7 @@ class ConversationManager {
             'system' => MessageRoleEnum::system(),
             default => MessageRoleEnum::user()
         };
-        
+
         return new Message($roleEnum, [new MessagePart($content)]);
     }
 
@@ -243,7 +309,7 @@ class ConversationManager {
 
     /**
      * Extract FunctionCalls from a Message
-     * 
+     *
      * @return FunctionCall[]
      */
     public static function extractFunctionCalls(Message $message): array {
@@ -266,7 +332,7 @@ class ConversationManager {
 
     /**
      * Validate for duplicate tool calls in conversation history
-     * 
+     *
      * @param FunctionCall $call The call to validate
      * @param Message[] $history Previous messages
      * @return array{is_duplicate: bool, message: string}
@@ -342,7 +408,7 @@ class ToolExecutor {
 
     /**
      * Convert legacy tool definitions to FunctionDeclarations
-     * 
+     *
      * @param array $legacyTools Tools in old format from filters
      * @return array{declarations: FunctionDeclaration[], metadata: array}
      */
@@ -464,7 +530,7 @@ class RequestBuilder {
             $prompt->withHistory(...$messages);
         }
 
-        // Add tools
+        // Add tools using direct function declarations API
         if (!empty($tools)) {
             $prompt->usingFunctionDeclarations(...$tools);
         }
@@ -716,16 +782,25 @@ $userMessage = ConversationManager::buildUserMessage($userInput);
 // Load history as Message objects (from database)
 $history = ChatDatabase::getMessagesAsNative($sessionId);
 
-// Get tools as declarations
-$legacyTools = apply_filters('datamachine_global_tools', []);
-$converted = ToolExecutor::convertToDeclarations($legacyTools);
+// Get tools as declarations (choose path based on schema stability)
+$toolConfig = apply_filters('datamachine_global_tools', []);
+
+// Check if tool has dynamic schema
+if (ToolRegistry::hasDynamicSchema($toolConfig)) {
+    // Use direct function declarations for dynamic schemas
+    $declarations = ToolRegistry::buildRuntimeDeclarations($toolConfig);
+} else {
+    // Use Abilities API for static schemas
+    // Tool already registered via wp_register_ability()
+    $declarations = [];
+}
 
 // Execute
 $loop = new AIConversationLoop();
 $result = $loop->execute(
     array_merge($history, [$userMessage]),
-    $converted['declarations'],
-    $converted['metadata'],
+    $declarations,
+    $toolConfig,
     $provider,
     $model,
     'chat',
@@ -865,7 +940,7 @@ Search and remove all references to:
 - `chubes_ai_provider_api_keys`
 - `chubes_ai_library_error`
 
-**Keep:** `chubes_ai_tools` (rename to `datamachine_ai_tools`) - still used for tool registration from handlers
+**Keep:** `datamachine_ai_tools` - still used for tool registration from handlers
 
 ### 9.3 Settings Cleanup
 
@@ -882,10 +957,13 @@ In `inc/Core/Admin/Settings/SettingsFilters.php`:
 - [ ] ConversationManager builds correct Message types
 - [ ] ToolExecutor converts legacy tools to FunctionDeclarations
 - [ ] FunctionResponse creation works correctly
+- [ ] Credential storage hooks work correctly
 
 ### 10.2 Integration Tests
 
 - [ ] Configure API keys in Settings > AI Credentials
+- [ ] Verify credentials retrieved from encrypted storage via filter
+- [ ] Verify credentials saved to encrypted storage via action hook
 - [ ] Provider dropdown populates correctly
 - [ ] Model dropdown populates after provider selection
 
@@ -893,7 +971,8 @@ In `inc/Core/Admin/Settings/SettingsFilters.php`:
 
 - [ ] Create pipeline with AI step
 - [ ] Execute pipeline - AI responds
-- [ ] Tool calls execute correctly
+- [ ] Static schema tools execute via Abilities API
+- [ ] Dynamic schema tools execute via direct function declarations
 - [ ] Multi-turn conversations work
 - [ ] Handler tools end conversation properly
 
@@ -940,6 +1019,7 @@ In `inc/Core/Admin/Settings/SettingsFilters.php`:
 | `inc/Api/Chat/Chat.php` | Build native types |
 | `inc/Core/Database/Chat/ChatDatabase.php` | Message serialization |
 | `inc/Core/Admin/Settings/SettingsFilters.php` | Remove API key handling |
+| Main plugin file | Add credential storage hooks |
 
 ### Deletions
 
@@ -955,18 +1035,19 @@ In `inc/Core/Admin/Settings/SettingsFilters.php`:
 ## [1.0.0] - YYYY-MM-DD
 
 ### Breaking Changes
-- **AI Provider Migration**: API keys must be re-entered in Settings > AI Credentials
-- **Removed Providers**: Grok and OpenRouter support removed
+- **AI Provider Migration**: Migrated from `chubes4/ai-http-client` to `wordpress/wp-ai-client`
 
 ### Changed
 - **AI Architecture**: Full migration to `wordpress/wp-ai-client` with native type usage throughout
 - **Message Format**: Internal message handling now uses wp-ai-client Message objects
 - **Tool Definitions**: Internal tool handling uses FunctionDeclaration objects
 - **Settings**: AI provider configuration moved to Settings > AI Credentials
+- **Custom Storage**: API keys stored in encrypted Data Machine storage via `wp_ai_client_credentials` filter
+- **Tool Registration**: Hybrid approach - Abilities API for static schemas, direct declarations for dynamic schemas
 
 ### Removed
 - AI Providers tab from Data Machine Settings
-- All `chubes_ai_*` filters (replaced by wp-ai-client)
+- `chubes_ai_*` filters (replaced by wp-ai-client)
 - `chubes4/ai-http-client` dependency
 
 ### Technical
@@ -974,6 +1055,7 @@ In `inc/Core/Admin/Settings/SettingsFilters.php`:
 - AIConversationLoop rewritten for native type flow
 - RequestBuilder rewritten for wp-ai-client fluent API
 - Chat database updated for Message serialization
+- Credential storage hooks integrated
 ```
 
 ---
@@ -981,15 +1063,16 @@ In `inc/Core/Admin/Settings/SettingsFilters.php`:
 ## Implementation Order
 
 1. **Phase 1**: Dependency swap (composer)
-2. **Phase 2**: ConversationManager rewrite
-3. **Phase 3**: ToolExecutor updates
-4. **Phase 4**: RequestBuilder rewrite
-5. **Phase 5**: AIConversationLoop rewrite
-6. **Phase 6**: Update callers (Chat API, etc.)
-7. **Phase 7**: Chat database storage
-8. **Phase 8**: Providers API
-9. **Phase 9**: Remove legacy code
-10. **Phase 10**: Testing
+2. **Phase 1.3**: Register credential storage hooks
+3. **Phase 2**: ConversationManager rewrite
+4. **Phase 3**: ToolExecutor updates
+5. **Phase 4**: RequestBuilder rewrite
+6. **Phase 5**: AIConversationLoop rewrite
+7. **Phase 6**: Update callers (Chat API, etc.)
+8. **Phase 7**: Chat database storage
+9. **Phase 8**: Providers API
+10. **Phase 9**: Remove legacy code
+11. **Phase 10**: Testing
 
 ---
 
@@ -1005,144 +1088,170 @@ Keep pre-migration branch for 30 days.
 
 ---
 
-## Appendix A: Abilities API Feature Request
+## Appendix A: Hybrid Tool Registration Pattern
 
-### Issue: Support Dynamic input_schema (Schema Callbacks)
+### Decision Matrix
 
-**Repository**: `wordpress/abilities-api` (or `wordpress/wordpress-develop`)
+| Tool Characteristic | Use Abilities API | Use Direct Declarations |
+|------------------|-------------------|----------------------|
+| Static schema (never changes) | ✅ Yes | ✅ No |
+| Dynamic schema (depends on config) | ❌ No | ✅ Yes |
+| Ephemeral/context-scoped | ❌ No | ✅ Yes |
+| Globally discoverable | ✅ Yes | ❌ No |
+| Needs REST endpoint | ✅ Yes | ❌ No |
 
----
+### Implementation Strategy
 
-#### Summary
-
-The WordPress 6.9 Abilities API requires static `input_schema` definitions at registration time. This proposal adds support for dynamic schema generation via callbacks, enabling context-aware abilities.
-
-#### Problem
-
-Many real-world abilities have parameters that vary based on execution context:
-
-1. **Configuration-dependent parameters** - An "upsert post" ability where taxonomy fields depend on user configuration (some taxonomies preset, others AI-selectable)
-
-2. **Role-based parameters** - Administrators see different parameters than editors
-
-3. **Multi-step workflows** - Later steps have parameters dependent on earlier step outputs
-
-4. **Multi-tenant applications** - Schema varies by site/tenant configuration
-
-Currently, developers must either:
-- Register abilities with overly permissive schemas (`additionalProperties: true`), losing type safety
-- Register multiple ability variants, causing registration explosion
-- Skip the Abilities API entirely for dynamic use cases
-
-#### Proposed Solution
-
-Allow `input_schema` to be a callable that receives execution context:
-
+**For static schema tools** (e.g., CreatePipeline, RunFlow):
 ```php
-wp_register_ability('myplugin/upsert-content', [
-    'label'       => __('Upsert Content', 'myplugin'),
-    'description' => __('Create or update content with context-aware fields', 'myplugin'),
-    'category'    => 'content',
-
-    // NEW: Schema callback for dynamic generation
-    'input_schema' => function(array $context): array {
-        $schema = [
-            'type' => 'object',
-            'properties' => [
-                'title' => ['type' => 'string', 'description' => 'Content title'],
-            ],
-            'required' => ['title'],
-        ];
-
-        // Add taxonomy parameters based on configuration
-        $config = get_option('myplugin_taxonomy_config', []);
-        foreach ($config as $taxonomy => $mode) {
-            if ($mode === 'user_selects') {
-                $schema['properties'][$taxonomy] = [
-                    'type' => 'array',
-                    'items' => ['type' => 'string'],
-                    'description' => "Terms for {$taxonomy} taxonomy",
-                ];
-            }
-        }
-
-        return $schema;
-    },
-
-    'execute_callback'    => 'myplugin_upsert_content',
+// Register via Abilities API for discoverability
+wp_register_ability( 'datamachine/create_pipeline', [
+    'label' => 'Create Pipeline',
+    'description' => 'Create a new data processing pipeline',
+    'input_schema' => [
+        'type' => 'object',
+        'properties' => [
+            'name' => ['type' => 'string'],
+            'steps' => ['type' => 'array'],
+        ],
+    ],
+    'execute_callback' => 'DataMachine\\Handlers\\CreatePipelineHandler::execute',
     'permission_callback' => fn() => current_user_can('edit_posts'),
-]);
+] );
 ```
 
-#### Context Parameter
-
-The `$context` array passed to schema callbacks could include:
-
+**For dynamic schema tools** (handler tools, taxonomy-dependent chat tools):
 ```php
-$context = [
-    'user_id'     => get_current_user_id(),
-    'user_roles'  => wp_get_current_user()->roles,
-    'request'     => $request,  // WP_REST_Request if via REST
-    'source'      => 'rest' | 'cli' | 'mcp' | 'internal',
-    'meta'        => [],  // Caller-provided context
-];
+// Use direct function declarations API
+function execute_dynamic_tool( $messages, $tool_config ) {
+    // Build FunctionDeclarations at runtime
+    $declarations = buildDynamicDeclarations( $tool_config );
+
+    // Use wp-ai-client directly, bypassing Abilities API
+    $result = AI_Client::prompt()
+        ->usingFunctionDeclarations( ...$declarations )
+        ->withHistory( ...$messages )
+        ->generateTextResult();
+
+    return $result;
+}
 ```
 
-#### Backwards Compatibility
+### Benefits of Hybrid Approach
 
-- Static `input_schema` arrays continue to work unchanged
-- Schema callbacks are opt-in
-- REST API schema endpoints could cache or show "dynamic" indicator
-
-#### Use Cases
-
-1. **AI Tool Calling** - MCP and AI agents benefit from context-aware tool schemas
-2. **Form Builders** - Conditional fields based on user selections
-3. **Multi-tenant SaaS** - Per-tenant ability customization
-4. **Workflow Engines** - Pipeline steps with data-dependent parameters
-5. **Role-based UX** - Different parameters for different capability levels
-
-#### Alternatives Considered
-
-| Alternative | Drawback |
-|-------------|----------|
-| Multiple ability registrations | Registration explosion, maintenance burden |
-| Permissive schemas + runtime validation | Loses type safety, poor developer experience |
-| Plugin-level abstraction | Inconsistent patterns, no ecosystem benefit |
-
-#### Related
-
-- WordPress MCP integration (abilities exposed as tools)
-- Block bindings API (context-aware attributes)
-- Interactivity API (dynamic state)
-
----
-
-**Labels**: `Feature Request`, `Abilities API`, `REST API`
+1. **Discoverability**: Static tools are exposed via standard Abilities API
+2. **Flexibility**: Dynamic tools have full control over schema generation
+3. **No architectural conflicts**: Ephemeral/context-scoped tools don't fight Abilities API design
+4. **Ecosystem compatibility**: Follows WordPress AI patterns where appropriate
+5. **Migration path clear**: Each tool type has well-defined path forward
 
 ---
 
 ## Appendix B: Blocker Resolution Timeline
 
-| Blocker | Issue | Status | Impact |
-|---------|-------|--------|--------|
-| wp-ai-client credential storage | [#44](https://github.com/WordPress/wp-ai-client/issues/44) | Open | Blocks wp-ai-client adoption |
-| Abilities API dynamic schemas | Filed | Awaiting response | Blocks chat tools with config-dependent schemas |
-| Abilities API context-scoped tools | Not filed | Architectural gap | Handler tools fundamentally incompatible |
+| Blocker | Issue | Status | Resolution Date |
+|---------|-------|--------|---------------|
+| wp-ai-client credential storage | [#44](https://github.com/WordPress/wp-ai-client/issues/44) | ✅ RESOLVED - PR submitted (pending approval) | 2026-01-17 |
+| Abilities API dynamic schemas | [#158](https://github.com/WordPress/abilities-api/issues/158) | ✅ RESOLVED - Use direct function declarations | 2026-01-17 |
 
-### Migration Scope (Revised)
+### Migration Scope (Updated - Both Blockers Resolved)
 
-| Tool Type | Abilities API Compatible? | Reason |
-|-----------|---------------------------|--------|
-| Chat tools (static schema) | Yes, when Blocker 1 resolved | Globally available, fixed schema |
-| Chat tools (config-dependent) | Requires Blocker 2a | Schema depends on settings |
-| Handler tools | **No - architectural mismatch** | Ephemeral, step-scoped, stateful |
+| Tool Type | Abilities API Compatible? | Path Forward |
+|-----------|---------------------------|-------------|
+| Chat tools (static schema) | ✅ Yes | Use Abilities API |
+| Chat tools (config-dependent) | ❌ No (by design) | Use `using_function_declarations()` directly |
+| Handler tools (ephemeral) | ❌ No (by design) | Use `using_function_declarations()` directly |
 
-**Key Insight**: Handler tools will NEVER migrate to Abilities API regardless of dynamic schema support. They require execution-context scoping that the Abilities API fundamentally does not provide.
+**Key Insight**: Hybrid approach allows each tool type to use its optimal path while maintaining compatibility with broader WordPress AI ecosystem.
 
-**Until then**: Continue using `chubes4/ai-http-client` which provides:
-- Multi-provider support (OpenAI, Anthropic, Google, Grok, OpenRouter)
-- Custom API key storage via `chubes_ai_http_shared_api_keys` filter
-- Dynamic tool schemas via runtime generation
-- Ephemeral context-scoped tool registration
-- Stable, production-tested reliability
+---
+
+## Appendix C: Credential Storage Implementation
+
+### Encrypted Storage Implementation
+
+In Data Machine's `PluginSettings` class:
+
+```php
+<?php
+namespace DataMachine\Core;
+
+class PluginSettings {
+
+    /**
+     * Get encrypted option value
+     *
+     * @param string $option_name
+     * @param mixed $default
+     * @return mixed
+     */
+    public static function get_encrypted_option( string $option_name, $default = null ) {
+        $encrypted = get_option( $option_name . '_encrypted', $default );
+
+        if ( $encrypted === $default ) {
+            return $default;
+        }
+
+        $decrypted = self::decrypt( $encrypted );
+
+        return $decrypted;
+    }
+
+    /**
+     * Update encrypted option value
+     *
+     * @param string $option_name
+     * @param mixed $value
+     * @return bool
+     */
+    public static function update_encrypted_option( string $option_name, $value ): bool {
+        $encrypted = self::encrypt( $value );
+
+        return update_option( $option_name . '_encrypted', $encrypted );
+    }
+
+    /**
+     * Encrypt value
+     */
+    private static function encrypt( $value ): string {
+        // Implement encryption logic (e.g., sodium, openssl)
+        // ...
+    }
+
+    /**
+     * Decrypt value
+     */
+    private static function decrypt( $encrypted ): mixed {
+        // Implement decryption logic matching encryption method
+        // ...
+    }
+}
+```
+
+### Hook Registration
+
+In Data Machine's main plugin file:
+
+```php
+<?php
+namespace DataMachine;
+
+use DataMachine\Core\PluginSettings;
+
+/**
+ * Register credential storage hooks for wp-ai-client
+ */
+function register_wp_ai_client_storage_hooks(): void {
+    add_filter( 'wp_ai_client_credentials', function( $credentials, $option_name ) {
+        // Return empty array if not found, allowing default behavior
+        return PluginSettings::get_encrypted_option( $option_name, [] );
+    }, 10, 2 );
+
+    add_action( 'wp_ai_client_update_credentials', function( $credentials, $option_name ) {
+        // Save to encrypted storage
+        PluginSettings::update_encrypted_option( $option_name, $credentials );
+    }, 10, 2 );
+}
+
+add_action( 'plugins_loaded', 'register_wp_ai_client_storage_hooks' );
+```

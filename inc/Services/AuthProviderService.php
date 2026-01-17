@@ -40,6 +40,7 @@ class AuthProviderService {
 
         if ($auth_provider_key !== $handler_slug) {
             do_action('datamachine_log', 'debug', 'Resolved auth provider key differs from handler slug', [
+                'agent_type' => 'system',
                 'handler_slug' => $handler_slug,
                 'auth_provider_key' => $auth_provider_key,
             ]);

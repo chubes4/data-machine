@@ -241,6 +241,7 @@ class ProcessedItems {
         
         // Log table creation
         do_action('datamachine_log', 'debug', 'Created processed items database table', [
+            'agent_type' => 'system',
             'table_name' => $this->table_name,
             'action' => 'create_table'
         ]);

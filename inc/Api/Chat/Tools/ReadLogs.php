@@ -38,7 +38,7 @@ class ReadLogs {
 				'agent_type' => [
 					'type' => 'string',
 					'required' => false,
-					'description' => 'Log source: "pipeline" (default) for job execution logs, "chat" for chat agent logs'
+					'description' => 'Log source: "pipeline" (default) for job execution logs, "chat" for chat agent logs, "system" for system infrastructure operations'
 				],
 				'mode' => [
 					'type' => 'string',
@@ -75,11 +75,12 @@ class ReadLogs {
 	 * @return string Tool description
 	 */
 	private function buildDescription(): string {
-		return 'Read Data Machine logs for troubleshooting jobs, flows, and pipelines.
+		return 'Read Data Machine logs for troubleshooting jobs, flows, pipelines, and system operations.
 
 AGENT TYPES:
 - pipeline (default): Logs from job/flow execution - use this for troubleshooting failed jobs
 - chat: Logs from chat agent operations - use this to check your own activity
+- system: System infrastructure operations - database, OAuth, cleanup, and service initialization
 
 FILTERS (all optional, combined with AND logic):
 - job_id: Filter to specific job execution
@@ -93,7 +94,8 @@ MODES:
 TIPS:
 - Start with job_id filter when troubleshooting a specific failed job
 - Use flow_id to see all executions of a particular flow
-- Check chat logs to review your own recent operations';
+- Check chat logs to review your own recent operations
+- Check system logs for database issues, authentication errors, or service failures';
 	}
 
 	/**

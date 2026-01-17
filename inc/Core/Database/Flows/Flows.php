@@ -43,6 +43,7 @@ class Flows {
         $result = dbDelta($sql);
         
         do_action('datamachine_log', 'debug', 'Flows table creation completed', [
+            'agent_type' => 'system',
             'table_name' => $table_name,
             'result' => $result
         ]);

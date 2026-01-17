@@ -394,6 +394,7 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
 
         if (!empty($dataPackets)) {
             do_action('datamachine_log', 'debug', 'Next step scheduled via Action Scheduler', [
+                'agent_type' => 'system',
                 'job_id' => $job_id,
                 'flow_step_id' => $flow_step_id,
                 'action_id' => $action_id,
@@ -430,6 +431,7 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
             $db_flows->update_flow_scheduling($flow_id, $scheduling_config);
 
             do_action('datamachine_log', 'info', 'Flow schedule cleared (set to manual)', [
+                'agent_type' => 'system',
                 'flow_id' => $flow_id
             ]);
             return;
@@ -455,6 +457,7 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
                 $db_flows->update_flow_scheduling($flow_id, $scheduling_config);
 
                 do_action('datamachine_log', 'info', 'Flow scheduled for one-time execution', [
+                    'agent_type' => 'system',
                     'flow_id' => $flow_id,
                     'timestamp' => $interval_or_timestamp,
                     'scheduled_time' => wp_date('c', $interval_or_timestamp),
@@ -468,6 +471,7 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
 
             if (!$interval_seconds) {
                 do_action('datamachine_log', 'error', 'Invalid schedule interval', [
+                    'agent_type' => 'system',
                     'flow_id' => $flow_id,
                     'interval' => $interval_or_timestamp,
                     'available_intervals' => array_keys($intervals)
@@ -493,6 +497,7 @@ add_action('datamachine_run_flow_now', function($flow_id, $job_id = null) {
                 $db_flows->update_flow_scheduling($flow_id, $scheduling_config);
 
                 do_action('datamachine_log', 'info', 'Flow scheduled for recurring execution', [
+                    'agent_type' => 'system',
                     'flow_id' => $flow_id,
                     'interval' => $interval_or_timestamp,
                     'interval_seconds' => $interval_seconds,

@@ -31,6 +31,7 @@ class OAuth2Handler {
         set_transient("datamachine_{$provider_key}_oauth_state", $state, 15 * MINUTE_IN_SECONDS);
 
         do_action('datamachine_log', 'debug', 'OAuth2: Created state nonce', [
+            'agent_type' => 'system',
             'provider' => $provider_key,
             'state_length' => strlen($state)
         ]);
@@ -54,6 +55,7 @@ class OAuth2Handler {
         }
 
         do_action('datamachine_log', $is_valid ? 'debug' : 'error', 'OAuth2: State verification', [
+            'agent_type' => 'system',
             'provider' => $provider_key,
             'valid' => $is_valid
         ]);
@@ -72,6 +74,7 @@ class OAuth2Handler {
         $url = add_query_arg($params, $auth_url);
 
         do_action('datamachine_log', 'debug', 'OAuth2: Built authorization URL', [
+            'agent_type' => 'system',
             'auth_url' => $auth_url,
             'param_count' => count($params)
         ]);
@@ -115,6 +118,7 @@ class OAuth2Handler {
         // Handle OAuth errors
         if ($error) {
             do_action('datamachine_log', 'error', 'OAuth2: Provider returned error', [
+                'agent_type' => 'system',
                 'provider' => $provider_key,
                 'error' => $error
             ]);
@@ -126,6 +130,7 @@ class OAuth2Handler {
         // Verify state
         if (!$this->verify_state($provider_key, $state)) {
             do_action('datamachine_log', 'error', 'OAuth2: State verification failed', [
+                'agent_type' => 'system',
                 'provider' => $provider_key
             ]);
 
@@ -138,6 +143,7 @@ class OAuth2Handler {
 
         if (is_wp_error($token_data)) {
             do_action('datamachine_log', 'error', 'OAuth2: Token exchange failed', [
+                'agent_type' => 'system',
                 'provider' => $provider_key,
                 'error' => $token_data->get_error_message()
             ]);
@@ -152,6 +158,7 @@ class OAuth2Handler {
 
             if (is_wp_error($token_data)) {
                 do_action('datamachine_log', 'error', 'OAuth2: Token transformation failed', [
+                    'agent_type' => 'system',
                     'provider' => $provider_key,
                     'error' => $token_data->get_error_message()
                 ]);
@@ -166,6 +173,7 @@ class OAuth2Handler {
 
         if (is_wp_error($account_data)) {
             do_action('datamachine_log', 'error', 'OAuth2: Failed to retrieve account details', [
+                'agent_type' => 'system',
                 'provider' => $provider_key,
                 'error' => $account_data->get_error_message()
             ]);
@@ -180,12 +188,14 @@ class OAuth2Handler {
             $stored = call_user_func($storage_fn, $account_data);
         } else {
             do_action('datamachine_log', 'error', 'OAuth2: No storage callback provided', [
+                'agent_type' => 'system',
                 'provider' => $provider_key
             ]);
         }
 
         if (!$stored) {
             do_action('datamachine_log', 'error', 'OAuth2: Failed to store account data', [
+                'agent_type' => 'system',
                 'provider' => $provider_key
             ]);
 
@@ -194,6 +204,7 @@ class OAuth2Handler {
         }
 
         do_action('datamachine_log', 'info', 'OAuth2: Authentication successful', [
+            'agent_type' => 'system',
             'provider' => $provider_key,
             'account_id' => $account_data['id'] ?? 'unknown'
         ]);

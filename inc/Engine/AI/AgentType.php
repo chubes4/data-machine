@@ -20,6 +20,7 @@ final class AgentType {
     public const PIPELINE = 'pipeline';
     public const CHAT = 'chat';
     public const CLI = 'cli';
+    public const SYSTEM = 'system';
     public const ALL = 'all';
 
     /**
@@ -40,6 +41,10 @@ final class AgentType {
             self::CLI => [
                 'label' => __('CLI', 'data-machine'),
                 'description' => __('Command-line interface agent', 'data-machine'),
+            ],
+            self::SYSTEM => [
+                'label' => __('System', 'data-machine'),
+                'description' => __('Infrastructure and system operations', 'data-machine'),
             ],
         ]);
     }

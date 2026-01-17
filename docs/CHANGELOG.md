@@ -5,6 +5,16 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+- Add system log type for infrastructure operations
+
+- Added SYSTEM constant to AgentType registry
+- Migrated 58 system-level log calls from pipeline/chat to system log
+- System operations now route to datamachine-system.log
+- Chat tools (read_logs, manage_logs) updated to support system logs
+- Database, OAuth, scheduler, and service errors now log to system
+
 ## [0.11.3] - 2026-01-17
 
 - {"component_id":"data-machine","type":"Removed","summary":"Removed unused post_date_source setting"}

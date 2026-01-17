@@ -52,6 +52,7 @@ class OAuth1Handler {
                 !isset($request_token['oauth_token_secret'])) {
 
                 do_action('datamachine_log', 'error', 'OAuth1: Failed to get request token', [
+                    'agent_type' => 'system',
                     'provider' => $provider_key,
                     'http_code' => $connection->getLastHttpCode(),
                     'response' => $connection->getLastBody()
@@ -72,6 +73,7 @@ class OAuth1Handler {
             );
 
             do_action('datamachine_log', 'debug', 'OAuth1: Request token obtained', [
+                'agent_type' => 'system',
                 'provider' => $provider_key,
                 'oauth_token' => substr($request_token['oauth_token'], 0, 10) . '...'
             ]);
@@ -80,6 +82,7 @@ class OAuth1Handler {
 
         } catch (\Exception $e) {
             do_action('datamachine_log', 'error', 'OAuth1: Exception getting request token', [
+                'agent_type' => 'system',
                 'provider' => $provider_key,
                 'error' => $e->getMessage()
             ]);
@@ -112,6 +115,7 @@ class OAuth1Handler {
         $url = add_query_arg(['oauth_token' => $oauth_token], $authorize_url);
 
         do_action('datamachine_log', 'debug', 'OAuth1: Built authorization URL', [
+            'agent_type' => 'system',
             'provider' => $provider_key,
             'oauth_token' => substr($oauth_token, 0, 10) . '...'
         ]);
@@ -143,6 +147,7 @@ class OAuth1Handler {
         $nonce = isset($_GET['_wpnonce']) ? sanitize_text_field(wp_unslash($_GET['_wpnonce'])) : '';
         if (empty($nonce) || !wp_verify_nonce($nonce, 'datamachine_oauth1_callback')) {
             do_action('datamachine_log', 'error', 'OAuth1: Callback nonce verification failed', [
+                'agent_type' => 'system',
                 'provider' => $provider_key
             ]);
             $this->redirect_with_error($provider_key, 'invalid_nonce');
@@ -159,6 +164,7 @@ class OAuth1Handler {
             $this->delete_temp_token_secret($provider_key, $denied);
 
             do_action('datamachine_log', 'warning', 'OAuth1: User denied access', [
+                'agent_type' => 'system',
                 'provider' => $provider_key,
                 'denied_token' => substr($denied, 0, 10) . '...'
             ]);
@@ -170,6 +176,7 @@ class OAuth1Handler {
         // Validate required parameters
         if (empty($oauth_token) || empty($oauth_verifier)) {
             do_action('datamachine_log', 'error', 'OAuth1: Missing callback parameters', [
+                'agent_type' => 'system',
                 'provider' => $provider_key,
                 'has_token' => !empty($oauth_token),
                 'has_verifier' => !empty($oauth_verifier)
@@ -184,6 +191,7 @@ class OAuth1Handler {
 
         if (empty($oauth_token_secret)) {
             do_action('datamachine_log', 'error', 'OAuth1: Token secret missing or expired', [
+                'agent_type' => 'system',
                 'provider' => $provider_key,
                 'oauth_token' => substr($oauth_token, 0, 10) . '...'
             ]);
@@ -209,6 +217,7 @@ class OAuth1Handler {
                 !isset($access_token_data['oauth_token_secret'])) {
 
                 do_action('datamachine_log', 'error', 'OAuth1: Failed to get access token', [
+                    'agent_type' => 'system',
                     'provider' => $provider_key,
                     'http_code' => $connection->getLastHttpCode(),
                     'response' => $connection->getLastBody()
@@ -228,12 +237,14 @@ class OAuth1Handler {
                 $stored = call_user_func($storage_fn, $account_data);
             } else {
                 do_action('datamachine_log', 'error', 'OAuth1: No storage callback provided', [
+                    'agent_type' => 'system',
                     'provider' => $provider_key
                 ]);
             }
 
             if (!$stored) {
                 do_action('datamachine_log', 'error', 'OAuth1: Failed to store account data', [
+                    'agent_type' => 'system',
                     'provider' => $provider_key
                 ]);
 
@@ -242,6 +253,7 @@ class OAuth1Handler {
             }
 
             do_action('datamachine_log', 'info', 'OAuth1: Authentication successful', [
+                'agent_type' => 'system',
                 'provider' => $provider_key,
                 'user_id' => $account_data['user_id'] ?? 'unknown'
             ]);
@@ -252,6 +264,7 @@ class OAuth1Handler {
 
         } catch (\Exception $e) {
             do_action('datamachine_log', 'error', 'OAuth1: Exception during callback', [
+                'agent_type' => 'system',
                 'provider' => $provider_key,
                 'error' => $e->getMessage()
             ]);

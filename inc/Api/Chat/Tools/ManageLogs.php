@@ -43,7 +43,7 @@ class ManageLogs {
 				'agent_type' => [
 					'type' => 'string',
 					'required' => false,
-					'description' => 'Agent type: "pipeline", "chat", or "all" (for clear action). Defaults to "pipeline"'
+					'description' => 'Agent type: "pipeline", "chat", "system", or "all" (for clear action). Defaults to "pipeline"'
 				],
 				'level' => [
 					'type' => 'string',
@@ -77,6 +77,7 @@ LOG LEVELS (for set_level action):
 AGENT TYPES:
 - pipeline: Job/flow execution logs
 - chat: Chat agent operation logs
+- system: System infrastructure logs (database, OAuth, cleanup, services)
 - all: All agent types (only valid for clear action)';
 	}
 

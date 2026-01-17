@@ -276,6 +276,7 @@ class PipelineStepManager {
 
         if (!$success) {
             do_action('datamachine_log', 'error', 'System prompt update failed - database update error', [
+                'agent_type' => 'system',
                 'pipeline_id' => $target_pipeline['pipeline_id'],
                 'pipeline_step_id' => $pipeline_step_id
             ]);

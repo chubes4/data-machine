@@ -49,6 +49,7 @@ class Reddit extends FetchHandler {
 			if ($this->oauth_reddit === null) {
 				$auth_service = new AuthProviderService();
 				do_action('datamachine_log', 'error', 'Reddit Handler: Authentication service not available', [
+					'agent_type' => 'system',
 					'handler' => 'reddit',
 					'missing_service' => 'reddit',
 					'available_providers' => array_keys($auth_service->getAll())

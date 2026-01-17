@@ -42,6 +42,7 @@ class ToolResultFinder {
 
         // Log error when not found
         do_action('datamachine_log', 'error', 'AI did not execute handler tool', [
+            'agent_type' => 'system',
             'handler' => $handler,
             'flow_step_id' => $flow_step_id
         ]);

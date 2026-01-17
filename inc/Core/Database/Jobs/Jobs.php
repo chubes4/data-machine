@@ -117,6 +117,7 @@ class Jobs {
         self::migrate_columns($table_name);
 
         do_action('datamachine_log', 'debug', 'Created jobs database table with pipeline+flow architecture', [
+            'agent_type' => 'system',
             'table_name' => $table_name,
             'action' => 'create_table'
         ]);
@@ -158,6 +159,7 @@ class Jobs {
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
             $wpdb->query("ALTER TABLE {$table_name} MODIFY status varchar(100) NOT NULL");
             do_action('datamachine_log', 'info', 'Migrated jobs.status column to varchar(100)', [
+                'agent_type' => 'system',
                 'table_name' => $table_name,
                 'previous_size' => $columns['status']->CHARACTER_MAXIMUM_LENGTH
             ]);
@@ -168,6 +170,7 @@ class Jobs {
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
             $wpdb->query("ALTER TABLE {$table_name} MODIFY pipeline_id varchar(20) NOT NULL");
             do_action('datamachine_log', 'info', 'Migrated jobs.pipeline_id column to varchar(20) for direct execution support', [
+                'agent_type' => 'system',
                 'table_name' => $table_name
             ]);
         }
@@ -177,6 +180,7 @@ class Jobs {
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
             $wpdb->query("ALTER TABLE {$table_name} MODIFY flow_id varchar(20) NOT NULL");
             do_action('datamachine_log', 'info', 'Migrated jobs.flow_id column to varchar(20) for direct execution support', [
+                'agent_type' => 'system',
                 'table_name' => $table_name
             ]);
         }

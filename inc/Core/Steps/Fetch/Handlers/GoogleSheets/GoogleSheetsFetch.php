@@ -53,6 +53,7 @@ class GoogleSheetsFetch extends FetchHandler {
 			if ($this->auth_service === null) {
 				$auth_provider_service = new AuthProviderService();
 				do_action('datamachine_log', 'error', 'Google Sheets Handler: Authentication service not available', [
+					'agent_type' => 'system',
 					'handler' => 'googlesheets',
 					'missing_service' => 'googlesheets',
 					'available_providers' => array_keys($auth_provider_service->getAll())
