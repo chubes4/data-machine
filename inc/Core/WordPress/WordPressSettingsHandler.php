@@ -211,7 +211,7 @@ class WordPressSettingsHandler {
     }
 
     /**
-     * Get standard WordPress publish fields (post_type, post_status, post_author, post_date_source).
+     * Get standard WordPress publish fields (post_type, post_status, post_author).
      *
      * @param array $config Configuration overrides
      * @return array Standard publish fields
@@ -222,7 +222,6 @@ class WordPressSettingsHandler {
             'post_type_default' => 'post',
             'post_status_default' => 'draft',
             'post_author_default' => null,
-            'post_date_source_default' => 'current_date',
         ];
         $config = array_merge($defaults, $config);
         $domain = $config['domain'];
@@ -263,16 +262,6 @@ class WordPressSettingsHandler {
                 'options' => $user_options,
                 'default' => $config['post_author_default'],
             ],
-            'post_date_source' => [
-                'type' => 'select',
-                'label' => __('Post Date Setting', 'data-machine'),
-                'description' => __('Choose whether to use the original date from the source (if available) or the current date when publishing.', 'data-machine'),
-                'options' => [
-                    'current_date' => __('Use Current Date', 'data-machine'),
-                    'source_date' => __('Use Source Date (if available)', 'data-machine'),
-                ],
-                'default' => $config['post_date_source_default'],
-            ],
         ];
     }
 
@@ -295,15 +284,6 @@ class WordPressSettingsHandler {
 
         if (isset($raw_settings['post_author'])) {
             $sanitized['post_author'] = absint($raw_settings['post_author']);
-        }
-
-        if (isset($raw_settings['post_date_source'])) {
-            $valid_date_sources = ['current_date', 'source_date'];
-            $date_source = sanitize_text_field($raw_settings['post_date_source']);
-            if (!in_array($date_source, $valid_date_sources)) {
-                $date_source = 'current_date';
-            }
-            $sanitized['post_date_source'] = $date_source;
         }
 
         return $sanitized;

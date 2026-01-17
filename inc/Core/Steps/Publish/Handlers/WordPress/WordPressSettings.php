@@ -69,7 +69,6 @@ class WordPressSettings extends PublishHandlerSettings {
         $common_fields = parent::get_common_fields();
 
         // Align field names and add WordPress-specific fields
-        // Note: post_date_source is now handled in standard fields
         return $common_fields;
     }
 
