@@ -21,7 +21,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.10.2' );
+define( 'DATAMACHINE_VERSION', '0.11.3' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -126,7 +126,11 @@ function datamachine_run_datamachine_plugin() {
 	\DataMachine\Api\Settings::register();
 	\DataMachine\Api\Auth::register();
 	\DataMachine\Api\Chat\Chat::register();
-}
+
+	// Load abilities
+	require_once __DIR__ . '/inc/Abilities/FlowAbilities.php';
+	new \DataMachine\Engine\Abilities\FlowAbilities();
+	}
 
 
 // Plugin activation hook to initialize default settings
@@ -222,6 +226,7 @@ function datamachine_load_chat_tools() {
     new \DataMachine\Api\Chat\Tools\DeletePipeline();
     new \DataMachine\Api\Chat\Tools\DeletePipelineStep();
     new \DataMachine\Api\Chat\Tools\ReorderPipelineSteps();
+    new \DataMachine\Api\Chat\Tools\ListFlows();
 }
 
 /**

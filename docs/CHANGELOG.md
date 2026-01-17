@@ -7,13 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-- Add system log type for infrastructure operations
+- Fixed: DATAMACHINE_VERSION constant now matches plugin header version (0.11.3)
 
-- Added SYSTEM constant to AgentType registry
-- Migrated 58 system-level log calls from pipeline/chat to system log
-- System operations now route to datamachine-system.log
-- Chat tools (read_logs, manage_logs) updated to support system logs
-- Database, OAuth, scheduler, and service errors now log to system
+## [0.11.3] - 2026-01-17
+
+- {"component_id":"data-machine","type":"Removed","summary":"Removed unused post_date_source setting"}
 
 ## [0.11.3] - 2026-01-17
 

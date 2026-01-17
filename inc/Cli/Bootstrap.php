@@ -18,3 +18,4 @@ if (!defined('WP_CLI') || !WP_CLI) {
 
 WP_CLI::add_command('datamachine agent', Commands\AgentCommand::class);
 WP_CLI::add_command('datamachine settings', Commands\SettingsCommand::class);
+WP_CLI::add_command('datamachine flows', Commands\FlowsCommand::class);

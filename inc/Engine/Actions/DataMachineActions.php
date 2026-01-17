@@ -112,39 +112,51 @@ function datamachine_register_core_actions() {
         $jobs_ops->update_flow_health_cache( $job_id, $status );
     }, 10, 2 );
     
-    // Central logging hook - eliminates logger service discovery across all components  
+    // Central logging hook - delegates to abilities-based logging
     add_action('datamachine_log', function($operation, $param2 = null, $param3 = null, &$result = null) {
         $management_operations = ['clear_all', 'cleanup', 'set_level'];
+        
         if (in_array($operation, $management_operations)) {
             switch ($operation) {
                 case 'clear_all':
                     $result = datamachine_clear_log_files();
                     return $result;
-
+ 
                 case 'cleanup':
                     $max_size_mb = $param2 ?? 10;
                     $max_age_days = $param3 ?? 30;
                     $result = datamachine_cleanup_log_files($max_size_mb, $max_age_days);
                     return $result;
-
+ 
                 case 'set_level':
-                    return datamachine_set_log_level($param2);
+                    $result = datamachine_set_log_level($param2);
+                    return $result;
             }
         }
-
+        
         $context = $param3 ?? [];
-
         $valid_levels = datamachine_get_valid_log_levels();
+        
         if (!in_array($operation, $valid_levels)) {
+            if (class_exists('WP_Ability')) {
+                $ability = wp_get_ability('datamachine/write-to-log');
+                $result = $ability->execute([
+                    'level' => $operation,
+                    'message' => $param2,
+                    'context' => $context
+                ]);
+                $result = is_wp_error($result) ? false : true;
+                return $result;
+            }
             return false;
         }
-
+        
         $function_name = 'datamachine_log_' . $operation;
         if (function_exists($function_name)) {
             $function_name($param2, $context);
             return true;
         }
-
+        
         return false;
     }, 10, 4);
 

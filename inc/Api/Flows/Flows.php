@@ -287,59 +287,37 @@ class Flows {
 		$per_page = $request->get_param('per_page') ?? 20;
 		$offset = $request->get_param('offset') ?? 0;
 
-		$db_jobs = new Jobs();
+		$ability = wp_get_ability('datamachine/list-flows');
+		if (!$ability) {
+			return new \WP_Error('ability_not_found', 'Ability not found', ['status' => 500]);
+		}
+
+		$result = $ability->execute([
+			'pipeline_id' => $pipeline_id,
+			'per_page' => $per_page,
+			'offset' => $offset
+		]);
+
+		if (!$result['success']) {
+			return new \WP_Error('ability_error', $result['error'], ['status' => 500]);
+		}
 
 		if ($pipeline_id) {
-			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-
-			$flows = $db_flows->get_flows_for_pipeline_paginated($pipeline_id, $per_page, $offset);
-			$total = $db_flows->count_flows_for_pipeline($pipeline_id);
-
-			// Batch query latest jobs for all flows
-			$flow_ids = array_column($flows, 'flow_id');
-			$latest_jobs = $db_jobs->get_latest_jobs_by_flow_ids($flow_ids);
-
-			$formatted_flows = array_map(function($flow) use ($latest_jobs) {
-				$flow_id = (int) $flow['flow_id'];
-				$latest_job = $latest_jobs[$flow_id] ?? null;
-				return self::format_flow_for_response($flow, $latest_job);
-			}, $flows);
-
 			return rest_ensure_response([
 				'success' => true,
 				'data' => [
 					'pipeline_id' => $pipeline_id,
-					'flows' => $formatted_flows
+					'flows' => $result['flows']
 				],
-				'total' => $total,
-				'per_page' => $per_page,
-				'offset' => $offset
+				'total' => $result['total'],
+				'per_page' => $result['per_page'],
+				'offset' => $result['offset']
 			]);
-		}
-
-		// Get all flows across all pipelines (no pagination for this case)
-		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
-		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-		$all_pipelines = $db_pipelines->get_pipelines_list();
-		$all_flows = [];
-
-		foreach ($all_pipelines as $pipeline) {
-			$pipeline_flows = $db_flows->get_flows_for_pipeline($pipeline['pipeline_id']);
-
-			// Batch query latest jobs for this pipeline's flows
-			$flow_ids = array_column($pipeline_flows, 'flow_id');
-			$latest_jobs = $db_jobs->get_latest_jobs_by_flow_ids($flow_ids);
-
-			foreach ($pipeline_flows as $flow) {
-				$flow_id = (int) $flow['flow_id'];
-				$latest_job = $latest_jobs[$flow_id] ?? null;
-				$all_flows[] = self::format_flow_for_response($flow, $latest_job);
-			}
 		}
 
 		return rest_ensure_response([
 			'success' => true,
-			'data' => $all_flows
+			'data' => $result['flows']
 		]);
 	}
 
