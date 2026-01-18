@@ -9,7 +9,6 @@
 # Build system (exclude build files but not the final product)
 build.sh
 .buildignore
-node_modules/**/build/
 /build/
 
 # Testing
