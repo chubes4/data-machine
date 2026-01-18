@@ -4,8 +4,6 @@
  * Centralized constant definitions for intervals and other shared values.
  */
 
-
-
 /**
  * Modal Types
  */

@@ -15,25 +15,25 @@ import ToolMessage from './ToolMessage';
  * Pair consecutive tool_call and tool_result messages by tool name.
  * Returns array of { toolCall, toolResult } pairs.
  */
-function pairToolMessages(toolMessages) {
+function pairToolMessages( toolMessages ) {
 	const pairs = [];
 	const callsByName = {};
 
-	toolMessages.forEach((msg) => {
+	toolMessages.forEach( ( msg ) => {
 		const type = msg.metadata?.type;
 		const toolName = msg.metadata?.tool_name;
 
-		if (type === 'tool_call') {
-			callsByName[toolName] = { toolCall: msg, toolResult: null };
-		} else if (type === 'tool_result' && callsByName[toolName]) {
-			callsByName[toolName].toolResult = msg;
-			pairs.push(callsByName[toolName]);
-			delete callsByName[toolName];
+		if ( type === 'tool_call' ) {
+			callsByName[ toolName ] = { toolCall: msg, toolResult: null };
+		} else if ( type === 'tool_result' && callsByName[ toolName ] ) {
+			callsByName[ toolName ].toolResult = msg;
+			pairs.push( callsByName[ toolName ] );
+			delete callsByName[ toolName ];
 		}
-	});
+	} );
 
 	// Handle any orphaned calls (shouldn't happen but be safe)
-	Object.values(callsByName).forEach((pair) => pairs.push(pair));
+	Object.values( callsByName ).forEach( ( pair ) => pairs.push( pair ) );
 
 	return pairs;
 }
@@ -42,85 +42,85 @@ function pairToolMessages(toolMessages) {
  * Build display items array with regular messages and tool groups in order.
  * Uses position-based grouping to keep tools within their exchange.
  */
-function buildDisplayItems(messages) {
+function buildDisplayItems( messages ) {
 	const items = [];
 	let toolBuffer = [];
 
-	messages.forEach((msg) => {
+	messages.forEach( ( msg ) => {
 		const type = msg.metadata?.type;
 		const isToolMessage = type === 'tool_call' || type === 'tool_result';
 
-		if (isToolMessage) {
-			toolBuffer.push(msg);
+		if ( isToolMessage ) {
+			toolBuffer.push( msg );
 		} else {
 			// Flush any accumulated tools before this message
-			if (toolBuffer.length > 0) {
-				items.push({
+			if ( toolBuffer.length > 0 ) {
+				items.push( {
 					type: 'tool_group',
-					data: { tools: pairToolMessages(toolBuffer) },
-				});
+					data: { tools: pairToolMessages( toolBuffer ) },
+				} );
 				toolBuffer = [];
 			}
 
 			// Add the regular message
-			if (msg.role === 'user' || msg.role === 'assistant') {
-				items.push({ type: 'message', data: msg });
+			if ( msg.role === 'user' || msg.role === 'assistant' ) {
+				items.push( { type: 'message', data: msg } );
 			}
 		}
-	});
+	} );
 
 	// Flush any remaining tools at end
-	if (toolBuffer.length > 0) {
-		items.push({
+	if ( toolBuffer.length > 0 ) {
+		items.push( {
 			type: 'tool_group',
-			data: { tools: pairToolMessages(toolBuffer) },
-		});
+			data: { tools: pairToolMessages( toolBuffer ) },
+		} );
 	}
 
 	return items;
 }
 
-export default function ChatMessages({ messages, isLoading }) {
-	const containerRef = useRef(null);
+export default function ChatMessages( { messages, isLoading } ) {
+	const containerRef = useRef( null );
 
-	useEffect(() => {
-		if (containerRef.current) {
+	useEffect( () => {
+		if ( containerRef.current ) {
 			containerRef.current.scrollTop = containerRef.current.scrollHeight;
 		}
-	}, [messages, isLoading]);
+	}, [ messages, isLoading ] );
 
-	const displayItems = buildDisplayItems(messages);
+	const displayItems = buildDisplayItems( messages );
 
 	return (
-		<div className="datamachine-chat-messages" ref={containerRef}>
-			{displayItems.length === 0 && !isLoading && (
+		<div className="datamachine-chat-messages" ref={ containerRef }>
+			{ displayItems.length === 0 && ! isLoading && (
 				<div className="datamachine-chat-messages__empty">
-					{__(
+					{ __(
 						'Ask me to create a pipeline, configure a flow, or help with your automations.',
 						'data-machine'
-					)}
+					) }
 				</div>
-			)}
+			) }
 
-			{displayItems.map((item, index) => {
-				if (item.type === 'tool_group') {
+			{ displayItems.map( ( item, index ) => {
+				if ( item.type === 'tool_group' ) {
 					return (
 						<ToolMessage
-							key={`tool-group-${index}`}
-							tools={item.data.tools}
+							key={ `tool-group-${ index }` }
+							tools={ item.data.tools }
 						/>
 					);
 				}
-				return <ChatMessage key={index} message={item.data} />;
-			})}
+				return <ChatMessage key={ index } message={ item.data } />;
+			} ) }
 
-			{isLoading && (
+			{ isLoading && (
 				<div className="datamachine-chat-messages__typing">
 					<span className="datamachine-typing-dot"></span>
 					<span className="datamachine-typing-dot"></span>
 					<span className="datamachine-typing-dot"></span>
 				</div>
-			)}
+			) }
 		</div>
 	);
 }

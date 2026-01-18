@@ -28,9 +28,18 @@ const getConfig = () => {
  * @param {Object} params - Query parameters
  * @param {Object} extraOptions - Additional fetch options (headers, body, etc.)
  */
-const request = async ( path, method = 'GET', data = undefined, params = {}, extraOptions = {} ) => {
+const request = async (
+	path,
+	method = 'GET',
+	data = undefined,
+	params = {},
+	extraOptions = {}
+) => {
 	const config = getConfig();
-	const endpoint = addQueryArgs( `/${ config.restNamespace }${ path }`, params );
+	const endpoint = addQueryArgs(
+		`/${ config.restNamespace }${ path }`,
+		params
+	);
 
 	try {
 		const response = await apiFetch( {
@@ -77,9 +86,15 @@ const client = {
 			formData.append( key, additionalData[ key ] )
 		);
 
-		return request( path, 'POST', undefined, {}, {
-			body: formData,
-		} );
+		return request(
+			path,
+			'POST',
+			undefined,
+			{},
+			{
+				body: formData,
+			}
+		);
 	},
 };
 
@@ -94,7 +109,10 @@ const client = {
  * @returns {Promise<Object>} Pipeline data
  */
 export const fetchPipelines = async ( pipelineId = null ) => {
-	return await client.get( '/pipelines', pipelineId ? { pipeline_id: pipelineId } : {} );
+	return await client.get(
+		'/pipelines',
+		pipelineId ? { pipeline_id: pipelineId } : {}
+	);
 };
 
 /**
@@ -115,7 +133,9 @@ export const createPipeline = async ( name ) => {
  * @returns {Promise<Object>} Updated pipeline data
  */
 export const updatePipelineTitle = async ( pipelineId, name ) => {
-	return await client.patch( `/pipelines/${ pipelineId }`, { pipeline_name: name } );
+	return await client.patch( `/pipelines/${ pipelineId }`, {
+		pipeline_name: name,
+	} );
 };
 
 /**
@@ -144,7 +164,9 @@ export const addPipelineStep = async (
 	return await client.post( `/pipelines/${ pipelineId }/steps`, {
 		step_type: stepType,
 		execution_order: executionOrder,
-		label: `${ stepType.charAt( 0 ).toUpperCase() + stepType.slice( 1 ) } Step`,
+		label: `${
+			stepType.charAt( 0 ).toUpperCase() + stepType.slice( 1 )
+		} Step`,
 	} );
 };
 
@@ -156,7 +178,9 @@ export const addPipelineStep = async (
  * @returns {Promise<Object>} Deletion confirmation
  */
 export const deletePipelineStep = async ( pipelineId, stepId ) => {
-	return await client.delete( `/pipelines/${ pipelineId }/steps/${ stepId }` );
+	return await client.delete(
+		`/pipelines/${ pipelineId }/steps/${ stepId }`
+	);
 };
 
 /**
@@ -172,7 +196,9 @@ export const reorderPipelineSteps = async ( pipelineId, steps ) => {
 		execution_order: index,
 	} ) );
 
-	return await client.put( `/pipelines/${ pipelineId }/steps/reorder`, { step_order: stepOrder } );
+	return await client.put( `/pipelines/${ pipelineId }/steps/reorder`, {
+		step_order: stepOrder,
+	} );
 };
 
 /**
@@ -219,7 +245,10 @@ export const updateSystemPrompt = async (
  * @param {number} options.perPage - Items per page
  * @returns {Promise<Object>} Paginated flows response
  */
-export const fetchFlows = async ( pipelineId, { page = 1, perPage = 20 } = {} ) => {
+export const fetchFlows = async (
+	pipelineId,
+	{ page = 1, perPage = 20 } = {}
+) => {
 	const offset = ( page - 1 ) * perPage;
 	return await client.get( '/flows', {
 		pipeline_id: pipelineId,
@@ -330,7 +359,9 @@ export const updateFlowHandler = async (
  * @returns {Promise<Object>} Updated flow step data
  */
 export const updateUserMessage = async ( flowStepId, message ) => {
-	return await client.patch( `/flows/steps/${ flowStepId }/user-message`, { user_message: message } );
+	return await client.patch( `/flows/steps/${ flowStepId }/user-message`, {
+		user_message: message,
+	} );
 };
 
 /**
@@ -352,7 +383,7 @@ export const getSchedulingIntervals = async () => {
  */
 export const updateFlowSchedule = async ( flowId, schedulingConfig ) => {
 	return await client.patch( `/flows/${ flowId }`, {
-		scheduling_config: schedulingConfig
+		scheduling_config: schedulingConfig,
 	} );
 };
 
@@ -369,7 +400,7 @@ export const updateFlowSchedule = async ( flowId, schedulingConfig ) => {
 export const exportPipelines = async ( pipelineIds ) => {
 	return await client.get( '/pipelines', {
 		format: 'csv',
-		ids: pipelineIds.join( ',' )
+		ids: pipelineIds.join( ',' ),
 	} );
 };
 

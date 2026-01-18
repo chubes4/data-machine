@@ -10,8 +10,8 @@
 
 namespace DataMachine\Api\Chat;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
@@ -23,7 +23,6 @@ if (!defined('ABSPATH')) {
  * @since 0.2.0
  */
 function datamachine_register_chat_filters() {
-
 }
 
 datamachine_register_chat_filters();

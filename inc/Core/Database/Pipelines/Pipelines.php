@@ -9,7 +9,7 @@
 
 namespace DataMachine\Core\Database\Pipelines;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 class Pipelines {
 
@@ -21,7 +21,7 @@ class Pipelines {
 
 	public function __construct() {
 		global $wpdb;
-		$this->wpdb = $wpdb;
+		$this->wpdb       = $wpdb;
 		$this->table_name = $wpdb->prefix . 'datamachine_pipelines';
 	}
 
@@ -32,42 +32,57 @@ class Pipelines {
 	 * @return int|false Pipeline ID on success, false on failure
 	 */
 	public function create_pipeline( array $pipeline_data ): int|false {
-		if ( !isset( $pipeline_data['pipeline_name'] ) || empty( trim( $pipeline_data['pipeline_name'] ) ) ) {
-			do_action( 'datamachine_log', 'error', 'Cannot create pipeline - missing or empty pipeline name', [
-				'pipeline_data' => $pipeline_data
-			] );
+		if ( ! isset( $pipeline_data['pipeline_name'] ) || empty( trim( $pipeline_data['pipeline_name'] ) ) ) {
+			do_action(
+				'datamachine_log',
+				'error',
+				'Cannot create pipeline - missing or empty pipeline name',
+				array(
+					'pipeline_data' => $pipeline_data,
+				)
+			);
 			return false;
 		}
 
-		$pipeline_name = sanitize_text_field( $pipeline_data['pipeline_name'] );
-		$pipeline_config = $pipeline_data['pipeline_config'] ?? [];
+		$pipeline_name        = sanitize_text_field( $pipeline_data['pipeline_name'] );
+		$pipeline_config      = $pipeline_data['pipeline_config'] ?? array();
 		$pipeline_config_json = wp_json_encode( $pipeline_config );
 
-		$data = [
-			'pipeline_name' => $pipeline_name,
+		$data = array(
+			'pipeline_name'   => $pipeline_name,
 			'pipeline_config' => $pipeline_config_json,
-			'created_at' => current_time( 'mysql', 1 ),
-			'updated_at' => current_time( 'mysql', 1 )
-		];
+			'created_at'      => current_time( 'mysql', 1 ),
+			'updated_at'      => current_time( 'mysql', 1 ),
+		);
 
-		$format = [ '%s', '%s', '%s', '%s' ];
+		$format = array( '%s', '%s', '%s', '%s' );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$inserted = $this->wpdb->insert( $this->table_name, $data, $format );
 
 		if ( false === $inserted ) {
-			do_action( 'datamachine_log', 'error', 'Failed to insert pipeline', [
-				'pipeline_name' => $pipeline_name,
-				'db_error' => $this->wpdb->last_error
-			] );
+			do_action(
+				'datamachine_log',
+				'error',
+				'Failed to insert pipeline',
+				array(
+					'pipeline_name' => $pipeline_name,
+					'db_error'      => $this->wpdb->last_error,
+				)
+			);
 			return false;
 		}
 
 		$pipeline_id = $this->wpdb->insert_id;
-		do_action( 'datamachine_log', 'debug', 'Successfully created pipeline', [
-			'pipeline_id' => $pipeline_id,
-			'pipeline_name' => $pipeline_name
-		] );
+		do_action(
+			'datamachine_log',
+			'debug',
+			'Successfully created pipeline',
+			array(
+				'pipeline_id'   => $pipeline_id,
+				'pipeline_name' => $pipeline_name,
+			)
+		);
 
 		return $pipeline_id;
 	}
@@ -85,10 +100,10 @@ class Pipelines {
 		}
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$pipeline = $this->wpdb->get_row( $this->wpdb->prepare( "SELECT * FROM %i WHERE pipeline_id = %d", $this->table_name, $pipeline_id ), ARRAY_A );
+		$pipeline = $this->wpdb->get_row( $this->wpdb->prepare( 'SELECT * FROM %i WHERE pipeline_id = %d', $this->table_name, $pipeline_id ), ARRAY_A );
 
-		if ($pipeline && !empty($pipeline['pipeline_config'])) {
-			$pipeline['pipeline_config'] = json_decode($pipeline['pipeline_config'], true) ?: [];
+		if ( $pipeline && ! empty( $pipeline['pipeline_config'] ) ) {
+			$pipeline['pipeline_config'] = json_decode( $pipeline['pipeline_config'], true ) ?: array();
 		}
 
 		return $pipeline;
@@ -101,15 +116,15 @@ class Pipelines {
 	 */
 	public function get_all_pipelines(): array {
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT * FROM %i ORDER BY updated_at DESC", $this->table_name ), ARRAY_A );
+		$results = $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT * FROM %i ORDER BY updated_at DESC', $this->table_name ), ARRAY_A );
 
-		foreach ($results as &$pipeline) {
-			if (!empty($pipeline['pipeline_config'])) {
-				$pipeline['pipeline_config'] = json_decode($pipeline['pipeline_config'], true) ?: [];
+		foreach ( $results as &$pipeline ) {
+			if ( ! empty( $pipeline['pipeline_config'] ) ) {
+				$pipeline['pipeline_config'] = json_decode( $pipeline['pipeline_config'], true ) ?: array();
 			}
 		}
 
-		return $results ?: [];
+		return $results ?: array();
 	}
 
 	/**
@@ -117,9 +132,9 @@ class Pipelines {
 	 */
 	public function get_pipelines_list(): array {
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$results = $this->wpdb->get_results( $this->wpdb->prepare( "SELECT pipeline_id, pipeline_name FROM %i ORDER BY pipeline_name ASC", $this->table_name ), ARRAY_A );
+		$results = $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT pipeline_id, pipeline_name FROM %i ORDER BY pipeline_name ASC', $this->table_name ), ARRAY_A );
 
-		return $results ?: [];
+		return $results ?: array();
 	}
 
 	/**
@@ -128,7 +143,7 @@ class Pipelines {
 	/**
 	 * Update an existing pipeline.
 	 *
-	 * @param int $pipeline_id Pipeline ID to update
+	 * @param int   $pipeline_id Pipeline ID to update
 	 * @param array $pipeline_data Updated pipeline data
 	 * @return bool True on success, false on failure
 	 */
@@ -140,27 +155,32 @@ class Pipelines {
 		}
 
 		// Build update data array
-		$update_data = [];
-		$format = [];
+		$update_data = array();
+		$format      = array();
 
 		if ( isset( $pipeline_data['pipeline_name'] ) ) {
 			$update_data['pipeline_name'] = sanitize_text_field( $pipeline_data['pipeline_name'] );
-			$format[] = '%s';
+			$format[]                     = '%s';
 		}
 
 		if ( isset( $pipeline_data['pipeline_config'] ) ) {
 			$update_data['pipeline_config'] = wp_json_encode( $pipeline_data['pipeline_config'] );
-			$format[] = '%s';
+			$format[]                       = '%s';
 		}
 
 		// Always update the updated_at timestamp
 		$update_data['updated_at'] = current_time( 'mysql', 1 );
-		$format[] = '%s';
+		$format[]                  = '%s';
 
 		if ( empty( $update_data ) ) {
-			do_action( 'datamachine_log', 'warning', 'No valid data provided for pipeline update', [
-				'pipeline_id' => $pipeline_id
-			] );
+			do_action(
+				'datamachine_log',
+				'warning',
+				'No valid data provided for pipeline update',
+				array(
+					'pipeline_id' => $pipeline_id,
+				)
+			);
 			return false;
 		}
 
@@ -168,23 +188,33 @@ class Pipelines {
 		$updated = $this->wpdb->update(
 			$this->table_name,
 			$update_data,
-			[ 'pipeline_id' => $pipeline_id ],
+			array( 'pipeline_id' => $pipeline_id ),
 			$format,
-			[ '%d' ]
+			array( '%d' )
 		);
 
 		if ( false === $updated ) {
-			do_action( 'datamachine_log', 'error', 'Failed to update pipeline', [
-				'pipeline_id' => $pipeline_id,
-				'db_error' => $this->wpdb->last_error
-			] );
+			do_action(
+				'datamachine_log',
+				'error',
+				'Failed to update pipeline',
+				array(
+					'pipeline_id' => $pipeline_id,
+					'db_error'    => $this->wpdb->last_error,
+				)
+			);
 			return false;
 		}
 
-		do_action( 'datamachine_log', 'debug', 'Successfully updated pipeline', [
-			'pipeline_id' => $pipeline_id,
-			'updated_fields' => array_keys( $update_data )
-		] );
+		do_action(
+			'datamachine_log',
+			'debug',
+			'Successfully updated pipeline',
+			array(
+				'pipeline_id'    => $pipeline_id,
+				'updated_fields' => array_keys( $update_data ),
+			)
+		);
 
 		return true;
 	}
@@ -206,53 +236,73 @@ class Pipelines {
 		}
 
 		// Get pipeline info for logging before deletion
-		$pipeline = $this->get_pipeline( $pipeline_id );
+		$pipeline      = $this->get_pipeline( $pipeline_id );
 		$pipeline_name = $pipeline ? $pipeline['pipeline_name'] : 'Unknown';
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$deleted = $this->wpdb->delete(
 			$this->table_name,
-			[ 'pipeline_id' => $pipeline_id ],
-			[ '%d' ]
+			array( 'pipeline_id' => $pipeline_id ),
+			array( '%d' )
 		);
 
 		if ( false === $deleted ) {
-			do_action( 'datamachine_log', 'error', 'Failed to delete pipeline', [
-				'pipeline_id' => $pipeline_id,
-				'pipeline_name' => $pipeline_name,
-				'db_error' => $this->wpdb->last_error
-			] );
+			do_action(
+				'datamachine_log',
+				'error',
+				'Failed to delete pipeline',
+				array(
+					'pipeline_id'   => $pipeline_id,
+					'pipeline_name' => $pipeline_name,
+					'db_error'      => $this->wpdb->last_error,
+				)
+			);
 			return false;
 		}
 
 		if ( 0 === $deleted ) {
-			do_action( 'datamachine_log', 'warning', 'Pipeline not found for deletion', [
-				'pipeline_id' => $pipeline_id
-			] );
+			do_action(
+				'datamachine_log',
+				'warning',
+				'Pipeline not found for deletion',
+				array(
+					'pipeline_id' => $pipeline_id,
+				)
+			);
 			return false;
 		}
 
-		do_action( 'datamachine_log', 'debug', 'Successfully deleted pipeline', [
-			'pipeline_id' => $pipeline_id,
-			'pipeline_name' => $pipeline_name
-		] );
+		do_action(
+			'datamachine_log',
+			'debug',
+			'Successfully deleted pipeline',
+			array(
+				'pipeline_id'   => $pipeline_id,
+				'pipeline_name' => $pipeline_name,
+			)
+		);
 
 		// Delete pipeline filesystem directory (cascade deletion)
-		$dir_manager = new \DataMachine\Core\FilesRepository\DirectoryManager();
-		$pipeline_dir = $dir_manager->get_pipeline_directory($pipeline_id);
+		$dir_manager  = new \DataMachine\Core\FilesRepository\DirectoryManager();
+		$pipeline_dir = $dir_manager->get_pipeline_directory( $pipeline_id );
 
-		if (is_dir($pipeline_dir)) {
-			if (!function_exists('WP_Filesystem')) {
-				require_once(ABSPATH . 'wp-admin/includes/file.php');
+		if ( is_dir( $pipeline_dir ) ) {
+			if ( ! function_exists( 'WP_Filesystem' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/file.php';
 			}
-			if (WP_Filesystem()) {
+			if ( WP_Filesystem() ) {
 				global $wp_filesystem;
-				$wp_filesystem->rmdir($pipeline_dir, true);
+				$wp_filesystem->rmdir( $pipeline_dir, true );
 
-				do_action('datamachine_log', 'debug', 'Deleted pipeline directory', [
-					'pipeline_id' => $pipeline_id,
-					'directory' => $pipeline_dir
-				]);
+				do_action(
+					'datamachine_log',
+					'debug',
+					'Deleted pipeline directory',
+					array(
+						'pipeline_id' => $pipeline_id,
+						'directory'   => $pipeline_dir,
+					)
+				);
 			}
 		}
 
@@ -266,17 +316,17 @@ class Pipelines {
 	public function get_pipeline_config( int $pipeline_id ): array {
 
 		if ( empty( $pipeline_id ) ) {
-			return [];
+			return array();
 		}
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$pipeline_config_json = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT pipeline_config FROM %i WHERE pipeline_id = %d", $this->table_name, $pipeline_id ) );
+		$pipeline_config_json = $this->wpdb->get_var( $this->wpdb->prepare( 'SELECT pipeline_config FROM %i WHERE pipeline_id = %d', $this->table_name, $pipeline_id ) );
 
 		if ( empty( $pipeline_config_json ) ) {
-			return [];
+			return array();
 		}
 
-		return json_decode( $pipeline_config_json, true ) ?: [];
+		return json_decode( $pipeline_config_json, true ) ?: array();
 	}
 
 
@@ -285,7 +335,7 @@ class Pipelines {
 	 */
 	public function get_pipelines_count(): int {
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$count = $this->wpdb->get_var( $this->wpdb->prepare( "SELECT COUNT(pipeline_id) FROM %i", $this->table_name ) );
+		$count = $this->wpdb->get_var( $this->wpdb->prepare( 'SELECT COUNT(pipeline_id) FROM %i', $this->table_name ) );
 
 		return (int) $count;
 	}
@@ -295,11 +345,11 @@ class Pipelines {
 	 */
 	public function get_pipelines_for_list_table( array $args ): array {
 
-		$orderby = $args['orderby'] ?? 'pipeline_id';
-		$order = strtoupper( $args['order'] ?? 'DESC' );
+		$orderby  = $args['orderby'] ?? 'pipeline_id';
+		$order    = strtoupper( $args['order'] ?? 'DESC' );
 		$per_page = (int) ( $args['per_page'] ?? 20 );
-		$offset = (int) ( $args['offset'] ?? 0 );
-		$is_asc = ( $order === 'ASC' );
+		$offset   = (int) ( $args['offset'] ?? 0 );
+		$is_asc   = ( $order === 'ASC' );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL
 		$results = match ( $orderby ) {
@@ -318,13 +368,13 @@ class Pipelines {
 		};
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL
 
-		foreach ($results as &$pipeline) {
-			if (!empty($pipeline['pipeline_config'])) {
-				$pipeline['pipeline_config'] = json_decode($pipeline['pipeline_config'], true) ?: [];
+		foreach ( $results as &$pipeline ) {
+			if ( ! empty( $pipeline['pipeline_config'] ) ) {
+				$pipeline['pipeline_config'] = json_decode( $pipeline['pipeline_config'], true ) ?: array();
 			}
 		}
 
-		return $results ?: [];
+		return $results ?: array();
 	}
 
 	/**
@@ -336,32 +386,32 @@ class Pipelines {
 	 * @param int $pipeline_id Pipeline ID
 	 * @return array Context files array
 	 */
-	public function get_pipeline_context_files(int $pipeline_id): array {
-		$pipeline_config = $this->get_pipeline_config($pipeline_id);
-		return $pipeline_config['context_files'] ?? ['uploaded_files' => []];
+	public function get_pipeline_context_files( int $pipeline_id ): array {
+		$pipeline_config = $this->get_pipeline_config( $pipeline_id );
+		return $pipeline_config['context_files'] ?? array( 'uploaded_files' => array() );
 	}
 
 	/**
 	 * Update pipeline context files in pipeline config
 	 *
-	 * @param int $pipeline_id Pipeline ID
+	 * @param int   $pipeline_id Pipeline ID
 	 * @param array $files_data Context files data
 	 * @return bool True on success, false on failure
 	 */
-	public function update_pipeline_context_files(int $pipeline_id, array $files_data): bool {
-		if (empty($pipeline_id)) {
+	public function update_pipeline_context_files( int $pipeline_id, array $files_data ): bool {
+		if ( empty( $pipeline_id ) ) {
 			return false;
 		}
 
-		$pipeline_config = $this->get_pipeline_config($pipeline_id);
+		$pipeline_config                  = $this->get_pipeline_config( $pipeline_id );
 		$pipeline_config['context_files'] = $files_data;
 
 		$result = $this->wpdb->update(
 			$this->table_name,
-			['pipeline_config' => wp_json_encode($pipeline_config)],
-			['pipeline_id' => $pipeline_id],
-			['%s'],
-			['%d']
+			array( 'pipeline_config' => wp_json_encode( $pipeline_config ) ),
+			array( 'pipeline_id' => $pipeline_id ),
+			array( '%s' ),
+			array( '%d' )
 		);
 
 		return $result !== false;
@@ -377,40 +427,55 @@ class Pipelines {
 	 */
 	public function get_pipeline_step_config( string $pipeline_step_id ): array {
 		if ( empty( $pipeline_step_id ) ) {
-			return [];
+			return array();
 		}
 
 		// Extract pipeline_id from pipeline-prefixed step ID
 		$parts = apply_filters( 'datamachine_split_pipeline_step_id', null, $pipeline_step_id );
 		if ( ! $parts || empty( $parts['pipeline_id'] ) ) {
-			do_action( 'datamachine_log', 'error', 'Invalid pipeline step ID format', [
-				'pipeline_step_id' => $pipeline_step_id
-			] );
-			return [];
+			do_action(
+				'datamachine_log',
+				'error',
+				'Invalid pipeline step ID format',
+				array(
+					'pipeline_step_id' => $pipeline_step_id,
+				)
+			);
+			return array();
 		}
 
 		$pipeline_id = (int) $parts['pipeline_id'];
-		$pipeline = $this->get_pipeline( $pipeline_id );
+		$pipeline    = $this->get_pipeline( $pipeline_id );
 
 		if ( ! $pipeline ) {
-			do_action( 'datamachine_log', 'error', 'Pipeline not found', [
-				'pipeline_step_id' => $pipeline_step_id,
-				'pipeline_id' => $pipeline_id
-			] );
-			return [];
+			do_action(
+				'datamachine_log',
+				'error',
+				'Pipeline not found',
+				array(
+					'pipeline_step_id' => $pipeline_step_id,
+					'pipeline_id'      => $pipeline_id,
+				)
+			);
+			return array();
 		}
 
-		$pipeline_config = $pipeline['pipeline_config'] ?? [];
+		$pipeline_config = $pipeline['pipeline_config'] ?? array();
 
 		if ( ! isset( $pipeline_config[ $pipeline_step_id ] ) ) {
-			do_action( 'datamachine_log', 'error', 'Pipeline step not found in pipeline config', [
-				'pipeline_step_id' => $pipeline_step_id,
-				'pipeline_id' => $pipeline_id
-			] );
-			return [];
+			do_action(
+				'datamachine_log',
+				'error',
+				'Pipeline step not found in pipeline config',
+				array(
+					'pipeline_step_id' => $pipeline_step_id,
+					'pipeline_id'      => $pipeline_id,
+				)
+			);
+			return array();
 		}
 
-		$step_config = $pipeline_config[ $pipeline_step_id ];
+		$step_config                = $pipeline_config[ $pipeline_step_id ];
 		$step_config['pipeline_id'] = $pipeline_id;
 
 		return $step_config;
@@ -418,11 +483,11 @@ class Pipelines {
 
 	public static function create_table() {
 		global $wpdb;
-		$table_name = $wpdb->prefix . 'datamachine_pipelines';
+		$table_name      = $wpdb->prefix . 'datamachine_pipelines';
 		$charset_collate = $wpdb->get_charset_collate();
 
 		// We need dbDelta()
-		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 		$sql = "CREATE TABLE $table_name (
 			pipeline_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -439,10 +504,14 @@ class Pipelines {
 		dbDelta( $sql );
 
 		// Log table creation
-		do_action( 'datamachine_log', 'debug', 'Created pipelines database table', [
-			'table_name' => $table_name,
-			'action' => 'create_table'
-		] );
+		do_action(
+			'datamachine_log',
+			'debug',
+			'Created pipelines database table',
+			array(
+				'table_name' => $table_name,
+				'action'     => 'create_table',
+			)
+		);
 	}
-
 }

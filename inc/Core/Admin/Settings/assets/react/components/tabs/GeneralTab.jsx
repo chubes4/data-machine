@@ -25,10 +25,12 @@ const GeneralTab = () => {
 	useEffect( () => {
 		if ( data?.settings ) {
 			setFormState( {
-				cleanup_job_data_on_failure: data.settings.cleanup_job_data_on_failure ?? true,
+				cleanup_job_data_on_failure:
+					data.settings.cleanup_job_data_on_failure ?? true,
 				file_retention_days: data.settings.file_retention_days ?? 7,
 				chat_retention_days: data.settings.chat_retention_days ?? 90,
-				chat_ai_titles_enabled: data.settings.chat_ai_titles_enabled ?? true,
+				chat_ai_titles_enabled:
+					data.settings.chat_ai_titles_enabled ?? true,
 				flows_per_page: data.settings.flows_per_page ?? 20,
 				jobs_per_page: data.settings.jobs_per_page ?? 50,
 			} );
@@ -54,7 +56,10 @@ const GeneralTab = () => {
 	};
 
 	const handleChatRetentionChange = ( days ) => {
-		const value = Math.max( 1, Math.min( 365, parseInt( days, 10 ) || 90 ) );
+		const value = Math.max(
+			1,
+			Math.min( 365, parseInt( days, 10 ) || 90 )
+		);
 		setFormState( ( prev ) => ( {
 			...prev,
 			chat_retention_days: value,
@@ -71,7 +76,10 @@ const GeneralTab = () => {
 	};
 
 	const handleFlowsPerPageChange = ( count ) => {
-		const value = Math.max( 5, Math.min( 100, parseInt( count, 10 ) || 20 ) );
+		const value = Math.max(
+			5,
+			Math.min( 100, parseInt( count, 10 ) || 20 )
+		);
 		setFormState( ( prev ) => ( {
 			...prev,
 			flows_per_page: value,
@@ -80,7 +88,10 @@ const GeneralTab = () => {
 	};
 
 	const handleJobsPerPageChange = ( count ) => {
-		const value = Math.max( 5, Math.min( 100, parseInt( count, 10 ) || 50 ) );
+		const value = Math.max(
+			5,
+			Math.min( 100, parseInt( count, 10 ) || 50 )
+		);
 		setFormState( ( prev ) => ( {
 			...prev,
 			jobs_per_page: value,
@@ -130,14 +141,22 @@ const GeneralTab = () => {
 									<input
 										type="checkbox"
 										id="cleanup_job_data_on_failure"
-										checked={ formState.cleanup_job_data_on_failure }
-										onChange={ ( e ) => handleCleanupToggle( e.target.checked ) }
+										checked={
+											formState.cleanup_job_data_on_failure
+										}
+										onChange={ ( e ) =>
+											handleCleanupToggle(
+												e.target.checked
+											)
+										}
 									/>
 									Remove job data files when jobs fail
 								</label>
 								<p className="description">
-									Disable to preserve failed job data files for debugging purposes.
-									Processed items in database are always cleaned up to allow retry.
+									Disable to preserve failed job data files
+									for debugging purposes. Processed items in
+									database are always cleaned up to allow
+									retry.
 								</p>
 							</fieldset>
 						</td>
@@ -151,14 +170,18 @@ const GeneralTab = () => {
 									type="number"
 									id="file_retention_days"
 									value={ formState.file_retention_days }
-									onChange={ ( e ) => handleRetentionChange( e.target.value ) }
+									onChange={ ( e ) =>
+										handleRetentionChange( e.target.value )
+									}
 									min="1"
 									max="90"
 									className="small-text"
 								/>
 								<p className="description">
-									Automatically delete repository files older than this many days.
-									Includes Reddit images, Files handler uploads, and other temporary workflow files.
+									Automatically delete repository files older
+									than this many days. Includes Reddit images,
+									Files handler uploads, and other temporary
+									workflow files.
 								</p>
 							</fieldset>
 						</td>
@@ -172,13 +195,18 @@ const GeneralTab = () => {
 									type="number"
 									id="chat_retention_days"
 									value={ formState.chat_retention_days }
-									onChange={ ( e ) => handleChatRetentionChange( e.target.value ) }
+									onChange={ ( e ) =>
+										handleChatRetentionChange(
+											e.target.value
+										)
+									}
 									min="1"
 									max="365"
 									className="small-text"
 								/>
 								<p className="description">
-									Automatically delete chat sessions with no activity older than this many days.
+									Automatically delete chat sessions with no
+									activity older than this many days.
 								</p>
 							</fieldset>
 						</td>
@@ -192,13 +220,21 @@ const GeneralTab = () => {
 									<input
 										type="checkbox"
 										id="chat_ai_titles_enabled"
-										checked={ formState.chat_ai_titles_enabled }
-										onChange={ ( e ) => handleChatAiTitlesToggle( e.target.checked ) }
+										checked={
+											formState.chat_ai_titles_enabled
+										}
+										onChange={ ( e ) =>
+											handleChatAiTitlesToggle(
+												e.target.checked
+											)
+										}
 									/>
-									Use AI to generate descriptive titles for chat sessions
+									Use AI to generate descriptive titles for
+									chat sessions
 								</label>
 								<p className="description">
-									Disable to reduce API costs. Titles will use the first message instead.
+									Disable to reduce API costs. Titles will use
+									the first message instead.
 								</p>
 							</fieldset>
 						</td>
@@ -212,13 +248,18 @@ const GeneralTab = () => {
 									type="number"
 									id="flows_per_page"
 									value={ formState.flows_per_page }
-									onChange={ ( e ) => handleFlowsPerPageChange( e.target.value ) }
+									onChange={ ( e ) =>
+										handleFlowsPerPageChange(
+											e.target.value
+										)
+									}
 									min="5"
 									max="100"
 									className="small-text"
 								/>
 								<p className="description">
-									Number of flows to display per page in the Pipeline Builder.
+									Number of flows to display per page in the
+									Pipeline Builder.
 								</p>
 							</fieldset>
 						</td>
@@ -232,13 +273,18 @@ const GeneralTab = () => {
 									type="number"
 									id="jobs_per_page"
 									value={ formState.jobs_per_page }
-									onChange={ ( e ) => handleJobsPerPageChange( e.target.value ) }
+									onChange={ ( e ) =>
+										handleJobsPerPageChange(
+											e.target.value
+										)
+									}
 									min="5"
 									max="100"
 									className="small-text"
 								/>
 								<p className="description">
-									Number of jobs to display per page in the Jobs admin.
+									Number of jobs to display per page in the
+									Jobs admin.
 								</p>
 							</fieldset>
 						</td>
@@ -257,15 +303,21 @@ const GeneralTab = () => {
 				</button>
 
 				{ hasChanges && saveStatus !== 'saving' && (
-					<span className="datamachine-unsaved-indicator">Unsaved changes</span>
+					<span className="datamachine-unsaved-indicator">
+						Unsaved changes
+					</span>
 				) }
 
 				{ saveStatus === 'saved' && (
-					<span className="datamachine-saved-indicator">Settings saved!</span>
+					<span className="datamachine-saved-indicator">
+						Settings saved!
+					</span>
 				) }
 
 				{ saveStatus === 'error' && (
-					<span className="datamachine-error-indicator">Error saving settings</span>
+					<span className="datamachine-error-indicator">
+						Error saving settings
+					</span>
 				) }
 			</div>
 		</div>

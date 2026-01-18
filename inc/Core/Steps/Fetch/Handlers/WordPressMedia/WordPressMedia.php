@@ -14,7 +14,7 @@ use DataMachine\Core\Steps\HandlerRegistrationTrait;
 use WP_Query;
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly.
+	exit; // Exit if accessed directly.
 }
 
 class WordPressMedia extends FetchHandler {
@@ -43,225 +43,230 @@ class WordPressMedia extends FetchHandler {
 	 * Engine data (source_url, image_file_path) stored via datamachine_engine_data filter.
 	 */
 	protected function executeFetch( array $config, ExecutionContext $context ): array {
-		return $this->fetch_media_data($config, $context);
+		return $this->fetch_media_data( $config, $context );
 	}
 
-    /**
-     * Fetch media data from local WordPress installation.
-     */
-    private function fetch_media_data(array $config, ExecutionContext $context): array {
-        // Media-specific configuration
-        $file_types = $config['file_types'] ?? ['image'];
-        $include_parent_content = !empty($config['include_parent_content']);
-        
-        // Check for randomize option
-        $randomize = !empty($config['randomize_selection']);
-        $orderby = $randomize ? 'rand' : 'modified';
-        $order = $randomize ? 'ASC' : 'DESC';
+	/**
+	 * Fetch media data from local WordPress installation.
+	 */
+	private function fetch_media_data( array $config, ExecutionContext $context ): array {
+		// Media-specific configuration
+		$file_types             = $config['file_types'] ?? array( 'image' );
+		$include_parent_content = ! empty( $config['include_parent_content'] );
 
-        // Direct config parsing for common fields
-        $timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
-        $search = trim($config['search'] ?? '');
+		// Check for randomize option
+		$randomize = ! empty( $config['randomize_selection'] );
+		$orderby   = $randomize ? 'rand' : 'modified';
+		$order     = $randomize ? 'ASC' : 'DESC';
 
-        // Calculate date query parameters
-        $cutoff_timestamp = apply_filters('datamachine_timeframe_limit', null, $timeframe_limit);
-        $date_query = [];
-        if ($cutoff_timestamp !== null) {
-            $date_query = [
-                [
-                    'after' => gmdate('Y-m-d H:i:s', $cutoff_timestamp),
-                    'inclusive' => true,
-                ]
-            ];
-        }
+		// Direct config parsing for common fields
+		$timeframe_limit = $config['timeframe_limit'] ?? 'all_time';
+		$search          = trim( $config['search'] ?? '' );
 
-        // Build mime type query for file types
-        $mime_types = $this->build_mime_type_query($file_types);
+		// Calculate date query parameters
+		$cutoff_timestamp = apply_filters( 'datamachine_timeframe_limit', null, $timeframe_limit );
+		$date_query       = array();
+		if ( $cutoff_timestamp !== null ) {
+			$date_query = array(
+				array(
+					'after'     => gmdate( 'Y-m-d H:i:s', $cutoff_timestamp ),
+					'inclusive' => true,
+				),
+			);
+		}
 
-        // Build WP_Query arguments for attachments
-        $query_args = [
-            'post_type' => 'attachment',
-            'post_status' => 'inherit', // Attachments use 'inherit' status
-            'post_parent__not_in' => [0], // Only get attached media (exclude orphaned)
-            'posts_per_page' => 10, // Simple limit to find first eligible item
-            'orderby' => $orderby,
-            'order' => $order,
-            'no_found_rows' => true, // Performance optimization
-            'update_post_meta_cache' => false, // Performance optimization
-            'update_post_term_cache' => false, // Performance optimization
-        ];
+		// Build mime type query for file types
+		$mime_types = $this->build_mime_type_query( $file_types );
 
-        // Add mime type filter if specified
-        if (!empty($mime_types)) {
-            $query_args['post_mime_type'] = $mime_types;
-        }
+		// Build WP_Query arguments for attachments
+		$query_args = array(
+			'post_type'              => 'attachment',
+			'post_status'            => 'inherit', // Attachments use 'inherit' status
+			'post_parent__not_in'    => array( 0 ), // Only get attached media (exclude orphaned)
+			'posts_per_page'         => 10, // Simple limit to find first eligible item
+			'orderby'                => $orderby,
+			'order'                  => $order,
+			'no_found_rows'          => true, // Performance optimization
+			'update_post_meta_cache' => false, // Performance optimization
+			'update_post_term_cache' => false, // Performance optimization
+		);
 
-        // Add search term if specified - use server-side for single terms, client-side for comma-separated
-        $use_client_side_search = false;
-        if (!empty($search)) {
-            if (strpos($search, ',') !== false) {
-                // Comma-separated keywords detected - use client-side filtering
-                $use_client_side_search = true;
-            } else {
-                // Single term - use efficient server-side search
-                $query_args['s'] = $search;
-            }
-        }
+		// Add mime type filter if specified
+		if ( ! empty( $mime_types ) ) {
+			$query_args['post_mime_type'] = $mime_types;
+		}
 
-        // Add date query if specified
-        if (!empty($date_query)) {
-            $query_args['date_query'] = $date_query;
-        }
+		// Add search term if specified - use server-side for single terms, client-side for comma-separated
+		$use_client_side_search = false;
+		if ( ! empty( $search ) ) {
+			if ( strpos( $search, ',' ) !== false ) {
+				// Comma-separated keywords detected - use client-side filtering
+				$use_client_side_search = true;
+			} else {
+				// Single term - use efficient server-side search
+				$query_args['s'] = $search;
+			}
+		}
 
-        // Execute query
-        $wp_query = new WP_Query($query_args);
-        $posts = $wp_query->posts;
+		// Add date query if specified
+		if ( ! empty( $date_query ) ) {
+			$query_args['date_query'] = $date_query;
+		}
 
-        if (empty($posts)) {
-            return [];
-        }
+		// Execute query
+		$wp_query = new WP_Query( $query_args );
+		$posts    = $wp_query->posts;
 
-        // Find first unprocessed media item
-        foreach ($posts as $post) {
-            $post_id = $post->ID;
-            if ($context->isItemProcessed((string) $post_id)) {
-                continue;
-            }
+		if ( empty( $posts ) ) {
+			return array();
+		}
 
-            // Apply client-side keyword search filter if needed
-            if ($use_client_side_search && !empty($search)) {
-                $search_text = $post->post_title . ' ' . wp_strip_all_tags($post->post_content . ' ' . $post->post_excerpt);
-                if (!$this->applyKeywordSearch($search_text, $search)) {
-                    continue; // Skip media that don't match search keywords
-                }
-            }
+		// Find first unprocessed media item
+		foreach ( $posts as $post ) {
+			$post_id = $post->ID;
+			if ( $context->isItemProcessed( (string) $post_id ) ) {
+				continue;
+			}
 
-            // Found first eligible item - mark as processed and return
-            $context->markItemProcessed((string) $post_id);
+			// Apply client-side keyword search filter if needed
+			if ( $use_client_side_search && ! empty( $search ) ) {
+				$search_text = $post->post_title . ' ' . wp_strip_all_tags( $post->post_content . ' ' . $post->post_excerpt );
+				if ( ! $this->applyKeywordSearch( $search_text, $search ) ) {
+					continue; // Skip media that don't match search keywords
+				}
+			}
 
-            // Extract media data using universal pattern (identical to all other handlers)
-            $post_id = $post->ID;
-            $title = $post->post_title ?: 'N/A';
-            $caption = $post->post_excerpt ?: '';
-            $description = $post->post_content ?: '';
-            $alt_text = get_post_meta($post_id, '_wp_attachment_image_alt', true) ?: '';
-            $file_type = get_post_mime_type($post_id) ?: 'unknown';
-            $file_path = get_attached_file($post_id);
-            $file_size = $file_path && file_exists($file_path) ? filesize($file_path) : 0;
-            $site_name = get_bloginfo('name') ?: 'Local WordPress';
+			// Found first eligible item - mark as processed and return
+			$context->markItemProcessed( (string) $post_id );
 
-            // Handle parent post content if enabled
-            $content_data = [];
-            $parent_post = null;
-            if ($include_parent_content && $post->post_parent > 0) {
-                $parent_post = get_post($post->post_parent);
-                if ($parent_post && $parent_post->post_status === 'publish') {
-                    $content_data = [
-                        'title' => $parent_post->post_title ?: 'Untitled',
-                        'content' => $parent_post->post_content ?: ''
-                    ];
-                }
-            }
+			// Extract media data using universal pattern (identical to all other handlers)
+			$post_id     = $post->ID;
+			$title       = $post->post_title ?: 'N/A';
+			$caption     = $post->post_excerpt ?: '';
+			$description = $post->post_content ?: '';
+			$alt_text    = get_post_meta( $post_id, '_wp_attachment_image_alt', true ) ?: '';
+			$file_type   = get_post_mime_type( $post_id ) ?: 'unknown';
+			$file_path   = get_attached_file( $post_id );
+			$file_size   = $file_path && file_exists( $file_path ) ? filesize( $file_path ) : 0;
+			$site_name   = get_bloginfo( 'name' ) ?: 'Local WordPress';
 
-            // Create file info for AI processing (contains actual media data)
-            $file_info = [
-                'file_path' => $file_path,
-                'file_name' => basename($file_path),
-                'title' => $title,
-                'alt_text' => $alt_text,
-                'caption' => $caption,
-                'description' => $description,
-                'file_type' => $file_type,
-                'mime_type' => $file_type,
-                'file_size' => $file_size,
-                'file_size_formatted' => $file_size > 0 ? size_format($file_size) : null
-            ];
+			// Handle parent post content if enabled
+			$content_data = array();
+			$parent_post  = null;
+			if ( $include_parent_content && $post->post_parent > 0 ) {
+				$parent_post = get_post( $post->post_parent );
+				if ( $parent_post && $parent_post->post_status === 'publish' ) {
+					$content_data = array(
+						'title'   => $parent_post->post_title ?: 'Untitled',
+						'content' => $parent_post->post_content ?: '',
+					);
+				}
+			}
 
-            // Create metadata (no URLs, clean for AI)
-            $metadata = [
-                'source_type' => 'wordpress_media',
-                'item_identifier_to_log' => $post_id,
-                'original_id' => $post_id,
-                'parent_post_id' => $post->post_parent,
-                'original_title' => $title,
-                'original_date_gmt' => $post->post_date_gmt,
-                'mime_type' => $file_type,
-                'file_size' => $file_size,
-                'site_name' => $site_name
-            ];
+			// Create file info for AI processing (contains actual media data)
+			$file_info = array(
+				'file_path'           => $file_path,
+				'file_name'           => basename( $file_path ),
+				'title'               => $title,
+				'alt_text'            => $alt_text,
+				'caption'             => $caption,
+				'description'         => $description,
+				'file_type'           => $file_type,
+				'mime_type'           => $file_type,
+				'file_size'           => $file_size,
+				'file_size_formatted' => $file_size > 0 ? size_format( $file_size ) : null,
+			);
 
-            // Prepare raw data for DataPacket creation
-            $raw_data = [
-                'title' => $content_data['title'] ?? '',
-                'content' => $content_data['content'] ?? '',
-                'metadata' => $metadata,
-                'file_info' => $file_info
-            ];
+			// Create metadata (no URLs, clean for AI)
+			$metadata = array(
+				'source_type'            => 'wordpress_media',
+				'item_identifier_to_log' => $post_id,
+				'original_id'            => $post_id,
+				'parent_post_id'         => $post->post_parent,
+				'original_title'         => $title,
+				'original_date_gmt'      => $post->post_date_gmt,
+				'mime_type'              => $file_type,
+				'file_size'              => $file_size,
+				'site_name'              => $site_name,
+			);
 
-            // Store URLs in engine_data via centralized filter
-            $source_url = '';
-            if ($include_parent_content && $post->post_parent > 0) {
-                $source_url = get_permalink($post->post_parent) ?: '';
-            }
-            $image_file_path = '';
-            if ($file_info) {
-                $image_file_path = $file_info['file_path'];
-            }
+			// Prepare raw data for DataPacket creation
+			$raw_data = array(
+				'title'     => $content_data['title'] ?? '',
+				'content'   => $content_data['content'] ?? '',
+				'metadata'  => $metadata,
+				'file_info' => $file_info,
+			);
 
-            $context->storeEngineData([
-                'source_url' => $source_url,
-                'image_file_path' => $image_file_path
-            ]);
+			// Store URLs in engine_data via centralized filter
+			$source_url = '';
+			if ( $include_parent_content && $post->post_parent > 0 ) {
+				$source_url = get_permalink( $post->post_parent ) ?: '';
+			}
+			$image_file_path = '';
+			if ( $file_info ) {
+				$image_file_path = $file_info['file_path'];
+			}
 
-            return $raw_data;
-        }
+			$context->storeEngineData(
+				array(
+					'source_url'      => $source_url,
+					'image_file_path' => $image_file_path,
+				)
+			);
 
-        // No eligible items found
-        return [];
-    }
+			return $raw_data;
+		}
 
-
-    /**
-     * Build mime type query array from file type selections.
-     *
-     * @param array $file_types Selected file types.
-     * @return array Mime type patterns.
-     */
-    private function build_mime_type_query(array $file_types): array {
-        $mime_patterns = [];
-        
-        foreach ($file_types as $file_type) {
-            switch ($file_type) {
-                case 'image':
-                    $mime_patterns[] = 'image/*';
-                    break;
-                case 'video':
-                    $mime_patterns[] = 'video/*';
-                    break;
-                case 'audio':
-                    $mime_patterns[] = 'audio/*';
-                    break;
-                case 'document':
-                    $mime_patterns = array_merge($mime_patterns, [
-                        'application/pdf',
-                        'application/msword',
-                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                        'text/plain'
-                    ]);
-                    break;
-            }
-        }
-        
-        return $mime_patterns;
-    }
+		// No eligible items found
+		return array();
+	}
 
 
-    /**
-     * Get the user-friendly label for this handler.
-     *
-     * @return string Handler label.
-     */
-    public static function get_label(): string {
-        return __('WordPress Media', 'data-machine');
-    }
+	/**
+	 * Build mime type query array from file type selections.
+	 *
+	 * @param array $file_types Selected file types.
+	 * @return array Mime type patterns.
+	 */
+	private function build_mime_type_query( array $file_types ): array {
+		$mime_patterns = array();
+
+		foreach ( $file_types as $file_type ) {
+			switch ( $file_type ) {
+				case 'image':
+					$mime_patterns[] = 'image/*';
+					break;
+				case 'video':
+					$mime_patterns[] = 'video/*';
+					break;
+				case 'audio':
+					$mime_patterns[] = 'audio/*';
+					break;
+				case 'document':
+					$mime_patterns = array_merge(
+						$mime_patterns,
+						array(
+							'application/pdf',
+							'application/msword',
+							'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+							'text/plain',
+						)
+					);
+					break;
+			}
+		}
+
+		return $mime_patterns;
+	}
+
+
+	/**
+	 * Get the user-friendly label for this handler.
+	 *
+	 * @return string Handler label.
+	 */
+	public static function get_label(): string {
+		return __( 'WordPress Media', 'data-machine' );
+	}
 }

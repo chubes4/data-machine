@@ -12,60 +12,60 @@
 
 namespace DataMachine\Services;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 class CacheManager {
 
-    /**
-     * Clear all service caches.
-     *
-     * Call when major changes occur that could affect multiple cached systems.
-     */
-    public static function clearAll(): void {
-        self::clearStepTypeCaches();
-        self::clearHandlerCaches();
-        self::clearToolCaches();
-    }
+	/**
+	 * Clear all service caches.
+	 *
+	 * Call when major changes occur that could affect multiple cached systems.
+	 */
+	public static function clearAll(): void {
+		self::clearStepTypeCaches();
+		self::clearHandlerCaches();
+		self::clearToolCaches();
+	}
 
-    /**
-     * Clear handler-related caches.
-     *
-     * Call when handlers are dynamically registered.
-     */
-    public static function clearHandlerCaches(): void {
-        HandlerService::clearCache();
-        AuthProviderService::clearCache();
+	/**
+	 * Clear handler-related caches.
+	 *
+	 * Call when handlers are dynamically registered.
+	 */
+	public static function clearHandlerCaches(): void {
+		HandlerService::clearCache();
+		AuthProviderService::clearCache();
 
-        if (class_exists('\DataMachine\Api\Chat\Tools\HandlerDocumentation')) {
-            \DataMachine\Api\Chat\Tools\HandlerDocumentation::clearCache();
-        }
+		if ( class_exists( '\DataMachine\Api\Chat\Tools\HandlerDocumentation' ) ) {
+			\DataMachine\Api\Chat\Tools\HandlerDocumentation::clearCache();
+		}
 
-        self::clearToolCaches();
-    }
+		self::clearToolCaches();
+	}
 
-    /**
-     * Clear step type caches.
-     *
-     * Call when step types are dynamically registered.
-     */
-    public static function clearStepTypeCaches(): void {
-        StepTypeService::clearCache();
+	/**
+	 * Clear step type caches.
+	 *
+	 * Call when step types are dynamically registered.
+	 */
+	public static function clearStepTypeCaches(): void {
+		StepTypeService::clearCache();
 
-        if (class_exists('\DataMachine\Api\Chat\Tools\HandlerDocumentation')) {
-            \DataMachine\Api\Chat\Tools\HandlerDocumentation::clearCache();
-        }
+		if ( class_exists( '\DataMachine\Api\Chat\Tools\HandlerDocumentation' ) ) {
+			\DataMachine\Api\Chat\Tools\HandlerDocumentation::clearCache();
+		}
 
-        self::clearToolCaches();
-    }
+		self::clearToolCaches();
+	}
 
-    /**
-     * Clear tool definition caches.
-     *
-     * Call when tool definitions need to be rebuilt.
-     */
-    public static function clearToolCaches(): void {
-        if (class_exists('\DataMachine\Engine\AI\Tools\ToolManager')) {
-            \DataMachine\Engine\AI\Tools\ToolManager::clearCache();
-        }
-    }
+	/**
+	 * Clear tool definition caches.
+	 *
+	 * Call when tool definitions need to be rebuilt.
+	 */
+	public static function clearToolCaches(): void {
+		if ( class_exists( '\DataMachine\Engine\AI\Tools\ToolManager' ) ) {
+			\DataMachine\Engine\AI\Tools\ToolManager::clearCache();
+		}
+	}
 }

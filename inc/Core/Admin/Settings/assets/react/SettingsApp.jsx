@@ -23,7 +23,9 @@ const SettingsApp = () => {
 	const [ activeTab, setActiveTab ] = useState( () => {
 		// Restore from localStorage or default to first tab
 		const stored = localStorage.getItem( STORAGE_KEY );
-		return stored && TABS.some( ( t ) => t.id === stored ) ? stored : 'general';
+		return stored && TABS.some( ( t ) => t.id === stored )
+			? stored
+			: 'general';
 	} );
 
 	// Persist active tab to localStorage
@@ -53,7 +55,9 @@ const SettingsApp = () => {
 					<button
 						key={ tab.id }
 						type="button"
-						className={ `nav-tab ${ activeTab === tab.id ? 'nav-tab-active' : '' }` }
+						className={ `nav-tab ${
+							activeTab === tab.id ? 'nav-tab-active' : ''
+						}` }
 						onClick={ () => setActiveTab( tab.id ) }
 					>
 						{ tab.label }

@@ -6,7 +6,10 @@
  */
 
 import { useState } from '@wordpress/element';
-import { useHandlerDefaults, useUpdateHandlerDefaults } from '../../queries/handlerDefaults';
+import {
+	useHandlerDefaults,
+	useUpdateHandlerDefaults,
+} from '../../queries/handlerDefaults';
 import StepTypeAccordion from '../StepTypeAccordion';
 
 const HandlerDefaultsTab = () => {
@@ -52,22 +55,25 @@ const HandlerDefaultsTab = () => {
 	return (
 		<div className="datamachine-handler-defaults-tab">
 			<p className="description">
-				Configure site-wide default values for handlers. These defaults apply when creating new flows
-				and fields are not explicitly set. Existing flows are not affected.
+				Configure site-wide default values for handlers. These defaults
+				apply when creating new flows and fields are not explicitly set.
+				Existing flows are not affected.
 			</p>
 
 			<div className="datamachine-step-types-list">
-				{ Object.entries( data ).map( ( [ stepTypeSlug, stepTypeData ] ) => (
-					<StepTypeAccordion
-						key={ stepTypeSlug }
-						stepTypeSlug={ stepTypeSlug }
-						stepTypeData={ stepTypeData }
-						expandedHandler={ expandedHandler }
-						setExpandedHandler={ setExpandedHandler }
-						onSave={ handleSave }
-						savingHandler={ savingHandler }
-					/>
-				) ) }
+				{ Object.entries( data ).map(
+					( [ stepTypeSlug, stepTypeData ] ) => (
+						<StepTypeAccordion
+							key={ stepTypeSlug }
+							stepTypeSlug={ stepTypeSlug }
+							stepTypeData={ stepTypeData }
+							expandedHandler={ expandedHandler }
+							setExpandedHandler={ setExpandedHandler }
+							onSave={ handleSave }
+							savingHandler={ savingHandler }
+						/>
+					)
+				) }
 			</div>
 		</div>
 	);

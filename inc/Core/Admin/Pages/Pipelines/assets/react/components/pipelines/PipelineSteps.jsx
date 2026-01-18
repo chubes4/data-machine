@@ -109,13 +109,11 @@ export default function PipelineSteps( {
 					onDragStart={ () => setDraggedIndex( index ) }
 					onDragOver={ ( e ) => e.preventDefault() }
 					onDrop={ () => handleDrop( index ) }
-					className={
-						`datamachine-step-card-draggable ${
-							draggedIndex === index
-								? 'datamachine-step-dragging'
-								: ''
-						}`
-					}
+					className={ `datamachine-step-card-draggable ${
+						draggedIndex === index
+							? 'datamachine-step-dragging'
+							: ''
+					}` }
 				>
 					<PipelineStepCard
 						step={ step }

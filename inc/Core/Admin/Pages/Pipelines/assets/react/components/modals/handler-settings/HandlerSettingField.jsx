@@ -97,10 +97,11 @@ export default function HandlerSettingField( {
 					<SelectControl
 						label={ label }
 						value={ resolvedValue }
-						options={ ( fieldConfig.options || [] ).map( ( option ) =>
-							option.value === 'separator'
-								? { ...option, disabled: true }
-								: option
+						options={ ( fieldConfig.options || [] ).map(
+							( option ) =>
+								option.value === 'separator'
+									? { ...option, disabled: true }
+									: option
 						) }
 						onChange={ handleChange }
 						help={ help }

@@ -2,9 +2,39 @@
 
 Data Machine — WordPress plugin for automating content workflows with AI. Visual pipeline builder, chat agent, REST API, and extensibility via handlers and tools.
 
-Version: 0.10.2
+Version: 0.11.4
 
 This file provides a concise, present-tense technical reference for contributors and automated agents. For user-focused docs see datamachine/docs/.
+
+Build system
+
+- **Homeboy** is used for all build operations (versioning, packaging, deployment)
+- Build command: `composer test` runs PHPUnit tests (stops on failure via `set -e` in homeboy build script)
+- Lint command: `composer lint` runs PHP CodeSniffer with WordPress coding standards
+- Auto-fix: `composer lint-fix` runs PHPCBF to auto-fix most linting issues
+- Composer scripts: `test`, `lint`, and `lint-fix` defined in composer.json for homeboy integration
+- PHP CodeSniffer configuration: `.phpcs.xml.dist` defines WordPress standards and PHP 8.2+ compatibility
+
+Testing
+
+- PHPUnit tests located in `tests/Unit/` directory
+- Bootstrap: `tests/bootstrap.php` loads WordPress test environment
+- Ability registration tests cover all abilities API primitives:
+  - `FlowAbilitiesTest.php` - Tests `datamachine/list-flows` ability
+  - `LogAbilitiesTest.php` - Tests `datamachine/write-to-log` and `datamachine/clear-logs` abilities
+  - `PostQueryAbilitiesTest.php` - Tests `datamachine/query-posts-by-handler`, `datamachine/query-posts-by-flow`, and `datamachine/query-posts-by-pipeline` abilities
+- Run tests locally: `composer test` (requires WordPress test environment via `bin/install-wp-tests.sh`)
+
+Abilities API
+
+- WordPress 6.9 Abilities API provides standardized capability discovery and execution
+- Abilities registered in `inc/Abilities/`:
+  - `FlowAbilities` - Registers `datamachine/list-flows` ability with category `datamachine`
+  - `LogAbilities` - Registers `datamachine/write-to-log` and `datamachine/clear-logs` abilities
+  - `PostQueryAbilities` - Registers three query abilities for debugging Data Machine-created posts
+- Category registration: `datamachine` category registered via `wp_register_ability_category()` on `wp_abilities_api_categories_init` hook
+- Ability execution: Each ability implements `execute_callback` with `permission_callback` (checks `manage_options` or WP_CLI)
+- Tests verify ability registration, schema validation, permission checks, and execution logic
 
 Engine & execution
 

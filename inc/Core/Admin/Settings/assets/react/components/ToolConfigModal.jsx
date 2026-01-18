@@ -79,7 +79,13 @@ const ToolConfigModal = ( { toolId, isOpen, onRequestClose } ) => {
 			) }
 
 			{ ( isLoading || isFetching ) && (
-				<div style={ { display: 'flex', gap: '8px', alignItems: 'center' } }>
+				<div
+					style={ {
+						display: 'flex',
+						gap: '8px',
+						alignItems: 'center',
+					} }
+				>
 					<Spinner />
 					<span>Loading tool configuration…</span>
 				</div>
@@ -96,26 +102,40 @@ const ToolConfigModal = ( { toolId, isOpen, onRequestClose } ) => {
 					{ Object.keys( fields ).length === 0 ? (
 						<p>This tool has no configurable fields.</p>
 					) : (
-						Object.entries( fields ).map( ( [ fieldKey, field ] ) => {
-							const isSecret =
-								field?.type === 'password' || field?.type === 'secret';
+						Object.entries( fields ).map(
+							( [ fieldKey, field ] ) => {
+								const isSecret =
+									field?.type === 'password' ||
+									field?.type === 'secret';
 
-							return (
-								<div key={ fieldKey } style={ { marginBottom: '16px' } }>
-									<TextControl
-										label={ field?.label || fieldKey }
-										help={ field?.description || '' }
-										placeholder={ field?.placeholder || '' }
-										type={ isSecret ? 'password' : 'text' }
-										required={ Boolean( field?.required ) }
-										value={ formValues?.[ fieldKey ] || '' }
-										onChange={ ( value ) =>
-											handleChange( fieldKey, value )
-										}
-									/>
-								</div>
-							);
-						} )
+								return (
+									<div
+										key={ fieldKey }
+										style={ { marginBottom: '16px' } }
+									>
+										<TextControl
+											label={ field?.label || fieldKey }
+											help={ field?.description || '' }
+											placeholder={
+												field?.placeholder || ''
+											}
+											type={
+												isSecret ? 'password' : 'text'
+											}
+											required={ Boolean(
+												field?.required
+											) }
+											value={
+												formValues?.[ fieldKey ] || ''
+											}
+											onChange={ ( value ) =>
+												handleChange( fieldKey, value )
+											}
+										/>
+									</div>
+								);
+							}
+						)
 					) }
 
 					<div
@@ -133,7 +153,9 @@ const ToolConfigModal = ( { toolId, isOpen, onRequestClose } ) => {
 							onClick={ handleSave }
 							disabled={ saveMutation.isPending || ! toolId }
 						>
-							{ saveMutation.isPending ? 'Saving…' : 'Save Configuration' }
+							{ saveMutation.isPending
+								? 'Saving…'
+								: 'Save Configuration' }
 						</Button>
 					</div>
 				</div>

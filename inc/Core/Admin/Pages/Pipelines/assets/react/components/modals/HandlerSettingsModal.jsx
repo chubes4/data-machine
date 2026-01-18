@@ -50,7 +50,8 @@ export default function HandlerSettingsModal( {
 	handlerDetails,
 } ) {
 	// Presentational: Receive handler details as props
-	const isLoadingSettings = handlerDetails === undefined || handlerDetails === null;
+	const isLoadingSettings =
+		handlerDetails === undefined || handlerDetails === null;
 	const handlerDetailsError = null;
 	const updateHandlerMutation = useUpdateFlowHandler();
 
@@ -61,23 +62,27 @@ export default function HandlerSettingsModal( {
 	// This ref stores a key combining handler + settings identity to detect actual changes
 	const enrichmentCompleteRef = useRef( null );
 
-	const handlerModel = useHandlerModel(handlerSlug);
+	const handlerModel = useHandlerModel( handlerSlug );
 
-	const formState = useFormState({
+	const formState = useFormState( {
 		initialData: currentSettings || {},
-		onSubmit: async (data) => {
-			const settingsToSend = handlerModel ? handlerModel.sanitizeForAPI(data, settingsFields) : data;
+		onSubmit: async ( data ) => {
+			const settingsToSend = handlerModel
+				? handlerModel.sanitizeForAPI( data, settingsFields )
+				: data;
 
-			const response = await updateHandlerMutation.mutateAsync({
+			const response = await updateHandlerMutation.mutateAsync( {
 				flowStepId,
 				handlerSlug,
 				settings: settingsToSend,
 				pipelineId,
 				stepType,
-			});
+			} );
 
 			if ( ! response || ! response.success ) {
-				const message = response?.message || __( 'Failed to update handler settings', 'datamachine' );
+				const message =
+					response?.message ||
+					__( 'Failed to update handler settings', 'datamachine' );
 				throw new Error( message );
 			}
 
@@ -85,8 +90,8 @@ export default function HandlerSettingsModal( {
 				onSuccess();
 			}
 			onClose();
-		}
-	});
+		},
+	} );
 
 	// Update settings fields when handler details load
 	useEffect( () => {
@@ -94,8 +99,6 @@ export default function HandlerSettingsModal( {
 			setSettingsFields( handlerDetails.settings );
 		}
 	}, [ handlerDetails ] );
-
-
 
 	/**
 	 * Initialize form when modal opens.
@@ -138,7 +141,10 @@ export default function HandlerSettingsModal( {
 			setIsEnrichingSettings( false );
 
 			if ( handlerModel ) {
-				const normalized = handlerModel.normalizeForForm( settings, handlerDetails?.settings || {} );
+				const normalized = handlerModel.normalizeForForm(
+					settings,
+					handlerDetails?.settings || {}
+				);
 				formState.reset( normalized );
 			} else {
 				formState.reset( settings );
@@ -175,21 +181,26 @@ export default function HandlerSettingsModal( {
 				formState.updateData( enrichedData );
 			}
 		} catch ( error ) {
-			console.error( 'Handler settings field change enrichment failed:', error );
+			console.error(
+				'Handler settings field change enrichment failed:',
+				error
+			);
 		}
 	};
 
-
-
-		return (
-			<Modal
-				title={ handlerInfo.label ?
-					sprintf( __( 'Configure %s Settings', 'datamachine' ), handlerInfo.label ) :
-					__( 'Configure Handler Settings', 'datamachine' )
-				}
-				onRequestClose={ onClose }
-				className="datamachine-handler-settings-modal"
-			>
+	return (
+		<Modal
+			title={
+				handlerInfo.label
+					? sprintf(
+							__( 'Configure %s Settings', 'datamachine' ),
+							handlerInfo.label
+					  )
+					: __( 'Configure Handler Settings', 'datamachine' )
+			}
+			onRequestClose={ onClose }
+			className="datamachine-handler-settings-modal"
+		>
 			<div className="datamachine-modal-content">
 				{ formState.error && (
 					<div className="datamachine-modal-error notice notice-error">
@@ -212,20 +223,47 @@ export default function HandlerSettingsModal( {
 						</Button>
 					</div>
 
-				{ handlerInfo.requires_auth && (
-					<div className="datamachine-modal-handler-display">
-						{ handlerInfo.is_authenticated ? (
-							<div className="datamachine-auth-status datamachine-auth-status--connected">
-								<span className="dashicons dashicons-yes-alt"></span>
-								<span>
-									{ handlerInfo.account_details?.username 
-										? sprintf( __( 'Connected as %s', 'datamachine' ), handlerInfo.account_details.username )
-										: __( 'Account Connected', 'datamachine' )
-									}
-								</span>
+					{ handlerInfo.requires_auth && (
+						<div className="datamachine-modal-handler-display">
+							{ handlerInfo.is_authenticated ? (
+								<div className="datamachine-auth-status datamachine-auth-status--connected">
+									<span className="dashicons dashicons-yes-alt"></span>
+									<span>
+										{ handlerInfo.account_details?.username
+											? sprintf(
+													__(
+														'Connected as %s',
+														'datamachine'
+													),
+													handlerInfo.account_details
+														.username
+											  )
+											: __(
+													'Account Connected',
+													'datamachine'
+											  ) }
+									</span>
+									<Button
+										variant="link"
+										size="small"
+										onClick={ () => {
+											if ( onOAuthConnect ) {
+												onOAuthConnect(
+													handlerSlug,
+													handlerInfo
+												);
+											}
+										} }
+									>
+										{ __(
+											'Manage Connection',
+											'datamachine'
+										) }
+									</Button>
+								</div>
+							) : (
 								<Button
-									variant="link"
-									size="small"
+									variant="secondary"
 									onClick={ () => {
 										if ( onOAuthConnect ) {
 											onOAuthConnect(
@@ -235,26 +273,11 @@ export default function HandlerSettingsModal( {
 										}
 									} }
 								>
-									{ __( 'Manage Connection', 'datamachine' ) }
+									{ __( 'Connect Account', 'datamachine' ) }
 								</Button>
-							</div>
-						) : (
-							<Button
-								variant="secondary"
-								onClick={ () => {
-									if ( onOAuthConnect ) {
-										onOAuthConnect(
-											handlerSlug,
-											handlerInfo
-										);
-									}
-								} }
-							>
-								{ __( 'Connect Account', 'datamachine' ) }
-							</Button>
-						) }
-					</div>
-				) }
+							) }
+						</div>
+					) }
 				</div>
 
 				{ /* Loading state while fetching settings schema or enriching */ }
@@ -307,12 +330,17 @@ export default function HandlerSettingsModal( {
 												fieldKey={ key }
 												fieldConfig={ config }
 												value={
-													formState.data?.[ key ] !== undefined
+													formState.data?.[ key ] !==
+													undefined
 														? formState.data[ key ]
-														: config.default ?? config.current_value ?? ''
+														: config.default ??
+														  config.current_value ??
+														  ''
 												}
 												onChange={ handleSettingChange }
-												onBatchChange={ formState.updateData }
+												onBatchChange={
+													formState.updateData
+												}
 												handlerSlug={ handlerSlug }
 											/>
 										)

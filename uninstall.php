@@ -11,9 +11,9 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 // Delete authentication data (unified datamachine_oauth system)
-$datamachine_auth_providers = ['twitter', 'facebook', 'threads', 'googlesheets', 'reddit', 'bluesky', 'wordpress_publish', 'wordpress_posts'];
-foreach ($datamachine_auth_providers as $datamachine_provider) {
-    delete_option("{$datamachine_provider}_auth_data");
+$datamachine_auth_providers = array( 'twitter', 'facebook', 'threads', 'googlesheets', 'reddit', 'bluesky', 'wordpress_publish', 'wordpress_posts' );
+foreach ( $datamachine_auth_providers as $datamachine_provider ) {
+	delete_option( "{$datamachine_provider}_auth_data" );
 }
 
 // Note: AI HTTP Client library shared API keys preserved for other plugins using the library
@@ -40,21 +40,21 @@ wp_cache_flush();
 // Check for proper capabilities (should be admin-only in uninstall context)
 if ( current_user_can( 'delete_plugins' ) || defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
-    // Drop tables in reverse dependency order
-    $datamachine_tables_to_drop = [
-        $wpdb->prefix . 'datamachine_processed_items',
-        $wpdb->prefix . 'datamachine_jobs',
-        $wpdb->prefix . 'datamachine_flows',
-        $wpdb->prefix . 'datamachine_pipelines'
-    ];
+	// Drop tables in reverse dependency order
+	$datamachine_tables_to_drop = array(
+		$wpdb->prefix . 'datamachine_processed_items',
+		$wpdb->prefix . 'datamachine_jobs',
+		$wpdb->prefix . 'datamachine_flows',
+		$wpdb->prefix . 'datamachine_pipelines',
+	);
 
-    foreach ( $datamachine_tables_to_drop as $datamachine_table_name ) {
+	foreach ( $datamachine_tables_to_drop as $datamachine_table_name ) {
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-        $wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $datamachine_table_name ) );
-    }
+		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $datamachine_table_name ) );
+	}
 
-    // Clear all WordPress caches to ensure clean state
-    wp_cache_flush();
+	// Clear all WordPress caches to ensure clean state
+	wp_cache_flush();
 }
 
 // Delete files repository (uploads/datamachine-files/)

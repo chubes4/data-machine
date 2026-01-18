@@ -50,31 +50,45 @@ export default function PipelinesApp() {
 	}, [ selectedPipelineId ] );
 
 	// Data from TanStack Query
-	const { data: pipelines = [], isLoading: pipelinesLoading, error: pipelinesError } = usePipelines();
+	const {
+		data: pipelines = [],
+		isLoading: pipelinesLoading,
+		error: pipelinesError,
+	} = usePipelines();
 	const { data: settingsData } = useSettings();
 	const flowsPerPage = settingsData?.settings?.flows_per_page ?? 20;
 
-	const { data: flowsData, isLoading: flowsLoading, error: flowsError } = useFlows(
-		selectedPipelineId,
-		{ page: flowsPage, perPage: flowsPerPage }
-	);
+	const {
+		data: flowsData,
+		isLoading: flowsLoading,
+		error: flowsError,
+	} = useFlows( selectedPipelineId, {
+		page: flowsPage,
+		perPage: flowsPerPage,
+	} );
 	const flows = useMemo( () => flowsData?.flows ?? [], [ flowsData ] );
 	const flowsTotal = flowsData?.total ?? 0;
 
 	const { data: handlers = {} } = useHandlers();
 
 	// Fetch handler details for settings modal (skip if already seeded in modalData)
-	const handlerSlug = activeModal === MODAL_TYPES.HANDLER_SETTINGS && !modalData?.handlerDetails ? modalData?.handlerSlug : null;
-	const { data: handlerDetails } = useHandlerDetails(handlerSlug);
-	const createPipelineMutation = useCreatePipeline({
-		onSuccess: (pipelineId) => {
-			setSelectedPipelineId(pipelineId);
+	const handlerSlug =
+		activeModal === MODAL_TYPES.HANDLER_SETTINGS &&
+		! modalData?.handlerDetails
+			? modalData?.handlerSlug
+			: null;
+	const { data: handlerDetails } = useHandlerDetails( handlerSlug );
+	const createPipelineMutation = useCreatePipeline( {
+		onSuccess: ( pipelineId ) => {
+			setSelectedPipelineId( pipelineId );
 		},
-	});
+	} );
 	const updateHandlerMutation = useUpdateFlowHandler();
 
 	// Find selected pipeline from pipelines array
-	const selectedPipeline = pipelines?.find((p) => isSameId(p.pipeline_id, selectedPipelineId));
+	const selectedPipeline = pipelines?.find( ( p ) =>
+		isSameId( p.pipeline_id, selectedPipelineId )
+	);
 	const selectedPipelineLoading = false; // No separate loading for selected pipeline
 	const selectedPipelineError = null; // No separate error for selected pipeline
 
@@ -87,42 +101,51 @@ export default function PipelinesApp() {
 		closeModal();
 	}, [ closeModal ] );
 
-	const handleHandlerSelected = useCallback( async ( selectedHandlerSlug ) => {
-		// First persist handler selection to flow step
-		const result = await updateHandlerMutation.mutateAsync({
-			flowStepId: modalData.flowStepId,
-			handlerSlug: selectedHandlerSlug,
-			settings: {},
-			pipelineId: modalData.pipelineId,
-			stepType: modalData.stepType,
-		});
+	const handleHandlerSelected = useCallback(
+		async ( selectedHandlerSlug ) => {
+			// First persist handler selection to flow step
+			const result = await updateHandlerMutation.mutateAsync( {
+				flowStepId: modalData.flowStepId,
+				handlerSlug: selectedHandlerSlug,
+				settings: {},
+				pipelineId: modalData.pipelineId,
+				stepType: modalData.stepType,
+			} );
 
-		if ( ! result || ! result.success ) {
-			const message = result?.message || 'Failed to assign handler to this flow step.';
-			throw new Error( message );
-		}
+			if ( ! result || ! result.success ) {
+				const message =
+					result?.message ||
+					'Failed to assign handler to this flow step.';
+				throw new Error( message );
+			}
 
-		// On success, open handler settings modal with updated config
-		openModal( MODAL_TYPES.HANDLER_SETTINGS, {
-			...modalData,
-			handlerSlug: selectedHandlerSlug,
-			currentSettings: result?.data?.step_config?.handler_config || {},
-			// Don't seed handlerDetails - let the hook fetch the complete details to ensure we have the settings schema
-			// handlerDetails: result?.data?.handler_settings_display ?? null,
-		});
-	}, [ openModal, modalData, updateHandlerMutation ] );
+			// On success, open handler settings modal with updated config
+			openModal( MODAL_TYPES.HANDLER_SETTINGS, {
+				...modalData,
+				handlerSlug: selectedHandlerSlug,
+				currentSettings:
+					result?.data?.step_config?.handler_config || {},
+				// Don't seed handlerDetails - let the hook fetch the complete details to ensure we have the settings schema
+				// handlerDetails: result?.data?.handler_settings_display ?? null,
+			} );
+		},
+		[ openModal, modalData, updateHandlerMutation ]
+	);
 
 	const handleChangeHandler = useCallback( () => {
 		openModal( MODAL_TYPES.HANDLER_SELECTION, modalData );
 	}, [ openModal, modalData ] );
 
-	const handleOAuthConnect = useCallback( ( handlerSlug, handlerInfo ) => {
-		openModal( MODAL_TYPES.OAUTH, {
-			...modalData,
-			handlerSlug,
-			handlerInfo,
-		} );
-	}, [ openModal, modalData ] );
+	const handleOAuthConnect = useCallback(
+		( handlerSlug, handlerInfo ) => {
+			openModal( MODAL_TYPES.OAUTH, {
+				...modalData,
+				handlerSlug,
+				handlerInfo,
+			} );
+		},
+		[ openModal, modalData ]
+	);
 
 	const handleBackToSettings = useCallback( () => {
 		openModal( MODAL_TYPES.HANDLER_SETTINGS, modalData );
@@ -141,7 +164,9 @@ export default function PipelinesApp() {
 			setSelectedPipelineId( pipelines[ 0 ].pipeline_id );
 		} else if ( pipelines.length > 0 && selectedPipelineId ) {
 			// Check if selected pipeline still exists, if not, select next available
-			const selectedPipelineExists = pipelines.some((p) => isSameId(p.pipeline_id, selectedPipelineId));
+			const selectedPipelineExists = pipelines.some( ( p ) =>
+				isSameId( p.pipeline_id, selectedPipelineId )
+			);
 			if ( ! selectedPipelineExists ) {
 				setSelectedPipelineId( pipelines[ 0 ].pipeline_id );
 			}
@@ -149,7 +174,13 @@ export default function PipelinesApp() {
 			// No pipelines available
 			setSelectedPipelineId( null );
 		}
-	}, [ pipelines, selectedPipelineId, setSelectedPipelineId, hasHydrated, pipelinesLoading ] );
+	}, [
+		pipelines,
+		selectedPipelineId,
+		setSelectedPipelineId,
+		hasHydrated,
+		pipelinesLoading,
+	] );
 
 	/**
 	 * Handle creating a new pipeline
@@ -157,7 +188,7 @@ export default function PipelinesApp() {
 	const handleAddNewPipeline = useCallback( async () => {
 		setIsCreatingPipeline( true );
 		try {
-			await createPipelineMutation.mutateAsync('New Pipeline');
+			await createPipelineMutation.mutateAsync( 'New Pipeline' );
 		} catch ( error ) {
 			// eslint-disable-next-line no-console
 			console.error( 'Error creating pipeline:', error );
@@ -189,7 +220,11 @@ export default function PipelinesApp() {
 		if ( pipelinesError || selectedPipelineError || flowsError ) {
 			return (
 				<Notice status="error" isDismissible={ false }>
-					<p>{ pipelinesError || selectedPipelineError || flowsError }</p>
+					<p>
+						{ pipelinesError ||
+							selectedPipelineError ||
+							flowsError }
+					</p>
 				</Notice>
 			);
 		}
@@ -225,7 +260,9 @@ export default function PipelinesApp() {
 			return (
 				<div className="datamachine-pipelines-loading">
 					<Spinner />
-					<p>{ __( 'Loading pipeline details...', 'datamachine' ) }</p>
+					<p>
+						{ __( 'Loading pipeline details...', 'datamachine' ) }
+					</p>
 				</div>
 			);
 		}
@@ -279,7 +316,9 @@ export default function PipelinesApp() {
 					<div className="datamachine-header__right">
 						<Button
 							variant="secondary"
-							onClick={ () => openModal( MODAL_TYPES.IMPORT_EXPORT ) }
+							onClick={ () =>
+								openModal( MODAL_TYPES.IMPORT_EXPORT )
+							}
 						>
 							{ __( 'Import / Export', 'datamachine' ) }
 						</Button>

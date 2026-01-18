@@ -24,8 +24,6 @@ export default function ImportExportModal( {
 	pipelines = [],
 	onSuccess,
 } ) {
-
-
 	/**
 	 * Tab configuration
 	 */

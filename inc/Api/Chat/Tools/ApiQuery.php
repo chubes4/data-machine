@@ -12,11 +12,11 @@
 
 namespace DataMachine\Api\Chat\Tools;
 
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use \DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 /**
  * API Query Tool
@@ -25,7 +25,7 @@ class ApiQuery {
 	use ToolRegistrationTrait;
 
 	public function __construct() {
-		$this->registerTool('chat', 'api_query', [$this, 'getToolDefinition']);
+		$this->registerTool( 'chat', 'api_query', array( $this, 'getToolDefinition' ) );
 	}
 
 	/**
@@ -35,23 +35,23 @@ class ApiQuery {
 	 * @return array Tool definition array
 	 */
 	public function getToolDefinition(): array {
-		return [
-			'class' => self::class,
-			'method' => 'handle_tool_call',
+		return array(
+			'class'       => self::class,
+			'method'      => 'handle_tool_call',
 			'description' => $this->buildApiDocumentation(),
-			'parameters' => [
-				'endpoint' => [
-					'type' => 'string',
-					'required' => false,
-					'description' => 'Single mode: REST API endpoint path (e.g., /datamachine/v1/handlers)'
-				],
-				'requests' => [
-					'type' => 'array',
-					'required' => false,
-					'description' => 'Batch mode: Array of {endpoint, key?}. Results keyed by endpoint or custom key.'
-				]
-			]
-		];
+			'parameters'  => array(
+				'endpoint' => array(
+					'type'        => 'string',
+					'required'    => false,
+					'description' => 'Single mode: REST API endpoint path (e.g., /datamachine/v1/handlers)',
+				),
+				'requests' => array(
+					'type'        => 'array',
+					'required'    => false,
+					'description' => 'Batch mode: Array of {endpoint, key?}. Results keyed by endpoint or custom key.',
+				),
+			),
+		);
 	}
 
 	/**
@@ -82,26 +82,26 @@ KEY ENDPOINTS:
 	 * @param array $tool_def   Tool definition
 	 * @return array Tool execution result
 	 */
-	public function handle_tool_call(array $parameters, array $tool_def = []): array {
+	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
 		// Validate at least one mode is specified
-		$has_endpoint = !empty($parameters['endpoint']);
-		$has_requests = !empty($parameters['requests']) && is_array($parameters['requests']);
+		$has_endpoint = ! empty( $parameters['endpoint'] );
+		$has_requests = ! empty( $parameters['requests'] ) && is_array( $parameters['requests'] );
 
-		if (!$has_endpoint && !$has_requests) {
-			return [
-				'success' => false,
-				'error' => 'Either endpoint (single mode) or requests (batch mode) parameter is required. For external URLs, use web_fetch tool instead - api_query is for internal Data Machine REST API only.',
-				'tool_name' => 'api_query'
-			];
+		if ( ! $has_endpoint && ! $has_requests ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Either endpoint (single mode) or requests (batch mode) parameter is required. For external URLs, use web_fetch tool instead - api_query is for internal Data Machine REST API only.',
+				'tool_name' => 'api_query',
+			);
 		}
 
 		// Batch mode: requests array provided
-		if ($has_requests) {
-			return $this->handleBatchRequest($parameters['requests']);
+		if ( $has_requests ) {
+			return $this->handleBatchRequest( $parameters['requests'] );
 		}
 
 		// Single mode: existing behavior
-		return $this->handleSingleRequest($parameters);
+		return $this->handleSingleRequest( $parameters );
 	}
 
 	/**
@@ -110,20 +110,20 @@ KEY ENDPOINTS:
 	 * @param array $parameters Request parameters
 	 * @return array Result
 	 */
-	private function handleSingleRequest(array $parameters): array {
+	private function handleSingleRequest( array $parameters ): array {
 		$endpoint = $parameters['endpoint'] ?? '';
 
-		if (empty($endpoint)) {
-			return [
-				'success' => false,
-				'error' => 'Endpoint parameter is required',
-				'tool_name' => 'api_query'
-			];
+		if ( empty( $endpoint ) ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Endpoint parameter is required',
+				'tool_name' => 'api_query',
+			);
 		}
 
-		$result = $this->executeSingleRequest($endpoint, 'GET', []);
+		$result = $this->executeSingleRequest( $endpoint, 'GET', array() );
 
-		return array_merge($result, ['tool_name' => 'api_query']);
+		return array_merge( $result, array( 'tool_name' => 'api_query' ) );
 	}
 
 	/**
@@ -132,62 +132,62 @@ KEY ENDPOINTS:
 	 * @param array $requests Array of request definitions
 	 * @return array Batch result with keyed responses
 	 */
-	private function handleBatchRequest(array $requests): array {
-		if (empty($requests)) {
-			return [
-				'success' => false,
-				'error' => 'Requests array cannot be empty',
-				'tool_name' => 'api_query'
-			];
+	private function handleBatchRequest( array $requests ): array {
+		if ( empty( $requests ) ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Requests array cannot be empty',
+				'tool_name' => 'api_query',
+			);
 		}
 
-		$results = [];
-		$errors = [];
-		$used_keys = [];
+		$results   = array();
+		$errors    = array();
+		$used_keys = array();
 
-		foreach ($requests as $index => $req) {
+		foreach ( $requests as $index => $req ) {
 			$endpoint = $req['endpoint'] ?? '';
 
 			// Determine result key
-			$key = $req['key'] ?? $this->extractKeyFromEndpoint($endpoint);
+			$key = $req['key'] ?? $this->extractKeyFromEndpoint( $endpoint );
 
 			// Handle duplicate keys by appending index
-			if (isset($used_keys[$key])) {
+			if ( isset( $used_keys[ $key ] ) ) {
 				$key = $key . '_' . $index;
 			}
-			$used_keys[$key] = true;
+			$used_keys[ $key ] = true;
 
-			if (empty($endpoint)) {
-				$errors[$key] = 'Missing endpoint';
+			if ( empty( $endpoint ) ) {
+				$errors[ $key ] = 'Missing endpoint';
 				continue;
 			}
 
-			$result = $this->executeSingleRequest($endpoint, 'GET', []);
+			$result = $this->executeSingleRequest( $endpoint, 'GET', array() );
 
-			if ($result['success']) {
-				$results[$key] = $result['data'];
+			if ( $result['success'] ) {
+				$results[ $key ] = $result['data'];
 			} else {
-				$errors[$key] = $result['error'];
+				$errors[ $key ] = $result['error'];
 			}
 		}
 
-		$response = [
-			'success' => empty($errors),
-			'data' => $results,
-			'tool_name' => 'api_query',
-			'batch' => true,
-			'request_count' => count($requests),
-			'success_count' => count($results),
-			'error_count' => count($errors)
-		];
+		$response = array(
+			'success'       => empty( $errors ),
+			'data'          => $results,
+			'tool_name'     => 'api_query',
+			'batch'         => true,
+			'request_count' => count( $requests ),
+			'success_count' => count( $results ),
+			'error_count'   => count( $errors ),
+		);
 
-		if (!empty($errors)) {
+		if ( ! empty( $errors ) ) {
 			$response['errors'] = $errors;
-			$response['error'] = count($errors) === 1
-				? reset($errors)
-				: 'Multiple requests failed: ' . implode(', ', array_keys($errors));
+			$response['error']  = count( $errors ) === 1
+				? reset( $errors )
+				: 'Multiple requests failed: ' . implode( ', ', array_keys( $errors ) );
 			// Partial success if some requests succeeded
-			if (!empty($results)) {
+			if ( ! empty( $results ) ) {
 				$response['success'] = true;
 				$response['partial'] = true;
 			}
@@ -204,44 +204,44 @@ KEY ENDPOINTS:
 	 * @param array  $data     Unused, kept for signature compatibility
 	 * @return array Result with success, data/error, status
 	 */
-	private function executeSingleRequest(string $endpoint, string $method = 'GET', array $data = []): array {
-		$parsed = wp_parse_url($endpoint);
-		$path = $parsed['path'] ?? $endpoint;
+	private function executeSingleRequest( string $endpoint, string $method = 'GET', array $data = array() ): array {
+		$parsed       = wp_parse_url( $endpoint );
+		$path         = $parsed['path'] ?? $endpoint;
 		$query_string = $parsed['query'] ?? '';
 
-		$request = new \WP_REST_Request('GET', $path);
+		$request = new \WP_REST_Request( 'GET', $path );
 
-		if (!empty($query_string)) {
-			parse_str($query_string, $query_params);
-			$request->set_query_params($query_params);
+		if ( ! empty( $query_string ) ) {
+			parse_str( $query_string, $query_params );
+			$request->set_query_params( $query_params );
 		}
 
-		$response = rest_do_request($request);
+		$response = rest_do_request( $request );
 
-		if (is_wp_error($response)) {
-			return [
+		if ( is_wp_error( $response ) ) {
+			return array(
 				'success' => false,
-				'error' => $response->get_error_message()
-			];
+				'error'   => $response->get_error_message(),
+			);
 		}
 
-		$data = $response->get_data();
+		$data   = $response->get_data();
 		$status = $response->get_status();
 
-		if ($status >= 400) {
+		if ( $status >= 400 ) {
 			$error_message = $data['message'] ?? 'Request failed with status ' . $status;
-			return [
+			return array(
 				'success' => false,
-				'error' => $error_message,
-				'status' => $status
-			];
+				'error'   => $error_message,
+				'status'  => $status,
+			);
 		}
 
-		return [
+		return array(
 			'success' => true,
-			'data' => $data,
-			'status' => $status
-		];
+			'data'    => $data,
+			'status'  => $status,
+		);
 	}
 
 	/**
@@ -250,30 +250,30 @@ KEY ENDPOINTS:
 	 * @param string $endpoint Endpoint path
 	 * @return string Generated key
 	 */
-	private function extractKeyFromEndpoint(string $endpoint): string {
+	private function extractKeyFromEndpoint( string $endpoint ): string {
 		// Parse and get path without query string
-		$parsed = wp_parse_url($endpoint);
-		$path = $parsed['path'] ?? $endpoint;
+		$parsed = wp_parse_url( $endpoint );
+		$path   = $parsed['path'] ?? $endpoint;
 
 		// Remove /datamachine/v1/ prefix
-		$path = preg_replace('#^/datamachine/v\d+/#', '', $path);
+		$path = preg_replace( '#^/datamachine/v\d+/#', '', $path );
 
 		// Split into segments
-		$segments = array_filter(explode('/', $path));
+		$segments = array_filter( explode( '/', $path ) );
 
-		if (empty($segments)) {
+		if ( empty( $segments ) ) {
 			return 'result';
 		}
 
 		// Get main resource (first segment)
-		$resource = array_shift($segments);
+		$resource = array_shift( $segments );
 
 		// If there's an ID (numeric second segment), append it
-		if (!empty($segments)) {
-			$next = array_shift($segments);
-			if (is_numeric($next)) {
+		if ( ! empty( $segments ) ) {
+			$next = array_shift( $segments );
+			if ( is_numeric( $next ) ) {
 				$resource .= '_' . $next;
-			} elseif (!empty($next)) {
+			} elseif ( ! empty( $next ) ) {
 				// Sub-resource like /pipelines/5/steps
 				$resource .= '_' . $next;
 			}

@@ -22,7 +22,9 @@ export const useSettings = () => {
 		queryFn: async () => {
 			const response = await client.get( '/settings' );
 			if ( ! response.success ) {
-				throw new Error( response.message || 'Failed to fetch settings' );
+				throw new Error(
+					response.message || 'Failed to fetch settings'
+				);
 			}
 			return response.data;
 		},
@@ -39,7 +41,9 @@ export const useUpdateSettings = () => {
 		mutationFn: async ( updates ) => {
 			const response = await client.patch( '/settings', updates );
 			if ( ! response.success ) {
-				throw new Error( response.message || 'Failed to update settings' );
+				throw new Error(
+					response.message || 'Failed to update settings'
+				);
 			}
 			return response;
 		},

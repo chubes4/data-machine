@@ -43,8 +43,8 @@ export default function PipelineSelector() {
 		setSelectedPipelineId( pipelineId );
 	};
 
-		return (
-			<div className="datamachine-pipeline-selector-wrapper datamachine-spacing--margin-bottom-20">
+	return (
+		<div className="datamachine-pipeline-selector-wrapper datamachine-spacing--margin-bottom-20">
 			<SelectControl
 				label={ __( 'Select Pipeline', 'datamachine' ) }
 				value={ selectedPipelineId || options[ 0 ]?.value || '' }

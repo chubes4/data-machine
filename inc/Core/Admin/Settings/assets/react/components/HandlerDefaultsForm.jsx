@@ -7,7 +7,12 @@
 
 import { useState, useEffect } from '@wordpress/element';
 
-const HandlerDefaultsForm = ( { handlerSlug, handlerData, onSave, isSaving } ) => {
+const HandlerDefaultsForm = ( {
+	handlerSlug,
+	handlerData,
+	onSave,
+	isSaving,
+} ) => {
 	const { defaults, fields, description } = handlerData;
 	const [ formValues, setFormValues ] = useState( {} );
 	const [ isDirty, setIsDirty ] = useState( false );
@@ -16,7 +21,8 @@ const HandlerDefaultsForm = ( { handlerSlug, handlerData, onSave, isSaving } ) =
 	useEffect( () => {
 		const initialValues = {};
 		Object.keys( fields || {} ).forEach( ( fieldKey ) => {
-			initialValues[ fieldKey ] = defaults?.[ fieldKey ] ?? fields[ fieldKey ]?.default ?? '';
+			initialValues[ fieldKey ] =
+				defaults?.[ fieldKey ] ?? fields[ fieldKey ]?.default ?? '';
 		} );
 		setFormValues( initialValues );
 		setIsDirty( false );
@@ -48,7 +54,9 @@ const HandlerDefaultsForm = ( { handlerSlug, handlerData, onSave, isSaving } ) =
 						type="checkbox"
 						id={ fieldId }
 						checked={ !! value }
-						onChange={ ( e ) => handleFieldChange( fieldKey, e.target.checked ) }
+						onChange={ ( e ) =>
+							handleFieldChange( fieldKey, e.target.checked )
+						}
 					/>
 				);
 
@@ -57,15 +65,19 @@ const HandlerDefaultsForm = ( { handlerSlug, handlerData, onSave, isSaving } ) =
 					<select
 						id={ fieldId }
 						value={ value }
-						onChange={ ( e ) => handleFieldChange( fieldKey, e.target.value ) }
+						onChange={ ( e ) =>
+							handleFieldChange( fieldKey, e.target.value )
+						}
 						className="regular-text"
 					>
 						<option value="">— Select —</option>
-						{ Object.entries( fieldConfig.options || {} ).map( ( [ optValue, optLabel ] ) => (
-							<option key={ optValue } value={ optValue }>
-								{ optLabel }
-							</option>
-						) ) }
+						{ Object.entries( fieldConfig.options || {} ).map(
+							( [ optValue, optLabel ] ) => (
+								<option key={ optValue } value={ optValue }>
+									{ optLabel }
+								</option>
+							)
+						) }
 					</select>
 				);
 
@@ -74,7 +86,9 @@ const HandlerDefaultsForm = ( { handlerSlug, handlerData, onSave, isSaving } ) =
 					<textarea
 						id={ fieldId }
 						value={ value }
-						onChange={ ( e ) => handleFieldChange( fieldKey, e.target.value ) }
+						onChange={ ( e ) =>
+							handleFieldChange( fieldKey, e.target.value )
+						}
 						className="large-text"
 						rows={ 4 }
 						placeholder={ fieldConfig.placeholder || '' }
@@ -87,7 +101,9 @@ const HandlerDefaultsForm = ( { handlerSlug, handlerData, onSave, isSaving } ) =
 						type="number"
 						id={ fieldId }
 						value={ value }
-						onChange={ ( e ) => handleFieldChange( fieldKey, e.target.value ) }
+						onChange={ ( e ) =>
+							handleFieldChange( fieldKey, e.target.value )
+						}
 						className="small-text"
 						min={ fieldConfig.min }
 						max={ fieldConfig.max }
@@ -101,7 +117,9 @@ const HandlerDefaultsForm = ( { handlerSlug, handlerData, onSave, isSaving } ) =
 						type="url"
 						id={ fieldId }
 						value={ value }
-						onChange={ ( e ) => handleFieldChange( fieldKey, e.target.value ) }
+						onChange={ ( e ) =>
+							handleFieldChange( fieldKey, e.target.value )
+						}
 						className="regular-text"
 						placeholder={ fieldConfig.placeholder || '' }
 					/>
@@ -113,7 +131,9 @@ const HandlerDefaultsForm = ( { handlerSlug, handlerData, onSave, isSaving } ) =
 						type="text"
 						id={ fieldId }
 						value={ value }
-						onChange={ ( e ) => handleFieldChange( fieldKey, e.target.value ) }
+						onChange={ ( e ) =>
+							handleFieldChange( fieldKey, e.target.value )
+						}
 						className="regular-text"
 						placeholder={ fieldConfig.placeholder || '' }
 					/>
@@ -124,7 +144,9 @@ const HandlerDefaultsForm = ( { handlerSlug, handlerData, onSave, isSaving } ) =
 	if ( ! fields || Object.keys( fields ).length === 0 ) {
 		return (
 			<div className="datamachine-handler-form datamachine-handler-form-empty">
-				<p className="description">This handler has no configurable fields.</p>
+				<p className="description">
+					This handler has no configurable fields.
+				</p>
 			</div>
 		);
 	}
@@ -132,28 +154,41 @@ const HandlerDefaultsForm = ( { handlerSlug, handlerData, onSave, isSaving } ) =
 	return (
 		<div className="datamachine-handler-form">
 			{ description && (
-				<p className="datamachine-handler-description">{ description }</p>
+				<p className="datamachine-handler-description">
+					{ description }
+				</p>
 			) }
 
 			<form onSubmit={ handleSubmit }>
 				<table className="form-table">
 					<tbody>
-						{ Object.entries( fields ).map( ( [ fieldKey, fieldConfig ] ) => (
-							<tr key={ fieldKey }>
-								<th scope="row">
-									<label htmlFor={ `handler-${ handlerSlug }-${ fieldKey }` }>
-										{ fieldConfig.label || fieldKey }
-										{ fieldConfig.required && <span className="required"> *</span> }
-									</label>
-								</th>
-								<td>
-									{ renderField( fieldKey, fieldConfig ) }
-									{ fieldConfig.description && (
-										<p className="description">{ fieldConfig.description }</p>
-									) }
-								</td>
-							</tr>
-						) ) }
+						{ Object.entries( fields ).map(
+							( [ fieldKey, fieldConfig ] ) => (
+								<tr key={ fieldKey }>
+									<th scope="row">
+										<label
+											htmlFor={ `handler-${ handlerSlug }-${ fieldKey }` }
+										>
+											{ fieldConfig.label || fieldKey }
+											{ fieldConfig.required && (
+												<span className="required">
+													{ ' ' }
+													*
+												</span>
+											) }
+										</label>
+									</th>
+									<td>
+										{ renderField( fieldKey, fieldConfig ) }
+										{ fieldConfig.description && (
+											<p className="description">
+												{ fieldConfig.description }
+											</p>
+										) }
+									</td>
+								</tr>
+							)
+						) }
 					</tbody>
 				</table>
 

@@ -8,28 +8,28 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchHandlerDetails, getHandlers } from '../utils/api';
 
 export const useHandlers = () =>
-  useQuery({
-    queryKey: ['handlers'],
-    queryFn: async () => {
-      const result = await getHandlers();
-      return result.success ? result.data : {};
-    },
-    staleTime: 30 * 60 * 1000, // 30 minutes - handlers don't change often
-  });
+	useQuery( {
+		queryKey: [ 'handlers' ],
+		queryFn: async () => {
+			const result = await getHandlers();
+			return result.success ? result.data : {};
+		},
+		staleTime: 30 * 60 * 1000, // 30 minutes - handlers don't change often
+	} );
 
 export const useHandlerModels = () => {
-  // Deprecated: Return mapping slug -> model via HandlerFactory
-  const { data: handlers = {} } = useHandlers();
-  return handlers;
+	// Deprecated: Return mapping slug -> model via HandlerFactory
+	const { data: handlers = {} } = useHandlers();
+	return handlers;
 };
 
-export const useHandlerDetails = (handlerSlug) =>
-  useQuery({
-    queryKey: ['handlers', handlerSlug],
-    queryFn: async () => {
-      const response = await fetchHandlerDetails(handlerSlug);
-      return response.success ? response.data : null;
-    },
-    enabled: !!handlerSlug,
-    staleTime: 30 * 60 * 1000, // 30 minutes
-  });
+export const useHandlerDetails = ( handlerSlug ) =>
+	useQuery( {
+		queryKey: [ 'handlers', handlerSlug ],
+		queryFn: async () => {
+			const response = await fetchHandlerDetails( handlerSlug );
+			return response.success ? response.data : null;
+		},
+		enabled: !! handlerSlug,
+		staleTime: 30 * 60 * 1000, // 30 minutes
+	} );

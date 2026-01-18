@@ -21,7 +21,10 @@ export default function RedirectUrlDisplay( { url } ) {
 	return (
 		<div className="datamachine-redirect-url-display">
 			<p className="datamachine-redirect-url-label">
-				{ __( 'Redirect URL (configure in your app settings):', 'datamachine' ) }
+				{ __(
+					'Redirect URL (configure in your app settings):',
+					'datamachine'
+				) }
 			</p>
 			<code className="datamachine-redirect-url-value">{ url }</code>
 		</div>

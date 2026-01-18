@@ -25,7 +25,10 @@ const formatStatus = ( status ) => {
 	if ( ! status ) {
 		return __( 'Unknown', 'data-machine' );
 	}
-	return status.charAt( 0 ).toUpperCase() + status.slice( 1 ).replace( /_/g, ' ' );
+	return (
+		status.charAt( 0 ).toUpperCase() +
+		status.slice( 1 ).replace( /_/g, ' ' )
+	);
 };
 
 const JobsTable = ( { jobs, isLoading, isError, error } ) => {
@@ -33,7 +36,7 @@ const JobsTable = ( { jobs, isLoading, isError, error } ) => {
 		return (
 			<div className="datamachine-jobs-loading">
 				<Spinner />
-				<span>{ __( 'Loading jobs...', 'data-machine' ) }</span>
+				<span>{ __( 'Loading jobs…', 'data-machine' ) }</span>
 			</div>
 		);
 	}
@@ -41,7 +44,8 @@ const JobsTable = ( { jobs, isLoading, isError, error } ) => {
 	if ( isError ) {
 		return (
 			<div className="datamachine-jobs-error">
-				{ error?.message || __( 'Failed to load jobs.', 'data-machine' ) }
+				{ error?.message ||
+					__( 'Failed to load jobs.', 'data-machine' ) }
 			</div>
 		);
 	}
@@ -50,7 +54,10 @@ const JobsTable = ( { jobs, isLoading, isError, error } ) => {
 		return (
 			<div className="datamachine-jobs-empty-state">
 				<p className="datamachine-jobs-empty-message">
-					{ __( 'No jobs found. Jobs will appear here when Data Machine processes data.', 'data-machine' ) }
+					{ __(
+						'No jobs found. Jobs will appear here when Data Machine processes data.',
+						'data-machine'
+					) }
 				</p>
 			</div>
 		);
@@ -83,12 +90,16 @@ const JobsTable = ( { jobs, isLoading, isError, error } ) => {
 								<strong>{ job.job_id }</strong>
 							</td>
 							<td>
-								{ job.pipeline_name || __( 'Unknown Pipeline', 'data-machine' ) }
+								{ job.pipeline_name ||
+									__( 'Unknown Pipeline', 'data-machine' ) }
 								{ ' → ' }
-								{ job.flow_name || __( 'Unknown Flow', 'data-machine' ) }
+								{ job.flow_name ||
+									__( 'Unknown Flow', 'data-machine' ) }
 							</td>
 							<td>
-								<span className={ getStatusClass( job.status ) }>
+								<span
+									className={ getStatusClass( job.status ) }
+								>
 									{ formatStatus( job.status ) }
 								</span>
 							</td>

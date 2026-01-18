@@ -13,7 +13,7 @@ namespace DataMachine\Api;
 
 use WP_REST_Server;
 
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -30,12 +30,16 @@ class Tools {
 	 * @since 0.1.2
 	 */
 	public static function register_routes() {
-		register_rest_route('datamachine/v1', '/tools', [
-			'methods' => WP_REST_Server::READABLE,
-			'callback' => [self::class, 'handle_get_tools'],
-			'permission_callback' => '__return_true', // Public endpoint
-			'args' => []
-		]);
+		register_rest_route(
+			'datamachine/v1',
+			'/tools',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'handle_get_tools' ),
+				'permission_callback' => '__return_true', // Public endpoint
+				'args'                => array(),
+			)
+		);
 	}
 
 	/**
@@ -49,14 +53,16 @@ class Tools {
 	 */
 	public static function handle_get_tools() {
 		$tool_manager = new \DataMachine\Engine\AI\Tools\ToolManager();
-		$tools = $tool_manager->get_tools_for_api();
+		$tools        = $tool_manager->get_tools_for_api();
 
-		return rest_ensure_response([
-			'success' => true,
-			'data' => $tools
-		]);
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'data'    => $tools,
+			)
+		);
 	}
 }
 
 // Register routes on WordPress REST API initialization
-add_action('rest_api_init', [Tools::class, 'register_routes']);
+add_action( 'rest_api_init', array( Tools::class, 'register_routes' ) );

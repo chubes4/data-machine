@@ -14,7 +14,7 @@ use DataMachine\Core\Admin\DateFormatter;
 use DataMachine\Services\PipelineManager;
 use WP_REST_Server;
 
-if (!defined('WPINC')) {
+if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
@@ -24,158 +24,166 @@ class Pipelines {
 	 * Register REST API routes
 	 */
 	public static function register() {
-		add_action('rest_api_init', [self::class, 'register_routes']);
+		add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
 	}
 
 	/**
 	 * Register pipeline CRUD endpoints
 	 */
 	public static function register_routes() {
-		register_rest_route('datamachine/v1', '/pipelines', [
-			[
-				'methods' => 'GET',
-				'callback' => [self::class, 'handle_get_pipelines'],
-				'permission_callback' => [self::class, 'check_permission'],
-				'args' => [
-					'pipeline_id' => [
-						'required' => false,
-						'type' => 'integer',
-						'description' => __('Pipeline ID to retrieve (omit for all pipelines)', 'data-machine'),
-						'sanitize_callback' => 'absint',
-					],
-					'fields' => [
-						'required' => false,
-						'type' => 'string',
-						'description' => __('Comma-separated list of fields to return', 'data-machine'),
-						'sanitize_callback' => function($param) {
-							return sanitize_text_field($param);
-						}
-					],
-					'format' => [
-						'required' => false,
-						'type' => 'string',
-						'default' => 'json',
-						'enum' => ['json', 'csv'],
-						'description' => __('Response format (json or csv)', 'data-machine'),
-						'sanitize_callback' => 'sanitize_text_field',
-					],
-					'ids' => [
-						'required' => false,
-						'type' => 'string',
-						'description' => __('Comma-separated pipeline IDs for export', 'data-machine'),
-						'sanitize_callback' => 'sanitize_text_field',
-					]
-				]
-			],
-			[
-				'methods' => 'POST',
-				'callback' => [self::class, 'handle_create_pipeline'],
-				'permission_callback' => [self::class, 'check_permission'],
-				'args' => [
-					'pipeline_name' => [
-						'required' => false,
-						'type' => 'string',
-						'default' => 'Pipeline',
-						'description' => __('Pipeline name', 'data-machine'),
-						'sanitize_callback' => function($param) {
-							return sanitize_text_field($param);
-						}
-					],
-					'steps' => [
-						'required' => false,
-						'type' => 'array',
-						'description' => __('Pipeline steps configuration (for complete mode)', 'data-machine'),
-					],
-					'flow_config' => [
-						'required' => false,
-						'type' => 'array',
-						'description' => __('Flow configuration', 'data-machine'),
-					],
-					'batch_import' => [
-						'required' => false,
-						'type' => 'boolean',
-						'default' => false,
-						'description' => __('Enable batch import mode', 'data-machine'),
-						'sanitize_callback' => 'rest_sanitize_boolean',
-					],
-					'format' => [
-						'required' => false,
-						'type' => 'string',
-						'default' => 'json',
-						'enum' => ['json', 'csv'],
-						'description' => __('Import format (json or csv)', 'data-machine'),
-						'sanitize_callback' => 'sanitize_text_field',
-					],
-					'data' => [
-						'required' => false,
-						'type' => 'string',
-						'description' => __('CSV data for batch import', 'data-machine'),
-						'sanitize_callback' => function($param) {
-							return wp_unslash($param);
-						}
-					]
-				]
-			]
-		]);
+		register_rest_route(
+			'datamachine/v1',
+			'/pipelines',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( self::class, 'handle_get_pipelines' ),
+					'permission_callback' => array( self::class, 'check_permission' ),
+					'args'                => array(
+						'pipeline_id' => array(
+							'required'          => false,
+							'type'              => 'integer',
+							'description'       => __( 'Pipeline ID to retrieve (omit for all pipelines)', 'data-machine' ),
+							'sanitize_callback' => 'absint',
+						),
+						'fields'      => array(
+							'required'          => false,
+							'type'              => 'string',
+							'description'       => __( 'Comma-separated list of fields to return', 'data-machine' ),
+							'sanitize_callback' => function ( $param ) {
+								return sanitize_text_field( $param );
+							},
+						),
+						'format'      => array(
+							'required'          => false,
+							'type'              => 'string',
+							'default'           => 'json',
+							'enum'              => array( 'json', 'csv' ),
+							'description'       => __( 'Response format (json or csv)', 'data-machine' ),
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'ids'         => array(
+							'required'          => false,
+							'type'              => 'string',
+							'description'       => __( 'Comma-separated pipeline IDs for export', 'data-machine' ),
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+					),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( self::class, 'handle_create_pipeline' ),
+					'permission_callback' => array( self::class, 'check_permission' ),
+					'args'                => array(
+						'pipeline_name' => array(
+							'required'          => false,
+							'type'              => 'string',
+							'default'           => 'Pipeline',
+							'description'       => __( 'Pipeline name', 'data-machine' ),
+							'sanitize_callback' => function ( $param ) {
+								return sanitize_text_field( $param );
+							},
+						),
+						'steps'         => array(
+							'required'    => false,
+							'type'        => 'array',
+							'description' => __( 'Pipeline steps configuration (for complete mode)', 'data-machine' ),
+						),
+						'flow_config'   => array(
+							'required'    => false,
+							'type'        => 'array',
+							'description' => __( 'Flow configuration', 'data-machine' ),
+						),
+						'batch_import'  => array(
+							'required'          => false,
+							'type'              => 'boolean',
+							'default'           => false,
+							'description'       => __( 'Enable batch import mode', 'data-machine' ),
+							'sanitize_callback' => 'rest_sanitize_boolean',
+						),
+						'format'        => array(
+							'required'          => false,
+							'type'              => 'string',
+							'default'           => 'json',
+							'enum'              => array( 'json', 'csv' ),
+							'description'       => __( 'Import format (json or csv)', 'data-machine' ),
+							'sanitize_callback' => 'sanitize_text_field',
+						),
+						'data'          => array(
+							'required'          => false,
+							'type'              => 'string',
+							'description'       => __( 'CSV data for batch import', 'data-machine' ),
+							'sanitize_callback' => function ( $param ) {
+								return wp_unslash( $param );
+							},
+						),
+					),
+				),
+			)
+		);
 
-		register_rest_route('datamachine/v1', '/pipelines/(?P<pipeline_id>\d+)', [
-			[
-				'methods' => WP_REST_Server::READABLE,
-				'callback' => [self::class, 'handle_get_pipelines'],
-				'permission_callback' => [self::class, 'check_permission'],
-				'args' => [
-					'pipeline_id' => [
-						'required' => true,
-						'type' => 'integer',
-						'sanitize_callback' => 'absint',
-						'description' => __('Pipeline ID to retrieve', 'data-machine'),
-					],
-				]
-			],
-			[
-				'methods' => WP_REST_Server::DELETABLE,
-				'callback' => [self::class, 'handle_delete_pipeline'],
-				'permission_callback' => [self::class, 'check_permission'],
-				'args' => [
-					'pipeline_id' => [
-						'required' => true,
-						'type' => 'integer',
-						'sanitize_callback' => 'absint',
-						'description' => __('Pipeline ID to delete', 'data-machine'),
-					],
-				]
-			],
-			[
-				'methods' => 'PATCH',
-				'callback' => [self::class, 'handle_update_pipeline_title'],
-				'permission_callback' => [self::class, 'check_permission'],
-				'args' => [
-					'pipeline_id' => [
-						'required' => true,
-						'type' => 'integer',
-						'sanitize_callback' => 'absint',
-						'description' => __('Pipeline ID to update', 'data-machine'),
-					],
-					'pipeline_name' => [
-						'required' => true,
-						'type' => 'string',
-						'sanitize_callback' => 'sanitize_text_field',
-						'description' => __('New pipeline title', 'data-machine'),
-					],
-				]
-			]
-		]);
+		register_rest_route(
+			'datamachine/v1',
+			'/pipelines/(?P<pipeline_id>\d+)',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( self::class, 'handle_get_pipelines' ),
+					'permission_callback' => array( self::class, 'check_permission' ),
+					'args'                => array(
+						'pipeline_id' => array(
+							'required'          => true,
+							'type'              => 'integer',
+							'sanitize_callback' => 'absint',
+							'description'       => __( 'Pipeline ID to retrieve', 'data-machine' ),
+						),
+					),
+				),
+				array(
+					'methods'             => WP_REST_Server::DELETABLE,
+					'callback'            => array( self::class, 'handle_delete_pipeline' ),
+					'permission_callback' => array( self::class, 'check_permission' ),
+					'args'                => array(
+						'pipeline_id' => array(
+							'required'          => true,
+							'type'              => 'integer',
+							'sanitize_callback' => 'absint',
+							'description'       => __( 'Pipeline ID to delete', 'data-machine' ),
+						),
+					),
+				),
+				array(
+					'methods'             => 'PATCH',
+					'callback'            => array( self::class, 'handle_update_pipeline_title' ),
+					'permission_callback' => array( self::class, 'check_permission' ),
+					'args'                => array(
+						'pipeline_id'   => array(
+							'required'          => true,
+							'type'              => 'integer',
+							'sanitize_callback' => 'absint',
+							'description'       => __( 'Pipeline ID to update', 'data-machine' ),
+						),
+						'pipeline_name' => array(
+							'required'          => true,
+							'type'              => 'string',
+							'sanitize_callback' => 'sanitize_text_field',
+							'description'       => __( 'New pipeline title', 'data-machine' ),
+						),
+					),
+				),
+			)
+		);
 	}
 
 	/**
 	 * Check if user has permission to access pipelines
 	 */
-	public static function check_permission($request) {
-		if (!current_user_can('manage_options')) {
+	public static function check_permission( $request ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
 			return new \WP_Error(
 				'rest_forbidden',
-				__('You do not have permission to access pipelines.', 'data-machine'),
-				['status' => 403]
+				__( 'You do not have permission to access pipelines.', 'data-machine' ),
+				array( 'status' => 403 )
 			);
 		}
 
@@ -185,171 +193,182 @@ class Pipelines {
 	/**
 	 * Handle pipeline retrieval request
 	 */
-	public static function handle_get_pipelines($request) {
-		$pipeline_id = $request->get_param('pipeline_id');
-		$fields = $request->get_param('fields');
-		$format = $request->get_param('format') ?: 'json';
-		$ids = $request->get_param('ids');
+	public static function handle_get_pipelines( $request ) {
+		$pipeline_id = $request->get_param( 'pipeline_id' );
+		$fields      = $request->get_param( 'fields' );
+		$format      = $request->get_param( 'format' ) ?: 'json';
+		$ids         = $request->get_param( 'ids' );
 
 		// Handle CSV export
-		if ($format === 'csv') {
+		if ( $format === 'csv' ) {
 			// Parse IDs parameter
-			$export_ids = [];
-			if ($ids) {
-				$export_ids = array_map('absint', explode(',', $ids));
-			} elseif ($pipeline_id) {
-				$export_ids = [$pipeline_id];
+			$export_ids = array();
+			if ( $ids ) {
+				$export_ids = array_map( 'absint', explode( ',', $ids ) );
+			} elseif ( $pipeline_id ) {
+				$export_ids = array( $pipeline_id );
 			} else {
 				// Export all pipelines
-				$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
+				$db_pipelines  = new \DataMachine\Core\Database\Pipelines\Pipelines();
 				$all_pipelines = $db_pipelines->get_all_pipelines();
-				$export_ids = array_column($all_pipelines, 'pipeline_id');
+				$export_ids    = array_column( $all_pipelines, 'pipeline_id' );
 			}
 
 			// Get CSV data using existing export logic
 			$import_export = new \DataMachine\Engine\Actions\ImportExport();
-			$csv_content = $import_export->handle_export('pipelines', $export_ids);
+			$csv_content   = $import_export->handle_export( 'pipelines', $export_ids );
 
-			if (!$csv_content) {
+			if ( ! $csv_content ) {
 				return new \WP_Error(
 					'export_failed',
-					__('Failed to generate CSV export.', 'data-machine'),
-					['status' => 500]
+					__( 'Failed to generate CSV export.', 'data-machine' ),
+					array( 'status' => 500 )
 				);
 			}
 
 			// Return CSV with proper headers
-			$response = new \WP_REST_Response($csv_content);
-			$response->set_headers([
-				'Content-Type' => 'text/csv; charset=utf-8',
-				'Content-Disposition' => 'attachment; filename="pipelines-export-' . gmdate('Y-m-d-H-i-s') . '.csv"',
-			]);
+			$response = new \WP_REST_Response( $csv_content );
+			$response->set_headers(
+				array(
+					'Content-Type'        => 'text/csv; charset=utf-8',
+					'Content-Disposition' => 'attachment; filename="pipelines-export-' . gmdate( 'Y-m-d-H-i-s' ) . '.csv"',
+				)
+			);
 
 			return $response;
 		}
 
 		// Parse fields parameter if provided (JSON format)
-		$requested_fields = [];
-		if ($fields) {
-			$requested_fields = array_map('trim', explode(',', $fields));
+		$requested_fields = array();
+		if ( $fields ) {
+			$requested_fields = array_map( 'trim', explode( ',', $fields ) );
 		}
 
 		// Get pipeline data via filter
-		if ($pipeline_id) {
+		if ( $pipeline_id ) {
 			// Single pipeline retrieval
 			$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
-			$pipeline = $db_pipelines->get_pipeline($pipeline_id);
+			$pipeline     = $db_pipelines->get_pipeline( $pipeline_id );
 
-			if (!$pipeline) {
+			if ( ! $pipeline ) {
 				return new \WP_Error(
 					'pipeline_not_found',
-					__('Pipeline not found.', 'data-machine'),
-					['status' => 404]
+					__( 'Pipeline not found.', 'data-machine' ),
+					array( 'status' => 404 )
 				);
 			}
 
 			// Add display fields for timestamps
-			$pipeline = self::add_display_fields($pipeline);
+			$pipeline = self::add_display_fields( $pipeline );
 
 			// Apply field filtering if requested
-			if (!empty($requested_fields)) {
-				$pipeline = array_intersect_key($pipeline, array_flip($requested_fields));
+			if ( ! empty( $requested_fields ) ) {
+				$pipeline = array_intersect_key( $pipeline, array_flip( $requested_fields ) );
 			}
 
 			// Get flows for this pipeline
 			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-			$flows = $db_flows->get_flows_for_pipeline($pipeline_id);
+			$flows    = $db_flows->get_flows_for_pipeline( $pipeline_id );
 
-			return rest_ensure_response([
-				'success' => true,
-				'data' => [
-					'pipeline' => $pipeline,
-					'flows' => $flows
-				]
-			]);
+			return rest_ensure_response(
+				array(
+					'success' => true,
+					'data'    => array(
+						'pipeline' => $pipeline,
+						'flows'    => $flows,
+					),
+				)
+			);
 		} else {
 			// All pipelines retrieval
 			$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
-			$pipelines = $db_pipelines->get_all_pipelines();
+			$pipelines    = $db_pipelines->get_all_pipelines();
 
 			// Add display fields for timestamps
-			$pipelines = array_map([self::class, 'add_display_fields'], $pipelines);
+			$pipelines = array_map( array( self::class, 'add_display_fields' ), $pipelines );
 
 			// Apply field filtering if requested
-			if (!empty($requested_fields)) {
-				$pipelines = array_map(function($pipeline) use ($requested_fields) {
-					return array_intersect_key($pipeline, array_flip($requested_fields));
-				}, $pipelines);
+			if ( ! empty( $requested_fields ) ) {
+				$pipelines = array_map(
+					function ( $pipeline ) use ( $requested_fields ) {
+						return array_intersect_key( $pipeline, array_flip( $requested_fields ) );
+					},
+					$pipelines
+				);
 			}
 
-			return rest_ensure_response([
-				'success' => true,
-				'data' => [
-					'pipelines' => $pipelines,
-					'total' => count($pipelines)
-				]
-			]);
+			return rest_ensure_response(
+				array(
+					'success' => true,
+					'data'    => array(
+						'pipelines' => $pipelines,
+						'total'     => count( $pipelines ),
+					),
+				)
+			);
 		}
 	}
 
 	/**
 	 * Handle pipeline creation request
 	 */
-	public static function handle_create_pipeline($request) {
+	public static function handle_create_pipeline( $request ) {
 		$params = $request->get_json_params();
-		if (empty($params) || !isset($params['pipeline_name'])) {
+		if ( empty( $params ) || ! isset( $params['pipeline_name'] ) ) {
 			return new \WP_Error(
 				'rest_invalid_param',
-				__('Pipeline name is required.', 'data-machine'),
-				['status' => 400]
+				__( 'Pipeline name is required.', 'data-machine' ),
+				array( 'status' => 400 )
 			);
 		}
 
 		$manager = new PipelineManager();
 
-		$is_complete_mode = isset($params['steps']) && is_array($params['steps']) && !empty($params['steps']);
+		$is_complete_mode = isset( $params['steps'] ) && is_array( $params['steps'] ) && ! empty( $params['steps'] );
 
-		if ($is_complete_mode) {
+		if ( $is_complete_mode ) {
 			$result = $manager->createWithSteps(
 				$params['pipeline_name'],
 				$params['steps'],
-				['flow_config' => $params['flow_config'] ?? []]
+				array( 'flow_config' => $params['flow_config'] ?? array() )
 			);
 		} else {
 			$result = $manager->create(
 				$params['pipeline_name'],
-				['flow_config' => $params['flow_config'] ?? []]
+				array( 'flow_config' => $params['flow_config'] ?? array() )
 			);
 		}
 
-		if (!$result) {
+		if ( ! $result ) {
 			return new \WP_Error(
 				'rest_internal_server_error',
-				__('Failed to create pipeline.', 'data-machine'),
-				['status' => 500]
+				__( 'Failed to create pipeline.', 'data-machine' ),
+				array( 'status' => 500 )
 			);
 		}
 
-		return rest_ensure_response([
-			'success' => true,
-			'data' => $result
-		]);
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'data'    => $result,
+			)
+		);
 	}
 
 	/**
 	 * Handle pipeline deletion request
 	 */
-	public static function handle_delete_pipeline($request) {
-		$pipeline_id = (int) $request->get_param('pipeline_id');
+	public static function handle_delete_pipeline( $request ) {
+		$pipeline_id = (int) $request->get_param( 'pipeline_id' );
 
 		$manager = new PipelineManager();
-		$result = $manager->delete($pipeline_id);
+		$result  = $manager->delete( $pipeline_id );
 
-		if (is_wp_error($result)) {
+		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
 
-		return rest_ensure_response(array_merge(['success' => true], $result));
+		return rest_ensure_response( array_merge( array( 'success' => true ), $result ) );
 	}
 
 	/**
@@ -357,39 +376,44 @@ class Pipelines {
 	 *
 	 * PATCH /datamachine/v1/pipelines/{id}
 	 */
-	public static function handle_update_pipeline_title($request) {
-		$pipeline_id = (int) $request->get_param('pipeline_id');
-		$params = $request->get_json_params();
+	public static function handle_update_pipeline_title( $request ) {
+		$pipeline_id = (int) $request->get_param( 'pipeline_id' );
+		$params      = $request->get_json_params();
 
-		if (!$pipeline_id || empty($params['pipeline_name'])) {
+		if ( ! $pipeline_id || empty( $params['pipeline_name'] ) ) {
 			return new \WP_Error(
 				'rest_invalid_param',
-				__('Pipeline ID and name are required.', 'data-machine'),
-				['status' => 400]
+				__( 'Pipeline ID and name are required.', 'data-machine' ),
+				array( 'status' => 400 )
 			);
 		}
 
 		$manager = new PipelineManager();
-		$success = $manager->update($pipeline_id, [
-			'pipeline_name' => $params['pipeline_name']
-		]);
+		$success = $manager->update(
+			$pipeline_id,
+			array(
+				'pipeline_name' => $params['pipeline_name'],
+			)
+		);
 
-		if (!$success) {
+		if ( ! $success ) {
 			return new \WP_Error(
 				'update_failed',
-				__('Failed to save pipeline title', 'data-machine'),
-				['status' => 500]
+				__( 'Failed to save pipeline title', 'data-machine' ),
+				array( 'status' => 500 )
 			);
 		}
 
-		return rest_ensure_response([
-			'success' => true,
-			'data' => [
-				'pipeline_id' => $pipeline_id,
-				'pipeline_name' => sanitize_text_field(wp_unslash($params['pipeline_name']))
-			],
-			'message' => __('Pipeline title saved successfully', 'data-machine')
-		]);
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'data'    => array(
+					'pipeline_id'   => $pipeline_id,
+					'pipeline_name' => sanitize_text_field( wp_unslash( $params['pipeline_name'] ) ),
+				),
+				'message' => __( 'Pipeline title saved successfully', 'data-machine' ),
+			)
+		);
 	}
 
 	/**

@@ -60,8 +60,8 @@ export default function FlowSteps( {
 
 		// Match with pipeline steps
 		return sorted.map( ( flowStep ) => {
-			const pipelineStep = pipelineStepsArray.find(
-				( ps ) => isSameId( ps.pipeline_step_id, flowStep.pipeline_step_id )
+			const pipelineStep = pipelineStepsArray.find( ( ps ) =>
+				isSameId( ps.pipeline_step_id, flowStep.pipeline_step_id )
 			);
 
 			return {

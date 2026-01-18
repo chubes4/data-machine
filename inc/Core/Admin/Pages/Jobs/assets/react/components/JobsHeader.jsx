@@ -14,10 +14,7 @@ const JobsHeader = ( { onOpenModal } ) => {
 				{ __( 'Jobs', 'data-machine' ) }
 			</h1>
 			<div className="datamachine-jobs-header-actions">
-				<Button
-					variant="secondary"
-					onClick={ onOpenModal }
-				>
+				<Button variant="secondary" onClick={ onOpenModal }>
 					{ __( 'Admin', 'data-machine' ) }
 				</Button>
 			</div>

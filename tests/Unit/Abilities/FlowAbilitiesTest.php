@@ -9,7 +9,7 @@
 
 namespace DataMachine\Tests\Unit\Abilities;
 
-use DataMachine\Engine\Abilities\FlowAbilities;
+use DataMachine\Abilities\FlowAbilities;
 use WP_UnitTestCase;
 
 class FlowAbilitiesTest extends WP_UnitTestCase {

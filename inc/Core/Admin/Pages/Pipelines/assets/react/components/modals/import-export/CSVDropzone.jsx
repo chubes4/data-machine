@@ -33,15 +33,19 @@ export default function CSVDropzone( {
 	const processFile = ( file ) => {
 		// Validate file type
 		if ( ! file.name.endsWith( '.csv' ) && file.type !== 'text/csv' ) {
-			dragDrop.setError( __( 'Please select a valid CSV file.', 'datamachine' ) );
+			dragDrop.setError(
+				__( 'Please select a valid CSV file.', 'datamachine' )
+			);
 			return;
 		}
 
 		// Validate file size (dynamic limit)
 		const maxSize = window.dataMachineConfig?.maxUploadSize || 10485760; // fallback to 10MB
 		if ( file.size > maxSize ) {
-			const maxSizeMB = Math.round(maxSize / (1024 * 1024));
-			dragDrop.setError( __( `File size exceeds ${maxSizeMB}MB limit.`, 'datamachine' ) );
+			const maxSizeMB = Math.round( maxSize / ( 1024 * 1024 ) );
+			dragDrop.setError(
+				__( `File size exceeds ${ maxSizeMB }MB limit.`, 'datamachine' )
+			);
 			return;
 		}
 
@@ -103,7 +107,7 @@ export default function CSVDropzone( {
 				onDragEnter={ dragDrop.handleDragEnter }
 				onDragLeave={ dragDrop.handleDragLeave }
 				onDragOver={ dragDrop.handleDragOver }
-				onDrop={ dragDrop.handleDrop.bind(null, handleDrop) }
+				onDrop={ dragDrop.handleDrop.bind( null, handleDrop ) }
 				onClick={ ! disabled ? handleBrowseClick : undefined }
 			>
 				<div className="datamachine-csv-dropzone__icon">📄</div>

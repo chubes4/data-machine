@@ -7,13 +7,18 @@
 import { useState } from '@wordpress/element';
 import { Button, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { useLogMetadata, useClearLogs, useUpdateLogLevel } from '../queries/logs';
 import { useQueryClient } from '@tanstack/react-query';
-import { logsKeys } from '../queries/logs';
+import {
+	useLogMetadata,
+	useClearLogs,
+	useUpdateLogLevel,
+	logsKeys,
+} from '../queries/logs';
 
 const LogsControls = ( { agentType, agentLabel } ) => {
 	const queryClient = useQueryClient();
-	const { data: metadata, isLoading: metadataLoading } = useLogMetadata( agentType );
+	const { data: metadata, isLoading: metadataLoading } =
+		useLogMetadata( agentType );
 	const clearMutation = useClearLogs();
 	const updateLevelMutation = useUpdateLogLevel();
 	const [ isCopied, setIsCopied ] = useState( false );
@@ -23,21 +28,33 @@ const LogsControls = ( { agentType, agentLabel } ) => {
 	const fileSize = metadata?.log_file?.size_formatted || '0 bytes';
 
 	const handleClear = () => {
-		if ( window.confirm(
-			// translators: %s is the agent type label (e.g., "Pipeline" or "Chat")
-			__( `Are you sure you want to clear ${ agentLabel } logs? This action cannot be undone.`, 'data-machine' )
-		) ) {
+		if (
+			window.confirm(
+				// eslint-disable-line no-alert
+				// translators: %s is the agent type label (e.g., "Pipeline" or "Chat")
+				__(
+					`Are you sure you want to clear ${ agentLabel } logs? This action cannot be undone.`,
+					'data-machine'
+				)
+			)
+		) {
 			clearMutation.mutate( agentType );
 		}
 	};
 
 	const handleRefresh = () => {
-		queryClient.invalidateQueries( { queryKey: logsKeys.content( agentType, 'recent', 200 ) } );
-		queryClient.invalidateQueries( { queryKey: logsKeys.metadata( agentType ) } );
+		queryClient.invalidateQueries( {
+			queryKey: logsKeys.content( agentType, 'recent', 200 ),
+		} );
+		queryClient.invalidateQueries( {
+			queryKey: logsKeys.metadata( agentType ),
+		} );
 	};
 
 	const handleCopy = () => {
-		const logViewer = document.querySelector( `.datamachine-log-viewer[data-agent-type="${ agentType }"]` );
+		const logViewer = document.querySelector(
+			`.datamachine-log-viewer[data-agent-type="${ agentType }"]`
+		);
 		if ( logViewer ) {
 			navigator.clipboard.writeText( logViewer.textContent || '' );
 			setIsCopied( true );
@@ -49,10 +66,12 @@ const LogsControls = ( { agentType, agentLabel } ) => {
 		updateLevelMutation.mutate( { agentType, level: newLevel } );
 	};
 
-	const levelOptions = Object.entries( availableLevels ).map( ( [ value, label ] ) => ( {
-		value,
-		label,
-	} ) );
+	const levelOptions = Object.entries( availableLevels ).map(
+		( [ value, label ] ) => ( {
+			value,
+			label,
+		} )
+	);
 
 	return (
 		<div className="datamachine-logs-controls">
@@ -62,7 +81,9 @@ const LogsControls = ( { agentType, agentLabel } ) => {
 					value={ currentLevel }
 					options={ levelOptions }
 					onChange={ handleLevelChange }
-					disabled={ metadataLoading || updateLevelMutation.isPending }
+					disabled={
+						metadataLoading || updateLevelMutation.isPending
+					}
 					__nextHasNoMarginBottom
 				/>
 				<span className="datamachine-logs-file-size">
@@ -70,17 +91,13 @@ const LogsControls = ( { agentType, agentLabel } ) => {
 				</span>
 			</div>
 			<div className="datamachine-logs-controls-right">
-				<Button
-					variant="secondary"
-					onClick={ handleRefresh }
-				>
+				<Button variant="secondary" onClick={ handleRefresh }>
 					{ __( 'Refresh', 'data-machine' ) }
 				</Button>
-				<Button
-					variant="secondary"
-					onClick={ handleCopy }
-				>
-					{ isCopied ? __( 'Copied!', 'data-machine' ) : __( 'Copy', 'data-machine' ) }
+				<Button variant="secondary" onClick={ handleCopy }>
+					{ isCopied
+						? __( 'Copied!', 'data-machine' )
+						: __( 'Copy', 'data-machine' ) }
 				</Button>
 				<Button
 					variant="secondary"
@@ -90,8 +107,7 @@ const LogsControls = ( { agentType, agentLabel } ) => {
 				>
 					{ clearMutation.isPending
 						? __( 'Clearing...', 'data-machine' )
-						: __( 'Clear', 'data-machine' )
-					}
+						: __( 'Clear', 'data-machine' ) }
 				</Button>
 			</div>
 		</div>

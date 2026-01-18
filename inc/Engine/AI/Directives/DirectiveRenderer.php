@@ -9,46 +9,46 @@
 
 namespace DataMachine\Engine\AI\Directives;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 class DirectiveRenderer {
 
-	public static function renderMessages(array $validated_outputs): array {
-		$messages = [];
+	public static function renderMessages( array $validated_outputs ): array {
+		$messages = array();
 
-		foreach ($validated_outputs as $output) {
+		foreach ( $validated_outputs as $output ) {
 			$type = $output['type'] ?? '';
 
-			if ($type === 'system_text') {
-				$messages[] = [
-					'role' => 'system',
+			if ( $type === 'system_text' ) {
+				$messages[] = array(
+					'role'    => 'system',
 					'content' => $output['content'],
-				];
+				);
 				continue;
 			}
 
-			if ($type === 'system_json') {
+			if ( $type === 'system_json' ) {
 				$label = $output['label'];
-				$data = $output['data'];
+				$data  = $output['data'];
 
-				$messages[] = [
-					'role' => 'system',
-					'content' => $label . ":\n\n" . wp_json_encode($data, JSON_PRETTY_PRINT),
-				];
+				$messages[] = array(
+					'role'    => 'system',
+					'content' => $label . ":\n\n" . wp_json_encode( $data, JSON_PRETTY_PRINT ),
+				);
 				continue;
 			}
 
-			if ($type === 'system_file') {
-				$messages[] = [
-					'role' => 'system',
-					'content' => [
-						[
-							'type' => 'file',
+			if ( $type === 'system_file' ) {
+				$messages[] = array(
+					'role'    => 'system',
+					'content' => array(
+						array(
+							'type'      => 'file',
 							'file_path' => $output['file_path'],
 							'mime_type' => $output['mime_type'],
-						],
-					],
-				];
+						),
+					),
+				);
 				continue;
 			}
 		}

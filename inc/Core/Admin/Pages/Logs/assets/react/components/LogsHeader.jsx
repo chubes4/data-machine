@@ -12,7 +12,14 @@ const LogsHeader = () => {
 	const clearAllMutation = useClearAllLogs();
 
 	const handleClearAll = () => {
-		if ( window.confirm( __( 'Are you sure you want to clear ALL logs? This action cannot be undone.', 'data-machine' ) ) ) {
+		if (
+			window.confirm(
+				__(
+					'Are you sure you want to clear ALL logs? This action cannot be undone.',
+					'data-machine'
+				)
+			)
+		) {
 			clearAllMutation.mutate();
 		}
 	};
@@ -31,8 +38,7 @@ const LogsHeader = () => {
 				>
 					{ clearAllMutation.isPending
 						? __( 'Clearing...', 'data-machine' )
-						: __( 'Clear All Logs', 'data-machine' )
-					}
+						: __( 'Clear All Logs', 'data-machine' ) }
 				</Button>
 			</div>
 		</div>

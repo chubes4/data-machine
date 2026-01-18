@@ -19,39 +19,38 @@ namespace DataMachine\Engine\AI\Directives;
 use DataMachine\Core\PluginSettings;
 use DataMachine\Engine\AI\Directives\DirectiveInterface;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 class SiteContextDirective implements DirectiveInterface {
 
-    public static function get_outputs(string $provider_name, array $tools, ?string $step_id = null, array $payload = []): array {
-        if (!self::is_site_context_enabled()) {
-            return [];
-        }
+	public static function get_outputs( string $provider_name, array $tools, ?string $step_id = null, array $payload = array() ): array {
+		if ( ! self::is_site_context_enabled() ) {
+			return array();
+		}
 
-        $context_data = SiteContext::get_context();
-        if (empty($context_data) || !is_array($context_data)) {
-            do_action('datamachine_log', 'warning', 'Site Context Directive: Empty context generated');
-            return [];
-        }
+		$context_data = SiteContext::get_context();
+		if ( empty( $context_data ) || ! is_array( $context_data ) ) {
+			do_action( 'datamachine_log', 'warning', 'Site Context Directive: Empty context generated' );
+			return array();
+		}
 
-        return [
-            [
-                'type' => 'system_json',
-                'label' => 'WORDPRESS SITE CONTEXT',
-                'data' => $context_data,
-            ],
-        ];
-    }
+		return array(
+			array(
+				'type'  => 'system_json',
+				'label' => 'WORDPRESS SITE CONTEXT',
+				'data'  => $context_data,
+			),
+		);
+	}
 
-    /**
-     * Check if site context injection is enabled in plugin settings.
-     *
-     * @return bool True if enabled, false otherwise
-     */
-    public static function is_site_context_enabled(): bool {
-        return PluginSettings::get('site_context_enabled', true);
-    }
-
+	/**
+	 * Check if site context injection is enabled in plugin settings.
+	 *
+	 * @return bool True if enabled, false otherwise
+	 */
+	public static function is_site_context_enabled(): bool {
+		return PluginSettings::get( 'site_context_enabled', true );
+	}
 }
 
 /**
@@ -61,16 +60,19 @@ class SiteContextDirective implements DirectiveInterface {
  * @param string $directive_class The directive class to use for site context
  * @return string The filtered directive class
  */
-$datamachine_site_context_directive = apply_filters('datamachine_site_context_directive', SiteContextDirective::class);
+$datamachine_site_context_directive = apply_filters( 'datamachine_site_context_directive', SiteContextDirective::class );
 
 // Register the filtered directive for global context (applies to all AI agents - allows replacement by multisite plugin)
-if ($datamachine_site_context_directive) {
-    add_filter('datamachine_directives', function($directives) use ($datamachine_site_context_directive) {
-        $directives[] = [
-            'class' => $datamachine_site_context_directive,
-            'priority' => 50,
-            'agent_types' => ['all']
-        ];
-        return $directives;
-    });
+if ( $datamachine_site_context_directive ) {
+	add_filter(
+		'datamachine_directives',
+		function ( $directives ) use ( $datamachine_site_context_directive ) {
+			$directives[] = array(
+				'class'       => $datamachine_site_context_directive,
+				'priority'    => 50,
+				'agent_types' => array( 'all' ),
+			);
+			return $directives;
+		}
+	);
 }

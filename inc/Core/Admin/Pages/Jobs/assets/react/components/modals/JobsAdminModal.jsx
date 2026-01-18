@@ -18,7 +18,10 @@ const JobsAdminModal = ( { onClose } ) => {
 		>
 			<div className="datamachine-jobs-modal-content">
 				<p className="datamachine-modal-description">
-					{ __( 'Administrative tools for managing job processing and testing workflows.', 'data-machine' ) }
+					{ __(
+						'Administrative tools for managing job processing and testing workflows.',
+						'data-machine'
+					) }
 				</p>
 
 				<ClearProcessedForm />

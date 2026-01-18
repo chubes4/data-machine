@@ -24,7 +24,11 @@ export const useJobs = ( { page = 1, perPage = 50, status } = {} ) =>
 	useQuery( {
 		queryKey: jobsKeys.list( { page, perPage, status } ),
 		queryFn: async () => {
-			const response = await jobsApi.fetchJobs( { page, perPage, status } );
+			const response = await jobsApi.fetchJobs( {
+				page,
+				perPage,
+				status,
+			} );
 			if ( ! response.success ) {
 				throw new Error( response.message || 'Failed to fetch jobs' );
 			}
@@ -71,7 +75,9 @@ export const usePipelinesForDropdown = () =>
 		queryFn: async () => {
 			const response = await jobsApi.fetchPipelines();
 			if ( ! response.success ) {
-				throw new Error( response.message || 'Failed to fetch pipelines' );
+				throw new Error(
+					response.message || 'Failed to fetch pipelines'
+				);
 			}
 			return response.data?.pipelines || [];
 		},

@@ -21,22 +21,22 @@ function datamachine_register_root_css_filter() {
 			// Add root.css to EVERY admin page
 			foreach ( $pages as $page_slug => &$page_config ) {
 				if ( ! isset( $page_config['assets'] ) ) {
-					$page_config['assets'] = [];
+					$page_config['assets'] = array();
 				}
 
 				if ( ! isset( $page_config['assets']['css'] ) ) {
-					$page_config['assets']['css'] = [];
+					$page_config['assets']['css'] = array();
 				}
 
 				// Prepend root.css so it loads FIRST
 				$page_config['assets']['css'] = array_merge(
-					[
-						'datamachine-root' => [
+					array(
+						'datamachine-root' => array(
 							'file'  => 'inc/Core/Admin/assets/css/root.css',
-							'deps'  => [],
+							'deps'  => array(),
 							'media' => 'all',
-						],
-					],
+						),
+					),
 					$page_config['assets']['css']
 				);
 			}

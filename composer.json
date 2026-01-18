@@ -1,7 +1,7 @@
 {
-  "name": "chubes/datamachine",
-  "description": "WordPress plugin for automated data collection, AI processing, and multi-platform publishing",
-  "version": "0.10.2",
+	"name": "chubes/datamachine",
+	"description": "WordPress plugin for automated data collection, AI processing, and multi-platform publishing",
+	"version": "0.10.2",
 	"license": "GPL-2.0-or-later",
 	"require": {
 		"php": ">=8.2",
@@ -14,7 +14,10 @@
 		"phpunit/phpunit": "^9.6",
 		"yoast/phpunit-polyfills": "^2.0",
 		"php-stubs/wordpress-stubs": "^6.9",
-		"wp-phpunit/wp-phpunit": "^6.9"
+		"wp-phpunit/wp-phpunit": "^6.9",
+		"wp-coding-standards/wpcs": "^3.1",
+		"phpcsstandards/phpcsutils": "^1.0",
+		"phpcompatibility/phpcompatibility-wp": "^2.1"
 	},
 	"autoload": {
 		"psr-4": {
@@ -30,11 +33,16 @@
 			"DataMachine\\Tests\\": "tests/"
 		}
 	},
+	"scripts": {
+		"test": "phpunit",
+		"lint": "phpcs",
+		"lint-fix": "phpcbf"
+	},
 	"config": {
 		"process-timeout": 0,
-
 		"allow-plugins": {
-			"yoast/phpunit-polyfills": true
+			"yoast/phpunit-polyfills": true,
+			"dealerdirect/phpcodesniffer-composer-installer": true
 		}
 	}
 }

@@ -12,7 +12,7 @@ namespace DataMachine\Core\Admin;
 
 use DataMachine\Core\JobStatus;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 class DateFormatter {
 

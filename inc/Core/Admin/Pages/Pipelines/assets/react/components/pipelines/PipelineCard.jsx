@@ -15,7 +15,6 @@ import PipelineSteps from './PipelineSteps';
 import FlowsSection from '../flows/FlowsSection';
 import { MODAL_TYPES } from '../../utils/constants';
 
-
 /**
  * Pipeline Card Component
  *
@@ -47,23 +46,17 @@ export default function PipelineCard( {
 	/**
 	 * Handle pipeline name change
 	 */
-	const handleNameChange = useCallback(
-		( newName ) => {
-			// Name change already saved by PipelineHeader
-			// Queries will automatically refetch
-		},
-		[]
-	);
+	const handleNameChange = useCallback( ( newName ) => {
+		// Name change already saved by PipelineHeader
+		// Queries will automatically refetch
+	}, [] );
 
 	/**
 	 * Handle pipeline deletion
 	 */
-	const handleDelete = useCallback(
-		( pipelineId ) => {
-			// Deletion already complete - queries will automatically refetch
-		},
-		[]
-	);
+	const handleDelete = useCallback( ( pipelineId ) => {
+		// Deletion already complete - queries will automatically refetch
+	}, [] );
 
 	/**
 	 * Handle step addition
@@ -85,10 +78,10 @@ export default function PipelineCard( {
 	const handleStepRemoved = useCallback(
 		async ( stepId ) => {
 			try {
-				await deleteStepMutation.mutateAsync({
+				await deleteStepMutation.mutateAsync( {
 					pipelineId: pipeline.pipeline_id,
 					stepId,
-				});
+				} );
 			} catch ( error ) {
 				console.error( 'Step deletion error:', error );
 				alert(
@@ -128,39 +121,39 @@ export default function PipelineCard( {
 		} );
 	}, [ pipeline.pipeline_id, openModal ] );
 
-		return (
-			<Card className="datamachine-pipeline-card" size="large">
-				<CardBody>
-					<PipelineHeader
-						pipelineId={ pipeline.pipeline_id }
-						pipelineName={ pipeline.pipeline_name }
-						onNameChange={ handleNameChange }
-						onDelete={ handleDelete }
-						onOpenContextFiles={ handleOpenContextFiles }
-					/>
+	return (
+		<Card className="datamachine-pipeline-card" size="large">
+			<CardBody>
+				<PipelineHeader
+					pipelineId={ pipeline.pipeline_id }
+					pipelineName={ pipeline.pipeline_name }
+					onNameChange={ handleNameChange }
+					onDelete={ handleDelete }
+					onOpenContextFiles={ handleOpenContextFiles }
+				/>
 
-					<CardDivider />
+				<CardDivider />
 
-					<PipelineSteps
-						pipelineId={ pipeline.pipeline_id }
-						pipelineConfig={ pipeline.pipeline_config || {} }
-						onStepAdded={ handleStepAdded }
-						onStepRemoved={ handleStepRemoved }
-						onStepConfigured={ handleStepConfigured }
-					/>
+				<PipelineSteps
+					pipelineId={ pipeline.pipeline_id }
+					pipelineConfig={ pipeline.pipeline_config || {} }
+					onStepAdded={ handleStepAdded }
+					onStepRemoved={ handleStepRemoved }
+					onStepConfigured={ handleStepConfigured }
+				/>
 
-					<CardDivider />
+				<CardDivider />
 
-					<FlowsSection
-						pipelineId={ pipeline.pipeline_id }
-						flows={ flows }
-						pipelineConfig={ pipeline.pipeline_config || {} }
-						total={ flowsTotal }
-						page={ flowsPage }
-						perPage={ flowsPerPage }
-						onPageChange={ onFlowsPageChange }
-					/>
-				</CardBody>
-			</Card>
-		);
+				<FlowsSection
+					pipelineId={ pipeline.pipeline_id }
+					flows={ flows }
+					pipelineConfig={ pipeline.pipeline_config || {} }
+					total={ flowsTotal }
+					page={ flowsPage }
+					perPage={ flowsPerPage }
+					onPageChange={ onFlowsPageChange }
+				/>
+			</CardBody>
+		</Card>
+	);
 }

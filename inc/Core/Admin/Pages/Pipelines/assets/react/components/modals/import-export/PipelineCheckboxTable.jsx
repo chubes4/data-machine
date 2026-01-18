@@ -41,7 +41,9 @@ export default function PipelineCheckboxTable( {
 		if ( selectedIds.length === pipelines.length ) {
 			onSelectionChange( [] );
 		} else {
-			onSelectionChange( pipelines.map( ( p ) => normalizeId( p.pipeline_id ) ) );
+			onSelectionChange(
+				pipelines.map( ( p ) => normalizeId( p.pipeline_id ) )
+			);
 		}
 	};
 
@@ -63,9 +65,7 @@ export default function PipelineCheckboxTable( {
 								__nextHasNoMarginBottom
 							/>
 						</th>
-						<th>
-							{ __( 'Pipeline Name', 'datamachine' ) }
-						</th>
+						<th>{ __( 'Pipeline Name', 'datamachine' ) }</th>
 						<th className="datamachine-table-col--100">
 							{ __( 'Steps', 'datamachine' ) }
 						</th>
@@ -104,7 +104,10 @@ export default function PipelineCheckboxTable( {
 							: 'datamachine-pipeline-table-row';
 
 						return (
-							<tr key={ pipeline.pipeline_id } className={ rowClass }>
+							<tr
+								key={ pipeline.pipeline_id }
+								className={ rowClass }
+							>
 								<td>
 									<CheckboxControl
 										checked={ isSelected }

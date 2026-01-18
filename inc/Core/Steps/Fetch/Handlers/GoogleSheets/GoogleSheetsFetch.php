@@ -14,7 +14,7 @@ use DataMachine\Core\Steps\HandlerRegistrationTrait;
 use DataMachine\Services\AuthProviderService;
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly.
+	exit; // Exit if accessed directly.
 }
 
 class GoogleSheetsFetch extends FetchHandler {
@@ -26,16 +26,16 @@ class GoogleSheetsFetch extends FetchHandler {
 	public function __construct() {
 		parent::__construct( 'googlesheets_fetch' );
 
-        // Self-register with filters
-        self::registerHandler(
-            'googlesheets_fetch',
-            'fetch',
-            self::class,
-            'Google Sheets',
-            'Fetch data from Google Sheets spreadsheets',
-            true,
-            \DataMachine\Core\OAuth\Providers\GoogleSheetsAuth::class,
-            GoogleSheetsFetchSettings::class,
+		// Self-register with filters
+		self::registerHandler(
+			'googlesheets_fetch',
+			'fetch',
+			self::class,
+			'Google Sheets',
+			'Fetch data from Google Sheets spreadsheets',
+			true,
+			\DataMachine\Core\OAuth\Providers\GoogleSheetsAuth::class,
+			GoogleSheetsFetchSettings::class,
 			null,
 			'googlesheets'
 		);
@@ -47,17 +47,22 @@ class GoogleSheetsFetch extends FetchHandler {
 	 * @return object|null Auth provider instance or null if unavailable
 	 */
 	private function get_auth_service() {
-		if ($this->auth_service === null) {
-			$this->auth_service = $this->getAuthProvider('googlesheets');
+		if ( $this->auth_service === null ) {
+			$this->auth_service = $this->getAuthProvider( 'googlesheets' );
 
-			if ($this->auth_service === null) {
+			if ( $this->auth_service === null ) {
 				$auth_provider_service = new AuthProviderService();
-				do_action('datamachine_log', 'error', 'Google Sheets Handler: Authentication service not available', [
-					'agent_type' => 'system',
-					'handler' => 'googlesheets',
-					'missing_service' => 'googlesheets',
-					'available_providers' => array_keys($auth_provider_service->getAll())
-				]);
+				do_action(
+					'datamachine_log',
+					'error',
+					'Google Sheets Handler: Authentication service not available',
+					array(
+						'agent_type'          => 'system',
+						'handler'             => 'googlesheets',
+						'missing_service'     => 'googlesheets',
+						'available_providers' => array_keys( $auth_provider_service->getAll() ),
+					)
+				);
 			}
 		}
 		return $this->auth_service;
@@ -68,335 +73,384 @@ class GoogleSheetsFetch extends FetchHandler {
 	 * No engine data stored (no URLs for spreadsheet data).
 	 */
 	protected function executeFetch( array $config, ExecutionContext $context ): array {
-        // Configuration validation
-        $spreadsheet_id = trim($config['spreadsheet_id'] ?? '');
-        if (empty($spreadsheet_id)) {
-            $context->log('error', 'GoogleSheets: Spreadsheet ID is required.');
-            return [];
-        }
+		// Configuration validation
+		$spreadsheet_id = trim( $config['spreadsheet_id'] ?? '' );
+		if ( empty( $spreadsheet_id ) ) {
+			$context->log( 'error', 'GoogleSheets: Spreadsheet ID is required.' );
+			return array();
+		}
 
-        $worksheet_name = trim($config['worksheet_name'] ?? 'Sheet1');
-        $processing_mode = $config['processing_mode'] ?? 'by_row';
-        $has_header_row = !empty($config['has_header_row']);
+		$worksheet_name  = trim( $config['worksheet_name'] ?? 'Sheet1' );
+		$processing_mode = $config['processing_mode'] ?? 'by_row';
+		$has_header_row  = ! empty( $config['has_header_row'] );
 
-        // Get Google Sheets authentication service
-        $auth_service = $this->get_auth_service();
-        if (!$auth_service) {
-            $context->log('error', 'GoogleSheets: Authentication not configured');
-            return [];
-        }
+		// Get Google Sheets authentication service
+		$auth_service = $this->get_auth_service();
+		if ( ! $auth_service ) {
+			$context->log( 'error', 'GoogleSheets: Authentication not configured' );
+			return array();
+		}
 
-        // Get authenticated access token
-        $access_token = $auth_service->get_service();
-        if (is_wp_error($access_token)) {
-            $context->log('error', 'GoogleSheets: Authentication failed.', [
-                'error' => $access_token->get_error_message()
-            ]);
-            return [];
-        }
+		// Get authenticated access token
+		$access_token = $auth_service->get_service();
+		if ( is_wp_error( $access_token ) ) {
+			$context->log(
+				'error',
+				'GoogleSheets: Authentication failed.',
+				array(
+					'error' => $access_token->get_error_message(),
+				)
+			);
+			return array();
+		}
 
-        // Build Google Sheets API URL - get entire worksheet
-        $range_param = urlencode($worksheet_name);
-        $api_url = "https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheet_id}/values/{$range_param}";
+		// Build Google Sheets API URL - get entire worksheet
+		$range_param = urlencode( $worksheet_name );
+		$api_url     = "https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheet_id}/values/{$range_param}";
 
-        $context->log('debug', 'GoogleSheets: Fetching spreadsheet data.', [
-            'spreadsheet_id' => $spreadsheet_id,
-            'worksheet_name' => $worksheet_name,
-            'processing_mode' => $processing_mode
-        ]);
+		$context->log(
+			'debug',
+			'GoogleSheets: Fetching spreadsheet data.',
+			array(
+				'spreadsheet_id'  => $spreadsheet_id,
+				'worksheet_name'  => $worksheet_name,
+				'processing_mode' => $processing_mode,
+			)
+		);
 
-        $result = $this->httpGet($api_url, [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $access_token,
-                'Accept' => 'application/json',
-            ],
-            'context' => 'Google Sheets API'
-        ]);
+		$result = $this->httpGet(
+			$api_url,
+			array(
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $access_token,
+					'Accept'        => 'application/json',
+				),
+				'context' => 'Google Sheets API',
+			)
+		);
 
-        if (!$result['success']) {
-            $context->log('error', 'GoogleSheets: Failed to fetch data.', [
-                'error' => $result['error'],
-                'spreadsheet_id' => $spreadsheet_id
-            ]);
-            return [];
-        }
+		if ( ! $result['success'] ) {
+			$context->log(
+				'error',
+				'GoogleSheets: Failed to fetch data.',
+				array(
+					'error'          => $result['error'],
+					'spreadsheet_id' => $spreadsheet_id,
+				)
+			);
+			return array();
+		}
 
-        $response_code = $result['status_code'];
-        $response_body = $result['data'];
+		$response_code = $result['status_code'];
+		$response_body = $result['data'];
 
-        if ($response_code !== 200) {
-            $error_data = json_decode($response_body, true);
-            $error_message = $error_data['error']['message'] ?? 'Unknown API error';
+		if ( $response_code !== 200 ) {
+			$error_data    = json_decode( $response_body, true );
+			$error_message = $error_data['error']['message'] ?? 'Unknown API error';
 
-            $context->log('error', 'GoogleSheets: API request failed.', [
-                'status_code' => $response_code,
-                'error_message' => $error_message,
-                'spreadsheet_id' => $spreadsheet_id
-            ]);
-            return [];
-        }
+			$context->log(
+				'error',
+				'GoogleSheets: API request failed.',
+				array(
+					'status_code'    => $response_code,
+					'error_message'  => $error_message,
+					'spreadsheet_id' => $spreadsheet_id,
+				)
+			);
+			return array();
+		}
 
-        $sheet_data = json_decode($response_body, true);
-        if (empty($sheet_data['values'])) {
-            $context->log('debug', 'GoogleSheets: No data found in specified range.');
-            return [];
-        }
+		$sheet_data = json_decode( $response_body, true );
+		if ( empty( $sheet_data['values'] ) ) {
+			$context->log( 'debug', 'GoogleSheets: No data found in specified range.' );
+			return array();
+		}
 
-        $rows = $sheet_data['values'];
-        $context->log('debug', 'GoogleSheets: Retrieved spreadsheet data.', [
-            'total_rows' => count($rows),
-            'processing_mode' => $processing_mode
-        ]);
+		$rows = $sheet_data['values'];
+		$context->log(
+			'debug',
+			'GoogleSheets: Retrieved spreadsheet data.',
+			array(
+				'total_rows'      => count( $rows ),
+				'processing_mode' => $processing_mode,
+			)
+		);
 
-        // Process header row if present
-        $headers = [];
-        $data_start_index = 0;
+		// Process header row if present
+		$headers          = array();
+		$data_start_index = 0;
 
-        if ($has_header_row && !empty($rows)) {
-            $headers = array_map('trim', $rows[0]);
-            $data_start_index = 1;
-            $context->log('debug', 'GoogleSheets: Using header row.', [
-                'headers' => $headers
-            ]);
-        }
+		if ( $has_header_row && ! empty( $rows ) ) {
+			$headers          = array_map( 'trim', $rows[0] );
+			$data_start_index = 1;
+			$context->log(
+				'debug',
+				'GoogleSheets: Using header row.',
+				array(
+					'headers' => $headers,
+				)
+			);
+		}
 
-        // Process based on mode
-        switch ($processing_mode) {
-            case 'full_spreadsheet':
-                return $this->process_full_spreadsheet($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $context);
-            
-            case 'by_column':
-                return $this->process_by_column($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $context);
-            
-            case 'by_row':
-            default:
-                return $this->process_by_row($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $context);
-        }
-    }
+		// Process based on mode
+		switch ( $processing_mode ) {
+			case 'full_spreadsheet':
+				return $this->process_full_spreadsheet( $rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $context );
 
-    /**
-     * Process entire spreadsheet as single data packet.
-     */
-    private function process_full_spreadsheet($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, ExecutionContext $context) {
-        $sheet_identifier = $spreadsheet_id . '_' . $worksheet_name . '_full';
+			case 'by_column':
+				return $this->process_by_column( $rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $context );
 
-        // Check if already processed
-        if ($context->isItemProcessed($sheet_identifier)) {
-            $context->log('debug', 'GoogleSheets: Full spreadsheet already processed.', [
-                'sheet_identifier' => $sheet_identifier
-            ]);
-            return [];
-        }
+			case 'by_row':
+			default:
+				return $this->process_by_row( $rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, $context );
+		}
+	}
 
-        // Mark as processed
-        $context->markItemProcessed($sheet_identifier);
+	/**
+	 * Process entire spreadsheet as single data packet.
+	 */
+	private function process_full_spreadsheet( $rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, ExecutionContext $context ) {
+		$sheet_identifier = $spreadsheet_id . '_' . $worksheet_name . '_full';
 
-        // Build data for all rows
-        $all_data = [];
-        for ($i = $data_start_index; $i < count($rows); $i++) {
-            $row = $rows[$i];
-            if (empty(array_filter($row, 'strlen'))) {
-                continue;
-            }
-            
-            $row_data = [];
-            foreach ($row as $col_index => $cell_value) {
-                $cell_value = trim($cell_value);
-                if (!empty($cell_value)) {
-                    $column_key = $headers[$col_index] ?? 'Column_' . chr(65 + $col_index);
-                    $row_data[$column_key] = $cell_value;
-                }
-            }
-            
-            if (!empty($row_data)) {
-                $all_data[] = $row_data;
-            }
-        }
+		// Check if already processed
+		if ( $context->isItemProcessed( $sheet_identifier ) ) {
+			$context->log(
+				'debug',
+				'GoogleSheets: Full spreadsheet already processed.',
+				array(
+					'sheet_identifier' => $sheet_identifier,
+				)
+			);
+			return array();
+		}
 
-        $metadata = [
-            'source_type' => 'googlesheets_fetch',
-            'processing_mode' => 'full_spreadsheet',
-            'spreadsheet_id' => $spreadsheet_id,
-            'worksheet_name' => $worksheet_name,
-            'headers' => $headers,
-            'total_rows' => count($all_data)
-        ];
+		// Mark as processed
+		$context->markItemProcessed( $sheet_identifier );
 
-        // Prepare raw data for DataPacket creation
-        $raw_data = [
-            'title' => 'Google Sheets Data: ' . $worksheet_name,
-            'content' => json_encode($all_data, JSON_PRETTY_PRINT),
-            'metadata' => $metadata
-        ];
+		// Build data for all rows
+		$all_data = array();
+		for ( $i = $data_start_index; $i < count( $rows ); $i++ ) {
+			$row = $rows[ $i ];
+			if ( empty( array_filter( $row, 'strlen' ) ) ) {
+				continue;
+			}
 
-        // Store empty engine data for downstream handlers
-        $context->storeEngineData([
-            'source_url' => '',
-            'image_url' => ''
-        ]);
+			$row_data = array();
+			foreach ( $row as $col_index => $cell_value ) {
+				$cell_value = trim( $cell_value );
+				if ( ! empty( $cell_value ) ) {
+					$column_key              = $headers[ $col_index ] ?? 'Column_' . chr( 65 + $col_index );
+					$row_data[ $column_key ] = $cell_value;
+				}
+			}
 
-        $context->log('debug', 'GoogleSheets: Processed full spreadsheet.', [
-            'total_rows' => count($all_data)
-        ]);
+			if ( ! empty( $row_data ) ) {
+				$all_data[] = $row_data;
+			}
+		}
 
-        return $raw_data;
-    }
+		$metadata = array(
+			'source_type'     => 'googlesheets_fetch',
+			'processing_mode' => 'full_spreadsheet',
+			'spreadsheet_id'  => $spreadsheet_id,
+			'worksheet_name'  => $worksheet_name,
+			'headers'         => $headers,
+			'total_rows'      => count( $all_data ),
+		);
 
-    /**
-     * Process spreadsheet rows individually with deduplication.
-     */
-    private function process_by_row($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, ExecutionContext $context) {
-        // Find next unprocessed row
-        for ($i = $data_start_index; $i < count($rows); $i++) {
-            $row = $rows[$i];
-            
-            // Skip empty rows
-            if (empty(array_filter($row, 'strlen'))) {
-                continue;
-            }
+		// Prepare raw data for DataPacket creation
+		$raw_data = array(
+			'title'    => 'Google Sheets Data: ' . $worksheet_name,
+			'content'  => json_encode( $all_data, JSON_PRETTY_PRINT ),
+			'metadata' => $metadata,
+		);
 
-            $row_identifier = $spreadsheet_id . '_' . $worksheet_name . '_row_' . ($i + 1);
+		// Store empty engine data for downstream handlers
+		$context->storeEngineData(
+			array(
+				'source_url' => '',
+				'image_url'  => '',
+			)
+		);
 
-            // Check if already processed
-            if ($context->isItemProcessed($row_identifier)) {
-                continue;
-            }
+		$context->log(
+			'debug',
+			'GoogleSheets: Processed full spreadsheet.',
+			array(
+				'total_rows' => count( $all_data ),
+			)
+		);
 
-            // Mark as processed
-            $context->markItemProcessed($row_identifier);
+		return $raw_data;
+	}
 
-            // Build row data
-            $row_data = [];
-            foreach ($row as $col_index => $cell_value) {
-                $cell_value = trim($cell_value);
-                if (!empty($cell_value)) {
-                    $column_key = $headers[$col_index] ?? 'Column_' . chr(65 + $col_index);
-                    $row_data[$column_key] = $cell_value;
-                }
-            }
-            
-            if (empty($row_data)) {
-                continue;
-            }
+	/**
+	 * Process spreadsheet rows individually with deduplication.
+	 */
+	private function process_by_row( $rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, ExecutionContext $context ) {
+		// Find next unprocessed row
+		for ( $i = $data_start_index; $i < count( $rows ); $i++ ) {
+			$row = $rows[ $i ];
 
-            $metadata = [
-                'source_type' => 'googlesheets_fetch',
-                'processing_mode' => 'by_row',
-                'spreadsheet_id' => $spreadsheet_id,
-                'worksheet_name' => $worksheet_name,
-                'row_number' => $i + 1,
-                'headers' => $headers
-            ];
+			// Skip empty rows
+			if ( empty( array_filter( $row, 'strlen' ) ) ) {
+				continue;
+			}
 
-            // Prepare raw data for DataPacket creation
-            $raw_data = [
-                'title' => 'Row ' . ($i + 1) . ' Data',
-                'content' => json_encode($row_data, JSON_PRETTY_PRINT),
-                'metadata' => $metadata
-            ];
+			$row_identifier = $spreadsheet_id . '_' . $worksheet_name . '_row_' . ( $i + 1 );
 
-            // Store empty engine data via centralized filter
-            $context->storeEngineData([
-                'source_url' => '',
-                'image_url' => ''
-            ]);
+			// Check if already processed
+			if ( $context->isItemProcessed( $row_identifier ) ) {
+				continue;
+			}
 
-            $context->log('debug', 'GoogleSheets: Processed row.', [
-                'row_number' => $i + 1
-            ]);
+			// Mark as processed
+			$context->markItemProcessed( $row_identifier );
 
-            return $raw_data;
-        }
+			// Build row data
+			$row_data = array();
+			foreach ( $row as $col_index => $cell_value ) {
+				$cell_value = trim( $cell_value );
+				if ( ! empty( $cell_value ) ) {
+					$column_key              = $headers[ $col_index ] ?? 'Column_' . chr( 65 + $col_index );
+					$row_data[ $column_key ] = $cell_value;
+				}
+			}
 
-        // No unprocessed rows found
-        $context->log('debug', 'GoogleSheets: No unprocessed rows found.');
-        return [];
-    }
+			if ( empty( $row_data ) ) {
+				continue;
+			}
 
-     /**
-      * Process spreadsheet columns individually with deduplication.
-      */
-      private function process_by_column($rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, ExecutionContext $context) {
-          if (empty($rows)) {
-              return [];
-          }
+			$metadata = array(
+				'source_type'     => 'googlesheets_fetch',
+				'processing_mode' => 'by_row',
+				'spreadsheet_id'  => $spreadsheet_id,
+				'worksheet_name'  => $worksheet_name,
+				'row_number'      => $i + 1,
+				'headers'         => $headers,
+			);
 
-        // Determine max columns
-        $max_cols = 0;
-        foreach ($rows as $row) {
-            $max_cols = max($max_cols, count($row));
-        }
+			// Prepare raw data for DataPacket creation
+			$raw_data = array(
+				'title'    => 'Row ' . ( $i + 1 ) . ' Data',
+				'content'  => json_encode( $row_data, JSON_PRETTY_PRINT ),
+				'metadata' => $metadata,
+			);
 
-        // Find next unprocessed column
-        for ($col_index = 0; $col_index < $max_cols; $col_index++) {
-            $column_letter = chr(65 + $col_index);
-            $column_identifier = $spreadsheet_id . '_' . $worksheet_name . '_col_' . $column_letter;
+			// Store empty engine data via centralized filter
+			$context->storeEngineData(
+				array(
+					'source_url' => '',
+					'image_url'  => '',
+				)
+			);
 
-            // Check if already processed
-            if ($context->isItemProcessed($column_identifier)) {
-                continue;
-            }
+			$context->log(
+				'debug',
+				'GoogleSheets: Processed row.',
+				array(
+					'row_number' => $i + 1,
+				)
+			);
 
-            // Build column data
-            $column_data = [];
-            $column_header = $headers[$col_index] ?? 'Column_' . $column_letter;
+			return $raw_data;
+		}
 
-            for ($i = $data_start_index; $i < count($rows); $i++) {
-                $cell_value = trim($rows[$i][$col_index] ?? '');
-                if (!empty($cell_value)) {
-                    $column_data[] = $cell_value;
-                }
-            }
+		// No unprocessed rows found
+		$context->log( 'debug', 'GoogleSheets: No unprocessed rows found.' );
+		return array();
+	}
 
-            if (empty($column_data)) {
-                continue;
-            }
+	/**
+	 * Process spreadsheet columns individually with deduplication.
+	 */
+	private function process_by_column( $rows, $headers, $data_start_index, $spreadsheet_id, $worksheet_name, ExecutionContext $context ) {
+		if ( empty( $rows ) ) {
+			return array();
+		}
 
-            // Mark as processed
-            $context->markItemProcessed($column_identifier);
+		// Determine max columns
+		$max_cols = 0;
+		foreach ( $rows as $row ) {
+			$max_cols = max( $max_cols, count( $row ) );
+		}
 
-            $metadata = [
-                'source_type' => 'googlesheets_fetch',
-                'processing_mode' => 'by_column',
-                'spreadsheet_id' => $spreadsheet_id,
-                'worksheet_name' => $worksheet_name,
-                'column_letter' => $column_letter,
-                'column_header' => $column_header,
-                'headers' => $headers
-            ];
+		// Find next unprocessed column
+		for ( $col_index = 0; $col_index < $max_cols; $col_index++ ) {
+			$column_letter     = chr( 65 + $col_index );
+			$column_identifier = $spreadsheet_id . '_' . $worksheet_name . '_col_' . $column_letter;
 
-            // Prepare raw data for DataPacket creation
-            $raw_data = [
-                'title' => 'Column: ' . $column_header,
-                'content' => json_encode([$column_header => $column_data], JSON_PRETTY_PRINT),
-                'metadata' => $metadata
-            ];
+			// Check if already processed
+			if ( $context->isItemProcessed( $column_identifier ) ) {
+				continue;
+			}
 
-            // Store empty engine data via centralized filter
-            $context->storeEngineData([
-                'source_url' => '',
-                'image_url' => ''
-            ]);
+			// Build column data
+			$column_data   = array();
+			$column_header = $headers[ $col_index ] ?? 'Column_' . $column_letter;
 
-            $context->log('debug', 'GoogleSheets: Processed column.', [
-                'column_letter' => $column_letter,
-                'column_header' => $column_header
-            ]);
+			for ( $i = $data_start_index; $i < count( $rows ); $i++ ) {
+				$cell_value = trim( $rows[ $i ][ $col_index ] ?? '' );
+				if ( ! empty( $cell_value ) ) {
+					$column_data[] = $cell_value;
+				}
+			}
 
-            return $raw_data;
-        }
+			if ( empty( $column_data ) ) {
+				continue;
+			}
 
-        // No unprocessed columns found
-        $context->log('debug', 'GoogleSheets: No unprocessed columns found.');
-        return [];
-    }
+			// Mark as processed
+			$context->markItemProcessed( $column_identifier );
 
-    /**
-     * Get handler display label.
-     *
-     * @return string Handler label
-     */
-    public static function get_label(): string {
-        return __('Google Sheets Fetch', 'data-machine');
-    }
+			$metadata = array(
+				'source_type'     => 'googlesheets_fetch',
+				'processing_mode' => 'by_column',
+				'spreadsheet_id'  => $spreadsheet_id,
+				'worksheet_name'  => $worksheet_name,
+				'column_letter'   => $column_letter,
+				'column_header'   => $column_header,
+				'headers'         => $headers,
+			);
+
+			// Prepare raw data for DataPacket creation
+			$raw_data = array(
+				'title'    => 'Column: ' . $column_header,
+				'content'  => json_encode( array( $column_header => $column_data ), JSON_PRETTY_PRINT ),
+				'metadata' => $metadata,
+			);
+
+			// Store empty engine data via centralized filter
+			$context->storeEngineData(
+				array(
+					'source_url' => '',
+					'image_url'  => '',
+				)
+			);
+
+			$context->log(
+				'debug',
+				'GoogleSheets: Processed column.',
+				array(
+					'column_letter' => $column_letter,
+					'column_header' => $column_header,
+				)
+			);
+
+			return $raw_data;
+		}
+
+		// No unprocessed columns found
+		$context->log( 'debug', 'GoogleSheets: No unprocessed columns found.' );
+		return array();
+	}
+
+	/**
+	 * Get handler display label.
+	 *
+	 * @return string Handler label
+	 */
+	public static function get_label(): string {
+		return __( 'Google Sheets Fetch', 'data-machine' );
+	}
 }

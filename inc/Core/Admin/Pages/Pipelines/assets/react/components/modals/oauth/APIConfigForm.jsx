@@ -57,8 +57,7 @@ export default function APIConfigForm( {
 				key,
 		  } ) );
 
-	const fieldsToRender =
-		fieldsArray.length > 0 ? fieldsArray : defaultFields;
+	const fieldsToRender = fieldsArray.length > 0 ? fieldsArray : defaultFields;
 
 	return (
 		<div className="datamachine-api-config-form">

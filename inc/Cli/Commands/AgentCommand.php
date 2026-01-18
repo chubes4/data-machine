@@ -20,7 +20,7 @@ use DataMachine\Engine\AI\Tools\ToolManager;
 use DataMachine\Core\Database\Chat\Chat as ChatDatabase;
 use DataMachine\Core\PluginSettings;
 
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -87,24 +87,24 @@ class AgentCommand extends WP_CLI_Command {
 	 * @param array $args       Positional arguments.
 	 * @param array $assoc_args Associative arguments.
 	 */
-	public function __invoke(array $args, array $assoc_args): void {
+	public function __invoke( array $args, array $assoc_args ): void {
 		$message = $args[0] ?? '';
 
-		if (empty($message)) {
-			WP_CLI::error('Message is required.');
+		if ( empty( $message ) ) {
+			WP_CLI::error( 'Message is required.' );
 		}
 
-		if (!current_user_can('manage_options')) {
-			WP_CLI::error('You must have manage_options capability to use this command.');
+		if ( ! current_user_can( 'manage_options' ) ) {
+			WP_CLI::error( 'You must have manage_options capability to use this command.' );
 		}
 
-		AgentContext::set(AgentType::CLI);
+		AgentContext::set( AgentType::CLI );
 
 		try {
-			$result = $this->execute_agent($message, $assoc_args);
-			$this->output_result($result, $assoc_args);
-		} catch (\Exception $e) {
-			WP_CLI::error($e->getMessage());
+			$result = $this->execute_agent( $message, $assoc_args );
+			$this->output_result( $result, $assoc_args );
+		} catch ( \Exception $e ) {
+			WP_CLI::error( $e->getMessage() );
 		} finally {
 			AgentContext::clear();
 		}
@@ -117,83 +117,93 @@ class AgentCommand extends WP_CLI_Command {
 	 * @param array  $assoc_args Command arguments.
 	 * @return array Result data.
 	 */
-	private function execute_agent(string $message, array $assoc_args): array {
-		$user_id = get_current_user_id();
-		$session_id = $assoc_args['session'] ?? null;
-		$provider = $assoc_args['provider'] ?? PluginSettings::get('default_provider', 'anthropic');
-		$model = $assoc_args['model'] ?? PluginSettings::get('default_model', 'claude-sonnet-4-20250514');
-		$max_turns = (int) ($assoc_args['max-turns'] ?? 12);
+	private function execute_agent( string $message, array $assoc_args ): array {
+		$user_id              = get_current_user_id();
+		$session_id           = $assoc_args['session'] ?? null;
+		$provider             = $assoc_args['provider'] ?? PluginSettings::get( 'default_provider', 'anthropic' );
+		$model                = $assoc_args['model'] ?? PluginSettings::get( 'default_model', 'claude-sonnet-4-20250514' );
+		$max_turns            = (int) ( $assoc_args['max-turns'] ?? 12 );
 		$selected_pipeline_id = $assoc_args['selected-pipeline-id'] ?? null;
-		$verbose = isset($assoc_args['verbose']);
+		$verbose              = isset( $assoc_args['verbose'] );
 
-		$chat_db = new ChatDatabase();
-		$messages = [];
+		$chat_db        = new ChatDatabase();
+		$messages       = array();
 		$is_new_session = false;
 
-		if ($session_id) {
-			$session = $chat_db->get_session($session_id);
-			if (!$session) {
-				throw new \Exception("Session not found: {$session_id}");
+		if ( $session_id ) {
+			$session = $chat_db->get_session( $session_id );
+			if ( ! $session ) {
+				throw new \Exception( "Session not found: {$session_id}" );
 			}
-			if ((int) $session['user_id'] !== $user_id) {
-				throw new \Exception('You do not have access to this session.');
+			if ( (int) $session['user_id'] !== $user_id ) {
+				throw new \Exception( 'You do not have access to this session.' );
 			}
-			$messages = $session['messages'] ?? [];
+			$messages = $session['messages'] ?? array();
 
-			if ($verbose) {
-				WP_CLI::log("Continuing session: {$session_id}");
-				WP_CLI::log("Messages in history: " . count($messages));
+			if ( $verbose ) {
+				WP_CLI::log( "Continuing session: {$session_id}" );
+				WP_CLI::log( 'Messages in history: ' . count( $messages ) );
 			}
 		} else {
-			$session_id = $chat_db->create_session($user_id, [
-				'started_at' => current_time('mysql', true),
-				'source' => 'cli',
-			], AgentType::CLI);
+			$session_id = $chat_db->create_session(
+				$user_id,
+				array(
+					'started_at' => current_time( 'mysql', true ),
+					'source'     => 'cli',
+				),
+				AgentType::CLI
+			);
 
-			if (empty($session_id)) {
-				throw new \Exception('Failed to create session.');
+			if ( empty( $session_id ) ) {
+				throw new \Exception( 'Failed to create session.' );
 			}
 
 			$is_new_session = true;
 
-			if ($verbose) {
-				WP_CLI::log("Created new session: {$session_id}");
+			if ( $verbose ) {
+				WP_CLI::log( "Created new session: {$session_id}" );
 			}
 		}
 
-		$messages[] = $this->build_user_message($message);
+		$messages[] = $this->build_user_message( $message );
 
-		$chat_db->update_session($session_id, $messages, [
-			'status' => 'processing',
-			'last_activity' => current_time('mysql', true),
-		], $provider, $model);
+		$chat_db->update_session(
+			$session_id,
+			$messages,
+			array(
+				'status'        => 'processing',
+				'last_activity' => current_time( 'mysql', true ),
+			),
+			$provider,
+			$model
+		);
 
-		if ($verbose) {
-			WP_CLI::log("Provider: {$provider}");
-			WP_CLI::log("Model: {$model}");
-			WP_CLI::log("Loading tools...");
+		if ( $verbose ) {
+			WP_CLI::log( "Provider: {$provider}" );
+			WP_CLI::log( "Model: {$model}" );
+			WP_CLI::log( 'Loading tools...' );
 		}
 
 		$tool_manager = new ToolManager();
-		$tools = $tool_manager->getAvailableToolsForChat();
+		$tools        = $tool_manager->getAvailableToolsForChat();
 
-		if ($verbose) {
-			WP_CLI::log("Available tools: " . count($tools));
+		if ( $verbose ) {
+			WP_CLI::log( 'Available tools: ' . count( $tools ) );
 		}
 
-		$payload = [
+		$payload = array(
 			'session_id' => $session_id,
-		];
+		);
 
-		if ($selected_pipeline_id) {
+		if ( $selected_pipeline_id ) {
 			$payload['selected_pipeline_id'] = (int) $selected_pipeline_id;
 		}
 
-		if ($verbose) {
-			WP_CLI::log("Executing conversation loop (max turns: {$max_turns})...");
+		if ( $verbose ) {
+			WP_CLI::log( "Executing conversation loop (max turns: {$max_turns})..." );
 		}
 
-		$loop = new AIConversationLoop();
+		$loop   = new AIConversationLoop();
 		$result = $loop->execute(
 			$messages,
 			$tools,
@@ -204,43 +214,55 @@ class AgentCommand extends WP_CLI_Command {
 			$max_turns
 		);
 
-		if (isset($result['error'])) {
-			$chat_db->update_session($session_id, $result['messages'] ?? $messages, [
-				'status' => 'error',
-				'error_message' => $result['error'],
-				'last_activity' => current_time('mysql', true),
-			], $provider, $model);
+		if ( isset( $result['error'] ) ) {
+			$chat_db->update_session(
+				$session_id,
+				$result['messages'] ?? $messages,
+				array(
+					'status'        => 'error',
+					'error_message' => $result['error'],
+					'last_activity' => current_time( 'mysql', true ),
+				),
+				$provider,
+				$model
+			);
 
-			throw new \Exception($result['error']);
+			throw new \Exception( $result['error'] );
 		}
 
 		$final_messages = $result['messages'] ?? $messages;
 
-		$chat_db->update_session($session_id, $final_messages, [
-			'status' => 'completed',
-			'message_count' => count($final_messages),
-			'last_activity' => current_time('mysql', true),
-			'turn_count' => $result['turn_count'] ?? 0,
-		], $provider, $model);
+		$chat_db->update_session(
+			$session_id,
+			$final_messages,
+			array(
+				'status'        => 'completed',
+				'message_count' => count( $final_messages ),
+				'last_activity' => current_time( 'mysql', true ),
+				'turn_count'    => $result['turn_count'] ?? 0,
+			),
+			$provider,
+			$model
+		);
 
-		if ($verbose && !empty($result['tool_execution_results'])) {
-			WP_CLI::log("\n--- Tool Executions ---");
-			foreach ($result['tool_execution_results'] as $tool_result) {
+		if ( $verbose && ! empty( $result['tool_execution_results'] ) ) {
+			WP_CLI::log( "\n--- Tool Executions ---" );
+			foreach ( $result['tool_execution_results'] as $tool_result ) {
 				$tool_name = $tool_result['tool_name'] ?? 'unknown';
-				$success = ($tool_result['success'] ?? false) ? 'SUCCESS' : 'FAILED';
-				WP_CLI::log("  [{$success}] {$tool_name}");
+				$success   = ( $tool_result['success'] ?? false ) ? 'SUCCESS' : 'FAILED';
+				WP_CLI::log( "  [{$success}] {$tool_name}" );
 			}
-			WP_CLI::log("--- End Tool Executions ---\n");
+			WP_CLI::log( "--- End Tool Executions ---\n" );
 		}
 
-		return [
-			'session_id' => $session_id,
-			'response' => $result['final_content'] ?? '',
-			'completed' => $result['completed'] ?? true,
-			'turn_count' => $result['turn_count'] ?? 0,
-			'tool_calls' => $result['last_tool_calls'] ?? [],
+		return array(
+			'session_id'     => $session_id,
+			'response'       => $result['final_content'] ?? '',
+			'completed'      => $result['completed'] ?? true,
+			'turn_count'     => $result['turn_count'] ?? 0,
+			'tool_calls'     => $result['last_tool_calls'] ?? array(),
 			'is_new_session' => $is_new_session,
-		];
+		);
 	}
 
 	/**
@@ -249,16 +271,16 @@ class AgentCommand extends WP_CLI_Command {
 	 * @param string $content Message content.
 	 * @return array Message array.
 	 */
-	private function build_user_message(string $content): array {
-		return [
-			'role' => 'user',
-			'content' => $content,
-			'metadata' => [
-				'timestamp' => gmdate('c'),
-				'type' => 'text',
-				'source' => 'cli',
-			],
-		];
+	private function build_user_message( string $content ): array {
+		return array(
+			'role'     => 'user',
+			'content'  => $content,
+			'metadata' => array(
+				'timestamp' => gmdate( 'c' ),
+				'type'      => 'text',
+				'source'    => 'cli',
+			),
+		);
 	}
 
 	/**
@@ -267,13 +289,13 @@ class AgentCommand extends WP_CLI_Command {
 	 * @param array $result     Result data.
 	 * @param array $assoc_args Command arguments.
 	 */
-	private function output_result(array $result, array $assoc_args): void {
+	private function output_result( array $result, array $assoc_args ): void {
 		$format = $assoc_args['format'] ?? 'json';
 
-		if ($format === 'text') {
-			WP_CLI::log($result['response']);
+		if ( $format === 'text' ) {
+			WP_CLI::log( $result['response'] );
 		} else {
-			WP_CLI::log(wp_json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+			WP_CLI::log( wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
 		}
 	}
 }

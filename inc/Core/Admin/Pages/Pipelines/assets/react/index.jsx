@@ -30,7 +30,7 @@ domReady( () => {
 
 	// Render React app
 	render(
-		<QueryClientProvider client={queryClient}>
+		<QueryClientProvider client={ queryClient }>
 			<HandlerProvider>
 				<PipelinesApp />
 			</HandlerProvider>

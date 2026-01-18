@@ -61,8 +61,9 @@ const patchFlowInCache = ( queryClient, { pipelineId, flowId, patchFlow } ) => {
 		return;
 	}
 
-	queryClient.setQueryData( [ 'flows', 'single', cachedFlowId ], ( oldFlow ) =>
-		oldFlow ? patchFlow( oldFlow ) : oldFlow
+	queryClient.setQueryData(
+		[ 'flows', 'single', cachedFlowId ],
+		( oldFlow ) => ( oldFlow ? patchFlow( oldFlow ) : oldFlow )
 	);
 
 	if ( cachedPipelineId ) {
@@ -185,14 +186,18 @@ export const useDeleteFlow = () => {
 				queryClient.setQueriesData(
 					{ queryKey: [ 'flows', cachedPipelineId ], exact: false },
 					( oldData ) => {
-						if ( ! oldData?.flows || ! Array.isArray( oldData.flows ) ) {
+						if (
+							! oldData?.flows ||
+							! Array.isArray( oldData.flows )
+						) {
 							return oldData;
 						}
 
 						return {
 							...oldData,
 							flows: oldData.flows.filter(
-								( flow ) => ! isSameId( flow.flow_id, cachedFlowId )
+								( flow ) =>
+									! isSameId( flow.flow_id, cachedFlowId )
 							),
 							total: Math.max( 0, ( oldData.total || 0 ) - 1 ),
 						};
@@ -332,7 +337,11 @@ export const useUpdateUserMessage = () => {
 			const cachedPipelineId = normalizeId( pipelineId );
 
 			const previousSingle = cachedFlowId
-				? queryClient.getQueryData( [ 'flows', 'single', cachedFlowId ] )
+				? queryClient.getQueryData( [
+						'flows',
+						'single',
+						cachedFlowId,
+				  ] )
 				: undefined;
 
 			const previousPaginatedQueries = cachedPipelineId
@@ -357,10 +366,15 @@ export const useUpdateUserMessage = () => {
 				);
 			}
 
-			if ( cachedPipelineId && context?.previousPaginatedQueries?.length ) {
-				context.previousPaginatedQueries.forEach( ( [ queryKey, data ] ) => {
-					queryClient.setQueryData( queryKey, data );
-				} );
+			if (
+				cachedPipelineId &&
+				context?.previousPaginatedQueries?.length
+			) {
+				context.previousPaginatedQueries.forEach(
+					( [ queryKey, data ] ) => {
+						queryClient.setQueryData( queryKey, data );
+					}
+				);
 			}
 		},
 	} );

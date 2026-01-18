@@ -38,7 +38,7 @@ export default function ExportTab( { pipelines, onClose } ) {
 			return;
 		}
 
-		exportOperation.execute(async () => {
+		exportOperation.execute( async () => {
 			const response = await exportPipelines( selectedIds );
 
 			if ( response.success && response.data.csv_content ) {
@@ -63,7 +63,7 @@ export default function ExportTab( { pipelines, onClose } ) {
 						__( 'Failed to export pipelines', 'datamachine' )
 				);
 			}
-		});
+		} );
 	};
 
 	return (
@@ -113,7 +113,9 @@ export default function ExportTab( { pipelines, onClose } ) {
 				<Button
 					variant="primary"
 					onClick={ handleExport }
-					disabled={ exportOperation.isLoading || selectedIds.length === 0 }
+					disabled={
+						exportOperation.isLoading || selectedIds.length === 0
+					}
 					isBusy={ exportOperation.isLoading }
 				>
 					{ exportOperation.isLoading

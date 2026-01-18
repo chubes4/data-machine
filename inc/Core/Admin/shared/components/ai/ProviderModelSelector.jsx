@@ -52,7 +52,13 @@ export default function ProviderModelSelector( {
 		if ( ! provider && defaults.provider ) {
 			onProviderChange?.( defaults.provider );
 		}
-	}, [ isLoading, provider, defaults.provider, applyDefaults, onProviderChange ] );
+	}, [
+		isLoading,
+		provider,
+		defaults.provider,
+		applyDefaults,
+		onProviderChange,
+	] );
 
 	// Apply default model when provider matches default and no model is set
 	useEffect( () => {
@@ -60,10 +66,23 @@ export default function ProviderModelSelector( {
 			return;
 		}
 
-		if ( provider && provider === defaults.provider && ! model && defaults.model ) {
+		if (
+			provider &&
+			provider === defaults.provider &&
+			! model &&
+			defaults.model
+		) {
 			onModelChange?.( defaults.model );
 		}
-	}, [ isLoading, provider, model, defaults.provider, defaults.model, applyDefaults, onModelChange ] );
+	}, [
+		isLoading,
+		provider,
+		model,
+		defaults.provider,
+		defaults.model,
+		applyDefaults,
+		onModelChange,
+	] );
 
 	const providerOptions = useMemo( () => {
 		const options = [

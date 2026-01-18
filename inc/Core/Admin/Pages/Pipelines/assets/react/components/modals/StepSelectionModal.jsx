@@ -49,18 +49,18 @@ export default function StepSelectionModal( {
 	 * Handle step type selection
 	 */
 	const handleSelectStep = ( stepType ) => {
-		addStepOperation.execute(async () => {
-			await addStepMutation.mutateAsync({
+		addStepOperation.execute( async () => {
+			await addStepMutation.mutateAsync( {
 				pipelineId,
 				stepType,
 				executionOrder: nextExecutionOrder,
-			});
+			} );
 
 			if ( onSuccess ) {
 				onSuccess();
 			}
 			onClose();
-		});
+		} );
 	};
 
 	return (
@@ -99,12 +99,11 @@ export default function StepSelectionModal( {
 									disabled={ addStepOperation.isLoading }
 								>
 									<strong>
-										{ stepTypes[stepType]?.label || stepType }
+										{ stepTypes[ stepType ]?.label ||
+											stepType }
 									</strong>
 
-									<p>
-										{ config.description || '' }
-									</p>
+									<p>{ config.description || '' }</p>
 
 									{ stepType !== 'ai' && handlerCount > 0 && (
 										<span className="datamachine-modal-card-meta">

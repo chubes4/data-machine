@@ -15,14 +15,14 @@ import { __ } from '@wordpress/i18n';
  * @returns {React.ReactElement} Loading spinner
  */
 export default function LoadingSpinner( { message } ) {
-		return (
-			<div className="datamachine-loading-spinner datamachine-layout--flex-column datamachine-layout--flex-center datamachine-empty-state">
-				<Spinner />
-				{ message && (
-					<p className="datamachine-spacing--margin-top-16 datamachine-color--text-muted">
-						{ message }
-					</p>
-				) }
-			</div>
-		);
+	return (
+		<div className="datamachine-loading-spinner datamachine-layout--flex-column datamachine-layout--flex-center datamachine-empty-state">
+			<Spinner />
+			{ message && (
+				<p className="datamachine-spacing--margin-top-16 datamachine-color--text-muted">
+					{ message }
+				</p>
+			) }
+		</div>
+	);
 }

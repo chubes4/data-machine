@@ -41,7 +41,10 @@ const formatStatus = ( status ) => {
 	if ( ! status ) {
 		return null;
 	}
-	return status.charAt( 0 ).toUpperCase() + status.slice( 1 ).replace( /_/g, ' ' );
+	return (
+		status.charAt( 0 ).toUpperCase() +
+		status.slice( 1 ).replace( /_/g, ' ' )
+	);
 };
 
 /**
@@ -79,8 +82,7 @@ export default function FlowFooter( { flowId, scheduling } ) {
 	return (
 		<div className="datamachine-flow-footer">
 			<div className="datamachine-flow-meta-item datamachine-flow-meta-item--id">
-				<strong>{ __( 'Flow ID:', 'datamachine' ) }</strong>{ ' ' }
-				#{ flowId }
+				<strong>{ __( 'Flow ID:', 'datamachine' ) }</strong> #{ flowId }
 			</div>
 
 			<div className="datamachine-flow-meta-item">
@@ -92,8 +94,14 @@ export default function FlowFooter( { flowId, scheduling } ) {
 				<strong>{ __( 'Last Run:', 'datamachine' ) }</strong>{ ' ' }
 				{ last_run_display || __( 'Never', 'datamachine' ) }
 				{ displayStatus && (
-					<span className={ getStatusClass( last_run_status, is_running ) }>
-						{ ' ' }({ displayStatus })
+					<span
+						className={ getStatusClass(
+							last_run_status,
+							is_running
+						) }
+					>
+						{ ' ' }
+						({ displayStatus })
 					</span>
 				) }
 			</div>

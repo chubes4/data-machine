@@ -6,173 +6,208 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  fetchPipelines,
-  createPipeline,
-  updatePipelineTitle,
-  deletePipeline,
-  addPipelineStep,
-  deletePipelineStep,
-  reorderPipelineSteps,
-  updateSystemPrompt,
-  fetchContextFiles,
-  uploadContextFile,
-  deleteContextFile,
+	fetchPipelines,
+	createPipeline,
+	updatePipelineTitle,
+	deletePipeline,
+	addPipelineStep,
+	deletePipelineStep,
+	reorderPipelineSteps,
+	updateSystemPrompt,
+	fetchContextFiles,
+	uploadContextFile,
+	deleteContextFile,
 } from '../utils/api';
 import { isSameId } from '../utils/ids';
 
 // Queries
 export const usePipelines = () =>
-  useQuery({
-    queryKey: ['pipelines'],
-    queryFn: async () => {
-      const response = await fetchPipelines();
-      return response.success ? response.data.pipelines : [];
-    },
-  });
+	useQuery( {
+		queryKey: [ 'pipelines' ],
+		queryFn: async () => {
+			const response = await fetchPipelines();
+			return response.success ? response.data.pipelines : [];
+		},
+	} );
 
-export const useContextFiles = (pipelineId) =>
-  useQuery({
-    queryKey: ['context-files', pipelineId],
-    queryFn: async () => {
-      const response = await fetchContextFiles(pipelineId);
-      return response.success ? response.data : [];
-    },
-    enabled: !!pipelineId,
-  });
+export const useContextFiles = ( pipelineId ) =>
+	useQuery( {
+		queryKey: [ 'context-files', pipelineId ],
+		queryFn: async () => {
+			const response = await fetchContextFiles( pipelineId );
+			return response.success ? response.data : [];
+		},
+		enabled: !! pipelineId,
+	} );
 
 // Mutations
-export const useCreatePipeline = (options = {}) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: createPipeline,
-    onMutate: async (name) => {
-      await queryClient.cancelQueries({ queryKey: ['pipelines'] });
+export const useCreatePipeline = ( options = {} ) => {
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: createPipeline,
+		onMutate: async ( name ) => {
+			await queryClient.cancelQueries( { queryKey: [ 'pipelines' ] } );
 
-      const previousPipelines = queryClient.getQueryData(['pipelines']);
-      const optimisticPipelineId = `optimistic_${Date.now()}`;
+			const previousPipelines = queryClient.getQueryData( [
+				'pipelines',
+			] );
+			const optimisticPipelineId = `optimistic_${ Date.now() }`;
 
-      queryClient.setQueryData(['pipelines'], (old = []) => [
-        {
-          pipeline_id: optimisticPipelineId,
-          pipeline_name: name,
-          pipeline_config: {},
-        },
-        ...old,
-      ]);
+			queryClient.setQueryData( [ 'pipelines' ], ( old = [] ) => [
+				{
+					pipeline_id: optimisticPipelineId,
+					pipeline_name: name,
+					pipeline_config: {},
+				},
+				...old,
+			] );
 
-      return { previousPipelines, optimisticPipelineId };
-    },
-    onError: (_err, _name, context) => {
-      if (context?.previousPipelines) {
-        queryClient.setQueryData(['pipelines'], context.previousPipelines);
-      }
-    },
-    onSuccess: (response, _name, context) => {
-      const pipeline = response?.data?.pipeline_data;
-      const pipelineId = response?.data?.pipeline_id;
+			return { previousPipelines, optimisticPipelineId };
+		},
+		onError: ( _err, _name, context ) => {
+			if ( context?.previousPipelines ) {
+				queryClient.setQueryData(
+					[ 'pipelines' ],
+					context.previousPipelines
+				);
+			}
+		},
+		onSuccess: ( response, _name, context ) => {
+			const pipeline = response?.data?.pipeline_data;
+			const pipelineId = response?.data?.pipeline_id;
 
-      if (pipeline && context?.optimisticPipelineId) {
-        queryClient.setQueryData(['pipelines'], (old = []) =>
-          old.map((p) =>
-            isSameId(p.pipeline_id, context.optimisticPipelineId) ? pipeline : p
-          )
-        );
-      }
+			if ( pipeline && context?.optimisticPipelineId ) {
+				queryClient.setQueryData( [ 'pipelines' ], ( old = [] ) =>
+					old.map( ( p ) =>
+						isSameId( p.pipeline_id, context.optimisticPipelineId )
+							? pipeline
+							: p
+					)
+				);
+			}
 
-      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+			queryClient.invalidateQueries( { queryKey: [ 'pipelines' ] } );
 
-      // Call external onSuccess callback with the new pipeline ID after cache is updated
-      if (options.onSuccess && pipelineId) {
-        options.onSuccess(pipelineId);
-      }
-    },
-  });
+			// Call external onSuccess callback with the new pipeline ID after cache is updated
+			if ( options.onSuccess && pipelineId ) {
+				options.onSuccess( pipelineId );
+			}
+		},
+	} );
 };
 
 export const useUpdatePipelineTitle = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ pipelineId, name }) => updatePipelineTitle(pipelineId, name),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: ( { pipelineId, name } ) =>
+			updatePipelineTitle( pipelineId, name ),
+		onSuccess: () => {
+			queryClient.invalidateQueries( { queryKey: [ 'pipelines' ] } );
+		},
+	} );
 };
 
 export const useDeletePipeline = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: deletePipeline,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: deletePipeline,
+		onSuccess: () => {
+			queryClient.invalidateQueries( { queryKey: [ 'pipelines' ] } );
+		},
+	} );
 };
 
 export const useAddPipelineStep = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ pipelineId, stepType, executionOrder }) =>
-      addPipelineStep(pipelineId, stepType, executionOrder),
-    onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
-      queryClient.invalidateQueries({ queryKey: ['flows', pipelineId] });
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: ( { pipelineId, stepType, executionOrder } ) =>
+			addPipelineStep( pipelineId, stepType, executionOrder ),
+		onSuccess: ( _, { pipelineId } ) => {
+			queryClient.invalidateQueries( { queryKey: [ 'pipelines' ] } );
+			queryClient.invalidateQueries( {
+				queryKey: [ 'flows', pipelineId ],
+			} );
+		},
+	} );
 };
 
 export const useDeletePipelineStep = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ pipelineId, stepId }) => deletePipelineStep(pipelineId, stepId),
-    onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
-      queryClient.invalidateQueries({ queryKey: ['flows', pipelineId] });
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: ( { pipelineId, stepId } ) =>
+			deletePipelineStep( pipelineId, stepId ),
+		onSuccess: ( _, { pipelineId } ) => {
+			queryClient.invalidateQueries( { queryKey: [ 'pipelines' ] } );
+			queryClient.invalidateQueries( {
+				queryKey: [ 'flows', pipelineId ],
+			} );
+		},
+	} );
 };
 
 export const useReorderPipelineSteps = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ pipelineId, steps }) => reorderPipelineSteps(pipelineId, steps),
-    onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
-      queryClient.invalidateQueries({ queryKey: ['flows', pipelineId] });
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: ( { pipelineId, steps } ) =>
+			reorderPipelineSteps( pipelineId, steps ),
+		onSuccess: ( _, { pipelineId } ) => {
+			queryClient.invalidateQueries( { queryKey: [ 'pipelines' ] } );
+			queryClient.invalidateQueries( {
+				queryKey: [ 'flows', pipelineId ],
+			} );
+		},
+	} );
 };
 
 export const useUpdateSystemPrompt = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ stepId, prompt, provider, model, enabledTools, stepType, pipelineId }) =>
-      updateSystemPrompt(stepId, prompt, provider, model, enabledTools, stepType, pipelineId),
-    onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
-      queryClient.invalidateQueries({ queryKey: ['flows', pipelineId] });
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: ( {
+			stepId,
+			prompt,
+			provider,
+			model,
+			enabledTools,
+			stepType,
+			pipelineId,
+		} ) =>
+			updateSystemPrompt(
+				stepId,
+				prompt,
+				provider,
+				model,
+				enabledTools,
+				stepType,
+				pipelineId
+			),
+		onSuccess: ( _, { pipelineId } ) => {
+			queryClient.invalidateQueries( { queryKey: [ 'pipelines' ] } );
+			queryClient.invalidateQueries( {
+				queryKey: [ 'flows', pipelineId ],
+			} );
+		},
+	} );
 };
 
-
-
 export const useUploadContextFile = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ pipelineId, file }) => uploadContextFile(pipelineId, file),
-    onSuccess: (_, { pipelineId }) => {
-      queryClient.invalidateQueries({ queryKey: ['context-files', pipelineId] });
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: ( { pipelineId, file } ) =>
+			uploadContextFile( pipelineId, file ),
+		onSuccess: ( _, { pipelineId } ) => {
+			queryClient.invalidateQueries( {
+				queryKey: [ 'context-files', pipelineId ],
+			} );
+		},
+	} );
 };
 
 export const useDeleteContextFile = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: deleteContextFile,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['context-files'] });
-    },
-  });
+	const queryClient = useQueryClient();
+	return useMutation( {
+		mutationFn: deleteContextFile,
+		onSuccess: () => {
+			queryClient.invalidateQueries( { queryKey: [ 'context-files' ] } );
+		},
+	} );
 };

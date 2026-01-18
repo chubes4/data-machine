@@ -19,32 +19,32 @@
 
 namespace DataMachine\Core\Steps\AI\Directives;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 class PipelineContextDirective implements \DataMachine\Engine\AI\Directives\DirectiveInterface {
 
-	public static function get_outputs(string $provider_name, array $tools, ?string $step_id = null, array $payload = []): array {
+	public static function get_outputs( string $provider_name, array $tools, ?string $step_id = null, array $payload = array() ): array {
 		$pipeline_step_id = $step_id;
 		if ( empty( $pipeline_step_id ) ) {
-			return [];
+			return array();
 		}
 
 		$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
-		$step_config = $db_pipelines->get_pipeline_step_config( $pipeline_step_id );
-		$pipeline_id = $step_config['pipeline_id'] ?? null;
+		$step_config  = $db_pipelines->get_pipeline_step_config( $pipeline_step_id );
+		$pipeline_id  = $step_config['pipeline_id'] ?? null;
 
 		if ( empty( $pipeline_id ) ) {
-			return [];
+			return array();
 		}
 
 		$context_files  = $db_pipelines->get_pipeline_context_files( $pipeline_id );
-		$uploaded_files = $context_files['uploaded_files'] ?? [];
+		$uploaded_files = $context_files['uploaded_files'] ?? array();
 
 		if ( empty( $uploaded_files ) ) {
-			return [];
+			return array();
 		}
 
-		$outputs = [];
+		$outputs = array();
 
 		foreach ( $uploaded_files as $file_info ) {
 			$file_path = $file_info['persistent_path'] ?? '';
@@ -55,19 +55,19 @@ class PipelineContextDirective implements \DataMachine\Engine\AI\Directives\Dire
 					'datamachine_log',
 					'warning',
 					'Pipeline Context: File not found',
-					[
+					array(
 						'file_path'   => $file_path,
 						'pipeline_id' => $pipeline_id,
-					]
+					)
 				);
 				continue;
 			}
 
-			$outputs[] = [
-				'type' => 'system_file',
+			$outputs[] = array(
+				'type'      => 'system_file',
 				'file_path' => $file_path,
 				'mime_type' => $mime_type,
-			];
+			);
 		}
 
 		if ( ! empty( $uploaded_files ) ) {
@@ -75,12 +75,12 @@ class PipelineContextDirective implements \DataMachine\Engine\AI\Directives\Dire
 				'datamachine_log',
 				'debug',
 				'Pipeline Context: Injected context files',
-				[
+				array(
 					'pipeline_id' => $pipeline_id,
 					'file_count'  => count( $uploaded_files ),
 					'files'       => array_column( $uploaded_files, 'filename' ),
 					'provider'    => $provider_name,
-				]
+				)
 			);
 		}
 
@@ -89,11 +89,14 @@ class PipelineContextDirective implements \DataMachine\Engine\AI\Directives\Dire
 }
 
 // Register with universal agent directive system (Priority 35 = fourth in directive system)
-add_filter('datamachine_directives', function($directives) {
-    $directives[] = [
-        'class' => PipelineContextDirective::class,
-        'priority' => 35,
-        'agent_types' => ['pipeline']
-    ];
-    return $directives;
-});
+add_filter(
+	'datamachine_directives',
+	function ( $directives ) {
+		$directives[] = array(
+			'class'       => PipelineContextDirective::class,
+			'priority'    => 35,
+			'agent_types' => array( 'pipeline' ),
+		);
+		return $directives;
+	}
+);

@@ -22,8 +22,6 @@ export default function AIToolsSelector( {
 	selectedTools = [],
 	onSelectionChange,
 } ) {
-
-
 	// Use TanStack Query for tools data
 	const { data: toolsData, isLoading: isLoadingTools } = useTools();
 	const tools = Object.entries( toolsData || {} ).map(

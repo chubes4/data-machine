@@ -17,7 +17,6 @@ import PipelineContextFiles from '../pipelines/PipelineContextFiles';
  * @returns {React.ReactElement|null} Context files modal
  */
 export default function ContextFilesModal( { onClose, pipelineId } ) {
-
 	return (
 		<Modal
 			title={ __( 'Pipeline Context Files', 'datamachine' ) }

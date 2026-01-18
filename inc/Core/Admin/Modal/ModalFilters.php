@@ -16,8 +16,8 @@
 namespace DataMachine\Core\Admin\Modal;
 
 // Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 /**
@@ -29,7 +29,7 @@ if (!defined('ABSPATH')) {
  * @since 0.1.0
  */
 function datamachine_register_modal_system_filters() {
-    add_action('admin_enqueue_scripts', 'DataMachine\\Core\\Admin\\Modal\\enqueue_modal_manager_script');
+	add_action( 'admin_enqueue_scripts', 'DataMachine\\Core\\Admin\\Modal\\enqueue_modal_manager_script' );
 }
 
 /**
@@ -40,13 +40,13 @@ function datamachine_register_modal_system_filters() {
  * @since 0.2.0
  */
 function enqueue_modal_manager_script() {
-    wp_enqueue_script(
-        'datamachine-modal-manager',
-        DATAMACHINE_URL . 'inc/Core/Admin/Modal/assets/js/modal-manager.js',
-        [],
-        DATAMACHINE_VERSION,
-        true
-    );
+	wp_enqueue_script(
+		'datamachine-modal-manager',
+		DATAMACHINE_URL . 'inc/Core/Admin/Modal/assets/js/modal-manager.js',
+		array(),
+		DATAMACHINE_VERSION,
+		true
+	);
 }
 
 // Auto-register when file loads - achieving complete self-containment

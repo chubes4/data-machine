@@ -166,36 +166,37 @@ export default function PipelineStepCard( {
 				) }
 
 				<div className="datamachine-step-card-header">
-					<strong>{ stepTypes[step.step_type]?.label || step.step_type }</strong>
+					<strong>
+						{ stepTypes[ step.step_type ]?.label || step.step_type }
+					</strong>
 				</div>
 
 				{ /* AI Configuration Display */ }
 				{ aiConfig && (
 					<div className="datamachine-ai-config-display datamachine-step-card-ai-config">
-					<div className="datamachine-step-card-ai-label">
-						<strong>
-							{ __( 'AI Provider:', 'datamachine' ) }
-						</strong>{ ' ' }
-						{ aiConfig.provider || 'Not configured' }
-						{ ' | ' }
-						<strong>
-							{ __( 'Model:', 'datamachine' ) }
-						</strong>{ ' ' }
-						{ aiConfig.model || 'Not configured' }
-					</div>
-					<div className="datamachine-step-card-tools-label">
-						<strong>
-							{ __( 'Tools:', 'datamachine' ) }
-						</strong>{ ' ' }
-						{ aiConfig.enabled_tools?.length > 0
-							? aiConfig.enabled_tools
-									.map(
-										( toolId ) =>
-											toolsData[ toolId ]?.label || toolId
-									)
-									.join( ', ' )
-							: __( 'No tools enabled', 'datamachine' ) }
-					</div>
+						<div className="datamachine-step-card-ai-label">
+							<strong>
+								{ __( 'AI Provider:', 'datamachine' ) }
+							</strong>{ ' ' }
+							{ aiConfig.provider || 'Not configured' }
+							{ ' | ' }
+							<strong>
+								{ __( 'Model:', 'datamachine' ) }
+							</strong>{ ' ' }
+							{ aiConfig.model || 'Not configured' }
+						</div>
+						<div className="datamachine-step-card-tools-label">
+							<strong>{ __( 'Tools:', 'datamachine' ) }</strong>{ ' ' }
+							{ aiConfig.enabled_tools?.length > 0
+								? aiConfig.enabled_tools
+										.map(
+											( toolId ) =>
+												toolsData[ toolId ]?.label ||
+												toolId
+										)
+										.join( ', ' )
+								: __( 'No tools enabled', 'datamachine' ) }
+						</div>
 
 						<TextareaControl
 							label={ __( 'System Prompt', 'datamachine' ) }

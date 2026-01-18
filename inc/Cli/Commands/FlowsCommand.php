@@ -13,7 +13,7 @@ namespace DataMachine\Cli\Commands;
 use WP_CLI;
 use WP_CLI_Command;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 class FlowsCommand extends WP_CLI_Command {
 
@@ -69,114 +69,120 @@ class FlowsCommand extends WP_CLI_Command {
 	 *     # JSON output
 	 *     wp datamachine flows --format=json
 	 */
-	public function __invoke(array $args, array $assoc_args): void {
+	public function __invoke( array $args, array $assoc_args ): void {
 		$pipeline_id = null;
 
-		if (!empty($args) && $args[0] !== 'list') {
+		if ( ! empty( $args ) && $args[0] !== 'list' ) {
 			$pipeline_id = (int) $args[0];
 		}
 
 		$handler_slug = $assoc_args['handler'] ?? null;
-		$per_page = (int) ($assoc_args['per_page'] ?? 20);
-		$offset = (int) ($assoc_args['offset'] ?? 0);
-		$format = $assoc_args['format'] ?? 'table';
+		$per_page     = (int) ( $assoc_args['per_page'] ?? 20 );
+		$offset       = (int) ( $assoc_args['offset'] ?? 0 );
+		$format       = $assoc_args['format'] ?? 'table';
 
-		if ($per_page < 1) {
+		if ( $per_page < 1 ) {
 			$per_page = 20;
 		}
-		if ($per_page > 100) {
+		if ( $per_page > 100 ) {
 			$per_page = 100;
 		}
-		if ($offset < 0) {
+		if ( $offset < 0 ) {
 			$offset = 0;
 		}
 
-		$ability = new \DataMachine\Engine\Abilities\FlowAbilities();
-		$result = $ability->executeAbility([
-			'pipeline_id' => $pipeline_id,
-			'handler_slug' => $handler_slug,
-			'per_page' => $per_page,
-			'offset' => $offset
-		]);
+		$ability = new \DataMachine\Abilities\FlowAbilities();
+		$result  = $ability->executeAbility(
+			array(
+				'pipeline_id'  => $pipeline_id,
+				'handler_slug' => $handler_slug,
+				'per_page'     => $per_page,
+				'offset'       => $offset,
+			)
+		);
 
-		if (!$result['success']) {
-			WP_CLI::error($result['error'] ?? 'Failed to list flows');
+		if ( ! $result['success'] ) {
+			WP_CLI::error( $result['error'] ?? 'Failed to list flows' );
 			return;
 		}
 
-		$this->outputResult($result, $format);
+		$this->outputResult( $result, $format );
 	}
 
 	/**
 	 * Output results in requested format.
 	 */
-	private function outputResult(array $result, string $format): void {
-		$flows = $result['flows'] ?? [];
-		$total = $result['total'] ?? 0;
-		$per_page = $result['per_page'] ?? 20;
-		$offset = $result['offset'] ?? 0;
-		$filters_applied = $result['filters_applied'] ?? [];
+	private function outputResult( array $result, string $format ): void {
+		$flows           = $result['flows'] ?? array();
+		$total           = $result['total'] ?? 0;
+		$per_page        = $result['per_page'] ?? 20;
+		$offset          = $result['offset'] ?? 0;
+		$filters_applied = $result['filters_applied'] ?? array();
 
-		if (empty($flows)) {
-			WP_CLI::warning('No flows found matching your criteria.');
+		if ( empty( $flows ) ) {
+			WP_CLI::warning( 'No flows found matching your criteria.' );
 			return;
 		}
 
-		if ($format === 'json') {
-			WP_CLI::log(wp_json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+		if ( $format === 'json' ) {
+			WP_CLI::log( wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
 			return;
 		}
 
-		$rows = [];
-		foreach ($flows as $flow) {
-			$handlers = $this->extractHandlers($flow);
-			$rows[] = [
-				'Flow ID' => $flow['flow_id'],
-				'Flow Name' => $flow['flow_name'],
-				'Pipeline ID' => $flow['pipeline_id'],
-				'Handlers' => $handlers,
+		$rows = array();
+		foreach ( $flows as $flow ) {
+			$handlers = $this->extractHandlers( $flow );
+			$rows[]   = array(
+				'Flow ID'         => $flow['flow_id'],
+				'Flow Name'       => $flow['flow_name'],
+				'Pipeline ID'     => $flow['pipeline_id'],
+				'Handlers'        => $handlers,
 				'Last Run Status' => $flow['last_run_status'] ?? 'Never',
-				'Next Run' => $flow['next_run_display'] ?? 'Not scheduled'
-			];
+				'Next Run'        => $flow['next_run_display'] ?? 'Not scheduled',
+			);
 		}
 
-		WP_CLI\Utils\format_items('table', $rows, [
-			'Flow ID',
-			'Flow Name',
-			'Pipeline ID',
-			'Handlers',
-			'Last Run Status',
-			'Next Run'
-		]);
+		WP_CLI\Utils\format_items(
+			'table',
+			$rows,
+			array(
+				'Flow ID',
+				'Flow Name',
+				'Pipeline ID',
+				'Handlers',
+				'Last Run Status',
+				'Next Run',
+			)
+		);
 
-		$end = $offset + count($flows);
-		if ($end < $total) {
-			WP_CLI::log("Showing {$offset} - {$end} of {$total} flows. Use --offset to see more.");
+		$end = $offset + count( $flows );
+		if ( $end < $total ) {
+			WP_CLI::log( "Showing {$offset} - {$end} of {$total} flows. Use --offset to see more." );
 		} else {
-			WP_CLI::log("Showing {$offset} - {$end} of {$total} flows.");
+			WP_CLI::log( "Showing {$offset} - {$end} of {$total} flows." );
 		}
 
-		if ($filters_applied['pipeline_id'] ?? null) {
-			WP_CLI::log("Filtered by pipeline ID: {$filters_applied['pipeline_id']}");
+		if ( $filters_applied['pipeline_id'] ?? null ) {
+			WP_CLI::log( "Filtered by pipeline ID: {$filters_applied['pipeline_id']}" );
 		}
-		if ($filters_applied['handler_slug'] ?? null) {
-			WP_CLI::log("Filtered by handler slug: {$filters_applied['handler_slug']}");
+		if ( $filters_applied['handler_slug'] ?? null ) {
+			WP_CLI::log( "Filtered by handler slug: {$filters_applied['handler_slug']}" );
 		}
 	}
 
 	/**
 	 * Extract handler slugs from flow config.
 	 */
-	private function extractHandlers(array $flow): string {
-		$flow_config = $flow['flow_config'] ?? [];
-		$handlers = [];
+	private function extractHandlers( array $flow ): string {
+		$flow_config = $flow['flow_config'] ?? array();
+		$handlers    = array();
 
-		foreach ($flow_config as $step_data) {
-			if (!empty($step_data['handler_slug'])) {
+		foreach ( $flow_config as $step_data ) {
+			if ( ! empty( $step_data['handler_slug'] ) ) {
 				$handlers[] = $step_data['handler_slug'];
 			}
 		}
 
-		return implode(', ', array_unique($handlers));
+		return implode( ', ', array_unique( $handlers ) );
 	}
 }

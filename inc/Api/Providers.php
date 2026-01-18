@@ -14,7 +14,7 @@ namespace DataMachine\Api;
 use DataMachine\Core\PluginSettings;
 use WP_REST_Server;
 
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -31,12 +31,16 @@ class Providers {
 	 * @since 0.1.2
 	 */
 	public static function register_routes() {
-		register_rest_route('datamachine/v1', '/providers', [
-			'methods' => WP_REST_Server::READABLE,
-			'callback' => [self::class, 'handle_get_providers'],
-			'permission_callback' => '__return_true', // Public endpoint
-			'args' => []
-		]);
+		register_rest_route(
+			'datamachine/v1',
+			'/providers',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'handle_get_providers' ),
+				'permission_callback' => '__return_true', // Public endpoint
+				'args'                => array(),
+			)
+		);
 	}
 
 	/**
@@ -47,51 +51,52 @@ class Providers {
 	 * @since 0.1.2
 	 * @return \WP_REST_Response Providers response
 	 */
- 	public static function handle_get_providers() {
+	public static function handle_get_providers() {
 		try {
 			// Use AI HTTP Client library's filters directly
-			$library_providers = apply_filters('chubes_ai_providers', []);
+			$library_providers = apply_filters( 'chubes_ai_providers', array() );
 
 			// Get all API keys for model fetching
-			$all_api_keys = apply_filters('chubes_ai_provider_api_keys', null);
+			$all_api_keys = apply_filters( 'chubes_ai_provider_api_keys', null );
 
-			$providers = [];
-			foreach ($library_providers as $key => $provider_info) {
+			$providers = array();
+			foreach ( $library_providers as $key => $provider_info ) {
 				// Get API key for this provider
-				$api_key = $all_api_keys[$key] ?? '';
+				$api_key = $all_api_keys[ $key ] ?? '';
 
 				// Get models for this provider via filter with API key
-				$models = apply_filters('chubes_ai_models', $key, ['api_key' => $api_key]);
+				$models = apply_filters( 'chubes_ai_models', $key, array( 'api_key' => $api_key ) );
 
-				$providers[$key] = [
-					'label' => $provider_info['name'] ?? ucfirst($key),
-					'models' => $models
-				];
+				$providers[ $key ] = array(
+					'label'  => $provider_info['name'] ?? ucfirst( $key ),
+					'models' => $models,
+				);
 			}
 
 			// Get default settings
-			$defaults = [
-				'provider' => PluginSettings::get('default_provider', ''),
-				'model' => PluginSettings::get('default_model', '')
-			];
+			$defaults = array(
+				'provider' => PluginSettings::get( 'default_provider', '' ),
+				'model'    => PluginSettings::get( 'default_model', '' ),
+			);
 
-			return rest_ensure_response([
-				'success' => true,
-				'data' => [
-					'providers' => $providers,
-					'defaults' => $defaults
-				]
-			]);
-
-		} catch (\Exception $e) {
+			return rest_ensure_response(
+				array(
+					'success' => true,
+					'data'    => array(
+						'providers' => $providers,
+						'defaults'  => $defaults,
+					),
+				)
+			);
+		} catch ( \Exception $e ) {
 			return new \WP_Error(
 				'providers_api_error',
-				__('Failed to communicate with AI HTTP Client library.', 'data-machine'),
-				['status' => 500]
+				__( 'Failed to communicate with AI HTTP Client library.', 'data-machine' ),
+				array( 'status' => 500 )
 			);
 		}
 	}
 }
 
 // Register routes on WordPress REST API initialization
-add_action('rest_api_init', [Providers::class, 'register_routes']);
+add_action( 'rest_api_init', array( Providers::class, 'register_routes' ) );

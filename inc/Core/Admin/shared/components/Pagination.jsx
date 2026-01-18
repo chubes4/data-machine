@@ -8,7 +8,13 @@
 import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
-const Pagination = ( { page, perPage, total, onPageChange, itemLabel = 'items' } ) => {
+const Pagination = ( {
+	page,
+	perPage,
+	total,
+	onPageChange,
+	itemLabel = 'items',
+} ) => {
 	const totalPages = Math.ceil( total / perPage );
 	const startItem = total > 0 ? ( page - 1 ) * perPage + 1 : 0;
 	const endItem = Math.min( page * perPage, total );
@@ -26,13 +32,16 @@ const Pagination = ( { page, perPage, total, onPageChange, itemLabel = 'items' }
 				{ total > 0 ? (
 					<span>
 						{ __( 'Showing', 'data-machine' ) }{ ' ' }
-						<strong>{ startItem }-{ endItem }</strong>{ ' ' }
+						<strong>
+							{ startItem }-{ endItem }
+						</strong>{ ' ' }
 						{ __( 'of', 'data-machine' ) }{ ' ' }
-						<strong>{ total }</strong>{ ' ' }
-						{ itemLabel }
+						<strong>{ total }</strong> { itemLabel }
 					</span>
 				) : (
-					<span>{ __( 'No', 'data-machine' ) } { itemLabel }</span>
+					<span>
+						{ __( 'No', 'data-machine' ) } { itemLabel }
+					</span>
 				) }
 			</div>
 

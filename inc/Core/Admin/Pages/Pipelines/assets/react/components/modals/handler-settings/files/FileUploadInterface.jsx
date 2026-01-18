@@ -23,7 +23,7 @@ export default function FileUploadInterface( { onFileUploaded } ) {
 	 * Handle file selection
 	 */
 	const handleFileSelected = ( file ) => {
-		fileUpload.upload(async () => {
+		fileUpload.upload( async () => {
 			// In production, this would upload to handler-specific storage
 			// For now, we'll simulate the upload
 			await new Promise( ( resolve ) => setTimeout( resolve, 1000 ) );
@@ -37,7 +37,7 @@ export default function FileUploadInterface( { onFileUploaded } ) {
 			}
 
 			return __( 'File uploaded successfully!', 'datamachine' );
-		});
+		} );
 	};
 
 	return (
@@ -74,10 +74,15 @@ export default function FileUploadInterface( { onFileUploaded } ) {
 					'png',
 					'gif',
 				] }
-				maxSizeMB={ Math.round((window.dataMachineConfig?.maxUploadSize || 10485760) / (1024 * 1024)) }
+				maxSizeMB={ Math.round(
+					( window.dataMachineConfig?.maxUploadSize || 10485760 ) /
+						( 1024 * 1024 )
+				) }
 				disabled={ fileUpload.isUploading }
 				uploadText={
-					fileUpload.isUploading ? __( 'Uploading...', 'datamachine' ) : null
+					fileUpload.isUploading
+						? __( 'Uploading...', 'datamachine' )
+						: null
 				}
 			/>
 		</div>

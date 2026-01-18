@@ -10,7 +10,7 @@
 
 namespace DataMachine\Api\Chat;
 
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -19,15 +19,15 @@ if (!defined('ABSPATH')) {
  */
 class ChatAgentDirective implements \DataMachine\Engine\AI\Directives\DirectiveInterface {
 
-	public static function get_outputs(string $provider_name, array $tools, ?string $step_id = null, array $payload = []): array {
-		$directive = self::get_directive($tools);
+	public static function get_outputs( string $provider_name, array $tools, ?string $step_id = null, array $payload = array() ): array {
+		$directive = self::get_directive( $tools );
 
-		return [
-			[
-				'type' => 'system_text',
+		return array(
+			array(
+				'type'    => 'system_text',
 				'content' => $directive,
-			],
-		];
+			),
+		);
 	}
 
 	/**
@@ -36,7 +36,7 @@ class ChatAgentDirective implements \DataMachine\Engine\AI\Directives\DirectiveI
 	 * @param array $tools Available tools
 	 * @return string System prompt
 	 */
-	private static function get_directive($tools): string {
+	private static function get_directive( $tools ): string {
 		return '# Data Machine Chat Agent' . "\n\n"
 			. 'You are a decisive configuration specialist. You help users configure Data Machine workflows. Your goal is to take direct action with minimal questioning.' . "\n\n"
 			. '## Architecture' . "\n\n"
@@ -63,16 +63,18 @@ class ChatAgentDirective implements \DataMachine\Engine\AI\Directives\DirectiveI
 			. '- INVALID FIELDS: If a tool rejects unknown fields, retry using only the valid fields listed in the error. Remove invalid fields entirely rather than asking about them.' . "\n"
 			. '- ACT DECISIVELY: Execute tools directly without asking "would you like me to proceed?" for routine configuration tasks.' . "\n"
 			. '- USE DEFAULTS: If uncertain about a value, use the most sensible default and note your assumption rather than stalling.';
-
 	}
 }
 
 // Register with universal agent directive system (Priority 15)
-add_filter('datamachine_directives', function($directives) {
-    $directives[] = [
-        'class' => ChatAgentDirective::class,
-        'priority' => 15,
-        'agent_types' => ['chat']
-    ];
-    return $directives;
-});
+add_filter(
+	'datamachine_directives',
+	function ( $directives ) {
+		$directives[] = array(
+			'class'       => ChatAgentDirective::class,
+			'priority'    => 15,
+			'agent_types' => array( 'chat' ),
+		);
+		return $directives;
+	}
+);

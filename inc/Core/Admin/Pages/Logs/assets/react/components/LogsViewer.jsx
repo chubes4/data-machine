@@ -9,7 +9,11 @@ import { __ } from '@wordpress/i18n';
 import { useLogContent } from '../queries/logs';
 
 const LogsViewer = ( { agentType } ) => {
-	const { data, isLoading, isError, error } = useLogContent( agentType, 'recent', 200 );
+	const { data, isLoading, isError, error } = useLogContent(
+		agentType,
+		'recent',
+		200
+	);
 
 	if ( isLoading ) {
 		return (
@@ -23,7 +27,8 @@ const LogsViewer = ( { agentType } ) => {
 	if ( isError ) {
 		return (
 			<div className="datamachine-logs-viewer-error">
-				{ error?.message || __( 'Failed to load logs.', 'data-machine' ) }
+				{ error?.message ||
+					__( 'Failed to load logs.', 'data-machine' ) }
 			</div>
 		);
 	}
@@ -44,7 +49,10 @@ const LogsViewer = ( { agentType } ) => {
 			<div className="datamachine-logs-viewer-info">
 				{ __( 'Showing recent 200 entries', 'data-machine' ) }
 				{ totalLines > 200 && (
-					<span> ({ totalLines } { __( 'total', 'data-machine' ) })</span>
+					<span>
+						{ ' ' }
+						({ totalLines } { __( 'total', 'data-machine' ) })
+					</span>
 				) }
 			</div>
 			<pre

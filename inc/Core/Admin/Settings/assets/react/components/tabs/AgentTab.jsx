@@ -33,7 +33,8 @@ const AgentTab = () => {
 				global_system_prompt: data.settings.global_system_prompt || '',
 				default_provider: data.settings.default_provider || '',
 				default_model: data.settings.default_model || '',
-				site_context_enabled: data.settings.site_context_enabled ?? false,
+				site_context_enabled:
+					data.settings.site_context_enabled ?? false,
 				max_turns: data.settings.max_turns ?? 12,
 			} );
 			setHasChanges( false );
@@ -173,7 +174,11 @@ const AgentTab = () => {
 															{ toolConfig.requires_configuration && (
 																<Button
 																	variant="secondary"
-																	onClick={ () => openToolModal( toolName ) }
+																	onClick={ () =>
+																		openToolModal(
+																			toolName
+																		)
+																	}
 																>
 																	Configure
 																</Button>
@@ -183,18 +188,33 @@ const AgentTab = () => {
 																<label className="datamachine-tool-enabled-toggle">
 																	<input
 																		type="checkbox"
-																		checked={ isEnabled }
-																		onChange={ ( e ) =>
-																		handleToolToggle( toolName, e.target.checked )
-																	}
-																/>
-																Enable for agents
-															</label>
+																		checked={
+																			isEnabled
+																		}
+																		onChange={ (
+																			e
+																		) =>
+																			handleToolToggle(
+																				toolName,
+																				e
+																					.target
+																					.checked
+																			)
+																		}
+																	/>
+																	Enable for
+																	agents
+																</label>
 															) : (
 																<label className="datamachine-tool-enabled-toggle datamachine-tool-disabled">
-																	<input type="checkbox" disabled />
+																	<input
+																		type="checkbox"
+																		disabled
+																	/>
 																	<span className="description">
-																		Configure to enable
+																		Configure
+																		to
+																		enable
 																	</span>
 																</label>
 															) }
@@ -269,7 +289,9 @@ const AgentTab = () => {
 									<input
 										type="checkbox"
 										id="site_context_enabled"
-										checked={ formState.site_context_enabled }
+										checked={
+											formState.site_context_enabled
+										}
 										onChange={ ( e ) =>
 											handleFieldChange(
 												'site_context_enabled',

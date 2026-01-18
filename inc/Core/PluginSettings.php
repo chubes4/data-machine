@@ -11,7 +11,7 @@
 
 namespace DataMachine\Core;
 
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -25,8 +25,8 @@ class PluginSettings {
 	 * @return array
 	 */
 	public static function all(): array {
-		if (self::$cache === null) {
-			self::$cache = get_option('datamachine_settings', []);
+		if ( self::$cache === null ) {
+			self::$cache = get_option( 'datamachine_settings', array() );
 		}
 		return self::$cache;
 	}
@@ -38,9 +38,9 @@ class PluginSettings {
 	 * @param mixed  $default Default value if key not found
 	 * @return mixed
 	 */
-	public static function get(string $key, mixed $default = null): mixed {
+	public static function get( string $key, mixed $default = null ): mixed {
 		$settings = self::all();
-		return $settings[$key] ?? $default;
+		return $settings[ $key ] ?? $default;
 	}
 
 	/**

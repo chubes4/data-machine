@@ -46,17 +46,18 @@ export default function ImportTab( { onSuccess, onClose } ) {
 			return;
 		}
 
-		importOperation.execute(async () => {
+		importOperation.execute( async () => {
 			const response = await importPipelines( csvContent );
 
 			if ( response.success ) {
 				const count = response.data.created_count || 0;
-				const message = count > 0
-					? __(
-							`Successfully imported ${ count } pipeline(s)!`,
-							'datamachine'
-					  )
-					: __( 'Import completed!', 'datamachine' );
+				const message =
+					count > 0
+						? __(
+								`Successfully imported ${ count } pipeline(s)!`,
+								'datamachine'
+						  )
+						: __( 'Import completed!', 'datamachine' );
 
 				// Clear file after successful import
 				setCsvContent( null );
@@ -76,7 +77,7 @@ export default function ImportTab( { onSuccess, onClose } ) {
 						__( 'Failed to import pipelines', 'datamachine' )
 				);
 			}
-		});
+		} );
 	};
 
 	/**

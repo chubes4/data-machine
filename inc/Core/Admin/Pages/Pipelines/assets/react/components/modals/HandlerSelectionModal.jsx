@@ -26,7 +26,7 @@ export default function HandlerSelectionModal( {
 	onSelectHandler,
 	handlers,
 } ) {
-	const [ error, setError ] = useState(null);
+	const [ error, setError ] = useState( null );
 	// Presentational: Receive handlers data as props
 
 	/**
@@ -49,7 +49,10 @@ export default function HandlerSelectionModal( {
 			} catch ( err ) {
 				// eslint-disable-next-line no-console
 				console.error( 'Handler selection error:', err );
-				setError( err?.message || 'An error occurred while assigning the handler.' );
+				setError(
+					err?.message ||
+						'An error occurred while assigning the handler.'
+				);
 			}
 		}
 	};
@@ -76,47 +79,54 @@ export default function HandlerSelectionModal( {
 					</div>
 				) }
 
-		{ filteredHandlers.length > 0 && (
-				<div className="datamachine-modal-grid-2col">
-{ filteredHandlers.map( ( [ slug, handler ] ) => {
-					const model = getModel ? getModel(slug, null) : null;
-					const label = model ? model.getLabel() : handler.label || slug;
-					const desc = model ? model.getDescription() : handler.description || '';
-					const auth = model ? model.requiresAuth() : handler.requires_auth || handler.requiresAuth;
+				{ filteredHandlers.length > 0 && (
+					<div className="datamachine-modal-grid-2col">
+						{ filteredHandlers.map( ( [ slug, handler ] ) => {
+							const model = getModel
+								? getModel( slug, null )
+								: null;
+							const label = model
+								? model.getLabel()
+								: handler.label || slug;
+							const desc = model
+								? model.getDescription()
+								: handler.description || '';
+							const auth = model
+								? model.requiresAuth()
+								: handler.requires_auth || handler.requiresAuth;
 
-					return (
-						<button
-							key={ slug }
-							type="button"
-							className="datamachine-modal-card"
-							onClick={ () => handleSelect( slug ) }
-						>
-							<strong>
-								{ label }
-							</strong>
+							return (
+								<button
+									key={ slug }
+									type="button"
+									className="datamachine-modal-card"
+									onClick={ () => handleSelect( slug ) }
+								>
+									<strong>{ label }</strong>
 
-							<p>
-								{ desc }
-							</p>
+									<p>{ desc }</p>
 
-							{ auth && (
-								<span className="datamachine-modal-badge">
-									{ __( 'Requires Auth', 'datamachine' ) }
-								</span>
-							) }
-						</button>
-					);
-				} ) }
-				</div>
-			) }
+									{ auth && (
+										<span className="datamachine-modal-badge">
+											{ __(
+												'Requires Auth',
+												'datamachine'
+											) }
+										</span>
+									) }
+								</button>
+							);
+						} ) }
+					</div>
+				) }
 
-			{ error && (
-				<div className="datamachine-modal-error">
-					<Notice status="error" isDismissible={ false }>
-						<p>{ error }</p>
-					</Notice>
-				</div>
-			) }
+				{ error && (
+					<div className="datamachine-modal-error">
+						<Notice status="error" isDismissible={ false }>
+							<p>{ error }</p>
+						</Notice>
+					</div>
+				) }
 
 				<div className="datamachine-modal-actions">
 					<Button variant="secondary" onClick={ onClose }>

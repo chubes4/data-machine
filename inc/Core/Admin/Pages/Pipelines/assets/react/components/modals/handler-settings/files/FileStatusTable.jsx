@@ -30,7 +30,9 @@ export default function FileStatusTable( { files = [] } ) {
 		};
 
 		const config = statusConfig[ status ] || statusConfig.pending;
-		const className = `datamachine-status-badge datamachine-status-badge--${ status || 'pending' }`;
+		const className = `datamachine-status-badge datamachine-status-badge--${
+			status || 'pending'
+		}`;
 
 		return (
 			<span className={ className }>

@@ -12,46 +12,52 @@ import { __ } from '@wordpress/i18n';
 
 const SUBMIT_COOLDOWN_MS = 300;
 
-export default function ChatInput({ onSend, isLoading }) {
-	const [message, setMessage] = useState('');
-	const isSubmittingRef = useRef(false);
+export default function ChatInput( { onSend, isLoading } ) {
+	const [ message, setMessage ] = useState( '' );
+	const isSubmittingRef = useRef( false );
 
-	const handleSubmit = useCallback(() => {
+	const handleSubmit = useCallback( () => {
 		const trimmed = message.trim();
-		if (!trimmed || isLoading || isSubmittingRef.current) {
+		if ( ! trimmed || isLoading || isSubmittingRef.current ) {
 			return;
 		}
 
 		isSubmittingRef.current = true;
-		setTimeout(() => {
+		setTimeout( () => {
 			isSubmittingRef.current = false;
-		}, SUBMIT_COOLDOWN_MS);
+		}, SUBMIT_COOLDOWN_MS );
 
-		onSend(trimmed);
-		setMessage('');
-	}, [message, isLoading, onSend]);
+		onSend( trimmed );
+		setMessage( '' );
+	}, [ message, isLoading, onSend ] );
 
-	const handleKeyDown = useCallback((e) => {
-		if (e.key === 'Enter' && !e.shiftKey) {
-			e.preventDefault();
-			handleSubmit();
-		}
-	}, [handleSubmit]);
+	const handleKeyDown = useCallback(
+		( e ) => {
+			if ( e.key === 'Enter' && ! e.shiftKey ) {
+				e.preventDefault();
+				handleSubmit();
+			}
+		},
+		[ handleSubmit ]
+	);
 
 	return (
 		<div className="datamachine-chat-input">
 			<textarea
 				className="datamachine-chat-input__textarea"
 				value={ message }
-				onChange={ (e) => setMessage(e.target.value) }
+				onChange={ ( e ) => setMessage( e.target.value ) }
 				onKeyDown={ handleKeyDown }
-				placeholder={ __( 'Ask me to build something...', 'data-machine' ) }
+				placeholder={ __(
+					'Ask me to build something...',
+					'data-machine'
+				) }
 				rows={ 2 }
 			/>
 			<Button
 				icon={ arrowUp }
 				onClick={ handleSubmit }
-				disabled={ isLoading || !message.trim() }
+				disabled={ isLoading || ! message.trim() }
 				label={ __( 'Send message', 'data-machine' ) }
 				className="datamachine-chat-input__send"
 				variant="primary"

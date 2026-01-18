@@ -26,6 +26,20 @@ class LogAbilitiesTest extends \WP_UnitTestCase {
 		parent::tearDown();
 	}
 
+	public function testWrite_toLog_ability_registered(): void {
+		$ability = wp_get_ability('datamachine/write-to-log');
+
+		$this->assertNotNull($ability);
+		$this->assertSame('datamachine/write-to-log', $ability->get_name());
+	}
+
+	public function testClear_logs_ability_registered(): void {
+		$ability = wp_get_ability('datamachine/clear-logs');
+
+		$this->assertNotNull($ability);
+		$this->assertSame('datamachine/clear-logs', $ability->get_name());
+	}
+
 	public function testWrite_toLog_withValidData_returnsSuccess(): void {
 		if (!class_exists('WP_Ability')) {
 			$this->markTestSkipped('WP_Ability class not available');

@@ -53,9 +53,7 @@ const JobsApp = () => {
 				/>
 			) }
 
-			{ isModalOpen && (
-				<JobsAdminModal onClose={ closeModal } />
-			) }
+			{ isModalOpen && <JobsAdminModal onClose={ closeModal } /> }
 		</div>
 	);
 };

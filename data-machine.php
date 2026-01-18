@@ -32,7 +32,7 @@ define( 'DATAMACHINE_LOG_DIR', '/datamachine-logs' );
 require_once __DIR__ . '/vendor/autoload.php';
 
 // WP-CLI integration
-if (defined('WP_CLI') && WP_CLI) {
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once __DIR__ . '/inc/Cli/Bootstrap.php';
 }
 
@@ -52,6 +52,7 @@ require_once __DIR__ . '/inc/Core/Admin/Pages/Pipelines/PipelinesFilters.php';
 require_once __DIR__ . '/inc/Core/Admin/Settings/SettingsFilters.php';
 require_once __DIR__ . '/inc/Core/Admin/Pages/Logs/LogsFilters.php';
 require_once __DIR__ . '/inc/Core/Admin/Pages/Jobs/JobsFilters.php';
+require_once __DIR__ . '/inc/Core/WordPress/PostTrackingTrait.php';
 require_once __DIR__ . '/inc/Core/Steps/StepTypeRegistrationTrait.php';
 require_once __DIR__ . '/inc/Engine/AI/Tools/ToolRegistrationTrait.php';
 require_once __DIR__ . '/inc/Engine/AI/Tools/Global/GoogleSearch.php';
@@ -75,25 +76,36 @@ require_once __DIR__ . '/inc/Api/Tools.php';
 require_once __DIR__ . '/inc/Api/Chat/Chat.php';
 
 if ( ! class_exists( 'ActionScheduler' ) ) {
-    require_once __DIR__ . '/vendor/woocommerce/action-scheduler/action-scheduler.php';
+	require_once __DIR__ . '/vendor/woocommerce/action-scheduler/action-scheduler.php';
 }
 
 
 function datamachine_run_datamachine_plugin() {
 
 	// Set Action Scheduler timeout to 10 minutes (600 seconds) for large tasks
-	add_filter('action_scheduler_timeout_period', function() { return 600; });
+	add_filter(
+		'action_scheduler_timeout_period',
+		function () {
+			return 600;
+		}
+	);
 
 	// Initialize translation readiness tracking for lazy tool resolution
 	\DataMachine\Engine\AI\Tools\ToolManager::init();
 
 	// Cache invalidation hooks for dynamic registration
-	add_action('datamachine_handler_registered', function() {
-		\DataMachine\Services\CacheManager::clearHandlerCaches();
-	});
-	add_action('datamachine_step_type_registered', function() {
-		\DataMachine\Services\CacheManager::clearStepTypeCaches();
-	});
+	add_action(
+		'datamachine_handler_registered',
+		function () {
+			\DataMachine\Services\CacheManager::clearHandlerCaches();
+		}
+	);
+	add_action(
+		'datamachine_step_type_registered',
+		function () {
+			\DataMachine\Services\CacheManager::clearStepTypeCaches();
+		}
+	);
 
 	datamachine_register_utility_filters();
 	datamachine_register_admin_filters();
@@ -112,12 +124,12 @@ function datamachine_run_datamachine_plugin() {
 	// Load chat tools - must happen AFTER step types and handlers are registered
 	datamachine_load_chat_tools();
 
-    \DataMachine\Api\Execute::register();
-    \DataMachine\Api\Pipelines\Pipelines::register();
-    \DataMachine\Api\Pipelines\PipelineSteps::register();
-    \DataMachine\Api\Pipelines\PipelineFlows::register();
-    \DataMachine\Api\Flows\Flows::register();
-    \DataMachine\Api\Flows\FlowSteps::register();
+	\DataMachine\Api\Execute::register();
+	\DataMachine\Api\Pipelines\Pipelines::register();
+	\DataMachine\Api\Pipelines\PipelineSteps::register();
+	\DataMachine\Api\Pipelines\PipelineFlows::register();
+	\DataMachine\Api\Flows\Flows::register();
+	\DataMachine\Api\Flows\FlowSteps::register();
 	\DataMachine\Api\Files::register();
 	\DataMachine\Api\Users::register();
 	\DataMachine\Api\Logs::register();
@@ -129,32 +141,36 @@ function datamachine_run_datamachine_plugin() {
 
 	// Load abilities
 	require_once __DIR__ . '/inc/Abilities/FlowAbilities.php';
-	new \DataMachine\Engine\Abilities\FlowAbilities();
-	}
+	require_once __DIR__ . '/inc/Abilities/LogAbilities.php';
+	require_once __DIR__ . '/inc/Abilities/PostQueryAbilities.php';
+	new \DataMachine\Abilities\FlowAbilities();
+	\DataMachine\Abilities\LogAbilities::register();
+	new \DataMachine\Abilities\PostQueryAbilities();
+}
 
 
 // Plugin activation hook to initialize default settings
-register_activation_hook(__FILE__, 'datamachine_activate_plugin_defaults');
+register_activation_hook( __FILE__, 'datamachine_activate_plugin_defaults' );
 function datamachine_activate_plugin_defaults() {
-    $tool_manager = new \DataMachine\Engine\AI\Tools\ToolManager();
-    $opt_out_defaults = $tool_manager->get_opt_out_defaults();
+	$tool_manager     = new \DataMachine\Engine\AI\Tools\ToolManager();
+	$opt_out_defaults = $tool_manager->get_opt_out_defaults();
 
-    $default_settings = [
-        'enabled_tools' => array_fill_keys($opt_out_defaults, true),
-        'enabled_pages' => [
-            'pipelines' => true,
-            'jobs' => true,
-            'logs' => true,
-            'settings' => true,
-        ],
-        'site_context_enabled' => true,
-        'cleanup_job_data_on_failure' => true,
-    ];
+	$default_settings = array(
+		'enabled_tools'               => array_fill_keys( $opt_out_defaults, true ),
+		'enabled_pages'               => array(
+			'pipelines' => true,
+			'jobs'      => true,
+			'logs'      => true,
+			'settings'  => true,
+		),
+		'site_context_enabled'        => true,
+		'cleanup_job_data_on_failure' => true,
+	);
 
-    add_option('datamachine_settings', $default_settings);
+	add_option( 'datamachine_settings', $default_settings );
 }
 
-add_action('plugins_loaded', 'datamachine_run_datamachine_plugin', 20);
+add_action( 'plugins_loaded', 'datamachine_run_datamachine_plugin', 20 );
 
 
 
@@ -164,10 +180,10 @@ add_action('plugins_loaded', 'datamachine_run_datamachine_plugin', 20);
  * Uses StepTypeRegistrationTrait for standardized registration.
  */
 function datamachine_load_step_types() {
-    new \DataMachine\Core\Steps\Fetch\FetchStep();
-    new \DataMachine\Core\Steps\Publish\PublishStep();
-    new \DataMachine\Core\Steps\Update\UpdateStep();
-    new \DataMachine\Core\Steps\AI\AIStep();
+	new \DataMachine\Core\Steps\Fetch\FetchStep();
+	new \DataMachine\Core\Steps\Publish\PublishStep();
+	new \DataMachine\Core\Steps\Update\UpdateStep();
+	new \DataMachine\Core\Steps\AI\AIStep();
 }
 
 /**
@@ -175,25 +191,25 @@ function datamachine_load_step_types() {
  * Clean, explicit approach using composer PSR-4 autoloading.
  */
 function datamachine_load_handlers() {
-    // Publish Handlers
-    new \DataMachine\Core\Steps\Publish\Handlers\WordPress\WordPress();
-    new \DataMachine\Core\Steps\Publish\Handlers\Twitter\Twitter();
-    new \DataMachine\Core\Steps\Publish\Handlers\Facebook\Facebook();
-    new \DataMachine\Core\Steps\Publish\Handlers\GoogleSheets\GoogleSheets();
-    new \DataMachine\Core\Steps\Publish\Handlers\Threads\Threads();
-    new \DataMachine\Core\Steps\Publish\Handlers\Bluesky\Bluesky();
+	// Publish Handlers
+	new \DataMachine\Core\Steps\Publish\Handlers\WordPress\WordPress();
+	new \DataMachine\Core\Steps\Publish\Handlers\Twitter\Twitter();
+	new \DataMachine\Core\Steps\Publish\Handlers\Facebook\Facebook();
+	new \DataMachine\Core\Steps\Publish\Handlers\GoogleSheets\GoogleSheets();
+	new \DataMachine\Core\Steps\Publish\Handlers\Threads\Threads();
+	new \DataMachine\Core\Steps\Publish\Handlers\Bluesky\Bluesky();
 
-    // Fetch Handlers
-    new \DataMachine\Core\Steps\Fetch\Handlers\WordPress\WordPress();
-    new \DataMachine\Core\Steps\Fetch\Handlers\WordPressAPI\WordPressAPI();
-    new \DataMachine\Core\Steps\Fetch\Handlers\WordPressMedia\WordPressMedia();
-    new \DataMachine\Core\Steps\Fetch\Handlers\Rss\Rss();
-    new \DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets\GoogleSheetsFetch();
-    new \DataMachine\Core\Steps\Fetch\Handlers\Reddit\Reddit();
-    new \DataMachine\Core\Steps\Fetch\Handlers\Files\Files();
+	// Fetch Handlers
+	new \DataMachine\Core\Steps\Fetch\Handlers\WordPress\WordPress();
+	new \DataMachine\Core\Steps\Fetch\Handlers\WordPressAPI\WordPressAPI();
+	new \DataMachine\Core\Steps\Fetch\Handlers\WordPressMedia\WordPressMedia();
+	new \DataMachine\Core\Steps\Fetch\Handlers\Rss\Rss();
+	new \DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets\GoogleSheetsFetch();
+	new \DataMachine\Core\Steps\Fetch\Handlers\Reddit\Reddit();
+	new \DataMachine\Core\Steps\Fetch\Handlers\Files\Files();
 
-    // Update Handlers
-    new \DataMachine\Core\Steps\Update\Handlers\WordPress\WordPress();
+	// Update Handlers
+	new \DataMachine\Core\Steps\Update\Handlers\WordPress\WordPress();
 }
 
 /**
@@ -201,64 +217,64 @@ function datamachine_load_handlers() {
  * These tools build their descriptions from registered step types and handlers.
  */
 function datamachine_load_chat_tools() {
-    new \DataMachine\Api\Chat\Tools\ApiQuery();
-    new \DataMachine\Api\Chat\Tools\CreatePipeline();
-    new \DataMachine\Api\Chat\Tools\AddPipelineStep();
-    new \DataMachine\Api\Chat\Tools\CreateFlow();
-    new \DataMachine\Api\Chat\Tools\ConfigureFlowSteps();
-    new \DataMachine\Api\Chat\Tools\RunFlow();
-    new \DataMachine\Api\Chat\Tools\UpdateFlow();
-    new \DataMachine\Api\Chat\Tools\ConfigurePipelineStep();
-    new \DataMachine\Api\Chat\Tools\ExecuteWorkflowTool();
-    new \DataMachine\Api\Chat\Tools\CopyFlow();
-    new \DataMachine\Api\Chat\Tools\AuthenticateHandler();
-    new \DataMachine\Api\Chat\Tools\ReadLogs();
-    new \DataMachine\Api\Chat\Tools\ManageLogs();
-    new \DataMachine\Api\Chat\Tools\CreateTaxonomyTerm();
-    new \DataMachine\Api\Chat\Tools\SearchTaxonomyTerms();
-    new \DataMachine\Api\Chat\Tools\UpdateTaxonomyTerm();
-    new \DataMachine\Api\Chat\Tools\MergeTaxonomyTerms();
-    new \DataMachine\Api\Chat\Tools\AssignTaxonomyTerm();
-    new \DataMachine\Api\Chat\Tools\GetHandlerDefaults();
-    new \DataMachine\Api\Chat\Tools\SetHandlerDefaults();
-    new \DataMachine\Api\Chat\Tools\DeleteFile();
-    new \DataMachine\Api\Chat\Tools\DeleteFlow();
-    new \DataMachine\Api\Chat\Tools\DeletePipeline();
-    new \DataMachine\Api\Chat\Tools\DeletePipelineStep();
-    new \DataMachine\Api\Chat\Tools\ReorderPipelineSteps();
-    new \DataMachine\Api\Chat\Tools\ListFlows();
+	new \DataMachine\Api\Chat\Tools\ApiQuery();
+	new \DataMachine\Api\Chat\Tools\CreatePipeline();
+	new \DataMachine\Api\Chat\Tools\AddPipelineStep();
+	new \DataMachine\Api\Chat\Tools\CreateFlow();
+	new \DataMachine\Api\Chat\Tools\ConfigureFlowSteps();
+	new \DataMachine\Api\Chat\Tools\RunFlow();
+	new \DataMachine\Api\Chat\Tools\UpdateFlow();
+	new \DataMachine\Api\Chat\Tools\ConfigurePipelineStep();
+	new \DataMachine\Api\Chat\Tools\ExecuteWorkflowTool();
+	new \DataMachine\Api\Chat\Tools\CopyFlow();
+	new \DataMachine\Api\Chat\Tools\AuthenticateHandler();
+	new \DataMachine\Api\Chat\Tools\ReadLogs();
+	new \DataMachine\Api\Chat\Tools\ManageLogs();
+	new \DataMachine\Api\Chat\Tools\CreateTaxonomyTerm();
+	new \DataMachine\Api\Chat\Tools\SearchTaxonomyTerms();
+	new \DataMachine\Api\Chat\Tools\UpdateTaxonomyTerm();
+	new \DataMachine\Api\Chat\Tools\MergeTaxonomyTerms();
+	new \DataMachine\Api\Chat\Tools\AssignTaxonomyTerm();
+	new \DataMachine\Api\Chat\Tools\GetHandlerDefaults();
+	new \DataMachine\Api\Chat\Tools\SetHandlerDefaults();
+	new \DataMachine\Api\Chat\Tools\DeleteFile();
+	new \DataMachine\Api\Chat\Tools\DeleteFlow();
+	new \DataMachine\Api\Chat\Tools\DeletePipeline();
+	new \DataMachine\Api\Chat\Tools\DeletePipelineStep();
+	new \DataMachine\Api\Chat\Tools\ReorderPipelineSteps();
+	new \DataMachine\Api\Chat\Tools\ListFlows();
 }
 
 /**
  * Scan directory for PHP files and instantiate classes.
  * Classes are expected to self-register in their constructors.
  */
-function datamachine_scan_and_instantiate($directory) {
-    $files = glob($directory . '/*.php');
+function datamachine_scan_and_instantiate( $directory ) {
+	$files = glob( $directory . '/*.php' );
 
-    foreach ($files as $file) {
-        // Skip if it's a *Filters.php file (will be deleted)
-        if (strpos(basename($file), 'Filters.php') !== false) {
-            continue;
-        }
+	foreach ( $files as $file ) {
+		// Skip if it's a *Filters.php file (will be deleted)
+		if ( strpos( basename( $file ), 'Filters.php' ) !== false ) {
+			continue;
+		}
 
-        // Skip if it's a *Settings.php file
-        if (strpos(basename($file), 'Settings.php') !== false) {
-            continue;
-        }
+		// Skip if it's a *Settings.php file
+		if ( strpos( basename( $file ), 'Settings.php' ) !== false ) {
+			continue;
+		}
 
-        // Include the file - classes will auto-instantiate
-        include_once $file;
-    }
+		// Include the file - classes will auto-instantiate
+		include_once $file;
+	}
 }
 
-function datamachine_allow_json_upload($mimes) {
-    $mimes['json'] = 'application/json';
-    return $mimes;
+function datamachine_allow_json_upload( $mimes ) {
+	$mimes['json'] = 'application/json';
+	return $mimes;
 }
 add_filter( 'upload_mimes', 'datamachine_allow_json_upload' );
 
-add_action('update_option_datamachine_settings', [\DataMachine\Core\PluginSettings::class, 'clearCache']);
+add_action( 'update_option_datamachine_settings', array( \DataMachine\Core\PluginSettings::class, 'clearCache' ) );
 
 register_activation_hook( __FILE__, 'datamachine_activate_plugin' );
 register_deactivation_hook( __FILE__, 'datamachine_deactivate_plugin' );
@@ -290,9 +306,9 @@ function datamachine_activate_plugin() {
 
 	// Create log directory during activation
 	$upload_dir = wp_upload_dir();
-	$log_dir = $upload_dir['basedir'] . DATAMACHINE_LOG_DIR;
-	if (!file_exists($log_dir)) {
-		wp_mkdir_p($log_dir);
+	$log_dir    = $upload_dir['basedir'] . DATAMACHINE_LOG_DIR;
+	if ( ! file_exists( $log_dir ) ) {
+		wp_mkdir_p( $log_dir );
 	}
 
 	// Re-schedule any flows with non-manual scheduling
@@ -333,7 +349,7 @@ function datamachine_activate_scheduled_flows() {
 	$scheduled_count = 0;
 
 	foreach ( $flows as $flow ) {
-		$flow_id = (int) $flow['flow_id'];
+		$flow_id           = (int) $flow['flow_id'];
 		$scheduling_config = json_decode( $flow['scheduling_config'], true );
 
 		if ( empty( $scheduling_config ) || empty( $scheduling_config['interval'] ) ) {
@@ -348,15 +364,15 @@ function datamachine_activate_scheduled_flows() {
 
 		// Clear any existing scheduled actions for this flow
 		if ( function_exists( 'as_unschedule_all_actions' ) ) {
-			as_unschedule_all_actions( 'datamachine_run_flow_now', [ $flow_id ], 'data-machine' );
+			as_unschedule_all_actions( 'datamachine_run_flow_now', array( $flow_id ), 'data-machine' );
 		}
 
 		// Handle one-time scheduling
 		if ( $interval === 'one_time' ) {
 			$timestamp = $scheduling_config['timestamp'] ?? null;
 			if ( $timestamp && $timestamp > time() ) {
-				as_schedule_single_action( $timestamp, 'datamachine_run_flow_now', [ $flow_id ], 'data-machine' );
-				$scheduled_count++;
+				as_schedule_single_action( $timestamp, 'datamachine_run_flow_now', array( $flow_id ), 'data-machine' );
+				++$scheduled_count;
 			}
 			continue;
 		}
@@ -371,58 +387,70 @@ function datamachine_activate_scheduled_flows() {
 			time() + $interval_seconds,
 			$interval_seconds,
 			'datamachine_run_flow_now',
-			[ $flow_id ],
+			array( $flow_id ),
 			'data-machine'
 		);
-		$scheduled_count++;
+		++$scheduled_count;
 	}
 
 	if ( $scheduled_count > 0 ) {
-		do_action( 'datamachine_log', 'info', 'Flows re-scheduled on plugin activation', [
-			'scheduled_count' => $scheduled_count,
-		] );
+		do_action(
+			'datamachine_log',
+			'info',
+			'Flows re-scheduled on plugin activation',
+			array(
+				'scheduled_count' => $scheduled_count,
+			)
+		);
 	}
 }
 
 
 function datamachine_check_requirements() {
 	if ( version_compare( PHP_VERSION, '8.0', '<' ) ) {
-		add_action( 'admin_notices', function() {
-			echo '<div class="notice notice-error"><p>';
-			printf(
-				esc_html( 'Data Machine requires PHP %2$s or higher. You are running PHP %1$s.' ),
-				esc_html( PHP_VERSION ),
-				'8.0'
-			);
-			echo '</p></div>';
-		});
+		add_action(
+			'admin_notices',
+			function () {
+				echo '<div class="notice notice-error"><p>';
+				printf(
+					esc_html( 'Data Machine requires PHP %2$s or higher. You are running PHP %1$s.' ),
+					esc_html( PHP_VERSION ),
+					'8.0'
+				);
+				echo '</p></div>';
+			}
+		);
 		return false;
 	}
-	
+
 	global $wp_version;
 	if ( version_compare( $wp_version, '6.2', '<' ) ) {
-		add_action( 'admin_notices', function() use ( $wp_version ) {
-			echo '<div class="notice notice-error"><p>';
-			printf(
-				esc_html( 'Data Machine requires WordPress %2$s or higher. You are running WordPress %1$s.' ),
-				esc_html( $wp_version ),
-				'6.2'
-			);
-			echo '</p></div>';
-		});
+		add_action(
+			'admin_notices',
+			function () use ( $wp_version ) {
+				echo '<div class="notice notice-error"><p>';
+				printf(
+					esc_html( 'Data Machine requires WordPress %2$s or higher. You are running WordPress %1$s.' ),
+					esc_html( $wp_version ),
+					'6.2'
+				);
+				echo '</p></div>';
+			}
+		);
 		return false;
 	}
-	
+
 	if ( ! file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
-		add_action( 'admin_notices', function() {
-			echo '<div class="notice notice-error"><p>';
-			echo esc_html( 'Data Machine: Composer dependencies are missing. Please run "composer install" or contact Chubes to report a bug.' );
-			echo '</p></div>';
-		});
+		add_action(
+			'admin_notices',
+			function () {
+				echo '<div class="notice notice-error"><p>';
+				echo esc_html( 'Data Machine: Composer dependencies are missing. Please run "composer install" or contact Chubes to report a bug.' );
+				echo '</p></div>';
+			}
+		);
 		return false;
 	}
-	
+
 	return true;
 }
-
-

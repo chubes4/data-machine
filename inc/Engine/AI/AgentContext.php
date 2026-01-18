@@ -12,36 +12,36 @@
 
 namespace DataMachine\Engine\AI;
 
-if (!defined('WPINC')) {
-    die;
+if ( ! defined( 'WPINC' ) ) {
+	die;
 }
 
 final class AgentContext {
 
-    private static ?string $currentAgentType = null;
+	private static ?string $currentAgentType = null;
 
-    /**
-     * Set the current agent type context.
-     *
-     * @param string $agentType Agent type (use AgentType constants)
-     */
-    public static function set(string $agentType): void {
-        self::$currentAgentType = $agentType;
-    }
+	/**
+	 * Set the current agent type context.
+	 *
+	 * @param string $agentType Agent type (use AgentType constants)
+	 */
+	public static function set( string $agentType ): void {
+		self::$currentAgentType = $agentType;
+	}
 
-    /**
-     * Get the current agent type context.
-     *
-     * @return string|null Current agent type or null if not set
-     */
-    public static function get(): ?string {
-        return self::$currentAgentType;
-    }
+	/**
+	 * Get the current agent type context.
+	 *
+	 * @return string|null Current agent type or null if not set
+	 */
+	public static function get(): ?string {
+		return self::$currentAgentType;
+	}
 
-    /**
-     * Clear the current agent type context.
-     */
-    public static function clear(): void {
-        self::$currentAgentType = null;
-    }
+	/**
+	 * Clear the current agent type context.
+	 */
+	public static function clear(): void {
+		self::$currentAgentType = null;
+	}
 }

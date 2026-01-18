@@ -7,21 +7,21 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Threads;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 class ThreadsSettings {
-    /**
-     * Settings payload placeholder.
-     */
-    private array $settings = [];
+	/**
+	 * Settings payload placeholder.
+	 */
+	private array $settings = array();
 
-    public function __construct(array $settings = []) {
-        $this->settings = $settings;
-    }
+	public function __construct( array $settings = array() ) {
+		$this->settings = $settings;
+	}
 
-    public function all(): array {
-        return $this->settings;
-    }
+	public function all(): array {
+		return $this->settings;
+	}
 }

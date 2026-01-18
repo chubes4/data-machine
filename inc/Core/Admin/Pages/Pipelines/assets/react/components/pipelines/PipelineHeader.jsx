@@ -128,9 +128,9 @@ export default function PipelineHeader( {
 		};
 	}, [] );
 
-		return (
-			<div className="datamachine-pipeline-header">
-				<div className="datamachine-header--absolute-top-right datamachine-header--flex-start">
+	return (
+		<div className="datamachine-pipeline-header">
+			<div className="datamachine-header--absolute-top-right datamachine-header--flex-start">
 				<Button
 					variant="secondary"
 					onClick={ onOpenContextFiles }

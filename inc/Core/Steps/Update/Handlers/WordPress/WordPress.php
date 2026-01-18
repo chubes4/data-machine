@@ -13,370 +13,458 @@ use DataMachine\Core\Steps\HandlerRegistrationTrait;
 use DataMachine\Core\WordPress\TaxonomyHandler;
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly.
+	exit; // Exit if accessed directly.
 }
 
 class WordPress extends UpdateHandler {
-    use HandlerRegistrationTrait;
+	use HandlerRegistrationTrait;
 
-    protected $taxonomy_handler;
+	protected $taxonomy_handler;
 
-    public function __construct() {
-        $this->taxonomy_handler = new TaxonomyHandler();
+	public function __construct() {
+		$this->taxonomy_handler = new TaxonomyHandler();
 
-        // Register handler via standardized trait
-        self::registerHandler(
-            'wordpress_update',
-            'update',
-            self::class,
-            'WordPress Update',
-            'Update existing WordPress posts and pages',
-            false,
-            null,
-            null,
-            [self::class, 'registerTools']
-        );
-    }
+		// Register handler via standardized trait
+		self::registerHandler(
+			'wordpress_update',
+			'update',
+			self::class,
+			'WordPress Update',
+			'Update existing WordPress posts and pages',
+			false,
+			null,
+			null,
+			array( self::class, 'registerTools' )
+		);
+	}
 
-    // Handler registration is managed by HandlerRegistrationTrait
+	// Handler registration is managed by HandlerRegistrationTrait
 
-    public static function registerTools($tools, $handler_slug, $handler_config) {
-        if ($handler_slug === 'wordpress_update') {
-            $tools['wordpress_update'] = [
-                'class' => self::class,
-                'method' => 'handle_tool_call',
-                'handler' => 'wordpress_update',
-                'description' => 'Update an existing WordPress post. Requires source_url from previous fetch step.',
-                'parameters' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'content' => [
-                            'type' => 'string',
-                            'description' => 'The new content to update the post with'
-                        ]
-                    ],
-                    'required' => ['content']
-                ]
-            ];
-        }
-        return $tools;
-    }
+	public static function registerTools( $tools, $handler_slug, $handler_config ) {
+		if ( $handler_slug === 'wordpress_update' ) {
+			$tools['wordpress_update'] = array(
+				'class'       => self::class,
+				'method'      => 'handle_tool_call',
+				'handler'     => 'wordpress_update',
+				'description' => 'Update an existing WordPress post. Requires source_url from previous fetch step.',
+				'parameters'  => array(
+					'type'       => 'object',
+					'properties' => array(
+						'content' => array(
+							'type'        => 'string',
+							'description' => 'The new content to update the post with',
+						),
+					),
+					'required'   => array( 'content' ),
+				),
+			);
+		}
+		return $tools;
+	}
 
-    protected function executeUpdate(array $parameters, array $handler_config): array {
-        $job_id = $parameters['job_id'];
-        $engine = $parameters['engine'] ?? null;
-        if (!$engine instanceof EngineData) {
-            $engine = new EngineData($parameters['engine_data'] ?? [], $job_id);
-        }
-        $source_url = $engine->getSourceUrl();
+	protected function executeUpdate( array $parameters, array $handler_config ): array {
+		$job_id = $parameters['job_id'];
+		$engine = $parameters['engine'] ?? null;
+		if ( ! $engine instanceof EngineData ) {
+			$engine = new EngineData( $parameters['engine_data'] ?? array(), $job_id );
+		}
+		$source_url = $engine->getSourceUrl();
 
-        // Build base log context for consistent logging
-        $log_context = ['job_id' => $job_id, 'handler' => 'wordpress_update'];
+		// Build base log context for consistent logging
+		$log_context = array(
+			'job_id'  => $job_id,
+			'handler' => 'wordpress_update',
+		);
 
-        do_action('datamachine_log', 'debug', 'WordPress Update: Handling tool call', array_merge($log_context, [
-            'source_url' => $source_url,
-            'has_handler_config' => !empty($handler_config)
-        ]));
+		do_action(
+			'datamachine_log',
+			'debug',
+			'WordPress Update: Handling tool call',
+			array_merge(
+				$log_context,
+				array(
+					'source_url'         => $source_url,
+					'has_handler_config' => ! empty( $handler_config ),
+				)
+			)
+		);
 
-        if (empty($source_url)) {
-            do_action('datamachine_log', 'error', 'WordPress Update: source_url is required', $log_context);
+		if ( empty( $source_url ) ) {
+			do_action( 'datamachine_log', 'error', 'WordPress Update: source_url is required', $log_context );
 
-            return [
-                'success' => false,
-                'error' => 'source_url parameter is required for WordPress Update handler',
-                'tool_name' => 'wordpress_update'
-            ];
-        }
+			return array(
+				'success'   => false,
+				'error'     => 'source_url parameter is required for WordPress Update handler',
+				'tool_name' => 'wordpress_update',
+			);
+		}
 
-        $post_id = url_to_postid($source_url);
-        if (!$post_id) {
-            do_action('datamachine_log', 'error', 'WordPress Update: Could not extract post ID from URL', array_merge($log_context, [
-                'source_url' => $source_url
-            ]));
+		$post_id = url_to_postid( $source_url );
+		if ( ! $post_id ) {
+			do_action(
+				'datamachine_log',
+				'error',
+				'WordPress Update: Could not extract post ID from URL',
+				array_merge(
+					$log_context,
+					array(
+						'source_url' => $source_url,
+					)
+				)
+			);
 
-            return [
-                'success' => false,
-                'error' => "Could not extract valid WordPress post ID from URL: {$source_url}",
-                'tool_name' => 'wordpress_update'
-            ];
-        }
+			return array(
+				'success'   => false,
+				'error'     => "Could not extract valid WordPress post ID from URL: {$source_url}",
+				'tool_name' => 'wordpress_update',
+			);
+		}
 
-        // Add post_id to log context for remaining logs
-        $log_context['post_id'] = $post_id;
-        
-        $existing_post = get_post($post_id);
-        if (!$existing_post) {
-            do_action('datamachine_log', 'error', 'WordPress Update: Post does not exist', $log_context);
-            
-            return [
-                'success' => false,
-                'error' => "WordPress post with ID {$post_id} does not exist",
-                'tool_name' => 'wordpress_update'
-            ];
-        }
+		// Add post_id to log context for remaining logs
+		$log_context['post_id'] = $post_id;
 
-        do_action('datamachine_log', 'debug', 'WordPress Update: Processing update', array_merge($log_context, [
-            'post_title' => $existing_post->post_title,
-            'has_title_update' => !empty($parameters['title']),
-            'has_content_update' => !empty($parameters['content']),
-            'has_surgical_updates' => !empty($parameters['updates']),
-            'has_block_updates' => !empty($parameters['block_updates'])
-        ]));
-        
-        $post_data = [
-            'ID' => $post_id
-        ];
-        $all_changes = [];
-        $original_content = $existing_post->post_content;
+		$existing_post = get_post( $post_id );
+		if ( ! $existing_post ) {
+			do_action( 'datamachine_log', 'error', 'WordPress Update: Post does not exist', $log_context );
 
-        if (!empty($parameters['updates'])) {
-            $result = $this->applySurgicalUpdates($original_content, $parameters['updates']);
-            $post_data['post_content'] = $this->sanitizeBlockContent($result['content']);
-            $all_changes['content_updates'] = $result['changes'];
-        }
+			return array(
+				'success'   => false,
+				'error'     => "WordPress post with ID {$post_id} does not exist",
+				'tool_name' => 'wordpress_update',
+			);
+		}
 
-        if (!empty($parameters['block_updates'])) {
-            $working_content = $post_data['post_content'] ?? $original_content;
-            $result = $this->applyBlockUpdates($working_content, $parameters['block_updates']);
-            $post_data['post_content'] = $this->sanitizeBlockContent($result['content']);
-            $all_changes['block_updates'] = $result['changes'];
-        }
+		do_action(
+			'datamachine_log',
+			'debug',
+			'WordPress Update: Processing update',
+			array_merge(
+				$log_context,
+				array(
+					'post_title'           => $existing_post->post_title,
+					'has_title_update'     => ! empty( $parameters['title'] ),
+					'has_content_update'   => ! empty( $parameters['content'] ),
+					'has_surgical_updates' => ! empty( $parameters['updates'] ),
+					'has_block_updates'    => ! empty( $parameters['block_updates'] ),
+				)
+			)
+		);
 
-        if (!empty($parameters['title'])) {
-            $post_data['post_title'] = sanitize_text_field(wp_unslash($parameters['title']));
-            $all_changes['title_update'] = true;
-        }
+		$post_data        = array(
+			'ID' => $post_id,
+		);
+		$all_changes      = array();
+		$original_content = $existing_post->post_content;
 
-        $has_updates = count($post_data) > 1;
-        
-        if (!$has_updates) {
-            do_action('datamachine_log', 'info', 'WordPress Update: No updates to apply', $log_context);
-            
-            return [
-                'success' => true,
-                'data' => [
-                    'updated_id' => $post_id,
-                    'post_url' => get_permalink($post_id),
-                    'modifications' => [],
-                    'message' => 'No updates applied - post unchanged'
-                ],
-                'tool_name' => 'wordpress_update'
-            ];
-        }
+		if ( ! empty( $parameters['updates'] ) ) {
+			$result                         = $this->applySurgicalUpdates( $original_content, $parameters['updates'] );
+			$post_data['post_content']      = $this->sanitizeBlockContent( $result['content'] );
+			$all_changes['content_updates'] = $result['changes'];
+		}
 
-        do_action('datamachine_log', 'debug', 'WordPress Update: Applying changes', array_merge($log_context, [
-            'updating_title' => isset($post_data['post_title']),
-            'updating_content' => isset($post_data['post_content'])
-        ]));
+		if ( ! empty( $parameters['block_updates'] ) ) {
+			$working_content              = $post_data['post_content'] ?? $original_content;
+			$result                       = $this->applyBlockUpdates( $working_content, $parameters['block_updates'] );
+			$post_data['post_content']    = $this->sanitizeBlockContent( $result['content'] );
+			$all_changes['block_updates'] = $result['changes'];
+		}
 
-        $result = wp_update_post($post_data);
+		if ( ! empty( $parameters['title'] ) ) {
+			$post_data['post_title']     = sanitize_text_field( wp_unslash( $parameters['title'] ) );
+			$all_changes['title_update'] = true;
+		}
 
-        if (is_wp_error($result)) {
-            do_action('datamachine_log', 'error', 'WordPress Update: wp_update_post failed', array_merge($log_context, [
-                'error' => $result->get_error_message()
-            ]));
+		$has_updates = count( $post_data ) > 1;
 
-            return [
-                'success' => false,
-                'error' => 'WordPress post update failed: ' . $result->get_error_message(),
-                'tool_name' => 'wordpress_update'
-            ];
-        }
+		if ( ! $has_updates ) {
+			do_action( 'datamachine_log', 'info', 'WordPress Update: No updates to apply', $log_context );
 
-        if ($result === 0) {
-            do_action('datamachine_log', 'error', 'WordPress Update: wp_update_post returned 0', $log_context);
+			return array(
+				'success'   => true,
+				'data'      => array(
+					'updated_id'    => $post_id,
+					'post_url'      => get_permalink( $post_id ),
+					'modifications' => array(),
+					'message'       => 'No updates applied - post unchanged',
+				),
+				'tool_name' => 'wordpress_update',
+			);
+		}
 
-            return [
-                'success' => false,
-                'error' => 'WordPress post update failed: wp_update_post returned 0',
-                'tool_name' => 'wordpress_update'
-            ];
-        }
+		do_action(
+			'datamachine_log',
+			'debug',
+			'WordPress Update: Applying changes',
+			array_merge(
+				$log_context,
+				array(
+					'updating_title'   => isset( $post_data['post_title'] ),
+					'updating_content' => isset( $post_data['post_content'] ),
+				)
+			)
+		);
 
-        $engine_data_array = $engine instanceof EngineData ? $engine->all() : [];
-        $taxonomy_results = $this->taxonomy_handler->processTaxonomies($post_id, $parameters, $handler_config, $engine_data_array);
+		$result = wp_update_post( $post_data );
 
-        do_action('datamachine_log', 'info', 'WordPress Update: Post updated successfully', array_merge($log_context, [
-            'post_url' => get_permalink($post_id),
-            'updated_fields' => array_diff(array_keys($post_data), ['ID'])
-        ]));
+		if ( is_wp_error( $result ) ) {
+			do_action(
+				'datamachine_log',
+				'error',
+				'WordPress Update: wp_update_post failed',
+				array_merge(
+					$log_context,
+					array(
+						'error' => $result->get_error_message(),
+					)
+				)
+			);
 
-        return [
-            'success' => true,
-            'data' => [
-                'updated_id' => $post_id,
-                'post_url' => get_permalink($post_id),
-                'taxonomy_results' => $taxonomy_results,
-                'changes_applied' => $all_changes,
-                'modifications' => array_diff_key($post_data, ['ID' => ''])
-            ],
-            'tool_name' => 'wordpress_update'
-        ];
-    }
+			return array(
+				'success'   => false,
+				'error'     => 'WordPress post update failed: ' . $result->get_error_message(),
+				'tool_name' => 'wordpress_update',
+			);
+		}
 
-    public static function get_label(): string {
-        return __('WordPress Update', 'data-machine');
-    }
+		if ( $result === 0 ) {
+			do_action( 'datamachine_log', 'error', 'WordPress Update: wp_update_post returned 0', $log_context );
 
-    /**
-     * Apply surgical find-and-replace updates with change tracking.
-     *
-     * @param string $original_content Original content
-     * @param array $updates Array of update operations with 'find' and 'replace' keys
-     * @return array Array with 'content' and 'changes' keys
-     */
-    private function applySurgicalUpdates(string $original_content, array $updates): array {
-        $working_content = $original_content;
-        $changes_made = [];
+			return array(
+				'success'   => false,
+				'error'     => 'WordPress post update failed: wp_update_post returned 0',
+				'tool_name' => 'wordpress_update',
+			);
+		}
 
-        foreach ($updates as $update) {
-            if (!isset($update['find']) || !isset($update['replace'])) {
-                $changes_made[] = [
-                    'found' => $update['find'] ?? '',
-                    'replaced_with' => $update['replace'] ?? '',
-                    'success' => false,
-                    'error' => 'Missing find or replace parameter'
-                ];
-                continue;
-            }
+		$engine_data_array = $engine instanceof EngineData ? $engine->all() : array();
+		$taxonomy_results  = $this->taxonomy_handler->processTaxonomies( $post_id, $parameters, $handler_config, $engine_data_array );
 
-            $find = $update['find'];
-            $replace = $update['replace'];
+		do_action(
+			'datamachine_log',
+			'info',
+			'WordPress Update: Post updated successfully',
+			array_merge(
+				$log_context,
+				array(
+					'post_url'       => get_permalink( $post_id ),
+					'updated_fields' => array_diff( array_keys( $post_data ), array( 'ID' ) ),
+				)
+			)
+		);
 
-            if (strpos($working_content, $find) !== false) {
-                $working_content = str_replace($find, $replace, $working_content);
-                $changes_made[] = [
-                    'found' => $find,
-                    'replaced_with' => $replace,
-                    'success' => true
-                ];
+		return array(
+			'success'   => true,
+			'data'      => array(
+				'updated_id'       => $post_id,
+				'post_url'         => get_permalink( $post_id ),
+				'taxonomy_results' => $taxonomy_results,
+				'changes_applied'  => $all_changes,
+				'modifications'    => array_diff_key( $post_data, array( 'ID' => '' ) ),
+			),
+			'tool_name' => 'wordpress_update',
+		);
+	}
 
-                do_action('datamachine_log', 'debug', 'WordPress Update: Surgical update applied', [
-                    'find_length' => strlen($find),
-                    'replace_length' => strlen($replace),
-                    'change_successful' => true
-                ]);
-            } else {
-                $changes_made[] = [
-                    'found' => $find,
-                    'replaced_with' => $replace,
-                    'success' => false,
-                    'error' => 'Target text not found in content'
-                ];
+	public static function get_label(): string {
+		return __( 'WordPress Update', 'data-machine' );
+	}
 
-                do_action('datamachine_log', 'warning', 'WordPress Update: Surgical update target not found', [
-                    'find_text' => substr($find, 0, 100) . (strlen($find) > 100 ? '...' : ''),
-                    'content_length' => strlen($working_content)
-                ]);
-            }
-        }
+	/**
+	 * Apply surgical find-and-replace updates with change tracking.
+	 *
+	 * @param string $original_content Original content
+	 * @param array  $updates Array of update operations with 'find' and 'replace' keys
+	 * @return array Array with 'content' and 'changes' keys
+	 */
+	private function applySurgicalUpdates( string $original_content, array $updates ): array {
+		$working_content = $original_content;
+		$changes_made    = array();
 
-        return ['content' => $working_content, 'changes' => $changes_made];
-    }
+		foreach ( $updates as $update ) {
+			if ( ! isset( $update['find'] ) || ! isset( $update['replace'] ) ) {
+				$changes_made[] = array(
+					'found'         => $update['find'] ?? '',
+					'replaced_with' => $update['replace'] ?? '',
+					'success'       => false,
+					'error'         => 'Missing find or replace parameter',
+				);
+				continue;
+			}
 
-    /**
-     * Apply targeted updates to specific Gutenberg blocks by index.
-     *
-     * @param string $original_content Original content
-     * @param array $block_updates Array of block update operations
-     * @return array Array with 'content' and 'changes' keys
-     */
-    private function applyBlockUpdates(string $original_content, array $block_updates): array {
-        $blocks = parse_blocks($original_content);
-        $changes_made = [];
+			$find    = $update['find'];
+			$replace = $update['replace'];
 
-        foreach ($block_updates as $update) {
-            if (!isset($update['block_index']) || !isset($update['find']) || !isset($update['replace'])) {
-                $changes_made[] = [
-                    'block_index' => $update['block_index'] ?? 'unknown',
-                    'found' => $update['find'] ?? '',
-                    'replaced_with' => $update['replace'] ?? '',
-                    'success' => false,
-                    'error' => 'Missing required parameters (block_index, find, replace)'
-                ];
-                continue;
-            }
+			if ( strpos( $working_content, $find ) !== false ) {
+				$working_content = str_replace( $find, $replace, $working_content );
+				$changes_made[]  = array(
+					'found'         => $find,
+					'replaced_with' => $replace,
+					'success'       => true,
+				);
 
-            $target_index = $update['block_index'];
-            $find = $update['find'];
-            $replace = $update['replace'];
+				do_action(
+					'datamachine_log',
+					'debug',
+					'WordPress Update: Surgical update applied',
+					array(
+						'find_length'       => strlen( $find ),
+						'replace_length'    => strlen( $replace ),
+						'change_successful' => true,
+					)
+				);
+			} else {
+				$changes_made[] = array(
+					'found'         => $find,
+					'replaced_with' => $replace,
+					'success'       => false,
+					'error'         => 'Target text not found in content',
+				);
 
-            if (isset($blocks[$target_index])) {
-                $old_content = $blocks[$target_index]['innerHTML'] ?? '';
+				do_action(
+					'datamachine_log',
+					'warning',
+					'WordPress Update: Surgical update target not found',
+					array(
+						'find_text'      => substr( $find, 0, 100 ) . ( strlen( $find ) > 100 ? '...' : '' ),
+						'content_length' => strlen( $working_content ),
+					)
+				);
+			}
+		}
 
-                if (strpos($old_content, $find) !== false) {
-                    $blocks[$target_index]['innerHTML'] = str_replace($find, $replace, $old_content);
-                    $changes_made[] = [
-                        'block_index' => $target_index,
-                        'found' => $find,
-                        'replaced_with' => $replace,
-                        'success' => true
-                    ];
+		return array(
+			'content' => $working_content,
+			'changes' => $changes_made,
+		);
+	}
 
-                    do_action('datamachine_log', 'debug', 'WordPress Update: Block update applied', [
-                        'block_index' => $target_index,
-                        'block_type' => $blocks[$target_index]['blockName'] ?? 'unknown',
-                        'find_length' => strlen($find),
-                        'replace_length' => strlen($replace)
-                    ]);
-                } else {
-                    $changes_made[] = [
-                        'block_index' => $target_index,
-                        'found' => $find,
-                        'replaced_with' => $replace,
-                        'success' => false,
-                        'error' => 'Target text not found in block'
-                    ];
+	/**
+	 * Apply targeted updates to specific Gutenberg blocks by index.
+	 *
+	 * @param string $original_content Original content
+	 * @param array  $block_updates Array of block update operations
+	 * @return array Array with 'content' and 'changes' keys
+	 */
+	private function applyBlockUpdates( string $original_content, array $block_updates ): array {
+		$blocks       = parse_blocks( $original_content );
+		$changes_made = array();
 
-                    do_action('datamachine_log', 'warning', 'WordPress Update: Block update target not found', [
-                        'block_index' => $target_index,
-                        'block_type' => $blocks[$target_index]['blockName'] ?? 'unknown',
-                        'find_text' => substr($find, 0, 100) . (strlen($find) > 100 ? '...' : '')
-                    ]);
-                }
-            } else {
-                $changes_made[] = [
-                    'block_index' => $target_index,
-                    'found' => $find,
-                    'replaced_with' => $replace,
-                    'success' => false,
-                    'error' => 'Block index does not exist'
-                ];
+		foreach ( $block_updates as $update ) {
+			if ( ! isset( $update['block_index'] ) || ! isset( $update['find'] ) || ! isset( $update['replace'] ) ) {
+				$changes_made[] = array(
+					'block_index'   => $update['block_index'] ?? 'unknown',
+					'found'         => $update['find'] ?? '',
+					'replaced_with' => $update['replace'] ?? '',
+					'success'       => false,
+					'error'         => 'Missing required parameters (block_index, find, replace)',
+				);
+				continue;
+			}
 
-                do_action('datamachine_log', 'warning', 'WordPress Update: Block index out of range', [
-                    'requested_index' => $target_index,
-                    'total_blocks' => count($blocks)
-                ]);
-            }
-        }
+			$target_index = $update['block_index'];
+			$find         = $update['find'];
+			$replace      = $update['replace'];
 
-        return ['content' => serialize_blocks($blocks), 'changes' => $changes_made];
-    }
+			if ( isset( $blocks[ $target_index ] ) ) {
+				$old_content = $blocks[ $target_index ]['innerHTML'] ?? '';
 
-    /**
-     * Sanitize Gutenberg blocks recursively.
-     *
-     * @param string $content Content with Gutenberg blocks
-     * @return string Sanitized content
-     */
-    private function sanitizeBlockContent(string $content): string {
-        $blocks = parse_blocks($content);
+				if ( strpos( $old_content, $find ) !== false ) {
+					$blocks[ $target_index ]['innerHTML'] = str_replace( $find, $replace, $old_content );
+					$changes_made[]                       = array(
+						'block_index'   => $target_index,
+						'found'         => $find,
+						'replaced_with' => $replace,
+						'success'       => true,
+					);
 
-        $filtered = array_map(function($block) {
-            if (isset($block['innerHTML']) && $block['innerHTML'] !== '') {
-                $block['innerHTML'] = wp_kses_post($block['innerHTML']);
-            }
-            if (!empty($block['innerBlocks']) && is_array($block['innerBlocks'])) {
-                $block['innerBlocks'] = array_map(function($inner) {
-                    if (isset($inner['innerHTML']) && $inner['innerHTML'] !== '') {
-                        $inner['innerHTML'] = wp_kses_post($inner['innerHTML']);
-                    }
-                    return $inner;
-                }, $block['innerBlocks']);
-            }
-            return $block;
-        }, $blocks);
+					do_action(
+						'datamachine_log',
+						'debug',
+						'WordPress Update: Block update applied',
+						array(
+							'block_index'    => $target_index,
+							'block_type'     => $blocks[ $target_index ]['blockName'] ?? 'unknown',
+							'find_length'    => strlen( $find ),
+							'replace_length' => strlen( $replace ),
+						)
+					);
+				} else {
+					$changes_made[] = array(
+						'block_index'   => $target_index,
+						'found'         => $find,
+						'replaced_with' => $replace,
+						'success'       => false,
+						'error'         => 'Target text not found in block',
+					);
 
-        return serialize_blocks($filtered);
-    }
+					do_action(
+						'datamachine_log',
+						'warning',
+						'WordPress Update: Block update target not found',
+						array(
+							'block_index' => $target_index,
+							'block_type'  => $blocks[ $target_index ]['blockName'] ?? 'unknown',
+							'find_text'   => substr( $find, 0, 100 ) . ( strlen( $find ) > 100 ? '...' : '' ),
+						)
+					);
+				}
+			} else {
+				$changes_made[] = array(
+					'block_index'   => $target_index,
+					'found'         => $find,
+					'replaced_with' => $replace,
+					'success'       => false,
+					'error'         => 'Block index does not exist',
+				);
+
+				do_action(
+					'datamachine_log',
+					'warning',
+					'WordPress Update: Block index out of range',
+					array(
+						'requested_index' => $target_index,
+						'total_blocks'    => count( $blocks ),
+					)
+				);
+			}
+		}
+
+		return array(
+			'content' => serialize_blocks( $blocks ),
+			'changes' => $changes_made,
+		);
+	}
+
+	/**
+	 * Sanitize Gutenberg blocks recursively.
+	 *
+	 * @param string $content Content with Gutenberg blocks
+	 * @return string Sanitized content
+	 */
+	private function sanitizeBlockContent( string $content ): string {
+		$blocks = parse_blocks( $content );
+
+		$filtered = array_map(
+			function ( $block ) {
+				if ( isset( $block['innerHTML'] ) && $block['innerHTML'] !== '' ) {
+					$block['innerHTML'] = wp_kses_post( $block['innerHTML'] );
+				}
+				if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+					$block['innerBlocks'] = array_map(
+						function ( $inner ) {
+							if ( isset( $inner['innerHTML'] ) && $inner['innerHTML'] !== '' ) {
+								$inner['innerHTML'] = wp_kses_post( $inner['innerHTML'] );
+							}
+							return $inner;
+						},
+						$block['innerBlocks']
+					);
+				}
+				return $block;
+			},
+			$blocks
+		);
+
+		return serialize_blocks( $filtered );
+	}
 }

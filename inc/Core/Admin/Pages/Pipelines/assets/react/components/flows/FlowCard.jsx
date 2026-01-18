@@ -172,10 +172,14 @@ function FlowCardContent( props ) {
 
 								return {
 									...oldData,
-									flows: oldData.flows.map( ( existingFlow ) =>
-										isSameId( existingFlow.flow_id, flowId )
-											? updatedFlow
-											: existingFlow
+									flows: oldData.flows.map(
+										( existingFlow ) =>
+											isSameId(
+												existingFlow.flow_id,
+												flowId
+											)
+												? updatedFlow
+												: existingFlow
 									),
 								};
 							}
@@ -268,8 +272,8 @@ function FlowCardContent( props ) {
 			const flowStepConfig =
 				currentFlowData.flow_config?.[ flowStepId ] || {};
 			const pipelineStepId = flowStepConfig.pipeline_step_id;
-			const pipelineStep = Object.values( pipelineConfig ).find(
-				( s ) => isSameId( s.pipeline_step_id, pipelineStepId )
+			const pipelineStep = Object.values( pipelineConfig ).find( ( s ) =>
+				isSameId( s.pipeline_step_id, pipelineStepId )
 			);
 
 			// Build data for handler modals

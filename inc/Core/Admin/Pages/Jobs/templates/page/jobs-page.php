@@ -8,11 +8,11 @@
  * @since 0.8.2
  */
 
-if (!defined('WPINC')) {
-    die;
+if ( ! defined( 'WPINC' ) ) {
+	die;
 }
 ?>
 
 <div class="wrap">
-    <div id="datamachine-jobs-root"></div>
+	<div id="datamachine-jobs-root"></div>
 </div>

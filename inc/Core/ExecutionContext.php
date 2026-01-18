@@ -21,12 +21,12 @@ namespace DataMachine\Core;
 use DataMachine\Services\ProcessedItemsManager;
 use DataMachine\Core\FilesRepository\RemoteFileDownloader;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 class ExecutionContext {
 
 	public const MODE_DIRECT = 'direct';
-	public const MODE_FLOW = 'flow';
+	public const MODE_FLOW   = 'flow';
 
 	private string $mode;
 	private int|string|null $pipeline_id;
@@ -47,11 +47,11 @@ class ExecutionContext {
 		?string $job_id,
 		string $handler_type = ''
 	) {
-		$this->mode = $mode;
-		$this->pipeline_id = $pipeline_id;
-		$this->flow_id = $flow_id;
+		$this->mode         = $mode;
+		$this->pipeline_id  = $pipeline_id;
+		$this->flow_id      = $flow_id;
 		$this->flow_step_id = $flow_step_id;
-		$this->job_id = $job_id;
+		$this->job_id       = $job_id;
 		$this->handler_type = $handler_type;
 	}
 
@@ -65,7 +65,7 @@ class ExecutionContext {
 	 * @param string $handler_type Handler type identifier for logging
 	 * @return self
 	 */
-	public static function direct(string $handler_type = ''): self {
+	public static function direct( string $handler_type = '' ): self {
 		return new self(
 			self::MODE_DIRECT,
 			'direct',
@@ -81,11 +81,11 @@ class ExecutionContext {
 	 *
 	 * Standard execution mode with full pipeline/flow context.
 	 *
-	 * @param int $pipeline_id Pipeline ID
-	 * @param int $flow_id Flow ID
-	 * @param string $flow_step_id Flow step ID for deduplication
+	 * @param int         $pipeline_id Pipeline ID
+	 * @param int         $flow_id Flow ID
+	 * @param string      $flow_step_id Flow step ID for deduplication
 	 * @param string|null $job_id Job ID for engine data storage
-	 * @param string $handler_type Handler type identifier
+	 * @param string      $handler_type Handler type identifier
 	 * @return self
 	 */
 	public static function fromFlow(
@@ -111,16 +111,16 @@ class ExecutionContext {
 	 * Provides backward compatibility with existing config structures.
 	 * Automatically detects direct execution mode from 'direct' sentinel values.
 	 *
-	 * @param array $config Handler configuration array
+	 * @param array       $config Handler configuration array
 	 * @param string|null $job_id Job ID
-	 * @param string $handler_type Handler type identifier
+	 * @param string      $handler_type Handler type identifier
 	 * @return self
 	 */
-	public static function fromConfig(array $config, ?string $job_id = null, string $handler_type = ''): self {
-		$flow_id = $config['flow_id'] ?? null;
+	public static function fromConfig( array $config, ?string $job_id = null, string $handler_type = '' ): self {
+		$flow_id     = $config['flow_id'] ?? null;
 		$pipeline_id = $config['pipeline_id'] ?? null;
 
-		if ($flow_id === 'direct' || $pipeline_id === 'direct') {
+		if ( $flow_id === 'direct' || $pipeline_id === 'direct' ) {
 			return new self(
 				self::MODE_DIRECT,
 				'direct',
@@ -175,12 +175,12 @@ class ExecutionContext {
 	 * @param string $item_id Item identifier
 	 * @return bool True if already processed
 	 */
-	public function isItemProcessed(string $item_id): bool {
-		if ($this->isDirect() || !$this->flow_step_id) {
+	public function isItemProcessed( string $item_id ): bool {
+		if ( $this->isDirect() || ! $this->flow_step_id ) {
 			return false;
 		}
 		$manager = new ProcessedItemsManager();
-		return $manager->hasBeenProcessed($this->flow_step_id, $this->handler_type, $item_id);
+		return $manager->hasBeenProcessed( $this->flow_step_id, $this->handler_type, $item_id );
 	}
 
 	/**
@@ -190,8 +190,8 @@ class ExecutionContext {
 	 *
 	 * @param string $item_id Item identifier
 	 */
-	public function markItemProcessed(string $item_id): void {
-		if ($this->isDirect() || !$this->flow_step_id) {
+	public function markItemProcessed( string $item_id ): void {
+		if ( $this->isDirect() || ! $this->flow_step_id ) {
 			return;
 		}
 		do_action(
@@ -211,9 +211,9 @@ class ExecutionContext {
 	 * @return EngineData
 	 */
 	public function getEngine(): EngineData {
-		if ($this->engine === null) {
-			$data = $this->job_id ? datamachine_get_engine_data((int) $this->job_id) : [];
-			$this->engine = new EngineData($data, $this->job_id);
+		if ( $this->engine === null ) {
+			$data         = $this->job_id ? datamachine_get_engine_data( (int) $this->job_id ) : array();
+			$this->engine = new EngineData( $data, $this->job_id );
 		}
 		return $this->engine;
 	}
@@ -223,9 +223,9 @@ class ExecutionContext {
 	 *
 	 * @param array $data Data to merge into engine snapshot
 	 */
-	public function storeEngineData(array $data): void {
-		if ($this->job_id) {
-			datamachine_merge_engine_data((int) $this->job_id, $data);
+	public function storeEngineData( array $data ): void {
+		if ( $this->job_id ) {
+			datamachine_merge_engine_data( (int) $this->job_id, $data );
 			// Invalidate cached engine so next getEngine() fetches fresh data
 			$this->engine = null;
 		}
@@ -255,7 +255,7 @@ class ExecutionContext {
 	 * @return string
 	 */
 	public function getStoragePath(): string {
-		if ($this->isDirect()) {
+		if ( $this->isDirect() ) {
 			return 'direct';
 		}
 		return "pipeline-{$this->pipeline_id}/flow-{$this->flow_id}";
@@ -269,20 +269,20 @@ class ExecutionContext {
 	 * @return array Context array with pipeline/flow metadata
 	 */
 	public function getFileContext(): array {
-		if ($this->isDirect()) {
-			return [
-				'pipeline_id' => 'direct',
+		if ( $this->isDirect() ) {
+			return array(
+				'pipeline_id'   => 'direct',
 				'pipeline_name' => 'direct',
-				'flow_id' => 'direct',
-				'flow_name' => 'direct',
-			];
+				'flow_id'       => 'direct',
+				'flow_name'     => 'direct',
+			);
 		}
-		return [
-			'pipeline_id' => $this->pipeline_id,
+		return array(
+			'pipeline_id'   => $this->pipeline_id,
 			'pipeline_name' => "pipeline-{$this->pipeline_id}",
-			'flow_id' => $this->flow_id,
-			'flow_name' => "flow-{$this->flow_id}",
-		];
+			'flow_id'       => $this->flow_id,
+			'flow_name'     => "flow-{$this->flow_id}",
+		);
 	}
 
 	/**
@@ -290,12 +290,12 @@ class ExecutionContext {
 	 *
 	 * @param string $url File URL
 	 * @param string $filename Target filename
-	 * @param array $options Optional download options
+	 * @param array  $options Optional download options
 	 * @return array|null Download result or null on failure
 	 */
-	public function downloadFile(string $url, string $filename, array $options = []): ?array {
+	public function downloadFile( string $url, string $filename, array $options = array() ): ?array {
 		$downloader = new RemoteFileDownloader();
-		return $downloader->download_remote_file($url, $filename, $this->getFileContext(), $options);
+		return $downloader->download_remote_file( $url, $filename, $this->getFileContext(), $options );
 	}
 
 	/**
@@ -303,20 +303,23 @@ class ExecutionContext {
 	 *
 	 * @param string $level Log level (debug, info, warning, error)
 	 * @param string $message Log message
-	 * @param array $extra Additional context
+	 * @param array  $extra Additional context
 	 */
-	public function log(string $level, string $message, array $extra = []): void {
-		$context = array_merge([
-			'execution_mode' => $this->mode,
-			'pipeline_id' => $this->pipeline_id,
-			'flow_id' => $this->flow_id,
-		], $extra);
+	public function log( string $level, string $message, array $extra = array() ): void {
+		$context = array_merge(
+			array(
+				'execution_mode' => $this->mode,
+				'pipeline_id'    => $this->pipeline_id,
+				'flow_id'        => $this->flow_id,
+			),
+			$extra
+		);
 
-		if ($this->handler_type) {
+		if ( $this->handler_type ) {
 			$context['handler'] = $this->handler_type;
 		}
 
-		do_action('datamachine_log', $level, $message, $context);
+		do_action( 'datamachine_log', $level, $message, $context );
 	}
 
 	/**
@@ -376,10 +379,10 @@ class ExecutionContext {
 	 * @param string $handler_type New handler type
 	 * @return self New context instance
 	 */
-	public function withHandlerType(string $handler_type): self {
-		$clone = clone $this;
+	public function withHandlerType( string $handler_type ): self {
+		$clone               = clone $this;
 		$clone->handler_type = $handler_type;
-		$clone->engine = null; // Reset cached engine
+		$clone->engine       = null; // Reset cached engine
 		return $clone;
 	}
 
@@ -391,8 +394,8 @@ class ExecutionContext {
 	 * @param string $job_id Job ID
 	 * @return self New context instance
 	 */
-	public function withJobId(string $job_id): self {
-		$clone = clone $this;
+	public function withJobId( string $job_id ): self {
+		$clone         = clone $this;
 		$clone->job_id = $job_id;
 		$clone->engine = null; // Reset cached engine
 		return $clone;

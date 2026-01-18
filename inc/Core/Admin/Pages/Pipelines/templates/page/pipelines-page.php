@@ -9,11 +9,11 @@
  * @since 1.0.0
  */
 
-if (!defined('WPINC')) {
-    die;
+if ( ! defined( 'WPINC' ) ) {
+	die;
 }
 
 ?>
 <div class="datamachine-admin-wrap datamachine-pipelines-page">
-    <div id="datamachine-react-root"></div>
+	<div id="datamachine-react-root"></div>
 </div>

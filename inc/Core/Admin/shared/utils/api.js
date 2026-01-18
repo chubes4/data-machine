@@ -12,7 +12,11 @@ import { addQueryArgs } from '@wordpress/url';
  * Get REST API configuration from WordPress globals
  */
 const getConfig = () => {
-	const config = window.dataMachineConfig || window.dataMachineLogsConfig || window.dataMachineSettingsConfig || {};
+	const config =
+		window.dataMachineConfig ||
+		window.dataMachineLogsConfig ||
+		window.dataMachineSettingsConfig ||
+		{};
 	return {
 		restNamespace: config.restNamespace || 'datamachine/v1',
 		restNonce: config.restNonce || '',
@@ -28,9 +32,18 @@ const getConfig = () => {
  * @param {Object} params - Query parameters
  * @param {Object} extraOptions - Additional fetch options (headers, body, etc.)
  */
-const request = async ( path, method = 'GET', data = undefined, params = {}, extraOptions = {} ) => {
+const request = async (
+	path,
+	method = 'GET',
+	data = undefined,
+	params = {},
+	extraOptions = {}
+) => {
 	const config = getConfig();
-	const endpoint = addQueryArgs( `/${ config.restNamespace }${ path }`, params );
+	const endpoint = addQueryArgs(
+		`/${ config.restNamespace }${ path }`,
+		params
+	);
 
 	try {
 		const response = await apiFetch( {
@@ -69,7 +82,8 @@ export const client = {
 	post: ( path, data ) => request( path, 'POST', data ),
 	put: ( path, data ) => request( path, 'PUT', data ),
 	patch: ( path, data ) => request( path, 'PATCH', data ),
-	delete: ( path, params = {} ) => request( path, 'DELETE', undefined, params ),
+	delete: ( path, params = {} ) =>
+		request( path, 'DELETE', undefined, params ),
 	upload: async ( path, file, additionalData = {} ) => {
 		const formData = new FormData();
 		formData.append( 'file', file );
@@ -77,9 +91,15 @@ export const client = {
 			formData.append( key, additionalData[ key ] )
 		);
 
-		return request( path, 'POST', undefined, {}, {
-			body: formData,
-		} );
+		return request(
+			path,
+			'POST',
+			undefined,
+			{},
+			{
+				body: formData,
+			}
+		);
 	},
 };
 

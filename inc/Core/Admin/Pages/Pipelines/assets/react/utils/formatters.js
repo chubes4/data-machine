@@ -18,4 +18,3 @@ import { __ } from '@wordpress/i18n';
 export const formatDateTime = ( displayValue ) => {
 	return displayValue || __( 'Never', 'datamachine' );
 };
-

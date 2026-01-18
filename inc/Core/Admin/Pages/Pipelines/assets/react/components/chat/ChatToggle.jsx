@@ -17,8 +17,14 @@ export default function ChatToggle() {
 		<Button
 			icon={ comment }
 			onClick={ toggleChat }
-			label={ isChatOpen ? __( 'Close chat', 'data-machine' ) : __( 'Open chat', 'data-machine' ) }
-			className={ `datamachine-chat-toggle ${ isChatOpen ? 'is-active' : '' }` }
+			label={
+				isChatOpen
+					? __( 'Close chat', 'data-machine' )
+					: __( 'Open chat', 'data-machine' )
+			}
+			className={ `datamachine-chat-toggle ${
+				isChatOpen ? 'is-active' : ''
+			}` }
 			isPressed={ isChatOpen }
 		/>
 	);

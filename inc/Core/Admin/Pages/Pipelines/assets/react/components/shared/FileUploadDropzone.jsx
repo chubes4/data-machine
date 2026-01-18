@@ -141,12 +141,12 @@ export default function FileUploadDropzone( {
 				onDragLeave={ handleDragLeave }
 				onDragOver={ handleDragOver }
 				onDrop={ handleDrop }
-				className={`datamachine-dropzone ${isDragging ? 'datamachine-dropzone--dragging' : ''}`}
+				className={ `datamachine-dropzone ${
+					isDragging ? 'datamachine-dropzone--dragging' : ''
+				}` }
 				onClick={ ! disabled ? handleBrowseClick : undefined }
 			>
-				<div className="datamachine-dropzone-icon">
-					📁
-				</div>
+				<div className="datamachine-dropzone-icon">📁</div>
 
 				<p className="datamachine-dropzone-title">
 					{ uploadText || defaultUploadText }
@@ -182,9 +182,7 @@ export default function FileUploadDropzone( {
 			</div>
 
 			{ error && (
-				<div className="datamachine-dropzone-error">
-					{ error }
-				</div>
+				<div className="datamachine-dropzone-error">{ error }</div>
 			) }
 		</div>
 	);

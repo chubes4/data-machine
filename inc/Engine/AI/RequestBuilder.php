@@ -12,7 +12,7 @@
 
 namespace DataMachine\Engine\AI;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 class RequestBuilder {
 
@@ -37,50 +37,58 @@ class RequestBuilder {
 		string $model,
 		array $tools,
 		string $agent_type,
-		array $payload = []
+		array $payload = array()
 	): array {
 
 		// 1. Initialize request with model and messages
-		$request = [
-			'model' => $model,
-			'messages' => $messages
-		];
+		$request = array(
+			'model'    => $model,
+			'messages' => $messages,
+		);
 
 		// 2. Restructure tools to standard format (ensures consistent tool structure for all providers)
-		$structured_tools = self::restructure_tools($tools);
+		$structured_tools = self::restructure_tools( $tools );
 
 		// 3. Apply directives via PromptBuilder
 		$promptBuilder = new PromptBuilder();
-		$promptBuilder->setMessages($messages)->setTools($structured_tools);
+		$promptBuilder->setMessages( $messages )->setTools( $structured_tools );
 
 		// Get registered directives
-		$directives = apply_filters('datamachine_directives', []);
+		$directives = apply_filters( 'datamachine_directives', array() );
 
 		// Add each directive to the builder
-		foreach ($directives as $directive) {
+		foreach ( $directives as $directive ) {
 			$promptBuilder->addDirective(
 				$directive['class'],
 				$directive['priority'],
-				$directive['agent_types'] ?? ['all']
+				$directive['agent_types'] ?? array( 'all' )
 			);
 		}
 
 		// Build the request with directives applied
-		$request = $promptBuilder->build($agent_type, $provider, $payload);
-		$applied_directives = $request['applied_directives'] ?? [];
-		unset($request['applied_directives']);
+		$request            = $promptBuilder->build( $agent_type, $provider, $payload );
+		$applied_directives = $request['applied_directives'] ?? array();
+		unset( $request['applied_directives'] );
 		$request['model'] = $model;
 
-		do_action('datamachine_log', 'debug', 'AI request built', array_filter([
-			'agent_type' => $agent_type,
-			'job_id' => $payload['job_id'] ?? null,
-			'flow_step_id' => $payload['flow_step_id'] ?? null,
-			'provider' => $provider,
-			'model' => $model,
-			'message_count' => count($request['messages']),
-			'tool_count' => count($structured_tools),
-			'directives' => $applied_directives
-		], fn($v) => $v !== null));
+		do_action(
+			'datamachine_log',
+			'debug',
+			'AI request built',
+			array_filter(
+				array(
+					'agent_type'    => $agent_type,
+					'job_id'        => $payload['job_id'] ?? null,
+					'flow_step_id'  => $payload['flow_step_id'] ?? null,
+					'provider'      => $provider,
+					'model'         => $model,
+					'message_count' => count( $request['messages'] ),
+					'tool_count'    => count( $structured_tools ),
+					'directives'    => $applied_directives,
+				),
+				fn( $v ) => $v !== null
+			)
+		);
 
 		// 4. Send to ai-http-client via chubes_ai_request filter
 		return apply_filters(
@@ -90,10 +98,10 @@ class RequestBuilder {
 			null, // streaming_callback
 			$structured_tools,
 			$payload['step_id'] ?? $payload['session_id'] ?? null,
-			[
+			array(
 				'agent_type' => $agent_type,
-				'payload' => $payload
-			]
+				'payload'    => $payload,
+			)
 		);
 	}
 
@@ -107,17 +115,17 @@ class RequestBuilder {
 	 * @param array $raw_tools Raw tools array from filters
 	 * @return array Structured tools with explicit fields
 	 */
-	private static function restructure_tools(array $raw_tools): array {
-		$structured = [];
+	private static function restructure_tools( array $raw_tools ): array {
+		$structured = array();
 
-		foreach ($raw_tools as $tool_name => $tool_config) {
-			$structured[$tool_name] = [
-				'name' => $tool_name,
-				'description' => $tool_config['description'] ?? '',
-				'parameters' => $tool_config['parameters'] ?? [],
-				'handler' => $tool_config['handler'] ?? null,
-				'handler_config' => $tool_config['handler_config'] ?? []
-			];
+		foreach ( $raw_tools as $tool_name => $tool_config ) {
+			$structured[ $tool_name ] = array(
+				'name'           => $tool_name,
+				'description'    => $tool_config['description'] ?? '',
+				'parameters'     => $tool_config['parameters'] ?? array(),
+				'handler'        => $tool_config['handler'] ?? null,
+				'handler_config' => $tool_config['handler_config'] ?? array(),
+			);
 		}
 
 		return $structured;

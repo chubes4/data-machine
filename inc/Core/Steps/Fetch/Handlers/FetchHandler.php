@@ -49,7 +49,7 @@ abstract class FetchHandler {
 	 * @return array Processed items array
 	 */
 	final public function get_fetch_data( int|string $pipeline_id, array $handler_config, ?string $job_id = null ): array {
-		$config = $this->extractConfig( $handler_config );
+		$config  = $this->extractConfig( $handler_config );
 		$context = ExecutionContext::fromConfig( $handler_config, $job_id, $this->handler_type );
 
 		return $this->executeFetch( $config, $context );
@@ -173,11 +173,11 @@ abstract class FetchHandler {
 	 *                        - context: string - Context for logging (defaults to handler_type)
 	 * @return array{success: bool, data?: string, status_code?: int, headers?: array, response?: array, error?: string}
 	 */
-	protected function httpRequest(string $method, string $url, array $options = []): array {
-		if (!isset($options['context'])) {
-			$options['context'] = ucfirst($this->handler_type);
+	protected function httpRequest( string $method, string $url, array $options = array() ): array {
+		if ( ! isset( $options['context'] ) ) {
+			$options['context'] = ucfirst( $this->handler_type );
 		}
-		return HttpClient::request($method, $url, $options);
+		return HttpClient::request( $method, $url, $options );
 	}
 
 	/**
@@ -187,8 +187,8 @@ abstract class FetchHandler {
 	 * @param array  $options Request options
 	 * @return array Response array
 	 */
-	protected function httpGet(string $url, array $options = []): array {
-		return $this->httpRequest('GET', $url, $options);
+	protected function httpGet( string $url, array $options = array() ): array {
+		return $this->httpRequest( 'GET', $url, $options );
 	}
 
 	/**
@@ -198,8 +198,8 @@ abstract class FetchHandler {
 	 * @param array  $options Request options
 	 * @return array Response array
 	 */
-	protected function httpPost(string $url, array $options = []): array {
-		return $this->httpRequest('POST', $url, $options);
+	protected function httpPost( string $url, array $options = array() ): array {
+		return $this->httpRequest( 'POST', $url, $options );
 	}
 
 	/**
@@ -209,8 +209,8 @@ abstract class FetchHandler {
 	 * @param array  $options Request options
 	 * @return array Response array
 	 */
-	protected function httpDelete(string $url, array $options = []): array {
-		return $this->httpRequest('DELETE', $url, $options);
+	protected function httpDelete( string $url, array $options = array() ): array {
+		return $this->httpRequest( 'DELETE', $url, $options );
 	}
 
 	/**
@@ -222,7 +222,7 @@ abstract class FetchHandler {
 	 * @since 0.9.7
 	 */
 	public static function init(): void {
-		add_filter('chubes_ai_tools', [self::class, 'registerSkipItemTool'], 10, 4);
+		add_filter( 'chubes_ai_tools', array( self::class, 'registerSkipItemTool' ), 10, 4 );
 	}
 
 	/**
@@ -239,22 +239,22 @@ abstract class FetchHandler {
 	 * @return array Modified tools array
 	 * @since 0.9.7
 	 */
-	public static function registerSkipItemTool(array $tools, ?string $handler_slug = null, array $handler_config = [], array $engine_data = []): array {
-		if (empty($handler_slug)) {
+	public static function registerSkipItemTool( array $tools, ?string $handler_slug = null, array $handler_config = array(), array $engine_data = array() ): array {
+		if ( empty( $handler_slug ) ) {
 			return $tools;
 		}
 
 		// Check if this handler_slug is a fetch-type or event_import-type handler
-		$fetch_handlers = apply_filters('datamachine_handlers', [], 'fetch');
-		$event_import_handlers = apply_filters('datamachine_handlers', [], 'event_import');
-		$all_fetch_handlers = array_merge($fetch_handlers, $event_import_handlers);
+		$fetch_handlers        = apply_filters( 'datamachine_handlers', array(), 'fetch' );
+		$event_import_handlers = apply_filters( 'datamachine_handlers', array(), 'event_import' );
+		$all_fetch_handlers    = array_merge( $fetch_handlers, $event_import_handlers );
 
-		if (!isset($all_fetch_handlers[$handler_slug])) {
+		if ( ! isset( $all_fetch_handlers[ $handler_slug ] ) ) {
 			return $tools;
 		}
 
 		// Register skip_item tool with handler association
-		$tools['skip_item'] = self::getSkipItemToolDefinition($handler_slug, $handler_config);
+		$tools['skip_item'] = self::getSkipItemToolDefinition( $handler_slug, $handler_config );
 
 		return $tools;
 	}
@@ -267,20 +267,20 @@ abstract class FetchHandler {
 	 * @return array Tool definition
 	 * @since 0.9.7
 	 */
-	private static function getSkipItemToolDefinition(string $handler_slug, array $handler_config): array {
-		return [
-			'class' => SkipItemTool::class,
-			'method' => 'handle_tool_call',
-			'handler' => $handler_slug,
-			'description' => 'Skip processing this item. Use when the item does not meet criteria for this flow (e.g., not a music event, wrong location, irrelevant content). The item will be marked as processed and will not be refetched on subsequent runs.',
-			'parameters' => [
-				'reason' => [
-					'type' => 'string',
+	private static function getSkipItemToolDefinition( string $handler_slug, array $handler_config ): array {
+		return array(
+			'class'          => SkipItemTool::class,
+			'method'         => 'handle_tool_call',
+			'handler'        => $handler_slug,
+			'description'    => 'Skip processing this item. Use when the item does not meet criteria for this flow (e.g., not a music event, wrong location, irrelevant content). The item will be marked as processed and will not be refetched on subsequent runs.',
+			'parameters'     => array(
+				'reason' => array(
+					'type'        => 'string',
 					'description' => 'Brief explanation of why this item is being skipped (e.g., "not a music event", "comedy show", "wrong location")',
-					'required' => true
-				]
-			],
-			'handler_config' => $handler_config
-		];
+					'required'    => true,
+				),
+			),
+			'handler_config' => $handler_config,
+		);
 	}
 }

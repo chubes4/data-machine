@@ -10,7 +10,7 @@
 
 namespace DataMachine\Engine\AI\Directives;
 
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 interface DirectiveInterface {
 
@@ -23,5 +23,5 @@ interface DirectiveInterface {
 	 * @param array       $payload       Execution payload (job_id, flow_step_id, etc.)
 	 * @return array Array of directive outputs
 	 */
-	public static function get_outputs(string $provider_name, array $tools, ?string $step_id = null, array $payload = []): array;
+	public static function get_outputs( string $provider_name, array $tools, ?string $step_id = null, array $payload = array() ): array;
 }

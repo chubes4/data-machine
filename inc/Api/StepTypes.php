@@ -15,7 +15,7 @@ use DataMachine\Services\HandlerService;
 use DataMachine\Services\StepTypeService;
 use WP_REST_Server;
 
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -32,26 +32,34 @@ class StepTypes {
 	 * @since 0.1.2
 	 */
 	public static function register_routes() {
-		register_rest_route('datamachine/v1', '/step-types', [
-			'methods' => WP_REST_Server::READABLE,
-			'callback' => [self::class, 'handle_get_step_types'],
-			'permission_callback' => '__return_true', // Public endpoint - step type info is not sensitive
-			'args' => []
-		]);
+		register_rest_route(
+			'datamachine/v1',
+			'/step-types',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'handle_get_step_types' ),
+				'permission_callback' => '__return_true', // Public endpoint - step type info is not sensitive
+				'args'                => array(),
+			)
+		);
 
-		register_rest_route('datamachine/v1', '/step-types/(?P<step_type>[a-zA-Z0-9_-]+)', [
-			'methods' => WP_REST_Server::READABLE,
-			'callback' => [self::class, 'handle_get_step_type_detail'],
-			'permission_callback' => '__return_true',
-			'args' => [
-				'step_type' => [
-					'required' => true,
-					'type' => 'string',
-					'description' => __('Step type slug', 'data-machine'),
-					'sanitize_callback' => 'sanitize_key'
-				]
-			]
-		]);
+		register_rest_route(
+			'datamachine/v1',
+			'/step-types/(?P<step_type>[a-zA-Z0-9_-]+)',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'handle_get_step_type_detail' ),
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'step_type' => array(
+						'required'          => true,
+						'type'              => 'string',
+						'description'       => __( 'Step type slug', 'data-machine' ),
+						'sanitize_callback' => 'sanitize_key',
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -65,29 +73,34 @@ class StepTypes {
 	 */
 	public static function handle_get_step_types() {
 		$step_type_service = new StepTypeService();
-		$handler_service = new HandlerService();
+		$handler_service   = new HandlerService();
 
-		$step_types = $step_type_service->getAll();
-		$enriched_data = [];
+		$step_types    = $step_type_service->getAll();
+		$enriched_data = array();
 
-		foreach ($step_types as $slug => $config) {
-			$uses_handler = $config['uses_handler'] ?? true;
+		foreach ( $step_types as $slug => $config ) {
+			$uses_handler  = $config['uses_handler'] ?? true;
 			$handler_count = 0;
 
-			if ($uses_handler) {
-				$handlers = $handler_service->getAll($slug);
-				$handler_count = count($handlers);
+			if ( $uses_handler ) {
+				$handlers      = $handler_service->getAll( $slug );
+				$handler_count = count( $handlers );
 			}
 
-			$enriched_data[$slug] = array_merge($config, [
-				'handler_count' => $handler_count,
-			]);
+			$enriched_data[ $slug ] = array_merge(
+				$config,
+				array(
+					'handler_count' => $handler_count,
+				)
+			);
 		}
 
-		return rest_ensure_response([
-			'success' => true,
-			'data' => $enriched_data
-		]);
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'data'    => $enriched_data,
+			)
+		);
 	}
 
 	/**
@@ -100,33 +113,35 @@ class StepTypes {
 	 * @param \WP_REST_Request $request Request instance
 	 * @return \WP_REST_Response|\WP_Error Step type detail response
 	 */
-	public static function handle_get_step_type_detail($request) {
-		$step_type = $request->get_param('step_type');
+	public static function handle_get_step_type_detail( $request ) {
+		$step_type = $request->get_param( 'step_type' );
 
 		$step_type_service = new StepTypeService();
-		$definition = $step_type_service->get($step_type);
+		$definition        = $step_type_service->get( $step_type );
 
-		if (!$definition) {
+		if ( ! $definition ) {
 			return new \WP_Error(
 				'step_type_not_found',
-				__('Step type not found', 'data-machine'),
-				['status' => 404]
+				__( 'Step type not found', 'data-machine' ),
+				array( 'status' => 404 )
 			);
 		}
 
-		$step_settings = apply_filters('datamachine_step_settings', []);
-		$config = $step_settings[$step_type] ?? null;
+		$step_settings = apply_filters( 'datamachine_step_settings', array() );
+		$config        = $step_settings[ $step_type ] ?? null;
 
-		return rest_ensure_response([
-			'success' => true,
-			'data' => [
-				'step_type' => $step_type,
-				'definition' => $definition,
-				'config' => $config
-			]
-		]);
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'data'    => array(
+					'step_type'  => $step_type,
+					'definition' => $definition,
+					'config'     => $config,
+				),
+			)
+		);
 	}
 }
 
 // Register routes on WordPress REST API initialization
-add_action('rest_api_init', [StepTypes::class, 'register_routes']);
+add_action( 'rest_api_init', array( StepTypes::class, 'register_routes' ) );

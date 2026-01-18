@@ -12,55 +12,61 @@
 
 namespace DataMachine\Api\Chat\Tools;
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 class SchedulingDocumentation {
 
-    /**
-     * Cached intervals JSON string.
-     *
-     * @var string|null
-     */
-    private static ?string $cached_json = null;
+	/**
+	 * Cached intervals JSON string.
+	 *
+	 * @var string|null
+	 */
+	private static ?string $cached_json = null;
 
-    /**
-     * Clear cached documentation.
-     */
-    public static function clearCache(): void {
-        self::$cached_json = null;
-    }
+	/**
+	 * Clear cached documentation.
+	 */
+	public static function clearCache(): void {
+		self::$cached_json = null;
+	}
 
-    /**
-     * Get scheduling intervals as a JSON array.
-     *
-     * Returns a formatted JSON string suitable for inclusion in tool descriptions.
-     * The JSON format is more parseable by LLMs than pipe-delimited strings.
-     *
-     * @return string JSON array of valid scheduling intervals
-     */
-    public static function getIntervalsJson(): string {
-        if (self::$cached_json !== null) {
-            return self::$cached_json;
-        }
+	/**
+	 * Get scheduling intervals as a JSON array.
+	 *
+	 * Returns a formatted JSON string suitable for inclusion in tool descriptions.
+	 * The JSON format is more parseable by LLMs than pipe-delimited strings.
+	 *
+	 * @return string JSON array of valid scheduling intervals
+	 */
+	public static function getIntervalsJson(): string {
+		if ( self::$cached_json !== null ) {
+			return self::$cached_json;
+		}
 
-        $intervals = apply_filters('datamachine_scheduler_intervals', []);
+		$intervals = apply_filters( 'datamachine_scheduler_intervals', array() );
 
-        $options = [
-            ['value' => 'manual', 'label' => 'Manual only'],
-            ['value' => 'one_time', 'label' => 'One-time (requires timestamp)'],
-        ];
+		$options = array(
+			array(
+				'value' => 'manual',
+				'label' => 'Manual only',
+			),
+			array(
+				'value' => 'one_time',
+				'label' => 'One-time (requires timestamp)',
+			),
+		);
 
-        foreach ($intervals as $key => $config) {
-            $options[] = [
-                'value' => $key,
-                'label' => $config['label'] ?? $key,
-            ];
-        }
+		foreach ( $intervals as $key => $config ) {
+			$options[] = array(
+				'value' => $key,
+				'label' => $config['label'] ?? $key,
+			);
+		}
 
-        self::$cached_json = json_encode($options, JSON_PRETTY_PRINT);
+		self::$cached_json = json_encode( $options, JSON_PRETTY_PRINT );
 
-        return self::$cached_json;
-    }
+		return self::$cached_json;
+	}
 }
