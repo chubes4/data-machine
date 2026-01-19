@@ -60,7 +60,7 @@ class GetProblemFlows {
 		$threshold = $parameters['threshold'] ?? null;
 
 		// Use setting if threshold not provided
-		if ( $threshold === null || ! is_numeric( $threshold ) || (int) $threshold <= 0 ) {
+		if ( null === $threshold || ! is_numeric( $threshold ) || (int) $threshold <= 0 ) {
 			$threshold = PluginSettings::get( 'problem_flow_threshold', 3 );
 		}
 

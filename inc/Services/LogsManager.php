@@ -117,7 +117,7 @@ class LogsManager {
 
 		$file_content = @file( $log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
 
-		if ( $file_content === false ) {
+		if ( false === $file_content ) {
 			return array(
 				'success' => false,
 				'error'   => 'log_file_read_error',
@@ -129,19 +129,19 @@ class LogsManager {
 		$total_lines  = count( $file_content );
 
 		// Apply filters (AND logic - all filters must match)
-		$has_filters = $jobId !== null || $pipelineId !== null || $flowId !== null;
-		if ( $jobId !== null ) {
+		$has_filters = null !== $jobId || null !== $pipelineId || null !== $flowId;
+		if ( null !== $jobId ) {
 			$file_content = self::filterByJobId( $file_content, $jobId );
 		}
-		if ( $pipelineId !== null ) {
+		if ( null !== $pipelineId ) {
 			$file_content = self::filterByPipelineId( $file_content, $pipelineId );
 		}
-		if ( $flowId !== null ) {
+		if ( null !== $flowId ) {
 			$file_content = self::filterByFlowId( $file_content, $flowId );
 		}
 		$filtered_lines = $has_filters ? count( $file_content ) : null;
 
-		if ( $mode === 'recent' ) {
+		if ( 'recent' === $mode ) {
 			$file_content = array_slice( $file_content, 0, $limit );
 		}
 
@@ -155,40 +155,42 @@ class LogsManager {
 			'agent_type'  => $agentType,
 		);
 
-		if ( $filtered_lines !== null ) {
+		if ( null !== $filtered_lines ) {
 			$response['filtered_lines'] = $filtered_lines;
-			if ( $jobId !== null ) {
+			if ( null !== $jobId ) {
 				$response['job_id'] = $jobId;
 			}
-			if ( $pipelineId !== null ) {
+			if ( null !== $pipelineId ) {
 				$response['pipeline_id'] = $pipelineId;
 			}
-			if ( $flowId !== null ) {
+			if ( null !== $flowId ) {
 				$response['flow_id'] = $flowId;
 			}
 		}
 
-		if ( $jobId !== null || $pipelineId !== null || $flowId !== null ) {
+		if ( null !== $jobId || null !== $pipelineId || null !== $flowId ) {
 			$filter_parts = array();
-			if ( $jobId !== null ) {
+			if ( null !== $jobId ) {
 				$filter_parts[] = sprintf( 'job %d', $jobId );
 			}
-			if ( $pipelineId !== null ) {
+			if ( null !== $pipelineId ) {
 				$filter_parts[] = sprintf( 'pipeline %d', $pipelineId );
 			}
-			if ( $flowId !== null ) {
+			if ( null !== $flowId ) {
 				$filter_parts[] = sprintf( 'flow %d', $flowId );
 			}
+			// translators: %1$d is the number of log entries, %2$s is the filter criteria (e.g., "job 123, pipeline 456").
 			$response['message'] = sprintf(
 				__( 'Retrieved %1$d log entries for %2$s.', 'data-machine' ),
 				count( $file_content ),
 				implode( ', ', $filter_parts )
 			);
 		} else {
+			// translators: %1$d is the number of log entries, %2$s is either "recent" or "total".
 			$response['message'] = sprintf(
 				__( 'Loaded %1$d %2$s log entries.', 'data-machine' ),
 				count( $file_content ),
-				$mode === 'recent' ? 'recent' : 'total'
+				'recent' === $mode ? 'recent' : 'total'
 			);
 		}
 

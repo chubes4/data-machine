@@ -90,7 +90,7 @@ class FlowManager {
 			$this->syncStepsToFlow( $flow_id, $pipeline_id, $pipeline_steps, $pipeline_config );
 		}
 
-		if ( isset( $scheduling_config['interval'] ) && $scheduling_config['interval'] !== 'manual' ) {
+		if ( isset( $scheduling_config['interval'] ) && 'manual' !== $scheduling_config['interval'] ) {
 			$scheduling_result = \DataMachine\Api\Flows\FlowScheduling::handle_scheduling_update( $flow_id, $scheduling_config );
 			if ( is_wp_error( $scheduling_result ) ) {
 				do_action(
@@ -136,7 +136,7 @@ class FlowManager {
 	 */
 	public function get( int $flow_id ): ?array {
 		$flow = $this->db_flows->get_flow( $flow_id );
-		return $flow ?: null;
+		return $flow ? $flow : null;
 	}
 
 	/**
@@ -367,7 +367,7 @@ class FlowManager {
 		}
 
 		// Handle scheduling if not manual
-		if ( isset( $scheduling_config['interval'] ) && $scheduling_config['interval'] !== 'manual' ) {
+		if ( isset( $scheduling_config['interval'] ) && 'manual' !== $scheduling_config['interval'] ) {
 			$scheduling_result = \DataMachine\Api\Flows\FlowScheduling::handle_scheduling_update( $new_flow_id, $scheduling_config );
 			if ( is_wp_error( $scheduling_result ) ) {
 				do_action(
@@ -420,7 +420,7 @@ class FlowManager {
 	private function getIntervalOnlySchedulingConfig( array $scheduling_config ): array {
 		$interval = $scheduling_config['interval'] ?? 'manual';
 
-		if ( ! is_string( $interval ) || $interval === '' ) {
+		if ( ! is_string( $interval ) || '' === $interval ) {
 			$interval = 'manual';
 		}
 

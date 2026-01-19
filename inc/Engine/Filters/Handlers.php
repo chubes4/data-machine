@@ -43,7 +43,7 @@ function datamachine_register_handler_filters() {
 	add_filter(
 		'datamachine_timeframe_limit',
 		function ( $default, $timeframe_limit ) {
-			if ( $timeframe_limit === null ) {
+			if ( null === $timeframe_limit ) {
 				return array(
 					'all_time' => 'All Time',
 					'24_hours' => 'Last 24 Hours',
@@ -53,7 +53,7 @@ function datamachine_register_handler_filters() {
 				);
 			}
 
-			if ( $timeframe_limit === 'all_time' ) {
+			if ( 'all_time' === $timeframe_limit ) {
 				return null;
 			}
 

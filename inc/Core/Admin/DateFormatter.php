@@ -20,14 +20,14 @@ class DateFormatter {
 	private static ?string $time_format = null;
 
 	private static function get_date_format(): string {
-		if ( self::$date_format === null ) {
+		if ( self::null === $date_format ) {
 			self::$date_format = get_option( 'date_format' );
 		}
 		return self::$date_format;
 	}
 
 	private static function get_time_format(): string {
-		if ( self::$time_format === null ) {
+		if ( self::null === $time_format ) {
 			self::$time_format = get_option( 'time_format' );
 		}
 		return self::$time_format;
@@ -44,7 +44,7 @@ class DateFormatter {
 	 * @return string Formatted datetime string
 	 */
 	public static function format_for_display( ?string $mysql_datetime, ?string $status = null ): string {
-		if ( empty( $mysql_datetime ) || $mysql_datetime === '0000-00-00 00:00:00' ) {
+		if ( empty( $mysql_datetime ) || '0000-00-00 00:00:00' === $mysql_datetime ) {
 			return __( 'Never', 'data-machine' );
 		}
 
@@ -67,7 +67,7 @@ class DateFormatter {
 	 * @return string Formatted date string or "Never"
 	 */
 	public static function format_date_only( ?string $mysql_datetime ): string {
-		if ( empty( $mysql_datetime ) || $mysql_datetime === '0000-00-00 00:00:00' ) {
+		if ( empty( $mysql_datetime ) || '0000-00-00 00:00:00' === $mysql_datetime ) {
 			return __( 'Never', 'data-machine' );
 		}
 
@@ -88,7 +88,7 @@ class DateFormatter {
 	 * @return string Formatted time string or empty string
 	 */
 	public static function format_time_only( ?string $mysql_datetime ): string {
-		if ( empty( $mysql_datetime ) || $mysql_datetime === '0000-00-00 00:00:00' ) {
+		if ( empty( $mysql_datetime ) || '0000-00-00 00:00:00' === $mysql_datetime ) {
 			return '';
 		}
 

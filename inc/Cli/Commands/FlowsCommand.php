@@ -72,7 +72,7 @@ class FlowsCommand extends WP_CLI_Command {
 	public function __invoke( array $args, array $assoc_args ): void {
 		$pipeline_id = null;
 
-		if ( ! empty( $args ) && $args[0] !== 'list' ) {
+		if ( ! empty( $args ) && 'list' !== $args[0] ) {
 			$pipeline_id = (int) $args[0];
 		}
 
@@ -124,7 +124,7 @@ class FlowsCommand extends WP_CLI_Command {
 			return;
 		}
 
-		if ( $format === 'json' ) {
+		if ( 'json' === $format ) {
 			WP_CLI::log( wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
 			return;
 		}

@@ -30,7 +30,7 @@ CREATE TABLE wp_datamachine_chat_sessions (
     messages LONGTEXT NOT NULL,                   -- JSON array of conversation messages
     metadata LONGTEXT NULL,                       -- JSON object for session metadata
     provider VARCHAR(50) NULL,                    -- AI provider (anthropic, openai, google, grok, openrouter)
-    model VARCHAR(100) NULL,                      -- AI model identifier (e.g., claude-sonnet-4)
+    model VARCHAR(100) NULL,                      -- AI model identifier (e.g., claude-3-5-sonnet-20241022)
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     expires_at DATETIME NULL,                     -- Auto-cleanup timestamp (24 hours from creation)
@@ -197,7 +197,7 @@ public function get_session(string $session_id): ?array
         'last_activity' => '2024-01-01 12:00:00'
     ],
     'provider' => 'anthropic',
-    'model' => 'claude-sonnet-4',
+    'model' => 'claude-3-5-sonnet-20241022',
     'created_at' => '2024-01-01 10:00:00',
     'updated_at' => '2024-01-01 12:00:00',
     'expires_at' => '2024-01-02 10:00:00'

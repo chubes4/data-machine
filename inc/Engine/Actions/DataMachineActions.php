@@ -148,7 +148,7 @@ function datamachine_register_core_actions() {
 		function ( $operation, $param2 = null, $param3 = null, &$result = null ) {
 			$management_operations = array( 'clear_all', 'cleanup', 'set_level' );
 
-			if ( in_array( $operation, $management_operations ) ) {
+			if ( in_array( $operation, $management_operations, true ) ) {
 				switch ( $operation ) {
 					case 'clear_all':
 						$result = datamachine_clear_log_files();
@@ -169,7 +169,7 @@ function datamachine_register_core_actions() {
 			$context      = $param3 ?? array();
 			$valid_levels = datamachine_get_valid_log_levels();
 
-			if ( ! in_array( $operation, $valid_levels ) ) {
+			if ( ! in_array( $operation, $valid_levels, true ) ) {
 				if ( class_exists( 'WP_Ability' ) ) {
 					$ability = wp_get_ability( 'datamachine/write-to-log' );
 					$result  = $ability->execute(

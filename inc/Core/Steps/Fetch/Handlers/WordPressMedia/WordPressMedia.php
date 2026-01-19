@@ -66,7 +66,7 @@ class WordPressMedia extends FetchHandler {
 		// Calculate date query parameters
 		$cutoff_timestamp = apply_filters( 'datamachine_timeframe_limit', null, $timeframe_limit );
 		$date_query       = array();
-		if ( $cutoff_timestamp !== null ) {
+		if ( null !== $cutoff_timestamp ) {
 			$date_query = array(
 				array(
 					'after'     => gmdate( 'Y-m-d H:i:s', $cutoff_timestamp ),
@@ -141,14 +141,17 @@ class WordPressMedia extends FetchHandler {
 
 			// Extract media data using universal pattern (identical to all other handlers)
 			$post_id     = $post->ID;
-			$title       = $post->post_title ?: 'N/A';
-			$caption     = $post->post_excerpt ?: '';
-			$description = $post->post_content ?: '';
-			$alt_text    = get_post_meta( $post_id, '_wp_attachment_image_alt', true ) ?: '';
-			$file_type   = get_post_mime_type( $post_id ) ?: 'unknown';
+			$title       = ! empty( $post->post_title ) ? $post->post_title : 'N/A';
+			$caption     = $post->post_excerpt;
+			$description = $post->post_content;
+			$alt_text    = get_post_meta( $post_id, '_wp_attachment_image_alt', true );
+			$alt_text    = is_string( $alt_text ) ? $alt_text : '';
+			$file_type   = get_post_mime_type( $post_id );
+			$file_type   = ! empty( $file_type ) ? $file_type : 'unknown';
 			$file_path   = get_attached_file( $post_id );
 			$file_size   = $file_path && file_exists( $file_path ) ? filesize( $file_path ) : 0;
-			$site_name   = get_bloginfo( 'name' ) ?: 'Local WordPress';
+			$site_name   = get_bloginfo( 'name' );
+			$site_name   = ! empty( $site_name ) ? $site_name : 'Local WordPress';
 
 			// Handle parent post content if enabled
 			$content_data = array();
@@ -156,9 +159,10 @@ class WordPressMedia extends FetchHandler {
 			if ( $include_parent_content && $post->post_parent > 0 ) {
 				$parent_post = get_post( $post->post_parent );
 				if ( $parent_post && $parent_post->post_status === 'publish' ) {
+					$parent_title = ! empty( $parent_post->post_title ) ? $parent_post->post_title : 'Untitled';
 					$content_data = array(
-						'title'   => $parent_post->post_title ?: 'Untitled',
-						'content' => $parent_post->post_content ?: '',
+						'title'   => $parent_title,
+						'content' => $parent_post->post_content,
 					);
 				}
 			}
@@ -201,7 +205,7 @@ class WordPressMedia extends FetchHandler {
 			// Store URLs in engine_data via centralized filter
 			$source_url = '';
 			if ( $include_parent_content && $post->post_parent > 0 ) {
-				$source_url = get_permalink( $post->post_parent ) ?: '';
+				$source_url = get_permalink( $post->post_parent ) ?? '';
 			}
 			$image_file_path = '';
 			if ( $file_info ) {

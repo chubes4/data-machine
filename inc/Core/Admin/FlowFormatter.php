@@ -67,7 +67,7 @@ class FlowFormatter {
 
 		$last_run_at     = $latest_job['created_at'] ?? null;
 		$last_run_status = $latest_job['status'] ?? null;
-		$is_running      = $latest_job && $latest_job['completed_at'] === null;
+		$is_running      = $latest_job && null === $latest_job['completed_at'];
 
 		$next_run = self::get_next_run_time( $flow_id );
 

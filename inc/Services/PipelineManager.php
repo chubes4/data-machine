@@ -240,7 +240,7 @@ class PipelineManager {
 	 */
 	public function get( int $pipeline_id ): ?array {
 		$pipeline = $this->db_pipelines->get_pipeline( $pipeline_id );
-		return $pipeline ?: null;
+		return $pipeline ? $pipeline : null;
 	}
 
 	/**
@@ -299,9 +299,6 @@ class PipelineManager {
 		}
 
 		$success = $this->db_pipelines->update_pipeline( $pipeline_id, $update_data );
-
-		if ( $success ) {
-		}
 
 		return $success;
 	}

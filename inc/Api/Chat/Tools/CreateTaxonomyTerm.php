@@ -137,7 +137,7 @@ class CreateTaxonomyTerm {
 			}
 
 			$parent_id = $this->resolveParentTerm( $parent, $taxonomy );
-			if ( $parent_id === false ) {
+			if ( false === $parent_id ) {
 				return array(
 					'success'   => false,
 					'error'     => "Parent term '{$parent}' not found in taxonomy '{$taxonomy}'",

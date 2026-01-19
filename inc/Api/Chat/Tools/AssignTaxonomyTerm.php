@@ -139,7 +139,7 @@ class AssignTaxonomyTerm {
 
 		// Build message
 		$mode    = $append ? 'appended to existing terms' : 'replaced existing terms';
-		$message = "Assigned '{$term->name}' to {$success_count} post" . ( $success_count !== 1 ? 's' : '' ) . " ({$mode}).";
+		$message = "Assigned '{$term->name}' to {$success_count} post" . ( 1 !== $success_count ? 's' : '' ) . " ({$mode}).";
 
 		if ( ! empty( $failed_posts ) ) {
 			$message .= ' Failed for post IDs: ' . implode( ', ', $failed_posts ) . '.';

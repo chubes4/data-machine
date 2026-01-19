@@ -81,7 +81,7 @@ class GoogleSheetsSettings extends PublishHandlerSettings {
 					if ( preg_match( '/^[A-Z]+$/', $clean_column ) ) {
 						// Sanitize field name
 						$clean_field = sanitize_text_field( $field );
-						if ( in_array( $clean_field, $valid_fields ) ) {
+						if ( in_array( $clean_field, $valid_fields, true ) ) {
 							$valid_mapping[ $clean_column ] = $clean_field;
 						}
 					}

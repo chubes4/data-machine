@@ -34,7 +34,7 @@ class Bluesky extends PublishHandler {
 			BlueskyAuth::class,
 			null,
 			function ( $tools, $handler_slug, $handler_config ) {
-				if ( $handler_slug === 'bluesky_publish' ) {
+				if ( 'bluesky_publish' === $handler_slug ) {
 					$tools['bluesky_publish'] = array(
 						'class'       => self::class,
 						'method'      => 'handle_tool_call',
@@ -145,7 +145,7 @@ class Bluesky extends PublishHandler {
 		$post_text       = $title ? $title . ': ' . $content : $content;
 		$ellipsis        = '…';
 		$ellipsis_len    = mb_strlen( $ellipsis, 'UTF-8' );
-		$link            = ( $link_handling === 'append' && ! empty( $source_url ) && filter_var( $source_url, FILTER_VALIDATE_URL ) ) ? "\n\n" . $source_url : '';
+		$link            = ( 'append' === $link_handling && ! empty( $source_url ) && filter_var( $source_url, FILTER_VALIDATE_URL ) ) ? "\n\n" . $source_url : '';
 		$link_length     = $link ? mb_strlen( $link, 'UTF-8' ) : 0; // Bluesky counts full URL length
 		$available_chars = 300 - $link_length;
 
@@ -191,7 +191,7 @@ class Bluesky extends PublishHandler {
 					);
 				}
 
-				$image_alt_text      = $title ?: substr( $content, 0, 50 );
+				$image_alt_text      = $title ? $title : substr( $content, 0, 50 );
 				$uploaded_image_blob = $this->upload_bluesky_image_from_file( $pds_url, $access_token, $did, $image_file_path, $image_alt_text );
 
 				if ( ! is_wp_error( $uploaded_image_blob ) && isset( $uploaded_image_blob['blob'] ) ) {
@@ -310,7 +310,7 @@ class Bluesky extends PublishHandler {
 	private function upload_bluesky_image_from_file( string $pds_url, string $access_token, string $did, string $image_file_path, string $alt_text ) {
 
 		$file_size = @filesize( $image_file_path );
-		if ( $file_size === false || $file_size > 1000000 ) {
+		if ( false === $file_size || $file_size > 1000000 ) {
 			return new \WP_Error( 'bluesky_image_too_large', __( 'Image exceeds Bluesky size limit.', 'data-machine' ) );
 		}
 
@@ -320,7 +320,7 @@ class Bluesky extends PublishHandler {
 		}
 
 		$image_content = file_get_contents( $image_file_path );
-		if ( $image_content === false ) {
+		if ( false === $image_content ) {
 			return new \WP_Error( 'bluesky_image_read_failed', __( 'Could not read image file.', 'data-machine' ) );
 		}
 
@@ -346,7 +346,7 @@ class Bluesky extends PublishHandler {
 		$response_code = $result['status_code'];
 		$response_body = $result['data'];
 
-		if ( $response_code !== 200 ) {
+		if ( 200 !== $response_code ) {
 			return new \WP_Error( 'bluesky_upload_failed', __( 'Image upload failed.', 'data-machine' ) );
 		}
 
@@ -397,12 +397,12 @@ class Bluesky extends PublishHandler {
 		$response_code = $result['status_code'];
 		$response_body = $result['data'];
 
-		if ( $response_code !== 200 ) {
+		if ( 200 !== $response_code ) {
 			return new \WP_Error( 'bluesky_post_failed', __( 'Failed to create Bluesky post.', 'data-machine' ) );
 		}
 
 		$result = json_decode( $response_body, true );
-		return $result ?: new \WP_Error( 'bluesky_post_decode_error', __( 'Could not decode post response.', 'data-machine' ) );
+		return $result ? $result : new \WP_Error( 'bluesky_post_decode_error', __( 'Could not decode post response.', 'data-machine' ) );
 	}
 
 	/**

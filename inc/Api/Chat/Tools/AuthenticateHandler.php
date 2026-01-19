@@ -92,7 +92,7 @@ ACTIONS:
 		}
 
 		// List action doesn't require handler_slug
-		if ( $action === 'list' ) {
+		if ( 'list' === $action ) {
 			return $this->handleList();
 		}
 
@@ -197,7 +197,7 @@ ACTIONS:
 		if ( ! $is_configured ) {
 			$response['message'] = "Configuration required. Please provide credentials using the 'configure' action.";
 		} elseif ( ! $is_authenticated ) {
-			if ( $auth_type === 'oauth1' || $auth_type === 'oauth2' ) {
+			if ( 'oauth1' === $auth_type || 'oauth2' === $auth_type ) {
 				$response['message'] = "Configured but not authenticated. Use 'get_oauth_url' action to authorize.";
 			} else {
 				$response['message'] = 'Configured but authentication failed. Check credentials.';

@@ -90,7 +90,7 @@ class RunFlow {
 
 		for ( $i = 0; $i < $count; $i++ ) {
 			$body_params = array( 'flow_id' => $flow_id );
-			if ( $timestamp !== null ) {
+			if ( null !== $timestamp ) {
 				$body_params['timestamp'] = $timestamp;
 			}
 
@@ -116,23 +116,23 @@ class RunFlow {
 			if ( isset( $data['data']['job_id'] ) ) {
 				$jobs[] = $data['data']['job_id'];
 			}
-			if ( $flow_name === null && isset( $data['data']['flow_name'] ) ) {
+			if ( null === $flow_name && isset( $data['data']['flow_name'] ) ) {
 				$flow_name = $data['data']['flow_name'];
 			}
 		}
 
-		if ( $count === 1 ) {
+		if ( 1 === $count ) {
 			$response_data = array(
 				'flow_id'        => $flow_id,
 				'execution_type' => $execution_type,
-				'message'        => $execution_type === 'immediate'
+				'message'        => 'immediate' === $execution_type
 					? 'Flow queued for immediate background execution. It will start within seconds. Use job_id to check status.'
 					: 'Flow scheduled for delayed background execution at the specified time.',
 			);
 			if ( ! empty( $jobs ) ) {
 				$response_data['job_id'] = $jobs[0];
 			}
-			if ( $flow_name !== null ) {
+			if ( null !== $flow_name ) {
 				$response_data['flow_name'] = $flow_name;
 			}
 		} else {
@@ -147,7 +147,7 @@ class RunFlow {
 					$flow_name ?? "ID {$flow_id}"
 				),
 			);
-			if ( $flow_name !== null ) {
+			if ( null !== $flow_name ) {
 				$response_data['flow_name'] = $flow_name;
 			}
 		}

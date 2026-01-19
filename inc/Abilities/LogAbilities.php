@@ -135,7 +135,7 @@ class LogAbilities {
 	public static function clear( array $input ): array {
 		$agent_type = $input['agent_type'];
 
-		if ( $agent_type === 'all' ) {
+		if ( 'all' === $agent_type ) {
 			$cleared       = datamachine_clear_log_files();
 			$files_cleared = array( 'all' );
 		} else {

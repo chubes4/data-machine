@@ -51,7 +51,7 @@ trait HandlerRegistrationTrait {
         // Handler registration
         add_filter('datamachine_handlers', function($handlers, $step_type = null)
             use ($slug, $type, $class, $label, $description, $requiresAuth, $provider_key) {
-            if ($step_type === null || $step_type === $type) {
+            if (null === $step_type || $step_type === $type) {
                 $handlers[$slug] = [
                     'type' => $type,
                     'class' => $class,
@@ -68,7 +68,7 @@ trait HandlerRegistrationTrait {
         if ($authClass && $requiresAuth) {
             add_filter('datamachine_auth_providers', function($providers, $step_type = null)
                 use ($provider_key, $authClass, $type) {
-                if ($step_type === null || $step_type === $type) {
+                if (null === $step_type || $step_type === $type) {
                     // Singleton pattern: only create instance if key doesn't already exist
                     if (!isset($providers[$provider_key])) {
                         $providers[$provider_key] = new $authClass();
@@ -82,7 +82,7 @@ trait HandlerRegistrationTrait {
         if ($settingsClass) {
             add_filter('datamachine_handler_settings', function($all_settings, $handler_slug = null)
                 use ($slug, $settingsClass) {
-                if ($handler_slug === null || $handler_slug === $slug) {
+                if (null === $handler_slug || $handler_slug === $slug) {
                     $all_settings[$slug] = new $settingsClass();
                 }
                 return $all_settings;

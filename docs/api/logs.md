@@ -4,7 +4,7 @@ Centralized system logging via the `LogsManager` service.
 
 ## Overview
 
-As of v0.4.0, Data Machine uses a centralized `LogsManager` service and a dedicated database table (`wp_datamachine_logs`) for consistent, performant logging across all agents (Pipeline, Chat, etc.). This replaces the previous file-based logging system.
+Data Machine uses a centralized file-based logging system managed by Monolog for consistent, performant logging across all agents (Pipeline, Chat, System, CLI). Individual log files are maintained per agent type in the uploads directory.
 
 ## Endpoints
 
@@ -16,9 +16,10 @@ Retrieves a paginated list of system logs with advanced filtering.
 
 **Parameters**:
 
+- `agent_type` (string): Filter by agent type (`pipeline`, `chat`, `system`, `cli`)
 - `per_page` (int): Number of items (default: 20)
 - `page` (int): Page number
-- `level` (string): Filter by log level (`info`, `warning`, `error`, `debug`)
+- `level` (string): Filter by log level (`debug`, `info`, `warning`, `error`, `critical`)
 - `context` (string): Filter by context (e.g., `flow_id`, `pipeline_id`, `handler_slug`)
 - `search` (string): Search within log messages
 - `date_start` (string): ISO 8601 start date
@@ -28,12 +29,13 @@ Retrieves a paginated list of system logs with advanced filtering.
 
 ### DELETE /datamachine/v1/logs
 
-Clears log entries.
+Clears log files.
 
 **Permission**: `manage_options` capability required
 
 **Parameters**:
-- `days` (int): Optional. Clear logs older than X days.
+- `agent_type` (string): Agent type to clear (`pipeline`, `chat`, `system`, `cli`, or `all`)
+- `days` (int): Optional. Clear logs older than X days (file-based logs filtered by date).
 
 ## Implementation
 
@@ -58,6 +60,7 @@ $logs = $logs_manager->get_logs([
 
 ### Log Levels
 
+- **Critical**: System-critical failures that require immediate attention
 - **Debug**: Detailed execution flow, AI processing steps, tool validation.
 - **Info**: Flow triggers, job completions, handler operations.
 - **Warning**: Deprecated functionality, missing optional configuration.

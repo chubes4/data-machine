@@ -143,7 +143,7 @@ class SearchTaxonomyTerms {
 				'hierarchical'   => $taxonomy_obj->hierarchical,
 				'total_terms'    => (int) $total_count,
 				'returned_count' => count( $term_data ),
-				'search_query'   => $search ?: null,
+				'search_query'   => $search ? $search : null,
 				'terms'          => $term_data,
 			),
 			'tool_name' => 'search_taxonomy_terms',

@@ -71,7 +71,7 @@ class ImageValidator {
 			return $result;
 		}
 
-		if ( ! in_array( $mime_type, self::SUPPORTED_MIME_TYPES ) ) {
+		if ( ! in_array( $mime_type, self::SUPPORTED_MIME_TYPES, true ) ) {
 			$result['errors'][] = 'Unsupported image format';
 			return $result;
 		}
@@ -127,6 +127,6 @@ class ImageValidator {
 	 * @return bool True if supported
 	 */
 	public function is_supported_mime_type( string $mime_type ): bool {
-		return in_array( $mime_type, self::SUPPORTED_MIME_TYPES );
+		return in_array( $mime_type, self::SUPPORTED_MIME_TYPES, true );
 	}
 }

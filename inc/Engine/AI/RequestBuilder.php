@@ -86,7 +86,7 @@ class RequestBuilder {
 					'tool_count'    => count( $structured_tools ),
 					'directives'    => $applied_directives,
 				),
-				fn( $v ) => $v !== null
+				fn( $v ) => null !== $v
 			)
 		);
 

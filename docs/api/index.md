@@ -103,4 +103,4 @@ For detailed implementation patterns, see Core Actions and Core Filters document
 ---
 
 **API Version**: v1
-**Last Updated**: 2026-01-03
+**Last Updated**: 2026-01-18

@@ -67,11 +67,11 @@ class SettingsCommand extends WP_CLI_Command {
 
 		$value = PluginSettings::get( $key );
 
-		if ( $value === null ) {
+		if ( null === $value ) {
 			WP_CLI::error( "Setting '{$key}' is not set." );
 		}
 
-		if ( $format === 'json' ) {
+		if ( 'json' === $format ) {
 			WP_CLI::log(
 				wp_json_encode(
 					array(
@@ -116,9 +116,9 @@ class SettingsCommand extends WP_CLI_Command {
 		$value = $args[1];
 
 		// Type coercion
-		if ( $value === 'true' ) {
+		if ( 'true' === $value ) {
 			$value = true;
-		} elseif ( $value === 'false' ) {
+		} elseif ( 'false' === $value ) {
 			$value = false;
 		} elseif ( is_numeric( $value ) && strpos( $value, '.' ) === false ) {
 			$value = (int) $value;
@@ -171,7 +171,7 @@ class SettingsCommand extends WP_CLI_Command {
 			return;
 		}
 
-		if ( $format === 'json' ) {
+		if ( 'json' === $format ) {
 			WP_CLI::log( wp_json_encode( $settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
 		} else {
 			$rows = array();
@@ -192,7 +192,7 @@ class SettingsCommand extends WP_CLI_Command {
 	 * @return string Formatted value.
 	 */
 	private function format_value( mixed $value ): string {
-		if ( $value === null ) {
+		if ( null === $value ) {
 			return '(null)';
 		}
 		if ( is_bool( $value ) ) {

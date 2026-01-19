@@ -66,7 +66,7 @@ class Rss extends FetchHandler {
 
 		libxml_use_internal_errors( true );
 		$xml = simplexml_load_string( $feed_content );
-		if ( $xml === false ) {
+		if ( false === $xml ) {
 			$errors         = libxml_get_errors();
 			$error_messages = array_map(
 				function ( $error ) {
@@ -125,7 +125,7 @@ class Rss extends FetchHandler {
 
 			if ( $pub_date ) {
 				$item_timestamp = strtotime( $pub_date );
-				if ( $item_timestamp !== false && ! $this->applyTimeframeFilter( $item_timestamp, $timeframe_limit ) ) {
+				if ( false !== $item_timestamp && ! $this->applyTimeframeFilter( $item_timestamp, $timeframe_limit ) ) {
 					$context->log(
 						'debug',
 						'Rss: Skipping item outside timeframe.',
@@ -167,9 +167,9 @@ class Rss extends FetchHandler {
 			$file_info = null;
 			if ( ! empty( $enclosure_url ) ) {
 				$file_check = wp_check_filetype( $enclosure_url );
-				$mime_type  = $file_check['type'] ?: 'application/octet-stream';
+				$mime_type  = $file_check['type'] ? $file_check['type'] : 'application/octet-stream';
 
-				if ( strpos( $mime_type, 'image/' ) === 0 && in_array( $mime_type, array( 'image/jpeg', 'image/png', 'image/gif', 'image/webp' ) ) ) {
+				if ( strpos( $mime_type, 'image/' ) === 0 && in_array( $mime_type, array( 'image/jpeg', 'image/png', 'image/gif', 'image/webp' ), true ) ) {
 					$filename = 'rss_image_' . time() . '_' . sanitize_file_name( basename( wp_parse_url( $enclosure_url, PHP_URL_PATH ) ) );
 
 					$download_result = $context->downloadFile( $enclosure_url, $filename );
@@ -227,7 +227,7 @@ class Rss extends FetchHandler {
 				$raw_data['file_info'] = $file_info;
 			}
 
-			$engine_data = array( 'source_url' => $link ?: '' );
+			$engine_data = array( 'source_url' => $link ? $link : '' );
 
 			// Store repository file path if image was downloaded
 			if ( ! empty( $file_info ) && isset( $file_info['file_path'] ) ) {

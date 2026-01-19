@@ -180,7 +180,7 @@ class HandlerService {
 	 * @return array Defaults keyed by handler slug
 	 */
 	public function getSiteDefaults(): array {
-		if ( self::$site_defaults_cache === null ) {
+		if ( null === self::$site_defaults_cache ) {
 			self::$site_defaults_cache = get_option( self::HANDLER_DEFAULTS_OPTION, array() );
 		}
 		return self::$site_defaults_cache;

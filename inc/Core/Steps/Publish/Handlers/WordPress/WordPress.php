@@ -41,7 +41,7 @@ class WordPress extends PublishHandler {
 			null,
 			WordPressSettings::class,
 			function ( $tools, $handler_slug, $handler_config ) {
-				if ( $handler_slug === 'wordpress_publish' ) {
+				if ( 'wordpress_publish' === $handler_slug ) {
 					// Base parameters (always present)
 					$base_parameters = array(
 						'title'   => array(

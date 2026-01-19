@@ -410,7 +410,7 @@ class PipelineSteps {
 
 		// Validate pipeline_step_id format
 		$parsed_step_id = apply_filters( 'datamachine_split_pipeline_step_id', null, $pipeline_step_id );
-		if ( $parsed_step_id === null ) {
+		if ( null === $parsed_step_id ) {
 			return new \WP_Error(
 				'invalid_pipeline_step_id',
 				__( 'Pipeline step ID format invalid - expected {pipeline_id}_{uuid4}', 'data-machine' ),
@@ -436,7 +436,7 @@ class PipelineSteps {
 			$step_type = 'ai';
 		}
 
-		if ( $step_type !== 'ai' ) {
+		if ( 'ai' !== $step_type ) {
 			return new \WP_Error(
 				'invalid_step_type',
 				__( 'Only AI steps support configuration updates.', 'data-machine' ),

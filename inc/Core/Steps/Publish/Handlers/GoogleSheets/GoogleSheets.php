@@ -44,7 +44,7 @@ class GoogleSheets extends PublishHandler {
 			\DataMachine\Core\OAuth\Providers\GoogleSheetsAuth::class,
 			GoogleSheetsSettings::class,
 			function ( $tools, $handler_slug, $handler_config ) {
-				if ( $handler_slug === 'googlesheets_publish' ) {
+				if ( 'googlesheets_publish' === $handler_slug ) {
 					$tools['googlesheets_publish'] = array(
 						'class'       => self::class,
 						'method'      => 'handle_tool_call',
@@ -314,7 +314,7 @@ class GoogleSheets extends PublishHandler {
 			$response_code = $result['status_code'];
 			$response_body = $result['data'];
 
-			if ( $response_code !== 200 ) {
+			if ( 200 !== $response_code ) {
 				$error_data    = json_decode( $response_body, true );
 				$error_message = $error_data['error']['message'] ?? 'Unknown Google Sheets API error';
 

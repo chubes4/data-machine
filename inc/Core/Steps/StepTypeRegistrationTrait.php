@@ -85,7 +85,7 @@ trait StepTypeRegistrationTrait {
 			}
 		);
 
-		if ( $stepSettings !== null ) {
+		if ( null !== $stepSettings ) {
 			add_filter(
 				'datamachine_step_settings',
 				function ( $configs ) use ( $slug, $stepSettings ) {

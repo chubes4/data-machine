@@ -103,7 +103,7 @@ class Pipelines {
 		$pipeline = $this->wpdb->get_row( $this->wpdb->prepare( 'SELECT * FROM %i WHERE pipeline_id = %d', $this->table_name, $pipeline_id ), ARRAY_A );
 
 		if ( $pipeline && ! empty( $pipeline['pipeline_config'] ) ) {
-			$pipeline['pipeline_config'] = json_decode( $pipeline['pipeline_config'], true ) ?: array();
+			$pipeline['pipeline_config'] = json_decode( $pipeline['pipeline_config'], true ) ?? array();
 		}
 
 		return $pipeline;
@@ -120,11 +120,11 @@ class Pipelines {
 
 		foreach ( $results as &$pipeline ) {
 			if ( ! empty( $pipeline['pipeline_config'] ) ) {
-				$pipeline['pipeline_config'] = json_decode( $pipeline['pipeline_config'], true ) ?: array();
+				$pipeline['pipeline_config'] = json_decode( $pipeline['pipeline_config'], true ) ?? array();
 			}
 		}
 
-		return $results ?: array();
+		return $results ? $results : array();
 	}
 
 	/**
@@ -134,7 +134,7 @@ class Pipelines {
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$results = $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT pipeline_id, pipeline_name FROM %i ORDER BY pipeline_name ASC', $this->table_name ), ARRAY_A );
 
-		return $results ?: array();
+		return $results ? $results : array();
 	}
 
 	/**
@@ -326,7 +326,7 @@ class Pipelines {
 			return array();
 		}
 
-		return json_decode( $pipeline_config_json, true ) ?: array();
+		return json_decode( $pipeline_config_json, true ) ?? array();
 	}
 
 
@@ -349,7 +349,7 @@ class Pipelines {
 		$order    = strtoupper( $args['order'] ?? 'DESC' );
 		$per_page = (int) ( $args['per_page'] ?? 20 );
 		$offset   = (int) ( $args['offset'] ?? 0 );
-		$is_asc   = ( $order === 'ASC' );
+		$is_asc   = ( 'ASC' === $order );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery,WordPress.DB.PreparedSQL
 		$results = match ( $orderby ) {
@@ -370,11 +370,11 @@ class Pipelines {
 
 		foreach ( $results as &$pipeline ) {
 			if ( ! empty( $pipeline['pipeline_config'] ) ) {
-				$pipeline['pipeline_config'] = json_decode( $pipeline['pipeline_config'], true ) ?: array();
+				$pipeline['pipeline_config'] = json_decode( $pipeline['pipeline_config'], true ) ?? array();
 			}
 		}
 
-		return $results ?: array();
+		return $results ? $results : array();
 	}
 
 	/**
@@ -414,7 +414,7 @@ class Pipelines {
 			array( '%d' )
 		);
 
-		return $result !== false;
+		return false !== $result;
 	}
 
 	/**

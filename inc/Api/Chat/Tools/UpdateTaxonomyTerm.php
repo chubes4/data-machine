@@ -125,7 +125,7 @@ class UpdateTaxonomyTerm {
 		}
 
 		// Check that at least one field is being updated
-		$has_core_updates = ! empty( $name ) || ! empty( $slug ) || $description !== null || ! empty( $parent );
+		$has_core_updates = ! empty( $name ) || ! empty( $slug ) || null !== $description || ! empty( $parent );
 		$has_meta_updates = ! empty( $meta ) && is_array( $meta );
 
 		if ( ! $has_core_updates && ! $has_meta_updates ) {
@@ -154,7 +154,7 @@ class UpdateTaxonomyTerm {
 		// Update core fields
 		if ( $has_core_updates ) {
 			$core_result = $this->updateCoreFields( $term, $taxonomy, $name, $slug, $description, $parent );
-			if ( $core_result['success'] === false ) {
+			if ( false === $core_result['success'] ) {
 				return $core_result;
 			}
 			$updated_fields = $core_result['updated_fields'];
@@ -257,7 +257,7 @@ class UpdateTaxonomyTerm {
 			$updated_fields[] = 'slug';
 		}
 
-		if ( $description !== null && $description !== '' ) {
+		if ( null !== $description && '' !== $description ) {
 			$args['description'] = sanitize_textarea_field( $description );
 			$updated_fields[]    = 'description';
 		}
@@ -328,7 +328,7 @@ class UpdateTaxonomyTerm {
 
 		foreach ( $meta as $key => $value ) {
 			// Skip null or empty string values (no change)
-			if ( $value === null || $value === '' ) {
+			if ( null === $value || '' === $value ) {
 				continue;
 			}
 

@@ -68,7 +68,7 @@ class WordPressAPI extends FetchHandler {
 		// Fetch from API endpoint
 		$item = $this->fetch_from_endpoint( $endpoint_url, $timeframe_limit, $search, $context );
 
-		return $item ?: array();
+		return $item ? $item : array();
 	}
 
 	/**
@@ -179,13 +179,13 @@ class WordPressAPI extends FetchHandler {
 				if ( empty( $extension ) ) {
 					$extension = 'jpg';
 				}
-				$filename = 'wp_api_image_' . time() . '_' . sanitize_file_name( basename( $url_path ?: 'image' ) ) . '.' . $extension;
+				$filename = 'wp_api_image_' . time() . '_' . sanitize_file_name( basename( $url_path ? $url_path : 'image' ) ) . '.' . $extension;
 
 				$download_result = $context->downloadFile( $image_url, $filename );
 
 				if ( $download_result ) {
 					$file_check = wp_check_filetype( $filename );
-					$mime_type  = $file_check['type'] ?: 'image/jpeg';
+					$mime_type  = $file_check['type'] ? $file_check['type'] : 'image/jpeg';
 
 					$file_info = array(
 						'file_path' => $download_result['path'],

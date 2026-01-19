@@ -44,7 +44,7 @@ class FileRetrieval {
 		}
 
 		$json_data = file_get_contents( $file_path );
-		if ( $json_data === false ) {
+		if ( false === $json_data ) {
 			return array();
 		}
 

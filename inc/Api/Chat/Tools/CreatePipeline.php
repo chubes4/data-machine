@@ -84,7 +84,7 @@ class CreatePipeline {
 		$scheduling_config = $parameters['scheduling_config'] ?? array( 'interval' => 'manual' );
 
 		$scheduling_validation = $this->validateSchedulingConfig( $scheduling_config );
-		if ( $scheduling_validation !== true ) {
+		if ( true !== $scheduling_validation ) {
 			return array(
 				'success'   => false,
 				'error'     => $scheduling_validation,
@@ -94,7 +94,7 @@ class CreatePipeline {
 
 		if ( ! empty( $steps ) ) {
 			$steps_validation = $this->validateSteps( $steps );
-			if ( $steps_validation !== true ) {
+			if ( true !== $steps_validation ) {
 				return array(
 					'success'   => false,
 					'error'     => $steps_validation,
@@ -163,7 +163,7 @@ class CreatePipeline {
 
 		$interval = $config['interval'] ?? null;
 
-		if ( $interval === null ) {
+		if ( null === $interval ) {
 			return 'scheduling_config requires an interval property';
 		}
 
@@ -173,7 +173,7 @@ class CreatePipeline {
 			return 'Invalid interval. Must be one of: ' . implode( ', ', $valid_intervals );
 		}
 
-		if ( $interval === 'one_time' ) {
+		if ( 'one_time' === $interval ) {
 			$timestamp = $config['timestamp'] ?? null;
 			if ( ! is_numeric( $timestamp ) || (int) $timestamp <= 0 ) {
 				return 'one_time interval requires a valid unix timestamp';

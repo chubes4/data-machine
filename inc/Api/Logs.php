@@ -64,7 +64,7 @@ class Logs {
 						'type'              => 'string',
 						'description'       => __( 'Agent type to clear logs for, or "all" to clear all logs', 'data-machine' ),
 						'validate_callback' => function ( $param ) {
-							return $param === 'all' || AgentType::isValid( $param );
+							return 'all' === $param || AgentType::isValid( $param );
 						},
 					),
 				),
@@ -224,7 +224,7 @@ class Logs {
 	public static function handle_clear_logs( $request ) {
 		$agent_type = $request->get_param( 'agent_type' );
 
-		if ( $agent_type === 'all' ) {
+		if ( 'all' === $agent_type ) {
 			LogsManager::clearAll();
 			return rest_ensure_response(
 				array(
@@ -245,6 +245,7 @@ class Logs {
 				'success' => true,
 				'data'    => null,
 				'message' => sprintf(
+					/* translators: %s: agent type label (e.g., Pipeline, Chat, System) */
 					__( '%s logs cleared successfully.', 'data-machine' ),
 					$agent_label
 				),
@@ -271,7 +272,7 @@ class Logs {
 			return new \WP_Error(
 				$result['error'],
 				$result['message'],
-				array( 'status' => $result['error'] === 'log_file_not_found' ? 404 : 500 )
+				array( 'status' => 'log_file_not_found' === $result['error'] ? 404 : 500 )
 			);
 		}
 

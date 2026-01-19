@@ -53,7 +53,7 @@ class OAuth2Handler {
 	 */
 	public function verify_state( string $provider_key, string $state ): bool {
 		$stored_state = get_transient( "datamachine_{$provider_key}_oauth_state" );
-		$is_valid     = ! empty( $state ) && $stored_state !== false && hash_equals( $stored_state, $state );
+		$is_valid     = ! empty( $state ) && false !== $stored_state && hash_equals( $stored_state, $state );
 
 		if ( $is_valid ) {
 			delete_transient( "datamachine_{$provider_key}_oauth_state" );

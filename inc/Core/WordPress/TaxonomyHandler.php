@@ -59,7 +59,7 @@ class TaxonomyHandler {
 
 		// Determine post type to fetch scoped taxonomies
 		$post_type = get_post_type( $post_id );
-		if ( $post_type === false ) {
+		if ( false === $post_type ) {
 			$post_type = null;
 		}
 		$taxonomies = self::getPublicTaxonomies( $post_type );
@@ -96,7 +96,7 @@ class TaxonomyHandler {
 				)
 			);
 
-			if ( $selection === 'skip' ) {
+			if ( 'skip' === $selection ) {
 				continue;
 			} elseif ( $this->isAiDecidedTaxonomy( $selection ) ) {
 				$result = $this->processAiDecidedTaxonomy( $post_id, $taxonomy, $parameters, $engine_data, $handler_config );
@@ -115,7 +115,7 @@ class TaxonomyHandler {
 	}
 
 	public static function getPublicTaxonomies( ?string $post_type = null ): array {
-		if ( $post_type !== null ) {
+		if ( null !== $post_type ) {
 			return get_object_taxonomies( $post_type, 'objects' );
 		}
 		return get_taxonomies( array( 'public' => true ), 'objects' );
@@ -143,7 +143,7 @@ class TaxonomyHandler {
 			$field_key = "taxonomy_{$taxonomy->name}_selection";
 			$selection = $handler_config[ $field_key ] ?? 'skip';
 
-			if ( $selection !== 'ai_decides' ) {
+			if ( 'ai_decides' !== $selection ) {
 				continue;
 			}
 
@@ -189,7 +189,7 @@ class TaxonomyHandler {
 	}
 
 	public static function shouldSkipTaxonomy( string $taxonomy_name ): bool {
-		return in_array( $taxonomy_name, self::SYSTEM_TAXONOMIES );
+		return in_array( $taxonomy_name, self::SYSTEM_TAXONOMIES, true );
 	}
 
 	/**
@@ -205,11 +205,11 @@ class TaxonomyHandler {
 	}
 
 	private function isAiDecidedTaxonomy( string $selection ): bool {
-		return $selection === 'ai_decides';
+		return 'ai_decides' === $selection;
 	}
 
 	private function isPreSelectedTaxonomy( string $selection ): bool {
-		return ! empty( $selection ) && $selection !== 'skip' && $selection !== 'ai_decides';
+		return ! empty( $selection ) && 'skip' !== $selection && 'ai_decides' !== $selection;
 	}
 
 	/**
@@ -269,9 +269,9 @@ class TaxonomyHandler {
 	 * @return string Corresponding parameter name for AI tools
 	 */
 	private function getParameterName( string $taxonomy_name ): string {
-		if ( $taxonomy_name === 'category' ) {
+		if ( 'category' === $taxonomy_name ) {
 			return 'category';
-		} elseif ( $taxonomy_name === 'post_tag' ) {
+		} elseif ( 'post_tag' === $taxonomy_name ) {
 			return 'tags';
 		} else {
 			return $taxonomy_name;
@@ -302,15 +302,17 @@ class TaxonomyHandler {
 			$term_id   = absint( $selection );
 			$term_name = self::getTermName( $term_id, $taxonomy_name );
 		} else {
-			$term = get_term_by( 'name', $selection, $taxonomy_name )
-				?: get_term_by( 'slug', $selection, $taxonomy_name );
+			$term = get_term_by( 'name', $selection, $taxonomy_name );
+			if ( ! $term ) {
+				$term = get_term_by( 'slug', $selection, $taxonomy_name );
+			}
 			if ( $term ) {
 				$term_id   = $term->term_id;
 				$term_name = $term->name;
 			}
 		}
 
-		if ( $term_id !== null && $term_name !== null ) {
+		if ( null !== $term_id && null !== $term_name ) {
 			$result = wp_set_object_terms( $post_id, array( $term_id ), $taxonomy_name );
 
 			if ( is_wp_error( $result ) ) {
@@ -375,7 +377,7 @@ class TaxonomyHandler {
 			}
 
 			$term_id = $this->findOrCreateTerm( $term_name, $taxonomy_name );
-			if ( $term_id !== false ) {
+			if ( false !== $term_id ) {
 				$term_ids[] = $term_id;
 			}
 		}

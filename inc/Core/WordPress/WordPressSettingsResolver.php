@@ -54,6 +54,13 @@ class WordPressSettingsResolver {
 		if ( ! empty( $default_author_id ) ) {
 			return $default_author_id;
 		}
-		return $handler_config['post_author'] ?? get_current_user_id() ?: $default;
+
+		$author = $handler_config['post_author'] ?? 0;
+		if ( $author > 0 ) {
+			return $author;
+		}
+
+		$current_user = get_current_user_id();
+		return $current_user > 0 ? $current_user : $default;
 	}
 }

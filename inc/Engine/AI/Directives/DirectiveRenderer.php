@@ -19,7 +19,7 @@ class DirectiveRenderer {
 		foreach ( $validated_outputs as $output ) {
 			$type = $output['type'] ?? '';
 
-			if ( $type === 'system_text' ) {
+			if ( 'system_text' === $type ) {
 				$messages[] = array(
 					'role'    => 'system',
 					'content' => $output['content'],
@@ -27,7 +27,7 @@ class DirectiveRenderer {
 				continue;
 			}
 
-			if ( $type === 'system_json' ) {
+			if ( 'system_json' === $type ) {
 				$label = $output['label'];
 				$data  = $output['data'];
 
@@ -38,7 +38,7 @@ class DirectiveRenderer {
 				continue;
 			}
 
-			if ( $type === 'system_file' ) {
+			if ( 'system_file' === $type ) {
 				$messages[] = array(
 					'role'    => 'system',
 					'content' => array(

@@ -65,6 +65,17 @@ public function delete(int $pipeline_id): array|WP_Error
 - Performance metrics and execution statistics
 - Integration with engine execution system
 
+**Key Methods**:
+```php
+public function create(int $flow_id, int $pipeline_id = 0): ?int
+public function get(int $job_id): ?array
+public function getForFlow(int $flow_id): array
+public function getForPipeline(int $pipeline_id): array
+public function updateStatus(int $job_id, string $status, string $context = 'update', ?string $old_status = null): bool
+public function start(int $job_id, string $status = 'processing'): bool
+public function failJob(int $job_id, string $error_type, array $context = []): bool
+```
+
 ### LogsManager
 
 **Location**: `/inc/Services/LogsManager.php`

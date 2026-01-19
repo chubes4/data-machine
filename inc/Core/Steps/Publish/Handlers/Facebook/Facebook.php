@@ -45,7 +45,7 @@ class Facebook extends PublishHandler {
 			FacebookAuth::class,
 			FacebookSettings::class,
 			function ( $tools, $handler_slug, $handler_config ) {
-				if ( $handler_slug === 'facebook_publish' ) {
+				if ( 'facebook_publish' === $handler_slug ) {
 					$tools['facebook_publish'] = array(
 						'class'       => self::class,
 						'method'      => 'handle_tool_call',
@@ -155,7 +155,7 @@ class Facebook extends PublishHandler {
 			$post_text = $title ? $title . "\n\n" . $content : $content;
 
 			// Handle source URL based on consolidated link_handling setting
-			if ( $link_handling === 'append' && ! empty( $source_url ) && filter_var( $source_url, FILTER_VALIDATE_URL ) ) {
+			if ( 'append' === $link_handling && ! empty( $source_url ) && filter_var( $source_url, FILTER_VALIDATE_URL ) ) {
 				$post_text .= "\n\n" . $source_url;
 			}
 
@@ -185,7 +185,7 @@ class Facebook extends PublishHandler {
 				}
 
 				// Use the correct parameter name for Facebook API
-				$post_data['attached_media'] = json_encode( array( array( 'media_fbid' => $image_result['id'] ) ) );
+				$post_data['attached_media'] = wp_json_encode( array( array( 'media_fbid' => $image_result['id'] ) ) );
 			}
 
 			// Make API request to Facebook
@@ -222,7 +222,7 @@ class Facebook extends PublishHandler {
 
 				// Handle URL as comment if configured
 				$comment_result = null;
-				if ( $link_handling === 'comment' && ! empty( $source_url ) && filter_var( $source_url, FILTER_VALIDATE_URL ) ) {
+				if ( 'comment' === $link_handling && ! empty( $source_url ) && filter_var( $source_url, FILTER_VALIDATE_URL ) ) {
 					// Check if we have comment permissions before attempting to post
 					if ( $auth && $auth->has_comment_permission() ) {
 						$this->log(
@@ -375,7 +375,7 @@ class Facebook extends PublishHandler {
 				$error_code = $response_data['error']['code'] ?? null;
 
 				// Check if this is a permissions error
-				if ( $error_code === 200 && strpos( $error_msg, 'sufficient permissions' ) !== false ) {
+				if ( 200 === $error_code && strpos( $error_msg, 'sufficient permissions' ) !== false ) {
 					$error_msg = 'Facebook comment failed: Missing pages_manage_engagement permission. Please re-authenticate your Facebook account to enable comment functionality.';
 
 					$this->log(
@@ -403,7 +403,7 @@ class Facebook extends PublishHandler {
 				return array(
 					'success'         => false,
 					'error'           => $error_msg,
-					'requires_reauth' => $error_code === 200,
+					'requires_reauth' => 200 === $error_code,
 				);
 			}
 		} catch ( \Exception $e ) {

@@ -72,7 +72,7 @@ class ProcessedItemsManager {
 
 		$result = $this->db_processed_items->delete_processed_items( $criteria );
 
-		if ( $result === false ) {
+		if ( false === $result ) {
 			do_action( 'datamachine_log', 'error', 'Processed items deletion failed', array( 'criteria' => $criteria ) );
 		}
 

@@ -120,7 +120,7 @@ class ExecutionContext {
 		$flow_id     = $config['flow_id'] ?? null;
 		$pipeline_id = $config['pipeline_id'] ?? null;
 
-		if ( $flow_id === 'direct' || $pipeline_id === 'direct' ) {
+		if ( 'direct' === $flow_id || 'direct' === $pipeline_id ) {
 			return new self(
 				self::MODE_DIRECT,
 				'direct',

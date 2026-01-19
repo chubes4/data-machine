@@ -273,7 +273,7 @@ class Execute {
 				'data-machine'
 			);
 
-			if ( $action_id === false ) {
+			if ( false === $action_id ) {
 				return new \WP_Error(
 					'scheduling_failed',
 					'Failed to schedule workflow execution',
@@ -339,7 +339,7 @@ class Execute {
 				);
 			}
 
-			if ( $step['type'] !== 'ai' && ! isset( $step['handler_slug'] ) ) {
+			if ( 'ai' !== $step['type'] && ! isset( $step['handler_slug'] ) ) {
 				return array(
 					'valid' => false,
 					'error' => "Step {$index} missing handler_slug (required for non-AI steps)",
@@ -376,7 +376,7 @@ class Execute {
 			);
 
 			// Pipeline config (AI settings only)
-			if ( $step['type'] === 'ai' ) {
+			if ( 'ai' === $step['type'] ) {
 				$pipeline_config[ $pipeline_step_id ] = array(
 					'provider'      => $step['provider'] ?? '',
 					'model'         => $step['model'] ?? '',

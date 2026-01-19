@@ -125,9 +125,9 @@ class JobManager {
 		$success = false;
 		$status  = JobStatus::fromString( $new_status );
 
-		if ( $context === 'start' || ( $new_status === JobStatus::PROCESSING && $old_status === JobStatus::PENDING ) ) {
+		if ( 'start' === $context || ( JobStatus::PROCESSING === $new_status && JobStatus::PENDING === $old_status ) ) {
 			$success = $this->db_jobs->start_job( $job_id, $new_status );
-		} elseif ( $context === 'complete' || $status->isFinal() ) {
+		} elseif ( 'complete' === $context || $status->isFinal() ) {
 			$success = $this->db_jobs->complete_job( $job_id, $new_status );
 		} else {
 			$success = $this->db_jobs->update_job_status( $job_id, $new_status );
@@ -247,7 +247,7 @@ class JobManager {
 
 		$deleted_count = $this->db_jobs->delete_jobs( $criteria );
 
-		if ( $deleted_count === false ) {
+		if ( false === $deleted_count ) {
 			return array(
 				'success'                 => false,
 				'jobs_deleted'            => 0,

@@ -121,7 +121,7 @@ class PipelineSystemPromptDirective implements \DataMachine\Engine\AI\Directives
 			$handler_slug          = $step_data['handler_slug'];
 			$step_pipeline_step_id = $step_data['pipeline_step_id'];
 
-			if ( $step_type === 'ai' ) {
+			if ( 'ai' === $step_type ) {
 				// Show "YOU ARE HERE" for currently executing AI step
 				$is_current       = ( $current_pipeline_step_id && $step_pipeline_step_id === $current_pipeline_step_id );
 				$workflow_parts[] = $is_current ? 'AI (YOU ARE HERE)' : 'AI';

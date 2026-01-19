@@ -1,20 +1,19 @@
 # Logger System
 
 **Implementation**: `\DataMachine\Services\LogsManager`
-**Database Table**: `wp_datamachine_logs`
-**Since**: 0.4.0 (Unified Database Logging)
+**Since**: 0.4.0 (Unified Logging System)
 **React Admin**: `inc/Core/Admin/Pages/Logs/` (@since v0.8.0)
 
 ## Overview
 
-Data Machine uses a centralized database-backed logging system managed by the `LogsManager` service. This provides consistent, performant, and queryable logging across all agents (Pipeline, Chat, etc.).
+Data Machine uses a centralized file-based logging system managed by Monolog for consistent, performant logging across all agents (Pipeline, Chat, System, CLI). Individual log files are maintained per agent type in the uploads directory.
 
 ## Architecture
 
-**Design Pattern**: Service-based logging with direct database persistence.
+**Design Pattern**: Service-based logging with Monolog file persistence.
 **Integration**: Custom WordPress action `datamachine_log` for decoupled logging from any component.
-**Log Storage**: Single dedicated database table with columns for level, message, context (JSON), and timestamps.
-**Agent Context**: Automatically captures the executing agent type and associated job/session context.
+**Log Storage**: Per-agent log files in uploads directory with Monolog StreamHandler.
+**Agent Context**: Automatically captures the executing agent type (Pipeline, Chat, System, CLI) and associated job/session context.
 
 ## LogsManager Service
 
@@ -23,10 +22,10 @@ The `LogsManager` is the primary interface for interacting with the logging syst
 ### Methods
 
 #### `log(string $level, string $message, array $context = [])`
-Records a log entry in the database.
-- **$level**: `info`, `warning`, `error`, `debug`.
+Records a log entry to the appropriate agent log file.
+- **$level**: `debug`, `info`, `warning`, `error`, `critical`.
 - **$message**: Human-readable log message.
-- **$context**: Array of metadata (e.g., `pipeline_id`, `flow_id`, `job_id`, `session_id`).
+- **$context**: Array of metadata (e.g., `pipeline_id`, `flow_id`, `job_id`, `session_id`, `agent_type`).
 
 #### `get_logs(array $args = [])`
 Retrieves logs with filtering and pagination. Supports filtering by `level`, `context`, `search` string, and date ranges.
@@ -36,6 +35,7 @@ Deletes log entries. If `$days` is provided, deletes logs older than that many d
 
 ## Log Levels
 
+- **Critical**: System-critical failures that require immediate attention
 - **Debug**: Detailed execution flow, AI processing steps, and tool validation logic.
 - **Info**: Successful triggers, job completions, and handler operations.
 - **Warning**: Potential issues, missing optional configuration, or deprecated usage.
@@ -48,18 +48,16 @@ Deletes log entries. If `$days` is provided, deletes logs older than that many d
 Components should ideally use the `datamachine_log` action to ensure loose coupling.
 
 ```php
-// Record an error during pipeline execution
-do_action('datamachine_log', 'error', 'Handler execution failed', [
-    'handler' => 'twitter',
-    'job_id' => $job_id,
-    'pipeline_id' => $pipeline_id,
-    'error' => $exception->getMessage()
-]);
-
 // Record info during a chat session
 do_action('datamachine_log', 'info', 'Chat session started', [
     'session_id' => $session_id,
     'agent_type' => 'chat'
+]);
+
+// Record system-level operation
+do_action('datamachine_log', 'critical', 'Database connection failed', [
+    'agent_type' => 'system',
+    'error_code' => 500
 ]);
 ```
 
@@ -69,15 +67,15 @@ The Data Machine admin UI provides a dedicated **Logs** page built with React. I
 
 ## Performance & Maintenance
 
-### Database Efficiency
-Logs are stored with indexed columns for rapid filtering. Context is stored as a JSON column to allow for flexible metadata without schema changes.
+### File-Based Storage
+Logs are stored in separate files per agent type in the WordPress uploads directory. Context is stored as JSON in log entries for flexible metadata without schema changes.
 
 ### Automated Cleanup
 The system includes routine cleanup of old logs to prevent table bloat. This can be configured in settings or triggered via the `datamachine_clear_logs` action.
 
 ## Multisite Support
 
-The logging system is multisite-aware, prefixing the `datamachine_logs` table with the site-specific database prefix to ensure log isolation across the network.
+The logging system is multisite-aware, maintaining separate log files per site with site-specific paths to ensure log isolation across the network.
 
 ---
 

@@ -174,21 +174,21 @@ class FlowSteps {
 	public static function handle_patch_flow_step_config( $request ) {
 		$flow_step_id   = sanitize_text_field( $request->get_param( 'flow_step_id' ) );
 		$handler_slug   = $request->get_param( 'handler_slug' );
-		$handler_config = $request->get_param( 'handler_config' ) ?: array();
+		$handler_config = $request->get_param( 'handler_config' ) ?? array();
 		$user_message   = $request->get_param( 'user_message' );
 
 		$manager = new FlowStepManager();
 
-		if ( $handler_slug !== null || ! empty( $handler_config ) ) {
+		if ( null !== $handler_slug || ! empty( $handler_config ) ) {
 			// If handler_slug is provided, we use it. If not, manager uses existing.
-			$slug    = $handler_slug ?: '';
+			$slug    = $handler_slug ? $handler_slug : '';
 			$success = $manager->updateHandler( $flow_step_id, $slug, $handler_config );
 			if ( ! $success ) {
 				return new \WP_Error( 'handler_update_failed', __( 'Failed to update handler config', 'data-machine' ), array( 'status' => 500 ) );
 			}
 		}
 
-		if ( $user_message !== null ) {
+		if ( null !== $user_message ) {
 			$success = $manager->updateUserMessage( $flow_step_id, $user_message );
 			if ( ! $success ) {
 				return new \WP_Error( 'user_message_update_failed', __( 'Failed to update user message', 'data-machine' ), array( 'status' => 500 ) );

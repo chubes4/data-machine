@@ -438,7 +438,7 @@ class Flows {
 		// Derive execution status from jobs table (single source of truth)
 		$last_run_at     = $latest_job['created_at'] ?? null;
 		$last_run_status = $latest_job['status'] ?? null;
-		$is_running      = $latest_job && $latest_job['completed_at'] === null;
+		$is_running      = $latest_job && null === $latest_job['completed_at'];
 
 		$next_run = self::get_next_run_time( $flow_id );
 
@@ -483,7 +483,7 @@ class Flows {
 		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
 
 		// Validate that at least one update parameter is provided
-		if ( $flow_name === null && $scheduling_config === null ) {
+		if ( null === $flow_name && null === $scheduling_config ) {
 			return new \WP_Error(
 				'no_updates',
 				__( 'Must provide flow_name or scheduling_config to update', 'data-machine' ),
@@ -492,7 +492,7 @@ class Flows {
 		}
 
 		// Handle title updates
-		if ( $flow_name !== null ) {
+		if ( null !== $flow_name ) {
 			$flow_name = sanitize_text_field( $flow_name );
 			if ( empty( $flow_name ) ) {
 				return new \WP_Error(
@@ -519,7 +519,7 @@ class Flows {
 		}
 
 		// Handle scheduling updates
-		if ( $scheduling_config !== null ) {
+		if ( null !== $scheduling_config ) {
 			$result = FlowScheduling::handle_scheduling_update( $flow_id, $scheduling_config );
 			if ( is_wp_error( $result ) ) {
 				return $result;
@@ -563,7 +563,7 @@ class Flows {
 		$threshold = $request->get_param( 'threshold' );
 
 		// Use setting if threshold not provided
-		if ( $threshold === null || $threshold <= 0 ) {
+		if ( null === $threshold || $threshold <= 0 ) {
 			$threshold = \DataMachine\Core\PluginSettings::get( 'problem_flow_threshold', 3 );
 		}
 

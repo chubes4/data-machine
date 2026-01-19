@@ -254,7 +254,7 @@ class ToolManager {
 	 */
 	public function is_step_tool_enabled( string $context_id, string $tool_id ): bool {
 		$step_tools = $this->get_step_enabled_tools( $context_id );
-		return in_array( $tool_id, $step_tools );
+		return in_array( $tool_id, $step_tools, true );
 	}
 
 	// ============================================

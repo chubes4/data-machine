@@ -137,7 +137,7 @@ class Chat {
 			array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 
-		if ( $result === false ) {
+		if ( false === $result ) {
 			do_action(
 				'datamachine_log',
 				'error',
@@ -190,8 +190,8 @@ class Chat {
 			return null;
 		}
 
-		$session['messages'] = json_decode( $session['messages'], true ) ?: array();
-		$session['metadata'] = json_decode( $session['metadata'], true ) ?: array();
+		$session['messages'] = json_decode( $session['messages'], true ) ?? array();
+		$session['metadata'] = json_decode( $session['metadata'], true ) ?? array();
 
 		return $session;
 	}
@@ -243,7 +243,7 @@ class Chat {
 			array( '%s' )
 		);
 
-		if ( $result === false ) {
+		if ( false === $result ) {
 			do_action(
 				'datamachine_log',
 				'error',
@@ -278,7 +278,7 @@ class Chat {
 			array( '%s' )
 		);
 
-		if ( $result === false ) {
+		if ( false === $result ) {
 			do_action(
 				'datamachine_log',
 				'error',
@@ -377,8 +377,8 @@ class Chat {
 
 		$result = array();
 		foreach ( $sessions as $session ) {
-			$messages      = json_decode( $session['messages'] ?? '[]', true ) ?: array();
-			$first_message = '';
+			$messages = json_decode( $session['messages'] ?? '[]', true ) ?? array();
+			$first_message    = '';
 			foreach ( $messages as $msg ) {
 				if ( ( $msg['role'] ?? '' ) === 'user' ) {
 					$first_message = $msg['content'] ?? '';
@@ -482,8 +482,8 @@ class Chat {
 			return null;
 		}
 
-		$session['messages'] = json_decode( $session['messages'], true ) ?: array();
-		$session['metadata'] = json_decode( $session['metadata'], true ) ?: array();
+		$session['messages'] = json_decode( $session['messages'], true ) ?? array();
+		$session['metadata'] = json_decode( $session['metadata'], true ) ?? array();
 
 		return $session;
 	}
@@ -509,7 +509,7 @@ class Chat {
 			array( '%s' )
 		);
 
-		if ( $result === false ) {
+		if ( false === $result ) {
 			do_action(
 				'datamachine_log',
 				'error',

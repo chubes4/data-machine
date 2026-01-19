@@ -358,7 +358,7 @@ function datamachine_activate_scheduled_flows() {
 
 		$interval = $scheduling_config['interval'];
 
-		if ( $interval === 'manual' ) {
+		if ( 'manual' === $interval ) {
 			continue;
 		}
 
@@ -368,7 +368,7 @@ function datamachine_activate_scheduled_flows() {
 		}
 
 		// Handle one-time scheduling
-		if ( $interval === 'one_time' ) {
+		if ( 'one_time' === $interval ) {
 			$timestamp = $scheduling_config['timestamp'] ?? null;
 			if ( $timestamp && $timestamp > time() ) {
 				as_schedule_single_action( $timestamp, 'datamachine_run_flow_now', array( $flow_id ), 'data-machine' );

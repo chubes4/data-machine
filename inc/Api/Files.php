@@ -160,7 +160,7 @@ class Files {
 			}
 
 			$pipeline_name = sanitize_text_field( $pipeline['pipeline_name'] ?? '' );
-			if ( $pipeline_name === '' ) {
+			if ( '' === $pipeline_name ) {
 				return new WP_Error(
 					'invalid_pipeline_name',
 					__( 'Invalid pipeline name.', 'data-machine' ),
@@ -286,7 +286,7 @@ class Files {
 		$file_name = sanitize_file_name( $uploaded['name'] ?? '' );
 		$file_type = sanitize_mime_type( $uploaded['type'] ?? '' );
 
-		if ( $file_name === '' ) {
+		if ( '' === $file_name ) {
 			return new WP_Error(
 				'invalid_file_name',
 				__( 'Invalid file name.', 'data-machine' ),
@@ -465,7 +465,7 @@ class Files {
 	 */
 	public static function get_file_context( int|string $flow_id ): array {
 		// Direct execution mode - no database lookup needed
-		if ( $flow_id === 'direct' ) {
+		if ( 'direct' === $flow_id ) {
 			return array(
 				'pipeline_id' => 'direct',
 				'flow_id'     => 'direct',
@@ -514,7 +514,7 @@ class Files {
 	 */
 	private static function validate_file_with_wordpress( array $file ): void {
 		$file_size = filesize( $file['tmp_name'] );
-		if ( $file_size === false ) {
+		if ( false === $file_size ) {
 			throw new \Exception( esc_html__( 'Cannot determine file size.', 'data-machine' ) );
 		}
 

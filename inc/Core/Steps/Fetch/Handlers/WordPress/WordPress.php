@@ -81,7 +81,7 @@ class WordPress extends FetchHandler {
 
 		// Build date query from timeframe using base class helper
 		$cutoff_timestamp = apply_filters( 'datamachine_timeframe_limit', null, $timeframe_limit );
-		if ( $cutoff_timestamp !== null ) {
+		if ( null !== $cutoff_timestamp ) {
 			$date_query = array(
 				array(
 					'after'     => gmdate( 'Y-m-d H:i:s', $cutoff_timestamp ),
@@ -171,9 +171,10 @@ class WordPress extends FetchHandler {
 
 		$context->markItemProcessed( (string) $post_id );
 
-		$title     = $post->post_title ?: 'N/A';
-		$content   = $post->post_content ?: '';
-		$site_name = get_bloginfo( 'name' ) ?: 'Local WordPress';
+		$title     = ! empty( $post->post_title ) ? $post->post_title : 'N/A';
+		$content   = $post->post_content;
+		$site_name = get_bloginfo( 'name' );
+		$site_name = ! empty( $site_name ) ? $site_name : 'Local WordPress';
 
 		// Include featured image file_info if present for AI vision analysis
 		$file_info         = null;
@@ -182,7 +183,8 @@ class WordPress extends FetchHandler {
 			$file_path = get_attached_file( $featured_image_id );
 			if ( $file_path && file_exists( $file_path ) ) {
 				$file_size = filesize( $file_path );
-				$mime_type = get_post_mime_type( $featured_image_id ) ?: 'image/jpeg';
+				$mime_type = get_post_mime_type( $featured_image_id );
+				$mime_type = ! empty( $mime_type ) ? $mime_type : 'image/jpeg';
 
 				$file_info = array(
 					'file_path' => $file_path,
@@ -206,7 +208,7 @@ class WordPress extends FetchHandler {
 		$content_data = array(
 			'title'   => $title,
 			'content' => $content,
-			'excerpt' => $post->post_excerpt ?: '',
+			'excerpt' => $post->post_excerpt,
 		);
 
 		// Add file_info if featured image is available
@@ -250,7 +252,7 @@ class WordPress extends FetchHandler {
 
 		$context->storeEngineData(
 			array(
-				'source_url'      => get_permalink( $post_id ) ?: '',
+				'source_url'      => get_permalink( $post_id ) ?? '',
 				'image_file_path' => $image_file_path,
 			)
 		);

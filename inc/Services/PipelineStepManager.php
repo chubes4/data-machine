@@ -178,7 +178,7 @@ class PipelineStepManager {
 		$pipeline_id      = absint( $pipeline_id );
 		$pipeline_step_id = trim( $pipeline_step_id );
 
-		if ( $pipeline_id <= 0 || $pipeline_step_id === '' ) {
+		if ( $pipeline_id <= 0 || '' === $pipeline_step_id ) {
 			return new WP_Error(
 				'invalid_step_parameters',
 				__( 'Valid pipeline ID and step ID are required.', 'data-machine' ),

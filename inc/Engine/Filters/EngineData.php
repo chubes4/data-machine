@@ -50,7 +50,7 @@ function datamachine_get_engine_data( int $job_id ): array {
 	}
 
 	$cached = wp_cache_get( $job_id, 'datamachine_engine_data' );
-	if ( $cached !== false ) {
+	if ( false !== $cached ) {
 		return is_array( $cached ) ? $cached : array();
 	}
 

@@ -47,7 +47,7 @@ function datamachine_get_monolog_instance( string $agent_type = AgentType::PIPEL
 		$channel_name                     = 'DataMachine-' . ucfirst( $agent_type );
 		$monolog_instances[ $agent_type ] = new MonologLogger( $channel_name );
 
-		if ( $log_level !== null ) {
+		if ( null !== $log_level ) {
 			$log_file = datamachine_get_log_file_path( $agent_type );
 			$handler  = new StreamHandler( $log_file, $log_level );
 
@@ -98,7 +98,7 @@ function datamachine_resolve_agent_type( array $context = array() ): string {
 
 	// Priority 2: Current execution context
 	$execution_context = AgentContext::get();
-	if ( $execution_context !== null && AgentType::isValid( $execution_context ) ) {
+	if ( null !== $execution_context && AgentType::isValid( $execution_context ) ) {
 		return $execution_context;
 	}
 
@@ -215,7 +215,7 @@ function datamachine_get_recent_logs( string $agent_type = AgentType::PIPELINE, 
 	}
 
 	$file_content = file( $log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
-	if ( $file_content === false ) {
+	if ( false === $file_content ) {
 		return array( 'Unable to read log file.' );
 	}
 
@@ -281,7 +281,7 @@ function datamachine_clear_log_file( string $agent_type ): bool {
 
 	$clear_result = file_put_contents( $log_file, '' );
 
-	if ( $clear_result !== false ) {
+	if ( false !== $clear_result ) {
 		datamachine_log_debug( "Log file cleared successfully for agent type: {$agent_type}" );
 		return true;
 	} else {
@@ -333,7 +333,7 @@ function datamachine_set_log_level( string $agent_type, string $level ): bool {
 	}
 
 	$available_levels = array_keys( datamachine_get_available_log_levels() );
-	if ( ! in_array( $level, $available_levels ) ) {
+	if ( ! in_array( $level, $available_levels, true ) ) {
 		return false;
 	}
 

@@ -50,8 +50,8 @@ class WordPressPostReader {
 			);
 		}
 
-		$title        = $post->post_title ?: '';
-		$content      = $post->post_content ?: '';
+		$title        = $post->post_title;
+		$content      = $post->post_content;
 		$permalink    = get_permalink( $post_id );
 		$post_type    = get_post_type( $post_id );
 		$post_status  = $post->post_status;
@@ -141,7 +141,7 @@ class WordPressPostReader {
 	}
 
 	public function check_configuration( $configured, $tool_id ) {
-		if ( $tool_id !== 'wordpress_post_reader' ) {
+		if ( 'wordpress_post_reader' !== $tool_id ) {
 			return $configured;
 		}
 

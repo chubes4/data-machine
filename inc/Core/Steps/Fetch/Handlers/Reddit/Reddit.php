@@ -155,7 +155,7 @@ class Reddit extends FetchHandler {
 		}
 
 		$valid_sorts = array( 'hot', 'new', 'top', 'rising', 'controversial' );
-		if ( ! in_array( $sort, $valid_sorts ) ) {
+		if ( ! in_array( $sort, $valid_sorts, true ) ) {
 			$context->log(
 				'error',
 				'Reddit: Invalid sort parameter.',
@@ -176,7 +176,7 @@ class Reddit extends FetchHandler {
 			++$pages_fetched;
 
 			$time_param = '';
-			if ( in_array( $sort, array( 'top', 'controversial' ) ) && $timeframe_limit !== 'all_time' ) {
+			if ( in_array( $sort, array( 'top', 'controversial' ), true ) && 'all_time' !== $timeframe_limit ) {
 				$reddit_time_map = array(
 					'24_hours' => 'day',
 					'72_hours' => 'week',
@@ -230,7 +230,7 @@ class Reddit extends FetchHandler {
 			);
 
 			if ( ! $result['success'] ) {
-				if ( $pages_fetched === 1 ) {
+				if ( 1 === $pages_fetched ) {
 					$context->log( 'error', 'Reddit: API request failed.', array( 'error' => $result['error'] ) );
 					return array();
 				} else {
@@ -249,9 +249,10 @@ class Reddit extends FetchHandler {
 			);
 
 			$response_data = json_decode( $body, true );
-			if ( json_last_error() !== JSON_ERROR_NONE ) {
+			if ( JSON_ERROR_NONE !== json_last_error() ) {
+				/* translators: %s: JSON error message */
 				$error_message = sprintf( __( 'Invalid JSON from Reddit API: %s', 'data-machine' ), json_last_error_msg() );
-				if ( $pages_fetched === 1 ) {
+				if ( 1 === $pages_fetched ) {
 					$context->log( 'error', 'Reddit: Invalid JSON response.', array( 'error' => $error_message ) );
 					return array();
 				} else {
@@ -358,7 +359,7 @@ class Reddit extends FetchHandler {
 									if ( isset( $comment_wrapper['data']['body'] ) && ! $comment_wrapper['data']['stickied'] ) {
 										$comment_author = $comment_wrapper['data']['author'] ?? '[deleted]';
 										$comment_body   = trim( $comment_wrapper['data']['body'] );
-										if ( $comment_body !== '' ) {
+										if ( '' !== $comment_body ) {
 											$comments_array[] = array(
 												'author' => $comment_author,
 												'body'   => $comment_body,
@@ -412,7 +413,7 @@ class Reddit extends FetchHandler {
 				} elseif (
 					! empty( $url ) &&
 					(
-						( isset( $item_data['post_hint'] ) && $item_data['post_hint'] === 'image' ) ||
+						( isset( $item_data['post_hint'] ) && 'image' === $item_data['post_hint'] ) ||
 						preg_match( '/\\.(jpg|jpeg|png|webp|gif)$/i', $url ) ||
 						$is_imgur
 					)

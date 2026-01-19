@@ -110,7 +110,7 @@ class AIStep extends Step {
 		if ( ! empty( $this->dataPackets ) ) {
 			$messages[] = array(
 				'role'    => 'user',
-				'content' => json_encode( array( 'data_packets' => $this->dataPackets ), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ),
+				'content' => wp_json_encode( array( 'data_packets' => $this->dataPackets ), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ),
 			);
 		}
 
@@ -226,12 +226,12 @@ class AIStep extends Step {
 			$role = $message['role'] ?? '';
 
 			// Track turns by counting assistant messages
-			if ( $role === 'assistant' ) {
+			if ( 'assistant' === $role ) {
 				++$turn_count;
 			}
 
 			// Process assistant responses (AI content or tool calls)
-			if ( $role === 'assistant' ) {
+			if ( 'assistant' === $role ) {
 				$content    = $message['content'] ?? '';
 				$tool_calls = $message['tool_calls'] ?? array();
 

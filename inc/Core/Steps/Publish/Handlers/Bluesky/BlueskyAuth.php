@@ -176,7 +176,7 @@ class BlueskyAuth extends BaseAuthProvider {
 			return new \WP_Error( 'bluesky_json_decode_error', __( 'Invalid response from Bluesky server.', 'data-machine' ) );
 		}
 
-		if ( $response_code !== 200 ) {
+		if ( 200 !== $response_code ) {
 			if ( empty( $session_data['message'] ) ) {
 				do_action(
 					'datamachine_log',

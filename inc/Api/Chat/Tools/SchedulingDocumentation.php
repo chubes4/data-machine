@@ -41,7 +41,7 @@ class SchedulingDocumentation {
 	 * @return string JSON array of valid scheduling intervals
 	 */
 	public static function getIntervalsJson(): string {
-		if ( self::$cached_json !== null ) {
+		if ( self::null !== $cached_json ) {
 			return self::$cached_json;
 		}
 
@@ -65,7 +65,7 @@ class SchedulingDocumentation {
 			);
 		}
 
-		self::$cached_json = json_encode( $options, JSON_PRETTY_PRINT );
+		self::$cached_json = wp_json_encode( $options, JSON_PRETTY_PRINT );
 
 		return self::$cached_json;
 	}

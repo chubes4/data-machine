@@ -346,7 +346,7 @@ function datamachine_register_execution_engine() {
 				} else {
 					// Check if this is a fetch step with processed items history
 					// If so, empty result means "no new items" not "failure"
-					$is_fetch_step           = ( $step_type === 'fetch' );
+					$is_fetch_step           = ( 'fetch' === $step_type );
 					$processed_items_manager = new \DataMachine\Services\ProcessedItemsManager();
 					$has_history             = $processed_items_manager->hasProcessedItems( $flow_step_id );
 
@@ -480,12 +480,12 @@ function datamachine_register_execution_engine() {
 						'job_id'       => $job_id,
 						'flow_step_id' => $flow_step_id,
 						'action_id'    => $action_id,
-						'success'      => ( $action_id !== false ),
+						'success'      => ( false !== $action_id ),
 					)
 				);
 			}
 
-			return $action_id !== false;
+			return false !== $action_id;
 		},
 		10,
 		3
@@ -512,7 +512,7 @@ function datamachine_register_execution_engine() {
 			}
 
 			// 2. Handle 'manual' case
-			if ( $interval_or_timestamp === 'manual' ) {
+			if ( 'manual' === $interval_or_timestamp ) {
 				$scheduling_config = array( 'interval' => 'manual' );
 				$db_flows->update_flow_scheduling( $flow_id, $scheduling_config );
 

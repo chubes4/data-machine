@@ -151,7 +151,7 @@ class GoogleSheetsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 		$response_code = $result['status_code'];
 		$response_body = $result['data'];
 
-		if ( $response_code !== 200 ) {
+		if ( 200 !== $response_code ) {
 			do_action(
 				'datamachine_log',
 				'error',

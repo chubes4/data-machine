@@ -48,7 +48,7 @@ class HttpClient {
 		$method  = strtoupper( $method );
 		$context = $options['context'] ?? 'HTTP Request';
 
-		if ( ! in_array( $method, self::VALID_METHODS ) ) {
+		if ( ! in_array( $method, self::VALID_METHODS, true ) ) {
 			do_action(
 				'datamachine_log',
 				'error',
@@ -66,7 +66,7 @@ class HttpClient {
 
 		$args = self::buildRequestArgs( $method, $options );
 
-		$response = ( $method === 'GET' )
+		$response = ( 'GET' === $method )
 			? wp_remote_get( $url, $args )
 			: wp_remote_request( $url, $args );
 
@@ -78,7 +78,7 @@ class HttpClient {
 		$body          = wp_remote_retrieve_body( $response );
 		$success_codes = self::SUCCESS_CODES[ $method ] ?? array( 200 );
 
-		if ( ! in_array( $status_code, $success_codes ) ) {
+		if ( ! in_array( $status_code, $success_codes, true ) ) {
 			return self::handleHttpError( $status_code, $body, $method, $url, $context );
 		}
 
@@ -184,7 +184,7 @@ class HttpClient {
 			'headers' => $headers,
 		);
 
-		if ( $method !== 'GET' ) {
+		if ( 'GET' !== $method ) {
 			$args['method'] = $method;
 		}
 

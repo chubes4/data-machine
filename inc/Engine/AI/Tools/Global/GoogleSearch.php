@@ -178,7 +178,7 @@ class GoogleSearch {
 	 * @return bool True if configured, false otherwise
 	 */
 	public function check_configuration( $configured, $tool_id ) {
-		if ( $tool_id !== 'google_search' ) {
+		if ( 'google_search' !== $tool_id ) {
 			return $configured;
 		}
 
@@ -186,7 +186,7 @@ class GoogleSearch {
 	}
 
 	public function get_configuration( $config, $tool_id ) {
-		if ( $tool_id !== 'google_search' ) {
+		if ( 'google_search' !== $tool_id ) {
 			return $config;
 		}
 
@@ -194,7 +194,7 @@ class GoogleSearch {
 	}
 
 	public function save_configuration( $tool_id, $config_data ) {
-		if ( $tool_id !== 'google_search' ) {
+		if ( 'google_search' !== $tool_id ) {
 			return;
 		}
 

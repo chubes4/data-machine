@@ -109,7 +109,7 @@ class PromptBuilder {
 			$directive  = $directiveConfig['directive'];
 			$agentTypes = $directiveConfig['agentTypes'];
 
-			if ( ! in_array( 'all', $agentTypes ) && ! in_array( $agentType, $agentTypes ) ) {
+			if ( ! in_array( 'all', $agentTypes, true ) && ! in_array( $agentType, $agentTypes, true ) ) {
 				continue;
 			}
 
@@ -141,7 +141,7 @@ class PromptBuilder {
 				'job_id'       => $payload['job_id'] ?? null,
 				'flow_step_id' => $payload['flow_step_id'] ?? null,
 			),
-			fn( $v ) => $v !== null
+			fn( $v ) => null !== $v
 		);
 		$validated_outputs  = DirectiveOutputValidator::validateOutputs( $directive_outputs, $validation_context );
 		$directive_messages = DirectiveRenderer::renderMessages( $validated_outputs );

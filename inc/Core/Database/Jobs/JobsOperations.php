@@ -40,7 +40,7 @@ class JobsOperations {
 		$flow_id     = $job_data['flow_id'] ?? null;
 
 		// Direct execution: both must be explicitly 'direct'
-		$is_direct_execution = ( $pipeline_id === 'direct' && $flow_id === 'direct' );
+		$is_direct_execution = ( 'direct' === $pipeline_id && 'direct' === $flow_id );
 
 		// Database flow: both must be valid numeric IDs > 0
 		$is_database_flow = ( is_numeric( $pipeline_id ) && (int) $pipeline_id > 0 && is_numeric( $flow_id ) && (int) $flow_id > 0 );
@@ -144,13 +144,14 @@ class JobsOperations {
 			$where_sql = 'WHERE ' . implode( ' AND ', $where_clauses );
 		}
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		$query = $this->wpdb->prepare(
 			"SELECT COUNT(job_id) FROM %i {$where_sql}",
 			array_merge( array( $this->table_name ), $where_values )
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Query is prepared above
 		$count = $this->wpdb->get_var( $query );
 
 		return (int) $count;
@@ -225,7 +226,7 @@ class JobsOperations {
 		// Build the full query
 		// Note: orderby is validated above, so safe to interpolate
 		// For direct execution jobs, LEFT JOINs will return NULL for pipeline_name/flow_name
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		$query = $this->wpdb->prepare(
 			"SELECT j.*, p.pipeline_name, f.flow_name
              FROM %i j
@@ -240,11 +241,12 @@ class JobsOperations {
 				array( $per_page, $offset )
 			)
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Query is prepared above
 		$results = $this->wpdb->get_results( $query, ARRAY_A );
 
-		return $results ?: array();
+		return $results ? $results : array();
 	}
 
 	/**
@@ -303,7 +305,7 @@ class JobsOperations {
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$results = $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT * FROM %i WHERE flow_id = %s ORDER BY created_at DESC', $this->table_name, (string) $flow_id ), ARRAY_A );
 
-		return $results ?: array();
+		return $results ? $results : array();
 	}
 
 	/**
@@ -330,19 +332,20 @@ class JobsOperations {
 		$placeholders = implode( ',', array_fill( 0, count( $flow_ids ), '%s' ) );
 
 		// Subquery to get max job_id per flow, then join to get full row
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		$query = $this->wpdb->prepare(
 			"SELECT j.* FROM %i j
              INNER JOIN (
                  SELECT flow_id, MAX(job_id) as max_job_id
                  FROM %i
-                 WHERE flow_id IN ($placeholders)
+                 WHERE flow_id IN ({$placeholders})
                  GROUP BY flow_id
              ) latest ON j.job_id = latest.max_job_id",
 			array_merge( array( $this->table_name, $this->table_name ), $flow_ids )
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Query is prepared above
 		$results = $this->wpdb->get_results( $query, ARRAY_A );
 
 		if ( ! $results ) {
@@ -382,8 +385,8 @@ class JobsOperations {
 			'Deleted jobs',
 			array(
 				'criteria'     => $criteria,
-				'jobs_deleted' => $result !== false ? $result : 0,
-				'success'      => $result !== false,
+				'jobs_deleted' => false !== $result ? $result : 0,
+				'success'      => false !== $result,
 			)
 		);
 
@@ -511,7 +514,7 @@ class JobsOperations {
 			ARRAY_A
 		);
 
-		return $results ?: array();
+		return $results ? $results : array();
 	}
 
 	/**
@@ -522,7 +525,7 @@ class JobsOperations {
 	 */
 	public function get_flow_health( int|string $flow_id ): array {
 		$cached = $this->get_flow_health_cache( $flow_id );
-		if ( $cached !== false ) {
+		if ( false !== $cached ) {
 			return $cached;
 		}
 
@@ -549,7 +552,7 @@ class JobsOperations {
 		$flow_id = $job['flow_id'];
 
 		// Skip direct execution jobs
-		if ( $flow_id === 'direct' || ! is_numeric( $flow_id ) ) {
+		if ( 'direct' === $flow_id || ! is_numeric( $flow_id ) ) {
 			return;
 		}
 
@@ -599,7 +602,7 @@ class JobsOperations {
 
 		// Count consecutive failures from most recent
 		foreach ( $jobs as $job ) {
-			if ( $job['status'] === 'failed' ) {
+			if ( 'failed' === $job['status'] ) {
 				++$result['consecutive_failures'];
 			} else {
 				break;
@@ -608,7 +611,7 @@ class JobsOperations {
 
 		// Count consecutive no_items from most recent
 		foreach ( $jobs as $job ) {
-			if ( $job['status'] === 'completed_no_items' ) {
+			if ( 'completed_no_items' === $job['status'] ) {
 				++$result['consecutive_no_items'];
 			} else {
 				break;

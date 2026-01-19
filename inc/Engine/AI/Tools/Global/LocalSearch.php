@@ -362,7 +362,7 @@ class LocalSearch {
 	 * @return bool True if configured, false otherwise
 	 */
 	public function check_configuration( $configured, $tool_id ) {
-		if ( $tool_id !== 'local_search' ) {
+		if ( 'local_search' !== $tool_id ) {
 			return $configured;
 		}
 

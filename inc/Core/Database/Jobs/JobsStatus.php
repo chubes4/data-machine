@@ -65,7 +65,7 @@ class JobsStatus {
 			array( '%d' )  // Format for WHERE
 		);
 
-		return $updated !== false;
+		return false !== $updated;
 	}
 
 	/**
@@ -97,11 +97,11 @@ class JobsStatus {
 			array( '%d' )
 		);
 
-		if ( $updated !== false ) {
+		if ( false !== $updated ) {
 			do_action( 'datamachine_job_complete', $job_id, $status );
 		}
 
-		return $updated !== false;
+		return false !== $updated;
 	}
 
 	/**
@@ -129,6 +129,6 @@ class JobsStatus {
 			array( '%d' )
 		);
 
-		return $updated !== false;
+		return false !== $updated;
 	}
 }

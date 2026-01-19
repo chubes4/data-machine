@@ -26,7 +26,7 @@ function datamachine_register_importexport_filters() {
 	add_filter(
 		'datamachine_importer',
 		function ( $service ) {
-			if ( $service === null ) {
+			if ( null === $service ) {
 				require_once DATAMACHINE_PATH . 'inc/Engine/Actions/ImportExport.php';
 				return new \DataMachine\Engine\Actions\ImportExport();
 			}
@@ -118,7 +118,7 @@ function datamachine_register_utility_filters() {
 
 			// Split on last underscore to handle UUIDs with dashes
 			$last_underscore_pos = strrpos( $flow_step_id, '_' );
-			if ( $last_underscore_pos === false ) {
+			if ( false === $last_underscore_pos ) {
 				return null;
 			}
 

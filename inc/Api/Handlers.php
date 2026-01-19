@@ -115,7 +115,7 @@ class Handlers {
 				}
 
 				// Add callback URL for OAuth providers (user must configure this externally)
-				if ( ( $auth_type === 'oauth1' || $auth_type === 'oauth2' ) && method_exists( $auth_instance, 'get_callback_url' ) ) {
+				if ( ( 'oauth1' === $auth_type || 'oauth2' === $auth_type ) && method_exists( $auth_instance, 'get_callback_url' ) ) {
 					$handler['callback_url'] = $auth_instance->get_callback_url();
 				}
 

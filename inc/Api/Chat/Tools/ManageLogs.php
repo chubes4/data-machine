@@ -197,7 +197,7 @@ AGENT TYPES:
 	private function getMetadata( string $agent_type ): array {
 		$request = new \WP_REST_Request( 'GET', '/datamachine/v1/logs' );
 
-		if ( $agent_type !== 'all' ) {
+		if ( 'all' !== $agent_type ) {
 			$request->set_query_params( array( 'agent_type' => $agent_type ) );
 		}
 

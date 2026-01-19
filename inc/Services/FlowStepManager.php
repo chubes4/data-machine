@@ -107,7 +107,7 @@ class FlowStepManager {
 		}
 
 		// If switching handlers, strip legacy config fields that don't belong to the new handler
-		if ( $effective_slug !== ( $flow_config[ $flow_step_id ]['handler_slug'] ?? '' ) ) {
+		if ( ( $flow_config[ $flow_step_id ]['handler_slug'] ?? '' ) !== $effective_slug ) {
 			$valid_fields = array_keys( $this->handler_service->getConfigFields( $effective_slug ) );
 			if ( ! empty( $valid_fields ) ) {
 				$existing_handler_config = array_intersect_key( $flow_config[ $flow_step_id ]['handler_config'] ?? array(), array_flip( $valid_fields ) );

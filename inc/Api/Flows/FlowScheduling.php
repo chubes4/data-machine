@@ -42,7 +42,7 @@ class FlowScheduling {
 		$interval = $scheduling_config['interval'] ?? null;
 
 		// Handle manual scheduling (unschedule)
-		if ( $interval === 'manual' || $interval === null ) {
+		if ( 'manual' === $interval || null === $interval ) {
 			if ( function_exists( 'as_unschedule_action' ) ) {
 				as_unschedule_action( 'datamachine_run_flow_now', array( $flow_id ), 'data-machine' );
 			}
@@ -52,7 +52,7 @@ class FlowScheduling {
 		}
 
 		// Handle one-time scheduling
-		if ( $interval === 'one_time' ) {
+		if ( 'one_time' === $interval ) {
 			$timestamp = $scheduling_config['timestamp'] ?? null;
 			if ( ! $timestamp ) {
 				return new \WP_Error(

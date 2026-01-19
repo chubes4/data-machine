@@ -78,7 +78,7 @@ class UpdateFlow {
 
 		if ( ! empty( $scheduling_config ) ) {
 			$validation = $this->validateSchedulingConfig( $scheduling_config );
-			if ( $validation !== true ) {
+			if ( true !== $validation ) {
 				return array(
 					'success'   => false,
 					'error'     => $validation,
@@ -143,7 +143,7 @@ class UpdateFlow {
 	private function validateSchedulingConfig( array $config ): bool|string {
 		$interval = $config['interval'] ?? null;
 
-		if ( $interval === null ) {
+		if ( null === $interval ) {
 			return 'scheduling_config requires an interval property';
 		}
 
@@ -153,7 +153,7 @@ class UpdateFlow {
 			return 'Invalid interval. Must be one of: ' . implode( ', ', $valid_intervals );
 		}
 
-		if ( $interval === 'one_time' ) {
+		if ( 'one_time' === $interval ) {
 			$timestamp = $config['timestamp'] ?? null;
 			if ( ! is_numeric( $timestamp ) || (int) $timestamp <= 0 ) {
 				return 'one_time interval requires a valid unix timestamp';

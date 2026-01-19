@@ -174,7 +174,7 @@ class RedditAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 		);
 
 		$identity_username = null;
-		if ( $identity_result['success'] && $identity_result['status_code'] === 200 ) {
+		if ( $identity_result['success'] && 200 === $identity_result['status_code'] ) {
 			$identity_data     = json_decode( $identity_result['data'], true );
 			$identity_username = $identity_data['name'] ?? null;
 
@@ -237,7 +237,7 @@ class RedditAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 			)
 		);
 
-		if ( ! $result['success'] || $result['status_code'] !== 200 ) {
+		if ( ! $result['success'] || 200 !== $result['status_code'] ) {
 			do_action(
 				'datamachine_log',
 				'error',

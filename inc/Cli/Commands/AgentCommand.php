@@ -292,7 +292,7 @@ class AgentCommand extends WP_CLI_Command {
 	private function output_result( array $result, array $assoc_args ): void {
 		$format = $assoc_args['format'] ?? 'json';
 
-		if ( $format === 'text' ) {
+		if ( 'text' === $format ) {
 			WP_CLI::log( $result['response'] );
 		} else {
 			WP_CLI::log( wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );

@@ -67,7 +67,7 @@ class AIConversationLoop {
 				'job_id'       => $payload['job_id'] ?? null,
 				'flow_step_id' => $payload['flow_step_id'] ?? null,
 			),
-			fn( $v ) => $v !== null
+			fn( $v ) => null !== $v
 		);
 
 		do {
@@ -223,7 +223,7 @@ class AIConversationLoop {
 					$is_handler_tool = $tool_def && isset( $tool_def['handler'] );
 
 					// Force conversation completion if a handler tool was successfully executed in pipeline mode
-					if ( $agent_type === 'pipeline' && $is_handler_tool && ( $tool_result['success'] ?? false ) ) {
+					if ( 'pipeline' === $agent_type && $is_handler_tool && ( $tool_result['success'] ?? false ) ) {
 						$conversation_complete = true;
 						do_action(
 							'datamachine_log',

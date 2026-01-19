@@ -196,11 +196,11 @@ class Pipelines {
 	public static function handle_get_pipelines( $request ) {
 		$pipeline_id = $request->get_param( 'pipeline_id' );
 		$fields      = $request->get_param( 'fields' );
-		$format      = $request->get_param( 'format' ) ?: 'json';
+		$format      = $request->get_param( 'format' ) ?? 'json';
 		$ids         = $request->get_param( 'ids' );
 
 		// Handle CSV export
-		if ( $format === 'csv' ) {
+		if ( 'csv' === $format ) {
 			// Parse IDs parameter
 			$export_ids = array();
 			if ( $ids ) {

@@ -21,7 +21,7 @@ class SiteContext {
 	 */
 	public static function get_context(): array {
 		$cached = get_transient( self::CACHE_KEY );
-		if ( $cached !== false ) {
+		if ( false !== $cached ) {
 			return $cached;
 		}
 

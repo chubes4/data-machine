@@ -96,7 +96,7 @@ class Flows {
 			$insert_format
 		);
 
-		if ( $result === false ) {
+		if ( false === $result ) {
 			do_action(
 				'datamachine_log',
 				'error',
@@ -129,7 +129,7 @@ class Flows {
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$flow = $this->wpdb->get_row( $this->wpdb->prepare( 'SELECT * FROM %i WHERE flow_id = %d', $this->table_name, $flow_id ), ARRAY_A );
 
-		if ( $flow === null ) {
+		if ( null === $flow ) {
 			do_action(
 				'datamachine_log',
 				'warning',
@@ -141,8 +141,8 @@ class Flows {
 			return null;
 		}
 
-		$flow['flow_config']       = json_decode( $flow['flow_config'], true ) ?: array();
-		$flow['scheduling_config'] = json_decode( $flow['scheduling_config'], true ) ?: array();
+		$flow['flow_config']       = json_decode( $flow['flow_config'], true ) ?? array();
+		$flow['scheduling_config'] = json_decode( $flow['scheduling_config'], true ) ?? array();
 
 		return $flow;
 	}
@@ -151,7 +151,7 @@ class Flows {
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$flows = $this->wpdb->get_results( $this->wpdb->prepare( 'SELECT * FROM %i WHERE pipeline_id = %d ORDER BY flow_id ASC', $this->table_name, $pipeline_id ), ARRAY_A );
 
-		if ( $flows === null ) {
+		if ( null === $flows ) {
 			do_action(
 				'datamachine_log',
 				'warning',
@@ -164,8 +164,8 @@ class Flows {
 		}
 
 		foreach ( $flows as &$flow ) {
-			$flow['flow_config']       = json_decode( $flow['flow_config'], true ) ?: array();
-			$flow['scheduling_config'] = json_decode( $flow['scheduling_config'], true ) ?: array();
+			$flow['flow_config']       = json_decode( $flow['flow_config'], true ) ?? array();
+			$flow['scheduling_config'] = json_decode( $flow['scheduling_config'], true ) ?? array();
 		}
 
 		return $flows;
@@ -192,13 +192,13 @@ class Flows {
 			ARRAY_A
 		);
 
-		if ( $flows === null ) {
+		if ( null === $flows ) {
 			return array();
 		}
 
 		foreach ( $flows as &$flow ) {
-			$flow['flow_config']       = json_decode( $flow['flow_config'], true ) ?: array();
-			$flow['scheduling_config'] = json_decode( $flow['scheduling_config'], true ) ?: array();
+			$flow['flow_config']       = json_decode( $flow['flow_config'], true ) ?? array();
+			$flow['scheduling_config'] = json_decode( $flow['scheduling_config'], true ) ?? array();
 		}
 
 		return $flows;
@@ -250,19 +250,20 @@ class Flows {
 		$flow_id_list = array_keys( $problem_flow_ids );
 		$placeholders = implode( ',', array_fill( 0, count( $flow_id_list ), '%d' ) );
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		$query = $this->wpdb->prepare(
 			"SELECT f.flow_id, f.pipeline_id, f.flow_name, p.pipeline_name
              FROM %i f
              LEFT JOIN %i p ON f.pipeline_id = p.pipeline_id
-             WHERE f.flow_id IN ($placeholders)",
+             WHERE f.flow_id IN ({$placeholders})",
 			array_merge( array( $this->table_name, $pipelines_table ), $flow_id_list )
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Query is prepared above
 		$results = $this->wpdb->get_results( $query, ARRAY_A );
 
-		if ( $results === null ) {
+		if ( null === $results ) {
 			return array();
 		}
 
@@ -341,7 +342,7 @@ class Flows {
 			array( '%d' )
 		);
 
-		if ( $result === false ) {
+		if ( false === $result ) {
 			do_action(
 				'datamachine_log',
 				'error',
@@ -369,7 +370,7 @@ class Flows {
 			array( '%d' )
 		);
 
-		if ( $result === false ) {
+		if ( false === $result ) {
 			do_action(
 				'datamachine_log',
 				'error',
@@ -382,7 +383,7 @@ class Flows {
 			return false;
 		}
 
-		if ( $result === 0 ) {
+		if ( 0 === $result ) {
 			do_action(
 				'datamachine_log',
 				'warning',
@@ -419,7 +420,7 @@ class Flows {
 			array( '%d' )
 		);
 
-		if ( $result === false ) {
+		if ( false === $result ) {
 			do_action(
 				'datamachine_log',
 				'error',
@@ -440,7 +441,7 @@ class Flows {
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$scheduling_config_json = $this->wpdb->get_var( $this->wpdb->prepare( 'SELECT scheduling_config FROM %i WHERE flow_id = %d', $this->table_name, $flow_id ) );
 
-		if ( $scheduling_config_json === null ) {
+		if ( null === $scheduling_config_json ) {
 			do_action(
 				'datamachine_log',
 				'warning',
@@ -454,7 +455,7 @@ class Flows {
 
 		$decoded_config = json_decode( $scheduling_config_json, true );
 
-		if ( $decoded_config === null ) {
+		if ( null === $decoded_config ) {
 			do_action(
 				'datamachine_log',
 				'error',
@@ -489,7 +490,7 @@ class Flows {
 			ARRAY_A
 		);
 
-		if ( $flows === null || empty( $flows ) ) {
+		if ( null === $flows || empty( $flows ) ) {
 			return array();
 		}
 
@@ -538,11 +539,11 @@ class Flows {
 			return false;
 		}
 
-		if ( $scheduling_config['interval'] === 'manual' ) {
+		if ( 'manual' === $scheduling_config['interval'] ) {
 			return false;
 		}
 
-		if ( $last_run_at === null ) {
+		if ( null === $last_run_at ) {
 			return true; // Never run before
 		}
 

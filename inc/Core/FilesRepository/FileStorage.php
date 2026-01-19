@@ -172,7 +172,7 @@ class FileStorage {
 			if ( is_file( $file_path ) ) {
 				$filename = basename( $file_path );
 
-				if ( $filename === 'index.php' ) {
+				if ( 'index.php' === $filename ) {
 					continue;
 				}
 
@@ -209,7 +209,7 @@ class FileStorage {
 			if ( is_file( $file_path ) ) {
 				$filename = basename( $file_path );
 
-				if ( $filename === 'index.php' ) {
+				if ( 'index.php' === $filename ) {
 					continue;
 				}
 
@@ -298,7 +298,7 @@ class FileStorage {
 		$accumulated_data = array();
 		if ( file_exists( $file_path ) ) {
 			$existing_json = file_get_contents( $file_path );
-			if ( $existing_json !== false ) {
+			if ( false !== $existing_json ) {
 				$accumulated_data = json_decode( $existing_json, true );
 				if ( ! is_array( $accumulated_data ) ) {
 					$accumulated_data = array();
@@ -313,7 +313,7 @@ class FileStorage {
 
 		// Serialize and write
 		$json_data = wp_json_encode( $accumulated_data, JSON_UNESCAPED_UNICODE );
-		if ( $json_data === false ) {
+		if ( false === $json_data ) {
 			do_action(
 				'datamachine_log',
 				'error',
@@ -372,7 +372,7 @@ class FileStorage {
 		}
 
 		$json_data = file_get_contents( $file_path );
-		if ( $json_data === false ) {
+		if ( false === $json_data ) {
 			do_action(
 				'datamachine_log',
 				'error',
@@ -385,7 +385,7 @@ class FileStorage {
 		}
 
 		$data = json_decode( $json_data, true );
-		if ( $data === null && json_last_error() !== JSON_ERROR_NONE ) {
+		if ( null === $data && json_last_error() !== JSON_ERROR_NONE ) {
 			do_action(
 				'datamachine_log',
 				'error',

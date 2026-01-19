@@ -1,9 +1,4 @@
 <?php
-namespace DataMachine\Engine\Actions;
-
-use DataMachine\Services\PipelineManager;
-use DataMachine\Services\PipelineStepManager;
-
 /**
  * Data Machine Import/Export Actions
  *
@@ -13,6 +8,11 @@ use DataMachine\Services\PipelineStepManager;
  * @package DataMachine
  * @since 1.0.0
  */
+
+namespace DataMachine\Engine\Actions;
+
+use DataMachine\Services\PipelineManager;
+use DataMachine\Services\PipelineStepManager;
 
 // Prevent direct access
 if ( ! defined( 'WPINC' ) ) {
@@ -39,7 +39,7 @@ class ImportExport {
 			return false;
 		}
 
-		if ( $type !== 'pipelines' ) {
+		if ( 'pipelines' !== $type ) {
 			do_action( 'datamachine_log', 'error', "Unknown import type: {$type}" );
 			return false;
 		}
@@ -52,7 +52,7 @@ class ImportExport {
 		$processed          = array();
 
 		foreach ( $rows as $index => $row ) {
-			if ( $index === 0 ) {
+			if ( 0 === $index ) {
 				continue;
 			}
 
@@ -112,7 +112,7 @@ class ImportExport {
 			return false;
 		}
 
-		if ( $type !== 'pipelines' ) {
+		if ( 'pipelines' !== $type ) {
 			do_action( 'datamachine_log', 'error', "Unknown export type: {$type}" );
 			return false;
 		}
@@ -131,7 +131,7 @@ class ImportExport {
 				continue;
 			}
 
-			$pipeline_config = json_decode( $pipeline['pipeline_config'], true ) ?: array();
+			$pipeline_config = json_decode( $pipeline['pipeline_config'], true ) ?? array();
 			$flows           = $db_flows->get_flows_for_pipeline( $pipeline_id );
 
 			$position = 0;
@@ -153,7 +153,7 @@ class ImportExport {
 					$pipeline['pipeline_name'],
 					$position++,
 					$step['step_type'] ?? '',
-					json_encode( $step ),
+					wp_json_encode( $step ),
 					'',
 					'',
 					'',
@@ -162,7 +162,7 @@ class ImportExport {
 
 				// Export flow configurations
 				foreach ( $flows as $flow ) {
-					$flow_config  = json_decode( $flow['flow_config'], true ) ?: array();
+					$flow_config  = json_decode( $flow['flow_config'], true ) ?? array();
 					$flow_step_id = apply_filters( 'datamachine_generate_flow_step_id', '', $step['pipeline_step_id'], $flow['flow_id'] );
 					$flow_step    = $flow_config[ $flow_step_id ] ?? array();
 
@@ -172,11 +172,11 @@ class ImportExport {
 							$pipeline['pipeline_name'],
 							$position - 1,
 							$step['step_type'] ?? '',
-							json_encode( $step ),
+							wp_json_encode( $step ),
 							$flow['flow_id'],
 							$flow['flow_name'],
 							$flow_step['handler_slug'],
-							json_encode( $flow_step['handler_config'] ?? array() ),
+							wp_json_encode( $flow_step['handler_config'] ?? array() ),
 						);
 					}
 				}

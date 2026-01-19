@@ -197,7 +197,7 @@ class ConfigureFlowSteps {
 			// Validate merged config against target handler schema
 			if ( ! empty( $merged_config ) ) {
 				$validation_result = $this->validateHandlerConfig( $effective_handler_slug, $merged_config );
-				if ( $validation_result !== true ) {
+				if ( true !== $validation_result ) {
 					return array(
 						'success'   => false,
 						'error'     => $validation_result,
@@ -354,7 +354,7 @@ class ConfigureFlowSteps {
 				// Validate merged config against target handler schema
 				if ( ! empty( $merged_config ) ) {
 					$validation_result = $this->validateHandlerConfig( $effective_handler_slug, $merged_config );
-					if ( $validation_result !== true ) {
+					if ( true !== $validation_result ) {
 						$errors[] = array(
 							'flow_step_id' => $flow_step_id,
 							'flow_id'      => $flow_id,
@@ -414,7 +414,7 @@ class ConfigureFlowSteps {
 		$flows_updated  = count( array_unique( array_column( $updated_details, 'flow_id' ) ) );
 		$steps_modified = count( $updated_details );
 
-		if ( $steps_modified === 0 && ! empty( $errors ) ) {
+		if ( 0 === $steps_modified && ! empty( $errors ) ) {
 			return array(
 				'success'   => false,
 				'error'     => 'No steps were updated. ' . count( $errors ) . ' error(s) occurred.',
@@ -424,7 +424,7 @@ class ConfigureFlowSteps {
 			);
 		}
 
-		if ( $steps_modified === 0 ) {
+		if ( 0 === $steps_modified ) {
 			return array(
 				'success'   => false,
 				'error'     => 'No matching steps found for the specified criteria',

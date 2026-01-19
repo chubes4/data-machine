@@ -16,7 +16,7 @@ $datamachine_current_keys = apply_filters( 'chubes_ai_provider_api_keys', null )
 <table class="form-table">
 	<tbody>
 		<?php foreach ( $datamachine_providers as $datamachine_key => $datamachine_provider ) : ?>
-			<?php if ( isset( $datamachine_provider['type'] ) && $datamachine_provider['type'] === 'llm' ) : ?>
+			<?php if ( isset( $datamachine_provider['type'] ) && 'llm' === $datamachine_provider['type'] ) : ?>
 			<tr>
 				<th scope="row">
 					<label for="ai_provider_keys_<?php echo esc_attr( $datamachine_key ); ?>">

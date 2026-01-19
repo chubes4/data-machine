@@ -168,12 +168,12 @@ class MergeTaxonomyTerms {
 
 		// Delete source term
 		$delete_result  = wp_delete_term( $source_term->term_id, $taxonomy );
-		$source_deleted = ! is_wp_error( $delete_result ) && $delete_result !== false;
+		$source_deleted = ! is_wp_error( $delete_result ) && false !== $delete_result;
 
 		// Build message
 		$message = "Merged '{$source_term->name}' into '{$target_term->name}'.";
 		if ( $posts_reassigned > 0 ) {
-			$message .= " Reassigned {$posts_reassigned} post" . ( $posts_reassigned !== 1 ? 's' : '' ) . '.';
+			$message .= " Reassigned {$posts_reassigned} post" . ( 1 !== $posts_reassigned ? 's' : '' ) . '.';
 		} else {
 			$message .= ' No posts to reassign.';
 		}

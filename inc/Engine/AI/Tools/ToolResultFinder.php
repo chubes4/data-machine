@@ -32,7 +32,7 @@ class ToolResultFinder {
 		foreach ( $dataPackets as $entry ) {
 			$entry_type = $entry['type'] ?? '';
 
-			if ( in_array( $entry_type, array( 'tool_result', 'ai_handler_complete' ) ) ) {
+			if ( in_array( $entry_type, array( 'tool_result', 'ai_handler_complete' ), true ) ) {
 				$handler_tool = $entry['metadata']['handler_tool'] ?? '';
 				if ( $handler_tool === $handler ) {
 					return $entry;

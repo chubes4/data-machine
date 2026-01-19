@@ -12,10 +12,8 @@ Build system
 - Homeboy provides full WordPress test environment for running tests (no local WordPress setup required)
 - Build command: `homeboy build data-machine` - runs tests, lints code, builds frontend, creates production ZIP
 - Test command: `homeboy test data-machine` - runs PHPUnit tests using homeboy's WordPress environment
-- Lint command: `composer lint` runs PHP CodeSniffer with WordPress coding standards
-- Auto-fix: `composer lint-fix` runs PHPCBF to auto-fix most linting issues
-- Composer scripts: `test`, `lint`, and `lint-fix` defined in composer.json for convenience
-- PHP CodeSniffer configuration: `.phpcs.xml.dist` defines WordPress standards and PHP 8.2+ compatibility
+- Lint command: `homeboy lint data-machine` - runs PHP CodeSniffer with WordPress coding standards
+- Auto-fix: `homeboy lint data-machine --fix` - runs PHPCBF to auto-fix formatting issues before validating
 
 Testing
 
@@ -51,7 +49,7 @@ Core architecture
   - `FlowManager` - Flow CRUD operations, duplication, step synchronization
   - `PipelineManager` - Pipeline CRUD operations with complete/simple creation modes
   - `JobManager` - Job execution monitoring and management
-  - **LogsManager** - Centralized log access and filtering (DB-based: `wp_datamachine_logs`)
+  - **LogsManager** - Centralized log file access and filtering (file-based per agent type)
   - `ProcessedItemsManager` - Deduplication tracking across workflows
   - `FlowStepManager` - Individual flow step configuration and handler management
   - `PipelineStepManager` - Pipeline step template management

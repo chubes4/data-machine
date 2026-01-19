@@ -318,7 +318,7 @@ class Settings {
 		}
 
 		// Get AI provider keys and mask them for the frontend
-		$raw_keys    = apply_filters( 'chubes_ai_provider_api_keys', null ) ?: array();
+		$raw_keys    = apply_filters( 'chubes_ai_provider_api_keys', null ) ?? array();
 		$masked_keys = array();
 		foreach ( $raw_keys as $provider => $key ) {
 			if ( ! empty( $key ) ) {
@@ -540,7 +540,7 @@ class Settings {
 		$defaults = get_option( self::HANDLER_DEFAULTS_OPTION, null );
 
 		// Auto-populate from schema defaults on first access
-		if ( $defaults === null ) {
+		if ( null === $defaults ) {
 			$defaults = self::build_initial_handler_defaults();
 			update_option( self::HANDLER_DEFAULTS_OPTION, $defaults );
 		}
@@ -606,6 +606,7 @@ class Settings {
 		if ( ! $handler_info ) {
 			return new \WP_Error(
 				'handler_not_found',
+				/* translators: %s: handler slug */
 				sprintf( __( 'Handler "%s" not found.', 'data-machine' ), $handler_slug ),
 				array( 'status' => 404 )
 			);
@@ -635,6 +636,7 @@ class Settings {
 				'data'    => array(
 					'handler_slug' => $handler_slug,
 					'defaults'     => $sanitized_defaults,
+					/* translators: %s: handler slug */
 					'message'      => sprintf( __( 'Defaults updated for handler "%s".', 'data-machine' ), $handler_slug ),
 				),
 			)

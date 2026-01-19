@@ -44,7 +44,7 @@ class Threads extends PublishHandler {
 			ThreadsAuth::class,
 			ThreadsSettings::class,
 			function ( $tools, $handler_slug, $handler_config ) {
-				if ( $handler_slug === 'threads_publish' ) {
+				if ( 'threads_publish' === $handler_slug ) {
 					$tools['threads_publish'] = array(
 						'class'       => self::class,
 						'method'      => 'handle_tool_call',
@@ -150,7 +150,7 @@ class Threads extends PublishHandler {
 		$post_text = $title ? $title . "\n\n" . $content : $content;
 
 		// Handle source URL based on consolidated link_handling setting
-		$link       = ( $link_handling === 'append' && ! empty( $source_url ) && filter_var( $source_url, FILTER_VALIDATE_URL ) ) ? "\n\n" . $source_url : '';
+		$link       = ( 'append' === $link_handling && ! empty( $source_url ) && filter_var( $source_url, FILTER_VALIDATE_URL ) ) ? "\n\n" . $source_url : '';
 		$ellipsis   = '...';
 		$max_length = 500 - strlen( $link );
 
@@ -254,7 +254,7 @@ class Threads extends PublishHandler {
 					'Authorization' => 'Bearer ' . $access_token,
 					'Content-Type'  => 'application/json',
 				),
-				'body'    => json_encode( $container_data ),
+				'body'    => wp_json_encode( $container_data ),
 				'context' => 'Threads API',
 			)
 		);
@@ -270,7 +270,7 @@ class Threads extends PublishHandler {
 		$response_body = $result['data'];
 		$data          = json_decode( $response_body, true );
 
-		if ( $response_code !== 200 || empty( $data['id'] ) ) {
+		if ( 200 !== $response_code || empty( $data['id'] ) ) {
 			$error_message = $data['error']['message'] ?? 'Unknown error';
 			return array(
 				'success' => false,
@@ -297,7 +297,7 @@ class Threads extends PublishHandler {
 					'Authorization' => 'Bearer ' . $access_token,
 					'Content-Type'  => 'application/json',
 				),
-				'body'    => json_encode(
+				'body'    => wp_json_encode(
 					array(
 						'creation_id' => $creation_id,
 					)
@@ -317,7 +317,7 @@ class Threads extends PublishHandler {
 		$response_body = $result['data'];
 		$data          = json_decode( $response_body, true );
 
-		if ( $response_code !== 200 || empty( $data['id'] ) ) {
+		if ( 200 !== $response_code || empty( $data['id'] ) ) {
 			$error_message = $data['error']['message'] ?? 'Unknown error';
 			return array(
 				'success' => false,

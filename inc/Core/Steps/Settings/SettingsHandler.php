@@ -143,7 +143,7 @@ abstract class SettingsHandler {
 	 * @return bool Checkbox value as boolean.
 	 */
 	protected static function sanitizeCheckbox( array $raw_settings, string $key ): bool {
-		return isset( $raw_settings[ $key ] ) && $raw_settings[ $key ] == '1';
+		return isset( $raw_settings[ $key ] ) && '1' == $raw_settings[ $key ];
 	}
 
 	/**
@@ -186,12 +186,12 @@ abstract class SettingsHandler {
 		$value = isset( $raw_settings[ $key ] ) ? absint( $raw_settings[ $key ] ) : $default;
 
 		// Apply min constraint
-		if ( $min !== null && $value < $min ) {
+		if ( null !== $min && $value < $min ) {
 			$value = $min;
 		}
 
 		// Apply max constraint
-		if ( $max !== null && $value > $max ) {
+		if ( null !== $max && $value > $max ) {
 			$value = $max;
 		}
 

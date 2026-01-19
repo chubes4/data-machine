@@ -95,12 +95,12 @@ class ProcessedItems {
 			)
 		);
 
-		if ( $result === false ) {
+		if ( false === $result ) {
 			// Log error - but check if it's a duplicate key error first
 			$db_error = $this->wpdb->last_error;
 
 			// If it's a duplicate key error, treat as success (race condition handling)
-			if ( strpos( $db_error, 'Duplicate entry' ) !== false ) {
+			if ( false !== strpos( $db_error, 'Duplicate entry' ) ) {
 				return true; // Treat duplicate as success
 			}
 
@@ -168,9 +168,8 @@ class ProcessedItems {
 			$pattern = '%_' . $criteria['flow_id'];
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$result = $this->wpdb->query( $this->wpdb->prepare( 'DELETE FROM %i WHERE flow_step_id LIKE %s', $this->table_name, $pattern ) );
-		}
-		// Handle pipeline_id (get all flows for pipeline and delete their processed items)
-		elseif ( ! empty( $criteria['pipeline_id'] ) && empty( $criteria['flow_step_id'] ) ) {
+		} elseif ( ! empty( $criteria['pipeline_id'] ) && empty( $criteria['flow_step_id'] ) ) {
+			// Handle pipeline_id (get all flows for pipeline and delete their processed items)
 			// Get all flows for this pipeline using the existing filter
 			$db_flows       = new \DataMachine\Core\Database\Flows\Flows();
 			$pipeline_flows = $db_flows->get_flows_for_pipeline( $criteria['pipeline_id'] );
@@ -201,7 +200,7 @@ class ProcessedItems {
 			foreach ( $flow_patterns as $pattern ) {
                 // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 				$deleted = $this->wpdb->query( $this->wpdb->prepare( 'DELETE FROM %i WHERE flow_step_id LIKE %s', $this->table_name, $pattern ) );
-				if ( $deleted !== false ) {
+				if ( false !== $deleted ) {
 					$total_deleted += $deleted;
 				}
 			}
@@ -222,8 +221,8 @@ class ProcessedItems {
 			'Deleted processed items',
 			array(
 				'criteria'      => $criteria,
-				'items_deleted' => $result !== false ? $result : 0,
-				'success'       => $result !== false,
+				'items_deleted' => false !== $result ? $result : 0,
+				'success'       => false !== $result,
 			)
 		);
 

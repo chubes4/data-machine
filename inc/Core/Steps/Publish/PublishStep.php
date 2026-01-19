@@ -87,13 +87,13 @@ class PublishStep extends Step {
 			);
 		}
 
-		$executed_via = ( $entry_type === 'ai_handler_complete' ) ? 'ai_conversation_tool' : 'ai_tool_call';
-		$title_suffix = ( $entry_type === 'ai_handler_complete' ) ? '(via AI Conversation)' : '(via AI Tool)';
+		$executed_via = ( 'ai_handler_complete' === $entry_type ) ? 'ai_conversation_tool' : 'ai_tool_call';
+		$title_suffix = ( 'ai_handler_complete' === $entry_type ) ? '(via AI Conversation)' : '(via AI Tool)';
 
 		$packet = new DataPacket(
 			array(
 				'title' => 'Publish Complete ' . $title_suffix,
-				'body'  => json_encode( $tool_result_data, JSON_PRETTY_PRINT ),
+				'body'  => wp_json_encode( $tool_result_data, JSON_PRETTY_PRINT ),
 			),
 			array(
 				'handler_used'        => $handler,

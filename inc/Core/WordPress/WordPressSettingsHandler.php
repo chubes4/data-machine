@@ -147,7 +147,7 @@ class WordPressSettingsHandler {
 				$term_id = absint( $raw_value );
 				if ( $term_id > 0 ) {
 					$term_name = TaxonomyHandler::getTermName( $term_id, $taxonomy->name );
-					if ( $term_name !== null ) {
+					if ( null !== $term_name ) {
 						$sanitized[ $field_key ] = $term_id;
 					} else {
 						// Invalid term ID - use default
@@ -236,7 +236,7 @@ class WordPressSettingsHandler {
 		$user_options      = self::get_user_options();
 
 		// Default author to first user if not specified
-		if ( $config['post_author_default'] === null && ! empty( $user_options ) ) {
+		if ( null === $config['post_author_default'] && ! empty( $user_options ) ) {
 			$config['post_author_default'] = array_key_first( $user_options );
 		}
 

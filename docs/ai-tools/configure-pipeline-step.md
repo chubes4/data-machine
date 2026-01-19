@@ -11,7 +11,7 @@ The `configure_pipeline_step` tool manages pipeline-level AI configuration that 
 - **pipeline_step_id** (string, required): Pipeline step ID to configure (format: "123_uuid4")
 - **system_prompt** (string, optional): System prompt defining AI persona and instructions
 - **provider** (string, optional): AI provider slug (e.g., "anthropic", "openai")
-- **model** (string, optional): AI model identifier (e.g., "claude-sonnet-4-20250514", "gpt-4o")
+- **model** (string, optional): AI model identifier (e.g., "claude-sonnet-4-20250514", "gpt-5.2")
 - **enabled_tools** (array, optional): Array of tool slugs to enable for this AI step
 
 ## Usage Examples

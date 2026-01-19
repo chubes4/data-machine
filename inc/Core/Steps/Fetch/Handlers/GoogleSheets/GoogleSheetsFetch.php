@@ -144,7 +144,7 @@ class GoogleSheetsFetch extends FetchHandler {
 		$response_code = $result['status_code'];
 		$response_body = $result['data'];
 
-		if ( $response_code !== 200 ) {
+		if ( 200 !== $response_code ) {
 			$error_data    = json_decode( $response_body, true );
 			$error_message = $error_data['error']['message'] ?? 'Unknown API error';
 
@@ -261,7 +261,7 @@ class GoogleSheetsFetch extends FetchHandler {
 		// Prepare raw data for DataPacket creation
 		$raw_data = array(
 			'title'    => 'Google Sheets Data: ' . $worksheet_name,
-			'content'  => json_encode( $all_data, JSON_PRETTY_PRINT ),
+			'content'  => wp_json_encode( $all_data, JSON_PRETTY_PRINT ),
 			'metadata' => $metadata,
 		);
 
@@ -333,7 +333,7 @@ class GoogleSheetsFetch extends FetchHandler {
 			// Prepare raw data for DataPacket creation
 			$raw_data = array(
 				'title'    => 'Row ' . ( $i + 1 ) . ' Data',
-				'content'  => json_encode( $row_data, JSON_PRETTY_PRINT ),
+				'content'  => wp_json_encode( $row_data, JSON_PRETTY_PRINT ),
 				'metadata' => $metadata,
 			);
 
@@ -416,7 +416,7 @@ class GoogleSheetsFetch extends FetchHandler {
 			// Prepare raw data for DataPacket creation
 			$raw_data = array(
 				'title'    => 'Column: ' . $column_header,
-				'content'  => json_encode( array( $column_header => $column_data ), JSON_PRETTY_PRINT ),
+				'content'  => wp_json_encode( array( $column_header => $column_data ), JSON_PRETTY_PRINT ),
 				'metadata' => $metadata,
 			);
 

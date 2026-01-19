@@ -30,12 +30,12 @@ class DirectiveOutputValidator {
 			}
 
 			$type = $output['type'] ?? null;
-			if ( ! is_string( $type ) || $type === '' ) {
+			if ( ! is_string( $type ) || '' === $type ) {
 				do_action( 'datamachine_log', 'warning', 'Directive output skipped (missing type)', array( 'agent_type' => 'system' ) + $context );
 				continue;
 			}
 
-			if ( $type === 'system_text' ) {
+			if ( 'system_text' === $type ) {
 				$content = $output['content'] ?? null;
 				if ( ! is_string( $content ) ) {
 					do_action( 'datamachine_log', 'warning', 'Directive output skipped (system_text missing content)', array( 'agent_type' => 'system' ) + $context );
@@ -43,7 +43,7 @@ class DirectiveOutputValidator {
 				}
 
 				$content = trim( $content );
-				if ( $content === '' ) {
+				if ( '' === $content ) {
 					continue;
 				}
 
@@ -55,7 +55,7 @@ class DirectiveOutputValidator {
 				continue;
 			}
 
-			if ( $type === 'system_json' ) {
+			if ( 'system_json' === $type ) {
 				$label = $output['label'] ?? null;
 				$data  = $output['data'] ?? null;
 
@@ -78,7 +78,7 @@ class DirectiveOutputValidator {
 				continue;
 			}
 
-			if ( $type === 'system_file' ) {
+			if ( 'system_file' === $type ) {
 				$file_path = $output['file_path'] ?? null;
 				$mime_type = $output['mime_type'] ?? null;
 

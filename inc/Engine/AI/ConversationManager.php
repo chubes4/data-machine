@@ -46,7 +46,7 @@ class ConversationManager {
 		if ( ! empty( $tool_parameters ) ) {
 			$params_str = array();
 			foreach ( $tool_parameters as $key => $value ) {
-				$params_str[] = "{$key}: " . ( is_string( $value ) ? $value : json_encode( $value ) );
+				$params_str[] = "{$key}: " . ( is_string( $value ) ? $value : wp_json_encode( $value ) );
 			}
 			$message .= ' with parameters: ' . implode( ', ', $params_str );
 		}
@@ -92,7 +92,7 @@ class ConversationManager {
 
 			// Still append to content for AI context, but frontend can use metadata to hide it
 			if ( ! $is_handler_tool ) {
-				$content .= "\n\n" . json_encode( $tool_result['data'] );
+				$content .= "\n\n" . wp_json_encode( $tool_result['data'] );
 			}
 		}
 
@@ -215,7 +215,7 @@ class ConversationManager {
 		for ( $i = count( $conversation_messages ) - 1; $i >= 0; $i-- ) {
 			$message = $conversation_messages[ $i ];
 
-			if ( $message['role'] !== 'assistant' ) {
+			if ( 'assistant' !== $message['role'] ) {
 				continue;
 			}
 
@@ -282,7 +282,7 @@ class ConversationManager {
 			}
 		}
 
-		if ( $message['role'] !== 'assistant' || ! isset( $message['content'] ) ) {
+		if ( 'assistant' !== $message['role'] || ! isset( $message['content'] ) ) {
 			return null;
 		}
 

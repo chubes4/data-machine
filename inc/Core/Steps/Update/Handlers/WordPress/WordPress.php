@@ -41,7 +41,7 @@ class WordPress extends UpdateHandler {
 	// Handler registration is managed by HandlerRegistrationTrait
 
 	public static function registerTools( $tools, $handler_slug, $handler_config ) {
-		if ( $handler_slug === 'wordpress_update' ) {
+		if ( 'wordpress_update' === $handler_slug ) {
 			$tools['wordpress_update'] = array(
 				'class'       => self::class,
 				'method'      => 'handle_tool_call',
@@ -226,7 +226,7 @@ class WordPress extends UpdateHandler {
 			);
 		}
 
-		if ( $result === 0 ) {
+		if ( 0 === $result ) {
 			do_action( 'datamachine_log', 'error', 'WordPress Update: wp_update_post returned 0', $log_context );
 
 			return array(
@@ -446,13 +446,13 @@ class WordPress extends UpdateHandler {
 
 		$filtered = array_map(
 			function ( $block ) {
-				if ( isset( $block['innerHTML'] ) && $block['innerHTML'] !== '' ) {
+				if ( isset( $block['innerHTML'] ) && '' !== $block['innerHTML'] ) {
 					$block['innerHTML'] = wp_kses_post( $block['innerHTML'] );
 				}
 				if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
 					$block['innerBlocks'] = array_map(
 						function ( $inner ) {
-							if ( isset( $inner['innerHTML'] ) && $inner['innerHTML'] !== '' ) {
+							if ( isset( $inner['innerHTML'] ) && '' !== $inner['innerHTML'] ) {
 								$inner['innerHTML'] = wp_kses_post( $inner['innerHTML'] );
 							}
 							return $inner;

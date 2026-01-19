@@ -308,7 +308,7 @@ class Chat {
 			$request_id      = sanitize_text_field( $request_id );
 			$cache_key       = 'datamachine_chat_request_' . $request_id;
 			$cached_response = get_transient( $cache_key );
-			if ( $cached_response !== false ) {
+			if ( false !== $cached_response ) {
 				return rest_ensure_response( $cached_response );
 			}
 		}
@@ -451,7 +451,7 @@ class Chat {
 				AgentType::CHAT,
 				array(
 					'session_id'           => $session_id,
-					'selected_pipeline_id' => $selected_pipeline_id ?: null,
+					'selected_pipeline_id' => $selected_pipeline_id ? $selected_pipeline_id : null,
 				),
 				$max_turns
 			);

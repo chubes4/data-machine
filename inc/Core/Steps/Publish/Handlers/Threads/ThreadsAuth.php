@@ -240,7 +240,7 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 		$data      = json_decode( $body, true );
 		$http_code = $result['status_code'];
 
-		if ( $http_code !== 200 || empty( $data['access_token'] ) ) {
+		if ( 200 !== $http_code || empty( $data['access_token'] ) ) {
 			$error_message = $data['error']['message'] ?? $data['error_description'] ?? 'Failed to retrieve long-lived access token from Threads.';
 			do_action(
 				'datamachine_log',
@@ -291,7 +291,7 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 		$data      = json_decode( $body, true );
 		$http_code = $result['status_code'];
 
-		if ( $http_code !== 200 || isset( $data['error'] ) ) {
+		if ( 200 !== $http_code || isset( $data['error'] ) ) {
 			$error_message = $data['error']['message'] ?? 'Failed to fetch Threads profile.';
 			do_action(
 				'datamachine_log',
@@ -345,7 +345,7 @@ class ThreadsAuth extends \DataMachine\Core\OAuth\BaseOAuth2Provider {
 		$data      = json_decode( $body, true );
 		$http_code = $result['status_code'];
 
-		if ( $http_code !== 200 || empty( $data['access_token'] ) ) {
+		if ( 200 !== $http_code || empty( $data['access_token'] ) ) {
 			$error_message = $data['error']['message'] ?? $data['error_description'] ?? 'Failed to refresh Threads access token.';
 			return new \WP_Error( 'threads_refresh_api_error', $error_message, $data );
 		}

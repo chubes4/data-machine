@@ -252,7 +252,7 @@ class Users {
 	protected static function get_pipeline_preference( int $user_id ): ?int {
 		$stored = get_user_meta( $user_id, 'datamachine_selected_pipeline_id', true );
 
-		if ( $stored === '' || $stored === false ) {
+		if ( '' === $stored || false === $stored ) {
 			return null;
 		}
 

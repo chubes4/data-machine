@@ -47,7 +47,7 @@ class Twitter extends PublishHandler {
 			TwitterAuth::class,
 			TwitterSettings::class,
 			function ( $tools, $handler_slug, $handler_config ) {
-				if ( $handler_slug === 'twitter_publish' ) {
+				if ( 'twitter_publish' === $handler_slug ) {
 					$tools['twitter_publish'] = array(
 						'class'       => self::class,
 						'method'      => 'handle_tool_call',
@@ -141,7 +141,7 @@ class Twitter extends PublishHandler {
 		$ellipsis     = '…';
 		$ellipsis_len = mb_strlen( $ellipsis, 'UTF-8' );
 
-		$should_append_url = $link_handling === 'append' && ! empty( $source_url ) && filter_var( $source_url, FILTER_VALIDATE_URL );
+		$should_append_url = 'append' === $link_handling && ! empty( $source_url ) && filter_var( $source_url, FILTER_VALIDATE_URL );
 		$link              = $should_append_url ? ' ' . $source_url : '';
 		$link_length       = $link ? 24 : 0;
 		$available_chars   = 280 - $link_length;
@@ -188,14 +188,14 @@ class Twitter extends PublishHandler {
 			$response  = $connection->post( 'tweets', $v2_payload, array( 'json' => true ) );
 			$http_code = $connection->getLastHttpCode();
 
-			if ( $http_code == 201 && isset( $response->data->id ) ) {
+			if ( 201 == $http_code && isset( $response->data->id ) ) {
 				$tweet_id        = $response->data->id;
 				$account_details = $auth->get_account_details();
 				$screen_name     = $account_details['screen_name'] ?? 'twitter';
 				$tweet_url       = "https://twitter.com/{$screen_name}/status/{$tweet_id}";
 
 				$reply_result = null;
-				if ( $link_handling === 'reply' && ! empty( $source_url ) && filter_var( $source_url, FILTER_VALIDATE_URL ) ) {
+				if ( 'reply' === $link_handling && ! empty( $source_url ) && filter_var( $source_url, FILTER_VALIDATE_URL ) ) {
 					$reply_result = $this->post_reply_tweet( $connection, $tweet_id, $source_url, $screen_name );
 				}
 
@@ -230,7 +230,7 @@ class Twitter extends PublishHandler {
 					$error_msg,
 					array(
 						'http_code'        => $http_code,
-						'raw_api_response' => json_encode( $response, JSON_PRETTY_PRINT ),
+						'raw_api_response' => wp_json_encode( $response, JSON_PRETTY_PRINT ),
 						'response_headers' => $connection->getLastXHeaders() ?? 'unavailable',
 					)
 				);
@@ -259,7 +259,7 @@ class Twitter extends PublishHandler {
 			$response  = $connection->post( 'tweets', $reply_payload, array( 'json' => true ) );
 			$http_code = $connection->getLastHttpCode();
 
-			if ( $http_code == 201 && isset( $response->data->id ) ) {
+			if ( 201 == $http_code && isset( $response->data->id ) ) {
 				$reply_tweet_id  = $response->data->id;
 				$reply_tweet_url = "https://twitter.com/{$screen_name}/status/{$reply_tweet_id}";
 
@@ -387,7 +387,7 @@ class Twitter extends PublishHandler {
 			);
 
 			$http_code = $connection->getLastHttpCode();
-			if ( $http_code !== 200 || ! isset( $init_response->media_id_string ) ) {
+			if ( 200 !== $http_code || ! isset( $init_response->media_id_string ) ) {
 				$this->log(
 					'error',
 					'Twitter: Chunked upload INIT failed.',
@@ -450,7 +450,7 @@ class Twitter extends PublishHandler {
 				);
 
 				$http_code = $connection->getLastHttpCode();
-				if ( $http_code !== 204 ) {
+				if ( 204 !== $http_code ) {
 					$this->log(
 						'error',
 						'Twitter: Chunked upload APPEND failed.',
@@ -476,7 +476,7 @@ class Twitter extends PublishHandler {
 			);
 
 			$http_code = $connection->getLastHttpCode();
-			if ( $http_code !== 200 || ! isset( $finalize_response->media_id_string ) ) {
+			if ( 200 !== $http_code || ! isset( $finalize_response->media_id_string ) ) {
 				$this->log(
 					'error',
 					'Twitter: Chunked upload FINALIZE failed.',

@@ -25,7 +25,7 @@ class PluginSettings {
 	 * @return array
 	 */
 	public static function all(): array {
-		if ( self::$cache === null ) {
+		if ( self::null === $cache ) {
 			self::$cache = get_option( 'datamachine_settings', array() );
 		}
 		return self::$cache;

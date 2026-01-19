@@ -85,7 +85,7 @@ abstract class FetchHandler {
 	protected function applyTimeframeFilter( int $timestamp, string $timeframe_limit ): bool {
 		$cutoff_timestamp = apply_filters( 'datamachine_timeframe_limit', null, $timeframe_limit );
 
-		if ( $cutoff_timestamp === null ) {
+		if ( null === $cutoff_timestamp ) {
 			return true;
 		}
 

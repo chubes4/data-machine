@@ -190,7 +190,7 @@ abstract class Step {
 		);
 
 		// Remove null values to keep logs clean
-		$full_context = array_filter( $full_context, fn( $v ) => $v !== null );
+		$full_context = array_filter( $full_context, fn( $v ) => null !== $v );
 
 		do_action( 'datamachine_log', $level, $message, $full_context );
 	}

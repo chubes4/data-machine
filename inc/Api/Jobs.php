@@ -240,7 +240,7 @@ class Jobs {
 		$cleanup_processed = $request->get_param( 'cleanup_processed' );
 
 		$criteria = array();
-		if ( $type === 'failed' ) {
+		if ( 'failed' === $type ) {
 			$criteria['failed'] = true;
 		} else {
 			$criteria['all'] = true;
@@ -258,8 +258,6 @@ class Jobs {
 		}
 
 		$message_parts = array();
-		/*
-		translators: %d: Number of jobs deleted */
 		/* translators: %d: number of jobs deleted */
 		$message_parts[] = sprintf( esc_html__( 'Deleted %d jobs', 'data-machine' ), $result['jobs_deleted'] );
 

@@ -29,7 +29,7 @@ class WebFetch {
 			);
 		}
 
-		if ( ! filter_var( $url, FILTER_VALIDATE_URL ) || ! in_array( wp_parse_url( $url, PHP_URL_SCHEME ), array( 'http', 'https' ) ) ) {
+		if ( ! filter_var( $url, FILTER_VALIDATE_URL ) || ! in_array( wp_parse_url( $url, PHP_URL_SCHEME ), array( 'http', 'https' ), true ) ) {
 			return array(
 				'success'   => false,
 				'error'     => 'Invalid URL format. Must be a valid HTTP or HTTPS URL',
@@ -119,7 +119,7 @@ class WebFetch {
 	}
 
 	public function check_configuration( $configured, $tool_id ) {
-		if ( $tool_id !== 'web_fetch' ) {
+		if ( 'web_fetch' !== $tool_id ) {
 			return $configured;
 		}
 

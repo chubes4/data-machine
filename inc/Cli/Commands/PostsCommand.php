@@ -100,7 +100,7 @@ class PostsCommand extends WP_CLI_Command {
 			return;
 		}
 
-		if ( $format === 'json' ) {
+		if ( 'json' === $format ) {
 			WP_CLI::log( wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
 			return;
 		}
@@ -112,9 +112,9 @@ class PostsCommand extends WP_CLI_Command {
 				'Title'       => $post['title'],
 				'Post Type'   => $post['post_type'],
 				'Status'      => $post['post_status'],
-				'Handler'     => $post['handler_slug'] ?: 'N/A',
-				'Flow ID'     => $post['flow_id'] ?: 'N/A',
-				'Pipeline ID' => $post['pipeline_id'] ?: 'N/A',
+				'Handler'     => $post['handler_slug'] ? $post['handler_slug'] : 'N/A',
+				'Flow ID'     => $post['flow_id'] ? $post['flow_id'] : 'N/A',
+				'Pipeline ID' => $post['pipeline_id'] ? $post['pipeline_id'] : 'N/A',
 				'Date'        => $post['post_date'],
 			);
 		}
@@ -214,7 +214,7 @@ class PostsCommand extends WP_CLI_Command {
 			return;
 		}
 
-		if ( $format === 'json' ) {
+		if ( 'json' === $format ) {
 			WP_CLI::log( wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
 			return;
 		}
@@ -226,9 +226,9 @@ class PostsCommand extends WP_CLI_Command {
 				'Title'       => $post['title'],
 				'Post Type'   => $post['post_type'],
 				'Status'      => $post['post_status'],
-				'Handler'     => $post['handler_slug'] ?: 'N/A',
-				'Flow ID'     => $post['flow_id'] ?: 'N/A',
-				'Pipeline ID' => $post['pipeline_id'] ?: 'N/A',
+				'Handler'     => $post['handler_slug'] ? $post['handler_slug'] : 'N/A',
+				'Flow ID'     => $post['flow_id'] ? $post['flow_id'] : 'N/A',
+				'Pipeline ID' => $post['pipeline_id'] ? $post['pipeline_id'] : 'N/A',
 				'Date'        => $post['post_date'],
 			);
 		}
@@ -331,7 +331,7 @@ class PostsCommand extends WP_CLI_Command {
 			return;
 		}
 
-		if ( $format === 'json' ) {
+		if ( 'json' === $format ) {
 			WP_CLI::log( wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
 			return;
 		}
@@ -343,9 +343,9 @@ class PostsCommand extends WP_CLI_Command {
 				'Title'       => $post['title'],
 				'Post Type'   => $post['post_type'],
 				'Status'      => $post['post_status'],
-				'Handler'     => $post['handler_slug'] ?: 'N/A',
-				'Flow ID'     => $post['flow_id'] ?: 'N/A',
-				'Pipeline ID' => $post['pipeline_id'] ?: 'N/A',
+				'Handler'     => $post['handler_slug'] ? $post['handler_slug'] : 'N/A',
+				'Flow ID'     => $post['flow_id'] ? $post['flow_id'] : 'N/A',
+				'Pipeline ID' => $post['pipeline_id'] ? $post['pipeline_id'] : 'N/A',
 				'Date'        => $post['post_date'],
 			);
 		}

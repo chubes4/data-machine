@@ -34,7 +34,7 @@ class AuthProviderService {
 
 		$auth_provider_key = $handler['auth_provider_key'] ?? null;
 
-		if ( ! is_string( $auth_provider_key ) || $auth_provider_key === '' ) {
+		if ( ! is_string( $auth_provider_key ) || '' === $auth_provider_key ) {
 			return $handler_slug;
 		}
 
@@ -76,7 +76,7 @@ class AuthProviderService {
 	 * @return array Auth providers array keyed by handler slug
 	 */
 	public function getAll(): array {
-		if ( self::$cache === null ) {
+		if ( self::null === $cache ) {
 			self::$cache = apply_filters( 'datamachine_auth_providers', array() );
 		}
 

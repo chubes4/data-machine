@@ -356,7 +356,7 @@ class OAuth1Handler {
 	private function get_temp_token_secret( string $provider_key, string $oauth_token ): ?string {
 		$transient_key = self::TEMP_TOKEN_SECRET_PREFIX . $provider_key . '_' . $oauth_token;
 		$secret        = get_transient( $transient_key );
-		return $secret ?: null;
+		return $secret ? $secret : null;
 	}
 
 	/**

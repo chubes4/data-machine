@@ -101,7 +101,7 @@ class SettingsDisplayService {
 			$value = $current_settings[ $key ];
 
 			// Skip if no value
-			if ( $value === '' || $value === null ) {
+			if ( '' === $value || null === $value ) {
 				continue;
 			}
 

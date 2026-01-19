@@ -68,18 +68,18 @@ class ChatTitleGenerator {
 			$role    = $msg['role'] ?? '';
 			$content = $msg['content'] ?? '';
 
-			if ( $role === 'user' && $first_user_message === null && ! empty( $content ) ) {
+			if ( 'user' === $role && null === $first_user_message && ! empty( $content ) ) {
 				$first_user_message = $content;
-			} elseif ( $role === 'assistant' && $first_assistant_response === null && ! empty( $content ) ) {
+			} elseif ( 'assistant' === $role && null === $first_assistant_response && ! empty( $content ) ) {
 				$first_assistant_response = $content;
 			}
 
-			if ( $first_user_message !== null && $first_assistant_response !== null ) {
+			if ( null !== $first_user_message && null !== $first_assistant_response ) {
 				break;
 			}
 		}
 
-		if ( $first_user_message === null ) {
+		if ( null === $first_user_message ) {
 			return false;
 		}
 
@@ -94,7 +94,7 @@ class ChatTitleGenerator {
 		// Try AI generation, fall back to truncated title on failure
 		$title = $this->generateAITitle( $first_user_message, $first_assistant_response, $session );
 
-		if ( $title === null ) {
+		if ( null === $title ) {
 			$title = $this->generateTruncatedTitle( $first_user_message );
 		}
 

@@ -82,11 +82,11 @@ class ProcessedItems {
 
 		$processed_items_manager = new \DataMachine\Services\ProcessedItemsManager();
 
-		$result = $clear_type === 'pipeline'
+		$result = 'pipeline' === $clear_type
 			? $processed_items_manager->deleteForPipeline( $target_id )
 			: $processed_items_manager->deleteForFlow( $target_id );
 
-		if ( $result === false ) {
+		if ( false === $result ) {
 			return new \WP_Error(
 				'delete_failed',
 				__( 'Failed to delete processed items.', 'data-machine' ),
