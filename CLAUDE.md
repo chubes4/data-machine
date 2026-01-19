@@ -9,21 +9,24 @@ This file provides a concise, present-tense technical reference for contributors
 Build system
 
 - **Homeboy** is used for all build operations (versioning, packaging, deployment)
-- Build command: `composer test` runs PHPUnit tests (stops on failure via `set -e` in homeboy build script)
+- Homeboy provides full WordPress test environment for running tests (no local WordPress setup required)
+- Build command: `homeboy build data-machine` - runs tests, lints code, builds frontend, creates production ZIP
+- Test command: `homeboy test data-machine` - runs PHPUnit tests using homeboy's WordPress environment
 - Lint command: `composer lint` runs PHP CodeSniffer with WordPress coding standards
 - Auto-fix: `composer lint-fix` runs PHPCBF to auto-fix most linting issues
-- Composer scripts: `test`, `lint`, and `lint-fix` defined in composer.json for homeboy integration
+- Composer scripts: `test`, `lint`, and `lint-fix` defined in composer.json for convenience
 - PHP CodeSniffer configuration: `.phpcs.xml.dist` defines WordPress standards and PHP 8.2+ compatibility
 
 Testing
 
 - PHPUnit tests located in `tests/Unit/` directory
-- Bootstrap: `tests/bootstrap.php` loads WordPress test environment
+- Tests use `WP_UnitTestCase` with homeboy's WordPress test environment
 - Ability registration tests cover all abilities API primitives:
   - `FlowAbilitiesTest.php` - Tests `datamachine/list-flows` ability
   - `LogAbilitiesTest.php` - Tests `datamachine/write-to-log` and `datamachine/clear-logs` abilities
   - `PostQueryAbilitiesTest.php` - Tests `datamachine/query-posts-by-handler`, `datamachine/query-posts-by-flow`, and `datamachine/query-posts-by-pipeline` abilities
-- Run tests locally: `composer test` (requires WordPress test environment via `bin/install-wp-tests.sh`)
+- Run tests: `homeboy test data-machine` (uses homeboy's WordPress installation)
+- Run build: `homeboy build data-machine` (runs tests, lints code, builds frontend assets, creates production ZIP)
 
 Abilities API
 
