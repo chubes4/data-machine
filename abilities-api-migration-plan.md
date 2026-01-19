@@ -8,13 +8,19 @@ Eliminate entire service layer (`inc/Services/`) and migrate all business logic 
 
 **Current Architecture:**
 ```
-REST API (41 endpoints) → Service Layer (10 files, 2809 lines) → Database Layer
+CLI Commands ─┐
+REST API ────┼──→ Services Layer (partial) ──→ Database
+Chat Tools ──┘    + Abilities (partial)
 ```
 
 **Target Architecture:**
 ```
-REST API (41 endpoints) → Abilities Layer (50+ abilities) → Database Layer
+CLI Commands ─┐
+REST API ────┼──→ Abilities Layer (50+) ──→ Database
+Chat Tools ──┘
 ```
+
+**Abilities as Universal Primitive:** All three consumer layers (CLI, REST, Chat) call the same abilities. This ensures consistent behavior, permissions, and business logic across all interfaces.
 
 ---
 
@@ -102,38 +108,50 @@ REST API (41 endpoints) → Abilities Layer (50+ abilities) → Database Layer
 
 ```
 inc/
-├── Engine/
-│   ├── Abilities/                 ← NEW DIRECTORY
-│   │   ├── AbilityRegistry.php    (Central registration)
-│   │   ├── PipelineAbilities.php (Pipeline CRUD)
-│   │   ├── FlowAbilities.php     (Flow CRUD)
-│   │   ├── PipelineStepAbilities.php (Pipeline steps)
-│   │   ├── FlowStepAbilities.php  (Flow steps)
-│   │   ├── JobAbilities.php      (Job lifecycle)
-│   │   ├── ProcessedItemsAbilities.php
-│   │   ├── FileAbilities.php
-│   │   ├── AuthAbilities.php
-│   │   ├── SettingsAbilities.php
-│   │   ├── StepTypeAbilities.php
-│   │   └── Tools/
-│   │       ├── CreateFlow.php
-│   │       ├── RunFlow.php
-│   │       ├── DeleteFlow.php
-│   │       ├── UpdateFlow.php
-│   │       ├── CopyFlow.php
-│   │       ├── CreatePipeline.php
-│   │       ├── DeletePipeline.php
-│   │       └── ... (all 30+ tools)
-│   ├── AI/
-│   │   └── Tools/            ← UPDATE
-│   │       ├── ToolExecutor.php (Uses abilities)
-│   │       └── ToolManager.php
-│   ├── Logger.php                 ← UPDATE
-│   ├── Actions/
-│   │   └── DataMachineActions.php  ← KEEP (action hook wrapper)
-│   ├── ConversationManager.php
-│   ├── RequestBuilder.php
-│   └── AIConversationLoop.php
+├── Abilities/                    ← ABILITIES LAYER (not inc/Engine/Abilities/)
+│   ├── FlowAbilities.php        (Flow CRUD) ✅ EXISTS
+│   ├── LogAbilities.php         ✅ EXISTS
+│   ├── PostQueryAbilities.php   ✅ EXISTS
+│   ├── PipelineAbilities.php    (Pipeline CRUD)
+│   ├── PipelineStepAbilities.php
+│   ├── FlowStepAbilities.php
+│   ├── JobAbilities.php
+│   ├── ProcessedItemsAbilities.php
+│   ├── FileAbilities.php
+│   ├── AuthAbilities.php
+│   └── SettingsAbilities.php
+├── Cli/
+│   └── Commands/                ← CLI LAYER (thin wrappers calling abilities)
+│       ├── FlowsCommand.php     ✅ EXISTS (uses FlowAbilities)
+│       ├── PipelinesCommand.php (future)
+│       ├── JobsCommand.php      (future)
+│       ├── LogsCommand.php      (future)
+│       └── ...
+├── Api/                         ← REST LAYER (delegate to abilities)
+│   ├── Pipelines/
+│   │   └── Pipelines.php
+│   ├── Flows/
+│   │   ├── Flows.php
+│   │   ├── FlowSteps.php
+│   │   └── FlowScheduling.php
+│   ├── Chat/
+│   │   ├── Tools/           ← CHAT LAYER (call abilities via wp_get_ability())
+│   │   │   ├── CreateFlow.php
+│   │   │   ├── RunFlow.php
+│   │   │   ├── DeleteFlow.php
+│   │   │   └── ...
+│   │   └── Chat.php
+│   ├── Jobs.php
+│   ├── ProcessedItems.php
+│   ├── Files.php
+│   ├── Settings.php
+│   ├── Auth.php
+│   ├── Tools.php
+│   ├── Handlers.php
+│   ├── StepTypes.php
+│   ├── Providers.php
+│   ├── Users.php
+│   └── Logs.php
 ├── Services/                    ← ELIMINATE ENTIRELY
 │   ├── PipelineManager.php
 │   ├── FlowManager.php
@@ -146,149 +164,166 @@ inc/
 │   ├── HandlerService.php
 │   ├── CacheManager.php
 │   └── LogsManager.php
-└── Api/                         ← UPDATE (delegate to abilities)
-    ├── Pipelines/
-    │   └── Pipelines.php
-    ├── Flows/
-    │   ├── Flows.php
-    │   ├── FlowSteps.php
-    │   └── FlowScheduling.php
-    ├── Chat/
-    │   ├── Tools/           ← UPDATE (use wp_get_ability())
-    │   │   ├── CreateFlow.php
-    │   │   ├── RunFlow.php
-    │   │   ├── DeleteFlow.php
-    │   │   ├── ...
-    │   └── Chat.php
-    ├── Jobs.php
-    ├── ProcessedItems.php
-    ├── Files.php
-    ├── Settings.php
-    ├── Auth.php
-    ├── Tools.php
-    ├── Handlers.php
-    ├── StepTypes.php
-    ├── Providers.php
-    ├── Users.php
-    └── Logs.php
+└── Engine/                      ← EXECUTION ENGINE (kept separate from abilities)
+    ├── AI/
+    │   └── Tools/
+    │       ├── ToolExecutor.php
+    │       └── ToolManager.php
+    ├── Logger.php
+    ├── Actions/
+    │   └── DataMachineActions.php
+    ├── ConversationManager.php
+    ├── RequestBuilder.php
+    └── AIConversationLoop.php
 ```
 
 ---
 
 ## Abilities Registry
 
-### Phase 1: Logging Primitives ✅ (DONE)
-- `datamachine/write-to-log` - Write log entries
-- `datamachine/clear-logs` - Clear log files
+### Naming Convention
+
+Abilities follow action-based naming for clarity and consistency:
+
+| Prefix | Purpose | Example |
+|--------|---------|---------|
+| `list-*` | Query/list multiple items | `datamachine/list-flows`, `datamachine/list-pipelines` |
+| `get-*` | Get single item by ID | `datamachine/get-flow`, `datamachine/get-pipeline` |
+| `create-*` | Create new item | `datamachine/create-flow`, `datamachine/create-pipeline` |
+| `update-*` | Update existing item | `datamachine/update-flow`, `datamachine/update-pipeline` |
+| `delete-*` | Delete item | `datamachine/delete-flow`, `datamachine/delete-pipeline` |
+| `query-*` | Complex queries with filters | `datamachine/query-posts-by-handler` |
+| Special actions | Domain-specific operations | `duplicate-*`, `schedule-*`, `run-*`, `clear-*` |
+
+### Phase 1: Foundation Abilities ✅ (DONE)
+
+**Completed Abilities:**
+| Ability | File | Description |
+|---------|------|-------------|
+| `datamachine/list-flows` | `FlowAbilities.php` | List/query flows with filtering by pipeline, handler, flow_id |
+| `datamachine/write-to-log` | `LogAbilities.php` | Write log entries with level routing |
+| `datamachine/clear-logs` | `LogAbilities.php` | Clear log files by agent type |
+| `datamachine/query-posts-by-handler` | `PostQueryAbilities.php` | Find posts created by a specific handler |
+| `datamachine/query-posts-by-flow` | `PostQueryAbilities.php` | Find posts created by a specific flow |
+| `datamachine/query-posts-by-pipeline` | `PostQueryAbilities.php` | Find posts created by a specific pipeline |
+
+**Completed CLI Commands:**
+| Command | Ability | Features |
+|---------|---------|----------|
+| `wp datamachine flows` | `datamachine/list-flows` | `--id`, `get` subcommand, pipeline filter, `--handler` filter, pagination |
 
 ### Phase 2: Pipeline CRUD Operations
 **Abilities to Register:**
 ```php
-// inc/Engine/Abilities/PipelineAbilities.php
+// inc/Abilities/PipelineAbilities.php
 
 add_action('wp_abilities_api_init', function() {
+    // List pipelines (query multiple)
+    wp_register_ability('datamachine/list-pipelines', [
+        'label' => 'List Pipelines',
+        'description' => 'List all pipelines with optional filtering',
+        'category' => 'datamachine',
+        'input_schema' => [
+            'type' => 'object',
+            'properties' => [
+                'per_page' => ['type' => 'integer', 'default' => 20],
+                'offset' => ['type' => 'integer', 'default' => 0],
+                'fields' => ['type' => 'string', 'default' => 'json'],
+                'format' => ['type' => 'string', 'enum' => ['json', 'csv']],
+            ]
+        ],
+        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::list',
+        'permission_callback' => fn() => current_user_can('manage_options'),
+        'meta' => ['show_in_rest' => true]
+    ]);
+
+    // Get single pipeline by ID
+    wp_register_ability('datamachine/get-pipeline', [
+        'label' => 'Get Pipeline',
+        'description' => 'Retrieve a specific pipeline by ID',
+        'category' => 'datamachine',
+        'input_schema' => [
+            'type' => 'object',
+            'required' => ['pipeline_id'],
+            'properties' => [
+                'pipeline_id' => ['type' => 'integer'],
+            ]
+        ],
+        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::get',
+        'permission_callback' => fn() => current_user_can('manage_options'),
+        'meta' => ['show_in_rest' => true]
+    ]);
+
     // Create pipeline
     wp_register_ability('datamachine/create-pipeline', [
         'label' => 'Create Pipeline',
         'description' => 'Create a new data processing pipeline',
-        'category' => 'pipeline',
+        'category' => 'datamachine',
         'input_schema' => [
             'type' => 'object',
             'properties' => [
-                'pipeline_name' => [
-                    'type' => 'string',
-                    'description' => 'Pipeline name'
-                ],
-                'steps' => [
-                    'type' => 'array',
-                    'description' => 'Pipeline steps (for complete mode)'
-                ],
-                'flow_config' => [
-                    'type' => 'array',
-                    'description' => 'Flow configuration'
-                ],
-                'batch_import' => [
-                    'type' => 'boolean',
-                    'default' => false,
-                    'description' => 'Enable batch import mode'
-                ]
+                'pipeline_name' => ['type' => 'string', 'description' => 'Pipeline name'],
+                'steps' => ['type' => 'array', 'description' => 'Pipeline steps (for complete mode)'],
+                'flow_config' => ['type' => 'array', 'description' => 'Flow configuration'],
+                'batch_import' => ['type' => 'boolean', 'default' => false]
             ]
         ],
-        'execute_callback' => 'DataMachine\\Engine\\Abilities\\PipelineAbilities::create',
+        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::create',
         'permission_callback' => fn() => current_user_can('manage_options'),
         'meta' => ['show_in_rest' => true]
     ]);
-    
-    // Read pipelines
-    wp_register_ability('datamachine/read-pipelines', [
-        'label' => 'Read Pipelines',
-        'description' => 'Retrieve all pipelines or specific pipeline by ID',
-        'category' => 'pipeline',
-        'input_schema' => [
-            'type' => 'object',
-            'properties' => [
-                'pipeline_id' => ['type' => 'integer'],
-                'fields' => ['type' => 'string', 'default' => 'json'],
-                'format' => ['type' => 'string', 'enum' => ['json', 'csv']],
-                'ids' => ['type' => 'string']
-            ]
-        ],
-        'execute_callback' => 'DataMachine\\Engine\\Abilities\\PipelineAbilities::read',
-        'permission_callback' => fn() => current_user_can('manage_options'),
-        'meta' => ['show_in_rest' => true]
-    ]);
-    
+
     // Update pipeline
     wp_register_ability('datamachine/update-pipeline', [
         'label' => 'Update Pipeline',
         'description' => 'Update pipeline configuration',
-        'category' => 'pipeline',
+        'category' => 'datamachine',
         'input_schema' => [...],
-        'execute_callback' => 'DataMachine\\Engine\\Abilities\\PipelineAbilities::update',
+        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::update',
         'permission_callback' => fn() => current_user_can('manage_options'),
         'meta' => ['show_in_rest' => true]
     ]);
-    
+
     // Delete pipeline
     wp_register_ability('datamachine/delete-pipeline', [
         'label' => 'Delete Pipeline',
         'description' => 'Delete pipeline and associated data',
-        'category' => 'pipeline',
+        'category' => 'datamachine',
         'input_schema' => [...],
-        'execute_callback' => 'DataMachine\\Engine\\Abilities\\PipelineAbilities::delete',
+        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::delete',
         'permission_callback' => fn() => current_user_can('manage_options'),
         'meta' => ['show_in_rest' => true]
     ]);
-    
+
     // Duplicate pipeline
     wp_register_ability('datamachine/duplicate-pipeline', [
         'label' => 'Duplicate Pipeline',
         'description' => 'Duplicate a pipeline with all its flows',
-        'category' => 'pipeline',
+        'category' => 'datamachine',
         'input_schema' => [...],
-        'execute_callback' => 'DataMachine\\Engine\\Abilities\\PipelineAbilities::duplicate',
+        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::duplicate',
         'permission_callback' => fn() => current_user_can('manage_options'),
         'meta' => ['show_in_rest' => true]
     ]);
-    
+
     // Import pipelines
     wp_register_ability('datamachine/import-pipelines', [
         'label' => 'Import Pipelines',
         'description' => 'Import pipelines from JSON or CSV',
-        'category' => 'pipeline',
+        'category' => 'datamachine',
         'input_schema' => [...],
-        'execute_callback' => 'DataMachine\\Engine\\Abilities\\PipelineAbilities::import',
+        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::import',
         'permission_callback' => fn() => current_user_can('manage_options'),
         'meta' => ['show_in_rest' => true]
     ]);
-    
+
     // Export pipelines
     wp_register_ability('datamachine/export-pipelines', [
         'label' => 'Export Pipelines',
         'description' => 'Export pipelines to JSON or CSV',
-        'category' => 'pipeline',
+        'category' => 'datamachine',
         'input_schema' => [...],
-        'execute_callback' => 'DataMachine\\Engine\\Abilities\\PipelineAbilities::export',
+        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::export',
         'permission_callback' => fn() => current_user_can('manage_options'),
         'meta' => ['show_in_rest' => true]
     ]);
@@ -298,25 +333,64 @@ add_action('wp_abilities_api_init', function() {
 ### Phase 3: Flow CRUD Operations
 **Abilities to Register:**
 ```php
-wp_register_ability('datamachine/create-flow', [
-    'label' => 'Create Flow',
-    'description' => 'Create a new flow for a pipeline',
-    'category' => 'flow',
+// inc/Abilities/FlowAbilities.php
+
+// List flows (query multiple) - ✅ EXISTS
+wp_register_ability('datamachine/list-flows', [
+    'label' => 'List Flows',
+    'description' => 'List flows with optional filtering by pipeline ID or handler slug',
+    'category' => 'datamachine',
     'input_schema' => [
         'type' => 'object',
         'properties' => [
-            'pipeline_id' => ['type' => 'integer', 'required' => true],
+            'pipeline_id' => ['type' => 'integer'],
+            'handler_slug' => ['type' => 'string'],
+            'per_page' => ['type' => 'integer', 'default' => 20],
+            'offset' => ['type' => 'integer', 'default' => 0],
+        ]
+    ],
+    'execute_callback' => 'DataMachine\\Abilities\\FlowAbilities::executeAbility',
+    'permission_callback' => fn() => current_user_can('manage_options'),
+    'meta' => ['show_in_rest' => true]
+]);
+
+// Get single flow by ID (can use list-flows with flow_id param, or create dedicated ability)
+wp_register_ability('datamachine/get-flow', [
+    'label' => 'Get Flow',
+    'description' => 'Retrieve a specific flow by ID',
+    'category' => 'datamachine',
+    'input_schema' => [
+        'type' => 'object',
+        'required' => ['flow_id'],
+        'properties' => [
+            'flow_id' => ['type' => 'integer'],
+        ]
+    ],
+    'execute_callback' => 'DataMachine\\Abilities\\FlowAbilities::get',
+    'permission_callback' => fn() => current_user_can('manage_options'),
+    'meta' => ['show_in_rest' => true]
+]);
+
+// Create flow
+wp_register_ability('datamachine/create-flow', [
+    'label' => 'Create Flow',
+    'description' => 'Create a new flow for a pipeline',
+    'category' => 'datamachine',
+    'input_schema' => [
+        'type' => 'object',
+        'required' => ['pipeline_id'],
+        'properties' => [
+            'pipeline_id' => ['type' => 'integer'],
             'flow_name' => ['type' => 'string', 'default' => 'Flow'],
             'flow_config' => ['type' => 'array'],
             'scheduling_config' => ['type' => 'array']
         ]
     ],
-    'execute_callback' => 'DataMachine\\Engine\\Abilities\\FlowAbilities::create',
+    'execute_callback' => 'DataMachine\\Abilities\\FlowAbilities::create',
     'permission_callback' => fn() => current_user_can('manage_options'),
     'meta' => ['show_in_rest' => true]
 ]);
 
-wp_register_ability('datamachine/read-flows', [...]);
 wp_register_ability('datamachine/update-flow', [...]);
 wp_register_ability('datamachine/delete-flow', [...]);
 wp_register_ability('datamachine/duplicate-flow', [...]);
@@ -480,126 +554,172 @@ class Pipelines {
 
 ---
 
-## Chat Tools Updates
+## CLI Commands
 
-### Pattern: Direct Ability Execution
+### Pattern: Command Delegates to Ability
+
+CLI commands are thin wrappers that:
+1. Parse arguments and flags from command line
+2. Call ability's `executeAbility()` method
+3. Format output for terminal (table, JSON, etc.)
+
+### Existing Implementation: FlowsCommand
 
 ```php
-// inc/Engine/Abilities/Tools/CreateFlow.php
+// inc/Cli/Commands/FlowsCommand.php (✅ EXISTS)
 
-namespace DataMachine\Engine\Abilities\Tools;
+class FlowsCommand extends WP_CLI_Command {
 
-use DataMachine\Api\Chat\Tools; // ← Import for backward compat reference
+    public function __invoke(array $args, array $assoc_args): void {
+        // 1. Parse arguments
+        $flow_id = isset($assoc_args['id']) ? (int) $assoc_args['id'] : null;
+        $pipeline_id = !empty($args) ? (int) $args[0] : null;
+        $handler_slug = $assoc_args['handler'] ?? null;
+        $per_page = (int) ($assoc_args['per_page'] ?? 20);
+        $offset = (int) ($assoc_args['offset'] ?? 0);
+        $format = $assoc_args['format'] ?? 'table';
 
-class CreateFlow {
-    
-    public static function register() {
-        // Register tool via abilities API instead of ToolRegistrationTrait
-        wp_register_ability('datamachine/create-flow-tool', [
-            'label' => 'Create Flow (Chat Tool)',
-            'description' => 'Create a new flow from existing pipeline via chat interface',
-            'category' => 'chat',
-            'input_schema' => [
-                'type' => 'object',
-                'properties' => [
-                    'pipeline_id' => ['type' => 'integer', 'required' => true],
-                    'flow_name' => ['type' => 'string', 'default' => 'Flow'],
-                    'scheduling_config' => ['type' => 'array'],
-                    'step_configs' => ['type' => 'array']
-                ]
-            ],
-            'execute_callback' => [self::class, 'execute'],
-            'permission_callback' => fn() => current_user_can('manage_options')
+        // 2. Call ability
+        $ability = new \DataMachine\Abilities\FlowAbilities();
+        $result = $ability->executeAbility([
+            'flow_id'      => $flow_id,
+            'pipeline_id'  => $pipeline_id,
+            'handler_slug' => $handler_slug,
+            'per_page'     => $per_page,
+            'offset'       => $offset,
         ]);
-    }
-    
-    public static function execute(array $input): array {
-        // Direct logic migration from CreateFlow.php handle_tool_call()
-        $pipeline_id = $input['pipeline_id'];
-        $flow_name = $input['flow_name'] ?? 'Flow';
-        $scheduling_config = $input['scheduling_config'] ?? ['interval' => 'manual'];
-        
-        // Get flows for existing flow name validation
-        $flows_db = new \DataMachine\Core\Database\Flows\Flows();
-        $existing_flows = $flows_db->get_flows_for_pipeline($pipeline_id);
-        
-        foreach ($existing_flows as $existing_flow) {
-            if (strcasecmp($existing_flow['flow_name'], $flow_name) === 0) {
-                return [
-                    'success' => false,
-                    'error' => "Flow '{$existing_flow['flow_name']}' already exists"
-                ];
-            }
-        }
-        
-        // Call ability to create flow
-        $createFlowAbility = wp_get_ability('datamachine/create-flow');
-        $result = $createFlowAbility->execute([
-            'pipeline_id' => $pipeline_id,
-            'flow_name' => $flow_name,
-            'scheduling_config' => $scheduling_config
-        ]);
-        
-        // Apply step configs
-        $flow_id = $result['data']['flow_id'];
-        $step_configs = $input['step_configs'] ?? [];
-        $config_results = ['applied' => [], 'errors' => []];
-        
-        foreach ($step_configs as $pipeline_step_id => $config) {
-            // Use abilities for step configuration
-            $updateFlowStepAbility = wp_get_ability('datamachine/update-flow-step');
-            $updateResult = $updateFlowStepAbility->execute([
-                'flow_step_id' => $pipeline_step_id . '_' . $flow_id,
-                ...$config
-            ]);
-            
-            if (!$updateResult['success']) {
-                $config_results['errors'][] = [
-                    'pipeline_step_id' => $pipeline_step_id,
-                    'error' => $updateResult['message']
-                ];
-            } else {
-                $config_results['applied'][] = $pipeline_step_id;
-            }
-        }
-        
-        return [
-            'success' => true,
-            'data' => [
-                'flow_id' => $flow_id,
-                'flow_name' => $result['data']['flow_name'],
-                'applied_steps' => $config_results['applied'],
-                'errors' => $config_results['errors']
-            ]
-        ];
+
+        // 3. Format output
+        $this->outputResult($result, $format);
     }
 }
 ```
 
-### All Chat Tools to Migrate
+### CLI Commands Roadmap
 
-**Files to Create in `inc/Engine/Abilities/Tools/`:**
-1. `CreateFlow.php` (Create from pipeline)
-2. `RunFlow.php` (Execute existing flow)
-3. `DeleteFlow.php`
-4. `UpdateFlow.php`
-5. `CopyFlow.php`
-6. `CreatePipeline.php`
-7. `DeletePipeline.php`
-8. `AddPipelineStep.php`
-9. `DeletePipelineStep.php`
-10. `ReorderPipelineSteps.php`
-11. `ConfigurePipelineStep.php`
-12. `ConfigureFlowSteps.php`
-13. `SetHandlerDefaults.php`
-14. `GetHandlerDefaults.php`
-15. `AssignTaxonomyTerm.php`
-16. `UpdateTaxonomyTerm.php`
-17. `MergeTaxonomyTerms.php`
-18. `SearchTaxonomyTerms.php`
-19. `ReadLogs.php` → Use `datamachine/read-logs` ability
-20. `ManageLogs.php` → Use `datamachine/clear-logs` ability
-21-30+ (All other tools)
+| Command | Ability | Status |
+|---------|---------|--------|
+| `wp datamachine flows` | `datamachine/list-flows` | ✅ Done |
+| `wp datamachine flows get <id>` | `datamachine/list-flows` (with flow_id) | ✅ Done |
+| `wp datamachine pipelines` | `datamachine/list-pipelines` | Planned |
+| `wp datamachine pipelines get <id>` | `datamachine/get-pipeline` | Planned |
+| `wp datamachine jobs` | `datamachine/list-jobs` | Planned |
+| `wp datamachine jobs get <id>` | `datamachine/get-job` | Planned |
+| `wp datamachine logs` | `datamachine/read-logs` | Planned |
+| `wp datamachine logs clear` | `datamachine/clear-logs` | Planned |
+| `wp datamachine run <flow_id>` | `datamachine/run-flow` | Planned |
+
+### CLI Command Features
+
+Commands support:
+- **Positional args:** `wp datamachine flows 5` (pipeline_id)
+- **Named flags:** `--handler=rss`, `--per_page=10`
+- **Subcommands:** `flows get 42`
+- **Output formats:** `--format=table` (default), `--format=json`
+- **Pagination:** `--per_page=10 --offset=20`
+
+---
+
+## Chat Tools Updates
+
+### Architecture: Tools CALL Abilities (Not Duplicate)
+
+**CRITICAL:** Chat tools should call existing abilities via `wp_get_ability()`, NOT register separate `-tool` abilities. This ensures:
+- Single source of truth for business logic
+- Consistent permissions across CLI, REST, and Chat
+- No code duplication
+
+### CORRECT Pattern: Chat Tool Calls Ability
+
+```php
+// inc/Api/Chat/Tools/CreateFlow.php
+
+namespace DataMachine\Api\Chat\Tools;
+
+class CreateFlow {
+    use ToolRegistrationTrait;
+
+    public function __construct() {
+        $this->registerTool('chat', 'create_flow', [$this, 'getToolDefinition']);
+    }
+
+    public static function handle_tool_call(array $input): array {
+        // Validate input specific to chat context
+        $pipeline_id = $input['pipeline_id'] ?? null;
+        $flow_name = $input['flow_name'] ?? 'Flow';
+
+        if (!$pipeline_id) {
+            return ['success' => false, 'error' => 'pipeline_id is required'];
+        }
+
+        // CORRECT: Call the ability directly
+        $ability = wp_get_ability('datamachine/create-flow');
+        $result = $ability->execute([
+            'pipeline_id' => $pipeline_id,
+            'flow_name' => $flow_name,
+            'scheduling_config' => $input['scheduling_config'] ?? ['interval' => 'manual'],
+        ]);
+
+        // Format response for chat interface
+        if ($result['success']) {
+            return [
+                'success' => true,
+                'message' => "Created flow '{$result['data']['flow_name']}' (ID: {$result['data']['flow_id']})",
+                'data' => $result['data'],
+            ];
+        }
+
+        return $result;
+    }
+}
+```
+
+### WRONG Pattern (DO NOT USE)
+
+```php
+// ❌ WRONG: Registering duplicate ability for chat
+wp_register_ability('datamachine/create-flow-tool', [...]); // ← DELETE THIS PATTERN
+
+// ❌ WRONG: Duplicating business logic in tool
+class CreateFlow {
+    public static function execute(array $input): array {
+        // Duplicated validation logic...
+        // Duplicated database calls...
+        // This creates maintenance burden and inconsistency
+    }
+}
+```
+
+### Chat Tools Migration Strategy
+
+**Keep existing `inc/Api/Chat/Tools/` structure.** Tools remain thin wrappers that:
+1. Define tool schema for AI agents
+2. Validate chat-specific requirements
+3. Call abilities via `wp_get_ability()`
+4. Format responses for chat interface
+
+### Tools to Update (Call Abilities)
+
+| Chat Tool | Calls Ability |
+|-----------|---------------|
+| `CreateFlow.php` | `datamachine/create-flow` |
+| `RunFlow.php` | `datamachine/run-flow` |
+| `DeleteFlow.php` | `datamachine/delete-flow` |
+| `UpdateFlow.php` | `datamachine/update-flow` |
+| `CopyFlow.php` | `datamachine/duplicate-flow` |
+| `CreatePipeline.php` | `datamachine/create-pipeline` |
+| `DeletePipeline.php` | `datamachine/delete-pipeline` |
+| `AddPipelineStep.php` | `datamachine/add-step` |
+| `DeletePipelineStep.php` | `datamachine/delete-step` |
+| `ReorderPipelineSteps.php` | `datamachine/reorder-steps` |
+| `ConfigurePipelineStep.php` | `datamachine/update-step` |
+| `ConfigureFlowSteps.php` | `datamachine/update-flow-step` |
+| `SetHandlerDefaults.php` | `datamachine/set-handler-defaults` |
+| `GetHandlerDefaults.php` | `datamachine/get-handler-defaults` |
+| `ReadLogs.php` | `datamachine/read-logs` |
+| `ManageLogs.php` | `datamachine/clear-logs` |
+
+**Note:** Taxonomy tools (`AssignTaxonomyTerm`, `SearchTaxonomyTerms`, etc.) may call WordPress native functions directly since they operate on WP core data.
 
 ---
 
@@ -608,7 +728,10 @@ class CreateFlow {
 ### Test Structure
 
 ```
-tests/Unit/Engine/Abilities/
+tests/Unit/Abilities/
+├── FlowAbilitiesTest.php        ✅ EXISTS
+├── LogAbilitiesTest.php         ✅ EXISTS
+├── PostQueryAbilitiesTest.php   ✅ EXISTS
 ├── PipelineAbilitiesTest.php
 │   ├── testCreatePipeline()
 │   ├── testReadPipelines()
@@ -664,62 +787,76 @@ tests/Unit/Engine/Abilities/
 
 ### Test Pattern
 
+Tests verify ability registration, schema validation, permission checks, and execution logic.
+
 ```php
-class PipelineAbilitiesTest extends \WP_UnitTestCase {
-    
+// tests/Unit/Abilities/FlowAbilitiesTest.php (✅ EXISTS)
+
+class FlowAbilitiesTest extends \WP_UnitTestCase {
+
     private $original_user_id;
-    
+
     public function setUp(): void {
         parent::setUp();
         $this->original_user_id = get_current_user_id();
         wp_set_current_user(1); // Administrator
     }
-    
+
     public function tearDown(): void {
         wp_set_current_user($this->original_user_id);
         parent::tearDown();
     }
-    
-    public function testCreatePipeline_withValidData_returnsSuccess(): void {
-        $ability = wp_get_ability('datamachine/create-pipeline');
-        $result = $ability->execute([
-            'pipeline_name' => 'Test Pipeline',
-            'steps' => []
+
+    public function testListFlows_abilityIsRegistered(): void {
+        $ability = wp_get_ability('datamachine/list-flows');
+        $this->assertNotNull($ability);
+        $this->assertEquals('datamachine', $ability->get_category());
+    }
+
+    public function testListFlows_withValidFilters_returnsFlows(): void {
+        $ability = new \DataMachine\Abilities\FlowAbilities();
+        $result = $ability->executeAbility([
+            'per_page' => 10,
+            'offset' => 0,
         ]);
-        
+
         $this->assertTrue($result['success']);
-        $this->assertArrayHasKey('data', $result);
-        $this->assertIsArray($result['data']);
-        $this->assertArrayHasKey('pipeline_id', $result['data']);
+        $this->assertArrayHasKey('flows', $result);
+        $this->assertArrayHasKey('total', $result);
     }
-    
-    public function testCreatePipeline_withoutPermissions_returnsPermissionDenied(): void {
-        wp_set_current_user(0); // Subscriber
-        
-        $ability = wp_get_ability('datamachine/create-pipeline');
-        $result = $ability->execute([
-            'pipeline_name' => 'Test Pipeline',
-            'steps' => []
+
+    public function testListFlows_withPipelineFilter_filtersCorrectly(): void {
+        $ability = new \DataMachine\Abilities\FlowAbilities();
+        $result = $ability->executeAbility([
+            'pipeline_id' => 1,
         ]);
-        
-        $this->assertFalse($result['success']);
-        $this->assertArrayHasKey('error_code', $result);
-        $this->assertEquals('permission_denied', $result['error_code']);
+
+        $this->assertTrue($result['success']);
+        $this->assertEquals(1, $result['filters_applied']['pipeline_id']);
     }
-    
-    public function testCreatePipeline_withInvalidData_returnsValidationError(): void {
-        $ability = wp_get_ability('datamachine/create-pipeline');
-        $result = $ability->execute([
-            'pipeline_name' => '', // Invalid: empty
-            'steps' => []
-        ]);
-        
-        $this->assertFalse($result['success']);
-        $this->assertArrayHasKey('error_code', $result);
-        $this->assertEquals('invalid_input', $result['error_code']);
+
+    public function testListFlows_withoutPermissions_returnsFalse(): void {
+        wp_set_current_user(0);
+
+        // Permission callback should prevent execution
+        $ability = wp_get_ability('datamachine/list-flows');
+        $this->assertFalse($ability->can_execute());
     }
-    
-    // ... more tests
+}
+```
+
+### CLI Integration Tests
+
+```php
+// tests/Unit/Cli/FlowsCommandTest.php
+
+class FlowsCommandTest extends \WP_UnitTestCase {
+
+    public function testFlowsCommand_callsFlowAbilities(): void {
+        // Verify CLI command delegates to ability
+        $command = new \DataMachine\Cli\Commands\FlowsCommand();
+        // Test via WP_CLI::runcommand() or direct invocation
+    }
 }
 ```
 
@@ -727,97 +864,111 @@ class PipelineAbilitiesTest extends \WP_UnitTestCase {
 
 ## Migration Phases
 
-### Phase 1: Logging Primitives ✅ (DONE)
+### Phase 1: Foundation Abilities ✅ (DONE)
 **Status:** COMPLETE
-- `datamachine/write-to-log` ability registered
-- `datamachine/clear-logs` ability registered
-- Action hook wraps abilities
-- 0 breaking changes
+
+**Abilities Registered:**
+- `datamachine/list-flows` - List/query flows with filtering (FlowAbilities.php)
+- `datamachine/write-to-log` - Write log entries (LogAbilities.php)
+- `datamachine/clear-logs` - Clear log files (LogAbilities.php)
+- `datamachine/query-posts-by-handler` - Query posts by handler (PostQueryAbilities.php)
+- `datamachine/query-posts-by-flow` - Query posts by flow (PostQueryAbilities.php)
+- `datamachine/query-posts-by-pipeline` - Query posts by pipeline (PostQueryAbilities.php)
+
+**CLI Commands:**
+- `wp datamachine flows` - Uses FlowAbilities (supports --id, get subcommand, pipeline filter, handler filter)
+
+**Tests:**
+- `tests/Unit/Abilities/FlowAbilitiesTest.php`
+- `tests/Unit/Abilities/LogAbilitiesTest.php`
+- `tests/Unit/Abilities/PostQueryAbilitiesTest.php`
 
 ---
 
-### Phase 2: Pipeline CRUD Abilities (2 weeks)
+### Phase 2: Pipeline CRUD Abilities
 **Tasks:**
-1. Create `inc/Engine/Abilities/PipelineAbilities.php`
-2. Register 7 abilities: `create-pipeline`, `read-pipelines`, `update-pipeline`, `delete-pipeline`, `duplicate-pipeline`, `import-pipelines`, `export-pipelines`
+1. Create `inc/Abilities/PipelineAbilities.php`
+2. Register 8 abilities: `list-pipelines`, `get-pipeline`, `create-pipeline`, `update-pipeline`, `delete-pipeline`, `duplicate-pipeline`, `import-pipelines`, `export-pipelines`
 3. Migrate business logic from `PipelineManager.php` (367 lines)
-4. Update `inc/Api/Pipelines/Pipelines.php` endpoints to delegate
-5. Delete `inc/Services/PipelineManager.php`
-6. Write `tests/Unit/Engine/Abilities/PipelineAbilitiesTest.php`
+4. Create `inc/Cli/Commands/PipelinesCommand.php`
+5. Update `inc/Api/Pipelines/Pipelines.php` endpoints to delegate
+6. Delete `inc/Services/PipelineManager.php`
+7. Write `tests/Unit/Abilities/PipelineAbilitiesTest.php`
 
-**Outcome:** Service layer eliminated. REST endpoints delegate to abilities.
+**Outcome:** Service layer eliminated. REST, CLI, and Chat all call abilities.
 
 ---
 
-### Phase 3: Flow CRUD Abilities (2 weeks)
+### Phase 3: Flow CRUD Abilities
 **Tasks:**
-1. Create `inc/Engine/Abilities/FlowAbilities.php`
-2. Register 7 abilities: `create-flow`, `read-flows`, `update-flow`, `delete-flow`, `duplicate-flow`, `schedule-flow`, `unschedule-flow`
+1. Extend `inc/Abilities/FlowAbilities.php` (already has `list-flows`)
+2. Register 6 more abilities: `get-flow`, `create-flow`, `update-flow`, `delete-flow`, `duplicate-flow`, `schedule-flow`, `unschedule-flow`
 3. Migrate business logic from `FlowManager.php` (393 lines)
 4. Update `inc/Api/Flows/Flows.php` endpoints
 5. Update `inc/Api/Flows/FlowScheduling.php` endpoints
 6. Delete `inc/Services/FlowManager.php`
-7. Write `tests/Unit/Engine/Abilities/FlowAbilitiesTest.php`
+7. Update `tests/Unit/Abilities/FlowAbilitiesTest.php`
 
 ---
 
-### Phase 4: Pipeline Steps Abilities (1 week)
+### Phase 4: Pipeline Steps Abilities
 **Tasks:**
-1. Create `inc/Engine/Abilities/PipelineStepAbilities.php`
-2. Register 6 abilities
+1. Create `inc/Abilities/PipelineStepAbilities.php`
+2. Register 6 abilities: `list-steps`, `get-step`, `add-step`, `update-step`, `delete-step`, `reorder-steps`
 3. Migrate business logic from `PipelineStepManager.php` (393 lines)
 4. Update `inc/Api/Pipelines/PipelineSteps.php` endpoints
 5. Delete `inc/Services/PipelineStepManager.php`
-6. Write tests
+6. Write `tests/Unit/Abilities/PipelineStepAbilitiesTest.php`
 
 ---
 
-### Phase 5: Flow Steps Abilities (1 week)
+### Phase 5: Flow Steps Abilities
 **Tasks:**
-1. Create `inc/Engine/Abilities/FlowStepAbilities.php`
-2. Register 5 abilities
+1. Create `inc/Abilities/FlowStepAbilities.php`
+2. Register 5 abilities: `list-flow-steps`, `get-flow-step`, `update-flow-step`, `configure-flow-steps`
 3. Migrate business logic from `FlowStepManager.php` (393 lines)
 4. Update `inc/Api/Flows/FlowSteps.php` endpoints
 5. Delete `inc/Services/FlowStepManager.php`
-6. Write tests
+6. Write `tests/Unit/Abilities/FlowStepAbilitiesTest.php`
 
 ---
 
-### Phase 6: Job Execution Abilities (2 weeks)
+### Phase 6: Job Execution Abilities
 **Tasks:**
-1. Create `inc/Engine/Abilities/JobAbilities.php`
-2. Register 8 abilities: `run-flow`, `execute-job`, `cancel-job`, `retry-job`, `read-jobs`, `read-job`, `delete-jobs`, `get-job-stats`
+1. Create `inc/Abilities/JobAbilities.php`
+2. Register 8 abilities: `run-flow`, `list-jobs`, `get-job`, `cancel-job`, `retry-job`, `delete-jobs`, `get-job-stats`
 3. Migrate business logic from `JobManager.php` (270 lines)
-4. Update `inc/Api/Execute.php` endpoints
-5. Update `inc/Api/Jobs.php` endpoints
-6. Delete `inc/Services/JobManager.php`
-7. Write tests
+4. Create `inc/Cli/Commands/JobsCommand.php`
+5. Update `inc/Api/Execute.php` endpoints
+6. Update `inc/Api/Jobs.php` endpoints
+7. Delete `inc/Services/JobManager.php`
+8. Write `tests/Unit/Abilities/JobAbilitiesTest.php`
 
 ---
 
-### Phase 7: File Management Abilities (1 week)
+### Phase 7: File Management Abilities
 **Tasks:**
-1. Create `inc/Engine/Abilities/FileAbilities.php`
-2. Register 5 abilities
+1. Create `inc/Abilities/FileAbilities.php`
+2. Register 5 abilities: `list-files`, `get-file`, `upload-file`, `delete-file`, `download-file`
 3. Update `inc/Api/Files.php` endpoints
-4. Write tests
+4. Write `tests/Unit/Abilities/FileAbilitiesTest.php`
 
 ---
 
-### Phase 8: Processed Items Abilities (3 days)
+### Phase 8: Processed Items Abilities
 **Tasks:**
-1. Create `inc/Engine/Abilities/ProcessedItemsAbilities.php`
-2. Register 3 abilities: `read-processed-items`, `clear-processed-items`, `get-processed-stats`
+1. Create `inc/Abilities/ProcessedItemsAbilities.php`
+2. Register 3 abilities: `list-processed-items`, `clear-processed-items`, `get-processed-stats`
 3. Update `inc/Api/ProcessedItems.php` endpoints
 4. Delete `inc/Services/ProcessedItemsManager.php`
-5. Write tests
+5. Write `tests/Unit/Abilities/ProcessedItemsAbilitiesTest.php`
 
 ---
 
-### Phase 9: Settings & Auth Abilities (1 week)
+### Phase 9: Settings & Auth Abilities
 **Tasks:**
-1. Create `inc/Engine/Abilities/SettingsAbilities.php`
-2. Create `inc/Engine/Abilities/AuthAbilities.php`
+1. Create `inc/Abilities/SettingsAbilities.php`
+2. Create `inc/Abilities/AuthAbilities.php`
 3. Register 9 abilities
 4. Update `inc/Api/Settings.php` and `inc/Api/Auth.php` endpoints
 5. Delete `inc/Services/CacheManager.php`, `inc/Services/LogsManager.php`
@@ -826,14 +977,14 @@ class PipelineAbilitiesTest extends \WP_UnitTestCase {
 
 ---
 
-### Phase 10: Chat Tools Migration (2 weeks)
+### Phase 10: Chat Tools Update
 **Tasks:**
-1. Create `inc/Engine/Abilities/Tools/` directory
-2. Register 30+ abilities for each tool
-3. Migrate all tool logic to abilities
-4. Update all tools to use `wp_get_ability()` directly
-5. Delete `inc/Api/Chat/Tools/` directory (30+ files)
-6. Write tests for chat tool abilities
+1. Update existing `inc/Api/Chat/Tools/` to call abilities via `wp_get_ability()`
+2. Remove duplicated business logic from tools
+3. Tools remain as thin wrappers for AI agent interface
+4. **DO NOT create separate `-tool` abilities**
+5. **DO NOT delete `inc/Api/Chat/Tools/` directory** - tools still needed for AI agent schema
+6. Write integration tests for chat tools calling abilities
 
 ---
 
@@ -868,28 +1019,29 @@ class PipelineAbilitiesTest extends \WP_UnitTestCase {
 
 ## Timeline Summary
 
-| Phase | Duration | Lines Changed | Files Added | Files Deleted |
-|--------|----------|---------------|--------------|---------------|
-| 1. Logging ✅ | DONE | ~50 | 2 | 0 |
-| 2. Pipeline CRUD | 2 weeks | ~367 + ~100 | 1 + 1 | 1 |
-| 3. Flow CRUD | 2 weeks | ~393 + ~150 | 1 + 1 | 1 |
-| 4. Pipeline Steps | 1 week | ~393 + ~100 | 1 + 1 | 1 |
-| 5. Flow Steps | 1 week | ~393 + ~100 | 1 + 1 | 1 |
-| 6. Job Execution | 2 weeks | ~270 + ~200 | 1 + 1 | 1 |
-| 7. File Mgmt | 1 week | ~200 | 1 | 0 |
-| 8. Processed Items | 3 days | ~120 + ~150 | 1 | 0 |
-| 9. Settings & Auth | 1 week | ~600 + ~300 | 2 | 3 |
-| 10. Chat Tools | 2 weeks | ~2000 | 30 | 30 |
-| 11. Extension Notify | 1 week | ~0 | 3 | 0 |
-| 12. Testing | 2 weeks | ~0 | ~40 | 0 |
-| 13. Documentation | 1 week | ~0 | 5 | 0 |
-| **TOTAL** | **15-16 weeks** | **~6409** | **~92** | **~36** |
+| Phase | Status | Abilities | CLI Commands | Files Modified |
+|-------|--------|-----------|--------------|----------------|
+| 1. Foundation ✅ | DONE | 6 | 1 | 3 ability files + 1 CLI + 3 tests |
+| 2. Pipeline CRUD | Planned | 8 | 1 | 1 ability + 1 CLI + 1 test |
+| 3. Flow CRUD | Planned | 7 | (extend existing) | 1 ability (extend) + 1 test |
+| 4. Pipeline Steps | Planned | 6 | 0 | 1 ability + 1 test |
+| 5. Flow Steps | Planned | 5 | 0 | 1 ability + 1 test |
+| 6. Job Execution | Planned | 7 | 1 | 1 ability + 1 CLI + 1 test |
+| 7. File Mgmt | Planned | 5 | 0 | 1 ability + 1 test |
+| 8. Processed Items | Planned | 3 | 0 | 1 ability + 1 test |
+| 9. Settings & Auth | Planned | 9 | 0 | 2 abilities + 2 tests |
+| 10. Chat Tools Update | Planned | 0 | 0 | ~20 tool files updated |
+| 11. Extension Notify | Planned | 0 | 0 | Documentation |
+| 12. Testing | Planned | 0 | 0 | Integration tests |
+| 13. Documentation | Planned | 0 | 0 | CLAUDE.md, docs/ |
+| **TOTAL** | | **~56** | **~4** | |
 
 **Net Impact:**
-- Delete: 36 files (entire `inc/Services/` + 30 chat tools)
-- Create: 92 files (abilities + tests + docs)
-- Modify: ~41 REST API files
-- Lines of code migrated: ~6409 lines
+- Delete: ~10 files (entire `inc/Services/`)
+- Create: ~12 ability files + ~4 CLI commands + ~12 test files
+- Modify: ~41 REST API files + ~20 Chat tools
+- Abilities registered: ~56 abilities
+- CLI commands: 4+ commands wrapping abilities
 
 ---
 
@@ -998,9 +1150,20 @@ With `'meta' => ['show_in_rest' => true]`:
 - Swagger/OpenAPI documentation auto-generated
 - No custom endpoint registration code needed
 
-### 4. CLI Zero-Code Integration
+### 4. CLI Commands Wrap Abilities
 ```bash
-# Direct ability execution from CLI
+# Existing CLI commands (wrap abilities)
+wp datamachine flows                    # Uses datamachine/list-flows ability
+wp datamachine flows 5                  # Filter by pipeline_id
+wp datamachine flows --handler=rss      # Filter by handler
+wp datamachine flows get 42             # Get specific flow
+
+# Future CLI commands
+wp datamachine pipelines                # Uses datamachine/list-pipelines ability
+wp datamachine jobs                     # Uses datamachine/list-jobs ability
+wp datamachine run 42                   # Uses datamachine/run-flow ability
+
+# Direct ability execution (WordPress 6.9 built-in)
 wp ability execute datamachine/run-flow --flow_id=123
 wp ability execute datamachine/clear-logs --agent_type=all
 ```
@@ -1019,9 +1182,24 @@ wp_register_ability('datamachine/create-and-run-flow', [
 ]);
 ```
 
-### 6. AI Agent Integration
+### 6. Universal Consumer Pattern
+
+All three consumer layers (CLI, REST, Chat) call the same abilities:
+
 ```php
-// AI agents can request Data Machine abilities directly
+// CLI Command
+$ability = new \DataMachine\Abilities\FlowAbilities();
+$result = $ability->executeAbility(['flow_id' => 42]);
+
+// REST Endpoint
+$ability = wp_get_ability('datamachine/list-flows');
+$result = $ability->execute(['pipeline_id' => 5]);
+
+// Chat Tool
+$ability = wp_get_ability('datamachine/create-flow');
+$result = $ability->execute(['pipeline_id' => 5, 'flow_name' => 'New Flow']);
+
+// AI Agent (via WP-AI)
 AI_Client::prompt()
     ->usingAbility('datamachine/create-pipeline')
     ->usingAbility('datamachine/run-flow')
