@@ -36,7 +36,7 @@ class StepTypeService {
 	 * @return array Step types array keyed by slug
 	 */
 	public function getAll(): array {
-		if ( self::null === $cache ) {
+		if ( null === $cache ) {
 			self::$cache = apply_filters( 'datamachine_step_types', array() );
 		}
 

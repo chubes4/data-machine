@@ -76,7 +76,7 @@ class AuthProviderService {
 	 * @return array Auth providers array keyed by handler slug
 	 */
 	public function getAll(): array {
-		if ( self::null === $cache ) {
+		if ( null === $cache ) {
 			self::$cache = apply_filters( 'datamachine_auth_providers', array() );
 		}
 

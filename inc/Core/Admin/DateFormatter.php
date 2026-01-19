@@ -20,14 +20,14 @@ class DateFormatter {
 	private static ?string $time_format = null;
 
 	private static function get_date_format(): string {
-		if ( self::null === $date_format ) {
+		if ( null === $date_format ) {
 			self::$date_format = get_option( 'date_format' );
 		}
 		return self::$date_format;
 	}
 
 	private static function get_time_format(): string {
-		if ( self::null === $time_format ) {
+		if ( null === $time_format ) {
 			self::$time_format = get_option( 'time_format' );
 		}
 		return self::$time_format;

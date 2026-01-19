@@ -67,7 +67,7 @@ class HandlerDocumentation {
 	 * Get HandlerService instance.
 	 */
 	private static function getHandlerService(): HandlerService {
-		if ( self::null === $handler_service ) {
+		if ( null === $handler_service ) {
 			self::$handler_service = new HandlerService();
 		}
 		return self::$handler_service;
@@ -77,7 +77,7 @@ class HandlerDocumentation {
 	 * Get StepTypeService instance.
 	 */
 	private static function getStepTypeService(): StepTypeService {
-		if ( self::null === $step_type_service ) {
+		if ( null === $step_type_service ) {
 			self::$step_type_service = new StepTypeService();
 		}
 		return self::$step_type_service;
@@ -99,7 +99,7 @@ class HandlerDocumentation {
 	 * @return bool True if cache is valid
 	 */
 	private static function isCacheValid(): bool {
-		if ( self::null === $cached_all_handlers ) {
+		if ( null === $cached_all_handlers ) {
 			return false;
 		}
 

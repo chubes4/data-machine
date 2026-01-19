@@ -41,7 +41,7 @@ class SchedulingDocumentation {
 	 * @return string JSON array of valid scheduling intervals
 	 */
 	public static function getIntervalsJson(): string {
-		if ( self::null !== $cached_json ) {
+		if ( null !== $cached_json ) {
 			return self::$cached_json;
 		}
 
