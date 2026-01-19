@@ -40,6 +40,9 @@ class FlowsCommand extends WP_CLI_Command {
 	 * default: 0
 	 * ---
 	 *
+	 * [--id=<flow_id>]
+	 * : Get a specific flow by ID.
+	 *
 	 * [--format=<format>]
 	 * : Output format.
 	 * ---
@@ -68,12 +71,29 @@ class FlowsCommand extends WP_CLI_Command {
 	 *
 	 *     # JSON output
 	 *     wp datamachine flows --format=json
+	 *
+	 *     # Get a specific flow by ID
+	 *     wp datamachine flows --id=42
+	 *
+	 *     # Alias: flows get <id>
+	 *     wp datamachine flows get 42
 	 */
 	public function __invoke( array $args, array $assoc_args ): void {
+		$flow_id     = null;
 		$pipeline_id = null;
 
-		if ( ! empty( $args ) && 'list' !== $args[0] ) {
+		// Handle 'get' subcommand: `flows get 42`.
+		if ( ! empty( $args ) && 'get' === $args[0] ) {
+			if ( isset( $args[1] ) ) {
+				$flow_id = (int) $args[1];
+			}
+		} elseif ( ! empty( $args ) && 'list' !== $args[0] ) {
 			$pipeline_id = (int) $args[0];
+		}
+
+		// Handle --id flag (takes precedence if both provided).
+		if ( isset( $assoc_args['id'] ) ) {
+			$flow_id = (int) $assoc_args['id'];
 		}
 
 		$handler_slug = $assoc_args['handler'] ?? null;
@@ -94,6 +114,7 @@ class FlowsCommand extends WP_CLI_Command {
 		$ability = new \DataMachine\Abilities\FlowAbilities();
 		$result  = $ability->executeAbility(
 			array(
+				'flow_id'      => $flow_id,
 				'pipeline_id'  => $pipeline_id,
 				'handler_slug' => $handler_slug,
 				'per_page'     => $per_page,
@@ -162,6 +183,9 @@ class FlowsCommand extends WP_CLI_Command {
 			WP_CLI::log( "Showing {$offset} - {$end} of {$total} flows." );
 		}
 
+		if ( $filters_applied['flow_id'] ?? null ) {
+			WP_CLI::log( "Filtered by flow ID: {$filters_applied['flow_id']}" );
+		}
 		if ( $filters_applied['pipeline_id'] ?? null ) {
 			WP_CLI::log( "Filtered by pipeline ID: {$filters_applied['pipeline_id']}" );
 		}

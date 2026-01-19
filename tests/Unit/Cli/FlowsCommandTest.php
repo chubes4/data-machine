@@ -127,4 +127,33 @@ class FlowsCommandTest extends WP_UnitTestCase {
 
 		$this->assertStringContainsString('Showing 0 -', $output2);
 	}
+
+	public function test_get_flow_by_id_flag(): void {
+		ob_start();
+		$command = new FlowsCommand();
+		$command->__invoke([], ['id' => (string) $this->test_flow_id]);
+		$output = ob_get_clean();
+
+		$this->assertStringContainsString('Test Flow for CLI', $output);
+		$this->assertStringContainsString('Filtered by flow ID:', $output);
+	}
+
+	public function test_get_subcommand(): void {
+		ob_start();
+		$command = new FlowsCommand();
+		$command->__invoke(['get', (string) $this->test_flow_id], []);
+		$output = ob_get_clean();
+
+		$this->assertStringContainsString('Test Flow for CLI', $output);
+		$this->assertStringContainsString('Filtered by flow ID:', $output);
+	}
+
+	public function test_get_nonexistent_flow(): void {
+		ob_start();
+		$command = new FlowsCommand();
+		$command->__invoke([], ['id' => '999999']);
+		$output = ob_get_clean();
+
+		$this->assertStringContainsString('No flows found', $output);
+	}
 }

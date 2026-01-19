@@ -66,6 +66,10 @@ class FlowAbilities {
 									'type'        => array( 'integer', 'null' ),
 									'description' => __( 'Filter flows by pipeline ID', 'data-machine' ),
 								),
+								'flow_id'      => array(
+									'type'        => array( 'integer', 'null' ),
+									'description' => __( 'Get a specific flow by ID', 'data-machine' ),
+								),
 								'handler_slug' => array(
 									'type'        => array( 'string', 'null' ),
 									'description' => __( 'Filter flows using this handler slug (any step that uses this handler)', 'data-machine' ),
@@ -111,10 +115,36 @@ class FlowAbilities {
 
 	public function executeAbility( array $input ): array {
 		try {
+			$flow_id      = $input['flow_id'] ?? null;
 			$pipeline_id  = $input['pipeline_id'] ?? null;
 			$handler_slug = $input['handler_slug'] ?? null;
 			$per_page     = (int) ( $input['per_page'] ?? self::DEFAULT_PER_PAGE );
 			$offset       = (int) ( $input['offset'] ?? 0 );
+
+			// Direct flow lookup by ID - bypasses pagination and filters.
+			if ( $flow_id ) {
+				$flow = $this->db_flows->get_flow( (int) $flow_id );
+				if ( ! $flow ) {
+					return array(
+						'success'         => true,
+						'flows'           => array(),
+						'total'           => 0,
+						'per_page'        => $per_page,
+						'offset'          => $offset,
+						'filters_applied' => array( 'flow_id' => $flow_id ),
+					);
+				}
+				$latest_jobs = $this->db_jobs->get_latest_jobs_by_flow_ids( array( $flow['flow_id'] ) );
+				$latest_job  = $latest_jobs[ (int) $flow['flow_id'] ] ?? null;
+				return array(
+					'success'         => true,
+					'flows'           => array( FlowFormatter::format_flow_for_response( $flow, $latest_job ) ),
+					'total'           => 1,
+					'per_page'        => $per_page,
+					'offset'          => $offset,
+					'filters_applied' => array( 'flow_id' => $flow_id ),
+				);
+			}
 
 			$filters_applied = array(
 				'pipeline_id'  => $pipeline_id,
