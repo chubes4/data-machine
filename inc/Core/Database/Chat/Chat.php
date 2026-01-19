@@ -377,8 +377,8 @@ class Chat {
 
 		$result = array();
 		foreach ( $sessions as $session ) {
-			$messages = json_decode( $session['messages'] ?? '[]', true ) ?? array();
-			$first_message    = '';
+			$messages      = json_decode( $session['messages'] ?? '[]', true ) ?? array();
+			$first_message = '';
 			foreach ( $messages as $msg ) {
 				if ( ( $msg['role'] ?? '' ) === 'user' ) {
 					$first_message = $msg['content'] ?? '';
