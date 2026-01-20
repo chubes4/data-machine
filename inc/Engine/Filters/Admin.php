@@ -305,8 +305,8 @@ function datamachine_allowed_html(): array {
 
 function datamachine_enqueue_admin_assets( $hook_suffix ) {
 	// Extract page slug from hook suffix
-	// Pattern: *_datamachine-{slug} (handles both toplevel and submenu)
-	if ( ! preg_match( '/_datamachine-([a-z0-9_-]+)$/', $hook_suffix, $matches ) ) {
+	// Pattern: datamachine-{slug} (handles both toplevel and submenu)
+	if ( ! preg_match( '/datamachine-([a-z0-9_-]+)$/', $hook_suffix, $matches ) ) {
 		return; // Not a Data Machine page
 	}
 
