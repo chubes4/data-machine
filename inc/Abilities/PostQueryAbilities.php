@@ -2,7 +2,7 @@
 /**
  * Post Query Abilities
  *
- * Abilities API primitives for querying posts by handler/flow/pipeline.
+ * Unified ability for querying posts by handler, flow, or pipeline.
  * Enables debugging and bulk fixes for Data Machine-created posts.
  *
  * @package DataMachine\Abilities
@@ -23,15 +23,28 @@ class PostQueryAbilities {
 
 	private const DEFAULT_PER_PAGE = 20;
 
+	private const FILTER_TYPES = array(
+		'handler'  => array(
+			'meta_key'   => DATAMACHINE_POST_HANDLER_META_KEY,
+			'value_type' => 'string',
+		),
+		'flow'     => array(
+			'meta_key'   => DATAMACHINE_POST_FLOW_ID_META_KEY,
+			'value_type' => 'integer',
+		),
+		'pipeline' => array(
+			'meta_key'   => DATAMACHINE_POST_PIPELINE_ID_META_KEY,
+			'value_type' => 'integer',
+		),
+	);
+
 	public function __construct() {
 		if ( ! class_exists( 'WP_Ability' ) ) {
 			return;
 		}
 
 		$this->registerAbility();
-		$this->registerTool( 'chat', 'query_posts_by_handler', array( $this, 'getQueryByHandlerTool' ) );
-		$this->registerTool( 'chat', 'query_posts_by_flow', array( $this, 'getQueryByFlowTool' ) );
-		$this->registerTool( 'chat', 'query_posts_by_pipeline', array( $this, 'getQueryByPipelineTool' ) );
+		$this->registerTool( 'chat', 'query_posts', array( $this, 'getQueryPostsTool' ) );
 	}
 
 	private function registerAbility(): void {
@@ -39,18 +52,23 @@ class PostQueryAbilities {
 			'wp_abilities_api_init',
 			function () {
 				wp_register_ability(
-					'datamachine/query-posts-by-handler',
+					'datamachine/query-posts',
 					array(
-						'label'               => __( 'Query Posts by Handler', 'data-machine' ),
-						'description'         => __( 'Find posts created by a specific handler', 'data-machine' ),
+						'label'               => __( 'Query Posts', 'data-machine' ),
+						'description'         => __( 'Find posts created by Data Machine, filtered by handler, flow, or pipeline', 'data-machine' ),
 						'category'            => 'datamachine',
 						'input_schema'        => array(
 							'type'       => 'object',
-							'required'   => array( 'handler_slug' ),
+							'required'   => array( 'filter_by', 'filter_value' ),
 							'properties' => array(
-								'handler_slug' => array(
+								'filter_by'    => array(
 									'type'        => 'string',
-									'description' => __( 'Handler slug to filter by', 'data-machine' ),
+									'enum'        => array( 'handler', 'flow', 'pipeline' ),
+									'description' => __( 'What to filter posts by', 'data-machine' ),
+								),
+								'filter_value' => array(
+									'type'        => array( 'string', 'integer' ),
+									'description' => __( 'Handler slug, flow ID, or pipeline ID', 'data-machine' ),
 								),
 								'post_type'    => array(
 									'type'        => 'string',
@@ -83,111 +101,7 @@ class PostQueryAbilities {
 								'offset'   => array( 'type' => 'integer' ),
 							),
 						),
-						'execute_callback'    => array( $this, 'executeByHandler' ),
-						'permission_callback' => function () {
-							if ( defined( 'WP_CLI' ) && WP_CLI ) {
-								return true;
-							}
-							return current_user_can( 'manage_options' );
-						},
-						'meta'                => array( 'show_in_rest' => true ),
-					)
-				);
-
-				wp_register_ability(
-					'datamachine/query-posts-by-flow',
-					array(
-						'label'               => __( 'Query Posts by Flow', 'data-machine' ),
-						'description'         => __( 'Find posts created by a specific flow', 'data-machine' ),
-						'category'            => 'datamachine',
-						'input_schema'        => array(
-							'type'       => 'object',
-							'required'   => array( 'flow_id' ),
-							'properties' => array(
-								'flow_id'     => array(
-									'type'        => 'integer',
-									'description' => __( 'Flow ID to filter by', 'data-machine' ),
-								),
-								'post_type'   => array(
-									'type'        => 'string',
-									'default'     => 'any',
-									'description' => __( 'Post type to query', 'data-machine' ),
-								),
-								'post_status' => array(
-									'type'        => 'string',
-									'default'     => 'publish',
-									'description' => __( 'Post status to query', 'data-machine' ),
-								),
-								'per_page'    => array(
-									'type'    => 'integer',
-									'default' => self::DEFAULT_PER_PAGE,
-								),
-								'offset'      => array(
-									'type'    => 'integer',
-									'default' => 0,
-								),
-							),
-						),
-						'output_schema'       => array(
-							'type'       => 'object',
-							'properties' => array(
-								'posts' => array( 'type' => 'array' ),
-								'total' => array( 'type' => 'integer' ),
-							),
-						),
-						'execute_callback'    => array( $this, 'executeByFlow' ),
-						'permission_callback' => function () {
-							if ( defined( 'WP_CLI' ) && WP_CLI ) {
-								return true;
-							}
-							return current_user_can( 'manage_options' );
-						},
-						'meta'                => array( 'show_in_rest' => true ),
-					)
-				);
-
-				wp_register_ability(
-					'datamachine/query-posts-by-pipeline',
-					array(
-						'label'               => __( 'Query Posts by Pipeline', 'data-machine' ),
-						'description'         => __( 'Find posts created by a specific pipeline', 'data-machine' ),
-						'category'            => 'datamachine',
-						'input_schema'        => array(
-							'type'       => 'object',
-							'required'   => array( 'pipeline_id' ),
-							'properties' => array(
-								'pipeline_id' => array(
-									'type'        => 'integer',
-									'description' => __( 'Pipeline ID to filter by', 'data-machine' ),
-								),
-								'post_type'   => array(
-									'type'        => 'string',
-									'default'     => 'any',
-									'description' => __( 'Post type to query', 'data-machine' ),
-								),
-								'post_status' => array(
-									'type'        => 'string',
-									'default'     => 'publish',
-									'description' => __( 'Post status to query', 'data-machine' ),
-								),
-								'per_page'    => array(
-									'type'    => 'integer',
-									'default' => self::DEFAULT_PER_PAGE,
-								),
-								'offset'      => array(
-									'type'    => 'integer',
-									'default' => 0,
-								),
-							),
-						),
-						'output_schema'       => array(
-							'type'       => 'object',
-							'properties' => array(
-								'posts' => array( 'type' => 'array' ),
-								'total' => array( 'type' => 'integer' ),
-							),
-						),
-						'execute_callback'    => array( $this, 'executeByPipeline' ),
+						'execute_callback'    => array( $this, 'executeQueryPosts' ),
 						'permission_callback' => function () {
 							if ( defined( 'WP_CLI' ) && WP_CLI ) {
 								return true;
@@ -201,16 +115,22 @@ class PostQueryAbilities {
 		);
 	}
 
-	public function getQueryByHandlerTool(): array {
+	public function getQueryPostsTool(): array {
 		return array(
 			'class'       => self::class,
-			'method'      => 'handleByHandler',
-			'description' => 'Find posts created by a specific Data Machine handler. Returns post ID, title, handler, flow ID, pipeline ID, and post date.',
+			'method'      => 'handleQueryPosts',
+			'description' => 'Find posts created by Data Machine. Filter by handler slug, flow ID, or pipeline ID. Returns post ID, title, handler, flow ID, pipeline ID, and post date.',
 			'parameters'  => array(
-				'handler_slug' => array(
+				'filter_by'    => array(
 					'type'        => 'string',
 					'required'    => true,
-					'description' => 'Handler slug (e.g., "universal_web_scraper", "ics_feed")',
+					'enum'        => array( 'handler', 'flow', 'pipeline' ),
+					'description' => 'What to filter by: "handler" (slug), "flow" (ID), or "pipeline" (ID)',
+				),
+				'filter_value' => array(
+					'type'        => array( 'string', 'integer' ),
+					'required'    => true,
+					'description' => 'Handler slug (e.g., "universal_web_scraper"), flow ID, or pipeline ID',
 				),
 				'post_type'    => array(
 					'type'        => 'string',
@@ -231,79 +151,44 @@ class PostQueryAbilities {
 		);
 	}
 
-	public function getQueryByFlowTool(): array {
-		return array(
-			'class'       => self::class,
-			'method'      => 'handleByFlow',
-			'description' => 'Find posts created by a specific Data Machine flow. Returns post ID, title, handler, flow ID, pipeline ID, and post date.',
-			'parameters'  => array(
-				'flow_id'     => array(
-					'type'        => 'integer',
-					'required'    => true,
-					'description' => 'Flow ID to filter by',
-				),
-				'post_type'   => array(
-					'type'        => 'string',
-					'required'    => false,
-					'description' => 'Post type to query (default: "any")',
-				),
-				'post_status' => array(
-					'type'        => 'string',
-					'required'    => false,
-					'description' => 'Post status (default: "publish")',
-				),
-				'per_page'    => array(
-					'type'        => 'integer',
-					'required'    => false,
-					'description' => 'Number of posts to return (default: 20)',
-				),
-			),
-		);
-	}
-
-	public function getQueryByPipelineTool(): array {
-		return array(
-			'class'       => self::class,
-			'method'      => 'handleByPipeline',
-			'description' => 'Find posts created by a specific Data Machine pipeline. Useful for debugging and bulk fixes across all flows using a pipeline.',
-			'parameters'  => array(
-				'pipeline_id' => array(
-					'type'        => 'integer',
-					'required'    => true,
-					'description' => 'Pipeline ID to filter by',
-				),
-				'post_type'   => array(
-					'type'        => 'string',
-					'required'    => false,
-					'description' => 'Post type to query (default: "any")',
-				),
-				'post_status' => array(
-					'type'        => 'string',
-					'required'    => false,
-					'description' => 'Post status (default: "publish")',
-				),
-				'per_page'    => array(
-					'type'        => 'integer',
-					'required'    => false,
-					'description' => 'Number of posts to return (default: 20)',
-				),
-			),
-		);
-	}
-
-	public function executeByHandler( array $input ): array {
-		$handler_slug = sanitize_text_field( $input['handler_slug'] ?? '' );
+	public function executeQueryPosts( array $input ): array {
+		$filter_by    = $input['filter_by'] ?? '';
+		$filter_value = $input['filter_value'] ?? '';
 		$post_type    = $input['post_type'] ?? 'any';
 		$post_status  = $input['post_status'] ?? 'publish';
 		$per_page     = (int) ( $input['per_page'] ?? self::DEFAULT_PER_PAGE );
 		$offset       = (int) ( $input['offset'] ?? 0 );
 
-		if ( empty( $handler_slug ) ) {
+		if ( ! isset( self::FILTER_TYPES[ $filter_by ] ) ) {
 			return array(
 				'posts' => array(),
 				'total' => 0,
-				'error' => 'handler_slug is required',
+				'error' => sprintf( 'Invalid filter_by value. Must be one of: %s', implode( ', ', array_keys( self::FILTER_TYPES ) ) ),
 			);
+		}
+
+		$filter_config = self::FILTER_TYPES[ $filter_by ];
+		$meta_key      = $filter_config['meta_key'];
+		$value_type    = $filter_config['value_type'];
+
+		if ( 'string' === $value_type ) {
+			$filter_value = sanitize_text_field( $filter_value );
+			if ( empty( $filter_value ) ) {
+				return array(
+					'posts' => array(),
+					'total' => 0,
+					'error' => 'filter_value is required for handler filter',
+				);
+			}
+		} else {
+			$filter_value = (int) $filter_value;
+			if ( $filter_value <= 0 ) {
+				return array(
+					'posts' => array(),
+					'total' => 0,
+					'error' => sprintf( 'filter_value must be a positive integer for %s filter', $filter_by ),
+				);
+			}
 		}
 
 		$args = array(
@@ -315,8 +200,8 @@ class PostQueryAbilities {
 			'order'          => 'DESC',
 			'meta_query'     => array(
 				array(
-					'key'     => DATAMACHINE_POST_HANDLER_META_KEY,
-					'value'   => $handler_slug,
+					'key'     => $meta_key,
+					'value'   => $filter_value,
 					'compare' => '=',
 				),
 			),
@@ -337,102 +222,11 @@ class PostQueryAbilities {
 		);
 	}
 
-	public function executeByFlow( array $input ): array {
-		$flow_id     = (int) ( $input['flow_id'] ?? 0 );
-		$post_type   = $input['post_type'] ?? 'any';
-		$post_status = $input['post_status'] ?? 'publish';
-		$per_page    = (int) ( $input['per_page'] ?? self::DEFAULT_PER_PAGE );
-		$offset      = (int) ( $input['offset'] ?? 0 );
-
-		if ( $flow_id <= 0 ) {
-			return array(
-				'posts' => array(),
-				'total' => 0,
-				'error' => 'flow_id is required',
-			);
-		}
-
-		$args = array(
-			'post_type'      => $post_type,
-			'post_status'    => $post_status,
-			'posts_per_page' => $per_page,
-			'offset'         => $offset,
-			'orderby'        => 'date',
-			'order'          => 'DESC',
-			'meta_query'     => array(
-				array(
-					'key'     => DATAMACHINE_POST_FLOW_ID_META_KEY,
-					'value'   => $flow_id,
-					'compare' => '=',
-				),
-			),
-		);
-
-		$query = new \WP_Query( $args );
-
-		$posts = array();
-		foreach ( $query->posts as $post ) {
-			$posts[] = $this->format_post_result( $post );
-		}
-
-		return array(
-			'posts'    => $posts,
-			'total'    => $query->found_posts,
-			'per_page' => $per_page,
-			'offset'   => $offset,
-		);
-	}
-
-	public function executeByPipeline( array $input ): array {
-		$pipeline_id = (int) ( $input['pipeline_id'] ?? 0 );
-		$post_type   = $input['post_type'] ?? 'any';
-		$post_status = $input['post_status'] ?? 'publish';
-		$per_page    = (int) ( $input['per_page'] ?? self::DEFAULT_PER_PAGE );
-		$offset      = (int) ( $input['offset'] ?? 0 );
-
-		if ( $pipeline_id <= 0 ) {
-			return array(
-				'posts' => array(),
-				'total' => 0,
-				'error' => 'pipeline_id is required',
-			);
-		}
-
-		$args = array(
-			'post_type'      => $post_type,
-			'post_status'    => $post_status,
-			'posts_per_page' => $per_page,
-			'offset'         => $offset,
-			'orderby'        => 'date',
-			'order'          => 'DESC',
-			'meta_query'     => array(
-				array(
-					'key'     => DATAMACHINE_POST_PIPELINE_ID_META_KEY,
-					'value'   => $pipeline_id,
-					'compare' => '=',
-				),
-			),
-		);
-
-		$query = new \WP_Query( $args );
-
-		$posts = array();
-		foreach ( $query->posts as $post ) {
-			$posts[] = $this->format_post_result( $post );
-		}
-
-		return array(
-			'posts'    => $posts,
-			'total'    => $query->found_posts,
-			'per_page' => $per_page,
-			'offset'   => $offset,
-		);
-	}
-
-	public function handleByHandler( array $parameters, array $tool_def = array() ): array {
-		$result = $this->executeByHandler(
+	public function handleQueryPosts( array $parameters, array $tool_def = array() ): array {
+		$result = $this->executeQueryPosts(
 			array(
-				'handler_slug' => $parameters['handler_slug'] ?? '',
+				'filter_by'    => $parameters['filter_by'] ?? '',
+				'filter_value' => $parameters['filter_value'] ?? '',
 				'post_type'    => $parameters['post_type'] ?? 'any',
 				'post_status'  => $parameters['post_status'] ?? 'publish',
 				'per_page'     => $parameters['per_page'] ?? self::DEFAULT_PER_PAGE,
@@ -442,41 +236,7 @@ class PostQueryAbilities {
 		return array(
 			'success'   => true,
 			'data'      => $result,
-			'tool_name' => 'query_posts_by_handler',
-		);
-	}
-
-	public function handleByFlow( array $parameters, array $tool_def = array() ): array {
-		$result = $this->executeByFlow(
-			array(
-				'flow_id'     => $parameters['flow_id'] ?? 0,
-				'post_type'   => $parameters['post_type'] ?? 'any',
-				'post_status' => $parameters['post_status'] ?? 'publish',
-				'per_page'    => $parameters['per_page'] ?? self::DEFAULT_PER_PAGE,
-			)
-		);
-
-		return array(
-			'success'   => true,
-			'data'      => $result,
-			'tool_name' => 'query_posts_by_flow',
-		);
-	}
-
-	public function handleByPipeline( array $parameters, array $tool_def = array() ): array {
-		$result = $this->executeByPipeline(
-			array(
-				'pipeline_id' => $parameters['pipeline_id'] ?? 0,
-				'post_type'   => $parameters['post_type'] ?? 'any',
-				'post_status' => $parameters['post_status'] ?? 'publish',
-				'per_page'    => $parameters['per_page'] ?? self::DEFAULT_PER_PAGE,
-			)
-		);
-
-		return array(
-			'success'   => true,
-			'data'      => $result,
-			'tool_name' => 'query_posts_by_pipeline',
+			'tool_name' => 'query_posts',
 		);
 	}
 
