@@ -3,6 +3,7 @@
  * REST API Pipeline Steps Endpoint
  *
  * Provides REST API access to pipeline step management operations.
+ * Delegates to Abilities API for core CRUD operations.
  * Requires WordPress manage_options capability.
  *
  * @package DataMachine\Api\Pipelines
@@ -10,6 +11,7 @@
 
 namespace DataMachine\Api\Pipelines;
 
+use DataMachine\Abilities\PipelineStepAbilities;
 use DataMachine\Services\PipelineStepManager;
 use DataMachine\Services\StepTypeService;
 use WP_REST_Server;
@@ -229,13 +231,18 @@ class PipelineSteps {
 		$pipeline_id = (int) $request->get_param( 'pipeline_id' );
 		$step_type   = $request->get_param( 'step_type' );
 
-		$manager = new PipelineStepManager();
-		$step_id = $manager->add( $pipeline_id, $step_type );
+		$abilities = new PipelineStepAbilities();
+		$result    = $abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $pipeline_id,
+				'step_type'   => $step_type,
+			)
+		);
 
-		if ( ! $step_id ) {
+		if ( ! $result['success'] ) {
 			return new \WP_Error(
 				'step_creation_failed',
-				__( 'Failed to create step.', 'data-machine' ),
+				$result['error'] ?? __( 'Failed to create step.', 'data-machine' ),
 				array( 'status' => 500 )
 			);
 		}
@@ -246,7 +253,7 @@ class PipelineSteps {
 
 		$step_data = null;
 		foreach ( $pipeline_steps as $step ) {
-			if ( $step['pipeline_step_id'] === $step_id ) {
+			if ( $step['pipeline_step_id'] === $result['pipeline_step_id'] ) {
 				$step_data = $step;
 				break;
 			}
@@ -259,7 +266,7 @@ class PipelineSteps {
 					'step_type'        => $step_type,
 					'step_config'      => $step_config,
 					'pipeline_id'      => $pipeline_id,
-					'pipeline_step_id' => $step_id,
+					'pipeline_step_id' => $result['pipeline_step_id'],
 					'step_data'        => $step_data,
 					'created_type'     => 'step',
 				),
@@ -279,11 +286,20 @@ class PipelineSteps {
 		$pipeline_id = (int) $request->get_param( 'pipeline_id' );
 		$step_id     = (string) $request->get_param( 'step_id' );
 
-		$manager = new PipelineStepManager();
-		$result  = $manager->delete( $step_id, $pipeline_id );
+		$abilities = new PipelineStepAbilities();
+		$result    = $abilities->executeDeletePipelineStep(
+			array(
+				'pipeline_id'      => $pipeline_id,
+				'pipeline_step_id' => $step_id,
+			)
+		);
 
-		if ( is_wp_error( $result ) ) {
-			return $result;
+		if ( ! $result['success'] ) {
+			return new \WP_Error(
+				'step_deletion_failed',
+				$result['error'] ?? __( 'Failed to delete step.', 'data-machine' ),
+				array( 'status' => 500 )
+			);
 		}
 
 		return rest_ensure_response(
@@ -342,11 +358,20 @@ class PipelineSteps {
 		$pipeline_id = (int) $request->get_param( 'pipeline_id' );
 		$step_order  = $request->get_param( 'step_order' );
 
-		$manager = new PipelineStepManager();
-		$result  = $manager->reorder( $pipeline_id, $step_order );
+		$abilities = new PipelineStepAbilities();
+		$result    = $abilities->executeReorderPipelineSteps(
+			array(
+				'pipeline_id' => $pipeline_id,
+				'step_order'  => $step_order,
+			)
+		);
 
-		if ( is_wp_error( $result ) ) {
-			return $result;
+		if ( ! $result['success'] ) {
+			return new \WP_Error(
+				'reorder_failed',
+				$result['error'] ?? __( 'Failed to reorder steps.', 'data-machine' ),
+				array( 'status' => 500 )
+			);
 		}
 
 		return rest_ensure_response(

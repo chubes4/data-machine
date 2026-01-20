@@ -3,6 +3,7 @@
  * Add Pipeline Step Tool
  *
  * Focused tool for adding steps to existing pipelines.
+ * Delegates to Abilities API for core logic.
  * Automatically syncs the new step to all flows on the pipeline.
  *
  * @package DataMachine\Api\Chat\Tools
@@ -14,8 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use DataMachine\Abilities\PipelineStepAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-use DataMachine\Services\PipelineStepManager;
 use DataMachine\Services\StepTypeService;
 
 class AddPipelineStep {
@@ -59,73 +60,13 @@ class AddPipelineStep {
 	}
 
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
-		$pipeline_id = $parameters['pipeline_id'] ?? null;
-		$step_type   = $parameters['step_type'] ?? null;
-
-		if ( ! is_numeric( $pipeline_id ) || (int) $pipeline_id <= 0 ) {
-			return array(
-				'success'   => false,
-				'error'     => 'pipeline_id is required and must be a positive integer',
-				'tool_name' => 'add_pipeline_step',
-			);
-		}
-
-		if ( empty( $step_type ) || ! is_string( $step_type ) ) {
-			return array(
-				'success'   => false,
-				'error'     => 'step_type is required and must be a string',
-				'tool_name' => 'add_pipeline_step',
-			);
-		}
-
-		$valid_types = self::getValidStepTypes();
-		if ( ! in_array( $step_type, $valid_types, true ) ) {
-			return array(
-				'success'   => false,
-				'error'     => "Invalid step_type '{$step_type}'. Must be one of: " . implode( ', ', $valid_types ),
-				'tool_name' => 'add_pipeline_step',
-			);
-		}
-
-		$pipeline_id  = (int) $pipeline_id;
-		$step_manager = new PipelineStepManager();
-
-		$pipeline_step_id = $step_manager->add( $pipeline_id, $step_type );
-
-		if ( ! $pipeline_step_id ) {
-			return array(
-				'success'   => false,
-				'error'     => 'Failed to add step. Verify the pipeline_id exists and you have sufficient permissions.',
-				'tool_name' => 'add_pipeline_step',
-			);
-		}
-
-		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-		$flows    = $db_flows->get_flows_for_pipeline( $pipeline_id );
-
-		$flow_step_ids = array();
-		foreach ( $flows as $flow ) {
-			$flow_config = $flow['flow_config'] ?? array();
-			foreach ( $flow_config as $flow_step_id => $step_data ) {
-				if ( isset( $step_data['pipeline_step_id'] ) && $step_data['pipeline_step_id'] === $pipeline_step_id ) {
-					$flow_step_ids[] = array(
-						'flow_id'      => $flow['flow_id'],
-						'flow_step_id' => $flow_step_id,
-					);
-				}
-			}
-		}
+		$abilities = new PipelineStepAbilities();
+		$result    = $abilities->executeAddPipelineStep( $parameters );
 
 		return array(
-			'success'   => true,
-			'data'      => array(
-				'pipeline_id'      => $pipeline_id,
-				'pipeline_step_id' => $pipeline_step_id,
-				'step_type'        => $step_type,
-				'flows_updated'    => count( $flows ),
-				'flow_step_ids'    => $flow_step_ids,
-				'message'          => "Step '{$step_type}' added to pipeline. Use configure_flow_steps with the flow_step_ids to set handler configuration.",
-			),
+			'success'   => $result['success'],
+			'data'      => $result['success'] ? $result : null,
+			'error'     => $result['error'] ?? null,
 			'tool_name' => 'add_pipeline_step',
 		);
 	}

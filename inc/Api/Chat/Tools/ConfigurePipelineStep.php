@@ -4,6 +4,7 @@
  *
  * Tool for configuring pipeline-level AI step settings including
  * system prompt, provider, model, and enabled tools.
+ * Delegates to Abilities API for core logic.
  *
  * @package DataMachine\Api\Chat\Tools
  */
@@ -14,6 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use DataMachine\Abilities\PipelineStepAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class ConfigurePipelineStep {
@@ -65,90 +67,13 @@ class ConfigurePipelineStep {
 	}
 
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
-		$pipeline_step_id = $parameters['pipeline_step_id'] ?? null;
-
-		if ( empty( $pipeline_step_id ) || ! is_string( $pipeline_step_id ) ) {
-			return array(
-				'success'   => false,
-				'error'     => 'pipeline_step_id is required and must be a string',
-				'tool_name' => 'configure_pipeline_step',
-			);
-		}
-
-		$system_prompt = $parameters['system_prompt'] ?? null;
-		$provider      = $parameters['provider'] ?? null;
-		$model         = $parameters['model'] ?? null;
-		$enabled_tools = $parameters['enabled_tools'] ?? null;
-
-		if ( empty( $system_prompt ) && empty( $provider ) && empty( $model ) && empty( $enabled_tools ) ) {
-			return array(
-				'success'   => false,
-				'error'     => 'At least one of system_prompt, provider, model, or enabled_tools is required',
-				'tool_name' => 'configure_pipeline_step',
-			);
-		}
-
-		$body_params = array();
-
-		if ( ! empty( $system_prompt ) ) {
-			$body_params['system_prompt'] = $system_prompt;
-		}
-		if ( ! empty( $provider ) ) {
-			$body_params['provider'] = $provider;
-		}
-		if ( ! empty( $model ) ) {
-			$body_params['model'] = $model;
-		}
-		if ( ! empty( $enabled_tools ) && is_array( $enabled_tools ) ) {
-			$body_params['enabled_tools'] = $enabled_tools;
-		}
-
-		$request = new \WP_REST_Request( 'PATCH', '/datamachine/v1/pipelines/steps/' . $pipeline_step_id . '/config' );
-		$request->set_body_params( $body_params );
-
-		$response = rest_do_request( $request );
-
-		if ( is_wp_error( $response ) ) {
-			return array(
-				'success'   => false,
-				'error'     => $response->get_error_message(),
-				'tool_name' => 'configure_pipeline_step',
-			);
-		}
-
-		$data   = $response->get_data();
-		$status = $response->get_status();
-
-		if ( $status >= 400 ) {
-			$error_message = $data['message'] ?? 'Failed to configure pipeline step';
-			return array(
-				'success'   => false,
-				'error'     => $error_message,
-				'tool_name' => 'configure_pipeline_step',
-			);
-		}
-
-		$response_data = array(
-			'pipeline_step_id' => $pipeline_step_id,
-			'message'          => 'Pipeline step configured successfully.',
-		);
-
-		if ( ! empty( $system_prompt ) ) {
-			$response_data['system_prompt_updated'] = true;
-		}
-		if ( ! empty( $provider ) ) {
-			$response_data['provider'] = $provider;
-		}
-		if ( ! empty( $model ) ) {
-			$response_data['model'] = $model;
-		}
-		if ( ! empty( $enabled_tools ) ) {
-			$response_data['enabled_tools_updated'] = true;
-		}
+		$abilities = new PipelineStepAbilities();
+		$result    = $abilities->executeUpdatePipelineStep( $parameters );
 
 		return array(
-			'success'   => true,
-			'data'      => $response_data,
+			'success'   => $result['success'],
+			'data'      => $result['success'] ? $result : null,
+			'error'     => $result['error'] ?? null,
 			'tool_name' => 'configure_pipeline_step',
 		);
 	}

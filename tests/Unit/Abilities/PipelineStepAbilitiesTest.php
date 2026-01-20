@@ -1,0 +1,529 @@
+<?php
+/**
+ * PipelineStepAbilities Tests
+ *
+ * Tests for pipeline step CRUD abilities.
+ *
+ * @package DataMachine\Tests\Unit\Abilities
+ */
+
+namespace DataMachine\Tests\Unit\Abilities;
+
+use DataMachine\Abilities\PipelineAbilities;
+use DataMachine\Abilities\PipelineStepAbilities;
+use WP_UnitTestCase;
+
+class PipelineStepAbilitiesTest extends WP_UnitTestCase {
+
+	private PipelineStepAbilities $step_abilities;
+	private PipelineAbilities $pipeline_abilities;
+	private int $test_pipeline_id;
+
+	/**
+	 * Set up test fixtures.
+	 */
+	public function set_up(): void {
+		parent::set_up();
+
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+
+		$this->pipeline_abilities = new PipelineAbilities();
+		$this->step_abilities     = new PipelineStepAbilities();
+
+		$result                 = $this->pipeline_abilities->executeCreatePipeline(
+			array( 'pipeline_name' => 'Test Pipeline for Step Abilities' )
+		);
+		$this->test_pipeline_id = $result['pipeline_id'];
+	}
+
+	/**
+	 * Tear down test fixtures.
+	 */
+	public function tear_down(): void {
+		parent::tear_down();
+	}
+
+	public function test_get_pipeline_steps_ability_registered(): void {
+		$ability = wp_get_ability( 'datamachine/get-pipeline-steps' );
+
+		$this->assertNotNull( $ability );
+		$this->assertSame( 'datamachine/get-pipeline-steps', $ability->get_name() );
+	}
+
+	public function test_get_pipeline_step_ability_registered(): void {
+		$ability = wp_get_ability( 'datamachine/get-pipeline-step' );
+
+		$this->assertNotNull( $ability );
+		$this->assertSame( 'datamachine/get-pipeline-step', $ability->get_name() );
+	}
+
+	public function test_add_pipeline_step_ability_registered(): void {
+		$ability = wp_get_ability( 'datamachine/add-pipeline-step' );
+
+		$this->assertNotNull( $ability );
+		$this->assertSame( 'datamachine/add-pipeline-step', $ability->get_name() );
+	}
+
+	public function test_update_pipeline_step_ability_registered(): void {
+		$ability = wp_get_ability( 'datamachine/update-pipeline-step' );
+
+		$this->assertNotNull( $ability );
+		$this->assertSame( 'datamachine/update-pipeline-step', $ability->get_name() );
+	}
+
+	public function test_delete_pipeline_step_ability_registered(): void {
+		$ability = wp_get_ability( 'datamachine/delete-pipeline-step' );
+
+		$this->assertNotNull( $ability );
+		$this->assertSame( 'datamachine/delete-pipeline-step', $ability->get_name() );
+	}
+
+	public function test_reorder_pipeline_steps_ability_registered(): void {
+		$ability = wp_get_ability( 'datamachine/reorder-pipeline-steps' );
+
+		$this->assertNotNull( $ability );
+		$this->assertSame( 'datamachine/reorder-pipeline-steps', $ability->get_name() );
+	}
+
+	public function test_get_pipeline_steps_empty(): void {
+		$result = $this->step_abilities->executeGetPipelineSteps(
+			array( 'pipeline_id' => $this->test_pipeline_id )
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertArrayHasKey( 'steps', $result );
+		$this->assertArrayHasKey( 'step_count', $result );
+		$this->assertEquals( $this->test_pipeline_id, $result['pipeline_id'] );
+		$this->assertEquals( 0, $result['step_count'] );
+	}
+
+	public function test_get_pipeline_steps_with_steps(): void {
+		$add_result = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'fetch',
+			)
+		);
+
+		$this->assertTrue( $add_result['success'] );
+
+		$result = $this->step_abilities->executeGetPipelineSteps(
+			array( 'pipeline_id' => $this->test_pipeline_id )
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( 1, $result['step_count'] );
+		$this->assertCount( 1, $result['steps'] );
+	}
+
+	public function test_get_pipeline_steps_not_found(): void {
+		$result = $this->step_abilities->executeGetPipelineSteps(
+			array( 'pipeline_id' => 999999 )
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'not found', $result['error'] );
+	}
+
+	public function test_get_pipeline_steps_invalid_id(): void {
+		$result = $this->step_abilities->executeGetPipelineSteps(
+			array( 'pipeline_id' => 0 )
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'positive integer', $result['error'] );
+	}
+
+	public function test_add_pipeline_step(): void {
+		$result = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'fetch',
+			)
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertArrayHasKey( 'pipeline_step_id', $result );
+		$this->assertArrayHasKey( 'step_type', $result );
+		$this->assertArrayHasKey( 'flows_updated', $result );
+		$this->assertArrayHasKey( 'flow_step_ids', $result );
+		$this->assertEquals( $this->test_pipeline_id, $result['pipeline_id'] );
+		$this->assertEquals( 'fetch', $result['step_type'] );
+		$this->assertStringStartsWith( $this->test_pipeline_id . '_', $result['pipeline_step_id'] );
+	}
+
+	public function test_add_pipeline_step_ai_type(): void {
+		$result = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'ai',
+			)
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( 'ai', $result['step_type'] );
+	}
+
+	public function test_add_pipeline_step_publish_type(): void {
+		$result = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'publish',
+			)
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( 'publish', $result['step_type'] );
+	}
+
+	public function test_add_pipeline_step_update_type(): void {
+		$result = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'update',
+			)
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( 'update', $result['step_type'] );
+	}
+
+	public function test_add_pipeline_step_invalid_type(): void {
+		$result = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'invalid_type',
+			)
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'Invalid step_type', $result['error'] );
+	}
+
+	public function test_add_pipeline_step_missing_pipeline_id(): void {
+		$result = $this->step_abilities->executeAddPipelineStep(
+			array( 'step_type' => 'fetch' )
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'pipeline_id', $result['error'] );
+	}
+
+	public function test_add_pipeline_step_missing_step_type(): void {
+		$result = $this->step_abilities->executeAddPipelineStep(
+			array( 'pipeline_id' => $this->test_pipeline_id )
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'step_type', $result['error'] );
+	}
+
+	public function test_get_pipeline_step(): void {
+		$add_result       = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'fetch',
+			)
+		);
+		$pipeline_step_id = $add_result['pipeline_step_id'];
+
+		$result = $this->step_abilities->executeGetPipelineStep(
+			array( 'pipeline_step_id' => $pipeline_step_id )
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertArrayHasKey( 'step', $result );
+		$this->assertEquals( $pipeline_step_id, $result['step']['pipeline_step_id'] );
+		$this->assertEquals( 'fetch', $result['step']['step_type'] );
+	}
+
+	public function test_get_pipeline_step_not_found(): void {
+		$result = $this->step_abilities->executeGetPipelineStep(
+			array( 'pipeline_step_id' => '999999_nonexistent-uuid' )
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'not found', $result['error'] );
+	}
+
+	public function test_get_pipeline_step_missing_id(): void {
+		$result = $this->step_abilities->executeGetPipelineStep( array() );
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'required', $result['error'] );
+	}
+
+	public function test_update_pipeline_step_system_prompt(): void {
+		$add_result       = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'ai',
+			)
+		);
+		$pipeline_step_id = $add_result['pipeline_step_id'];
+
+		$result = $this->step_abilities->executeUpdatePipelineStep(
+			array(
+				'pipeline_step_id' => $pipeline_step_id,
+				'system_prompt'    => 'You are a helpful assistant.',
+			)
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( $pipeline_step_id, $result['pipeline_step_id'] );
+		$this->assertStringContainsString( 'system_prompt', $result['message'] );
+	}
+
+	public function test_update_pipeline_step_provider_and_model(): void {
+		$add_result       = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'ai',
+			)
+		);
+		$pipeline_step_id = $add_result['pipeline_step_id'];
+
+		$result = $this->step_abilities->executeUpdatePipelineStep(
+			array(
+				'pipeline_step_id' => $pipeline_step_id,
+				'provider'         => 'anthropic',
+				'model'            => 'claude-sonnet-4-20250514',
+			)
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertStringContainsString( 'provider', $result['message'] );
+		$this->assertStringContainsString( 'model', $result['message'] );
+	}
+
+	public function test_update_pipeline_step_no_fields(): void {
+		$add_result       = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'ai',
+			)
+		);
+		$pipeline_step_id = $add_result['pipeline_step_id'];
+
+		$result = $this->step_abilities->executeUpdatePipelineStep(
+			array( 'pipeline_step_id' => $pipeline_step_id )
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'At least one', $result['error'] );
+	}
+
+	public function test_update_pipeline_step_not_found(): void {
+		$result = $this->step_abilities->executeUpdatePipelineStep(
+			array(
+				'pipeline_step_id' => '999999_nonexistent-uuid',
+				'system_prompt'    => 'Test prompt',
+			)
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'not found', $result['error'] );
+	}
+
+	public function test_delete_pipeline_step(): void {
+		$add_result       = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'fetch',
+			)
+		);
+		$pipeline_step_id = $add_result['pipeline_step_id'];
+
+		$result = $this->step_abilities->executeDeletePipelineStep(
+			array(
+				'pipeline_id'      => $this->test_pipeline_id,
+				'pipeline_step_id' => $pipeline_step_id,
+			)
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( $this->test_pipeline_id, $result['pipeline_id'] );
+		$this->assertEquals( $pipeline_step_id, $result['pipeline_step_id'] );
+		$this->assertArrayHasKey( 'affected_flows', $result );
+
+		$get_result = $this->step_abilities->executeGetPipelineStep(
+			array( 'pipeline_step_id' => $pipeline_step_id )
+		);
+		$this->assertFalse( $get_result['success'] );
+	}
+
+	public function test_delete_pipeline_step_not_found(): void {
+		$result = $this->step_abilities->executeDeletePipelineStep(
+			array(
+				'pipeline_id'      => $this->test_pipeline_id,
+				'pipeline_step_id' => '999999_nonexistent-uuid',
+			)
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+	}
+
+	public function test_delete_pipeline_step_missing_pipeline_id(): void {
+		$result = $this->step_abilities->executeDeletePipelineStep(
+			array( 'pipeline_step_id' => 'some-step-id' )
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'pipeline_id', $result['error'] );
+	}
+
+	public function test_delete_pipeline_step_missing_step_id(): void {
+		$result = $this->step_abilities->executeDeletePipelineStep(
+			array( 'pipeline_id' => $this->test_pipeline_id )
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'pipeline_step_id', $result['error'] );
+	}
+
+	public function test_reorder_pipeline_steps(): void {
+		$step1 = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'fetch',
+			)
+		);
+
+		$step2 = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'ai',
+			)
+		);
+
+		$result = $this->step_abilities->executeReorderPipelineSteps(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_order'  => array(
+					array(
+						'pipeline_step_id' => $step2['pipeline_step_id'],
+						'execution_order'  => 0,
+					),
+					array(
+						'pipeline_step_id' => $step1['pipeline_step_id'],
+						'execution_order'  => 1,
+					),
+				),
+			)
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( $this->test_pipeline_id, $result['pipeline_id'] );
+		$this->assertEquals( 2, $result['step_count'] );
+		$this->assertStringContainsString( 'reordered', $result['message'] );
+	}
+
+	public function test_reorder_pipeline_steps_invalid_format(): void {
+		$result = $this->step_abilities->executeReorderPipelineSteps(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_order'  => array( 'invalid' ),
+			)
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'object', $result['error'] );
+	}
+
+	public function test_reorder_pipeline_steps_missing_fields(): void {
+		$result = $this->step_abilities->executeReorderPipelineSteps(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_order'  => array(
+					array( 'pipeline_step_id' => 'test' ),
+				),
+			)
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'execution_order', $result['error'] );
+	}
+
+	public function test_reorder_pipeline_steps_empty_array(): void {
+		$result = $this->step_abilities->executeReorderPipelineSteps(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_order'  => array(),
+			)
+		);
+
+		$this->assertFalse( $result['success'] );
+		$this->assertArrayHasKey( 'error', $result );
+		$this->assertStringContainsString( 'required', $result['error'] );
+	}
+
+	public function test_permission_callback(): void {
+		wp_set_current_user( 0 );
+
+		$ability = wp_get_ability( 'datamachine/get-pipeline-steps' );
+		$this->assertNotNull( $ability );
+
+		$result = $ability->execute(
+			array( 'pipeline_id' => $this->test_pipeline_id )
+		);
+
+		$this->assertIsArray( $result );
+		$this->assertFalse( $result['success'] ?? true );
+		$this->assertArrayHasKey( 'error', $result );
+
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user_id );
+	}
+
+	public function test_multiple_steps_execution_order(): void {
+		$this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'fetch',
+			)
+		);
+
+		$this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'ai',
+			)
+		);
+
+		$this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'publish',
+			)
+		);
+
+		$result = $this->step_abilities->executeGetPipelineSteps(
+			array( 'pipeline_id' => $this->test_pipeline_id )
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertEquals( 3, $result['step_count'] );
+
+		$steps          = $result['steps'];
+		$expected_types = array( 'fetch', 'ai', 'publish' );
+		foreach ( $steps as $index => $step ) {
+			$this->assertEquals( $index, $step['execution_order'] );
+			$this->assertEquals( $expected_types[ $index ], $step['step_type'] );
+		}
+	}
+}
