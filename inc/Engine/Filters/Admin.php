@@ -16,6 +16,12 @@ if ( ! defined( 'WPINC' ) ) {
  */
 function datamachine_register_admin_filters() {
 
+	// One-time cleanup of deprecated options
+	if ( get_option( 'datamachine_page_hook_suffixes' ) ) {
+		delete_option( 'datamachine_page_hook_suffixes' );
+		delete_option( 'datamachine_page_configs' );
+	}
+
 	add_filter(
 		'datamachine_admin_pages',
 		function ( $pages ) {
@@ -38,7 +44,6 @@ function datamachine_register_admin_filters() {
 					$template_path = $page_config['templates'] . $template_name . '.php';
 					if ( file_exists( $template_path ) ) {
 						ob_start();
-						extract( $data ); // Extract data array to make variables available in template scope
 						include $template_path;
 						return ob_get_clean();
 					}
@@ -97,7 +102,7 @@ function datamachine_register_admin_menu() {
 	$first_page = reset( $registered_pages );
 	$first_slug = key( $registered_pages );
 
-	$main_menu_hook = add_menu_page(
+	add_menu_page(
 		'Data Machine',
 		'Data Machine',
 		$first_page['capability'] ?? 'manage_options',
@@ -107,12 +112,8 @@ function datamachine_register_admin_menu() {
 		30
 	);
 
-	// Store hook suffix and page config for first page
-	datamachine_store_hook_suffix( $first_slug, $main_menu_hook );
-	datamachine_store_page_config( $first_slug, $first_page );
-
 	// Add first page as submenu with its proper title
-	$first_submenu_hook = add_submenu_page(
+	add_submenu_page(
 		'datamachine-' . $first_slug,
 		$first_page['page_title'] ?? $first_page['menu_title'] ?? ucfirst( $first_slug ),
 		$first_page['menu_title'] ?? ucfirst( $first_slug ),
@@ -126,7 +127,7 @@ function datamachine_register_admin_menu() {
 	// Add remaining pages as submenus (already sorted)
 	$remaining_pages = array_slice( $registered_pages, 1, null, true );
 	foreach ( $remaining_pages as $slug => $page_config ) {
-		$hook_suffix = add_submenu_page(
+		add_submenu_page(
 			'datamachine-' . $first_slug,
 			$page_config['page_title'] ?? $page_config['menu_title'] ?? ucfirst( $slug ),
 			$page_config['menu_title'] ?? ucfirst( $slug ),
@@ -136,27 +137,8 @@ function datamachine_register_admin_menu() {
 				datamachine_render_admin_page_content( $page_config, $slug );
 			}
 		);
-
-		// Store hook suffixes and page config for asset loading
-		datamachine_store_hook_suffix( $slug, $hook_suffix );
-		datamachine_store_page_config( $slug, $page_config );
 	}
 }
-
-// Settings component registration
-add_action(
-	'init',
-	function () {
-		// Load Settings component
-		require_once DATAMACHINE_PATH . 'inc/Core/Admin/Settings/SettingsFilters.php';
-	},
-	1
-);
-
-/**
- * Get Data Machine settings with defaults.
- */
-
 
 /**
  * Get enabled admin pages based on settings.
@@ -193,24 +175,6 @@ function datamachine_get_enabled_global_tools() {
 	}
 
 	return array_intersect_key( $global_tools, array_filter( $settings['enabled_tools'] ) );
-}
-
-function datamachine_store_hook_suffix( $page_slug, $hook_suffix ) {
-	$page_hook_suffixes               = get_option( 'datamachine_page_hook_suffixes', array() );
-	$page_hook_suffixes[ $page_slug ] = $hook_suffix;
-	update_option( 'datamachine_page_hook_suffixes', $page_hook_suffixes );
-}
-
-/**
- * Store page configuration for unified rendering.
- *
- * @param string $page_slug Page slug
- * @param array  $page_config Page configuration
- */
-function datamachine_store_page_config( $page_slug, $page_config ) {
-	$page_configs               = get_option( 'datamachine_page_configs', array() );
-	$page_configs[ $page_slug ] = $page_config;
-	update_option( 'datamachine_page_configs', $page_configs );
 }
 
 /**
@@ -340,29 +304,26 @@ function datamachine_allowed_html(): array {
 }
 
 function datamachine_enqueue_admin_assets( $hook_suffix ) {
-	$page_hook_suffixes = get_option( 'datamachine_page_hook_suffixes', array() );
-
-	// Find matching page slug for this hook suffix
-	$current_page_slug = null;
-	foreach ( $page_hook_suffixes as $slug => $stored_hook ) {
-		if ( $stored_hook === $hook_suffix ) {
-			$current_page_slug = $slug;
-			break;
-		}
+	// Extract page slug from hook suffix
+	// Pattern: *_datamachine-{slug} (handles both toplevel and submenu)
+	if ( ! preg_match( '/_datamachine-([a-z0-9_-]+)$/', $hook_suffix, $matches ) ) {
+		return; // Not a Data Machine page
 	}
 
-	if ( ! $current_page_slug ) {
-		return;
+	$page_slug = $matches[1];
+
+	// Get fresh page configs (filter applied fresh = nonces created fresh)
+	$registered_pages = apply_filters( 'datamachine_admin_pages', array() );
+
+	if ( ! isset( $registered_pages[ $page_slug ] ) ) {
+		return; // Page not registered
 	}
 
-	$page_configs = get_option( 'datamachine_page_configs', array() );
-
-	// Get page assets from unified configuration
-	$page_config = $page_configs[ $current_page_slug ] ?? array();
+	$page_config = $registered_pages[ $page_slug ];
 	$page_assets = $page_config['assets'] ?? array();
 
 	if ( ! empty( $page_assets['css'] ) || ! empty( $page_assets['js'] ) ) {
-		datamachine_enqueue_page_assets( $page_assets, $current_page_slug );
+		datamachine_enqueue_page_assets( $page_assets, $page_slug );
 	}
 }
 
@@ -374,6 +335,12 @@ function datamachine_enqueue_page_assets( $assets, $page_slug ) {
 	// Enqueue CSS files
 	if ( ! empty( $assets['css'] ) ) {
 		foreach ( $assets['css'] as $handle => $css_config ) {
+			// WordPress core styles: null/empty file = just enqueue existing WP registration
+			if ( empty( $css_config['file'] ) ) {
+				wp_enqueue_style( $handle );
+				continue;
+			}
+
 			$css_path    = $plugin_base_path . $css_config['file'];
 			$css_url     = $plugin_base_url . $css_config['file'];
 			$css_version = file_exists( $css_path ) ? filemtime( $css_path ) : $version;
@@ -405,7 +372,11 @@ function datamachine_enqueue_page_assets( $assets, $page_slug ) {
 
 			// Add localization if provided
 			if ( ! empty( $js_config['localize'] ) ) {
-				wp_localize_script( $handle, $js_config['localize']['object'], $js_config['localize']['data'] );
+				wp_add_inline_script(
+					$handle,
+					'const ' . $js_config['localize']['object'] . ' = ' . wp_json_encode( $js_config['localize']['data'] ) . ';',
+					'before'
+				);
 			}
 		}
 	}

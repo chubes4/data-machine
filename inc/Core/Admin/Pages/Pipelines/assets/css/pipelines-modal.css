@@ -244,7 +244,7 @@
 }
 
 .datamachine-modal-spacing--mb-20 {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
 }
 
 /* Modal text variants */
@@ -373,8 +373,8 @@
     color: #757575;
 }
 
-.datamachine-global-disabled-text {
-    color: #f0b849 !important;
+.datamachine-tool-label-description.datamachine-global-disabled-text {
+    color: #f0b849;
     font-style: italic;
 }
 
@@ -973,15 +973,6 @@
     border-radius: var(--datamachine-border-radius);
     font-size: 11px;
     font-weight: 500;
-    margin-bottom: 8px;
-}
-
-.datamachine-handler-settings-display {
-    padding: 8px 12px;
-    background-color: #f6f7f7;
-    border: 1px solid var(--datamachine-border-1);
-    border-radius: var(--datamachine-border-radius);
-    font-size: 12px;
     margin-bottom: 8px;
 }
 

@@ -58,7 +58,6 @@ function datamachine_register_settings_admin_page_filters() {
 			$settings_template_path = DATAMACHINE_PATH . 'inc/Core/Admin/Settings/templates/' . $template_name . '.php';
 			if ( file_exists( $settings_template_path ) ) {
 				ob_start();
-				extract( $data );
 				include $settings_template_path;
 				return ob_get_clean();
 			}

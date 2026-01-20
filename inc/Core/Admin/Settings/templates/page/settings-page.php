@@ -13,7 +13,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 ?>
 <div class="wrap datamachine-settings-page">
-	<h1><?php echo esc_html( $page_title ?? __( 'Data Machine Settings', 'data-machine' ) ); ?></h1>
+	<h1><?php echo esc_html( $data['page_config']['page_title'] ?? __( 'Data Machine Settings', 'data-machine' ) ); ?></h1>
 	<div id="datamachine-settings-root">
 		<p class="description">Loading settings...</p>
 	</div>
