@@ -16,7 +16,7 @@ AI-first WordPress plugin for content processing workflows with a visual pipelin
 - **Pipeline + Flow architecture** that separates reusable pipeline templates from scheduled flow instances and job executions.
 - **Modern React admin** that relies exclusively on the REST API, TanStack Query, and Zustand for caching, optimistic updates, and client state isolation. Page visibility is controlled through the "Admin Pages" settings or the `datamachine_admin_pages` filter. Features a collapsible **Integrated Chat Sidebar** for context-aware pipeline automation, a centralized **Logs interface**, and a **React-based Jobs dashboard** for real-time monitoring.
 - **Tool-first AI agents** that discover enabling providers, call contextual tools, and persist conversations via a universal engine shared by chat and pipelines.
-- **Services layer** (FlowManager, PipelineManager, JobManager, LogsManager, ProcessedItemsManager, FlowStepManager, PipelineStepManager, CacheManager) that replaces filter indirection with direct method calls for predictable behavior and easier testing.
+- **Abilities API** for business logic (FlowAbilities, PipelineAbilities, FlowStepAbilities, PipelineStepAbilities, ProcessedItemsAbilities, JobAbilities, SettingsAbilities, etc.) with remaining utilities (JobManager, LogsManager, CacheManager) for cross-cutting concerns.
 - **Global handler tooling** with modular fetch, publish, and update adapters backed by centralized registration traits and field schemas.
 - **Centralized Cache Invalidation** via CacheManager to ensure dynamic handler and step type registrations are immediately reflected across the system. Site context metadata is also cached and automatically invalidated on content changes.
 

@@ -11,8 +11,6 @@
 namespace DataMachine\Abilities;
 
 use DataMachine\Core\PluginSettings;
-use DataMachine\Services\HandlerService;
-use DataMachine\Services\StepTypeService;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -493,9 +491,9 @@ class SettingsAbilities {
 			update_option( self::HANDLER_DEFAULTS_OPTION, $defaults );
 		}
 
-		$handler_service   = new HandlerService();
-		$step_type_service = new StepTypeService();
-		$step_types        = $step_type_service->getAll();
+		$handler_abilities   = new HandlerAbilities();
+		$step_type_abilities = new StepTypeAbilities();
+		$step_types          = $step_type_abilities->getAllStepTypes();
 
 		$grouped = array();
 		foreach ( $step_types as $step_type_slug => $step_type_config ) {
@@ -509,7 +507,7 @@ class SettingsAbilities {
 				continue;
 			}
 
-			$handlers         = $handler_service->getAll( $step_type_slug );
+			$handlers         = $handler_abilities->getAllHandlers( $step_type_slug );
 			$handler_defaults = array();
 
 			foreach ( $handlers as $handler_slug => $handler_info ) {
@@ -517,7 +515,7 @@ class SettingsAbilities {
 					'label'       => $handler_info['label'] ?? $handler_slug,
 					'description' => $handler_info['description'] ?? '',
 					'defaults'    => $defaults[ $handler_slug ] ?? array(),
-					'fields'      => $handler_service->getConfigFields( $handler_slug ),
+					'fields'      => $handler_abilities->getConfigFields( $handler_slug ),
 				);
 			}
 
@@ -545,8 +543,8 @@ class SettingsAbilities {
 			);
 		}
 
-		$handler_service = new HandlerService();
-		$handler_info    = $handler_service->get( $handler_slug );
+		$handler_abilities = new HandlerAbilities();
+		$handler_info      = $handler_abilities->getHandler( $handler_slug );
 
 		if ( ! $handler_info ) {
 			return array(
@@ -586,11 +584,11 @@ class SettingsAbilities {
 	}
 
 	private function buildInitialHandlerDefaults(): array {
-		$handler_service   = new HandlerService();
-		$step_type_service = new StepTypeService();
+		$handler_abilities   = new HandlerAbilities();
+		$step_type_abilities = new StepTypeAbilities();
 
 		$defaults   = array();
-		$step_types = $step_type_service->getAll();
+		$step_types = $step_type_abilities->getAllStepTypes();
 
 		foreach ( $step_types as $step_type_slug => $step_type_config ) {
 			$uses_handler = $step_type_config['uses_handler'] ?? true;
@@ -598,10 +596,10 @@ class SettingsAbilities {
 				continue;
 			}
 
-			$handlers = $handler_service->getAll( $step_type_slug );
+			$handlers = $handler_abilities->getAllHandlers( $step_type_slug );
 
 			foreach ( $handlers as $handler_slug => $handler_info ) {
-				$fields           = $handler_service->getConfigFields( $handler_slug );
+				$fields           = $handler_abilities->getConfigFields( $handler_slug );
 				$handler_defaults = array();
 
 				foreach ( $fields as $field_key => $field_config ) {

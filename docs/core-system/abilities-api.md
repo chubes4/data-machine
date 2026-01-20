@@ -145,13 +145,15 @@ All abilities support both WordPress admin and WP-CLI contexts:
 
 ### Delegation Pattern
 
-REST API endpoints, CLI commands, and Chat tools delegate to abilities for business logic:
+REST API endpoints, CLI commands, and Chat tools delegate to abilities for business logic. Abilities are the canonical, public-facing primitive; service classes are considered an internal implementation detail and are being phased out as abilities become fully self-contained.
 
 ```
-REST API Endpoint → Ability → Service Manager → Database
-CLI Command → Ability → Service Manager → Database
-Chat Tool → Ability → Service Manager → Database
+REST API Endpoint → Ability → (Service layer used during migration) → Database
+CLI Command → Ability → (Service layer used during migration) → Database
+Chat Tool → Ability → (Service layer used during migration) → Database
 ```
+
+Note: many ability implementations are already self-contained and do not call service managers. Where services remain, they are transitional and will be migrated into abilities per the migration plan.
 
 ### Ability Registration
 

@@ -48,23 +48,25 @@ $image_url = $engine_data['image_url'] ?? null;
 - **Flexible Storage**: Steps access only what they need via filter call
 
 ### Services Layer Architecture (@since v0.4.0)
-**Performance Revolution**: Complete replacement of filter-based action system with OOP service managers for 3x performance improvement through direct method calls.
+**Performance Revolution**: Complete replacement of filter-based action system with OOP service managers for 3x performance improvement through direct method calls. Most services have been migrated to the WordPress 6.9 Abilities API.
 
-**Service Managers**:
-- **FlowManager** - Flow CRUD operations, duplication, step synchronization
-- **PipelineManager** - Pipeline CRUD operations with complete/simple creation modes
+**Remaining Services** (utilities for cross-cutting concerns):
 - **JobManager** - Job execution monitoring and management
 - **LogsManager** - Centralized log access and filtering
-- **ProcessedItemsManager** - Deduplication tracking across workflows
-- **FlowStepManager** - Individual flow step configuration and handler management
-- **PipelineStepManager** - Pipeline step template management
 - **CacheManager** - Centralized cache invalidation for services, tools, and site context
+
+**Abilities API** (business logic):
+- **FlowAbilities** - Flow CRUD operations, duplication
+- **PipelineAbilities** - Pipeline CRUD operations with complete/simple creation modes
+- **FlowStepAbilities** - Individual flow step configuration and handler management
+- **PipelineStepAbilities** - Pipeline step template management
+- **ProcessedItemsAbilities** - Deduplication tracking across workflows
 
 **Benefits**:
 - **3x Performance Improvement**: Direct method calls eliminate filter indirection
 - **Centralized Business Logic**: Consistent validation and error handling
 - **Reduced Database Queries**: Optimized data access patterns
-- **Clean Architecture**: Single responsibility per service manager
+- **Clean Architecture**: Single responsibility per ability class
 - **Backward Compatibility**: Maintains WordPress hook integration
 
 ### Step Types

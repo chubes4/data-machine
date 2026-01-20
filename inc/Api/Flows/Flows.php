@@ -10,9 +10,9 @@
 
 namespace DataMachine\Api\Flows;
 
+use DataMachine\Abilities\HandlerAbilities;
 use DataMachine\Core\Admin\DateFormatter;
 use DataMachine\Core\Database\Jobs\Jobs;
-use DataMachine\Services\HandlerService;
 use WP_REST_Server;
 
 if ( ! defined( 'WPINC' ) ) {
@@ -399,7 +399,7 @@ class Flows {
 	private static function format_flow_for_response( array $flow, ?array $latest_job = null ): array {
 		$flow_config = $flow['flow_config'] ?? array();
 
-		$handler_service = new HandlerService();
+		$handler_abilities = new HandlerAbilities();
 
 		foreach ( $flow_config as $flow_step_id => &$step_data ) {
 			if ( ! isset( $step_data['handler_slug'] ) ) {
@@ -416,7 +416,7 @@ class Flows {
 				$step_type
 			);
 
-			$step_data['handler_config'] = $handler_service->applyDefaults(
+			$step_data['handler_config'] = $handler_abilities->applyDefaults(
 				$handler_slug,
 				$step_data['handler_config'] ?? array()
 			);

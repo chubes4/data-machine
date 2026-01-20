@@ -14,8 +14,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use DataMachine\Abilities\HandlerAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-use DataMachine\Services\HandlerService;
 
 class SetHandlerDefaults {
 	use ToolRegistrationTrait;
@@ -59,11 +59,11 @@ class SetHandlerDefaults {
 			);
 		}
 
-		$handler_slug    = sanitize_key( $handler_slug );
-		$handler_service = new HandlerService();
+		$handler_slug      = sanitize_key( $handler_slug );
+		$handler_abilities = new HandlerAbilities();
 
 		// Validate handler exists
-		$handler_info = $handler_service->get( $handler_slug );
+		$handler_info = $handler_abilities->getHandler( $handler_slug );
 		if ( ! $handler_info ) {
 			return array(
 				'success'   => false,
@@ -82,7 +82,7 @@ class SetHandlerDefaults {
 		}
 
 		// Get available fields for validation feedback
-		$fields            = $handler_service->getConfigFields( $handler_slug );
+		$fields            = $handler_abilities->getConfigFields( $handler_slug );
 		$valid_keys        = array_keys( $fields );
 		$provided_keys     = array_keys( $defaults );
 		$unrecognized_keys = array_diff( $provided_keys, $valid_keys );
@@ -98,7 +98,7 @@ class SetHandlerDefaults {
 		$updated = update_option( self::HANDLER_DEFAULTS_OPTION, $all_defaults );
 
 		// Clear cache so new defaults take effect immediately
-		HandlerService::clearSiteDefaultsCache();
+		HandlerAbilities::clearSiteDefaultsCache();
 
 		if ( ! $updated && get_option( self::HANDLER_DEFAULTS_OPTION ) !== $all_defaults ) {
 			return array(

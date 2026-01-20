@@ -14,8 +14,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use DataMachine\Abilities\HandlerAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-use DataMachine\Services\HandlerService;
 
 class GetHandlerDefaults {
 	use ToolRegistrationTrait;
@@ -40,16 +40,16 @@ class GetHandlerDefaults {
 	}
 
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
-		$handler_slug    = $parameters['handler_slug'] ?? null;
-		$handler_service = new HandlerService();
-		$site_defaults   = $handler_service->getSiteDefaults();
+		$handler_slug      = $parameters['handler_slug'] ?? null;
+		$handler_abilities = new HandlerAbilities();
+		$site_defaults     = $handler_abilities->getSiteDefaults();
 
 		// If specific handler requested
 		if ( ! empty( $handler_slug ) ) {
 			$handler_slug = sanitize_key( $handler_slug );
 
 			// Validate handler exists
-			$handler_info = $handler_service->get( $handler_slug );
+			$handler_info = $handler_abilities->getHandler( $handler_slug );
 			if ( ! $handler_info ) {
 				return array(
 					'success'   => false,
@@ -59,7 +59,7 @@ class GetHandlerDefaults {
 			}
 
 			$defaults = $site_defaults[ $handler_slug ] ?? array();
-			$fields   = $handler_service->getConfigFields( $handler_slug );
+			$fields   = $handler_abilities->getConfigFields( $handler_slug );
 
 			return array(
 				'success'   => true,
@@ -77,7 +77,7 @@ class GetHandlerDefaults {
 		}
 
 		// Return all defaults
-		$all_handlers = $handler_service->getAll();
+		$all_handlers = $handler_abilities->getAllHandlers();
 		$summary      = array();
 
 		foreach ( $all_handlers as $slug => $info ) {

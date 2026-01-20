@@ -67,8 +67,8 @@ function datamachine_register_execution_engine() {
 			// Set pipeline agent context for all logging during flow execution
 			AgentContext::set( AgentType::PIPELINE );
 
-			$db_flows    = new \DataMachine\Core\Database\Flows\Flows();
-			$job_manager = new \DataMachine\Services\JobManager();
+			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+			$db_jobs  = new \DataMachine\Core\Database\Jobs\Jobs();
 
 			$flow = $db_flows->get_flow( $flow_id );
 			if ( ! $flow ) {
@@ -80,14 +80,38 @@ function datamachine_register_execution_engine() {
 
 			// Use provided job_id or create new one (for scheduled/recurring flows)
 			if ( ! $job_id ) {
-				$job_id = $job_manager->create( $flow_id, $pipeline_id );
+				$job_id = $db_jobs->create_job(
+					array(
+						'pipeline_id' => $pipeline_id,
+						'flow_id'     => $flow_id,
+					)
+				);
 				if ( ! $job_id ) {
+					do_action(
+						'datamachine_log',
+						'error',
+						'Job creation failed - database insert failed',
+						array(
+							'flow_id'     => $flow_id,
+							'pipeline_id' => $pipeline_id,
+						)
+					);
 					return false;
 				}
+				do_action(
+					'datamachine_log',
+					'debug',
+					'Job created',
+					array(
+						'job_id'      => $job_id,
+						'flow_id'     => $flow_id,
+						'pipeline_id' => $pipeline_id,
+					)
+				);
 			}
 
 			// Transition job from pending to processing
-			$job_manager->start( $job_id );
+			$db_jobs->start_job( $job_id );
 
 			$flow_config       = $flow['flow_config'] ?? array();
 			$scheduling_config = $flow['scheduling_config'] ?? array();
@@ -177,8 +201,8 @@ function datamachine_register_execution_engine() {
 			// Set pipeline agent context for all logging during step execution
 			AgentContext::set( AgentType::PIPELINE );
 
-			$job_id      = (int) $job_id;
-			$job_manager = new \DataMachine\Services\JobManager();
+			$job_id  = (int) $job_id;
+			$db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
 
 			try {
 				$engine_snapshot = datamachine_get_engine_data( $job_id );
@@ -204,7 +228,8 @@ function datamachine_register_execution_engine() {
 				}
 
 				if ( ! isset( $flow_step_config['flow_id'] ) || empty( $flow_step_config['flow_id'] ) ) {
-					$job_manager->fail(
+					do_action(
+						'datamachine_fail_job',
 						$job_id,
 						'step_execution_failure',
 						array(
@@ -225,7 +250,8 @@ function datamachine_register_execution_engine() {
 				$dataPackets = $retrieval->retrieve_data_by_job_id( $job_id, $context );
 
 				if ( ! $flow_step_config ) {
-					$job_manager->fail(
+					do_action(
+						'datamachine_fail_job',
 						$job_id,
 						'step_execution_failure',
 						array(
@@ -237,7 +263,8 @@ function datamachine_register_execution_engine() {
 				}
 
 				if ( ! isset( $flow_step_config['step_type'] ) || empty( $flow_step_config['step_type'] ) ) {
-					$job_manager->fail(
+					do_action(
+						'datamachine_fail_job',
 						$job_id,
 						'step_execution_failure',
 						array(
@@ -248,12 +275,13 @@ function datamachine_register_execution_engine() {
 					return false;
 				}
 
-				$step_type         = $flow_step_config['step_type'];
-				$step_type_service = new \DataMachine\Services\StepTypeService();
-				$step_definition   = $step_type_service->get( $step_type );
+				$step_type           = $flow_step_config['step_type'];
+				$step_type_abilities = new \DataMachine\Abilities\StepTypeAbilities();
+				$step_definition     = $step_type_abilities->getStepType( $step_type );
 
 				if ( ! $step_definition ) {
-					$job_manager->fail(
+					do_action(
+						'datamachine_fail_job',
 						$job_id,
 						'step_execution_failure',
 						array(
@@ -278,7 +306,8 @@ function datamachine_register_execution_engine() {
 				$dataPackets = $flow_step->execute( $payload );
 
 				if ( ! is_array( $dataPackets ) ) {
-					$job_manager->fail(
+					do_action(
+						'datamachine_fail_job',
 						$job_id,
 						'step_execution_failure',
 						array(
@@ -301,7 +330,7 @@ function datamachine_register_execution_engine() {
 				// If set, complete the job immediately without scheduling next step
 				$status_override = $engine->get( 'job_status' );
 				if ( $status_override ) {
-					$job_manager->updateStatus( $job_id, $status_override, 'complete' );
+					$db_jobs->complete_job( $job_id, $status_override );
 					$cleanup = new \DataMachine\Core\FilesRepository\FileCleanup();
 					$context = datamachine_get_file_context( $flow_id );
 					$cleanup->cleanup_job_data_packets( $job_id, $context );
@@ -325,7 +354,7 @@ function datamachine_register_execution_engine() {
 					if ( $next_flow_step_id ) {
 						do_action( 'datamachine_schedule_next_step', $job_id, $next_flow_step_id, $dataPackets );
 					} else {
-						$job_manager->updateStatus( $job_id, JobStatus::COMPLETED, 'complete' );
+						$db_jobs->complete_job( $job_id, JobStatus::COMPLETED );
 						$cleanup = new \DataMachine\Core\FilesRepository\FileCleanup();
 						$context = datamachine_get_file_context( $flow_id );
 						$cleanup->cleanup_job_data_packets( $job_id, $context );
@@ -346,13 +375,13 @@ function datamachine_register_execution_engine() {
 				} else {
 					// Check if this is a fetch step with processed items history
 					// If so, empty result means "no new items" not "failure"
-					$is_fetch_step           = ( 'fetch' === $step_type );
-					$processed_items_manager = new \DataMachine\Services\ProcessedItemsManager();
-					$has_history             = $processed_items_manager->hasProcessedItems( $flow_step_id );
+					$is_fetch_step      = ( 'fetch' === $step_type );
+					$db_processed_items = new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
+					$has_history        = $db_processed_items->has_processed_items( $flow_step_id );
 
 					if ( $is_fetch_step && $has_history ) {
 						// Flow has processed items before - this is "no new items", not a failure
-						$job_manager->updateStatus( $job_id, JobStatus::COMPLETED_NO_ITEMS, 'complete' );
+						$db_jobs->complete_job( $job_id, JobStatus::COMPLETED_NO_ITEMS );
 						do_action(
 							'datamachine_log',
 							'info',
@@ -381,7 +410,8 @@ function datamachine_register_execution_engine() {
 								'has_history'  => $has_history,
 							)
 						);
-						$job_manager->fail(
+						do_action(
+							'datamachine_fail_job',
 							$job_id,
 							'step_execution_failure',
 							array(
@@ -395,7 +425,8 @@ function datamachine_register_execution_engine() {
 
 				return $step_success;
 			} catch ( \Throwable $e ) {
-				$job_manager->fail(
+				do_action(
+					'datamachine_fail_job',
 					$job_id,
 					'step_execution_failure',
 					array(

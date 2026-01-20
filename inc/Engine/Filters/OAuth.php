@@ -56,11 +56,11 @@ function datamachine_register_oauth_system() {
 				wp_die( esc_html( 'Insufficient permissions for OAuth operations.' ) );
 			}
 
-			$auth_service  = new \DataMachine\Services\AuthProviderService();
-			$auth_instance = $auth_service->get( $provider );
+			$auth_abilities = new \DataMachine\Abilities\AuthAbilities();
+			$auth_instance  = $auth_abilities->getProvider( $provider );
 
 			if ( ! $auth_instance ) {
-				$auth_instance = $auth_service->getForHandler( $provider );
+				$auth_instance = $auth_abilities->getProviderForHandler( $provider );
 			}
 
 			if ( $auth_instance && method_exists( $auth_instance, 'handle_oauth_callback' ) ) {

@@ -5,10 +5,10 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Bluesky;
 
+use DataMachine\Abilities\AuthAbilities;
 use DataMachine\Core\EngineData;
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
-use DataMachine\Services\AuthProviderService;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -65,8 +65,8 @@ class Bluesky extends PublishHandler {
 	 */
 	private function get_auth() {
 		if ( $this->auth === null ) {
-			$auth_service = new AuthProviderService();
-			$this->auth   = $auth_service->get( 'bluesky' );
+			$auth_abilities = new AuthAbilities();
+			$this->auth     = $auth_abilities->getProvider( 'bluesky' );
 
 			if ( $this->auth === null ) {
 				$this->log(
@@ -75,7 +75,7 @@ class Bluesky extends PublishHandler {
 					array(
 						'handler'             => 'bluesky',
 						'missing_service'     => 'bluesky',
-						'available_providers' => array_keys( $auth_service->getAll() ),
+						'available_providers' => array_keys( $auth_abilities->getAllProviders() ),
 					)
 				);
 			}

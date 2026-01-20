@@ -16,8 +16,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use DataMachine\Abilities\PipelineStepAbilities;
+use DataMachine\Abilities\StepTypeAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-use DataMachine\Services\StepTypeService;
 
 class AddPipelineStep {
 	use ToolRegistrationTrait;
@@ -27,8 +27,8 @@ class AddPipelineStep {
 	}
 
 	private static function getValidStepTypes(): array {
-		$step_type_service = new StepTypeService();
-		return array_keys( $step_type_service->getAll() );
+		$step_type_abilities = new StepTypeAbilities();
+		return array_keys( $step_type_abilities->getAllStepTypes() );
 	}
 
 	/**

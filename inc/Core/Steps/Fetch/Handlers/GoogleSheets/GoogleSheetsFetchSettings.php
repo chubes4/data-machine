@@ -12,8 +12,8 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
 
+use DataMachine\Abilities\AuthAbilities;
 use DataMachine\Core\Steps\Settings\SettingsHandler;
-use DataMachine\Services\AuthProviderService;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -116,13 +116,13 @@ class GoogleSheetsFetchSettings extends SettingsHandler {
 	 * @return bool|\WP_Error True if authenticated, WP_Error if not.
 	 */
 	public static function validate_authentication( int $user_id ) {
-		$auth_service  = new AuthProviderService();
-		$auth_provider = $auth_service->get( 'googlesheets' );
+		$auth_abilities = new AuthAbilities();
+		$auth_provider  = $auth_abilities->getProvider( 'googlesheets' );
 		if ( ! $auth_provider ) {
 			return new \WP_Error( 'googlesheets_auth_unavailable', __( 'Google Sheets authentication service not available.', 'data-machine' ) );
 		}
 
-		if ( ! $auth_service->isAuthenticated( 'googlesheets' ) ) {
+		if ( ! $auth_abilities->isHandlerAuthenticated( 'googlesheets' ) ) {
 			return new \WP_Error( 'googlesheets_not_authenticated', __( 'Google Sheets authentication required. Please authenticate in the API Keys settings.', 'data-machine' ) );
 		}
 

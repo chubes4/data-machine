@@ -17,8 +17,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use DataMachine\Abilities\FlowStepAbilities;
+use DataMachine\Abilities\HandlerAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-use DataMachine\Services\HandlerService;
 
 class ConfigureFlowSteps {
 	use ToolRegistrationTrait;
@@ -128,8 +128,8 @@ class ConfigureFlowSteps {
 
 		// Validation: target_handler_slug requires valid handler
 		if ( ! empty( $target_handler_slug ) ) {
-			$handler_service = new HandlerService();
-			if ( ! $handler_service->exists( $target_handler_slug ) ) {
+			$handler_abilities = new HandlerAbilities();
+			if ( ! $handler_abilities->handlerExists( $target_handler_slug ) ) {
 				return array(
 					'success'   => false,
 					'error'     => "Target handler '{$target_handler_slug}' not found",

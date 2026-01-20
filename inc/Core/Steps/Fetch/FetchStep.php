@@ -5,7 +5,7 @@ namespace DataMachine\Core\Steps\Fetch;
 use DataMachine\Core\DataPacket;
 use DataMachine\Core\Steps\Step;
 use DataMachine\Core\Steps\StepTypeRegistrationTrait;
-use DataMachine\Services\HandlerService;
+use DataMachine\Abilities\HandlerAbilities;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -193,8 +193,8 @@ class FetchStep extends Step {
 	 * @return object|null Handler instance or null if not found
 	 */
 	private function get_handler_object( string $handler_name ): ?object {
-		$handler_service = new HandlerService();
-		$handler_info    = $handler_service->get( $handler_name, 'fetch' );
+		$handler_abilities = new HandlerAbilities();
+		$handler_info      = $handler_abilities->getHandler( $handler_name, 'fetch' );
 
 		if ( ! $handler_info || ! isset( $handler_info['class'] ) ) {
 			return null;

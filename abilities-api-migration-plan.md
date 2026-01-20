@@ -28,21 +28,43 @@ Chat Tools ──┘
 
 ### Service Layer (To Eliminate)
 
-| File | Lines | Key Methods | Dependencies |
-|------|-------|--------------|--------------|
-| `PipelineManager.php` | 367 | `create()`, `duplicate()`, `import()`, `export()`, `delete()` | FlowManager, PipelineStepManager, PipelinesDB |
-| `FlowManager.php` | 393 | `create()`, `delete()`, `update()`, `duplicate()`, `syncStepsToFlow()` | FlowsDB, PipelinesDB, FlowStepManager |
-| `PipelineStepManager.php` | 393 | `add()`, `delete()`, `reorder()`, `updateHandler()`, `updateUserMessage()` | PipelinesDB, FlowManager, StepTypeService |
-| `FlowStepManager.php` | 393 | `add()`, `delete()`, `update()`, `configure()` | FlowsDB, FlowManager, HandlerService |
-| `JobManager.php` | 270 | `create()`, `get()`, `getForFlow()`, `getForPipeline()`, `updateStatus()`, `fail()`, `delete()` | JobsDB, ProcessedItemsManager |
-| `ProcessedItemsManager.php` | 120 | `getForJob()`, `deleteForJob()`, `clearForCriteria()` | ProcessedItemsDB |
-| `StepTypeService.php` | 105 | `get()`, `getAll()` | `datamachine_step_types` filter |
-| `AuthProviderService.php` | ~150 | `getAll()`, `get()`, `exists()`, `validate()`, `clearCache()` | `datamachine_auth_providers` filter |
-| `HandlerService.php` | ~120 | `getAll()`, `get()`, `exists()`, `validate()`, `clearCache()` | `datamachine_handlers` filter |
-| `CacheManager.php` | ~75 | `invalidate()`, `clear()` | `datamachine_cache_invalidated` filter |
-| `LogsManager.php` | ~100 | `getLogPath()`, `clear()`, `getSize()`, `cleanup()` | DATAMACHINE_LOG_DIR |
+| File | Lines | Key Methods | Dependencies | Status |
+|------|-------|--------------|--------------|--------|
+| `HandlerService.php` | ~120 | `getAll()`, `get()`, `exists()`, `validate()`, `clearCache()` | `datamachine_handlers` filter | ✅ **DELETED** (v0.11.7) |
+| `StepTypeService.php` | 105 | `get()`, `getAll()` | `datamachine_step_types` filter | ✅ **DELETED** (v0.11.7) |
+| `PipelineManager.php` | 367 | `create()`, `duplicate()`, `import()`, `export()`, `delete()` | FlowManager, PipelineStepManager, PipelinesDB | ✅ **DELETED** - PipelineAbilities is self-contained |
+| `PipelineStepManager.php` | 453 | `add()`, `delete()`, `reorder()`, `updateHandler()`, `updateUserMessage()` | PipelinesDB, FlowManager, StepTypeAbilities | ✅ **DELETED** - PipelineStepAbilities is self-contained |
+| `FlowManager.php` | 681 | `create()`, `delete()`, `update()`, `duplicate()`, `syncStepsToFlow()` | FlowsDB, PipelinesDB, FlowStepManager | ✅ **DELETED** - FlowAbilities is self-contained |
+| `JobManager.php` | 270 | `create()`, `get()`, `getForFlow()`, `getForPipeline()`, `updateStatus()`, `fail()`, `delete()` | JobsDB, ProcessedItemsManager | ⚠️ Used by JobAbilities (migration incomplete) |
+| `FlowStepManager.php` | 393 | `add()`, `delete()`, `update()`, `configure()` | FlowsDB, FlowManager, HandlerAbilities | ⚠️ Used by FlowStepAbilities (migration incomplete) |
+| `ProcessedItemsManager.php` | 120 | `getForJob()`, `deleteForJob()`, `clearForCriteria()` | ProcessedItemsDB | ⚠️ Used by ProcessedItemsAbilities (migration incomplete) |
+| `AuthProviderService.php` | ~150 | `getAll()`, `get()`, `exists()`, `validate()`, `clearCache()` | `datamachine_auth_providers` filter | ⚠️ Used by AuthAbilities (complex OAuth logic) |
+| `CacheManager.php` | ~75 | `invalidate()`, `clear()` | HandlerAbilities, StepTypeAbilities | Retained (utility) |
+| `LogsManager.php` | ~100 | `getLogPath()`, `clear()`, `getSize()`, `cleanup()` | DATAMACHINE_LOG_DIR | Retained (file operations) |
 
-**Total Service Layer:** 10 files, 2809 lines
+**Service Layer Status:** 5 of 11 files deleted (HandlerService, StepTypeService, PipelineManager, PipelineStepManager, FlowManager). 4 services still used internally by abilities (migration incomplete). 2 retained as utilities (CacheManager, LogsManager).
+
+**Architectural Note:** The Services layer was Data Machine's internal implementation of an "abilities-style" API before WordPress 6.9 shipped the Abilities API. The migration consolidates this custom implementation into the WordPress-native standard.
+
+### Abilities Self-Containment Status
+
+| Ability Class | Services Used | Status |
+|---------------|---------------|--------|
+| `FlowAbilities` | None | ✅ Self-contained |
+| `PipelineAbilities` | None | ✅ Self-contained |
+| `PipelineStepAbilities` | None | ✅ Self-contained (includes `syncStepsToFlow()`) |
+| `FileAbilities` | None | ✅ Self-contained |
+| `SettingsAbilities` | None | ✅ Self-contained |
+| `HandlerAbilities` | None | ✅ Self-contained |
+| `StepTypeAbilities` | None | ✅ Self-contained |
+| `LogAbilities` | None | ✅ Self-contained |
+| `PostQueryAbilities` | None | ✅ Self-contained |
+| `JobAbilities` | JobManager | ⚠️ Delegates to service |
+| `FlowStepAbilities` | FlowStepManager | ⚠️ Delegates to service |
+| `ProcessedItemsAbilities` | ProcessedItemsManager | ⚠️ Delegates to service |
+| `AuthAbilities` | AuthProviderService | ⚠️ Delegates to service |
+
+**Summary:** 9 of 13 ability classes (69%) are fully self-contained. 4 ability classes still delegate to services.
 
 ### REST API Layer (To Update)
 
@@ -211,128 +233,63 @@ Abilities follow action-based naming for clarity and consistency:
 | `datamachine/delete-flow` | `FlowAbilities.php` | Delete flow and unschedule actions |
 | `datamachine/duplicate-flow` | `FlowAbilities.php` | Duplicate flow, optionally cross-pipeline |
 
+### Handler & Step Type Abilities ✅ (DONE - v0.11.6)
+
+**Completed Abilities:**
+| Ability | File | Description |
+|---------|------|-------------|
+| `datamachine/get-handlers` | `HandlerAbilities.php` | List handlers with optional step_type filter |
+| `datamachine/get-handler` | `HandlerAbilities.php` | Get single handler by slug |
+| `datamachine/validate-handler` | `HandlerAbilities.php` | Validate handler slug exists |
+| `datamachine/get-handler-config-fields` | `HandlerAbilities.php` | Get config field definitions for handler |
+| `datamachine/apply-handler-defaults` | `HandlerAbilities.php` | Apply site defaults to handler config |
+| `datamachine/get-handler-site-defaults` | `HandlerAbilities.php` | Get site-wide handler defaults |
+| `datamachine/get-step-types` | `StepTypeAbilities.php` | List all registered step types |
+| `datamachine/get-step-type` | `StepTypeAbilities.php` | Get single step type by slug |
+| `datamachine/validate-step-type` | `StepTypeAbilities.php` | Validate step type slug exists |
+
+**Migration Completed:**
+- All HandlerService consumers migrated to HandlerAbilities
+- All StepTypeService consumers migrated to StepTypeAbilities
+- REST API endpoints, Chat tools, and Core classes now use abilities
+- **`HandlerService.php` DELETED** - no external consumers
+- **`StepTypeService.php` DELETED** - no external consumers
+
+**Files Updated in Final Cleanup (v0.11.7):**
+- `Api/Pipelines/PipelineSteps.php` - Replaced StepTypeService and PipelineStepManager calls with abilities
+- `Api/Flows/FlowSteps.php` - Fixed broken HandlerService reference, removed unused import
+- `Services/FlowStepManager.php` - Replaced HandlerService with HandlerAbilities
+- `Services/PipelineManager.php` - Replaced StepTypeService with StepTypeAbilities
+- `Services/PipelineStepManager.php` - Replaced StepTypeService with StepTypeAbilities
+- `Services/CacheManager.php` - Updated to use ability clearCache() methods
+- `Services/AuthProviderService.php` - Replaced HandlerService with HandlerAbilities
+- `Engine/Actions/Engine.php` - Replaced StepTypeService with StepTypeAbilities
+
 **Completed CLI Commands:**
 | Command | Ability | Features |
 |---------|---------|----------|
 | `wp datamachine flows` | `datamachine/get-flows` | `--id`, `get` subcommand, pipeline filter, `--handler` filter, `--output` mode, pagination |
 
-### Phase 2: Pipeline CRUD Operations
-**Abilities to Register:**
-```php
-// inc/Abilities/PipelineAbilities.php
+### Phase 2: Pipeline CRUD Operations ✅ (DONE)
+**Status:** COMPLETE - Abilities registered AND self-contained (no service dependency)
 
-add_action('wp_abilities_api_init', function() {
-    // Get pipelines (query single or multiple)
-    wp_register_ability('datamachine/get-pipelines', [
-        'label' => 'Get Pipelines',
-        'description' => 'Get pipelines with optional filtering',
-        'category' => 'datamachine',
-        'input_schema' => [
-            'type' => 'object',
-            'properties' => [
-                'per_page' => ['type' => 'integer', 'default' => 20],
-                'offset' => ['type' => 'integer', 'default' => 0],
-                'fields' => ['type' => 'string', 'default' => 'json'],
-                'format' => ['type' => 'string', 'enum' => ['json', 'csv']],
-            ]
-        ],
-        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::list',
-        'permission_callback' => fn() => current_user_can('manage_options'),
-        'meta' => ['show_in_rest' => true]
-    ]);
+**Completed Abilities:**
+| Ability | Description |
+|---------|-------------|
+| `datamachine/get-pipelines` | Get/query pipelines with filtering and pagination |
+| `datamachine/get-pipeline` | Retrieve a specific pipeline by ID |
+| `datamachine/create-pipeline` | Create a new data processing pipeline |
+| `datamachine/update-pipeline` | Update pipeline configuration |
+| `datamachine/delete-pipeline` | Delete pipeline and associated data |
+| `datamachine/duplicate-pipeline` | Duplicate a pipeline with all its flows |
+| `datamachine/import-pipelines` | Import pipelines from JSON or CSV |
+| `datamachine/export-pipelines` | Export pipelines to JSON or CSV |
 
-    // Get single pipeline by ID
-    wp_register_ability('datamachine/get-pipeline', [
-        'label' => 'Get Pipeline',
-        'description' => 'Retrieve a specific pipeline by ID',
-        'category' => 'datamachine',
-        'input_schema' => [
-            'type' => 'object',
-            'required' => ['pipeline_id'],
-            'properties' => [
-                'pipeline_id' => ['type' => 'integer'],
-            ]
-        ],
-        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::get',
-        'permission_callback' => fn() => current_user_can('manage_options'),
-        'meta' => ['show_in_rest' => true]
-    ]);
-
-    // Create pipeline
-    wp_register_ability('datamachine/create-pipeline', [
-        'label' => 'Create Pipeline',
-        'description' => 'Create a new data processing pipeline',
-        'category' => 'datamachine',
-        'input_schema' => [
-            'type' => 'object',
-            'properties' => [
-                'pipeline_name' => ['type' => 'string', 'description' => 'Pipeline name'],
-                'steps' => ['type' => 'array', 'description' => 'Pipeline steps (for complete mode)'],
-                'flow_config' => ['type' => 'array', 'description' => 'Flow configuration'],
-                'batch_import' => ['type' => 'boolean', 'default' => false]
-            ]
-        ],
-        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::create',
-        'permission_callback' => fn() => current_user_can('manage_options'),
-        'meta' => ['show_in_rest' => true]
-    ]);
-
-    // Update pipeline
-    wp_register_ability('datamachine/update-pipeline', [
-        'label' => 'Update Pipeline',
-        'description' => 'Update pipeline configuration',
-        'category' => 'datamachine',
-        'input_schema' => [...],
-        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::update',
-        'permission_callback' => fn() => current_user_can('manage_options'),
-        'meta' => ['show_in_rest' => true]
-    ]);
-
-    // Delete pipeline
-    wp_register_ability('datamachine/delete-pipeline', [
-        'label' => 'Delete Pipeline',
-        'description' => 'Delete pipeline and associated data',
-        'category' => 'datamachine',
-        'input_schema' => [...],
-        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::delete',
-        'permission_callback' => fn() => current_user_can('manage_options'),
-        'meta' => ['show_in_rest' => true]
-    ]);
-
-    // Duplicate pipeline
-    wp_register_ability('datamachine/duplicate-pipeline', [
-        'label' => 'Duplicate Pipeline',
-        'description' => 'Duplicate a pipeline with all its flows',
-        'category' => 'datamachine',
-        'input_schema' => [...],
-        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::duplicate',
-        'permission_callback' => fn() => current_user_can('manage_options'),
-        'meta' => ['show_in_rest' => true]
-    ]);
-
-    // Import pipelines
-    wp_register_ability('datamachine/import-pipelines', [
-        'label' => 'Import Pipelines',
-        'description' => 'Import pipelines from JSON or CSV',
-        'category' => 'datamachine',
-        'input_schema' => [...],
-        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::import',
-        'permission_callback' => fn() => current_user_can('manage_options'),
-        'meta' => ['show_in_rest' => true]
-    ]);
-
-    // Export pipelines
-    wp_register_ability('datamachine/export-pipelines', [
-        'label' => 'Export Pipelines',
-        'description' => 'Export pipelines to JSON or CSV',
-        'category' => 'datamachine',
-        'input_schema' => [...],
-        'execute_callback' => 'DataMachine\\Abilities\\PipelineAbilities::export',
-        'permission_callback' => fn() => current_user_can('manage_options'),
-        'meta' => ['show_in_rest' => true]
-    ]);
-});
-```
+**Implementation Details:**
+- `PipelineAbilities.php` contains 8 self-contained abilities with business logic
+- REST API endpoints delegate to abilities via `wp_get_ability()`
+- Chat tools call abilities directly
+- `PipelineManager.php` potentially unused (verify before deletion)
 
 ### Phase 3: Flow CRUD Operations ✅ (DONE)
 **Status:** COMPLETE
@@ -354,74 +311,121 @@ add_action('wp_abilities_api_init', function() {
 
 **Note:** `schedule-flow` and `unschedule-flow` abilities are deferred to a future phase as scheduling is currently handled inline within `create-flow` and `update-flow` via the `scheduling_config` parameter.
 
-### Phase 4: Pipeline Steps Operations
-**Abilities to Register:**
-```php
-wp_register_ability('datamachine/get-steps', [...]);      // List steps for pipeline
-wp_register_ability('datamachine/get-step', [...]);        // Get single step
-wp_register_ability('datamachine/add-step', [...]);        // Add step to pipeline
-wp_register_ability('datamachine/update-step', [...]);     // Update step config
-wp_register_ability('datamachine/delete-step', [...]);     // Delete step
-wp_register_ability('datamachine/reorder-steps', [...]);   // Reorder steps
-```
+### Phase 4: Pipeline Steps Operations ✅ (DONE)
+**Status:** COMPLETE - Abilities registered AND self-contained (no service dependency)
 
-### Phase 5: Flow Steps Operations
-**Abilities to Register:**
-```php
-wp_register_ability('datamachine/get-flow-steps', [...]);      // List steps for flow
-wp_register_ability('datamachine/get-flow-step', [...]);        // Get single flow step
-wp_register_ability('datamachine/update-flow-step', [...]);     // Update flow step config
-wp_register_ability('datamachine/configure-flow-steps', [...]); // Bulk configure flow steps
-```
+**Completed Abilities:**
+| Ability | Description |
+|---------|-------------|
+| `datamachine/get-pipeline-steps` | List steps for a pipeline |
+| `datamachine/get-pipeline-step` | Get single pipeline step |
+| `datamachine/add-pipeline-step` | Add step to pipeline |
+| `datamachine/update-pipeline-step` | Update pipeline step config |
+| `datamachine/delete-pipeline-step` | Delete pipeline step |
+| `datamachine/reorder-pipeline-steps` | Reorder pipeline steps |
 
-### Phase 6: Execution Operations
-**Abilities to Register:**
-```php
-wp_register_ability('datamachine/run-flow', [
-    'label' => 'Run Flow',
-    'description' => 'Execute flow immediately or schedule for later',
-    'category' => 'execution',
-    'input_schema' => [
-        'type' => 'object',
-        'properties' => [
-            'flow_id' => ['type' => 'integer', 'required' => true],
-            'count' => ['type' => 'integer', 'default' => 1],
-            'timestamp' => ['type' => 'integer']
-        ]
-    ],
-    'execute_callback' => 'DataMachine\\Engine\\Abilities\\JobAbilities::runFlow',
-    'permission_callback' => fn() => current_user_can('manage_options'),
-    'meta' => ['show_in_rest' => true]
-]);
+**Implementation Details:**
+- All PipelineStepManager business logic inlined into `PipelineStepAbilities.php`
+- Added private `syncStepsToFlow()` method for flow step synchronization
+- `ImportExport.php` updated to use `datamachine/add-pipeline-step` ability
+- **`PipelineStepManager.php` DELETED** (~453 lines)
 
-wp_register_ability('datamachine/get-jobs', [...]);   // List jobs with filtering
-wp_register_ability('datamachine/get-job', [...]);     // Get single job
-wp_register_ability('datamachine/cancel-job', [...]);  // Cancel running job
-wp_register_ability('datamachine/retry-job', [...]);   // Retry failed job
-wp_register_ability('datamachine/delete-jobs', [...]); // Delete jobs
-```
+### Phase 5: Flow Steps Operations ⚠️ (ABILITIES REGISTERED)
+**Status:** Abilities exist but `FlowStepManager` still used internally
 
-### Phase 7: File Management
-**Abilities to Register:**
-```php
-wp_register_ability('datamachine/get-files', [...]);    // List files for a flow
-wp_register_ability('datamachine/get-file', [...]);      // Get single file metadata
-wp_register_ability('datamachine/upload-file', [...]);   // Upload new file
-wp_register_ability('datamachine/delete-file', [...]);   // Delete file
-wp_register_ability('datamachine/download-file', [...]); // Download file content
-```
+**Registered Abilities:**
+| Ability | Description |
+|---------|-------------|
+| `datamachine/get-flow-steps` | List steps for a flow |
+| `datamachine/get-flow-step` | Get single flow step |
+| `datamachine/update-flow-step` | Update flow step config |
+| `datamachine/configure-flow-steps` | Bulk configure flow steps |
 
-### Phase 8: Settings & Auth
-**Abilities to Register:**
-```php
-wp_register_ability('datamachine/get-settings', [...]);          // Get current settings
-wp_register_ability('datamachine/update-settings', [...]);       // Update settings
-wp_register_ability('datamachine/authenticate-handler', [...]); // Initiate OAuth flow
-wp_register_ability('datamachine/disconnect-handler', [...]);   // Remove auth credentials
-wp_register_ability('datamachine/get-auth-status', [...]);      // Check handler auth status
-wp_register_ability('datamachine/set-handler-defaults', [...]); // Set handler default config
-wp_register_ability('datamachine/get-handler-defaults', [...]); // Get handler default config
-```
+**Remaining Work:**
+- Migrate `FlowStepManager` business logic into `FlowStepAbilities`
+- Update abilities to be self-contained (no service delegation)
+- Verify and delete `FlowStepManager.php`
+
+### Phase 6: Execution Operations ⚠️ (ABILITIES REGISTERED)
+**Status:** Abilities exist but `JobManager` still used internally
+
+**Registered Abilities:**
+| Ability | Description |
+|---------|-------------|
+| `datamachine/run-flow` | Execute flow immediately or schedule for later |
+| `datamachine/get-jobs` | List jobs with filtering |
+| `datamachine/get-job` | Get single job by ID |
+| `datamachine/delete-jobs` | Delete jobs |
+| `datamachine/get-flow-health` | Get flow execution health metrics |
+| `datamachine/get-problem-flows` | Get flows exceeding failure threshold |
+
+**Remaining Work:**
+- Migrate `JobManager` business logic into `JobAbilities`
+- Update abilities to be self-contained (no service delegation)
+- Verify and delete `JobManager.php`
+
+### Phase 7: File Management ✅ (DONE)
+**Status:** COMPLETE - Abilities registered AND self-contained (no service dependency)
+
+**Completed Abilities:**
+| Ability | Description |
+|---------|-------------|
+| `datamachine/list-files` | List files for a flow |
+| `datamachine/get-file` | Get single file metadata |
+| `datamachine/upload-file` | Upload new file |
+| `datamachine/delete-file` | Delete file |
+| `datamachine/cleanup-files` | Clean up orphaned/old files |
+
+**Implementation Details:**
+- `FileAbilities.php` contains 5 self-contained abilities
+- Direct FilesRepository access (no intermediate service layer)
+- REST API endpoints delegate to abilities
+
+### Phase 8: Processed Items ⚠️ (ABILITIES REGISTERED)
+**Status:** Abilities exist but `ProcessedItemsManager` still used internally
+
+**Registered Abilities:**
+| Ability | Description |
+|---------|-------------|
+| `datamachine/clear-processed-items` | Clear processed item history |
+| `datamachine/check-processed-item` | Check if item was already processed |
+| `datamachine/has-processed-history` | Check if flow has processing history |
+
+**Remaining Work:**
+- Migrate `ProcessedItemsManager` business logic into `ProcessedItemsAbilities`
+- Update abilities to be self-contained (no service delegation)
+- Verify and delete `ProcessedItemsManager.php`
+
+---
+
+### Phase 9: Settings & Auth ⚠️ (PARTIAL)
+**Status:** HandlerAbilities/StepTypeAbilities complete and self-contained; AuthAbilities still uses AuthProviderService
+
+**Completed Abilities (Self-Contained):**
+| Ability | File | Description |
+|---------|------|-------------|
+| `datamachine/get-settings` | SettingsAbilities | Get current settings |
+| `datamachine/update-settings` | SettingsAbilities | Update settings |
+| `datamachine/get-scheduling-intervals` | SettingsAbilities | Get available scheduling intervals |
+| `datamachine/get-tool-config` | SettingsAbilities | Get tool configuration |
+| `datamachine/get-handler-defaults` | SettingsAbilities | Get handler default config |
+| `datamachine/update-handler-defaults` | SettingsAbilities | Set handler default config |
+| `datamachine/get-handlers` | HandlerAbilities | List handlers with filtering |
+| `datamachine/get-handler` | HandlerAbilities | Get single handler |
+| `datamachine/validate-handler` | HandlerAbilities | Validate handler exists |
+| `datamachine/get-handler-config-fields` | HandlerAbilities | Get handler config fields |
+| `datamachine/apply-handler-defaults` | HandlerAbilities | Apply site defaults to config |
+| `datamachine/get-handler-site-defaults` | HandlerAbilities | Get site-wide handler defaults |
+
+**Abilities With Service Dependency:**
+| Ability | File | Service Used | Description |
+|---------|------|--------------|-------------|
+| `datamachine/get-auth-status` | AuthAbilities | AuthProviderService | Check handler auth status |
+| `datamachine/disconnect-auth` | AuthAbilities | AuthProviderService | Remove auth credentials |
+| `datamachine/save-auth-config` | AuthAbilities | AuthProviderService | Save authentication config |
+
+**Remaining Work:**
+- Decide: migrate AuthProviderService logic into AuthAbilities OR retain service (complex OAuth flows)
 
 ---
 
@@ -844,17 +848,17 @@ class FlowsCommandTest extends \WP_UnitTestCase {
 
 ---
 
-### Phase 2: Pipeline CRUD Abilities
-**Tasks:**
-1. Create `inc/Abilities/PipelineAbilities.php`
-2. Register 8 abilities: `get-pipelines`, `get-pipeline`, `create-pipeline`, `update-pipeline`, `delete-pipeline`, `duplicate-pipeline`, `import-pipelines`, `export-pipelines`
-3. Migrate business logic from `PipelineManager.php` (367 lines)
-4. Create `inc/Cli/Commands/PipelinesCommand.php`
-5. Update `inc/Api/Pipelines/Pipelines.php` endpoints to delegate
-6. Delete `inc/Services/PipelineManager.php`
-7. Write `tests/Unit/Abilities/PipelineAbilitiesTest.php`
+### Phase 2: Pipeline CRUD Abilities ✅ (DONE)
+**Completed:**
+1. ✅ Created `inc/Abilities/PipelineAbilities.php`
+2. ✅ Registered 8 abilities (all self-contained)
+3. ✅ Business logic in abilities (not delegating to PipelineManager)
+4. ⏳ Create `inc/Cli/Commands/PipelinesCommand.php` (future)
+5. ✅ REST API endpoints delegate to abilities
+6. ✅ **`PipelineManager.php` DELETED** (~367 lines)
+7. ✅ Tests exist in `tests/Unit/Abilities/PipelineAbilitiesTest.php`
 
-**Outcome:** Service layer eliminated. REST, CLI, and Chat all call abilities.
+**Outcome:** Abilities self-contained. Service eliminated.
 
 ---
 
@@ -866,85 +870,111 @@ class FlowsCommandTest extends \WP_UnitTestCase {
 4. Updated `inc/Api/Flows/Flows.php` endpoints to delegate to abilities
 5. Updated chat tools (CreateFlow, DeleteFlow, UpdateFlow, CopyFlow) to call abilities
 6. Added 18 new tests to `tests/Unit/Abilities/FlowAbilitiesTest.php`
+7. ✅ **`FlowManager.php` DELETED** (~681 lines)
+8. ✅ All test files updated to use `datamachine/create-flow` ability
 
-**Note:** `FlowManager.php` retained for now as some methods are still in use by other components. Full deletion deferred to later phase. Scheduling abilities (`schedule-flow`, `unschedule-flow`) deferred as scheduling is handled via `scheduling_config` parameter in create/update.
-
----
-
-### Phase 4: Pipeline Steps Abilities
-**Tasks:**
-1. Create `inc/Abilities/PipelineStepAbilities.php`
-2. Register 6 abilities: `get-steps`, `get-step`, `add-step`, `update-step`, `delete-step`, `reorder-steps`
-3. Migrate business logic from `PipelineStepManager.php` (393 lines)
-4. Update `inc/Api/Pipelines/PipelineSteps.php` endpoints
-5. Delete `inc/Services/PipelineStepManager.php`
-6. Write `tests/Unit/Abilities/PipelineStepAbilitiesTest.php`
+**Note:** Scheduling abilities (`schedule-flow`, `unschedule-flow`) deferred as scheduling is handled via `scheduling_config` parameter in create/update.
 
 ---
 
-### Phase 5: Flow Steps Abilities
-**Tasks:**
-1. Create `inc/Abilities/FlowStepAbilities.php`
-2. Register 5 abilities: `get-flow-steps`, `get-flow-step`, `update-flow-step`, `configure-flow-steps`
-3. Migrate business logic from `FlowStepManager.php` (393 lines)
-4. Update `inc/Api/Flows/FlowSteps.php` endpoints
-5. Delete `inc/Services/FlowStepManager.php`
-6. Write `tests/Unit/Abilities/FlowStepAbilitiesTest.php`
+### Phase 4: Pipeline Steps Abilities ✅ (DONE)
+**Completed:**
+1. ✅ Created `inc/Abilities/PipelineStepAbilities.php`
+2. ✅ Registered 6 abilities (all self-contained)
+3. ✅ Business logic inlined from `PipelineStepManager` into abilities
+4. ✅ Added private `syncStepsToFlow()` method for flow synchronization
+5. ✅ REST API endpoints delegate to abilities
+6. ✅ **`PipelineStepManager.php` DELETED** (~453 lines)
+7. ✅ Tests exist in `tests/Unit/Abilities/PipelineStepAbilitiesTest.php`
+
+**Outcome:** Abilities self-contained. Service eliminated.
 
 ---
 
-### Phase 6: Job Execution Abilities
-**Tasks:**
-1. Create `inc/Abilities/JobAbilities.php`
-2. Register 8 abilities: `run-flow`, `get-jobs`, `get-job`, `cancel-job`, `retry-job`, `delete-jobs`, `get-job-stats`
-3. Migrate business logic from `JobManager.php` (270 lines)
-4. Create `inc/Cli/Commands/JobsCommand.php`
-5. Update `inc/Api/Execute.php` endpoints
-6. Update `inc/Api/Jobs.php` endpoints
-7. Delete `inc/Services/JobManager.php`
-8. Write `tests/Unit/Abilities/JobAbilitiesTest.php`
+### Phase 5: Flow Steps Abilities ⚠️ (ABILITIES REGISTERED)
+**Completed:**
+1. ✅ Created `inc/Abilities/FlowStepAbilities.php`
+2. ✅ Registered 4 abilities
+3. ⚠️ Abilities delegate to `FlowStepManager` (migration incomplete)
+4. ✅ REST API endpoints delegate to abilities
+5. ❌ Cannot delete `FlowStepManager.php` yet (abilities depend on it)
+6. ✅ Tests exist in `tests/Unit/Abilities/FlowStepAbilitiesTest.php`
+
+**Remaining:** Migrate FlowStepManager logic into abilities, then delete service.
 
 ---
 
-### Phase 7: File Management Abilities
-**Tasks:**
-1. Create `inc/Abilities/FileAbilities.php`
-2. Register 5 abilities: `get-files`, `get-file`, `upload-file`, `delete-file`, `download-file`
-3. Update `inc/Api/Files.php` endpoints
-4. Write `tests/Unit/Abilities/FileAbilitiesTest.php`
+### Phase 6: Job Execution Abilities ⚠️ (ABILITIES REGISTERED)
+**Completed:**
+1. ✅ Created `inc/Abilities/JobAbilities.php`
+2. ✅ Registered 6 abilities (run-flow, get-jobs, get-job, delete-jobs, get-flow-health, get-problem-flows)
+3. ⚠️ Abilities delegate to `JobManager` (migration incomplete)
+4. ⏳ Create `inc/Cli/Commands/JobsCommand.php` (future)
+5. ✅ REST API endpoints delegate to abilities
+6. ❌ Cannot delete `JobManager.php` yet (abilities depend on it)
+7. ✅ Tests exist in `tests/Unit/Abilities/JobAbilitiesTest.php`
+
+**Remaining:** Migrate JobManager logic into abilities, then delete service.
 
 ---
 
-### Phase 8: Processed Items Abilities
-**Tasks:**
-1. Create `inc/Abilities/ProcessedItemsAbilities.php`
-2. Register 3 abilities: `get-processed-items`, `clear-processed-items`, `get-processed-stats`
-3. Update `inc/Api/ProcessedItems.php` endpoints
-4. Delete `inc/Services/ProcessedItemsManager.php`
-5. Write `tests/Unit/Abilities/ProcessedItemsAbilitiesTest.php`
+### Phase 7: File Management Abilities ✅ (DONE)
+**Completed:**
+1. ✅ Created `inc/Abilities/FileAbilities.php`
+2. ✅ Registered 5 abilities (list-files, get-file, upload-file, delete-file, cleanup-files)
+3. ✅ Abilities are self-contained (direct FilesRepository access)
+4. ✅ REST API endpoints delegate to abilities
+5. ✅ Tests exist in `tests/Unit/Abilities/FileAbilitiesTest.php`
+
+**Outcome:** No service layer for files - abilities access repository directly.
 
 ---
 
-### Phase 9: Settings & Auth Abilities
-**Tasks:**
-1. Create `inc/Abilities/SettingsAbilities.php`
-2. Create `inc/Abilities/AuthAbilities.php`
-3. Register 9 abilities
-4. Update `inc/Api/Settings.php` and `inc/Api/Auth.php` endpoints
-5. Delete `inc/Services/CacheManager.php`, `inc/Services/LogsManager.php`
-6. Delete `inc/Services/StepTypeService.php`, `inc/Services/HandlerService.php`, `inc/Services/AuthProviderService.php`
-7. Write tests
+### Phase 8: Processed Items Abilities ⚠️ (ABILITIES REGISTERED)
+**Completed:**
+1. ✅ Created `inc/Abilities/ProcessedItemsAbilities.php`
+2. ✅ Registered 3 abilities (clear-processed-items, check-processed-item, has-processed-history)
+3. ⚠️ Abilities delegate to `ProcessedItemsManager` (migration incomplete)
+4. ✅ REST API endpoints delegate to abilities
+5. ❌ Cannot delete `ProcessedItemsManager.php` yet (abilities depend on it)
+6. ✅ Tests exist in `tests/Unit/Abilities/ProcessedItemsAbilitiesTest.php`
+
+**Remaining:** Migrate ProcessedItemsManager logic into abilities, then delete service.
 
 ---
 
-### Phase 10: Chat Tools Update
-**Tasks:**
-1. Update existing `inc/Api/Chat/Tools/` to call abilities via `wp_get_ability()`
-2. Remove duplicated business logic from tools
-3. Tools remain as thin wrappers for AI agent interface
-4. **DO NOT create separate `-tool` abilities**
-5. **DO NOT delete `inc/Api/Chat/Tools/` directory** - tools still needed for AI agent schema
-6. Write integration tests for chat tools calling abilities
+### Phase 9: Settings & Auth Abilities ⚠️ (PARTIAL - v0.11.7)
+**Completed:**
+1. ✅ `inc/Abilities/SettingsAbilities.php` - 6 abilities (self-contained)
+2. ✅ `inc/Abilities/HandlerAbilities.php` - 6 abilities (self-contained, replaces HandlerService)
+3. ✅ `inc/Abilities/StepTypeAbilities.php` - 3 abilities (self-contained, replaces StepTypeService)
+4. ✅ **`inc/Services/HandlerService.php` DELETED** (v0.11.7)
+5. ✅ **`inc/Services/StepTypeService.php` DELETED** (v0.11.7)
+6. ⚠️ `inc/Abilities/AuthAbilities.php` - 3 abilities (delegates to AuthProviderService)
+7. ⚠️ `inc/Services/AuthProviderService.php` retained (complex OAuth1/OAuth2 flows)
+
+**Remaining Decision:** Migrate AuthProviderService into AuthAbilities or retain as internal service.
+
+---
+
+### Phase 10: Chat Tools Update ✅ (DONE)
+**Status:** COMPLETE - All 29 chat tools call abilities (not services directly)
+
+**Implementation Details:**
+- All chat tools updated to call abilities via `wp_get_ability()`
+- Tools are thin wrappers that validate input and format responses
+- Tools don't need changes when ability internals are migrated
+- Business logic centralized in abilities, not duplicated in tools
+
+**Tools calling abilities:**
+- CreateFlow, DeleteFlow, UpdateFlow, CopyFlow → FlowAbilities
+- CreatePipeline, DeletePipeline → PipelineAbilities
+- AddPipelineStep, DeletePipelineStep, ReorderPipelineSteps, ConfigurePipelineStep → PipelineStepAbilities
+- ConfigureFlowSteps → FlowStepAbilities
+- RunFlow, GetFlowHealth, GetProblemFlows → JobAbilities
+- SetHandlerDefaults, GetHandlerDefaults → SettingsAbilities/HandlerAbilities
+- ReadLogs, ManageLogs → LogAbilities
+- ApiQuery → Multiple abilities (read-only discovery)
 
 ---
 
@@ -979,29 +1009,62 @@ class FlowsCommandTest extends \WP_UnitTestCase {
 
 ## Timeline Summary
 
-| Phase | Status | Abilities | CLI Commands | Files Modified |
-|-------|--------|-----------|--------------|----------------|
-| 1. Foundation ✅ | DONE | 6 | 1 | 3 ability files + 1 CLI + 3 tests |
-| 2. Pipeline CRUD | Planned | 8 | 1 | 1 ability + 1 CLI + 1 test |
-| 3. Flow CRUD ✅ | **DONE** | 5 | (extend existing) | FlowAbilities (extend) + 18 tests + 4 chat tools |
-| 4. Pipeline Steps | Planned | 6 | 0 | 1 ability + 1 test |
-| 5. Flow Steps | Planned | 5 | 0 | 1 ability + 1 test |
-| 6. Job Execution | Planned | 7 | 1 | 1 ability + 1 CLI + 1 test |
-| 7. File Mgmt | Planned | 5 | 0 | 1 ability + 1 test |
-| 8. Processed Items | Planned | 3 | 0 | 1 ability + 1 test |
-| 9. Settings & Auth | Planned | 9 | 0 | 2 abilities + 2 tests |
-| 10. Chat Tools Update | Planned | 0 | 0 | ~16 tool files remaining |
-| 11. Extension Notify | Planned | 0 | 0 | Documentation |
-| 12. Testing | Planned | 0 | 0 | Integration tests |
-| 13. Documentation | Planned | 0 | 0 | CLAUDE.md, docs/ |
-| **TOTAL** | | **~56** | **~4** | |
+| Phase | Abilities Status | Service Status | Notes |
+|-------|------------------|----------------|-------|
+| 1. Foundation ✅ | 6 registered | N/A | CLI command exists |
+| 2. Pipeline CRUD ✅ | 8 registered | **PipelineManager DELETED** | Self-contained abilities |
+| 3. Flow CRUD ✅ | 5 registered | **FlowManager DELETED** | Self-contained abilities |
+| 4. Pipeline Steps ✅ | 6 registered | **PipelineStepManager DELETED** | Self-contained abilities |
+| 5. Flow Steps ⚠️ | 4 registered | FlowStepManager **in use** | Migration incomplete |
+| 6. Job Execution ⚠️ | 6 registered | JobManager **in use** | Migration incomplete |
+| 7. File Mgmt ✅ | 5 registered | No service needed | Self-contained abilities |
+| 8. Processed Items ⚠️ | 3 registered | ProcessedItemsManager **in use** | Migration incomplete |
+| 9. Settings & Auth ⚠️ | 15 registered | AuthProviderService **in use** | Partial - Handler/StepType done |
+| 10. Chat Tools ✅ | N/A | Tools call abilities | All 29 tools migrated |
+| Handler/StepType ✅ | 9 registered | **Both DELETED** | Full migration complete |
+| **TOTALS** | **49 abilities** | **5 of 11 deleted** | |
 
-**Net Impact:**
-- Delete: ~10 files (entire `inc/Services/`)
-- Create: ~12 ability files + ~4 CLI commands + ~12 test files
-- Modify: ~41 REST API files + ~20 Chat tools
-- Abilities registered: ~56 abilities
-- CLI commands: 4+ commands wrapping abilities
+### Migration Progress Summary
+
+| Metric | Count | Percentage |
+|--------|-------|------------|
+| Total abilities registered | 49 | 100% |
+| Self-contained ability classes | 9 of 13 | 69% |
+| Services eliminated | 5 of 11 | 45% |
+| Services requiring migration | 4 | 36% |
+| Utilities retained | 2 | 18% |
+| Chat tools calling abilities | 29 of 29 | 100% |
+
+### True Migration Remaining
+
+To achieve the target architecture (eliminate service layer), the following work remains:
+
+**Services Already Deleted:**
+- ✅ `HandlerService.php` - Replaced by HandlerAbilities
+- ✅ `StepTypeService.php` - Replaced by StepTypeAbilities
+- ✅ `PipelineManager.php` - Replaced by PipelineAbilities
+- ✅ `PipelineStepManager.php` - Replaced by PipelineStepAbilities
+- ✅ `FlowManager.php` - Replaced by FlowAbilities
+
+**Migrate Business Logic (4 remaining):**
+- `FlowStepManager.php` → Migrate logic into `FlowStepAbilities.php`
+- `JobManager.php` → Migrate logic into `JobAbilities.php`
+- `ProcessedItemsManager.php` → Migrate logic into `ProcessedItemsAbilities.php`
+- `AuthProviderService.php` → Migrate OAuth1/OAuth2 logic into `AuthAbilities.php`
+
+**Utilities Retained (Not Migrated):**
+- `CacheManager.php` - Cross-cutting concern, not business logic
+- `LogsManager.php` - File operations, LogAbilities delegates appropriately
+
+**Current Progress:**
+- Deleted: 5 files from `inc/Services/` (HandlerService, StepTypeService, PipelineManager, PipelineStepManager, FlowManager)
+- Remaining: 4 services to migrate (FlowStepManager, JobManager, ProcessedItemsManager, AuthProviderService)
+- Utilities retained: 2 (CacheManager, LogsManager)
+
+**Net Impact (When Complete):**
+- Delete: 9 files from `inc/Services/` (retain 2 utilities)
+- Abilities: 49 registered (all with proper callbacks)
+- Architecture: CLI, REST, and Chat all call abilities as universal primitive
 
 ---
 

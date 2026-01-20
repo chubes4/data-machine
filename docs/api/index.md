@@ -10,7 +10,7 @@ Complete REST API reference for Data Machine
 
 **Permissions**: Most endpoints require `manage_options` capability
 
-**Implementation**: All endpoints are implemented in `data-machine/inc/Api/` using the services layer for direct method calls, with automatic registration via `rest_api_init`
+**Implementation**: All endpoints are implemented in `data-machine/inc/Api/`. The project is migrating business logic to the WordPress 6.9 Abilities API; REST handlers should prefer calling abilities (via `wp_get_ability()` / `wp_ability_execute`) where available. Service managers may still be instantiated as a transitional implementation during migration.
 
 ## Endpoint Categories
 
@@ -86,6 +86,11 @@ register_rest_route('datamachine/v1', '/pipelines', [
 
 // Services layer usage in endpoint callbacks
 public function create_pipeline($request) {
+    // Prefer abilities when available:
+    // $ability = wp_get_ability('datamachine/create-pipeline');
+    // return $ability->execute(['pipeline_name' => $request['name'], 'options' => $request['options'] ?? []]);
+
+    // Transitional: service manager usage supported until full migration completes
     $pipeline_manager = new \DataMachine\Services\PipelineManager();
     return $pipeline_manager->create($request['name'], $request['options'] ?? []);
 }

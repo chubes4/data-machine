@@ -11,9 +11,9 @@
 
 namespace DataMachine\Api;
 
-use DataMachine\Services\AuthProviderService;
-use DataMachine\Services\HandlerService;
-use DataMachine\Services\StepTypeService;
+use DataMachine\Abilities\AuthAbilities;
+use DataMachine\Abilities\HandlerAbilities;
+use DataMachine\Abilities\StepTypeAbilities;
 use WP_REST_Server;
 use WP_REST_Request;
 
@@ -52,7 +52,7 @@ class Handlers {
 							if ( empty( $param ) ) {
 								return true;
 							}
-							return ( new StepTypeService() )->exists( $param );
+							return ( new StepTypeAbilities() )->stepTypeExists( $param );
 						},
 						'description'       => __( 'Filter handlers by step type (supports custom step types)', 'data-machine' ),
 					),
@@ -93,18 +93,18 @@ class Handlers {
 		// Get optional step_type filter
 		$step_type = $request->get_param( 'step_type' );
 
-		// Get handlers via cached service
+		// Get handlers via abilities
 		// If step_type provided, returns only handlers for that type
 		// If null, returns all handlers across all types
-		$handlers = ( new HandlerService() )->getAll( $step_type );
+		$handlers = ( new HandlerAbilities() )->getAllHandlers( $step_type );
 
-		// Get auth providers via cached service
-		$auth_service = new AuthProviderService();
+		// Get auth providers via cached abilities
+		$auth_abilities = new AuthAbilities();
 
 		// Enrich handler data with auth_type, auth_fields, and authentication status
 		foreach ( $handlers as $slug => &$handler ) {
 			$auth_key      = $handler['auth_provider_key'] ?? $slug;
-			$auth_instance = $auth_service->get( $auth_key );
+			$auth_instance = $auth_abilities->getProvider( $auth_key );
 			if ( $handler['requires_auth'] && $auth_instance ) {
 				$auth_type            = self::detect_auth_type( $auth_instance );
 				$handler['auth_type'] = $auth_type;
@@ -173,9 +173,9 @@ class Handlers {
 	public static function handle_get_handler_detail( $request ) {
 		$handler_slug = $request->get_param( 'handler_slug' );
 
-		// Get handler info via cached service
-		$handler_service = new HandlerService();
-		$handler_info    = $handler_service->get( $handler_slug );
+		// Get handler info via abilities
+		$handler_abilities = new HandlerAbilities();
+		$handler_info      = $handler_abilities->getHandler( $handler_slug );
 
 		if ( ! $handler_info ) {
 			return new \WP_Error(

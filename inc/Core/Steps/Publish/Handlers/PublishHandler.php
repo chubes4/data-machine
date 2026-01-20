@@ -14,9 +14,9 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers;
 
+use DataMachine\Abilities\AuthAbilities;
 use DataMachine\Core\EngineData;
 use DataMachine\Core\HttpClient;
-use DataMachine\Services\AuthProviderService;
 use DataMachine\Core\WordPress\PostTrackingTrait;
 
 defined( 'ABSPATH' ) || exit;
@@ -183,8 +183,8 @@ abstract class PublishHandler {
 	 * @return object|null Provider instance or null
 	 */
 	protected function getAuthProvider( string $provider_key ): ?object {
-		$auth_service = new AuthProviderService();
-		return $auth_service->get( $provider_key );
+		$auth_abilities = new AuthAbilities();
+		return $auth_abilities->getProvider( $provider_key );
 	}
 
 	/**

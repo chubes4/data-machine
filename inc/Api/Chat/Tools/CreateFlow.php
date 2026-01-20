@@ -14,10 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use DataMachine\Abilities\HandlerAbilities;
 use DataMachine\Core\Database\Flows\Flows as FlowsDB;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-use DataMachine\Services\FlowStepManager;
-use DataMachine\Services\HandlerService;
 
 class CreateFlow {
 	use ToolRegistrationTrait;
@@ -183,18 +182,29 @@ class CreateFlow {
 	 * @return array{applied: array, errors: array}
 	 */
 	private function applyStepConfigs( int $flow_id, array $step_configs ): array {
-		$flow_step_manager = new FlowStepManager();
-		$handler_service   = new HandlerService();
-		$applied           = array();
-		$errors            = array();
+		$handler_abilities   = new HandlerAbilities();
+		$update_step_ability = wp_get_ability( 'datamachine/update-flow-step' );
+		$applied             = array();
+		$errors              = array();
+
+		if ( ! $update_step_ability ) {
+			return array(
+				'applied' => array(),
+				'errors'  => array(
+					array(
+						'pipeline_step_id' => 'all',
+						'error'            => 'Update flow step ability not available',
+					),
+				),
+			);
+		}
 
 		foreach ( $step_configs as $pipeline_step_id => $config ) {
 			$flow_step_id = $pipeline_step_id . '_' . $flow_id;
 			$step_applied = false;
 
-			// Apply handler_slug + handler_config if provided
 			if ( ! empty( $config['handler_slug'] ) ) {
-				$validation = $handler_service->validate( $config['handler_slug'] );
+				$validation = $handler_abilities->validateHandler( $config['handler_slug'] );
 				if ( ! $validation['valid'] ) {
 					$errors[] = array(
 						'pipeline_step_id' => $pipeline_step_id,
@@ -203,34 +213,36 @@ class CreateFlow {
 					continue;
 				}
 
-				$handler_config = $config['handler_config'] ?? array();
-				$success        = $flow_step_manager->updateHandler(
-					$flow_step_id,
-					$config['handler_slug'],
-					$handler_config
+				$result = $update_step_ability->execute(
+					array(
+						'flow_step_id'   => $flow_step_id,
+						'handler_slug'   => $config['handler_slug'],
+						'handler_config' => $config['handler_config'] ?? array(),
+					)
 				);
 
-				if ( ! $success ) {
+				if ( ! $result['success'] ) {
 					$errors[] = array(
 						'pipeline_step_id' => $pipeline_step_id,
-						'error'            => 'Failed to update handler',
+						'error'            => $result['error'] ?? 'Failed to update handler',
 					);
 					continue;
 				}
 				$step_applied = true;
 			}
 
-			// Apply user_message if provided
 			if ( ! empty( $config['user_message'] ) ) {
-				$success = $flow_step_manager->updateUserMessage(
-					$flow_step_id,
-					$config['user_message']
+				$result = $update_step_ability->execute(
+					array(
+						'flow_step_id' => $flow_step_id,
+						'user_message' => $config['user_message'],
+					)
 				);
 
-				if ( ! $success ) {
+				if ( ! $result['success'] ) {
 					$errors[] = array(
 						'pipeline_step_id' => $pipeline_step_id,
-						'error'            => 'Failed to update user_message',
+						'error'            => $result['error'] ?? 'Failed to update user_message',
 					);
 					continue;
 				}

@@ -26,13 +26,13 @@ class ListFlowsTest extends WP_UnitTestCase {
 		$user_id = self::factory()->user->create(['role' => 'administrator']);
 		wp_set_current_user($user_id);
 
-		$pipeline_manager = new \DataMachine\Services\PipelineManager();
-		$flow_manager = new \DataMachine\Services\FlowManager();
+		$pipeline_ability = wp_get_ability( 'datamachine/create-pipeline' );
+		$flow_ability     = wp_get_ability( 'datamachine/create-flow' );
 
-		$pipeline = $pipeline_manager->create('Test Pipeline for Chat');
+		$pipeline = $pipeline_ability->execute( [ 'pipeline_name' => 'Test Pipeline for Chat' ] );
 		$this->test_pipeline_id = $pipeline['pipeline_id'];
 
-		$flow = $flow_manager->create($this->test_pipeline_id, 'Test Flow for Chat');
+		$flow = $flow_ability->execute( [ 'pipeline_id' => $this->test_pipeline_id, 'flow_name' => 'Test Flow for Chat' ] );
 		$this->test_flow_id = $flow['flow_id'];
 	}
 

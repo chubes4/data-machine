@@ -17,7 +17,7 @@
 
 namespace DataMachine\Core\Steps\AI\Directives;
 
-use DataMachine\Services\HandlerService;
+use DataMachine\Abilities\HandlerAbilities;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -126,11 +126,11 @@ class PipelineSystemPromptDirective implements \DataMachine\Engine\AI\Directives
 				$is_current       = ( $current_pipeline_step_id && $step_pipeline_step_id === $current_pipeline_step_id );
 				$workflow_parts[] = $is_current ? 'AI (YOU ARE HERE)' : 'AI';
 			} elseif ( $handler_slug ) {
-				// Get handler label via cached service
-				$handler_service  = new HandlerService();
-				$handler_info     = $handler_service->get( $handler_slug, $step_type );
-				$label            = strtoupper( $handler_info['label'] ?? 'UNKNOWN' );
-				$workflow_parts[] = $label . ' ' . strtoupper( $step_type );
+				// Get handler label via abilities
+				$handler_abilities = new HandlerAbilities();
+				$handler_info      = $handler_abilities->getHandler( $handler_slug, $step_type );
+				$label             = strtoupper( $handler_info['label'] ?? 'UNKNOWN' );
+				$workflow_parts[]  = $label . ' ' . strtoupper( $step_type );
 			} else {
 				$workflow_parts[] = strtoupper( $step_type );
 			}

@@ -18,7 +18,7 @@
 
 namespace DataMachine\Api;
 
-use DataMachine\Services\LogsManager;
+use DataMachine\Abilities\LogAbilities;
 use DataMachine\Engine\AI\AgentType;
 
 if ( ! defined( 'WPINC' ) ) {
@@ -224,32 +224,39 @@ class Logs {
 	public static function handle_clear_logs( $request ) {
 		$agent_type = $request->get_param( 'agent_type' );
 
-		if ( 'all' === $agent_type ) {
-			LogsManager::clearAll();
+		$result = LogAbilities::clear( array( 'agent_type' => $agent_type ) );
+
+		if ( $result['success'] ) {
+			if ( 'all' === $agent_type ) {
+				return rest_ensure_response(
+					array(
+						'success' => true,
+						'data'    => null,
+						'message' => __( 'All logs cleared successfully.', 'data-machine' ),
+					)
+				);
+			}
+
+			$agent_types = AgentType::getAll();
+			$agent_label = $agent_types[ $agent_type ]['label'] ?? ucfirst( $agent_type );
+
 			return rest_ensure_response(
 				array(
 					'success' => true,
 					'data'    => null,
-					'message' => __( 'All logs cleared successfully.', 'data-machine' ),
+					'message' => sprintf(
+						/* translators: %s: agent type label (e.g., Pipeline, Chat, System) */
+						__( '%s logs cleared successfully.', 'data-machine' ),
+						$agent_label
+					),
 				)
 			);
 		}
 
-		LogsManager::clear( $agent_type );
-
-		$agent_types = AgentType::getAll();
-		$agent_label = $agent_types[ $agent_type ]['label'] ?? ucfirst( $agent_type );
-
-		return rest_ensure_response(
-			array(
-				'success' => true,
-				'data'    => null,
-				'message' => sprintf(
-					/* translators: %s: agent type label (e.g., Pipeline, Chat, System) */
-					__( '%s logs cleared successfully.', 'data-machine' ),
-					$agent_label
-				),
-			)
+		return new \WP_Error(
+			'clear_logs_failed',
+			$result['error'] ?? __( 'Failed to clear logs.', 'data-machine' ),
+			array( 'status' => 500 )
 		);
 	}
 
@@ -259,14 +266,28 @@ class Logs {
 	 * GET /datamachine/v1/logs/content?agent_type=pipeline
 	 */
 	public static function handle_get_content( $request ) {
-		$agent_type  = $request->get_param( 'agent_type' );
-		$mode        = $request->get_param( 'mode' );
-		$limit       = $request->get_param( 'limit' );
-		$job_id      = $request->get_param( 'job_id' );
-		$pipeline_id = $request->get_param( 'pipeline_id' );
-		$flow_id     = $request->get_param( 'flow_id' );
+		$input = array(
+			'agent_type' => $request->get_param( 'agent_type' ),
+			'mode'       => $request->get_param( 'mode' ),
+			'limit'      => $request->get_param( 'limit' ),
+		);
 
-		$result = LogsManager::getContent( $agent_type, $mode, $limit, $job_id, $pipeline_id, $flow_id );
+		$job_id = $request->get_param( 'job_id' );
+		if ( null !== $job_id ) {
+			$input['job_id'] = (int) $job_id;
+		}
+
+		$pipeline_id = $request->get_param( 'pipeline_id' );
+		if ( null !== $pipeline_id ) {
+			$input['pipeline_id'] = (int) $pipeline_id;
+		}
+
+		$flow_id = $request->get_param( 'flow_id' );
+		if ( null !== $flow_id ) {
+			$input['flow_id'] = (int) $flow_id;
+		}
+
+		$result = LogAbilities::readLogs( $input );
 
 		if ( ! $result['success'] ) {
 			return new \WP_Error(
@@ -288,11 +309,12 @@ class Logs {
 	public static function handle_get_metadata( $request ) {
 		$agent_type = $request->get_param( 'agent_type' );
 
-		if ( empty( $agent_type ) ) {
-			return rest_ensure_response( LogsManager::getAllMetadata() );
+		$input = array();
+		if ( ! empty( $agent_type ) ) {
+			$input['agent_type'] = $agent_type;
 		}
 
-		return rest_ensure_response( LogsManager::getMetadata( $agent_type ) );
+		return rest_ensure_response( LogAbilities::getMetadata( $input ) );
 	}
 
 	/**
@@ -301,28 +323,21 @@ class Logs {
 	 * PUT /datamachine/v1/logs/level
 	 */
 	public static function handle_update_level( $request ) {
-		$agent_type = $request->get_param( 'agent_type' );
-		$new_level  = $request->get_param( 'level' );
-
-		LogsManager::setLevel( $agent_type, $new_level );
-
-		$available_levels = datamachine_get_available_log_levels();
-		$level_display    = $available_levels[ $new_level ] ?? ucfirst( $new_level );
-
-		$agent_types = AgentType::getAll();
-		$agent_label = $agent_types[ $agent_type ]['label'] ?? ucfirst( $agent_type );
-
-		return rest_ensure_response(
-			array(
-				'success'    => true,
-				'agent_type' => $agent_type,
-				'level'      => $new_level,
-				'message'    => sprintf(
-					__( '%1$s log level updated to %2$s.', 'data-machine' ),
-					$agent_label,
-					$level_display
-				),
-			)
+		$input = array(
+			'agent_type' => $request->get_param( 'agent_type' ),
+			'level'      => $request->get_param( 'level' ),
 		);
+
+		$result = LogAbilities::setLevel( $input );
+
+		if ( ! $result['success'] ) {
+			return new \WP_Error(
+				$result['error'] ?? 'set_level_failed',
+				$result['message'] ?? __( 'Failed to set log level.', 'data-machine' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		return rest_ensure_response( $result );
 	}
 }

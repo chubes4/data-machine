@@ -10,17 +10,19 @@
 - **Jobs** track individual flow executions, persist engine parameters, and power the fully React-based Jobs dashboard for real-time monitoring.
 - **Steps** execute sequentially (Fetch → AI → Publish/Update) with shared base classes that enforce validation, logging, and engine data synchronization.
 
-## Services Layer
+## Abilities API
 
-The services layer (DataMachine\Services) provides direct method calls for core operations:
+The Abilities API (DataMachine\Abilities) provides direct method calls for core operations via the WordPress 6.9 Abilities API:
 
-- `FlowManager`, `PipelineManager`, `FlowStepManager`, and `PipelineStepManager` handle creation, duplication, synchronization, and ordering.
-- `JobManager` monitors execution outcomes and updates statuses.
+- `FlowAbilities`, `PipelineAbilities`, `FlowStepAbilities`, and `PipelineStepAbilities` handle creation, duplication, synchronization, and ordering.
+- `JobAbilities` monitors execution outcomes and updates statuses.
+- `ProcessedItemsAbilities` deduplicates content across executions by tracking previously processed identifiers.
+
+**Remaining Services** (utilities for cross-cutting concerns):
 - `LogsManager` aggregates log entries in the `wp_datamachine_logs` table for filtering in the admin UI.
-- `ProcessedItemsManager` deduplicates content across executions by tracking previously processed identifiers.
 - `CacheManager` provides centralized cache invalidation to ensure dynamic handler and step type registrations are immediately reflected across the system.
 
-Services are the single source of truth for REST endpoints, ensuring validation and sanitization before persisting data or enqueuing jobs.
+Abilities are the single source of truth for REST endpoints, CLI commands, and Chat tools, ensuring validation and sanitization before persisting data or enqueuing jobs.
 
 ## Data Flow
 

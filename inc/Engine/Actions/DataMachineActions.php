@@ -20,13 +20,8 @@
  * - datamachine_fail_job: Central job failure handling with cleanup and logging
  * - datamachine_log: Central logging operations eliminating logger service discovery
  *
- * SERVICE MANAGERS (Direct method calls, no action hooks):
- * - PipelineManager: Pipeline and step CRUD operations
- * - FlowManager: Flow CRUD operations
- * - FlowStepManager: Flow step configuration operations (handler updates, user messages)
- * - JobManager: Job lifecycle management (create, status updates, failure handling)
- * - ProcessedItemsManager: Deduplication tracking operations
- * - LogsManager: Log file operations (clear, getContent, getMetadata, setLevel)
+ * UTILITIES (Abilities API):
+ * - LogAbilities: Log file operations (write, clear, read, metadata, level management)
  *
  * EXTENSIBILITY EXAMPLES:
  * External plugins can add: datamachine_transform, datamachine_validate, datamachine_backup, datamachine_migrate, datamachine_sync, datamachine_analyze
@@ -96,8 +91,8 @@ function datamachine_register_core_actions() {
 				return;
 			}
 
-			$processed_items_manager = new \DataMachine\Services\ProcessedItemsManager();
-			$success                 = $processed_items_manager->add( $flow_step_id, $source_type, $item_identifier, $job_id );
+			$db_processed_items = new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
+			$success            = $db_processed_items->add_processed_item( $flow_step_id, $source_type, $item_identifier, $job_id );
 
 			return $success;
 		},
@@ -105,7 +100,7 @@ function datamachine_register_core_actions() {
 		4
 	);
 
-	// Central job failure hook - routes to JobManager::fail() for consistent failure handling
+	// Central job failure hook - handles job failure with cleanup and logging
 	add_action(
 		'datamachine_fail_job',
 		function ( $job_id, $reason, $context_data = array() ) {
@@ -124,8 +119,55 @@ function datamachine_register_core_actions() {
 				return false;
 			}
 
-			$job_manager = new \DataMachine\Services\JobManager();
-			return $job_manager->fail( $job_id, $reason, $context_data );
+			$db_jobs            = new \DataMachine\Core\Database\Jobs\Jobs();
+			$db_processed_items = new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
+
+			$success = $db_jobs->complete_job( $job_id, \DataMachine\Core\JobStatus::FAILED );
+
+			if ( ! $success ) {
+				do_action(
+					'datamachine_log',
+					'error',
+					'Failed to mark job as failed in database',
+					array(
+						'job_id' => $job_id,
+						'reason' => $reason,
+					)
+				);
+				return false;
+			}
+
+			$db_processed_items->delete_processed_items( array( 'job_id' => $job_id ) );
+
+			$cleanup_files = \DataMachine\Core\PluginSettings::get( 'cleanup_job_data_on_failure', true );
+			$files_cleaned = false;
+
+			if ( $cleanup_files ) {
+				$job = $db_jobs->get_job( $job_id );
+				if ( $job && function_exists( 'datamachine_get_file_context' ) ) {
+					$cleanup       = new \DataMachine\Core\FilesRepository\FileCleanup();
+					$context       = datamachine_get_file_context( $job['flow_id'] );
+					$deleted_count = $cleanup->cleanup_job_data_packets( $job_id, $context );
+					$files_cleaned = $deleted_count > 0;
+				}
+			}
+
+			do_action(
+				'datamachine_log',
+				'error',
+				'Job marked as failed',
+				array(
+					'job_id'                  => $job_id,
+					'failure_reason'          => $reason,
+					'triggered_by'            => 'datamachine_fail_job',
+					'context_data'            => $context_data,
+					'processed_items_cleaned' => true,
+					'files_cleanup_enabled'   => $cleanup_files,
+					'files_cleaned'           => $files_cleaned,
+				)
+			);
+
+			return true;
 		},
 		10,
 		3

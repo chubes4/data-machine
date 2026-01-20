@@ -21,6 +21,7 @@
 	},
 	"autoload": {
 		"psr-4": {
+			"DataMachine\\Abilities\\": "inc/Abilities/",
 			"DataMachine\\Api\\": "inc/Api/",
 			"DataMachine\\Cli\\": "inc/Cli/",
 			"DataMachine\\Core\\": "inc/Core/",

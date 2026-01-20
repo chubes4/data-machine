@@ -15,9 +15,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use DataMachine\Abilities\AuthAbilities;
+use DataMachine\Abilities\HandlerAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-use DataMachine\Services\AuthProviderService;
-use DataMachine\Services\HandlerService;
 
 /**
  * Authenticate Handler Tool
@@ -122,22 +122,22 @@ ACTIONS:
 	 * List all handlers requiring auth.
 	 */
 	private function handleList(): array {
-		$handler_service = new HandlerService();
-		$auth_service    = new AuthProviderService();
-		$all_handlers    = $handler_service->getAll();
-		$result          = array();
+		$handler_abilities = new HandlerAbilities();
+		$auth_abilities    = new AuthAbilities();
+		$all_handlers      = $handler_abilities->getAllHandlers();
+		$result            = array();
 
 		foreach ( $all_handlers as $slug => $handler ) {
 			if ( empty( $handler['requires_auth'] ) ) {
 				continue;
 			}
 
-			$auth_instance = $auth_service->getForHandler( $slug );
+			$auth_instance = $auth_abilities->getProviderForHandler( $slug );
 			if ( ! $auth_instance ) {
 				continue;
 			}
 
-			$is_authenticated = $auth_service->isAuthenticated( $slug );
+			$is_authenticated = $auth_abilities->isHandlerAuthenticated( $slug );
 			$auth_type        = $this->detectAuthType( $auth_instance );
 
 			$info = array(
@@ -297,8 +297,8 @@ ACTIONS:
 	// Helpers
 
 	private function getAuthProvider( string $slug ) {
-		$auth_service = new AuthProviderService();
-		return $auth_service->getForHandler( $slug );
+		$auth_abilities = new AuthAbilities();
+		return $auth_abilities->getProviderForHandler( $slug );
 	}
 
 	private function detectAuthType( $instance ): string {

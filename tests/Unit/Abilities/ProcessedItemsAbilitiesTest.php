@@ -11,15 +11,11 @@ namespace DataMachine\Tests\Unit\Abilities;
 
 use DataMachine\Abilities\ProcessedItemsAbilities;
 use DataMachine\Core\Database\ProcessedItems\ProcessedItems;
-use DataMachine\Services\FlowManager;
-use DataMachine\Services\PipelineManager;
-use DataMachine\Services\ProcessedItemsManager;
 use WP_UnitTestCase;
 
 class ProcessedItemsAbilitiesTest extends WP_UnitTestCase {
 
 	private ProcessedItemsAbilities $abilities;
-	private ProcessedItemsManager $manager;
 	private ProcessedItems $db_processed_items;
 	private int $test_pipeline_id;
 	private int $test_flow_id;
@@ -31,17 +27,16 @@ class ProcessedItemsAbilitiesTest extends WP_UnitTestCase {
 		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $user_id );
 
-		$this->abilities           = new ProcessedItemsAbilities();
-		$this->manager             = new ProcessedItemsManager();
-		$this->db_processed_items  = new ProcessedItems();
+		$this->abilities          = new ProcessedItemsAbilities();
+		$this->db_processed_items = new ProcessedItems();
 
-		$pipeline_manager       = new PipelineManager();
-		$flow_manager           = new FlowManager();
+		$pipeline_ability       = wp_get_ability( 'datamachine/create-pipeline' );
+		$flow_ability           = wp_get_ability( 'datamachine/create-flow' );
 
-		$pipeline               = $pipeline_manager->create( 'Test Pipeline for Processed Items' );
+		$pipeline               = $pipeline_ability->execute( array( 'pipeline_name' => 'Test Pipeline for Processed Items' ) );
 		$this->test_pipeline_id = $pipeline['pipeline_id'];
 
-		$flow               = $flow_manager->create( $this->test_pipeline_id, 'Test Flow for Processed Items' );
+		$flow               = $flow_ability->execute( array( 'pipeline_id' => $this->test_pipeline_id, 'flow_name' => 'Test Flow for Processed Items' ) );
 		$this->test_flow_id = $flow['flow_id'];
 
 		$this->test_flow_step_id = '1_' . $this->test_flow_id;

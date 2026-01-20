@@ -10,9 +10,7 @@
 namespace DataMachine\Tests\Unit\Abilities;
 
 use DataMachine\Abilities\JobAbilities;
-use DataMachine\Services\FlowManager;
-use DataMachine\Services\JobManager;
-use DataMachine\Services\PipelineManager;
+use DataMachine\Core\Database\Jobs\Jobs;
 use WP_UnitTestCase;
 
 class JobAbilitiesTest extends WP_UnitTestCase {
@@ -30,17 +28,22 @@ class JobAbilitiesTest extends WP_UnitTestCase {
 
 		$this->job_abilities = new JobAbilities();
 
-		$pipeline_manager      = new PipelineManager();
-		$flow_manager          = new FlowManager();
-		$job_manager           = new JobManager();
+		$pipeline_ability      = wp_get_ability( 'datamachine/create-pipeline' );
+		$flow_ability          = wp_get_ability( 'datamachine/create-flow' );
+		$db_jobs               = new Jobs();
 
-		$pipeline              = $pipeline_manager->create( 'Test Pipeline for Jobs' );
+		$pipeline              = $pipeline_ability->execute( array( 'pipeline_name' => 'Test Pipeline for Jobs' ) );
 		$this->test_pipeline_id = $pipeline['pipeline_id'];
 
-		$flow                  = $flow_manager->create( $this->test_pipeline_id, 'Test Flow for Jobs' );
+		$flow                  = $flow_ability->execute( array( 'pipeline_id' => $this->test_pipeline_id, 'flow_name' => 'Test Flow for Jobs' ) );
 		$this->test_flow_id    = $flow['flow_id'];
 
-		$this->test_job_id     = $job_manager->create( $this->test_flow_id, $this->test_pipeline_id );
+		$this->test_job_id     = $db_jobs->create_job(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'flow_id'     => $this->test_flow_id,
+			)
+		);
 	}
 
 	public function tear_down(): void {
@@ -220,8 +223,13 @@ class JobAbilitiesTest extends WP_UnitTestCase {
 	}
 
 	public function test_delete_jobs_with_all_type(): void {
-		$job_manager = new JobManager();
-		$job_manager->create( $this->test_flow_id, $this->test_pipeline_id );
+		$db_jobs = new Jobs();
+		$db_jobs->create_job(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'flow_id'     => $this->test_flow_id,
+			)
+		);
 
 		$result = $this->job_abilities->executeDeleteJobs(
 			array(
@@ -236,9 +244,13 @@ class JobAbilitiesTest extends WP_UnitTestCase {
 	}
 
 	public function test_delete_jobs_with_failed_type(): void {
-		$db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
-		$job_manager = new JobManager();
-		$failed_job_id = $job_manager->create( $this->test_flow_id, $this->test_pipeline_id );
+		$db_jobs = new Jobs();
+		$failed_job_id = $db_jobs->create_job(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'flow_id'     => $this->test_flow_id,
+			)
+		);
 		$db_jobs->complete_job( $failed_job_id, 'failed' );
 
 		$result = $this->job_abilities->executeDeleteJobs(
@@ -414,11 +426,15 @@ class JobAbilitiesTest extends WP_UnitTestCase {
 	}
 
 	public function test_get_problem_flows_detects_failing_flows(): void {
-		$db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
-		$job_manager = new JobManager();
+		$db_jobs = new Jobs();
 
 		for ( $i = 0; $i < 3; $i++ ) {
-			$job_id = $job_manager->create( $this->test_flow_id, $this->test_pipeline_id );
+			$job_id = $db_jobs->create_job(
+				array(
+					'pipeline_id' => $this->test_pipeline_id,
+					'flow_id'     => $this->test_flow_id,
+				)
+			);
 			$db_jobs->complete_job( $job_id, 'failed' );
 		}
 

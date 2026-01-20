@@ -11,8 +11,8 @@
 
 namespace DataMachine\Api;
 
-use DataMachine\Services\HandlerService;
-use DataMachine\Services\StepTypeService;
+use DataMachine\Abilities\HandlerAbilities;
+use DataMachine\Abilities\StepTypeAbilities;
 use WP_REST_Server;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -72,10 +72,10 @@ class StepTypes {
 	 * @return \WP_REST_Response Step types response
 	 */
 	public static function handle_get_step_types() {
-		$step_type_service = new StepTypeService();
-		$handler_service   = new HandlerService();
+		$step_type_abilities = new StepTypeAbilities();
+		$handler_abilities   = new HandlerAbilities();
 
-		$step_types    = $step_type_service->getAll();
+		$step_types    = $step_type_abilities->getAllStepTypes();
 		$enriched_data = array();
 
 		foreach ( $step_types as $slug => $config ) {
@@ -83,7 +83,7 @@ class StepTypes {
 			$handler_count = 0;
 
 			if ( $uses_handler ) {
-				$handlers      = $handler_service->getAll( $slug );
+				$handlers      = $handler_abilities->getAllHandlers( $slug );
 				$handler_count = count( $handlers );
 			}
 
@@ -116,8 +116,8 @@ class StepTypes {
 	public static function handle_get_step_type_detail( $request ) {
 		$step_type = $request->get_param( 'step_type' );
 
-		$step_type_service = new StepTypeService();
-		$definition        = $step_type_service->get( $step_type );
+		$step_type_abilities = new StepTypeAbilities();
+		$definition          = $step_type_abilities->getStepType( $step_type );
 
 		if ( ! $definition ) {
 			return new \WP_Error(

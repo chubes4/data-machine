@@ -12,8 +12,6 @@ namespace DataMachine\Abilities;
 
 use DataMachine\Core\Database\Flows\Flows;
 use DataMachine\Core\Database\Pipelines\Pipelines;
-use DataMachine\Services\PipelineStepManager;
-use DataMachine\Services\StepTypeService;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -21,7 +19,6 @@ class PipelineStepAbilities {
 
 	private Pipelines $db_pipelines;
 	private Flows $db_flows;
-	private PipelineStepManager $step_manager;
 
 	public function __construct() {
 		if ( ! class_exists( 'WP_Ability' ) ) {
@@ -30,7 +27,6 @@ class PipelineStepAbilities {
 
 		$this->db_pipelines = new Pipelines();
 		$this->db_flows     = new Flows();
-		$this->step_manager = new PipelineStepManager();
 		$this->registerAbilities();
 	}
 
@@ -115,9 +111,9 @@ class PipelineStepAbilities {
 	}
 
 	private function registerAddPipelineStepAbility(): void {
-		$step_type_service = new StepTypeService();
-		$valid_types       = array_keys( $step_type_service->getAll() );
-		$types_list        = ! empty( $valid_types ) ? implode( ', ', $valid_types ) : 'fetch, ai, publish, update';
+		$step_type_abilities = new StepTypeAbilities();
+		$valid_types         = array_keys( $step_type_abilities->getAllStepTypes() );
+		$types_list          = ! empty( $valid_types ) ? implode( ', ', $valid_types ) : 'fetch, ai, publish, update';
 
 		wp_register_ability(
 			'datamachine/add-pipeline-step',
@@ -328,7 +324,7 @@ class PipelineStepAbilities {
 			);
 		}
 
-		$steps = $this->step_manager->getForPipeline( $pipeline_id );
+		$steps = $this->db_pipelines->get_pipeline_config( $pipeline_id );
 
 		return array(
 			'success'     => true,
@@ -354,9 +350,9 @@ class PipelineStepAbilities {
 			);
 		}
 
-		$step = $this->step_manager->get( $pipeline_step_id );
+		$step_config = $this->db_pipelines->get_pipeline_step_config( $pipeline_step_id );
 
-		if ( ! $step ) {
+		if ( empty( $step_config ) ) {
 			return array(
 				'success' => false,
 				'error'   => 'Pipeline step not found',
@@ -365,7 +361,7 @@ class PipelineStepAbilities {
 
 		return array(
 			'success' => true,
-			'step'    => $step,
+			'step'    => $step_config,
 		);
 	}
 
@@ -393,8 +389,8 @@ class PipelineStepAbilities {
 			);
 		}
 
-		$step_type_service = new StepTypeService();
-		$valid_types       = array_keys( $step_type_service->getAll() );
+		$step_type_abilities = new StepTypeAbilities();
+		$valid_types         = array_keys( $step_type_abilities->getAllStepTypes() );
 
 		if ( ! in_array( $step_type, $valid_types, true ) ) {
 			return array(
@@ -403,20 +399,67 @@ class PipelineStepAbilities {
 			);
 		}
 
-		$pipeline_id      = (int) $pipeline_id;
-		$pipeline_step_id = $this->step_manager->add( $pipeline_id, $step_type );
+		$pipeline_id = (int) $pipeline_id;
+		$step_type   = sanitize_text_field( wp_unslash( $step_type ) );
 
-		if ( ! $pipeline_step_id ) {
+		$step_type_config = $step_type_abilities->getStepType( $step_type );
+		if ( ! $step_type_config ) {
+			do_action( 'datamachine_log', 'error', 'Invalid step type for step creation', array( 'step_type' => $step_type ) );
+			return array(
+				'success' => false,
+				'error'   => 'Invalid step type configuration',
+			);
+		}
+
+		$current_steps        = $this->db_pipelines->get_pipeline_config( $pipeline_id );
+		$next_execution_order = count( $current_steps );
+
+		$new_step = array(
+			'step_type'        => $step_type,
+			'execution_order'  => $next_execution_order,
+			'pipeline_step_id' => $pipeline_id . '_' . wp_generate_uuid4(),
+			'label'            => $step_type_config['label'] ?? ucfirst( str_replace( '_', ' ', $step_type ) ),
+		);
+
+		$pipeline_config = array();
+		foreach ( $current_steps as $step ) {
+			$pipeline_config[ $step['pipeline_step_id'] ] = $step;
+		}
+		$pipeline_config[ $new_step['pipeline_step_id'] ] = $new_step;
+
+		$success = $this->db_pipelines->update_pipeline(
+			$pipeline_id,
+			array(
+				'pipeline_config' => $pipeline_config,
+			)
+		);
+
+		if ( ! $success ) {
+			do_action(
+				'datamachine_log',
+				'error',
+				'Failed to add step to pipeline',
+				array(
+					'pipeline_id' => $pipeline_id,
+					'step_type'   => $step_type,
+				)
+			);
 			return array(
 				'success' => false,
 				'error'   => 'Failed to add step. Verify the pipeline_id exists and you have sufficient permissions.',
 			);
 		}
 
-		$flows         = $this->db_flows->get_flows_for_pipeline( $pipeline_id );
-		$flow_step_ids = array();
+		$pipeline_step_id = $new_step['pipeline_step_id'];
+		$flows            = $this->db_flows->get_flows_for_pipeline( $pipeline_id );
 
 		foreach ( $flows as $flow ) {
+			$this->syncStepsToFlow( $flow['flow_id'], $pipeline_id, array( $new_step ), $pipeline_config );
+		}
+
+		$flow_step_ids = array();
+		$updated_flows = $this->db_flows->get_flows_for_pipeline( $pipeline_id );
+		foreach ( $updated_flows as $flow ) {
 			$flow_config = $flow['flow_config'] ?? array();
 			foreach ( $flow_config as $flow_step_id => $step_data ) {
 				if ( isset( $step_data['pipeline_step_id'] ) && $step_data['pipeline_step_id'] === $pipeline_step_id ) {
@@ -594,15 +637,73 @@ class PipelineStepAbilities {
 			);
 		}
 
-		$pipeline_id      = (int) $pipeline_id;
-		$pipeline_step_id = sanitize_text_field( $pipeline_step_id );
+		$pipeline_id      = absint( $pipeline_id );
+		$pipeline_step_id = trim( sanitize_text_field( $pipeline_step_id ) );
 
-		$result = $this->step_manager->delete( $pipeline_step_id, $pipeline_id );
-
-		if ( is_wp_error( $result ) ) {
+		$pipeline = $this->db_pipelines->get_pipeline( $pipeline_id );
+		if ( ! $pipeline ) {
 			return array(
 				'success' => false,
-				'error'   => $result->get_error_message(),
+				'error'   => __( 'Pipeline not found.', 'data-machine' ),
+			);
+		}
+
+		if ( ! isset( $pipeline['pipeline_name'] ) || empty( trim( $pipeline['pipeline_name'] ) ) ) {
+			do_action(
+				'datamachine_log',
+				'error',
+				'Cannot delete pipeline step - pipeline missing or empty name',
+				array(
+					'pipeline_id'      => $pipeline_id,
+					'pipeline_step_id' => $pipeline_step_id,
+				)
+			);
+			return array(
+				'success' => false,
+				'error'   => __( 'Pipeline data is corrupted - missing name.', 'data-machine' ),
+			);
+		}
+
+		$pipeline_name  = $pipeline['pipeline_name'];
+		$affected_flows = $this->db_flows->get_flows_for_pipeline( $pipeline_id );
+		$flow_count     = count( $affected_flows );
+
+		$current_steps   = $this->db_pipelines->get_pipeline_config( $pipeline_id );
+		$remaining_steps = array();
+		$step_found      = false;
+
+		foreach ( $current_steps as $step ) {
+			if ( ( $step['pipeline_step_id'] ?? '' ) !== $pipeline_step_id ) {
+				$remaining_steps[] = $step;
+			} else {
+				$step_found = true;
+			}
+		}
+
+		if ( ! $step_found ) {
+			return array(
+				'success' => false,
+				'error'   => __( 'Step not found in pipeline.', 'data-machine' ),
+			);
+		}
+
+		$updated_steps = array();
+		foreach ( $remaining_steps as $index => $step ) {
+			$step['execution_order']                    = $index;
+			$updated_steps[ $step['pipeline_step_id'] ] = $step;
+		}
+
+		$success = $this->db_pipelines->update_pipeline(
+			$pipeline_id,
+			array(
+				'pipeline_config' => $updated_steps,
+			)
+		);
+
+		if ( ! $success ) {
+			return array(
+				'success' => false,
+				'error'   => __( 'Failed to delete step from pipeline.', 'data-machine' ),
 			);
 		}
 
@@ -613,7 +714,7 @@ class PipelineStepAbilities {
 			array(
 				'pipeline_id'      => $pipeline_id,
 				'pipeline_step_id' => $pipeline_step_id,
-				'affected_flows'   => $result['affected_flows'] ?? 0,
+				'affected_flows'   => $flow_count,
 			)
 		);
 
@@ -621,8 +722,13 @@ class PipelineStepAbilities {
 			'success'          => true,
 			'pipeline_id'      => $pipeline_id,
 			'pipeline_step_id' => $pipeline_step_id,
-			'affected_flows'   => $result['affected_flows'] ?? 0,
-			'message'          => $result['message'] ?? 'Step removed from pipeline and all associated flows.',
+			'affected_flows'   => $flow_count,
+			'message'          => sprintf(
+				/* translators: 1: pipeline name, 2: number of flows affected */
+				esc_html__( 'Step deleted successfully from pipeline "%1$s". %2$d flows were affected.', 'data-machine' ),
+				$pipeline_name,
+				$flow_count
+			),
 		);
 	}
 
@@ -673,13 +779,89 @@ class PipelineStepAbilities {
 			}
 		}
 
-		$pipeline_id = (int) $pipeline_id;
-		$result      = $this->step_manager->reorder( $pipeline_id, $step_order );
+		$pipeline_id    = (int) $pipeline_id;
+		$pipeline_steps = $this->db_pipelines->get_pipeline_config( $pipeline_id );
 
-		if ( is_wp_error( $result ) ) {
+		if ( empty( $pipeline_steps ) ) {
 			return array(
 				'success' => false,
-				'error'   => $result->get_error_message(),
+				'error'   => __( 'Pipeline not found', 'data-machine' ),
+			);
+		}
+
+		$updated_steps = array();
+		foreach ( $step_order as $item ) {
+			$pipeline_step_id = sanitize_text_field( $item['pipeline_step_id'] );
+			$execution_order  = (int) $item['execution_order'];
+
+			$step_found = false;
+			foreach ( $pipeline_steps as $step ) {
+				if ( $step['pipeline_step_id'] === $pipeline_step_id ) {
+					$step['execution_order'] = $execution_order;
+					$updated_steps[]         = $step;
+					$step_found              = true;
+					break;
+				}
+			}
+
+			if ( ! $step_found ) {
+				return array(
+					'success' => false,
+					'error'   => sprintf(
+						/* translators: %s: pipeline step ID */
+						__( 'Step %s not found in pipeline', 'data-machine' ),
+						$pipeline_step_id
+					),
+				);
+			}
+		}
+
+		if ( count( $updated_steps ) !== count( $pipeline_steps ) ) {
+			return array(
+				'success' => false,
+				'error'   => __( 'Step count mismatch during reorder', 'data-machine' ),
+			);
+		}
+
+		$success = $this->db_pipelines->update_pipeline(
+			$pipeline_id,
+			array(
+				'pipeline_config' => $updated_steps,
+			)
+		);
+
+		if ( ! $success ) {
+			return array(
+				'success' => false,
+				'error'   => __( 'Failed to save step order', 'data-machine' ),
+			);
+		}
+
+		$flows = $this->db_flows->get_flows_for_pipeline( $pipeline_id );
+		foreach ( $flows as $flow ) {
+			$flow_id     = $flow['flow_id'];
+			$flow_config = $flow['flow_config'] ?? array();
+
+			foreach ( $flow_config as $flow_step_id => &$flow_step ) {
+				if ( ! isset( $flow_step['pipeline_step_id'] ) || empty( $flow_step['pipeline_step_id'] ) ) {
+					continue;
+				}
+				$pipeline_step_id = $flow_step['pipeline_step_id'];
+
+				foreach ( $updated_steps as $updated_step ) {
+					if ( $updated_step['pipeline_step_id'] === $pipeline_step_id ) {
+						$flow_step['execution_order'] = $updated_step['execution_order'];
+						break;
+					}
+				}
+			}
+			unset( $flow_step );
+
+			$this->db_flows->update_flow(
+				$flow_id,
+				array(
+					'flow_config' => $flow_config,
+				)
 			);
 		}
 
@@ -689,15 +871,76 @@ class PipelineStepAbilities {
 			'Pipeline steps reordered via ability',
 			array(
 				'pipeline_id' => $pipeline_id,
-				'step_count'  => $result['step_count'] ?? count( $step_order ),
+				'step_count'  => count( $updated_steps ),
 			)
 		);
 
 		return array(
 			'success'     => true,
 			'pipeline_id' => $pipeline_id,
-			'step_count'  => $result['step_count'] ?? count( $step_order ),
+			'step_count'  => count( $updated_steps ),
 			'message'     => 'Pipeline steps reordered successfully.',
 		);
+	}
+
+	/**
+	 * Sync pipeline steps to a flow's configuration.
+	 *
+	 * @param int   $flow_id Flow ID.
+	 * @param int   $pipeline_id Pipeline ID.
+	 * @param array $steps Array of pipeline step data.
+	 * @param array $pipeline_config Full pipeline config.
+	 * @return bool Success status.
+	 */
+	private function syncStepsToFlow( int $flow_id, int $pipeline_id, array $steps, array $pipeline_config = array() ): bool {
+		$flow = $this->db_flows->get_flow( $flow_id );
+		if ( ! $flow ) {
+			do_action( 'datamachine_log', 'error', 'Flow not found for step sync', array( 'flow_id' => $flow_id ) );
+			return false;
+		}
+
+		$flow_config = $flow['flow_config'] ?? array();
+
+		foreach ( $steps as $step ) {
+			$pipeline_step_id = $step['pipeline_step_id'] ?? null;
+			if ( ! $pipeline_step_id ) {
+				continue;
+			}
+
+			$flow_step_id = apply_filters( 'datamachine_generate_flow_step_id', '', $pipeline_step_id, $flow_id );
+
+			$enabled_tools = $pipeline_config[ $pipeline_step_id ]['enabled_tools'] ?? array();
+
+			$flow_config[ $flow_step_id ] = array(
+				'flow_step_id'     => $flow_step_id,
+				'step_type'        => $step['step_type'] ?? '',
+				'pipeline_step_id' => $pipeline_step_id,
+				'pipeline_id'      => $pipeline_id,
+				'flow_id'          => $flow_id,
+				'execution_order'  => $step['execution_order'] ?? 0,
+				'enabled_tools'    => $enabled_tools,
+				'handler'          => null,
+			);
+		}
+
+		$success = $this->db_flows->update_flow(
+			$flow_id,
+			array( 'flow_config' => $flow_config )
+		);
+
+		if ( ! $success ) {
+			do_action(
+				'datamachine_log',
+				'error',
+				'Flow step sync failed - database update failed',
+				array(
+					'flow_id'     => $flow_id,
+					'steps_count' => count( $steps ),
+				)
+			);
+			return false;
+		}
+
+		return true;
 	}
 }

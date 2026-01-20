@@ -17,11 +17,11 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers;
 
+use DataMachine\Abilities\AuthAbilities;
 use DataMachine\Core\ExecutionContext;
 use DataMachine\Core\FilesRepository\FileStorage;
 use DataMachine\Core\HttpClient;
 use DataMachine\Core\Steps\Fetch\Tools\SkipItemTool;
-use DataMachine\Services\AuthProviderService;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -156,8 +156,8 @@ abstract class FetchHandler {
 	 * @return object|null Provider instance or null
 	 */
 	protected function getAuthProvider( string $provider_key ): ?object {
-		$auth_service = new AuthProviderService();
-		return $auth_service->get( $provider_key );
+		$auth_abilities = new AuthAbilities();
+		return $auth_abilities->getProvider( $provider_key );
 	}
 
 	/**

@@ -11,10 +11,10 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Threads;
 
+use DataMachine\Abilities\AuthAbilities;
 use DataMachine\Core\EngineData;
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
-use DataMachine\Services\AuthProviderService;
 use Exception;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -75,8 +75,8 @@ class Threads extends PublishHandler {
 	 */
 	private function get_auth() {
 		if ( $this->auth === null ) {
-			$auth_service = new AuthProviderService();
-			$this->auth   = $auth_service->get( 'threads' );
+			$auth_abilities = new AuthAbilities();
+			$this->auth     = $auth_abilities->getProvider( 'threads' );
 
 			if ( $this->auth === null ) {
 				$this->log(
@@ -85,7 +85,7 @@ class Threads extends PublishHandler {
 					array(
 						'handler'             => 'threads',
 						'missing_service'     => 'threads',
-						'available_providers' => array_keys( $auth_service->getAll() ),
+						'available_providers' => array_keys( $auth_abilities->getAllProviders() ),
 					)
 				);
 			}

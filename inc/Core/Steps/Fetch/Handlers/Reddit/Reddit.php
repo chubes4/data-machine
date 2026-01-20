@@ -5,10 +5,10 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\Reddit;
 
+use DataMachine\Abilities\AuthAbilities;
 use DataMachine\Core\ExecutionContext;
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
-use DataMachine\Services\AuthProviderService;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -47,7 +47,7 @@ class Reddit extends FetchHandler {
 			$this->oauth_reddit = $this->getAuthProvider( 'reddit' );
 
 			if ( $this->oauth_reddit === null ) {
-				$auth_service = new AuthProviderService();
+				$auth_abilities = new AuthAbilities();
 				do_action(
 					'datamachine_log',
 					'error',
@@ -56,7 +56,7 @@ class Reddit extends FetchHandler {
 						'agent_type'          => 'system',
 						'handler'             => 'reddit',
 						'missing_service'     => 'reddit',
-						'available_providers' => array_keys( $auth_service->getAll() ),
+						'available_providers' => array_keys( $auth_abilities->getAllProviders() ),
 					)
 				);
 			}

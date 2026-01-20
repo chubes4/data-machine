@@ -18,7 +18,9 @@ Cache invalidation is triggered by ecosystem registration actions (hooked by the
 - `datamachine_step_type_registered`: Clears step type caches (and related tool caches).
 - `datamachine_tool_registered`: Clears tool definition caches.
 
-The cache manager clears caches via `HandlerService::clearCache()`, `AuthProviderService::clearCache()`, `StepTypeService::clearCache()`, and `ToolManager::clearCache()`.
+The cache manager clears caches via `HandlerAbilities::clearCache()`, `AuthProviderService::clearCache()`, `StepTypeAbilities::clearCache()`, and `ToolManager::clearCache()`.
+
+> **Migration Note (@since v0.11.7):** `HandlerService` and `StepTypeService` have been deleted and replaced by `HandlerAbilities` and `StepTypeAbilities`. Cache clearing now calls the ability class static methods instead of service methods.
 
 ## CacheManager Methods
 
@@ -54,9 +56,9 @@ In the React-based admin UI (Pipelines, Logs, Settings, and Jobs), caching is ha
 
 ## Implementation Details
 
-Caches are cleared by resetting static properties in the following services:
+Caches are cleared by resetting static properties in the following classes:
 
-- **HandlerService**: `$handlers_cache`, `$settings_cache`, `$config_fields_cache`.
-- **StepTypeService**: `$cache`.
+- **HandlerAbilities**: `$handlers_cache`, `$settings_cache`, `$config_fields_cache` (replaces HandlerService @since v0.11.7).
+- **StepTypeAbilities**: `$cache` (replaces StepTypeService @since v0.11.7).
 - **ToolManager**: `$resolved_cache`.
-- **HandlerDocumentation**: `$cached_all_handlers`, `$cached_by_step_type`, `$cached_handler_slugs`, and service instances.
+- **HandlerDocumentation**: `$cached_all_handlers`, `$cached_by_step_type`, `$cached_handler_slugs`, and ability class instances.

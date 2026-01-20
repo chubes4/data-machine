@@ -12,8 +12,7 @@
 namespace DataMachine\Api\Pipelines;
 
 use DataMachine\Abilities\PipelineStepAbilities;
-use DataMachine\Services\PipelineStepManager;
-use DataMachine\Services\StepTypeService;
+use DataMachine\Abilities\StepTypeAbilities;
 use WP_REST_Server;
 
 if ( ! defined( 'WPINC' ) ) {
@@ -52,7 +51,7 @@ class PipelineSteps {
 						'type'              => 'string',
 						'sanitize_callback' => 'sanitize_key',
 						'validate_callback' => function ( $param ) {
-							return ( new StepTypeService() )->exists( $param );
+							return ( new StepTypeAbilities() )->stepTypeExists( $param );
 						},
 						'description'       => __( 'Step type (supports custom step types)', 'data-machine' ),
 					),
@@ -247,7 +246,7 @@ class PipelineSteps {
 			);
 		}
 
-		$step_config    = ( new StepTypeService() )->get( $step_type ) ?? array();
+		$step_config    = ( new StepTypeAbilities() )->getStepType( $step_type ) ?? array();
 		$db_pipelines   = new \DataMachine\Core\Database\Pipelines\Pipelines();
 		$pipeline_steps = $db_pipelines->get_pipeline_config( $pipeline_id );
 
@@ -392,10 +391,15 @@ class PipelineSteps {
 		$pipeline_step_id = sanitize_text_field( $request->get_param( 'pipeline_step_id' ) );
 		$system_prompt    = sanitize_textarea_field( $request->get_param( 'system_prompt' ) );
 
-		$manager = new PipelineStepManager();
-		$success = $manager->updateSystemPrompt( $pipeline_step_id, $system_prompt );
+		$abilities = new PipelineStepAbilities();
+		$result    = $abilities->executeUpdatePipelineStep(
+			array(
+				'pipeline_step_id' => $pipeline_step_id,
+				'system_prompt'    => $system_prompt,
+			)
+		);
 
-		if ( ! $success ) {
+		if ( ! $result['success'] ) {
 			return new \WP_Error(
 				'update_failed',
 				__( 'Failed to save system prompt', 'data-machine' ),

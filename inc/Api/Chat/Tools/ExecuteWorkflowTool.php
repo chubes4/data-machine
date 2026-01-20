@@ -11,8 +11,8 @@
 
 namespace DataMachine\Api\Chat\Tools;
 
+use DataMachine\Abilities\StepTypeAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-use DataMachine\Services\StepTypeService;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -32,10 +32,10 @@ class ExecuteWorkflowTool {
 	 * @return array Tool definition array
 	 */
 	public function getToolDefinition(): array {
-		$step_type_service = new StepTypeService();
-		$step_types        = $step_type_service->getAll();
-		$type_slugs        = ! empty( $step_types ) ? array_keys( $step_types ) : array( 'fetch', 'ai', 'publish', 'update' );
-		$types_list        = implode( '|', $type_slugs );
+		$step_type_abilities = new StepTypeAbilities();
+		$step_types          = $step_type_abilities->getAllStepTypes();
+		$type_slugs          = ! empty( $step_types ) ? array_keys( $step_types ) : array( 'fetch', 'ai', 'publish', 'update' );
+		$types_list          = implode( '|', $type_slugs );
 
 		$description = 'Execute an ephemeral workflow (not saved to database).
 

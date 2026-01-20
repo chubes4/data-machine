@@ -21,7 +21,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.11.3' );
+define( 'DATAMACHINE_VERSION', '0.11.6' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -151,6 +151,8 @@ function datamachine_run_datamachine_plugin() {
 	require_once __DIR__ . '/inc/Abilities/PipelineStepAbilities.php';
 	require_once __DIR__ . '/inc/Abilities/ProcessedItemsAbilities.php';
 	require_once __DIR__ . '/inc/Abilities/SettingsAbilities.php';
+	require_once __DIR__ . '/inc/Abilities/HandlerAbilities.php';
+	require_once __DIR__ . '/inc/Abilities/StepTypeAbilities.php';
 	new \DataMachine\Abilities\AuthAbilities();
 	new \DataMachine\Abilities\FileAbilities();
 	new \DataMachine\Abilities\FlowAbilities();
@@ -162,6 +164,8 @@ function datamachine_run_datamachine_plugin() {
 	new \DataMachine\Abilities\PipelineStepAbilities();
 	new \DataMachine\Abilities\ProcessedItemsAbilities();
 	new \DataMachine\Abilities\SettingsAbilities();
+	new \DataMachine\Abilities\HandlerAbilities();
+	new \DataMachine\Abilities\StepTypeAbilities();
 }
 
 

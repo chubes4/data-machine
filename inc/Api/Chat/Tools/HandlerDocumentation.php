@@ -14,8 +14,8 @@
 
 namespace DataMachine\Api\Chat\Tools;
 
-use DataMachine\Services\HandlerService;
-use DataMachine\Services\StepTypeService;
+use DataMachine\Abilities\HandlerAbilities;
+use DataMachine\Abilities\StepTypeAbilities;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -24,10 +24,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 class HandlerDocumentation {
 
 	/**
-	 * Cached service instances.
+	 * Cached ability instances.
 	 */
-	private static ?HandlerService $handler_service    = null;
-	private static ?StepTypeService $step_type_service = null;
+	private static ?HandlerAbilities $handler_abilities    = null;
+	private static ?StepTypeAbilities $step_type_abilities = null;
 
 	/**
 	 * Cached complete documentation string.
@@ -59,28 +59,28 @@ class HandlerDocumentation {
 		self::$cached_all_handlers  = null;
 		self::$cached_by_step_type  = array();
 		self::$cached_handler_slugs = array();
-		self::$handler_service      = null;
-		self::$step_type_service    = null;
+		self::$handler_abilities    = null;
+		self::$step_type_abilities  = null;
 	}
 
 	/**
-	 * Get HandlerService instance.
+	 * Get HandlerAbilities instance.
 	 */
-	private static function getHandlerService(): HandlerService {
-		if ( null === $handler_service ) {
-			self::$handler_service = new HandlerService();
+	private static function getHandlerAbilities(): HandlerAbilities {
+		if ( null === self::$handler_abilities ) {
+			self::$handler_abilities = new HandlerAbilities();
 		}
-		return self::$handler_service;
+		return self::$handler_abilities;
 	}
 
 	/**
-	 * Get StepTypeService instance.
+	 * Get StepTypeAbilities instance.
 	 */
-	private static function getStepTypeService(): StepTypeService {
-		if ( null === $step_type_service ) {
-			self::$step_type_service = new StepTypeService();
+	private static function getStepTypeAbilities(): StepTypeAbilities {
+		if ( null === self::$step_type_abilities ) {
+			self::$step_type_abilities = new StepTypeAbilities();
 		}
-		return self::$step_type_service;
+		return self::$step_type_abilities;
 	}
 
 	/**
@@ -89,7 +89,7 @@ class HandlerDocumentation {
 	 * @return array<string> Current handler slugs
 	 */
 	private static function getCurrentHandlerSlugs(): array {
-		$handlers = self::getHandlerService()->getAll();
+		$handlers = self::getHandlerAbilities()->getAllHandlers();
 		return array_keys( $handlers );
 	}
 
@@ -123,7 +123,7 @@ class HandlerDocumentation {
 		$doc  = '';
 		$doc .= self::buildStepTypesSection();
 
-		$step_types = self::getStepTypeService()->getAll();
+		$step_types = self::getStepTypeAbilities()->getAllStepTypes();
 		foreach ( $step_types as $slug => $config ) {
 			$uses_handler = $config['uses_handler'] ?? true;
 			if ( ! $uses_handler ) {
@@ -148,7 +148,7 @@ class HandlerDocumentation {
 	 * @return string Step types section
 	 */
 	public static function buildStepTypesSection(): string {
-		$step_types = self::getStepTypeService()->getAll();
+		$step_types = self::getStepTypeAbilities()->getAllStepTypes();
 
 		if ( empty( $step_types ) ) {
 			return "STEP TYPES:\nNo step types registered.\n\n";
@@ -179,7 +179,7 @@ class HandlerDocumentation {
 			return self::$cached_by_step_type[ $step_type ];
 		}
 
-		$handlers = self::getHandlerService()->getAll( $step_type );
+		$handlers = self::getHandlerAbilities()->getAllHandlers( $step_type );
 
 		if ( empty( $handlers ) ) {
 			self::$cached_by_step_type[ $step_type ] = '';
@@ -232,7 +232,7 @@ class HandlerDocumentation {
 	 * @return array Formatted field list with types and descriptions
 	 */
 	public static function getHandlerConfigFields( string $handler_slug ): array {
-		$fields = self::getHandlerService()->getConfigFields( $handler_slug );
+		$fields = self::getHandlerAbilities()->getConfigFields( $handler_slug );
 
 		if ( empty( $fields ) ) {
 			return array();

@@ -18,7 +18,7 @@
 
 namespace DataMachine\Core;
 
-use DataMachine\Services\ProcessedItemsManager;
+use DataMachine\Core\Database\ProcessedItems\ProcessedItems;
 use DataMachine\Core\FilesRepository\RemoteFileDownloader;
 
 defined( 'ABSPATH' ) || exit;
@@ -179,8 +179,8 @@ class ExecutionContext {
 		if ( $this->isDirect() || ! $this->flow_step_id ) {
 			return false;
 		}
-		$manager = new ProcessedItemsManager();
-		return $manager->hasBeenProcessed( $this->flow_step_id, $this->handler_type, $item_id );
+		$db_processed_items = new ProcessedItems();
+		return $db_processed_items->has_item_been_processed( $this->flow_step_id, $this->handler_type, $item_id );
 	}
 
 	/**

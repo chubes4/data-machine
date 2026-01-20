@@ -13,10 +13,10 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Twitter;
 
+use DataMachine\Abilities\AuthAbilities;
 use DataMachine\Core\EngineData;
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
-use DataMachine\Services\AuthProviderService;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -78,8 +78,8 @@ class Twitter extends PublishHandler {
 	 */
 	private function get_auth() {
 		if ( $this->auth === null ) {
-			$auth_service = new AuthProviderService();
-			$this->auth   = $auth_service->get( 'twitter' );
+			$auth_abilities = new AuthAbilities();
+			$this->auth     = $auth_abilities->getProvider( 'twitter' );
 
 			if ( $this->auth === null ) {
 				$this->log(
@@ -88,7 +88,7 @@ class Twitter extends PublishHandler {
 					array(
 						'handler'             => 'twitter',
 						'missing_service'     => 'twitter',
-						'available_providers' => array_keys( $auth_service->getAll() ),
+						'available_providers' => array_keys( $auth_abilities->getAllProviders() ),
 					)
 				);
 			}

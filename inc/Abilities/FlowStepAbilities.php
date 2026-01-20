@@ -11,16 +11,13 @@
 namespace DataMachine\Abilities;
 
 use DataMachine\Core\Database\Flows\Flows;
-use DataMachine\Services\FlowStepManager;
-use DataMachine\Services\HandlerService;
 
 defined( 'ABSPATH' ) || exit;
 
 class FlowStepAbilities {
 
 	private Flows $db_flows;
-	private FlowStepManager $flow_step_manager;
-	private HandlerService $handler_service;
+	private HandlerAbilities $handler_abilities;
 
 	public function __construct() {
 		if ( ! class_exists( 'WP_Ability' ) ) {
@@ -28,8 +25,7 @@ class FlowStepAbilities {
 		}
 
 		$this->db_flows          = new Flows();
-		$this->flow_step_manager = new FlowStepManager();
-		$this->handler_service   = new HandlerService();
+		$this->handler_abilities = new HandlerAbilities();
 		$this->registerAbilities();
 	}
 
@@ -299,7 +295,8 @@ class FlowStepAbilities {
 			);
 		}
 
-		$step = $this->flow_step_manager->get( $flow_step_id );
+		$step_config = $this->db_flows->get_flow_step_config( $flow_step_id );
+		$step        = ! empty( $step_config ) ? $step_config : null;
 
 		if ( ! $step ) {
 			return array(
@@ -343,7 +340,8 @@ class FlowStepAbilities {
 			);
 		}
 
-		$existing_step = $this->flow_step_manager->get( $flow_step_id );
+		$step_config   = $this->db_flows->get_flow_step_config( $flow_step_id );
+		$existing_step = ! empty( $step_config ) ? $step_config : null;
 		if ( ! $existing_step ) {
 			return array(
 				'success' => false,
@@ -373,7 +371,7 @@ class FlowStepAbilities {
 				}
 			}
 
-			$success = $this->flow_step_manager->updateHandler( $flow_step_id, $effective_slug, $handler_config );
+			$success = $this->updateHandler( $flow_step_id, $effective_slug, $handler_config );
 
 			if ( ! $success ) {
 				return array(
@@ -391,7 +389,7 @@ class FlowStepAbilities {
 		}
 
 		if ( $has_message_update ) {
-			$success = $this->flow_step_manager->updateUserMessage( $flow_step_id, $user_message );
+			$success = $this->updateUserMessage( $flow_step_id, $user_message );
 
 			if ( ! $success ) {
 				return array(
@@ -445,7 +443,7 @@ class FlowStepAbilities {
 
 		$pipeline_id = (int) $pipeline_id;
 
-		if ( ! empty( $target_handler_slug ) && ! $this->handler_service->exists( $target_handler_slug ) ) {
+		if ( ! empty( $target_handler_slug ) && ! $this->handler_abilities->handlerExists( $target_handler_slug ) ) {
 			return array(
 				'success' => false,
 				'error'   => "Target handler '{$target_handler_slug}' not found",
@@ -539,7 +537,7 @@ class FlowStepAbilities {
 					}
 				}
 
-				$success = $this->flow_step_manager->updateHandler( $flow_step_id, $effective_handler_slug, $merged_config );
+				$success = $this->updateHandler( $flow_step_id, $effective_handler_slug, $merged_config );
 				if ( ! $success ) {
 					$errors[] = array(
 						'flow_step_id' => $flow_step_id,
@@ -550,7 +548,7 @@ class FlowStepAbilities {
 				}
 
 				if ( ! empty( $user_message ) ) {
-					$message_success = $this->flow_step_manager->updateUserMessage( $flow_step_id, $user_message );
+					$message_success = $this->updateUserMessage( $flow_step_id, $user_message );
 					if ( ! $message_success ) {
 						$errors[] = array(
 							'flow_step_id' => $flow_step_id,
@@ -647,7 +645,7 @@ class FlowStepAbilities {
 	 * @return true|string True if valid, error message if invalid.
 	 */
 	private function validateHandlerConfig( string $handler_slug, array $handler_config ): bool|string {
-		$valid_fields = array_keys( $this->handler_service->getConfigFields( $handler_slug ) );
+		$valid_fields = array_keys( $this->handler_abilities->getConfigFields( $handler_slug ) );
 
 		if ( empty( $valid_fields ) ) {
 			return true;
@@ -676,7 +674,7 @@ class FlowStepAbilities {
 	 * @return array Mapped config with only valid target handler fields.
 	 */
 	private function mapHandlerConfig( array $existing_config, string $target_handler, array $explicit_map ): array {
-		$target_fields = array_keys( $this->handler_service->getConfigFields( $target_handler ) );
+		$target_fields = array_keys( $this->handler_abilities->getConfigFields( $target_handler ) );
 
 		if ( empty( $target_fields ) ) {
 			return array();
@@ -699,5 +697,177 @@ class FlowStepAbilities {
 		}
 
 		return $mapped_config;
+	}
+
+	/**
+	 * Update handler configuration for a flow step.
+	 *
+	 * @param string $flow_step_id Flow step ID (format: pipeline_step_id_flow_id).
+	 * @param string $handler_slug Handler slug to set (uses existing if empty).
+	 * @param array  $handler_settings Handler configuration settings.
+	 * @return bool Success status.
+	 */
+	private function updateHandler( string $flow_step_id, string $handler_slug = '', array $handler_settings = array() ): bool {
+		$parts = apply_filters( 'datamachine_split_flow_step_id', null, $flow_step_id );
+		if ( ! $parts ) {
+			do_action( 'datamachine_log', 'error', 'Invalid flow_step_id format for handler update', array( 'flow_step_id' => $flow_step_id ) );
+			return false;
+		}
+		$flow_id = $parts['flow_id'];
+
+		$flow = $this->db_flows->get_flow( $flow_id );
+		if ( ! $flow ) {
+			do_action(
+				'datamachine_log',
+				'error',
+				'Flow handler update failed - flow not found',
+				array(
+					'flow_id'      => $flow_id,
+					'flow_step_id' => $flow_step_id,
+				)
+			);
+			return false;
+		}
+
+		$flow_config = $flow['flow_config'] ?? array();
+
+		if ( ! isset( $flow_config[ $flow_step_id ] ) ) {
+			if ( ! isset( $parts['pipeline_step_id'] ) || empty( $parts['pipeline_step_id'] ) ) {
+				do_action(
+					'datamachine_log',
+					'error',
+					'Pipeline step ID is required for flow handler update',
+					array(
+						'flow_step_id' => $flow_step_id,
+						'parts'        => $parts,
+					)
+				);
+				return false;
+			}
+			$pipeline_step_id             = $parts['pipeline_step_id'];
+			$flow_config[ $flow_step_id ] = array(
+				'flow_step_id'     => $flow_step_id,
+				'pipeline_step_id' => $pipeline_step_id,
+				'pipeline_id'      => $flow['pipeline_id'],
+				'flow_id'          => $flow_id,
+				'handler'          => null,
+			);
+		}
+
+		$effective_slug = ! empty( $handler_slug ) ? $handler_slug : ( $flow_config[ $flow_step_id ]['handler_slug'] ?? null );
+
+		if ( empty( $effective_slug ) ) {
+			do_action( 'datamachine_log', 'error', 'No handler slug available for flow step update', array( 'flow_step_id' => $flow_step_id ) );
+			return false;
+		}
+
+		// If switching handlers, strip legacy config fields that don't belong to the new handler.
+		if ( ( $flow_config[ $flow_step_id ]['handler_slug'] ?? '' ) !== $effective_slug ) {
+			$valid_fields = array_keys( $this->handler_abilities->getConfigFields( $effective_slug ) );
+			if ( ! empty( $valid_fields ) ) {
+				$existing_handler_config = array_intersect_key( $flow_config[ $flow_step_id ]['handler_config'] ?? array(), array_flip( $valid_fields ) );
+			} else {
+				$existing_handler_config = array();
+			}
+		} else {
+			$existing_handler_config = $flow_config[ $flow_step_id ]['handler_config'] ?? array();
+		}
+
+		$flow_config[ $flow_step_id ]['handler_slug']   = $effective_slug;
+		$merged_config                                  = array_merge( $existing_handler_config, $handler_settings );
+		$flow_config[ $flow_step_id ]['handler_config'] = $this->handler_abilities->applyDefaults( $effective_slug, $merged_config );
+		$flow_config[ $flow_step_id ]['enabled']        = true;
+
+		$success = $this->db_flows->update_flow(
+			$flow_id,
+			array(
+				'flow_config' => $flow_config,
+			)
+		);
+
+		if ( ! $success ) {
+			do_action(
+				'datamachine_log',
+				'error',
+				'Flow handler update failed - database update failed',
+				array(
+					'flow_id'      => $flow_id,
+					'flow_step_id' => $flow_step_id,
+					'handler_slug' => $handler_slug,
+				)
+			);
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Update user message for an AI flow step.
+	 *
+	 * @param string $flow_step_id Flow step ID (format: pipeline_step_id_flow_id).
+	 * @param string $user_message User message content.
+	 * @return bool Success status.
+	 */
+	private function updateUserMessage( string $flow_step_id, string $user_message ): bool {
+		$parts = apply_filters( 'datamachine_split_flow_step_id', null, $flow_step_id );
+		if ( ! $parts ) {
+			do_action( 'datamachine_log', 'error', 'Invalid flow_step_id format for user message update', array( 'flow_step_id' => $flow_step_id ) );
+			return false;
+		}
+		$flow_id = $parts['flow_id'];
+
+		$flow = $this->db_flows->get_flow( $flow_id );
+		if ( ! $flow ) {
+			do_action(
+				'datamachine_log',
+				'error',
+				'Flow user message update failed - flow not found',
+				array(
+					'flow_id'      => $flow_id,
+					'flow_step_id' => $flow_step_id,
+				)
+			);
+			return false;
+		}
+
+		$flow_config = $flow['flow_config'] ?? array();
+
+		if ( ! isset( $flow_config[ $flow_step_id ] ) ) {
+			do_action(
+				'datamachine_log',
+				'error',
+				'Flow user message update failed - flow step not found',
+				array(
+					'flow_id'      => $flow_id,
+					'flow_step_id' => $flow_step_id,
+				)
+			);
+			return false;
+		}
+
+		$flow_config[ $flow_step_id ]['user_message'] = wp_unslash( sanitize_textarea_field( $user_message ) );
+
+		$success = $this->db_flows->update_flow(
+			$flow_id,
+			array(
+				'flow_config' => $flow_config,
+			)
+		);
+
+		if ( ! $success ) {
+			do_action(
+				'datamachine_log',
+				'error',
+				'Flow user message update failed - database update error',
+				array(
+					'flow_id'      => $flow_id,
+					'flow_step_id' => $flow_step_id,
+				)
+			);
+			return false;
+		}
+
+		return true;
 	}
 }

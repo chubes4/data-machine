@@ -7,7 +7,7 @@
 
 namespace DataMachine\Api;
 
-use DataMachine\Services\StepTypeService;
+use DataMachine\Abilities\StepTypeAbilities;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -115,17 +115,42 @@ class Execute {
 		}
 
 		// Create job upfront for immediate visibility
-		$job_manager = new \DataMachine\Services\JobManager();
+		$db_jobs     = new \DataMachine\Core\Database\Jobs\Jobs();
 		$pipeline_id = (int) $flow['pipeline_id'];
-		$job_id      = $job_manager->create( $flow_id, $pipeline_id );
+		$job_id      = $db_jobs->create_job(
+			array(
+				'pipeline_id' => $pipeline_id,
+				'flow_id'     => $flow_id,
+			)
+		);
 
 		if ( ! $job_id ) {
+			do_action(
+				'datamachine_log',
+				'error',
+				'Job creation failed - database insert failed',
+				array(
+					'flow_id'     => $flow_id,
+					'pipeline_id' => $pipeline_id,
+				)
+			);
 			return new \WP_Error(
 				'job_creation_failed',
 				'Failed to create job record',
 				array( 'status' => 500 )
 			);
 		}
+
+		do_action(
+			'datamachine_log',
+			'debug',
+			'Job created',
+			array(
+				'job_id'      => $job_id,
+				'flow_id'     => $flow_id,
+				'pipeline_id' => $pipeline_id,
+			)
+		);
 
 		// Immediate execution via Action Scheduler
 		if ( ! $timestamp ) {
@@ -321,8 +346,8 @@ class Execute {
 			);
 		}
 
-		$step_type_service = new StepTypeService();
-		$valid_types       = array_keys( $step_type_service->getAll() );
+		$step_type_abilities = new StepTypeAbilities();
+		$valid_types         = array_keys( $step_type_abilities->getAllStepTypes() );
 
 		foreach ( $workflow['steps'] as $index => $step ) {
 			if ( ! isset( $step['type'] ) ) {

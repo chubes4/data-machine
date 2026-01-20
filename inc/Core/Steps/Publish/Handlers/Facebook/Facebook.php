@@ -13,10 +13,10 @@
 
 namespace DataMachine\Core\Steps\Publish\Handlers\Facebook;
 
+use DataMachine\Abilities\AuthAbilities;
 use DataMachine\Core\EngineData;
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
-use DataMachine\Services\AuthProviderService;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -76,8 +76,8 @@ class Facebook extends PublishHandler {
 	 */
 	private function get_auth() {
 		if ( $this->auth === null ) {
-			$auth_service = new AuthProviderService();
-			$this->auth   = $auth_service->get( 'facebook' );
+			$auth_abilities = new AuthAbilities();
+			$this->auth     = $auth_abilities->getProvider( 'facebook' );
 
 			if ( $this->auth === null ) {
 				$this->log(
@@ -86,7 +86,7 @@ class Facebook extends PublishHandler {
 					array(
 						'handler'             => 'facebook',
 						'missing_service'     => 'facebook',
-						'available_providers' => array_keys( $auth_service->getAll() ),
+						'available_providers' => array_keys( $auth_abilities->getAllProviders() ),
 					)
 				);
 			}

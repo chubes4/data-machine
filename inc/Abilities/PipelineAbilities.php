@@ -15,8 +15,6 @@ use DataMachine\Core\Database\Flows\Flows;
 use DataMachine\Core\Database\Pipelines\Pipelines;
 use DataMachine\Core\FilesRepository\FileCleanup;
 use DataMachine\Engine\Actions\ImportExport;
-use DataMachine\Services\FlowManager;
-use DataMachine\Services\StepTypeService;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -26,7 +24,6 @@ class PipelineAbilities {
 
 	private Pipelines $db_pipelines;
 	private Flows $db_flows;
-	private FlowManager $flow_manager;
 
 	public function __construct() {
 		if ( ! class_exists( 'WP_Ability' ) ) {
@@ -35,7 +32,6 @@ class PipelineAbilities {
 
 		$this->db_pipelines = new Pipelines();
 		$this->db_flows     = new Flows();
-		$this->flow_manager = new FlowManager();
 		$this->registerAbilities();
 	}
 
@@ -532,7 +528,7 @@ class PipelineAbilities {
 		$steps_created   = 0;
 
 		if ( $has_steps ) {
-			$step_type_service = new StepTypeService();
+			$step_type_abilities = new StepTypeAbilities();
 
 			foreach ( $steps as $index => $step_data ) {
 				$step_type = sanitize_text_field( $step_data['step_type'] ?? '' );
@@ -540,7 +536,7 @@ class PipelineAbilities {
 					continue;
 				}
 
-				$step_type_config = $step_type_service->get( $step_type );
+				$step_type_config = $step_type_abilities->getStepType( $step_type );
 				if ( ! $step_type_config ) {
 					continue;
 				}
@@ -569,19 +565,25 @@ class PipelineAbilities {
 		$flow_name         = $flow_config['flow_name'] ?? $pipeline_name;
 		$scheduling_config = $flow_config['scheduling_config'] ?? array( 'interval' => 'manual' );
 
-		$flow_result = $this->flow_manager->create(
-			$pipeline_id,
-			$flow_name,
-			array( 'scheduling_config' => $scheduling_config )
-		);
+		$create_flow_ability = wp_get_ability( 'datamachine/create-flow' );
+		$flow_result         = null;
+		if ( $create_flow_ability ) {
+			$flow_result = $create_flow_ability->execute(
+				array(
+					'pipeline_id'       => $pipeline_id,
+					'flow_name'         => $flow_name,
+					'scheduling_config' => $scheduling_config,
+				)
+			);
+		}
 
-		if ( ! $flow_result ) {
+		if ( ! $flow_result || ! $flow_result['success'] ) {
 			do_action( 'datamachine_log', 'error', "Failed to create flow for pipeline {$pipeline_id}" );
 		}
 
 		$flow_step_ids = array();
-		if ( $flow_result && ! empty( $flow_result['flow_config'] ) ) {
-			$flow_step_ids = array_keys( $flow_result['flow_config'] );
+		if ( $flow_result && $flow_result['success'] && ! empty( $flow_result['flow_data']['flow_config'] ) ) {
+			$flow_step_ids = array_keys( $flow_result['flow_data']['flow_config'] );
 		}
 
 		do_action(
@@ -849,13 +851,19 @@ class PipelineAbilities {
 
 			$interval_only_config = array( 'interval' => $scheduling_config['interval'] ?? 'manual' );
 
-			$flow_result = $this->flow_manager->create(
-				$new_pipeline_id,
-				$new_flow_name,
-				array( 'scheduling_config' => $interval_only_config )
-			);
+			$create_flow_ability = wp_get_ability( 'datamachine/create-flow' );
+			$flow_result         = null;
+			if ( $create_flow_ability ) {
+				$flow_result = $create_flow_ability->execute(
+					array(
+						'pipeline_id'       => $new_pipeline_id,
+						'flow_name'         => $new_flow_name,
+						'scheduling_config' => $interval_only_config,
+					)
+				);
+			}
 
-			if ( $flow_result ) {
+			if ( $flow_result && $flow_result['success'] ) {
 				++$flows_created;
 
 				$source_flow_config = $source_flow['flow_config'] ?? array();
@@ -1055,8 +1063,8 @@ class PipelineAbilities {
 	 * @return bool|string True if valid, error message if not.
 	 */
 	private function validateSteps( array $steps ): bool|string {
-		$step_type_service = new StepTypeService();
-		$valid_types       = array_keys( $step_type_service->getAll() );
+		$step_type_abilities = new StepTypeAbilities();
+		$valid_types         = array_keys( $step_type_abilities->getAllStepTypes() );
 
 		foreach ( $steps as $index => $step ) {
 			if ( ! is_array( $step ) ) {

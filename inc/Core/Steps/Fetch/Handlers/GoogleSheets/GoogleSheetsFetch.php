@@ -8,10 +8,10 @@
 
 namespace DataMachine\Core\Steps\Fetch\Handlers\GoogleSheets;
 
+use DataMachine\Abilities\AuthAbilities;
 use DataMachine\Core\ExecutionContext;
 use DataMachine\Core\Steps\Fetch\Handlers\FetchHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
-use DataMachine\Services\AuthProviderService;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
@@ -51,7 +51,7 @@ class GoogleSheetsFetch extends FetchHandler {
 			$this->auth_service = $this->getAuthProvider( 'googlesheets' );
 
 			if ( $this->auth_service === null ) {
-				$auth_provider_service = new AuthProviderService();
+				$auth_abilities = new AuthAbilities();
 				do_action(
 					'datamachine_log',
 					'error',
@@ -60,7 +60,7 @@ class GoogleSheetsFetch extends FetchHandler {
 						'agent_type'          => 'system',
 						'handler'             => 'googlesheets',
 						'missing_service'     => 'googlesheets',
-						'available_providers' => array_keys( $auth_provider_service->getAll() ),
+						'available_providers' => array_keys( $auth_abilities->getAllProviders() ),
 					)
 				);
 			}

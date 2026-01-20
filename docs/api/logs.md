@@ -43,7 +43,7 @@ For technical details on the logging architecture and the service layer, see the
 
 ### LogsManager Service
 
-The `LogsManager` service provides direct method calls for logging and retrieval:
+The `LogsManager` service provides direct method calls for logging and retrieval. Note: logging-related actions are also exposed via Abilities (`LogAbilities.php`) and REST endpoints delegate to abilities where available; `LogsManager` remains as a file/IO utility during the Abilities migration.
 
 ```php
 $logs_manager = new \DataMachine\Services\LogsManager();

@@ -29,13 +29,13 @@ class FlowAbilitiesTest extends WP_UnitTestCase {
 
 		$this->flow_abilities = new FlowAbilities();
 
-		$pipeline_manager = new \DataMachine\Services\PipelineManager();
-		$flow_manager = new \DataMachine\Services\FlowManager();
+		$pipeline_ability = wp_get_ability( 'datamachine/create-pipeline' );
+		$flow_ability     = wp_get_ability( 'datamachine/create-flow' );
 
-		$pipeline = $pipeline_manager->create('Test Pipeline for Abilities');
+		$pipeline = $pipeline_ability->execute( [ 'pipeline_name' => 'Test Pipeline for Abilities' ] );
 		$this->test_pipeline_id = $pipeline['pipeline_id'];
 
-		$flow = $flow_manager->create($this->test_pipeline_id, 'Test Flow for Abilities');
+		$flow = $flow_ability->execute( [ 'pipeline_id' => $this->test_pipeline_id, 'flow_name' => 'Test Flow for Abilities' ] );
 		$this->test_flow_id = $flow['flow_id'];
 	}
 
@@ -107,11 +107,13 @@ class FlowAbilitiesTest extends WP_UnitTestCase {
 	}
 
 	public function test_get_flows_by_handler_slug(): void {
-		$flow_manager = new \DataMachine\Services\FlowManager();
+		$flow_ability = wp_get_ability( 'datamachine/create-flow' );
 
-		$flow = $flow_manager->create($this->test_pipeline_id, 'RSS Test Flow', [
-			'scheduling_config' => ['interval' => 'manual']
-		]);
+		$flow = $flow_ability->execute( [
+			'pipeline_id'       => $this->test_pipeline_id,
+			'flow_name'         => 'RSS Test Flow',
+			'scheduling_config' => [ 'interval' => 'manual' ],
+		] );
 
 		$result = $this->flow_abilities->executeAbility([
 			'pipeline_id' => $this->test_pipeline_id,
@@ -138,38 +140,39 @@ class FlowAbilitiesTest extends WP_UnitTestCase {
 	}
 
 	public function test_handler_slug_any_step_match(): void {
-		$flow_manager = new \DataMachine\Services\FlowManager();
-		$pipeline_manager = new \DataMachine\Services\PipelineManager();
+		$pipeline_ability = wp_get_ability( 'datamachine/create-pipeline' );
+		$flow_ability     = wp_get_ability( 'datamachine/create-flow' );
 
-		$pipeline = $pipeline_manager->create('Multi-Handler Pipeline', [
-			'pipeline_config' => [
-				'0' => [
-					'pipeline_step_id' => 'step1',
+		$pipeline = $pipeline_ability->execute( [
+			'pipeline_name' => 'Multi-Handler Pipeline',
+			'steps'         => [
+				[
 					'step_type' => 'fetch',
-					'execution_order' => 1
+					'label'     => 'Fetch Step',
 				],
-				'1' => [
-					'pipeline_step_id' => 'step2',
+				[
 					'step_type' => 'publish',
-					'execution_order' => 2
-				]
-			]
-		]);
+					'label'     => 'Publish Step',
+				],
+			],
+		] );
 
-		$flow = $flow_manager->create($pipeline['pipeline_id'], 'Multi-Handler Flow', [
+		$flow = $flow_ability->execute( [
+			'pipeline_id' => $pipeline['pipeline_id'],
+			'flow_name'   => 'Multi-Handler Flow',
 			'flow_config' => [
-				'step1_' . $flow['flow_id'] => [
-					'step_type' => 'fetch',
-					'handler_slug' => 'rss',
-					'pipeline_step_id' => 'step1'
+				'step1' => [
+					'step_type'        => 'fetch',
+					'handler_slug'     => 'rss',
+					'pipeline_step_id' => 'step1',
 				],
-				'step2_' . $flow['flow_id'] => [
-					'step_type' => 'publish',
-					'handler_slug' => 'wordpress_publish',
-					'pipeline_step_id' => 'step2'
-				]
-			]
-		]);
+				'step2' => [
+					'step_type'        => 'publish',
+					'handler_slug'     => 'wordpress_publish',
+					'pipeline_step_id' => 'step2',
+				],
+			],
+		] );
 
 		$result = $this->flow_abilities->executeAbility([
 			'pipeline_id' => $pipeline['pipeline_id'],

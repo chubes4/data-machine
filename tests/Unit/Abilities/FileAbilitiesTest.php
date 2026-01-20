@@ -10,10 +10,8 @@
 namespace DataMachine\Tests\Unit\Abilities;
 
 use DataMachine\Abilities\FileAbilities;
+use DataMachine\Core\Database\Jobs\Jobs;
 use DataMachine\Core\FilesRepository\FileStorage;
-use DataMachine\Services\FlowManager;
-use DataMachine\Services\JobManager;
-use DataMachine\Services\PipelineManager;
 use WP_UnitTestCase;
 
 class FileAbilitiesTest extends WP_UnitTestCase {
@@ -31,13 +29,13 @@ class FileAbilitiesTest extends WP_UnitTestCase {
 
 		$this->file_abilities = new FileAbilities();
 
-		$pipeline_manager       = new PipelineManager();
-		$flow_manager           = new FlowManager();
+		$pipeline_ability       = wp_get_ability( 'datamachine/create-pipeline' );
+		$flow_ability           = wp_get_ability( 'datamachine/create-flow' );
 
-		$pipeline               = $pipeline_manager->create( 'Test Pipeline for Files' );
+		$pipeline               = $pipeline_ability->execute( array( 'pipeline_name' => 'Test Pipeline for Files' ) );
 		$this->test_pipeline_id = $pipeline['pipeline_id'];
 
-		$flow                   = $flow_manager->create( $this->test_pipeline_id, 'Test Flow for Files' );
+		$flow                   = $flow_ability->execute( array( 'pipeline_id' => $this->test_pipeline_id, 'flow_name' => 'Test Flow for Files' ) );
 		$this->test_flow_id     = $flow['flow_id'];
 
 		$this->test_flow_step_id = $this->test_pipeline_id . '-' . $this->test_flow_id;
@@ -270,8 +268,13 @@ class FileAbilitiesTest extends WP_UnitTestCase {
 	}
 
 	public function test_cleanup_files_with_job_and_flow(): void {
-		$job_manager = new JobManager();
-		$job_id      = $job_manager->create( $this->test_flow_id, $this->test_pipeline_id );
+		$db_jobs = new Jobs();
+		$job_id  = $db_jobs->create_job(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'flow_id'     => $this->test_flow_id,
+			)
+		);
 
 		$result = $this->file_abilities->executeCleanupFiles(
 			array(

@@ -10,7 +10,7 @@
 
 namespace DataMachine\Core\Admin;
 
-use DataMachine\Services\HandlerService;
+use DataMachine\Abilities\HandlerAbilities;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -26,7 +26,7 @@ class FlowFormatter {
 	public static function format_flow_for_response( array $flow, ?array $latest_job = null ): array {
 		$flow_config = $flow['flow_config'] ?? array();
 
-		$handler_service = new HandlerService();
+		$handler_abilities = new HandlerAbilities();
 
 		foreach ( $flow_config as $flow_step_id => &$step_data ) {
 			if ( ! isset( $step_data['handler_slug'] ) ) {
@@ -43,7 +43,7 @@ class FlowFormatter {
 				$step_type
 			);
 
-			$step_data['handler_config'] = $handler_service->applyDefaults(
+			$step_data['handler_config'] = $handler_abilities->applyDefaults(
 				$handler_slug,
 				$step_data['handler_config'] ?? array()
 			);

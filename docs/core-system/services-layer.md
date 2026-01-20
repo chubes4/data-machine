@@ -2,6 +2,18 @@
 
 **OOP service managers replacing filter-based actions for 3x performance improvement** (@since v0.4.0)
 
+> **Migration Note (@since v0.11.7):** The Services Layer is being progressively migrated to the WordPress 6.9 Abilities API. `HandlerService` and `StepTypeService` have been deleted and replaced by `HandlerAbilities` and `StepTypeAbilities`. Other services remain in use internally by abilities during the migration. See [abilities-api-migration-plan.md](/abilities-api-migration-plan.md) for migration status.
+
+## Migration Status (high level)
+
+The project is intentionally shifting business logic into an Abilities-first architecture. This section briefly summarises the current migration state so readers know which services remain and which have been replaced.
+
+- Deleted / Replaced: `HandlerService`, `StepTypeService`, `FlowManager`, `PipelineManager`, `PipelineStepManager`, `FlowStepManager`, `ProcessedItemsManager` (all replaced by corresponding ability classes in `inc/Abilities/`).
+- Retained as utilities: `inc/Services/CacheManager.php`, `inc/Services/LogsManager.php` — these provide cross-cutting utility functions rather than core business logic.
+- In-progress migration: `JobManager`, `AuthProviderService` — abilities exist for these domains but some internal service logic is still used during the migration.
+
+For full details and the migration plan, see [abilities-api-migration-plan.md](/abilities-api-migration-plan.md).
+
 ## Overview
 
 The Services Layer represents a fundamental architectural shift from filter-based action indirection to direct method calls through dedicated service managers. This eliminates redundant database queries, reduces complexity, and provides a 3x performance improvement for all core operations.
@@ -16,44 +28,24 @@ The Services Layer represents a fundamental architectural shift from filter-base
 
 ## Service Managers
 
-### FlowManager
+### FlowAbilities (migrated from FlowManager)
 
-**Location**: `/inc/Services/FlowManager.php`
+**Location**: `/inc/Abilities/FlowAbilities.php`
 
 **Responsibilities**:
 - Flow CRUD operations (create, read, update, delete)
 - Flow duplication with step ID remapping
 - Step synchronization from pipelines to flows
-- Scheduling integration with Action Scheduler
 
-**Key Methods**:
-```php
-public function create(int $pipeline_id, string $name, array $options = []): ?array
-public function get(int $flow_id): ?array
-public function delete(int $flow_id): bool
-public function duplicate(int $source_flow_id): ?array
-public function syncStepsToFlow(int $flow_id, int $pipeline_id, array $steps, array $pipeline_config = []): bool
-```
+### PipelineAbilities (migrated from PipelineManager)
 
-### PipelineManager
-
-**Location**: `/inc/Services/PipelineManager.php`
+**Location**: `/inc/Abilities/PipelineAbilities.php`
 
 **Responsibilities**:
 - Pipeline CRUD operations with two creation modes
 - Complete pipeline creation with steps and handler configuration
 - Simple pipeline creation (steps added later via builder)
 - Flow cascade deletion when pipelines are deleted
-
-**Key Methods**:
-```php
-public function create(string $name, array $options = []): ?array
-public function createWithSteps(string $name, array $steps, array $options = []): ?array
-public function get(int $pipeline_id): ?array
-public function getWithFlows(int $pipeline_id): ?array
-public function update(int $pipeline_id, array $data): bool
-public function delete(int $pipeline_id): array|WP_Error
-```
 
 ### JobManager
 
@@ -86,9 +78,9 @@ public function failJob(int $job_id, string $error_type, array $context = []): b
 - Search and pagination for log entries
 - Log cleanup and retention policies
 
-### ProcessedItemsManager
+### ProcessedItemsAbilities (migrated from ProcessedItemsManager)
 
-**Location**: `/inc/Services/ProcessedItemsManager.php`
+**Location**: `/inc/Abilities/ProcessedItemsAbilities.php`
 
 **Responsibilities**:
 - Deduplication tracking across all workflows
@@ -96,39 +88,9 @@ public function failJob(int $job_id, string $error_type, array $context = []): b
 - Processed item lookup and status checking
 - Cleanup of old processed item records
 
-### FlowStepManager
+### PipelineStepAbilities (migrated from PipelineStepManager)
 
-**Location**: `/inc/Services/FlowStepManager.php`
-
-**Responsibilities**:
-- Individual flow step configuration management
-- Handler assignment and configuration updates
-- Step validation and error handling
-- Integration with handler registration system
-
-### HandlerService
-
-**Location**: `/inc/Services/HandlerService.php`
-
-**Responsibilities**:
-- Centralized handler discovery and validation
-- Handler settings and schema lookup
-- Site-wide handler defaults management
-- Priority-based configuration merging (Explicit > Site > Schema)
-- Request-level caching for performance
-
-**Key Methods**:
-```php
-public function getAll(?string $step_type = null): array
-public function get(string $handler_slug, ?string $step_type = null): ?array
-public function getConfigFields(string $handler_slug): array
-public function getSiteDefaults(): array
-public function applyDefaults(string $handler_slug, array $config): array
-```
-
-### PipelineStepManager
-
-**Location**: `/inc/Services/PipelineStepManager.php`
+**Location**: `/inc/Abilities/PipelineStepAbilities.php`
 
 **Responsibilities**:
 - Pipeline step template management

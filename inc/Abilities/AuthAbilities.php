@@ -4,30 +4,170 @@
  *
  * WordPress 6.9 Abilities API primitives for authentication operations.
  * Centralizes OAuth status, disconnect, and configuration saving.
+ * Self-contained auth provider discovery and lookup with request-level caching.
  *
  * @package DataMachine\Abilities
  */
 
 namespace DataMachine\Abilities;
 
-use DataMachine\Services\AuthProviderService;
-use DataMachine\Services\HandlerService;
-
 defined( 'ABSPATH' ) || exit;
 
 class AuthAbilities {
 
-	private AuthProviderService $auth_service;
-	private HandlerService $handler_service;
+	/**
+	 * Cached auth providers.
+	 *
+	 * @var array|null
+	 */
+	private static ?array $cache = null;
+
+	private HandlerAbilities $handler_abilities;
 
 	public function __construct() {
+		$this->handler_abilities = new HandlerAbilities();
+
 		if ( ! class_exists( 'WP_Ability' ) ) {
 			return;
 		}
 
-		$this->auth_service    = new AuthProviderService();
-		$this->handler_service = new HandlerService();
 		$this->registerAbilities();
+	}
+
+	/**
+	 * Clear cached auth providers.
+	 * Call when handlers are dynamically registered.
+	 */
+	public static function clearCache(): void {
+		self::$cache = null;
+	}
+
+	/**
+	 * Get all registered auth providers (cached).
+	 *
+	 * @return array Auth providers array keyed by provider key
+	 */
+	public function getAllProviders(): array {
+		if ( null === self::$cache ) {
+			self::$cache = apply_filters( 'datamachine_auth_providers', array() );
+		}
+
+		return self::$cache;
+	}
+
+	/**
+	 * Get auth provider instance by provider key.
+	 *
+	 * @param string $provider_key Provider key (e.g., 'facebook', 'reddit')
+	 * @return object|null Auth provider instance or null
+	 */
+	public function getProvider( string $provider_key ): ?object {
+		$providers = $this->getAllProviders();
+		return $providers[ $provider_key ] ?? null;
+	}
+
+	/**
+	 * Resolve the auth provider key for a handler slug.
+	 *
+	 * Handlers can share authentication by setting `auth_provider_key` during
+	 * registration (see HandlerRegistrationTrait). This method centralizes the
+	 * mapping so callers do not assume provider key === handler slug.
+	 *
+	 * @param string $handler_slug Handler slug.
+	 * @return string Provider key to use for lookups.
+	 */
+	private function resolveProviderKey( string $handler_slug ): string {
+		$handler = $this->handler_abilities->getHandler( $handler_slug );
+
+		if ( ! is_array( $handler ) ) {
+			return $handler_slug;
+		}
+
+		$auth_provider_key = $handler['auth_provider_key'] ?? null;
+
+		if ( ! is_string( $auth_provider_key ) || '' === $auth_provider_key ) {
+			return $handler_slug;
+		}
+
+		if ( $auth_provider_key !== $handler_slug ) {
+			do_action(
+				'datamachine_log',
+				'debug',
+				'Resolved auth provider key differs from handler slug',
+				array(
+					'agent_type'        => 'system',
+					'handler_slug'      => $handler_slug,
+					'auth_provider_key' => $auth_provider_key,
+				)
+			);
+		}
+
+		return $auth_provider_key;
+	}
+
+	/**
+	 * Get auth provider instance from a handler slug.
+	 *
+	 * @param string $handler_slug Handler slug.
+	 * @return object|null Auth provider instance or null.
+	 */
+	public function getProviderForHandler( string $handler_slug ): ?object {
+		$provider_key = $this->resolveProviderKey( $handler_slug );
+		return $this->getProvider( $provider_key );
+	}
+
+	/**
+	 * Check if auth provider exists for handler.
+	 *
+	 * @param string $handler_slug Handler slug
+	 * @return bool True if auth provider exists
+	 */
+	public function providerExists( string $handler_slug ): bool {
+		return $this->getProviderForHandler( $handler_slug ) !== null;
+	}
+
+	/**
+	 * Check if handler is authenticated (has valid tokens).
+	 *
+	 * @param string $handler_slug Handler slug
+	 * @return bool True if authenticated
+	 */
+	public function isHandlerAuthenticated( string $handler_slug ): bool {
+		$provider = $this->getProviderForHandler( $handler_slug );
+
+		if ( ! $provider || ! method_exists( $provider, 'is_authenticated' ) ) {
+			return false;
+		}
+
+		return $provider->is_authenticated();
+	}
+
+	/**
+	 * Get authentication status details for a handler.
+	 *
+	 * @param string $handler_slug Handler slug
+	 * @return array Status array with exists, authenticated, and provider keys
+	 */
+	public function getAuthStatus( string $handler_slug ): array {
+		$provider = $this->getProviderForHandler( $handler_slug );
+
+		if ( ! $provider ) {
+			return array(
+				'exists'        => false,
+				'authenticated' => false,
+				'provider'      => null,
+			);
+		}
+
+		$authenticated = method_exists( $provider, 'is_authenticated' )
+			? $provider->is_authenticated()
+			: false;
+
+		return array(
+			'exists'        => true,
+			'authenticated' => $authenticated,
+			'provider'      => $provider,
+		);
 	}
 
 	private function registerAbilities(): void {
@@ -163,7 +303,7 @@ class AuthAbilities {
 			);
 		}
 
-		$handler_info = $this->handler_service->get( $handler_slug );
+		$handler_info = $this->handler_abilities->getHandler( $handler_slug );
 		if ( $handler_info && ( $handler_info['requires_auth'] ?? false ) === false ) {
 			return array(
 				'success'       => true,
@@ -174,7 +314,7 @@ class AuthAbilities {
 			);
 		}
 
-		$auth_instance = $this->auth_service->getForHandler( $handler_slug );
+		$auth_instance = $this->getProviderForHandler( $handler_slug );
 
 		if ( ! $auth_instance ) {
 			return array(
@@ -225,7 +365,7 @@ class AuthAbilities {
 			);
 		}
 
-		$handler_info = $this->handler_service->get( $handler_slug );
+		$handler_info = $this->handler_abilities->getHandler( $handler_slug );
 		if ( $handler_info && ( $handler_info['requires_auth'] ?? false ) === false ) {
 			return array(
 				'success' => false,
@@ -233,7 +373,7 @@ class AuthAbilities {
 			);
 		}
 
-		$auth_instance = $this->auth_service->getForHandler( $handler_slug );
+		$auth_instance = $this->getProviderForHandler( $handler_slug );
 
 		if ( ! $auth_instance ) {
 			return array(
@@ -276,7 +416,7 @@ class AuthAbilities {
 			);
 		}
 
-		$handler_info = $this->handler_service->get( $handler_slug );
+		$handler_info = $this->handler_abilities->getHandler( $handler_slug );
 		if ( $handler_info && ( $handler_info['requires_auth'] ?? false ) === false ) {
 			return array(
 				'success' => false,
@@ -284,7 +424,7 @@ class AuthAbilities {
 			);
 		}
 
-		$auth_instance = $this->auth_service->getForHandler( $handler_slug );
+		$auth_instance = $this->getProviderForHandler( $handler_slug );
 
 		if ( ! $auth_instance || ! method_exists( $auth_instance, 'get_config_fields' ) ) {
 			return array(

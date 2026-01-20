@@ -11,9 +11,6 @@
 
 namespace DataMachine\Engine\Actions;
 
-use DataMachine\Services\PipelineManager;
-use DataMachine\Services\PipelineStepManager;
-
 // Prevent direct access
 if ( ! defined( 'WPINC' ) ) {
 	die;
@@ -44,9 +41,6 @@ class ImportExport {
 			return false;
 		}
 
-		$manager      = new PipelineManager();
-		$step_manager = new PipelineStepManager();
-
 		$rows               = str_getcsv( $data, "\n" );
 		$imported_pipelines = array();
 		$processed          = array();
@@ -70,13 +64,14 @@ class ImportExport {
 				$existing_id = $this->find_pipeline_by_name( $pipeline_name );
 
 				if ( ! $existing_id ) {
-					$result      = $manager->create(
-						$pipeline_name,
+					$ability     = wp_get_ability( 'datamachine/create-pipeline' );
+					$result      = $ability->execute(
 						array(
-							'flow_config' => array( 'flow_name' => 'Default Flow' ),
+							'pipeline_name' => $pipeline_name,
+							'flow_config'   => array( 'flow_name' => 'Default Flow' ),
 						)
 					);
-					$existing_id = $result['pipeline_id'] ?? false;
+					$existing_id = $result['success'] ? ( $result['pipeline_id'] ?? false ) : false;
 				}
 
 				if ( $existing_id ) {
@@ -86,7 +81,13 @@ class ImportExport {
 			}
 
 			if ( isset( $processed[ $pipeline_name ] ) && $step_type ) {
-				$step_manager->add( $processed[ $pipeline_name ], $step_type );
+				$add_step_ability = wp_get_ability( 'datamachine/add-pipeline-step' );
+				$add_step_ability->execute(
+					array(
+						'pipeline_id' => $processed[ $pipeline_name ],
+						'step_type'   => $step_type,
+					)
+				);
 			}
 		}
 

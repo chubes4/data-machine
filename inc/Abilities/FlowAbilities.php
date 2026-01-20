@@ -15,7 +15,6 @@ use DataMachine\Core\Admin\FlowFormatter;
 use DataMachine\Core\Database\Flows\Flows;
 use DataMachine\Core\Database\Jobs\Jobs;
 use DataMachine\Core\Database\Pipelines\Pipelines;
-use DataMachine\Services\HandlerService;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -26,17 +25,15 @@ class FlowAbilities {
 	private Flows $db_flows;
 	private Pipelines $db_pipelines;
 	private Jobs $db_jobs;
-	private HandlerService $handler_service;
 
 	public function __construct() {
 		if ( ! class_exists( 'WP_Ability' ) ) {
 			return;
 		}
 
-		$this->db_flows        = new Flows();
-		$this->db_pipelines    = new Pipelines();
-		$this->db_jobs         = new Jobs();
-		$this->handler_service = new HandlerService();
+		$this->db_flows     = new Flows();
+		$this->db_pipelines = new Pipelines();
+		$this->db_jobs      = new Jobs();
 		$this->registerAbility();
 	}
 

@@ -5,25 +5,27 @@
  * Abilities API primitives for processed items (deduplication tracking) operations.
  * Centralizes clearing, checking, and history queries for REST API, CLI, and Chat tools.
  *
+ * Self-contained ability class - business logic inlined from ProcessedItemsManager (deleted).
+ *
  * @package DataMachine\Abilities
  */
 
 namespace DataMachine\Abilities;
 
-use DataMachine\Services\ProcessedItemsManager;
+use DataMachine\Core\Database\ProcessedItems\ProcessedItems;
 
 defined( 'ABSPATH' ) || exit;
 
 class ProcessedItemsAbilities {
 
-	private ProcessedItemsManager $processed_items_manager;
+	private ProcessedItems $db_processed_items;
 
 	public function __construct() {
 		if ( ! class_exists( 'WP_Ability' ) ) {
 			return;
 		}
 
-		$this->processed_items_manager = new ProcessedItemsManager();
+		$this->db_processed_items = new ProcessedItems();
 		$this->registerAbilities();
 	}
 
@@ -202,11 +204,14 @@ class ProcessedItemsAbilities {
 
 		$target_id = (int) $target_id;
 
-		$result = 'pipeline' === $clear_type
-			? $this->processed_items_manager->deleteForPipeline( $target_id )
-			: $this->processed_items_manager->deleteForFlow( $target_id );
+		$criteria = 'pipeline' === $clear_type
+			? array( 'pipeline_id' => $target_id )
+			: array( 'flow_id' => $target_id );
+
+		$result = $this->db_processed_items->delete_processed_items( $criteria );
 
 		if ( false === $result ) {
+			do_action( 'datamachine_log', 'error', 'Processed items deletion failed', array( 'criteria' => $criteria ) );
 			return array(
 				'success' => false,
 				'error'   => 'Failed to delete processed items',
@@ -269,7 +274,7 @@ class ProcessedItemsAbilities {
 		$source_type     = sanitize_text_field( $source_type );
 		$item_identifier = sanitize_text_field( $item_identifier );
 
-		$is_processed = $this->processed_items_manager->hasBeenProcessed(
+		$is_processed = $this->db_processed_items->has_item_been_processed(
 			$flow_step_id,
 			$source_type,
 			$item_identifier
@@ -299,7 +304,7 @@ class ProcessedItemsAbilities {
 
 		$flow_step_id = sanitize_text_field( $flow_step_id );
 
-		$has_history = $this->processed_items_manager->hasProcessedItems( $flow_step_id );
+		$has_history = $this->db_processed_items->has_processed_items( $flow_step_id );
 
 		return array(
 			'success'     => true,
