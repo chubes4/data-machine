@@ -15,7 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Abilities\PipelineAbilities;
 use DataMachine\Abilities\StepTypeAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
@@ -106,8 +105,16 @@ class CreatePipeline {
 			$steps = $this->normalizeSteps( $steps );
 		}
 
-		$abilities = new PipelineAbilities();
-		$result    = $abilities->executeCreatePipeline(
+		$ability = wp_get_ability( 'datamachine/create-pipeline' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Create pipeline ability not available',
+				'tool_name' => 'create_pipeline',
+			);
+		}
+
+		$result = $ability->execute(
 			array(
 				'pipeline_name' => $pipeline_name,
 				'steps'         => $steps,
@@ -118,7 +125,7 @@ class CreatePipeline {
 			)
 		);
 
-		if ( ! $result['success'] ) {
+		if ( ! ( $result['success'] ?? false ) ) {
 			return array(
 				'success'   => false,
 				'error'     => $result['error'] ?? 'Failed to create pipeline. Check logs for details.',

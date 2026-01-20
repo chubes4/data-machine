@@ -106,40 +106,44 @@ TIPS:
 	 * @return array Tool execution result
 	 */
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
-		$query_params = array(
+		$ability = wp_get_ability( 'datamachine/read-logs' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Read logs ability not available',
+				'tool_name' => 'read_logs',
+			);
+		}
+
+		$input = array(
 			'agent_type' => $parameters['agent_type'] ?? 'pipeline',
 			'mode'       => $parameters['mode'] ?? 'recent',
 			'limit'      => $parameters['limit'] ?? 200,
 		);
 
 		if ( ! empty( $parameters['job_id'] ) ) {
-			$query_params['job_id'] = (int) $parameters['job_id'];
+			$input['job_id'] = (int) $parameters['job_id'];
 		}
 		if ( ! empty( $parameters['pipeline_id'] ) ) {
-			$query_params['pipeline_id'] = (int) $parameters['pipeline_id'];
+			$input['pipeline_id'] = (int) $parameters['pipeline_id'];
 		}
 		if ( ! empty( $parameters['flow_id'] ) ) {
-			$query_params['flow_id'] = (int) $parameters['flow_id'];
+			$input['flow_id'] = (int) $parameters['flow_id'];
 		}
 
-		$request = new \WP_REST_Request( 'GET', '/datamachine/v1/logs/content' );
-		$request->set_query_params( $query_params );
+		$result = $ability->execute( $input );
 
-		$response = rest_do_request( $request );
-		$data     = $response->get_data();
-		$status   = $response->get_status();
-
-		if ( $status >= 400 || ! ( $data['success'] ?? false ) ) {
+		if ( ! ( $result['success'] ?? false ) ) {
 			return array(
 				'success'   => false,
-				'error'     => $data['message'] ?? 'Failed to read logs',
+				'error'     => $result['error'] ?? $result['message'] ?? 'Failed to read logs',
 				'tool_name' => 'read_logs',
 			);
 		}
 
 		return array(
 			'success'   => true,
-			'data'      => $data,
+			'data'      => $result,
 			'tool_name' => 'read_logs',
 		);
 	}

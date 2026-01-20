@@ -119,24 +119,28 @@ AGENT TYPES:
 	 * @return array Result
 	 */
 	private function clearLogs( string $agent_type ): array {
-		$request = new \WP_REST_Request( 'DELETE', '/datamachine/v1/logs' );
-		$request->set_query_params( array( 'agent_type' => $agent_type ) );
-
-		$response = rest_do_request( $request );
-		$data     = $response->get_data();
-		$status   = $response->get_status();
-
-		if ( $status >= 400 ) {
+		$ability = wp_get_ability( 'datamachine/clear-logs' );
+		if ( ! $ability ) {
 			return array(
 				'success'   => false,
-				'error'     => $data['message'] ?? 'Failed to clear logs',
+				'error'     => 'Clear logs ability not available',
+				'tool_name' => 'manage_logs',
+			);
+		}
+
+		$result = $ability->execute( array( 'agent_type' => $agent_type ) );
+
+		if ( ! ( $result['success'] ?? false ) ) {
+			return array(
+				'success'   => false,
+				'error'     => $result['error'] ?? $result['message'] ?? 'Failed to clear logs',
 				'tool_name' => 'manage_logs',
 			);
 		}
 
 		return array(
 			'success'   => true,
-			'data'      => array( 'message' => $data['message'] ?? 'Logs cleared' ),
+			'data'      => array( 'message' => $result['message'] ?? 'Logs cleared' ),
 			'tool_name' => 'manage_logs',
 		);
 	}
@@ -157,22 +161,26 @@ AGENT TYPES:
 			);
 		}
 
-		$request = new \WP_REST_Request( 'PUT', '/datamachine/v1/logs/level' );
-		$request->set_body_params(
+		$ability = wp_get_ability( 'datamachine/set-log-level' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Set log level ability not available',
+				'tool_name' => 'manage_logs',
+			);
+		}
+
+		$result = $ability->execute(
 			array(
 				'agent_type' => $agent_type,
 				'level'      => $level,
 			)
 		);
 
-		$response = rest_do_request( $request );
-		$data     = $response->get_data();
-		$status   = $response->get_status();
-
-		if ( $status >= 400 ) {
+		if ( ! ( $result['success'] ?? false ) ) {
 			return array(
 				'success'   => false,
-				'error'     => $data['message'] ?? 'Failed to set log level',
+				'error'     => $result['error'] ?? $result['message'] ?? 'Failed to set log level',
 				'tool_name' => 'manage_logs',
 			);
 		}
@@ -180,9 +188,9 @@ AGENT TYPES:
 		return array(
 			'success'   => true,
 			'data'      => array(
-				'agent_type' => $agent_type,
-				'level'      => $level,
-				'message'    => $data['message'] ?? 'Log level updated',
+				'agent_type' => $result['agent_type'] ?? $agent_type,
+				'level'      => $result['level'] ?? $level,
+				'message'    => $result['message'] ?? 'Log level updated',
 			),
 			'tool_name' => 'manage_logs',
 		);
@@ -195,27 +203,33 @@ AGENT TYPES:
 	 * @return array Result
 	 */
 	private function getMetadata( string $agent_type ): array {
-		$request = new \WP_REST_Request( 'GET', '/datamachine/v1/logs' );
-
-		if ( 'all' !== $agent_type ) {
-			$request->set_query_params( array( 'agent_type' => $agent_type ) );
-		}
-
-		$response = rest_do_request( $request );
-		$data     = $response->get_data();
-		$status   = $response->get_status();
-
-		if ( $status >= 400 ) {
+		$ability = wp_get_ability( 'datamachine/get-log-metadata' );
+		if ( ! $ability ) {
 			return array(
 				'success'   => false,
-				'error'     => $data['message'] ?? 'Failed to get log metadata',
+				'error'     => 'Get log metadata ability not available',
+				'tool_name' => 'manage_logs',
+			);
+		}
+
+		$input = array();
+		if ( 'all' !== $agent_type ) {
+			$input['agent_type'] = $agent_type;
+		}
+
+		$result = $ability->execute( $input );
+
+		if ( ! ( $result['success'] ?? false ) ) {
+			return array(
+				'success'   => false,
+				'error'     => $result['error'] ?? $result['message'] ?? 'Failed to get log metadata',
 				'tool_name' => 'manage_logs',
 			);
 		}
 
 		return array(
 			'success'   => true,
-			'data'      => $data,
+			'data'      => $result,
 			'tool_name' => 'manage_logs',
 		);
 	}

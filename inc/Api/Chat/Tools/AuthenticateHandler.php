@@ -15,8 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Abilities\AuthAbilities;
-use DataMachine\Abilities\HandlerAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 /**
@@ -122,23 +120,36 @@ ACTIONS:
 	 * List all handlers requiring auth.
 	 */
 	private function handleList(): array {
-		$handler_abilities = new HandlerAbilities();
-		$auth_abilities    = new AuthAbilities();
-		$all_handlers      = $handler_abilities->getAllHandlers();
-		$result            = array();
+		$handlers_ability = wp_get_ability( 'datamachine/get-handlers' );
+		if ( ! $handlers_ability ) {
+			return $this->error( 'Get handlers ability not available' );
+		}
+
+		$handlers_result = $handlers_ability->execute( array() );
+		if ( ! ( $handlers_result['success'] ?? false ) ) {
+			return $this->error( $handlers_result['error'] ?? 'Failed to get handlers' );
+		}
+
+		$all_handlers = $handlers_result['handlers'] ?? array();
+		$result       = array();
+
+		$auth_status_ability = wp_get_ability( 'datamachine/get-auth-status' );
 
 		foreach ( $all_handlers as $slug => $handler ) {
 			if ( empty( $handler['requires_auth'] ) ) {
 				continue;
 			}
 
-			$auth_instance = $auth_abilities->getProviderForHandler( $slug );
-			if ( ! $auth_instance ) {
-				continue;
-			}
+			$is_authenticated = false;
+			$auth_type        = 'unknown';
 
-			$is_authenticated = $auth_abilities->isHandlerAuthenticated( $slug );
-			$auth_type        = $this->detectAuthType( $auth_instance );
+			if ( $auth_status_ability ) {
+				$status_result = $auth_status_ability->execute( array( 'handler_slug' => $slug ) );
+				if ( $status_result['success'] ?? false ) {
+					$is_authenticated = ! empty( $status_result['oauth_url'] ) || ( $status_result['authenticated'] ?? false );
+					$auth_type        = ! empty( $status_result['oauth_url'] ) ? 'oauth' : 'simple';
+				}
+			}
 
 			$info = array(
 				'slug'             => $slug,
@@ -146,10 +157,6 @@ ACTIONS:
 				'auth_type'        => $auth_type,
 				'is_authenticated' => $is_authenticated,
 			);
-
-			if ( $is_authenticated && method_exists( $auth_instance, 'get_account_details' ) ) {
-				$info['account'] = $auth_instance->get_account_details();
-			}
 
 			$result[] = $info;
 		}
@@ -161,47 +168,31 @@ ACTIONS:
 	 * Get detailed status for a handler.
 	 */
 	private function handleStatus( string $slug ): array {
-		// Leverage internal REST API logic via simulation or direct call
-		// Since we are in the same process, we can use the provider directly
-		$auth_instance = $this->getAuthProvider( $slug );
-		if ( ! $auth_instance ) {
-			return $this->error( "Auth provider not found for: $slug" );
+		$ability = wp_get_ability( 'datamachine/get-auth-status' );
+		if ( ! $ability ) {
+			return $this->error( 'Get auth status ability not available' );
 		}
 
-		$is_authenticated = method_exists( $auth_instance, 'is_authenticated' ) && $auth_instance->is_authenticated();
-		$is_configured    = method_exists( $auth_instance, 'is_configured' ) && $auth_instance->is_configured();
-		$auth_type        = $this->detectAuthType( $auth_instance );
+		$result = $ability->execute( array( 'handler_slug' => $slug ) );
 
-		$config_fields = array();
-		if ( method_exists( $auth_instance, 'get_config_fields' ) ) {
-			foreach ( $auth_instance->get_config_fields() as $key => $field ) {
-				$config_fields[ $key ] = array(
-					'label'    => $field['label'] ?? $key,
-					'required' => $field['required'] ?? false,
-				);
-			}
+		if ( ! ( $result['success'] ?? false ) ) {
+			return $this->error( $result['error'] ?? "Auth provider not found for: $slug" );
 		}
 
 		$response = array(
 			'slug'             => $slug,
-			'auth_type'        => $auth_type,
-			'is_authenticated' => $is_authenticated,
-			'is_configured'    => $is_configured,
-			'required_config'  => $config_fields,
+			'handler_slug'     => $result['handler_slug'] ?? $slug,
+			'requires_auth'    => $result['requires_auth'] ?? true,
+			'is_authenticated' => ! empty( $result['oauth_url'] ) || ( $result['authenticated'] ?? false ),
 		);
 
-		if ( $is_authenticated && method_exists( $auth_instance, 'get_account_details' ) ) {
-			$response['account'] = $auth_instance->get_account_details();
+		if ( ! empty( $result['oauth_url'] ) ) {
+			$response['oauth_url']    = $result['oauth_url'];
+			$response['instructions'] = $result['instructions'] ?? '';
 		}
 
-		if ( ! $is_configured ) {
-			$response['message'] = "Configuration required. Please provide credentials using the 'configure' action.";
-		} elseif ( ! $is_authenticated ) {
-			if ( 'oauth1' === $auth_type || 'oauth2' === $auth_type ) {
-				$response['message'] = "Configured but not authenticated. Use 'get_oauth_url' action to authorize.";
-			} else {
-				$response['message'] = 'Configured but authentication failed. Check credentials.';
-			}
+		if ( ! empty( $result['message'] ) ) {
+			$response['message'] = $result['message'];
 		}
 
 		return $this->success( $response );
@@ -211,104 +202,73 @@ ACTIONS:
 	 * Configure credentials.
 	 */
 	private function handleConfigure( string $slug, array $credentials ): array {
-		$auth_instance = $this->getAuthProvider( $slug );
-		if ( ! $auth_instance ) {
-			return $this->error( "Auth provider not found for: $slug" );
+		$ability = wp_get_ability( 'datamachine/save-auth-config' );
+		if ( ! $ability ) {
+			return $this->error( 'Save auth config ability not available' );
 		}
 
-		// Determine save method based on auth type
-		$saved      = false;
-		$uses_oauth = $this->detectAuthType( $auth_instance ) !== 'simple';
+		$result = $ability->execute(
+			array(
+				'handler_slug' => $slug,
+				'config'       => $credentials,
+			)
+		);
 
-		if ( $uses_oauth ) {
-			if ( method_exists( $auth_instance, 'save_config' ) ) {
-				$saved = $auth_instance->save_config( $credentials );
-			} else {
-				return $this->error( 'Handler does not support saving config' );
-			}
-		} elseif ( method_exists( $auth_instance, 'save_account' ) ) {
-				$saved = $auth_instance->save_account( $credentials );
-		} elseif ( method_exists( $auth_instance, 'save_config' ) ) {
-			$saved = $auth_instance->save_config( $credentials );
-		} else {
-			return $this->error( 'Handler does not support saving account' );
+		if ( ! ( $result['success'] ?? false ) ) {
+			return $this->error( $result['error'] ?? 'Failed to save configuration.' );
 		}
 
-		if ( $saved ) {
-			return $this->success(
-				array(
-					'message'   => 'Configuration saved successfully.',
-					'next_step' => $uses_oauth ? "Use 'get_oauth_url' to authorize." : 'Authentication verified.',
-				)
-			);
-		}
-
-		return $this->error( 'Failed to save configuration.' );
+		return $this->success(
+			array(
+				'message'   => $result['message'] ?? 'Configuration saved successfully.',
+				'next_step' => "Use 'get_oauth_url' to authorize if this is an OAuth provider.",
+			)
+		);
 	}
 
 	/**
 	 * Get OAuth URL.
 	 */
 	private function handleGetOAuthUrl( string $slug ): array {
-		$auth_instance = $this->getAuthProvider( $slug );
-		if ( ! $auth_instance ) {
-			return $this->error( "Auth provider not found for: $slug" );
+		$ability = wp_get_ability( 'datamachine/get-auth-status' );
+		if ( ! $ability ) {
+			return $this->error( 'Get auth status ability not available' );
 		}
 
-		if ( ! method_exists( $auth_instance, 'get_authorization_url' ) ) {
-			return $this->error( 'Handler does not support OAuth' );
+		$result = $ability->execute( array( 'handler_slug' => $slug ) );
+
+		if ( ! ( $result['success'] ?? false ) ) {
+			return $this->error( $result['error'] ?? "Auth provider not found for: $slug" );
 		}
 
-		if ( method_exists( $auth_instance, 'is_configured' ) && ! $auth_instance->is_configured() ) {
-			return $this->error( "OAuth credentials not configured. Use 'configure' first." );
+		if ( empty( $result['oauth_url'] ) ) {
+			return $this->error( 'Handler does not support OAuth or credentials not configured.' );
 		}
 
-		try {
-			$url = $auth_instance->get_authorization_url();
-			return $this->success(
-				array(
-					'oauth_url'    => $url,
-					'instructions' => 'Visit this URL to authorize. You will be redirected back to Data Machine.',
-				)
-			);
-		} catch ( \Exception $e ) {
-			return $this->error( 'Failed to generate URL: ' . $e->getMessage() );
-		}
+		return $this->success(
+			array(
+				'oauth_url'    => $result['oauth_url'],
+				'instructions' => $result['instructions'] ?? 'Visit this URL to authorize. You will be redirected back to Data Machine.',
+			)
+		);
 	}
 
 	/**
 	 * Disconnect account.
 	 */
 	private function handleDisconnect( string $slug ): array {
-		$auth_instance = $this->getAuthProvider( $slug );
-		if ( ! $auth_instance ) {
-			return $this->error( "Auth provider not found for: $slug" );
+		$ability = wp_get_ability( 'datamachine/disconnect-auth' );
+		if ( ! $ability ) {
+			return $this->error( 'Disconnect auth ability not available' );
 		}
 
-		if ( method_exists( $auth_instance, 'clear_account' ) ) {
-			if ( $auth_instance->clear_account() ) {
-				return $this->success( array( 'message' => 'Disconnected successfully.' ) );
-			}
+		$result = $ability->execute( array( 'handler_slug' => $slug ) );
+
+		if ( ! ( $result['success'] ?? false ) ) {
+			return $this->error( $result['error'] ?? 'Failed to disconnect or not supported.' );
 		}
 
-		return $this->error( 'Failed to disconnect or not supported.' );
-	}
-
-	// Helpers
-
-	private function getAuthProvider( string $slug ) {
-		$auth_abilities = new AuthAbilities();
-		return $auth_abilities->getProviderForHandler( $slug );
-	}
-
-	private function detectAuthType( $instance ): string {
-		if ( $instance instanceof \DataMachine\Core\OAuth\BaseOAuth2Provider ) {
-			return 'oauth2';
-		}
-		if ( $instance instanceof \DataMachine\Core\OAuth\BaseOAuth1Provider ) {
-			return 'oauth1';
-		}
-		return 'simple';
+		return $this->success( array( 'message' => $result['message'] ?? 'Disconnected successfully.' ) );
 	}
 
 	private function success( array $data ): array {

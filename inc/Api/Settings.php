@@ -217,45 +217,41 @@ class Settings {
 		$tool_id     = $request->get_param( 'tool_id' );
 		$config_data = $request->get_param( 'config_data' );
 
-		if ( empty( $tool_id ) ) {
+		$ability = wp_get_ability( 'datamachine/save-tool-config' );
+		if ( ! $ability ) {
+			return new \WP_Error( 'ability_not_found', 'Ability not found', array( 'status' => 500 ) );
+		}
+
+		$result = $ability->execute(
+			array(
+				'tool_id'     => $tool_id,
+				'config_data' => $config_data,
+			)
+		);
+
+		if ( ! $result['success'] ) {
+			$status = 400;
+			if ( false !== strpos( $result['error'] ?? '', 'Unknown tool' ) ) {
+				$status = 404;
+			} elseif ( false !== strpos( $result['error'] ?? '', 'No configuration handler' ) ) {
+				$status = 500;
+			}
+
 			return new \WP_Error(
-				'missing_tool_id',
-				__( 'Tool ID is required.', 'data-machine' ),
-				array( 'status' => 400 )
+				'save_tool_config_error',
+				$result['error'] ?? __( 'Failed to save tool configuration', 'data-machine' ),
+				array( 'status' => $status )
 			);
 		}
 
-		if ( empty( $config_data ) || ! is_array( $config_data ) ) {
-			return new \WP_Error(
-				'invalid_config_data',
-				__( 'Valid configuration data is required.', 'data-machine' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		// Sanitize config data
-		$sanitized_config = array();
-		foreach ( $config_data as $key => $value ) {
-			$sanitized_key                      = sanitize_text_field( $key );
-			$sanitized_config[ $sanitized_key ] = is_array( $value )
-				? array_map( 'sanitize_text_field', $value )
-				: sanitize_text_field( $value );
-		}
-
-		// Delegate to existing action hook for tool-specific handlers
-		do_action( 'datamachine_save_tool_config', $tool_id, $sanitized_config );
-
-		// Check if any tool handler responded
-		// Tool handlers should use wp_send_json_success/error which exits
-		// If we get here, no handler claimed responsibility
-		return new \WP_Error(
-			'no_tool_handler',
-			sprintf(
-				/* translators: %s: tool ID */
-				__( 'No configuration handler found for tool: %s', 'data-machine' ),
-				$tool_id
-			),
-			array( 'status' => 500 )
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'data'    => array(
+					'tool_id' => $result['tool_id'] ?? $tool_id,
+					'message' => $result['message'] ?? __( 'Configuration saved', 'data-machine' ),
+				),
+			)
 		);
 	}
 

@@ -18,14 +18,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Abilities\JobAbilities;
 use DataMachine\Core\PluginSettings;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class GetProblemFlows {
 	use ToolRegistrationTrait;
-
-	private ?JobAbilities $abilities = null;
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'get_problem_flows', array( $this, 'getToolDefinition' ) );
@@ -61,17 +58,22 @@ class GetProblemFlows {
 	 * @return array Tool execution result
 	 */
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
-		if ( null === $this->abilities ) {
-			$this->abilities = new JobAbilities();
+		$ability = wp_get_ability( 'datamachine/get-problem-flows' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Problem flows ability not available',
+				'tool_name' => 'get_problem_flows',
+			);
 		}
 
 		$input = array(
 			'threshold' => $parameters['threshold'] ?? null,
 		);
 
-		$result = $this->abilities->executeGetProblemFlows( $input );
+		$result = $ability->execute( $input );
 
-		if ( ! $result['success'] ) {
+		if ( ! ( $result['success'] ?? false ) ) {
 			return array(
 				'success'   => false,
 				'error'     => $result['error'] ?? 'Failed to get problem flows',
@@ -82,12 +84,12 @@ class GetProblemFlows {
 		return array(
 			'success'   => true,
 			'data'      => array(
-				'problem_flows' => array_merge( $result['failing'], $result['idle'] ),
-				'total'         => $result['count'],
-				'failing_count' => count( $result['failing'] ),
-				'idle_count'    => count( $result['idle'] ),
-				'threshold'     => $result['threshold'],
-				'message'       => $result['message'],
+				'problem_flows' => array_merge( $result['failing'] ?? array(), $result['idle'] ?? array() ),
+				'total'         => $result['count'] ?? 0,
+				'failing_count' => count( $result['failing'] ?? array() ),
+				'idle_count'    => count( $result['idle'] ?? array() ),
+				'threshold'     => $result['threshold'] ?? 3,
+				'message'       => $result['message'] ?? '',
 			),
 			'tool_name' => 'get_problem_flows',
 		);

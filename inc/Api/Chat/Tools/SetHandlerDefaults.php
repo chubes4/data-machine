@@ -20,8 +20,6 @@ use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 class SetHandlerDefaults {
 	use ToolRegistrationTrait;
 
-	const HANDLER_DEFAULTS_OPTION = 'datamachine_handler_defaults';
-
 	public function __construct() {
 		$this->registerTool( 'chat', 'set_handler_defaults', array( $this, 'getToolDefinition' ) );
 	}
@@ -59,18 +57,7 @@ class SetHandlerDefaults {
 			);
 		}
 
-		$handler_slug      = sanitize_key( $handler_slug );
-		$handler_abilities = new HandlerAbilities();
-
-		// Validate handler exists
-		$handler_info = $handler_abilities->getHandler( $handler_slug );
-		if ( ! $handler_info ) {
-			return array(
-				'success'   => false,
-				'error'     => "Handler '{$handler_slug}' not found",
-				'tool_name' => 'set_handler_defaults',
-			);
-		}
+		$handler_slug = sanitize_key( $handler_slug );
 
 		// Validate defaults
 		if ( empty( $defaults ) || ! is_array( $defaults ) ) {
@@ -81,29 +68,35 @@ class SetHandlerDefaults {
 			);
 		}
 
-		// Get available fields for validation feedback
+		// Get available fields for validation feedback before delegating
+		$handler_abilities = new HandlerAbilities();
+		$handler_info      = $handler_abilities->getHandler( $handler_slug );
 		$fields            = $handler_abilities->getConfigFields( $handler_slug );
 		$valid_keys        = array_keys( $fields );
 		$provided_keys     = array_keys( $defaults );
 		$unrecognized_keys = array_diff( $provided_keys, $valid_keys );
 
-		// Sanitize defaults
-		$sanitized_defaults = $this->sanitizeDefaults( $defaults );
-
-		// Get existing defaults and merge
-		$all_defaults                  = get_option( self::HANDLER_DEFAULTS_OPTION, array() );
-		$all_defaults[ $handler_slug ] = $sanitized_defaults;
-
-		// Save
-		$updated = update_option( self::HANDLER_DEFAULTS_OPTION, $all_defaults );
-
-		// Clear cache so new defaults take effect immediately
-		HandlerAbilities::clearSiteDefaultsCache();
-
-		if ( ! $updated && get_option( self::HANDLER_DEFAULTS_OPTION ) !== $all_defaults ) {
+		// Delegate to SettingsAbilities via Abilities API
+		$ability = wp_get_ability( 'datamachine/update-handler-defaults' );
+		if ( ! $ability ) {
 			return array(
 				'success'   => false,
-				'error'     => 'Failed to save handler defaults',
+				'error'     => 'Handler defaults ability not available',
+				'tool_name' => 'set_handler_defaults',
+			);
+		}
+
+		$result = $ability->execute(
+			array(
+				'handler_slug' => $handler_slug,
+				'defaults'     => $defaults,
+			)
+		);
+
+		if ( ! ( $result['success'] ?? false ) ) {
+			return array(
+				'success'   => false,
+				'error'     => $result['error'] ?? 'Failed to save handler defaults',
 				'tool_name' => 'set_handler_defaults',
 			);
 		}
@@ -111,7 +104,7 @@ class SetHandlerDefaults {
 		$response_data = array(
 			'handler_slug' => $handler_slug,
 			'label'        => $handler_info['label'] ?? $handler_slug,
-			'defaults'     => $sanitized_defaults,
+			'defaults'     => $result['defaults'] ?? $defaults,
 			'message'      => "Defaults updated for '{$handler_slug}'. New flows will use these values when fields are not explicitly set.",
 		);
 
@@ -125,31 +118,5 @@ class SetHandlerDefaults {
 			'data'      => $response_data,
 			'tool_name' => 'set_handler_defaults',
 		);
-	}
-
-	/**
-	 * Sanitize defaults array recursively.
-	 *
-	 * @param array $defaults Defaults to sanitize
-	 * @return array Sanitized defaults
-	 */
-	private function sanitizeDefaults( array $defaults ): array {
-		$sanitized = array();
-
-		foreach ( $defaults as $key => $value ) {
-			$sanitized_key = sanitize_key( $key );
-
-			if ( is_array( $value ) ) {
-				$sanitized[ $sanitized_key ] = $this->sanitizeDefaults( $value );
-			} elseif ( is_bool( $value ) ) {
-				$sanitized[ $sanitized_key ] = (bool) $value;
-			} elseif ( is_numeric( $value ) ) {
-				$sanitized[ $sanitized_key ] = is_float( $value ) ? (float) $value : (int) $value;
-			} else {
-				$sanitized[ $sanitized_key ] = sanitize_text_field( $value );
-			}
-		}
-
-		return $sanitized;
 	}
 }

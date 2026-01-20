@@ -16,8 +16,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Abilities\FlowStepAbilities;
-use DataMachine\Abilities\HandlerAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class ConfigureFlowSteps {
@@ -128,8 +126,16 @@ class ConfigureFlowSteps {
 
 		// Validation: target_handler_slug requires valid handler
 		if ( ! empty( $target_handler_slug ) ) {
-			$handler_abilities = new HandlerAbilities();
-			if ( ! $handler_abilities->handlerExists( $target_handler_slug ) ) {
+			$ability = wp_get_ability( 'datamachine/validate-handler' );
+			if ( ! $ability ) {
+				return array(
+					'success'   => false,
+					'error'     => 'Handler validation ability not available',
+					'tool_name' => 'configure_flow_steps',
+				);
+			}
+			$validation_result = $ability->execute( array( 'handler_slug' => $target_handler_slug ) );
+			if ( ! ( $validation_result['valid'] ?? false ) ) {
 				return array(
 					'success'   => false,
 					'error'     => "Target handler '{$target_handler_slug}' not found",
@@ -157,7 +163,14 @@ class ConfigureFlowSteps {
 		array $handler_config,
 		?string $user_message
 	): array {
-		$abilities = new FlowStepAbilities();
+		$ability = wp_get_ability( 'datamachine/update-flow-step' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Update flow step ability not available',
+				'tool_name' => 'configure_flow_steps',
+			);
+		}
 
 		$effective_slug = $target_handler_slug ?? $handler_slug;
 
@@ -175,7 +188,7 @@ class ConfigureFlowSteps {
 			$input['user_message'] = $user_message;
 		}
 
-		$result = $abilities->executeUpdateFlowStep( $input );
+		$result = $ability->execute( $input );
 
 		$result['tool_name'] = 'configure_flow_steps';
 
@@ -210,7 +223,14 @@ class ConfigureFlowSteps {
 		array $flow_configs,
 		?string $user_message
 	): array {
-		$abilities = new FlowStepAbilities();
+		$ability = wp_get_ability( 'datamachine/configure-flow-steps' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Configure flow steps ability not available',
+				'tool_name' => 'configure_flow_steps',
+			);
+		}
 
 		$input = array( 'pipeline_id' => $pipeline_id );
 
@@ -242,7 +262,7 @@ class ConfigureFlowSteps {
 			$input['user_message'] = $user_message;
 		}
 
-		$result = $abilities->executeConfigureFlowSteps( $input );
+		$result = $ability->execute( $input );
 
 		$result['tool_name'] = 'configure_flow_steps';
 

@@ -54,6 +54,8 @@ class FlowAbilities {
 		add_action(
 			'wp_abilities_api_init',
 			function () {
+				$this->registerGetFlow();
+
 				wp_register_ability(
 					'datamachine/get-flows',
 					array(
@@ -298,6 +300,41 @@ class FlowAbilities {
 	}
 
 	/**
+	 * Register datamachine/get-flow ability for single flow retrieval with full metadata.
+	 */
+	private function registerGetFlow(): void {
+		wp_register_ability(
+			'datamachine/get-flow',
+			array(
+				'label'               => __( 'Get Flow', 'data-machine' ),
+				'description'         => __( 'Get a single flow by ID with full metadata including handler config, scheduling info, and execution status.', 'data-machine' ),
+				'category'            => 'datamachine',
+				'input_schema'        => array(
+					'type'       => 'object',
+					'required'   => array( 'flow_id' ),
+					'properties' => array(
+						'flow_id' => array(
+							'type'        => 'integer',
+							'description' => __( 'Flow ID to retrieve', 'data-machine' ),
+						),
+					),
+				),
+				'output_schema'       => array(
+					'type'       => 'object',
+					'properties' => array(
+						'success' => array( 'type' => 'boolean' ),
+						'flow'    => array( 'type' => 'object' ),
+						'error'   => array( 'type' => 'string' ),
+					),
+				),
+				'execute_callback'    => array( $this, 'executeGetFlow' ),
+				'permission_callback' => array( $this, 'checkPermission' ),
+				'meta'                => array( 'show_in_rest' => true ),
+			)
+		);
+	}
+
+	/**
 	 * Permission callback for abilities.
 	 *
 	 * @return bool True if user has permission.
@@ -307,6 +344,128 @@ class FlowAbilities {
 			return true;
 		}
 		return current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * Execute get-flow ability for single flow retrieval with full metadata.
+	 *
+	 * @param array $input Input parameters with flow_id.
+	 * @return array Result with flow data including scheduling and handler metadata.
+	 */
+	public function executeGetFlow( array $input ): array {
+		$flow_id = $input['flow_id'] ?? null;
+
+		if ( ! is_numeric( $flow_id ) || (int) $flow_id <= 0 ) {
+			return array(
+				'success' => false,
+				'error'   => 'flow_id is required and must be a positive integer',
+			);
+		}
+
+		$flow_id = (int) $flow_id;
+		$flow    = $this->db_flows->get_flow( $flow_id );
+
+		if ( ! $flow ) {
+			return array(
+				'success' => false,
+				'error'   => sprintf( 'Flow %d not found', $flow_id ),
+			);
+		}
+
+		$jobs       = $this->db_jobs->get_jobs_for_flow( $flow_id );
+		$latest_job = $jobs[0] ?? null;
+
+		$flow_payload = $this->formatFlowWithMetadata( $flow, $latest_job );
+
+		return array(
+			'success' => true,
+			'flow'    => $flow_payload,
+		);
+	}
+
+	/**
+	 * Format a flow record with handler config and scheduling metadata.
+	 *
+	 * @param array      $flow       Flow data from database.
+	 * @param array|null $latest_job Latest job for this flow (optional).
+	 * @return array Formatted flow data with metadata.
+	 */
+	private function formatFlowWithMetadata( array $flow, ?array $latest_job = null ): array {
+		$flow_config       = $flow['flow_config'] ?? array();
+		$handler_abilities = new HandlerAbilities();
+
+		foreach ( $flow_config as $flow_step_id => &$step_data ) {
+			if ( ! isset( $step_data['handler_slug'] ) ) {
+				continue;
+			}
+
+			$step_type    = $step_data['step_type'] ?? '';
+			$handler_slug = $step_data['handler_slug'];
+
+			$step_data['settings_display'] = apply_filters(
+				'datamachine_get_handler_settings_display',
+				array(),
+				$flow_step_id,
+				$step_type
+			);
+
+			$step_data['handler_config'] = $handler_abilities->applyDefaults(
+				$handler_slug,
+				$step_data['handler_config'] ?? array()
+			);
+
+			if ( ! empty( $step_data['settings_display'] ) && is_array( $step_data['settings_display'] ) ) {
+				$display_parts                 = array_map(
+					function ( $setting ) {
+						return sprintf( '%s: %s', $setting['label'], $setting['display_value'] );
+					},
+					$step_data['settings_display']
+				);
+				$step_data['settings_summary'] = implode( ' | ', $display_parts );
+			} else {
+				$step_data['settings_summary'] = '';
+			}
+		}
+		unset( $step_data );
+
+		$scheduling_config = $flow['scheduling_config'] ?? array();
+		$flow_id           = $flow['flow_id'] ?? null;
+
+		$last_run_at     = $latest_job['created_at'] ?? null;
+		$last_run_status = $latest_job['status'] ?? null;
+		$is_running      = $latest_job && null === $latest_job['completed_at'];
+
+		$next_run = $this->getNextRunTime( $flow_id );
+
+		return array(
+			'flow_id'           => $flow_id,
+			'flow_name'         => $flow['flow_name'] ?? '',
+			'pipeline_id'       => $flow['pipeline_id'] ?? null,
+			'flow_config'       => $flow_config,
+			'scheduling_config' => $scheduling_config,
+			'last_run'          => $last_run_at,
+			'last_run_status'   => $last_run_status,
+			'last_run_display'  => \DataMachine\Core\Admin\DateFormatter::format_for_display( $last_run_at, $last_run_status ),
+			'is_running'        => $is_running,
+			'next_run'          => $next_run,
+			'next_run_display'  => \DataMachine\Core\Admin\DateFormatter::format_for_display( $next_run ),
+		);
+	}
+
+	/**
+	 * Determine next scheduled run time for a flow if Action Scheduler is available.
+	 *
+	 * @param int|null $flow_id Flow ID.
+	 * @return string|null Next run timestamp or null.
+	 */
+	private function getNextRunTime( ?int $flow_id ): ?string {
+		if ( ! $flow_id || ! function_exists( 'as_next_scheduled_action' ) ) {
+			return null;
+		}
+
+		$next_timestamp = as_next_scheduled_action( 'datamachine_run_flow_now', array( $flow_id ), 'data-machine' );
+
+		return $next_timestamp ? wp_date( 'Y-m-d H:i:s', $next_timestamp ) : null;
 	}
 
 	public function executeAbility( array $input ): array {

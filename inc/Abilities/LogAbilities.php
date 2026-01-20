@@ -17,14 +17,15 @@ defined( 'ABSPATH' ) || exit;
 
 class LogAbilities {
 
-	/**
-	 * Register log abilities on wp_abilities_api_init
-	 */
-	public static function register(): void {
+	public function __construct() {
 		if ( ! class_exists( 'WP_Ability' ) ) {
 			return;
 		}
 
+		$this->registerAbilities();
+	}
+
+	private function registerAbilities(): void {
 		add_action(
 			'wp_abilities_api_init',
 			function () {

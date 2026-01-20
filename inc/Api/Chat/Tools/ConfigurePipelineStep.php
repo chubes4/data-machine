@@ -15,7 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Abilities\PipelineStepAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class ConfigurePipelineStep {
@@ -67,12 +66,20 @@ class ConfigurePipelineStep {
 	}
 
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
-		$abilities = new PipelineStepAbilities();
-		$result    = $abilities->executeUpdatePipelineStep( $parameters );
+		$ability = wp_get_ability( 'datamachine/update-pipeline-step' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Update pipeline step ability not available',
+				'tool_name' => 'configure_pipeline_step',
+			);
+		}
+
+		$result = $ability->execute( $parameters );
 
 		return array(
-			'success'   => $result['success'],
-			'data'      => $result['success'] ? $result : null,
+			'success'   => $result['success'] ?? false,
+			'data'      => ( $result['success'] ?? false ) ? $result : null,
 			'error'     => $result['error'] ?? null,
 			'tool_name' => 'configure_pipeline_step',
 		);

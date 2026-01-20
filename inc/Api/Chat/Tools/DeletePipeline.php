@@ -14,7 +14,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Abilities\PipelineAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class DeletePipeline {
@@ -64,8 +63,15 @@ class DeletePipeline {
 
 		$pipeline_id = (int) $pipeline_id;
 
-		$abilities = new PipelineAbilities();
-		$result    = $abilities->executeDeletePipeline( array( 'pipeline_id' => $pipeline_id ) );
+		$ability = wp_get_ability( 'datamachine/delete-pipeline' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Delete pipeline ability not available',
+				'tool_name' => 'delete_pipeline',
+			);
+		}
+		$result = $ability->execute( array( 'pipeline_id' => $pipeline_id ) );
 
 		if ( ! $result['success'] ) {
 			return array(

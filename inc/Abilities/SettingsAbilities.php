@@ -37,6 +37,7 @@ class SettingsAbilities {
 				$this->registerUpdateSettings();
 				$this->registerGetSchedulingIntervals();
 				$this->registerGetToolConfig();
+				$this->registerSaveToolConfig();
 				$this->registerGetHandlerDefaults();
 				$this->registerUpdateHandlerDefaults();
 			}
@@ -169,6 +170,43 @@ class SettingsAbilities {
 					),
 				),
 				'execute_callback'    => array( $this, 'executeGetToolConfig' ),
+				'permission_callback' => array( $this, 'checkPermission' ),
+				'meta'                => array( 'show_in_rest' => true ),
+			)
+		);
+	}
+
+	private function registerSaveToolConfig(): void {
+		wp_register_ability(
+			'datamachine/save-tool-config',
+			array(
+				'label'               => __( 'Save Tool Config', 'data-machine' ),
+				'description'         => __( 'Save configuration for a specific tool. Fires tool-specific handler via action hook.', 'data-machine' ),
+				'category'            => 'datamachine',
+				'input_schema'        => array(
+					'type'       => 'object',
+					'required'   => array( 'tool_id', 'config_data' ),
+					'properties' => array(
+						'tool_id'     => array(
+							'type'        => 'string',
+							'description' => __( 'Tool identifier', 'data-machine' ),
+						),
+						'config_data' => array(
+							'type'        => 'object',
+							'description' => __( 'Tool configuration data', 'data-machine' ),
+						),
+					),
+				),
+				'output_schema'       => array(
+					'type'       => 'object',
+					'properties' => array(
+						'success' => array( 'type' => 'boolean' ),
+						'tool_id' => array( 'type' => 'string' ),
+						'message' => array( 'type' => 'string' ),
+						'error'   => array( 'type' => 'string' ),
+					),
+				),
+				'execute_callback'    => array( $this, 'executeSaveToolConfig' ),
 				'permission_callback' => array( $this, 'checkPermission' ),
 				'meta'                => array( 'show_in_rest' => true ),
 			)
@@ -481,6 +519,75 @@ class SettingsAbilities {
 			'fields'                 => $fields,
 			'config'                 => $config,
 		);
+	}
+
+	public function executeSaveToolConfig( array $input ): array {
+		$tool_id     = $input['tool_id'] ?? '';
+		$config_data = $input['config_data'] ?? array();
+
+		if ( empty( $tool_id ) ) {
+			return array(
+				'success' => false,
+				'error'   => __( 'Tool ID is required.', 'data-machine' ),
+			);
+		}
+
+		if ( empty( $config_data ) || ! is_array( $config_data ) ) {
+			return array(
+				'success' => false,
+				'error'   => __( 'Valid configuration data is required.', 'data-machine' ),
+			);
+		}
+
+		$tool_manager    = new \DataMachine\Engine\AI\Tools\ToolManager();
+		$global_tools    = $tool_manager->get_global_tools();
+		$tool_definition = $global_tools[ $tool_id ] ?? null;
+
+		if ( empty( $tool_definition ) ) {
+			return array(
+				'success' => false,
+				'error'   => sprintf(
+					/* translators: %s: tool ID */
+					__( 'Unknown tool: %s', 'data-machine' ),
+					$tool_id
+				),
+			);
+		}
+
+		$sanitized_config = array();
+		foreach ( $config_data as $key => $value ) {
+			$sanitized_key                      = sanitize_text_field( $key );
+			$sanitized_config[ $sanitized_key ] = is_array( $value )
+				? array_map( 'sanitize_text_field', $value )
+				: sanitize_text_field( $value );
+		}
+
+		$result = array(
+			'success' => false,
+			'error'   => sprintf(
+				/* translators: %s: tool ID */
+				__( 'No configuration handler found for tool: %s', 'data-machine' ),
+				$tool_id
+			),
+		);
+
+		$handler_fired = apply_filters( 'datamachine_save_tool_config_ability', false, $tool_id, $sanitized_config );
+
+		if ( $handler_fired ) {
+			return array(
+				'success' => true,
+				'tool_id' => $tool_id,
+				'message' => sprintf(
+					/* translators: %s: tool ID */
+					__( 'Configuration saved for tool: %s', 'data-machine' ),
+					$tool_id
+				),
+			);
+		}
+
+		do_action( 'datamachine_save_tool_config', $tool_id, $sanitized_config );
+
+		return $result;
 	}
 
 	public function executeGetHandlerDefaults( array $input ): array {

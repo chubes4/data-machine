@@ -14,16 +14,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Abilities\FileAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class DeleteFile {
 	use ToolRegistrationTrait;
 
-	private FileAbilities $abilities;
-
 	public function __construct() {
-		$this->abilities = new FileAbilities();
 		$this->registerTool( 'chat', 'delete_file', array( $this, 'getToolDefinition' ) );
 	}
 
@@ -77,6 +73,15 @@ class DeleteFile {
 			);
 		}
 
+		$ability = wp_get_ability( 'datamachine/delete-file' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Delete file ability not available',
+				'tool_name' => 'delete_file',
+			);
+		}
+
 		$input = array(
 			'filename' => sanitize_file_name( $filename ),
 		);
@@ -89,7 +94,7 @@ class DeleteFile {
 			$input['pipeline_id'] = absint( $pipeline_id );
 		}
 
-		$result = $this->abilities->executeDeleteFile( $input );
+		$result = $ability->execute( $input );
 
 		if ( ! $result['success'] ) {
 			return array(

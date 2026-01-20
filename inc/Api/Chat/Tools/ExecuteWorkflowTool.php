@@ -11,7 +11,6 @@
 
 namespace DataMachine\Api\Chat\Tools;
 
-use DataMachine\Abilities\StepTypeAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -32,10 +31,17 @@ class ExecuteWorkflowTool {
 	 * @return array Tool definition array
 	 */
 	public function getToolDefinition(): array {
-		$step_type_abilities = new StepTypeAbilities();
-		$step_types          = $step_type_abilities->getAllStepTypes();
-		$type_slugs          = ! empty( $step_types ) ? array_keys( $step_types ) : array( 'fetch', 'ai', 'publish', 'update' );
-		$types_list          = implode( '|', $type_slugs );
+		$step_types_ability = wp_get_ability( 'datamachine/get-step-types' );
+		$type_slugs         = array( 'fetch', 'ai', 'publish', 'update' );
+
+		if ( $step_types_ability ) {
+			$result = $step_types_ability->execute( array() );
+			if ( ! empty( $result['success'] ) && ! empty( $result['step_types'] ) ) {
+				$type_slugs = array_keys( $result['step_types'] );
+			}
+		}
+
+		$types_list = implode( '|', $type_slugs );
 
 		$description = 'Execute an ephemeral workflow (not saved to database).
 
@@ -82,57 +88,41 @@ EXAMPLE:
 			);
 		}
 
-		$request = new \WP_REST_Request( 'POST', '/datamachine/v1/execute' );
-		$request->set_body_params(
-			array(
-				'workflow' => array( 'steps' => $steps ),
-			)
-		);
-
-		$response = rest_do_request( $request );
-		$data     = $response->get_data();
-		$status   = $response->get_status();
-
-		if ( $response->is_error() ) {
-			$error = $response->as_error();
-			do_action(
-				'datamachine_log',
-				'error',
-				'ExecuteWorkflowTool: REST request failed',
-				array(
-					'error' => $error->get_error_message(),
-					'steps' => $steps,
-				)
-			);
+		$ability = wp_get_ability( 'datamachine/execute-workflow' );
+		if ( ! $ability ) {
 			return array(
 				'success'   => false,
-				'error'     => $error->get_error_message(),
+				'error'     => 'Execute workflow ability not available',
 				'tool_name' => 'execute_workflow',
 			);
 		}
 
-		if ( $status >= 400 ) {
-			$error_message = $data['message'] ?? 'Execution failed';
+		$input = array(
+			'workflow' => array( 'steps' => $steps ),
+		);
+
+		$result = $ability->execute( $input );
+
+		if ( ! ( $result['success'] ?? false ) ) {
 			do_action(
 				'datamachine_log',
 				'error',
 				'ExecuteWorkflowTool: Execution failed',
 				array(
-					'status' => $status,
-					'error'  => $error_message,
-					'data'   => $data,
+					'error' => $result['error'] ?? 'Unknown error',
+					'steps' => $steps,
 				)
 			);
 			return array(
 				'success'   => false,
-				'error'     => $error_message,
+				'error'     => $result['error'] ?? 'Execution failed',
 				'tool_name' => 'execute_workflow',
 			);
 		}
 
 		return array(
 			'success'   => true,
-			'data'      => $data,
+			'data'      => $result,
 			'tool_name' => 'execute_workflow',
 		);
 	}

@@ -34,8 +34,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class SettingsCommand extends WP_CLI_Command {
 
-	private const OPTION_NAME = 'datamachine_settings';
-
 	/**
 	 * Get a setting value.
 	 *
@@ -124,17 +122,19 @@ class SettingsCommand extends WP_CLI_Command {
 			$value = (int) $value;
 		}
 
-		$settings         = get_option( self::OPTION_NAME, array() );
-		$old_value        = $settings[ $key ] ?? null;
-		$settings[ $key ] = $value;
+		$old_value = PluginSettings::get( $key );
 
-		$result = update_option( self::OPTION_NAME, $settings );
+		$ability = wp_get_ability( 'datamachine/update-settings' );
+		if ( ! $ability ) {
+			WP_CLI::error( 'Settings ability not available.' );
+		}
 
-		if ( $result ) {
-			PluginSettings::clearCache();
+		$result = $ability->execute( array( $key => $value ) );
+
+		if ( $result['success'] ?? false ) {
 			WP_CLI::success( "Updated '{$key}': " . $this->format_value( $old_value ) . ' → ' . $this->format_value( $value ) );
 		} elseif ( $old_value === $value ) {
-				WP_CLI::warning( "Setting '{$key}' already has value: " . $this->format_value( $value ) );
+			WP_CLI::warning( "Setting '{$key}' already has value: " . $this->format_value( $value ) );
 		} else {
 			WP_CLI::error( "Failed to update setting '{$key}'." );
 		}

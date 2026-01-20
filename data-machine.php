@@ -97,13 +97,13 @@ function datamachine_run_datamachine_plugin() {
 	add_action(
 		'datamachine_handler_registered',
 		function () {
-			\DataMachine\Services\CacheManager::clearHandlerCaches();
+			\DataMachine\Abilities\HandlerAbilities::clearCache();
 		}
 	);
 	add_action(
 		'datamachine_step_type_registered',
 		function () {
-			\DataMachine\Services\CacheManager::clearStepTypeCaches();
+			\DataMachine\Abilities\StepTypeAbilities::clearCache();
 		}
 	);
 
@@ -158,7 +158,7 @@ function datamachine_run_datamachine_plugin() {
 	new \DataMachine\Abilities\FlowAbilities();
 	new \DataMachine\Abilities\FlowStepAbilities();
 	new \DataMachine\Abilities\JobAbilities();
-	\DataMachine\Abilities\LogAbilities::register();
+	new \DataMachine\Abilities\LogAbilities();
 	new \DataMachine\Abilities\PostQueryAbilities();
 	new \DataMachine\Abilities\PipelineAbilities();
 	new \DataMachine\Abilities\PipelineStepAbilities();

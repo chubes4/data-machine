@@ -14,7 +14,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Abilities\PipelineStepAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class ReorderPipelineSteps {
@@ -57,8 +56,15 @@ class ReorderPipelineSteps {
 	 * @return array Tool execution result
 	 */
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
-		$abilities = new PipelineStepAbilities();
-		$result    = $abilities->executeReorderPipelineSteps( $parameters );
+		$ability = wp_get_ability( 'datamachine/reorder-pipeline-steps' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Reorder pipeline steps ability not available',
+				'tool_name' => 'reorder_pipeline_steps',
+			);
+		}
+		$result = $ability->execute( $parameters );
 
 		return array(
 			'success'   => $result['success'],

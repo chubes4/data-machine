@@ -14,13 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Abilities\JobAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class RunFlow {
 	use ToolRegistrationTrait;
-
-	private ?JobAbilities $abilities = null;
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'run_flow', array( $this, 'getToolDefinition' ) );
@@ -58,8 +55,13 @@ class RunFlow {
 	}
 
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
-		if ( null === $this->abilities ) {
-			$this->abilities = new JobAbilities();
+		$ability = wp_get_ability( 'datamachine/execute-workflow' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Execute workflow ability not available',
+				'tool_name' => 'run_flow',
+			);
 		}
 
 		$input = array(
@@ -68,20 +70,20 @@ class RunFlow {
 			'timestamp' => $parameters['timestamp'] ?? null,
 		);
 
-		$result = $this->abilities->executeRunFlow( $input );
+		$result = $ability->execute( $input );
 
-		if ( ! $result['success'] ) {
+		if ( ! ( $result['success'] ?? false ) ) {
 			return array(
 				'success'   => false,
-				'error'     => $result['error'],
+				'error'     => $result['error'] ?? 'Failed to run flow',
 				'tool_name' => 'run_flow',
 			);
 		}
 
 		$response_data = array(
-			'flow_id'        => $result['flow_id'],
-			'execution_type' => $result['execution_type'],
-			'message'        => $result['message'],
+			'flow_id'        => $result['flow_id'] ?? $input['flow_id'],
+			'execution_type' => $result['execution_type'] ?? 'immediate',
+			'message'        => $result['message'] ?? 'Flow execution started',
 		);
 
 		if ( isset( $result['flow_name'] ) ) {
@@ -94,7 +96,7 @@ class RunFlow {
 
 		if ( isset( $result['job_ids'] ) ) {
 			$response_data['job_ids'] = $result['job_ids'];
-			$response_data['count']   = $result['count'];
+			$response_data['count']   = $result['count'] ?? count( $result['job_ids'] );
 		}
 
 		return array(

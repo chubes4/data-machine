@@ -10,9 +10,6 @@
 
 namespace DataMachine\Api\Flows;
 
-use DataMachine\Abilities\HandlerAbilities;
-use DataMachine\Core\Admin\DateFormatter;
-use DataMachine\Core\Database\Jobs\Jobs;
 use WP_REST_Server;
 
 if ( ! defined( 'WPINC' ) ) {
@@ -363,115 +360,32 @@ class Flows {
 	public static function handle_get_single_flow( $request ) {
 		$flow_id = (int) $request->get_param( 'flow_id' );
 
-		// Retrieve flow data via filter
-		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-		$flow     = $db_flows->get_flow( $flow_id );
-
-		if ( ! $flow ) {
-			return new \WP_Error(
-				'flow_not_found',
-				__( 'Flow not found.', 'data-machine' ),
-				array( 'status' => 404 )
-			);
+		$ability = wp_get_ability( 'datamachine/get-flow' );
+		if ( ! $ability ) {
+			return new \WP_Error( 'ability_not_found', 'Ability not found', array( 'status' => 500 ) );
 		}
 
-		// Get latest job for this flow
-		$db_jobs    = new Jobs();
-		$jobs       = $db_jobs->get_jobs_for_flow( $flow_id );
-		$latest_job = $jobs[0] ?? null;
+		$result = $ability->execute( array( 'flow_id' => $flow_id ) );
 
-		$flow_payload = self::format_flow_for_response( $flow, $latest_job );
+		if ( ! $result['success'] ) {
+			$status = 400;
+			if ( false !== strpos( $result['error'] ?? '', 'not found' ) ) {
+				$status = 404;
+			}
+
+			return new \WP_Error(
+				'flow_not_found',
+				$result['error'] ?? __( 'Flow not found.', 'data-machine' ),
+				array( 'status' => $status )
+			);
+		}
 
 		return rest_ensure_response(
 			array(
 				'success' => true,
-				'data'    => $flow_payload,
+				'data'    => $result['flow'],
 			)
 		);
-	}
-
-	/**
-	 * Format a flow record with handler config and scheduling metadata.
-	 *
-	 * @param array      $flow       Flow data from database
-	 * @param array|null $latest_job Latest job for this flow (optional, for batch efficiency)
-	 */
-	private static function format_flow_for_response( array $flow, ?array $latest_job = null ): array {
-		$flow_config = $flow['flow_config'] ?? array();
-
-		$handler_abilities = new HandlerAbilities();
-
-		foreach ( $flow_config as $flow_step_id => &$step_data ) {
-			if ( ! isset( $step_data['handler_slug'] ) ) {
-				continue;
-			}
-
-			$step_type    = $step_data['step_type'] ?? '';
-			$handler_slug = $step_data['handler_slug'];
-
-			$step_data['settings_display'] = apply_filters(
-				'datamachine_get_handler_settings_display',
-				array(),
-				$flow_step_id,
-				$step_type
-			);
-
-			$step_data['handler_config'] = $handler_abilities->applyDefaults(
-				$handler_slug,
-				$step_data['handler_config'] ?? array()
-			);
-
-			// Map display settings to a clean string for UI summaries
-			if ( ! empty( $step_data['settings_display'] ) && is_array( $step_data['settings_display'] ) ) {
-				$display_parts                 = array_map(
-					function ( $setting ) {
-						return sprintf( '%s: %s', $setting['label'], $setting['display_value'] );
-					},
-					$step_data['settings_display']
-				);
-				$step_data['settings_summary'] = implode( ' | ', $display_parts );
-			} else {
-				$step_data['settings_summary'] = '';
-			}
-		}
-		unset( $step_data );
-
-		$scheduling_config = $flow['scheduling_config'] ?? array();
-		$flow_id           = $flow['flow_id'] ?? null;
-
-		// Derive execution status from jobs table (single source of truth)
-		$last_run_at     = $latest_job['created_at'] ?? null;
-		$last_run_status = $latest_job['status'] ?? null;
-		$is_running      = $latest_job && null === $latest_job['completed_at'];
-
-		$next_run = self::get_next_run_time( $flow_id );
-
-		return array(
-			'flow_id'           => $flow_id,
-			'flow_name'         => $flow['flow_name'] ?? '',
-			'pipeline_id'       => $flow['pipeline_id'] ?? null,
-			'flow_config'       => $flow_config,
-			'scheduling_config' => $scheduling_config,
-			'last_run'          => $last_run_at,
-			'last_run_status'   => $last_run_status,
-			'last_run_display'  => DateFormatter::format_for_display( $last_run_at, $last_run_status ),
-			'is_running'        => $is_running,
-			'next_run'          => $next_run,
-			'next_run_display'  => DateFormatter::format_for_display( $next_run ),
-		);
-	}
-
-	/**
-	 * Determine next scheduled run time for a flow if Action Scheduler is available.
-	 */
-	private static function get_next_run_time( ?int $flow_id ): ?string {
-		if ( ! $flow_id || ! function_exists( 'as_next_scheduled_action' ) ) {
-			return null;
-		}
-
-		$next_timestamp = as_next_scheduled_action( 'datamachine_run_flow_now', array( $flow_id ), 'data-machine' );
-
-		return $next_timestamp ? wp_date( 'Y-m-d H:i:s', $next_timestamp ) : null;
 	}
 
 	/**
@@ -511,19 +425,24 @@ class Flows {
 
 		$flow_id = $result['flow_id'];
 
-		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-		$flow     = $db_flows->get_flow( $flow_id );
-
-		$db_jobs    = new Jobs();
-		$jobs       = $db_jobs->get_jobs_for_flow( $flow_id );
-		$latest_job = $jobs[0] ?? null;
-
-		$flow_payload = self::format_flow_for_response( $flow, $latest_job );
+		$get_ability = wp_get_ability( 'datamachine/get-flow' );
+		if ( $get_ability ) {
+			$flow_result = $get_ability->execute( array( 'flow_id' => $flow_id ) );
+			if ( $flow_result['success'] ?? false ) {
+				return rest_ensure_response(
+					array(
+						'success' => true,
+						'data'    => $flow_result['flow'],
+						'message' => __( 'Flow updated successfully', 'data-machine' ),
+					)
+				);
+			}
+		}
 
 		return rest_ensure_response(
 			array(
 				'success' => true,
-				'data'    => $flow_payload,
+				'data'    => $result['flow_data'] ?? array( 'flow_id' => $flow_id ),
 				'message' => __( 'Flow updated successfully', 'data-machine' ),
 			)
 		);
@@ -539,21 +458,37 @@ class Flows {
 	public static function handle_get_problem_flows( $request ) {
 		$threshold = $request->get_param( 'threshold' );
 
-		// Use setting if threshold not provided
-		if ( null === $threshold || $threshold <= 0 ) {
-			$threshold = \DataMachine\Core\PluginSettings::get( 'problem_flow_threshold', 3 );
+		$ability = wp_get_ability( 'datamachine/get-problem-flows' );
+		if ( ! $ability ) {
+			return new \WP_Error( 'ability_not_found', 'Ability not found', array( 'status' => 500 ) );
 		}
 
-		$db_flows      = new \DataMachine\Core\Database\Flows\Flows();
-		$problem_flows = $db_flows->get_problem_flows( (int) $threshold );
+		$input = array();
+		if ( null !== $threshold && $threshold > 0 ) {
+			$input['threshold'] = (int) $threshold;
+		}
+
+		$result = $ability->execute( $input );
+
+		if ( ! $result['success'] ) {
+			return new \WP_Error(
+				'get_problem_flows_error',
+				$result['error'] ?? __( 'Failed to get problem flows', 'data-machine' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		$problem_flows = array_merge( $result['failing'] ?? array(), $result['idle'] ?? array() );
 
 		return rest_ensure_response(
 			array(
 				'success' => true,
 				'data'    => array(
 					'problem_flows' => $problem_flows,
-					'total'         => count( $problem_flows ),
-					'threshold'     => (int) $threshold,
+					'total'         => $result['count'] ?? count( $problem_flows ),
+					'threshold'     => $result['threshold'] ?? 3,
+					'failing'       => $result['failing'] ?? array(),
+					'idle'          => $result['idle'] ?? array(),
 				),
 			)
 		);
