@@ -5,6 +5,34 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-01-20
+
+### Added
+- WordPress 6.9 Abilities API integration with 64 registered abilities across 13 ability classes
+- PipelineAbilities with 8 abilities for pipeline CRUD and import/export operations
+- PipelineStepAbilities with 6 abilities for step management
+- FlowAbilities with 6 abilities for flow CRUD and duplication
+- FlowStepAbilities with 4 abilities for flow step configuration
+- JobAbilities with 6 abilities for execution, health monitoring, and problem flow detection
+- FileAbilities with 5 abilities for file management and uploads
+- ProcessedItemsAbilities with 3 abilities for deduplication tracking
+- SettingsAbilities with 7 abilities for plugin and handler settings
+- AuthAbilities with 3 abilities for OAuth authentication management
+- LogAbilities with 6 abilities for logging operations
+- HandlerAbilities with 6 abilities for handler discovery and configuration
+- StepTypeAbilities with 3 abilities for step type discovery and validation
+- PostQueryAbilities with unified query-posts ability supporting handler/flow/pipeline filters
+
+### Changed
+- Minimum WordPress requirement bumped to 6.9 for Abilities API support
+- REST API endpoints now delegate to Abilities for all business logic
+- CLI commands execute Abilities directly for consistent behavior
+- Chat tools delegate to Abilities for all mutation operations
+- Cache invalidation moved from CacheManager to individual ability classes
+
+### Removed
+- Services layer deleted - HandlerService, StepTypeService, PipelineManager, PipelineStepManager, FlowManager, FlowStepManager, ProcessedItemsManager, JobManager, AuthProviderService, LogsManager, CacheManager (~3000 lines removed)
+
 ## [0.11.6] - 2026-01-19
 
 - Fixed Yoda fixer breaking null comparisons (self::null -> null)
