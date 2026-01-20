@@ -4,7 +4,7 @@
  * Plugin URI:      https://wordpress.org/plugins/data-machine/
  * Description:     AI-powered WordPress plugin for automated content workflows with visual pipeline builder and multi-provider AI integration.
  * Version:           0.11.6
- * Requires at least: 6.2
+ * Requires at least: 6.9
  * Requires PHP:     8.2
  * Author:          Chris Huber, extrachill
  * Author URI:      https://chubes.net
