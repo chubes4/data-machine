@@ -3,6 +3,7 @@
  * REST API Pipelines Endpoint
  *
  * Provides REST API access to pipeline CRUD operations.
+ * Uses PipelineAbilities API primitives for centralized logic.
  * Requires WordPress manage_options capability.
  *
  * @package DataMachine\Api\Pipelines
@@ -10,8 +11,8 @@
 
 namespace DataMachine\Api\Pipelines;
 
+use DataMachine\Abilities\PipelineAbilities;
 use DataMachine\Core\Admin\DateFormatter;
-use DataMachine\Services\PipelineManager;
 use WP_REST_Server;
 
 if ( ! defined( 'WPINC' ) ) {
@@ -199,35 +200,30 @@ class Pipelines {
 		$format      = $request->get_param( 'format' ) ?? 'json';
 		$ids         = $request->get_param( 'ids' );
 
+		$abilities = new PipelineAbilities();
+
 		// Handle CSV export
 		if ( 'csv' === $format ) {
-			// Parse IDs parameter
 			$export_ids = array();
 			if ( $ids ) {
 				$export_ids = array_map( 'absint', explode( ',', $ids ) );
 			} elseif ( $pipeline_id ) {
 				$export_ids = array( $pipeline_id );
-			} else {
-				// Export all pipelines
-				$db_pipelines  = new \DataMachine\Core\Database\Pipelines\Pipelines();
-				$all_pipelines = $db_pipelines->get_all_pipelines();
-				$export_ids    = array_column( $all_pipelines, 'pipeline_id' );
 			}
 
-			// Get CSV data using existing export logic
-			$import_export = new \DataMachine\Engine\Actions\ImportExport();
-			$csv_content   = $import_export->handle_export( 'pipelines', $export_ids );
+			$result = $abilities->executeExportPipelines(
+				array( 'pipeline_ids' => $export_ids )
+			);
 
-			if ( ! $csv_content ) {
+			if ( ! $result['success'] ) {
 				return new \WP_Error(
 					'export_failed',
-					__( 'Failed to generate CSV export.', 'data-machine' ),
+					$result['error'] ?? __( 'Failed to generate CSV export.', 'data-machine' ),
 					array( 'status' => 500 )
 				);
 			}
 
-			// Return CSV with proper headers
-			$response = new \WP_REST_Response( $csv_content );
+			$response = new \WP_REST_Response( $result['data'] );
 			$response->set_headers(
 				array(
 					'Content-Type'        => 'text/csv; charset=utf-8',
@@ -238,37 +234,28 @@ class Pipelines {
 			return $response;
 		}
 
-		// Parse fields parameter if provided (JSON format)
 		$requested_fields = array();
 		if ( $fields ) {
 			$requested_fields = array_map( 'trim', explode( ',', $fields ) );
 		}
 
-		// Get pipeline data via filter
 		if ( $pipeline_id ) {
-			// Single pipeline retrieval
-			$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
-			$pipeline     = $db_pipelines->get_pipeline( $pipeline_id );
+			$result = $abilities->executeGetPipeline( array( 'pipeline_id' => (int) $pipeline_id ) );
 
-			if ( ! $pipeline ) {
+			if ( ! $result['success'] ) {
 				return new \WP_Error(
 					'pipeline_not_found',
-					__( 'Pipeline not found.', 'data-machine' ),
+					$result['error'] ?? __( 'Pipeline not found.', 'data-machine' ),
 					array( 'status' => 404 )
 				);
 			}
 
-			// Add display fields for timestamps
-			$pipeline = self::add_display_fields( $pipeline );
+			$pipeline = $result['pipeline'];
+			$flows    = $result['flows'];
 
-			// Apply field filtering if requested
 			if ( ! empty( $requested_fields ) ) {
 				$pipeline = array_intersect_key( $pipeline, array_flip( $requested_fields ) );
 			}
-
-			// Get flows for this pipeline
-			$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-			$flows    = $db_flows->get_flows_for_pipeline( $pipeline_id );
 
 			return rest_ensure_response(
 				array(
@@ -280,14 +267,24 @@ class Pipelines {
 				)
 			);
 		} else {
-			// All pipelines retrieval
-			$db_pipelines = new \DataMachine\Core\Database\Pipelines\Pipelines();
-			$pipelines    = $db_pipelines->get_all_pipelines();
+			$result = $abilities->executeGetPipelines(
+				array(
+					'per_page'    => 100,
+					'offset'      => 0,
+					'output_mode' => 'full',
+				)
+			);
 
-			// Add display fields for timestamps
-			$pipelines = array_map( array( self::class, 'add_display_fields' ), $pipelines );
+			if ( ! $result['success'] ) {
+				return new \WP_Error(
+					'get_pipelines_failed',
+					$result['error'] ?? __( 'Failed to get pipelines.', 'data-machine' ),
+					array( 'status' => 500 )
+				);
+			}
 
-			// Apply field filtering if requested
+			$pipelines = $result['pipelines'];
+
 			if ( ! empty( $requested_fields ) ) {
 				$pipelines = array_map(
 					function ( $pipeline ) use ( $requested_fields ) {
@@ -302,7 +299,7 @@ class Pipelines {
 					'success' => true,
 					'data'    => array(
 						'pipelines' => $pipelines,
-						'total'     => count( $pipelines ),
+						'total'     => $result['total'],
 					),
 				)
 			);
@@ -322,27 +319,19 @@ class Pipelines {
 			);
 		}
 
-		$manager = new PipelineManager();
+		$abilities = new PipelineAbilities();
+		$result    = $abilities->executeCreatePipeline(
+			array(
+				'pipeline_name' => $params['pipeline_name'],
+				'steps'         => $params['steps'] ?? array(),
+				'flow_config'   => $params['flow_config'] ?? array(),
+			)
+		);
 
-		$is_complete_mode = isset( $params['steps'] ) && is_array( $params['steps'] ) && ! empty( $params['steps'] );
-
-		if ( $is_complete_mode ) {
-			$result = $manager->createWithSteps(
-				$params['pipeline_name'],
-				$params['steps'],
-				array( 'flow_config' => $params['flow_config'] ?? array() )
-			);
-		} else {
-			$result = $manager->create(
-				$params['pipeline_name'],
-				array( 'flow_config' => $params['flow_config'] ?? array() )
-			);
-		}
-
-		if ( ! $result ) {
+		if ( ! $result['success'] ) {
 			return new \WP_Error(
 				'rest_internal_server_error',
-				__( 'Failed to create pipeline.', 'data-machine' ),
+				$result['error'] ?? __( 'Failed to create pipeline.', 'data-machine' ),
 				array( 'status' => 500 )
 			);
 		}
@@ -361,14 +350,22 @@ class Pipelines {
 	public static function handle_delete_pipeline( $request ) {
 		$pipeline_id = (int) $request->get_param( 'pipeline_id' );
 
-		$manager = new PipelineManager();
-		$result  = $manager->delete( $pipeline_id );
+		$abilities = new PipelineAbilities();
+		$result    = $abilities->executeDeletePipeline( array( 'pipeline_id' => $pipeline_id ) );
 
-		if ( is_wp_error( $result ) ) {
-			return $result;
+		if ( ! $result['success'] ) {
+			$status = 500;
+			if ( strpos( $result['error'] ?? '', 'not found' ) !== false ) {
+				$status = 404;
+			}
+			return new \WP_Error(
+				'pipeline_deletion_failed',
+				$result['error'] ?? __( 'Failed to delete pipeline.', 'data-machine' ),
+				array( 'status' => $status )
+			);
 		}
 
-		return rest_ensure_response( array_merge( array( 'success' => true ), $result ) );
+		return rest_ensure_response( $result );
 	}
 
 	/**
@@ -388,19 +385,23 @@ class Pipelines {
 			);
 		}
 
-		$manager = new PipelineManager();
-		$success = $manager->update(
-			$pipeline_id,
+		$abilities = new PipelineAbilities();
+		$result    = $abilities->executeUpdatePipeline(
 			array(
+				'pipeline_id'   => $pipeline_id,
 				'pipeline_name' => $params['pipeline_name'],
 			)
 		);
 
-		if ( ! $success ) {
+		if ( ! $result['success'] ) {
+			$status = 500;
+			if ( strpos( $result['error'] ?? '', 'not found' ) !== false ) {
+				$status = 404;
+			}
 			return new \WP_Error(
 				'update_failed',
-				__( 'Failed to save pipeline title', 'data-machine' ),
-				array( 'status' => 500 )
+				$result['error'] ?? __( 'Failed to save pipeline title', 'data-machine' ),
+				array( 'status' => $status )
 			);
 		}
 
@@ -408,10 +409,10 @@ class Pipelines {
 			array(
 				'success' => true,
 				'data'    => array(
-					'pipeline_id'   => $pipeline_id,
-					'pipeline_name' => sanitize_text_field( wp_unslash( $params['pipeline_name'] ) ),
+					'pipeline_id'   => $result['pipeline_id'],
+					'pipeline_name' => $result['pipeline_name'],
 				),
-				'message' => __( 'Pipeline title saved successfully', 'data-machine' ),
+				'message' => $result['message'] ?? __( 'Pipeline title saved successfully', 'data-machine' ),
 			)
 		);
 	}

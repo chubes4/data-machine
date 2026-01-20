@@ -143,9 +143,11 @@ function datamachine_run_datamachine_plugin() {
 	require_once __DIR__ . '/inc/Abilities/FlowAbilities.php';
 	require_once __DIR__ . '/inc/Abilities/LogAbilities.php';
 	require_once __DIR__ . '/inc/Abilities/PostQueryAbilities.php';
+	require_once __DIR__ . '/inc/Abilities/PipelineAbilities.php';
 	new \DataMachine\Abilities\FlowAbilities();
 	\DataMachine\Abilities\LogAbilities::register();
 	new \DataMachine\Abilities\PostQueryAbilities();
+	new \DataMachine\Abilities\PipelineAbilities();
 }
 
 

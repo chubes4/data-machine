@@ -3,6 +3,7 @@
  * Delete Pipeline Tool
  *
  * Focused tool for deleting pipelines.
+ * Uses PipelineAbilities API primitive for centralized logic.
  *
  * @package DataMachine\Api\Chat\Tools
  */
@@ -13,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use DataMachine\Abilities\PipelineAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class DeletePipeline {
@@ -62,15 +64,13 @@ class DeletePipeline {
 
 		$pipeline_id = (int) $pipeline_id;
 
-		$request  = new \WP_REST_Request( 'DELETE', '/datamachine/v1/pipelines/' . $pipeline_id );
-		$response = rest_do_request( $request );
-		$data     = $response->get_data();
-		$status   = $response->get_status();
+		$abilities = new PipelineAbilities();
+		$result    = $abilities->executeDeletePipeline( array( 'pipeline_id' => $pipeline_id ) );
 
-		if ( $status >= 400 ) {
+		if ( ! $result['success'] ) {
 			return array(
 				'success'   => false,
-				'error'     => $data['message'] ?? 'Failed to delete pipeline',
+				'error'     => $result['error'] ?? 'Failed to delete pipeline',
 				'tool_name' => 'delete_pipeline',
 			);
 		}
@@ -78,8 +78,10 @@ class DeletePipeline {
 		return array(
 			'success'   => true,
 			'data'      => array(
-				'pipeline_id' => $pipeline_id,
-				'message'     => 'Pipeline and all associated flows deleted.',
+				'pipeline_id'   => $pipeline_id,
+				'pipeline_name' => $result['pipeline_name'] ?? '',
+				'deleted_flows' => $result['deleted_flows'] ?? 0,
+				'message'       => $result['message'] ?? 'Pipeline and all associated flows deleted.',
 			),
 			'tool_name' => 'delete_pipeline',
 		);

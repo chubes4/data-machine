@@ -4,6 +4,7 @@
  *
  * Focused tool for creating pipelines with optional predefined steps.
  * Automatically creates an associated flow for immediate configuration.
+ * Uses PipelineAbilities API primitive for centralized logic.
  *
  * @package DataMachine\Api\Chat\Tools
  */
@@ -14,8 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use DataMachine\Abilities\PipelineAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-use DataMachine\Services\PipelineManager;
 use DataMachine\Services\StepTypeService;
 
 class CreatePipeline {
@@ -105,38 +106,29 @@ class CreatePipeline {
 			$steps = $this->normalizeSteps( $steps );
 		}
 
-		$pipeline_manager = new PipelineManager();
-
-		$options = array(
-			'flow_config' => array(
-				'flow_name'         => $flow_name,
-				'scheduling_config' => $scheduling_config,
-			),
+		$abilities = new PipelineAbilities();
+		$result    = $abilities->executeCreatePipeline(
+			array(
+				'pipeline_name' => $pipeline_name,
+				'steps'         => $steps,
+				'flow_config'   => array(
+					'flow_name'         => $flow_name,
+					'scheduling_config' => $scheduling_config,
+				),
+			)
 		);
 
-		if ( ! empty( $steps ) ) {
-			$result = $pipeline_manager->createWithSteps( $pipeline_name, $steps, $options );
-		} else {
-			$result = $pipeline_manager->create( $pipeline_name, $options );
-		}
-
-		if ( ! $result ) {
+		if ( ! $result['success'] ) {
 			return array(
 				'success'   => false,
-				'error'     => 'Failed to create pipeline. Check logs for details.',
+				'error'     => $result['error'] ?? 'Failed to create pipeline. Check logs for details.',
 				'tool_name' => 'create_pipeline',
 			);
 		}
 
-		$flow_step_ids = array();
-		if ( ! empty( $result['flows'] ) ) {
-			$flow = $result['flows'][0] ?? null;
-			if ( $flow && ! empty( $flow['flow_config'] ) ) {
-				$flow_step_ids = array_keys( $flow['flow_config'] );
-			}
-		}
-
-		$flow_id = $result['flows'][0]['flow_id'] ?? null;
+		$flow_id       = $result['flow_id'] ?? null;
+		$flow_step_ids = $result['flow_step_ids'] ?? array();
+		$steps_created = $result['steps_created'] ?? 0;
 
 		return array(
 			'success'   => true,
@@ -145,12 +137,12 @@ class CreatePipeline {
 				'pipeline_name' => $result['pipeline_name'],
 				'flow_id'       => $flow_id,
 				'flow_name'     => $flow_name,
-				'steps_created' => count( $steps ),
+				'steps_created' => $steps_created,
 				'flow_step_ids' => $flow_step_ids,
 				'scheduling'    => $scheduling_config['interval'],
-				'message'       => empty( $steps )
+				'message'       => 0 === $steps_created
 					? "Pipeline and flow (ID: {$flow_id}) created. Do NOT call create_flow - a flow already exists. Use add_pipeline_step to add steps, then configure_flow_steps to configure handlers."
-					: "Pipeline and flow (ID: {$flow_id}) created with " . count( $steps ) . ' steps. Do NOT call create_flow - a flow already exists. Use configure_flow_steps with the flow_step_ids to set handler configurations.',
+					: "Pipeline and flow (ID: {$flow_id}) created with {$steps_created} steps. Do NOT call create_flow - a flow already exists. Use configure_flow_steps with the flow_step_ids to set handler configurations.",
 			),
 			'tool_name' => 'create_pipeline',
 		);
