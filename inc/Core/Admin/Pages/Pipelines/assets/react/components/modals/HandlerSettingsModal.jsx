@@ -5,11 +5,17 @@
  * Receives complete handler configuration from API with defaults pre-merged.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useEffect, useRef } from '@wordpress/element';
 import { Modal, Button, Notice, Spinner } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { applyFilters } from '@wordpress/hooks';
 
+/**
+ * Internal dependencies
+ */
 import { useUpdateFlowHandler } from '../../queries/flows';
 import { useFormState } from '../../hooks/useFormState';
 import FilesHandlerSettings from './handler-settings/files/FilesHandlerSettings';
@@ -20,20 +26,20 @@ import useHandlerModel from '../../hooks/useHandlerModel';
 /**
  * Handler Settings Modal Component
  *
- * @param {Object} props - Component props
- * @param {Function} props.onClose - Close handler
- * @param {string} props.flowStepId - Flow step ID
- * @param {string} props.handlerSlug - Handler slug
- * @param {string} props.stepType - Step type
- * @param {number} props.pipelineId - Pipeline ID
- * @param {number} props.flowId - Flow ID
- * @param {Object} props.currentSettings - Current handler settings
- * @param {Function} props.onSuccess - Success callback
+ * @param {Object}   props                 - Component props
+ * @param {Function} props.onClose         - Close handler
+ * @param {string}   props.flowStepId      - Flow step ID
+ * @param {string}   props.handlerSlug     - Handler slug
+ * @param {string}   props.stepType        - Step type
+ * @param {number}   props.pipelineId      - Pipeline ID
+ * @param {number}   props.flowId          - Flow ID
+ * @param {Object}   props.currentSettings - Current handler settings
+ * @param {Function} props.onSuccess       - Success callback
  * @param {Function} props.onChangeHandler - Change handler callback
- * @param {Function} props.onOAuthConnect - OAuth connect callback
- * @param {Object} props.handlers - Global handlers metadata from PipelineContext
- * @param {Object} props.handlerDetails - Detailed configuration for the selected handler
- * @returns {React.ReactElement|null} Handler settings modal
+ * @param {Function} props.onOAuthConnect  - OAuth connect callback
+ * @param {Object}   props.handlers        - Global handlers metadata from PipelineContext
+ * @param {Object}   props.handlerDetails  - Detailed configuration for the selected handler
+ * @return {React.ReactElement|null} Handler settings modal
  */
 export default function HandlerSettingsModal( {
 	onClose,
@@ -82,7 +88,7 @@ export default function HandlerSettingsModal( {
 			if ( ! response || ! response.success ) {
 				const message =
 					response?.message ||
-					__( 'Failed to update handler settings', 'datamachine' );
+					__( 'Failed to update handler settings', 'data-machine' );
 				throw new Error( message );
 			}
 
@@ -163,6 +169,8 @@ export default function HandlerSettingsModal( {
 	 * Handle setting change with plugin hook support.
 	 * Applies 'datamachine.handlerSettings.fieldChange' filter to allow plugins
 	 * to react to field changes (e.g., loading venue data when dropdown changes).
+	 * @param key
+	 * @param value
 	 */
 	const handleSettingChange = async ( key, value ) => {
 		formState.updateField( key, value );
@@ -193,10 +201,10 @@ export default function HandlerSettingsModal( {
 			title={
 				handlerInfo.label
 					? sprintf(
-							__( 'Configure %s Settings', 'datamachine' ),
+							__( 'Configure %s Settings', 'data-machine' ),
 							handlerInfo.label
 					  )
-					: __( 'Configure Handler Settings', 'datamachine' )
+					: __( 'Configure Handler Settings', 'data-machine' )
 			}
 			onRequestClose={ onClose }
 			className="datamachine-handler-settings-modal"
@@ -211,7 +219,7 @@ export default function HandlerSettingsModal( {
 				<div className="datamachine-modal-section">
 					<div className="datamachine-modal-header-section">
 						<div>
-							<strong>{ __( 'Handler:', 'datamachine' ) }</strong>{ ' ' }
+							<strong>{ __( 'Handler:', 'data-machine' ) }</strong>{ ' ' }
 							{ handlerInfo.label || handlerSlug }
 						</div>
 						<Button
@@ -219,7 +227,7 @@ export default function HandlerSettingsModal( {
 							size="small"
 							onClick={ onChangeHandler }
 						>
-							{ __( 'Change Handler', 'datamachine' ) }
+							{ __( 'Change Handler', 'data-machine' ) }
 						</Button>
 					</div>
 
@@ -233,14 +241,14 @@ export default function HandlerSettingsModal( {
 											? sprintf(
 													__(
 														'Connected as %s',
-														'datamachine'
+														'data-machine'
 													),
 													handlerInfo.account_details
 														.username
 											  )
 											: __(
 													'Account Connected',
-													'datamachine'
+													'data-machine'
 											  ) }
 									</span>
 									<Button
@@ -257,7 +265,7 @@ export default function HandlerSettingsModal( {
 									>
 										{ __(
 											'Manage Connection',
-											'datamachine'
+											'data-machine'
 										) }
 									</Button>
 								</div>
@@ -273,7 +281,7 @@ export default function HandlerSettingsModal( {
 										}
 									} }
 								>
-									{ __( 'Connect Account', 'datamachine' ) }
+									{ __( 'Connect Account', 'data-machine' ) }
 								</Button>
 							) }
 						</div>
@@ -285,8 +293,8 @@ export default function HandlerSettingsModal( {
 					<div className="datamachine-modal-loading-state">
 						<p className="datamachine-modal-loading-text">
 							{ __(
-								'Loading handler settings...',
-								'datamachine'
+								'Loading handler settings…',
+								'data-machine'
 							) }
 						</p>
 					</div>
@@ -315,7 +323,7 @@ export default function HandlerSettingsModal( {
 									<p>
 										{ __(
 											'No configuration options available for this handler.',
-											'datamachine'
+											'data-machine'
 										) }
 									</p>
 								</div>
@@ -357,7 +365,7 @@ export default function HandlerSettingsModal( {
 						onClick={ onClose }
 						disabled={ formState.isSubmitting }
 					>
-						{ __( 'Cancel', 'datamachine' ) }
+						{ __( 'Cancel', 'data-machine' ) }
 					</Button>
 
 					<Button
@@ -367,8 +375,8 @@ export default function HandlerSettingsModal( {
 						isBusy={ formState.isSubmitting }
 					>
 						{ formState.isSubmitting
-							? __( 'Saving...', 'datamachine' )
-							: __( 'Save Settings', 'datamachine' ) }
+							? __( 'Saving…', 'data-machine' )
+							: __( 'Save Settings', 'data-machine' ) }
 					</Button>
 				</div>
 			</div>

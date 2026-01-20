@@ -4,8 +4,14 @@
  * Displays log content in a scrollable, monospace viewer.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useLogContent } from '../queries/logs';
 
 const LogsViewer = ( { agentType } ) => {
@@ -19,7 +25,7 @@ const LogsViewer = ( { agentType } ) => {
 		return (
 			<div className="datamachine-logs-viewer-loading">
 				<Spinner />
-				<span>{ __( 'Loading logs...', 'data-machine' ) }</span>
+				<span>{ __( 'Loading logs…', 'data-machine' ) }</span>
 			</div>
 		);
 	}

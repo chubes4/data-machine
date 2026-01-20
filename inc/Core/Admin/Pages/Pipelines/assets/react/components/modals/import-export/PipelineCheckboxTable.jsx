@@ -4,18 +4,24 @@
  * Reusable table with checkbox selection for pipelines.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { CheckboxControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { isSameId, includesId, normalizeId } from '../../../utils/ids';
 
 /**
  * Pipeline Checkbox Table Component
  *
- * @param {Object} props - Component props
- * @param {Array} props.pipelines - All available pipelines
- * @param {Array} props.selectedIds - Currently selected pipeline IDs
+ * @param {Object}   props                   - Component props
+ * @param {Array}    props.pipelines         - All available pipelines
+ * @param {Array}    props.selectedIds       - Currently selected pipeline IDs
  * @param {Function} props.onSelectionChange - Selection change handler
- * @returns {React.ReactElement} Pipeline checkbox table
+ * @return {React.ReactElement} Pipeline checkbox table
  */
 export default function PipelineCheckboxTable( {
 	pipelines,
@@ -24,6 +30,7 @@ export default function PipelineCheckboxTable( {
 } ) {
 	/**
 	 * Toggle individual pipeline selection
+	 * @param pipelineId
 	 */
 	const togglePipeline = ( pipelineId ) => {
 		const normalizedId = normalizeId( pipelineId );
@@ -65,12 +72,12 @@ export default function PipelineCheckboxTable( {
 								__nextHasNoMarginBottom
 							/>
 						</th>
-						<th>{ __( 'Pipeline Name', 'datamachine' ) }</th>
+						<th>{ __( 'Pipeline Name', 'data-machine' ) }</th>
 						<th className="datamachine-table-col--100">
-							{ __( 'Steps', 'datamachine' ) }
+							{ __( 'Steps', 'data-machine' ) }
 						</th>
 						<th className="datamachine-table-col--100">
-							{ __( 'Flows', 'datamachine' ) }
+							{ __( 'Flows', 'data-machine' ) }
 						</th>
 					</tr>
 				</thead>
@@ -83,7 +90,7 @@ export default function PipelineCheckboxTable( {
 							>
 								{ __(
 									'No pipelines available',
-									'datamachine'
+									'data-machine'
 								) }
 							</td>
 						</tr>

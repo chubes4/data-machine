@@ -5,10 +5,15 @@
  * Provides consistent loading, error, and success state handling.
  * Uses useReducer for stable callback references.
  */
+/**
+ * WordPress dependencies
+ */
 import { useReducer, useCallback, useRef, useState } from '@wordpress/element';
 
 /**
  * Form state reducer
+ * @param state
+ * @param action
  */
 const formReducer = ( state, action ) => {
 	switch ( action.type ) {
@@ -74,11 +79,11 @@ const formReducer = ( state, action ) => {
 /**
  * Generic form state management hook
  *
- * @param {Object} options Configuration options
- * @param {any} options.initialData Initial form data
- * @param {Function} options.validate Validation function
- * @param {Function} options.onSubmit Submit handler
- * @returns {Object} Form state and handlers
+ * @param {Object}   options             Configuration options
+ * @param {any}      options.initialData Initial form data
+ * @param {Function} options.validate    Validation function
+ * @param {Function} options.onSubmit    Submit handler
+ * @return {Object} Form state and handlers
  */
 export const useFormState = ( {
 	initialData = {},
@@ -122,7 +127,7 @@ export const useFormState = ( {
 	}, [] );
 
 	const submit = useCallback( async () => {
-		if ( state.isSubmitting ) return;
+		if ( state.isSubmitting ) {return;}
 
 		dispatch( { type: 'SET_ERROR', payload: null } );
 		dispatch( { type: 'SET_SUCCESS', payload: null } );
@@ -179,7 +184,7 @@ export const useAsyncOperation = () => {
 
 	const execute = useCallback(
 		async ( operation ) => {
-			if ( isLoading ) return;
+			if ( isLoading ) {return;}
 
 			setError( null );
 			setSuccess( null );
@@ -228,7 +233,7 @@ export const useFileUpload = () => {
 
 	const upload = useCallback(
 		async ( uploadFn ) => {
-			if ( isUploading ) return;
+			if ( isUploading ) {return;}
 
 			setError( null );
 			setSuccess( null );
@@ -298,7 +303,7 @@ export const useDragDrop = () => {
 		setError( null );
 
 		const files = Array.from( e.dataTransfer.files );
-		if ( files.length === 0 ) return;
+		if ( files.length === 0 ) {return;}
 
 		try {
 			onFilesDropped( files );

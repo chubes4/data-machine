@@ -2,10 +2,19 @@
  * Flows section component.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import FlowCard from './FlowCard';
 import EmptyFlowCard from './EmptyFlowCard';
+/**
+ * External dependencies
+ */
 import Pagination from '@shared/components/Pagination';
 import { useCreateFlow } from '../../queries/flows';
 
@@ -27,7 +36,7 @@ export default function FlowsSection( {
 	const handleAddFlow = useCallback(
 		async ( pipelineIdParam ) => {
 			try {
-				const defaultName = __( 'New Flow', 'datamachine' );
+				const defaultName = __( 'New Flow', 'data-machine' );
 				await createFlowMutation.mutateAsync( {
 					pipelineId: pipelineIdParam,
 					flowName: defaultName,
@@ -37,7 +46,7 @@ export default function FlowsSection( {
 				alert(
 					__(
 						'An error occurred while creating the flow',
-						'datamachine'
+						'data-machine'
 					)
 				);
 			}
@@ -66,12 +75,12 @@ export default function FlowsSection( {
 		return (
 			<div className="datamachine-flows-section datamachine-flows-section--empty">
 				<h3 className="datamachine-flows-section__title">
-					{ __( 'Flows', 'datamachine' ) }
+					{ __( 'Flows', 'data-machine' ) }
 				</h3>
 				<p className="datamachine-color--text-muted">
 					{ __(
 						'No flows configured. Add your first flow to get started.',
-						'datamachine'
+						'data-machine'
 					) }
 				</p>
 				<EmptyFlowCard
@@ -89,7 +98,7 @@ export default function FlowsSection( {
 		<div className="datamachine-flows-section">
 			<div className="datamachine-flows-section__header">
 				<h3 className="datamachine-flows-section__title">
-					{ __( 'Flows', 'datamachine' ) }{ ' ' }
+					{ __( 'Flows', 'data-machine' ) }{ ' ' }
 					<span className="datamachine-flows-section__count">
 						({ total })
 					</span>
@@ -118,7 +127,7 @@ export default function FlowsSection( {
 				perPage={ perPage }
 				total={ total }
 				onPageChange={ onPageChange }
-				itemLabel={ __( 'flows', 'datamachine' ) }
+				itemLabel={ __( 'flows', 'data-machine' ) }
 			/>
 		</div>
 	);

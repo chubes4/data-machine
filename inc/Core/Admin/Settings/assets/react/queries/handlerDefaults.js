@@ -4,6 +4,9 @@
  * TanStack Query hooks for handler defaults API operations.
  */
 
+/**
+ * External dependencies
+ */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { client } from '@shared/utils/api';
 

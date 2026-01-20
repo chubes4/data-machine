@@ -4,9 +4,15 @@
  * Form for clearing processed items by pipeline or flow.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useCallback } from '@wordpress/element';
 import { Button, SelectControl, Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import {
 	usePipelinesForDropdown,
 	useFlowsForDropdown,

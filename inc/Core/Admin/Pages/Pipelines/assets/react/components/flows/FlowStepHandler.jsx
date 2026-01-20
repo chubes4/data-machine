@@ -2,8 +2,14 @@
  * Flow step handler component.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useHandlers } from '../../queries/handlers';
 
 export default function FlowStepHandler( {
@@ -17,14 +23,14 @@ export default function FlowStepHandler( {
 		return (
 			<div className="datamachine-flow-step-handler datamachine-flow-step-handler--empty datamachine-handler-warning">
 				<p className="datamachine-handler-warning-text">
-					{ __( 'No handler configured', 'datamachine' ) }
+					{ __( 'No handler configured', 'data-machine' ) }
 				</p>
 				<Button
 					variant="secondary"
 					size="small"
 					onClick={ onConfigure }
 				>
-					{ __( 'Configure Handler', 'datamachine' ) }
+					{ __( 'Configure Handler', 'data-machine' ) }
 				</Button>
 			</div>
 		);
@@ -66,7 +72,7 @@ export default function FlowStepHandler( {
 			) }
 
 			<Button variant="secondary" size="small" onClick={ onConfigure }>
-				{ __( 'Configure', 'datamachine' ) }
+				{ __( 'Configure', 'data-machine' ) }
 			</Button>
 		</div>
 	);

@@ -5,26 +5,32 @@
  * Handles loading states, defaults application, and model reset on provider change.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useEffect, useMemo } from '@wordpress/element';
 import { SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * External dependencies
+ */
 import { useProviders } from '@shared/queries/providers';
 
 /**
  * Provider Model Selector Component
  *
- * @param {Object} props - Component props
- * @param {string} props.provider - Current provider value
- * @param {string} props.model - Current model value
+ * @param {Object}   props                  - Component props
+ * @param {string}   props.provider         - Current provider value
+ * @param {string}   props.model            - Current model value
  * @param {Function} props.onProviderChange - Provider change callback
- * @param {Function} props.onModelChange - Model change callback
- * @param {boolean} props.disabled - Disable both selects
- * @param {boolean} props.applyDefaults - Apply defaults when no values set (default: true)
- * @param {string} props.providerLabel - Custom provider label
- * @param {string} props.modelLabel - Custom model label
- * @param {string} props.providerHelp - Provider help text
- * @param {string} props.modelHelp - Model help text
- * @returns {React.ReactElement} Provider model selector
+ * @param {Function} props.onModelChange    - Model change callback
+ * @param {boolean}  props.disabled         - Disable both selects
+ * @param {boolean}  props.applyDefaults    - Apply defaults when no values set (default: true)
+ * @param {string}   props.providerLabel    - Custom provider label
+ * @param {string}   props.modelLabel       - Custom model label
+ * @param {string}   props.providerHelp     - Provider help text
+ * @param {string}   props.modelHelp        - Model help text
+ * @return {React.ReactElement} Provider model selector
  */
 export default function ProviderModelSelector( {
 	provider = '',
@@ -86,7 +92,7 @@ export default function ProviderModelSelector( {
 
 	const providerOptions = useMemo( () => {
 		const options = [
-			{ value: '', label: __( 'Select Provider...', 'data-machine' ) },
+			{ value: '', label: __( 'Select Provider…', 'data-machine' ) },
 		];
 
 		Object.entries( providers ).forEach( ( [ key, providerData ] ) => {
@@ -104,13 +110,13 @@ export default function ProviderModelSelector( {
 			return [
 				{
 					value: '',
-					label: __( 'Select provider first...', 'data-machine' ),
+					label: __( 'Select provider first…', 'data-machine' ),
 				},
 			];
 		}
 
 		const options = [
-			{ value: '', label: __( 'Select Model...', 'data-machine' ) },
+			{ value: '', label: __( 'Select Model…', 'data-machine' ) },
 		];
 
 		const providerData = providers[ provider ];

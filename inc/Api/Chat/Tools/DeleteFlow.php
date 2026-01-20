@@ -50,37 +50,28 @@ class DeleteFlow {
 	 * @return array Tool execution result
 	 */
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
-		$flow_id = $parameters['flow_id'] ?? null;
-
-		if ( ! is_numeric( $flow_id ) || (int) $flow_id <= 0 ) {
+		$ability = wp_get_ability( 'datamachine/delete-flow' );
+		if ( ! $ability ) {
 			return array(
 				'success'   => false,
-				'error'     => 'flow_id is required and must be a positive integer',
+				'error'     => 'Delete flow ability not available',
 				'tool_name' => 'delete_flow',
 			);
 		}
 
-		$flow_id = (int) $flow_id;
-
-		$request  = new \WP_REST_Request( 'DELETE', '/datamachine/v1/flows/' . $flow_id );
-		$response = rest_do_request( $request );
-		$data     = $response->get_data();
-		$status   = $response->get_status();
-
-		if ( $status >= 400 ) {
-			return array(
-				'success'   => false,
-				'error'     => $data['message'] ?? 'Failed to delete flow',
-				'tool_name' => 'delete_flow',
-			);
-		}
+		$result = $ability->execute(
+			array(
+				'flow_id' => (int) ( $parameters['flow_id'] ?? 0 ),
+			)
+		);
 
 		return array(
-			'success'   => true,
-			'data'      => array(
-				'flow_id' => $flow_id,
-				'message' => 'Flow deleted.',
-			),
+			'success'   => $result['success'],
+			'data'      => $result['success'] ? array(
+				'flow_id' => $result['flow_id'],
+				'message' => $result['message'] ?? 'Flow deleted.',
+			) : null,
+			'error'     => $result['error'] ?? null,
 			'tool_name' => 'delete_flow',
 		);
 	}

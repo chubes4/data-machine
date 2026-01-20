@@ -6,10 +6,16 @@
  * Persists conversation across page refreshes via session storage.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useCallback, useEffect, useRef } from '@wordpress/element';
 import { Button } from '@wordpress/components';
 import { close, copy } from '@wordpress/icons';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useUIStore } from '../../stores/uiStore';
 import { useChatMutation, useChatSession } from '../../queries/chat';
 import { useChatQueryInvalidation } from '../../hooks/useChatQueryInvalidation';

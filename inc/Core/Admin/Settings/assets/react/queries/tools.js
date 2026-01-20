@@ -4,8 +4,14 @@
  * TanStack Query hooks for tool configuration endpoints.
  */
 
+/**
+ * External dependencies
+ */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { client } from '@shared/utils/api';
+/**
+ * Internal dependencies
+ */
 import { SETTINGS_KEY } from './settings';
 
 export const toolConfigKey = ( toolId ) => [ 'settings', 'tools', toolId ];

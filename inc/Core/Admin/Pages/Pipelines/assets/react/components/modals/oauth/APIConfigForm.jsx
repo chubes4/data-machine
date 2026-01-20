@@ -4,17 +4,20 @@
  * Form for simple authentication with API key/secret fields.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { TextControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 /**
  * API Config Form Component
  *
- * @param {Object} props - Component props
- * @param {Object} props.config - Current API configuration
- * @param {Function} props.onChange - Configuration change handler
- * @param {Array<Object>} props.fields - Field definitions from handler
- * @returns {React.ReactElement} API config form
+ * @param {Object}        props          - Component props
+ * @param {Object}        props.config   - Current API configuration
+ * @param {Function}      props.onChange - Configuration change handler
+ * @param {Array<Object>} props.fields   - Field definitions from handler
+ * @return {React.ReactElement} API config form
  */
 export default function APIConfigForm( {
 	config = {},
@@ -23,6 +26,8 @@ export default function APIConfigForm( {
 } ) {
 	/**
 	 * Handle field change
+	 * @param fieldKey
+	 * @param value
 	 */
 	const handleFieldChange = ( fieldKey, value ) => {
 		if ( onChange ) {
@@ -37,13 +42,13 @@ export default function APIConfigForm( {
 	const defaultFields = [
 		{
 			key: 'api_key',
-			label: __( 'API Key', 'datamachine' ),
+			label: __( 'API Key', 'data-machine' ),
 			type: 'text',
 			required: true,
 		},
 		{
 			key: 'api_secret',
-			label: __( 'API Secret', 'datamachine' ),
+			label: __( 'API Secret', 'data-machine' ),
 			type: 'password',
 			required: true,
 		},
@@ -62,7 +67,7 @@ export default function APIConfigForm( {
 	return (
 		<div className="datamachine-api-config-form">
 			<p className="datamachine-api-config-description">
-				{ __( 'Enter your API credentials:', 'datamachine' ) }
+				{ __( 'Enter your API credentials:', 'data-machine' ) }
 			</p>
 
 			{ fieldsToRender.map( ( field ) => (

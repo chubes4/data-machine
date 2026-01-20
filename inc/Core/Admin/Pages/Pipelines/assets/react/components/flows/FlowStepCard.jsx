@@ -4,9 +4,15 @@
  * Display individual flow step with handler configuration.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useEffect, useCallback, useRef } from '@wordpress/element';
 import { Card, CardBody, TextareaControl, Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import FlowStepHandler from './FlowStepHandler';
 import { useUpdateUserMessage } from '../../queries/flows';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
@@ -85,7 +91,7 @@ export default function FlowStepCard( {
 				if ( ! response?.success ) {
 					setError(
 						response?.message ||
-							__( 'Failed to update user message', 'datamachine' )
+							__( 'Failed to update user message', 'data-machine' )
 					);
 					setLocalUserMessage( currentMessage );
 				}
@@ -93,7 +99,7 @@ export default function FlowStepCard( {
 				// eslint-disable-next-line no-console
 				console.error( 'User message update error:', err );
 				setError(
-					err.message || __( 'An error occurred', 'datamachine' )
+					err.message || __( 'An error occurred', 'data-machine' )
 				);
 				setLocalUserMessage( currentMessage );
 			} finally {
@@ -169,28 +175,28 @@ export default function FlowStepCard( {
 						<div className="datamachine-ai-config-display">
 							<div className="datamachine-ai-provider-info">
 								<strong>
-									{ __( 'AI Provider:', 'datamachine' ) }
+									{ __( 'AI Provider:', 'data-machine' ) }
 								</strong>{ ' ' }
 								{ aiConfig.provider || 'Not configured' }
 								{ ' | ' }
 								<strong>
-									{ __( 'Model:', 'datamachine' ) }
+									{ __( 'Model:', 'data-machine' ) }
 								</strong>{ ' ' }
 								{ aiConfig.model || 'Not configured' }
 							</div>
 
 							<TextareaControl
-								label={ __( 'User Message', 'datamachine' ) }
+								label={ __( 'User Message', 'data-machine' ) }
 								value={ localUserMessage }
 								onChange={ handleUserMessageChange }
 								placeholder={ __(
 									'Enter user message for AI processing…',
-									'datamachine'
+									'data-machine'
 								) }
 								rows={ 4 }
 								help={
 									isSaving
-										? __( 'Saving…', 'datamachine' )
+										? __( 'Saving…', 'data-machine' )
 										: null
 								}
 							/>

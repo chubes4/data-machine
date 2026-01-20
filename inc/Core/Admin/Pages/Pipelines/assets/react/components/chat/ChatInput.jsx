@@ -5,6 +5,9 @@
  * Supports Enter to send, Shift+Enter for newline.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useCallback, useRef } from '@wordpress/element';
 import { Button } from '@wordpress/components';
 import { arrowUp } from '@wordpress/icons';
@@ -49,7 +52,7 @@ export default function ChatInput( { onSend, isLoading } ) {
 				onChange={ ( e ) => setMessage( e.target.value ) }
 				onKeyDown={ handleKeyDown }
 				placeholder={ __(
-					'Ask me to build something...',
+					'Ask me to build something…',
 					'data-machine'
 				) }
 				rows={ 2 }

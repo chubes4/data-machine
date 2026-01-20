@@ -87,35 +87,29 @@ class UpdateFlow {
 			}
 		}
 
-		$body_params = array();
-		if ( ! empty( $flow_name ) ) {
-			$body_params['flow_name'] = $flow_name;
-		}
-		if ( ! empty( $scheduling_config ) ) {
-			$body_params['scheduling_config'] = $scheduling_config;
-		}
-
-		$request = new \WP_REST_Request( 'PATCH', '/datamachine/v1/flows/' . $flow_id );
-		$request->set_body_params( $body_params );
-
-		$response = rest_do_request( $request );
-
-		if ( is_wp_error( $response ) ) {
+		$ability = wp_get_ability( 'datamachine/update-flow' );
+		if ( ! $ability ) {
 			return array(
 				'success'   => false,
-				'error'     => $response->get_error_message(),
+				'error'     => 'Update flow ability not available',
 				'tool_name' => 'update_flow',
 			);
 		}
 
-		$data   = $response->get_data();
-		$status = $response->get_status();
+		$input = array( 'flow_id' => $flow_id );
+		if ( ! empty( $flow_name ) ) {
+			$input['flow_name'] = $flow_name;
+		}
+		if ( ! empty( $scheduling_config ) ) {
+			$input['scheduling_config'] = $scheduling_config;
+		}
 
-		if ( $status >= 400 ) {
-			$error_message = $data['message'] ?? 'Failed to update flow';
+		$result = $ability->execute( $input );
+
+		if ( ! $result['success'] ) {
 			return array(
 				'success'   => false,
-				'error'     => $error_message,
+				'error'     => $result['error'] ?? 'Failed to update flow',
 				'tool_name' => 'update_flow',
 			);
 		}
@@ -126,7 +120,7 @@ class UpdateFlow {
 		);
 
 		if ( ! empty( $flow_name ) ) {
-			$response_data['flow_name'] = $flow_name;
+			$response_data['flow_name'] = $result['flow_name'] ?? $flow_name;
 		}
 		if ( ! empty( $scheduling_config ) ) {
 			$response_data['scheduling']        = $scheduling_config['interval'];

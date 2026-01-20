@@ -5,13 +5,16 @@
  * Includes tool usage indicators for assistant messages.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { lazy, Suspense } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 const ReactMarkdown = lazy( () => import( 'react-markdown' ) );
 
 function formatTimestamp( isoString ) {
-	if ( ! isoString ) return null;
+	if ( ! isoString ) {return null;}
 	const date = new Date( isoString );
 	return date.toLocaleTimeString( [], {
 		hour: '2-digit',

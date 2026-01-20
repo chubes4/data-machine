@@ -4,10 +4,19 @@
  * Root container for the Jobs admin page.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import JobsHeader from './components/JobsHeader';
 import JobsTable from './components/JobsTable';
+/**
+ * External dependencies
+ */
 import Pagination from '@shared/components/Pagination';
 import JobsAdminModal from './components/modals/JobsAdminModal';
 import { useJobs } from './queries/jobs';

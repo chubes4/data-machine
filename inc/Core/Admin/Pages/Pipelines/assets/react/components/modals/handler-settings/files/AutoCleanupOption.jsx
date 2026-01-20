@@ -4,16 +4,19 @@
  * Checkbox option for automatic file cleanup after processing.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { CheckboxControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 /**
  * Auto Cleanup Option Component
  *
- * @param {Object} props - Component props
- * @param {boolean} props.checked - Checked state
+ * @param {Object}   props          - Component props
+ * @param {boolean}  props.checked  - Checked state
  * @param {Function} props.onChange - Change handler
- * @returns {React.ReactElement} Auto cleanup checkbox
+ * @return {React.ReactElement} Auto cleanup checkbox
  */
 export default function AutoCleanupOption( { checked, onChange } ) {
 	return (
@@ -21,13 +24,13 @@ export default function AutoCleanupOption( { checked, onChange } ) {
 			<CheckboxControl
 				label={ __(
 					'Automatically delete files after processing',
-					'datamachine'
+					'data-machine'
 				) }
 				checked={ checked }
 				onChange={ onChange }
 				help={ __(
 					'Files will be removed from the handler after successful processing. Disable to keep files for multiple uses.',
-					'datamachine'
+					'data-machine'
 				) }
 			/>
 		</div>

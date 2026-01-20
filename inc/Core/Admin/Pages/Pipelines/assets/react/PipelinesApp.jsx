@@ -5,11 +5,20 @@
  * @pattern Container - Fetches all pipeline-related data and manages global state
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useEffect, useCallback, useState, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Spinner, Notice, Button } from '@wordpress/components';
+/**
+ * Internal dependencies
+ */
 import { usePipelines, useCreatePipeline } from './queries/pipelines';
 import { useFlows, useUpdateFlowHandler } from './queries/flows';
+/**
+ * External dependencies
+ */
 import { useSettings } from '@shared/queries/settings';
 import { useHandlers, useHandlerDetails } from './queries/handlers';
 import { useUIStore } from './stores/uiStore';
@@ -24,7 +33,7 @@ import { isSameId } from './utils/ids';
 /**
  * Root application component
  *
- * @returns {React.ReactElement} Application component
+ * @return {React.ReactElement} Application component
  */
 export default function PipelinesApp() {
 	// UI state from Zustand
@@ -211,7 +220,7 @@ export default function PipelinesApp() {
 			return (
 				<div className="datamachine-pipelines-loading">
 					<Spinner />
-					<p>{ __( 'Loading pipelines...', 'datamachine' ) }</p>
+					<p>{ __( 'Loading pipelines…', 'data-machine' ) }</p>
 				</div>
 			);
 		}
@@ -237,7 +246,7 @@ export default function PipelinesApp() {
 						<p>
 							{ __(
 								'No pipelines found. Create your first pipeline to get started, or ask the chat to help you build one.',
-								'datamachine'
+								'data-machine'
 							) }
 						</p>
 					</Notice>
@@ -248,7 +257,7 @@ export default function PipelinesApp() {
 							disabled={ isCreatingPipeline }
 							isBusy={ isCreatingPipeline }
 						>
-							{ __( 'Create First Pipeline', 'datamachine' ) }
+							{ __( 'Create First Pipeline', 'data-machine' ) }
 						</Button>
 					</div>
 				</div>
@@ -261,7 +270,7 @@ export default function PipelinesApp() {
 				<div className="datamachine-pipelines-loading">
 					<Spinner />
 					<p>
-						{ __( 'Loading pipeline details...', 'datamachine' ) }
+						{ __( 'Loading pipeline details…', 'data-machine' ) }
 					</p>
 				</div>
 			);
@@ -311,7 +320,7 @@ export default function PipelinesApp() {
 						disabled={ isCreatingPipeline }
 						isBusy={ isCreatingPipeline }
 					>
-						{ __( 'Add New Pipeline', 'datamachine' ) }
+						{ __( 'Add New Pipeline', 'data-machine' ) }
 					</Button>
 					<div className="datamachine-header__right">
 						<Button
@@ -320,7 +329,7 @@ export default function PipelinesApp() {
 								openModal( MODAL_TYPES.IMPORT_EXPORT )
 							}
 						>
-							{ __( 'Import / Export', 'datamachine' ) }
+							{ __( 'Import / Export', 'data-machine' ) }
 						</Button>
 						<ChatToggle />
 					</div>

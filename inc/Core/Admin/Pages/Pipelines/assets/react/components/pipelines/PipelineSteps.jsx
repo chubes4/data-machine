@@ -4,8 +4,14 @@
  * Container for pipeline step list with data flow arrows.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useMemo, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import PipelineStepCard from './PipelineStepCard';
 import EmptyStepCard from './EmptyStepCard';
 import DataFlowArrow from '../shared/DataFlowArrow';
@@ -14,13 +20,13 @@ import { reorderPipelineSteps } from '../../utils/api';
 /**
  * Pipeline Steps Container Component
  *
- * @param {Object} props - Component props
- * @param {number} props.pipelineId - Pipeline ID
- * @param {Object} props.pipelineConfig - Pipeline configuration keyed by pipeline_step_id
- * @param {Function} props.onStepAdded - Add step handler
- * @param {Function} props.onStepRemoved - Remove step handler
+ * @param {Object}   props                  - Component props
+ * @param {number}   props.pipelineId       - Pipeline ID
+ * @param {Object}   props.pipelineConfig   - Pipeline configuration keyed by pipeline_step_id
+ * @param {Function} props.onStepAdded      - Add step handler
+ * @param {Function} props.onStepRemoved    - Remove step handler
  * @param {Function} props.onStepConfigured - Configure step handler
- * @returns {React.ReactElement} Pipeline steps container
+ * @return {React.ReactElement} Pipeline steps container
  */
 export default function PipelineSteps( {
 	pipelineId,
@@ -51,6 +57,7 @@ export default function PipelineSteps( {
 
 	/**
 	 * Handle step drop to reorder
+	 * @param dropIndex
 	 */
 	const handleDrop = async ( dropIndex ) => {
 		if ( draggedIndex === null || draggedIndex === dropIndex ) {
@@ -82,7 +89,7 @@ export default function PipelineSteps( {
 				<p className="datamachine-steps-empty-text">
 					{ __(
 						'No steps configured. Add your first step to get started.',
-						'datamachine'
+						'data-machine'
 					) }
 				</p>
 				<EmptyStepCard

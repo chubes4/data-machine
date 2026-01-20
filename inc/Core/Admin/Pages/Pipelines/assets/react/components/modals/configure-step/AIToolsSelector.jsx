@@ -4,8 +4,14 @@
  * Checkbox list for selecting AI tools with configuration status indicators.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useTools } from '../../../queries/config';
 import ToolCheckbox from './ToolCheckbox';
 import ConfigurationWarning from './ConfigurationWarning';
@@ -13,10 +19,10 @@ import ConfigurationWarning from './ConfigurationWarning';
 /**
  * AI Tools Selector Component
  *
- * @param {Object} props - Component props
- * @param {Array<string>} props.selectedTools - Currently selected tool IDs
- * @param {Function} props.onSelectionChange - Selection change handler
- * @returns {React.ReactElement} AI tools selector
+ * @param {Object}        props                   - Component props
+ * @param {Array<string>} props.selectedTools     - Currently selected tool IDs
+ * @param {Function}      props.onSelectionChange - Selection change handler
+ * @return {React.ReactElement} AI tools selector
  */
 export default function AIToolsSelector( {
 	selectedTools = [],
@@ -48,6 +54,7 @@ export default function AIToolsSelector( {
 
 	/**
 	 * Handle tool toggle
+	 * @param toolId
 	 */
 	const handleToggle = ( toolId ) => {
 		const newSelection = selectedTools.includes( toolId )
@@ -62,7 +69,7 @@ export default function AIToolsSelector( {
 	if ( isLoadingTools ) {
 		return (
 			<div className="datamachine-modal-loading-state datamachine-tools-spacing--mt-16">
-				{ __( 'Loading AI tools...', 'datamachine' ) }
+				{ __( 'Loading AI tools…', 'data-machine' ) }
 			</div>
 		);
 	}
@@ -74,13 +81,13 @@ export default function AIToolsSelector( {
 	return (
 		<div className="datamachine-tools-spacing--mt-16">
 			<label className="datamachine-section-header">
-				{ __( 'AI Tools', 'datamachine' ) }
+				{ __( 'AI Tools', 'data-machine' ) }
 			</label>
 
 			<p className="datamachine-warning-description datamachine-ai-tools-description">
 				{ __(
 					'Select the tools you want to enable for this AI step:',
-					'datamachine'
+					'data-machine'
 				) }
 			</p>
 

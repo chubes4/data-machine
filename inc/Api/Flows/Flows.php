@@ -12,7 +12,6 @@ namespace DataMachine\Api\Flows;
 
 use DataMachine\Core\Admin\DateFormatter;
 use DataMachine\Core\Database\Jobs\Jobs;
-use DataMachine\Services\FlowManager;
 use DataMachine\Services\HandlerService;
 use WP_REST_Server;
 
@@ -223,27 +222,30 @@ class Flows {
 	 * Handle flow creation request
 	 */
 	public static function handle_create_flow( $request ) {
-		$manager = new FlowManager();
-
-		$options = array();
-		if ( $request->get_param( 'flow_config' ) ) {
-			$options['flow_config'] = $request->get_param( 'flow_config' );
-		}
-		if ( $request->get_param( 'scheduling_config' ) ) {
-			$options['scheduling_config'] = $request->get_param( 'scheduling_config' );
+		$ability = wp_get_ability( 'datamachine/create-flow' );
+		if ( ! $ability ) {
+			return new \WP_Error( 'ability_not_found', 'Ability not found', array( 'status' => 500 ) );
 		}
 
-		$result = $manager->create(
-			$request->get_param( 'pipeline_id' ),
-			$request->get_param( 'flow_name' ) ?? 'Flow',
-			$options
+		$input = array(
+			'pipeline_id' => (int) $request->get_param( 'pipeline_id' ),
+			'flow_name'   => $request->get_param( 'flow_name' ) ?? 'Flow',
 		);
 
-		if ( ! $result ) {
+		if ( $request->get_param( 'flow_config' ) ) {
+			$input['flow_config'] = $request->get_param( 'flow_config' );
+		}
+		if ( $request->get_param( 'scheduling_config' ) ) {
+			$input['scheduling_config'] = $request->get_param( 'scheduling_config' );
+		}
+
+		$result = $ability->execute( $input );
+
+		if ( ! $result['success'] ) {
 			return new \WP_Error(
 				'flow_creation_failed',
-				__( 'Failed to create flow.', 'data-machine' ),
-				array( 'status' => 500 )
+				$result['error'] ?? __( 'Failed to create flow.', 'data-machine' ),
+				array( 'status' => 400 )
 			);
 		}
 
@@ -259,50 +261,52 @@ class Flows {
 	 * Handle flow deletion request
 	 */
 	public static function handle_delete_flow( $request ) {
-		$flow_id = (int) $request->get_param( 'flow_id' );
+		$ability = wp_get_ability( 'datamachine/delete-flow' );
+		if ( ! $ability ) {
+			return new \WP_Error( 'ability_not_found', 'Ability not found', array( 'status' => 500 ) );
+		}
 
-		$manager = new FlowManager();
-		$success = $manager->delete( $flow_id );
+		$result = $ability->execute(
+			array(
+				'flow_id' => (int) $request->get_param( 'flow_id' ),
+			)
+		);
 
-		if ( ! $success ) {
+		if ( ! $result['success'] ) {
 			return new \WP_Error(
 				'flow_deletion_failed',
-				__( 'Failed to delete flow.', 'data-machine' ),
-				array( 'status' => 500 )
+				$result['error'] ?? __( 'Failed to delete flow.', 'data-machine' ),
+				array( 'status' => 400 )
 			);
 		}
 
-		return rest_ensure_response(
-			array(
-				'success' => true,
-				'data'    => array( 'flow_id' => $flow_id ),
-			)
-		);
+		return rest_ensure_response( $result );
 	}
 
 	/**
 	 * Handle flow duplication request
 	 */
 	public static function handle_duplicate_flow( $request ) {
-		$source_flow_id = (int) $request->get_param( 'flow_id' );
+		$ability = wp_get_ability( 'datamachine/duplicate-flow' );
+		if ( ! $ability ) {
+			return new \WP_Error( 'ability_not_found', 'Ability not found', array( 'status' => 500 ) );
+		}
 
-		$manager = new FlowManager();
-		$result  = $manager->duplicate( $source_flow_id );
+		$result = $ability->execute(
+			array(
+				'source_flow_id' => (int) $request->get_param( 'flow_id' ),
+			)
+		);
 
-		if ( ! $result ) {
+		if ( ! $result['success'] ) {
 			return new \WP_Error(
 				'flow_duplication_failed',
-				__( 'Failed to duplicate flow.', 'data-machine' ),
-				array( 'status' => 500 )
+				$result['error'] ?? __( 'Failed to duplicate flow.', 'data-machine' ),
+				array( 'status' => 400 )
 			);
 		}
 
-		return rest_ensure_response(
-			array(
-				'success' => true,
-				'data'    => $result,
-			)
-		);
+		return rest_ensure_response( $result );
 	}
 
 	/**
@@ -313,7 +317,7 @@ class Flows {
 		$per_page    = $request->get_param( 'per_page' ) ?? 20;
 		$offset      = $request->get_param( 'offset' ) ?? 0;
 
-		$ability = wp_get_ability( 'datamachine/list-flows' );
+		$ability = wp_get_ability( 'datamachine/get-flows' );
 		if ( ! $ability ) {
 			return new \WP_Error( 'ability_not_found', 'Ability not found', array( 'status' => 500 ) );
 		}
@@ -476,67 +480,40 @@ class Flows {
 	 * PATCH /datamachine/v1/flows/{id}
 	 */
 	public static function handle_update_flow( $request ) {
-		$flow_id           = (int) $request->get_param( 'flow_id' );
+		$ability = wp_get_ability( 'datamachine/update-flow' );
+		if ( ! $ability ) {
+			return new \WP_Error( 'ability_not_found', 'Ability not found', array( 'status' => 500 ) );
+		}
+
+		$input = array(
+			'flow_id' => (int) $request->get_param( 'flow_id' ),
+		);
+
 		$flow_name         = $request->get_param( 'flow_name' );
 		$scheduling_config = $request->get_param( 'scheduling_config' );
 
-		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+		if ( null !== $flow_name ) {
+			$input['flow_name'] = $flow_name;
+		}
+		if ( null !== $scheduling_config ) {
+			$input['scheduling_config'] = $scheduling_config;
+		}
 
-		// Validate that at least one update parameter is provided
-		if ( null === $flow_name && null === $scheduling_config ) {
+		$result = $ability->execute( $input );
+
+		if ( ! $result['success'] ) {
 			return new \WP_Error(
-				'no_updates',
-				__( 'Must provide flow_name or scheduling_config to update', 'data-machine' ),
+				'update_failed',
+				$result['error'] ?? __( 'Failed to update flow', 'data-machine' ),
 				array( 'status' => 400 )
 			);
 		}
 
-		// Handle title updates
-		if ( null !== $flow_name ) {
-			$flow_name = sanitize_text_field( $flow_name );
-			if ( empty( $flow_name ) ) {
-				return new \WP_Error(
-					'empty_title',
-					__( 'Flow title cannot be empty', 'data-machine' ),
-					array( 'status' => 400 )
-				);
-			}
+		$flow_id = $result['flow_id'];
 
-			$success = $db_flows->update_flow(
-				$flow_id,
-				array(
-					'flow_name' => $flow_name,
-				)
-			);
+		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
+		$flow     = $db_flows->get_flow( $flow_id );
 
-			if ( ! $success ) {
-				return new \WP_Error(
-					'update_failed',
-					__( 'Failed to save flow title', 'data-machine' ),
-					array( 'status' => 500 )
-				);
-			}
-		}
-
-		// Handle scheduling updates
-		if ( null !== $scheduling_config ) {
-			$result = FlowScheduling::handle_scheduling_update( $flow_id, $scheduling_config );
-			if ( is_wp_error( $result ) ) {
-				return $result;
-			}
-		}
-
-		// Get updated flow data for response
-		$flow = $db_flows->get_flow( $flow_id );
-		if ( ! $flow ) {
-			return new \WP_Error(
-				'flow_not_found',
-				__( 'Flow not found after update', 'data-machine' ),
-				array( 'status' => 404 )
-			);
-		}
-
-		// Get latest job for this flow
 		$db_jobs    = new Jobs();
 		$jobs       = $db_jobs->get_jobs_for_flow( $flow_id );
 		$latest_job = $jobs[0] ?? null;

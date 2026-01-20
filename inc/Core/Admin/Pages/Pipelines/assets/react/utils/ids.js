@@ -10,7 +10,7 @@
  *
  * @param {string|number} a - First ID
  * @param {string|number} b - Second ID
- * @returns {boolean} True if IDs match
+ * @return {boolean} True if IDs match
  */
 export const isSameId = ( a, b ) => {
 	if ( a == null || b == null ) {
@@ -23,8 +23,8 @@ export const isSameId = ( a, b ) => {
  * Check if an ID exists in an array (type-safe)
  *
  * @param {Array<string|number>} ids - Array of IDs
- * @param {string|number} id - ID to find
- * @returns {boolean} True if ID exists in array
+ * @param {string|number}        id  - ID to find
+ * @return {boolean} True if ID exists in array
  */
 export const includesId = ( ids, id ) => {
 	if ( ! Array.isArray( ids ) || id == null ) {
@@ -37,7 +37,7 @@ export const includesId = ( ids, id ) => {
  * Normalize an ID to string format
  *
  * @param {string|number} id - ID to normalize
- * @returns {string|null} Normalized string ID or null
+ * @return {string|null} Normalized string ID or null
  */
 export const normalizeId = ( id ) => {
 	if ( id == null || id === '' ) {

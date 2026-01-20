@@ -4,7 +4,13 @@
  * Collapsible section for a step type containing its handlers.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState } from '@wordpress/element';
+/**
+ * Internal dependencies
+ */
 import HandlerDefaultsForm from './HandlerDefaultsForm';
 
 const StepTypeAccordion = ( {

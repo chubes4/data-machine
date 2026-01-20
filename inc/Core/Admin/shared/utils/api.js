@@ -5,6 +5,9 @@
  * Uses wp.apiFetch from @wordpress/api-fetch.
  */
 
+/**
+ * WordPress dependencies
+ */
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
 
@@ -26,10 +29,10 @@ const getConfig = () => {
 /**
  * Core API Request Handler
  *
- * @param {string} path - Endpoint path (relative to namespace)
- * @param {string} method - HTTP method
- * @param {Object} data - Request body data (for JSON)
- * @param {Object} params - Query parameters
+ * @param {string} path         - Endpoint path (relative to namespace)
+ * @param {string} method       - HTTP method
+ * @param {Object} data         - Request body data (for JSON)
+ * @param {Object} params       - Query parameters
  * @param {Object} extraOptions - Additional fetch options (headers, body, etc.)
  */
 const request = async (

@@ -4,6 +4,9 @@
  * Form for clearing jobs (failed or all) with optional processed items cleanup.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useCallback } from '@wordpress/element';
 import {
 	Button,
@@ -12,6 +15,9 @@ import {
 	Notice,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useClearJobs } from '../../queries/jobs';
 
 const ClearJobsForm = () => {

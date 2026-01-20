@@ -4,6 +4,9 @@
  * Page title and Admin button for the jobs page.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 

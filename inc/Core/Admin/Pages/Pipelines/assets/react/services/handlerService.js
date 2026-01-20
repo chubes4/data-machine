@@ -1,4 +1,10 @@
+/**
+ * External dependencies
+ */
 import { queryClient } from '@shared/lib/queryClient';
+/**
+ * Internal dependencies
+ */
 import { updateFlowHandler } from '../utils/api';
 import createModel from '../models/HandlerFactory';
 

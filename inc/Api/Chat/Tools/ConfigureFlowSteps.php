@@ -4,6 +4,7 @@
  *
  * Configures handler settings or AI user messages on flow steps.
  * Supports both single-step and bulk pipeline-scoped operations.
+ * Delegates to FlowStepAbilities for core logic.
  *
  * @package DataMachine\Api\Chat\Tools
  * @since 0.4.2
@@ -15,10 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use DataMachine\Abilities\FlowStepAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-use DataMachine\Services\FlowStepManager;
 use DataMachine\Services\HandlerService;
-use DataMachine\Core\Database\Flows\Flows as FlowsDB;
 
 class ConfigureFlowSteps {
 	use ToolRegistrationTrait;
@@ -157,94 +157,44 @@ class ConfigureFlowSteps {
 		array $handler_config,
 		?string $user_message
 	): array {
-		$flow_step_manager = new FlowStepManager();
-		$results           = array();
+		$abilities = new FlowStepAbilities();
 
-		$has_handler_change = ! empty( $handler_slug ) || ! empty( $target_handler_slug ) || ! empty( $handler_config );
+		$effective_slug = $target_handler_slug ?? $handler_slug;
 
-		if ( $has_handler_change ) {
-			// Get existing step config
-			$existing_step           = $flow_step_manager->get( $flow_step_id );
-			$existing_handler_slug   = $existing_step['handler_slug'] ?? null;
-			$existing_handler_config = $existing_step['handler_config'] ?? array();
+		$input = array( 'flow_step_id' => $flow_step_id );
 
-			// Determine effective handler slug
-			// Priority: target_handler_slug > handler_slug > existing
-			$effective_handler_slug = $target_handler_slug ?? $handler_slug ?? $existing_handler_slug;
+		if ( ! empty( $effective_slug ) ) {
+			$input['handler_slug'] = $effective_slug;
+		}
 
-			if ( empty( $effective_handler_slug ) ) {
-				return array(
-					'success'   => false,
-					'error'     => 'handler_slug or target_handler_slug is required when configuring a step without an existing handler',
-					'tool_name' => 'configure_flow_steps',
-				);
-			}
-
-			// Check if we're switching handlers
-			$is_switching = ! empty( $target_handler_slug ) && $target_handler_slug !== $existing_handler_slug;
-
-			// Build merged config
-			if ( $is_switching && ! empty( $existing_handler_config ) ) {
-				// Map existing config fields to new handler
-				$mapped_config = $this->mapHandlerConfig( $existing_handler_config, $effective_handler_slug, $field_map );
-			} else {
-				$mapped_config = array();
-			}
-
-			// Merge: mapped config < shared handler_config (shared takes precedence)
-			$merged_config = array_merge( $mapped_config, $handler_config );
-
-			// Validate merged config against target handler schema
-			if ( ! empty( $merged_config ) ) {
-				$validation_result = $this->validateHandlerConfig( $effective_handler_slug, $merged_config );
-				if ( true !== $validation_result ) {
-					return array(
-						'success'   => false,
-						'error'     => $validation_result,
-						'tool_name' => 'configure_flow_steps',
-					);
-				}
-			}
-
-			$handler_success = $flow_step_manager->updateHandler( $flow_step_id, $effective_handler_slug, $merged_config );
-			if ( ! $handler_success ) {
-				return array(
-					'success'   => false,
-					'error'     => 'Failed to update handler. Verify flow_step_id is valid.',
-					'tool_name' => 'configure_flow_steps',
-				);
-			}
-
-			$results['handler_updated'] = true;
-			$results['handler_slug']    = $effective_handler_slug;
-			if ( $is_switching ) {
-				$results['switched_from'] = $existing_handler_slug;
-			}
+		if ( ! empty( $handler_config ) ) {
+			$input['handler_config'] = $handler_config;
 		}
 
 		if ( ! empty( $user_message ) ) {
-			$message_success = $flow_step_manager->updateUserMessage( $flow_step_id, $user_message );
-			if ( ! $message_success ) {
-				return array(
-					'success'   => false,
-					'error'     => 'Failed to update user message. Verify flow_step_id is valid and belongs to an AI step.',
-					'tool_name' => 'configure_flow_steps',
-				);
-			}
-			$results['user_message_updated'] = true;
+			$input['user_message'] = $user_message;
 		}
 
-		return array(
-			'success'   => true,
-			'data'      => array_merge(
-				array(
-					'flow_step_id' => $flow_step_id,
-					'message'      => 'Flow step configured successfully.',
-				),
-				$results
-			),
-			'tool_name' => 'configure_flow_steps',
-		);
+		$result = $abilities->executeUpdateFlowStep( $input );
+
+		$result['tool_name'] = 'configure_flow_steps';
+
+		if ( $result['success'] ) {
+			$result['data'] = array(
+				'flow_step_id' => $flow_step_id,
+				'message'      => $result['message'] ?? 'Flow step configured successfully.',
+			);
+			if ( ! empty( $effective_slug ) ) {
+				$result['data']['handler_slug']    = $effective_slug;
+				$result['data']['handler_updated'] = true;
+			}
+			if ( ! empty( $user_message ) ) {
+				$result['data']['user_message_updated'] = true;
+			}
+			unset( $result['message'] );
+		}
+
+		return $result;
 	}
 
 	/**
@@ -260,277 +210,62 @@ class ConfigureFlowSteps {
 		array $flow_configs,
 		?string $user_message
 	): array {
-		$flows_db          = new FlowsDB();
-		$flow_step_manager = new FlowStepManager();
+		$abilities = new FlowStepAbilities();
 
-		// Get all flows for this pipeline
-		$flows = $flows_db->get_flows_for_pipeline( $pipeline_id );
-		if ( empty( $flows ) ) {
-			return array(
-				'success'   => false,
-				'error'     => 'No flows found for pipeline_id ' . $pipeline_id,
-				'tool_name' => 'configure_flow_steps',
+		$input = array( 'pipeline_id' => $pipeline_id );
+
+		if ( ! empty( $step_type ) ) {
+			$input['step_type'] = $step_type;
+		}
+
+		if ( ! empty( $handler_slug ) ) {
+			$input['handler_slug'] = $handler_slug;
+		}
+
+		if ( ! empty( $target_handler_slug ) ) {
+			$input['target_handler_slug'] = $target_handler_slug;
+		}
+
+		if ( ! empty( $field_map ) ) {
+			$input['field_map'] = $field_map;
+		}
+
+		if ( ! empty( $handler_config ) ) {
+			$input['handler_config'] = $handler_config;
+		}
+
+		if ( ! empty( $flow_configs ) ) {
+			$input['flow_configs'] = $flow_configs;
+		}
+
+		if ( ! empty( $user_message ) ) {
+			$input['user_message'] = $user_message;
+		}
+
+		$result = $abilities->executeConfigureFlowSteps( $input );
+
+		$result['tool_name'] = 'configure_flow_steps';
+
+		if ( $result['success'] ) {
+			$result['data'] = array(
+				'pipeline_id'    => $result['pipeline_id'],
+				'flows_updated'  => $result['flows_updated'],
+				'steps_modified' => $result['steps_modified'],
+				'details'        => $result['updated_steps'] ?? array(),
+				'message'        => $result['message'],
 			);
-		}
 
-		// Index flow_configs by flow_id for O(1) lookup
-		$flow_configs_by_id = array();
-		foreach ( $flow_configs as $fc ) {
-			if ( isset( $fc['flow_id'] ) ) {
-				$flow_configs_by_id[ (int) $fc['flow_id'] ] = $fc['handler_config'] ?? array();
-			}
-		}
-
-		// Track which flow_ids from flow_configs were actually found
-		$found_flow_ids    = array();
-		$pipeline_flow_ids = array_column( $flows, 'flow_id' );
-
-		$updated_details = array();
-		$errors          = array();
-		$skipped         = array();
-
-		foreach ( $flows as $flow ) {
-			$flow_id     = (int) $flow['flow_id'];
-			$flow_name   = $flow['flow_name'] ?? __( 'Unnamed Flow', 'data-machine' );
-			$flow_config = $flow['flow_config'] ?? array();
-
-			foreach ( $flow_config as $flow_step_id => $step_config ) {
-				// Filter by step_type if provided
-				if ( ! empty( $step_type ) ) {
-					$config_step_type = $step_config['step_type'] ?? null;
-					if ( $config_step_type !== $step_type ) {
-						continue;
-					}
-				}
-
-				// Filter by handler_slug if provided (filters by existing handler)
-				if ( ! empty( $handler_slug ) ) {
-					$config_handler_slug = $step_config['handler_slug'] ?? null;
-					if ( $config_handler_slug !== $handler_slug ) {
-						continue;
-					}
-				}
-
-				$existing_handler_slug   = $step_config['handler_slug'] ?? null;
-				$existing_handler_config = $step_config['handler_config'] ?? array();
-
-				// Determine effective handler (target_handler_slug takes precedence)
-				$effective_handler_slug = $target_handler_slug ?? $existing_handler_slug;
-
-				if ( empty( $effective_handler_slug ) ) {
-					$errors[] = array(
-						'flow_step_id' => $flow_step_id,
-						'flow_id'      => $flow_id,
-						'error'        => 'Step has no handler_slug configured and no target_handler_slug provided',
-					);
-					continue;
-				}
-
-				// Check if we're switching handlers
-				$is_switching = ! empty( $target_handler_slug ) && $target_handler_slug !== $existing_handler_slug;
-
-				// Build merged config
-				// 1. Start with mapped existing config (if switching handlers)
-				if ( $is_switching && ! empty( $existing_handler_config ) ) {
-					$mapped_config = $this->mapHandlerConfig( $existing_handler_config, $effective_handler_slug, $field_map );
-				} else {
-					$mapped_config = array();
-				}
-
-				// 2. Merge shared handler_config on top
-				$merged_config = array_merge( $mapped_config, $handler_config );
-
-				// 3. Merge per-flow config on top (highest priority)
-				if ( isset( $flow_configs_by_id[ $flow_id ] ) ) {
-					$found_flow_ids[] = $flow_id;
-					$merged_config    = array_merge( $merged_config, $flow_configs_by_id[ $flow_id ] );
-				}
-
-				// Skip if nothing to update
-				if ( empty( $merged_config ) && empty( $user_message ) && ! $is_switching ) {
-					continue;
-				}
-
-				// Validate merged config against target handler schema
-				if ( ! empty( $merged_config ) ) {
-					$validation_result = $this->validateHandlerConfig( $effective_handler_slug, $merged_config );
-					if ( true !== $validation_result ) {
-						$errors[] = array(
-							'flow_step_id' => $flow_step_id,
-							'flow_id'      => $flow_id,
-							'error'        => $validation_result,
-						);
-						continue;
-					}
-				}
-
-				// Apply handler update
-				$success = $flow_step_manager->updateHandler( $flow_step_id, $effective_handler_slug, $merged_config );
-				if ( ! $success ) {
-					$errors[] = array(
-						'flow_step_id' => $flow_step_id,
-						'flow_id'      => $flow_id,
-						'error'        => 'Failed to update handler',
-					);
-					continue;
-				}
-
-				// Apply user_message update
-				if ( ! empty( $user_message ) ) {
-					$message_success = $flow_step_manager->updateUserMessage( $flow_step_id, $user_message );
-					if ( ! $message_success ) {
-						$errors[] = array(
-							'flow_step_id' => $flow_step_id,
-							'flow_id'      => $flow_id,
-							'error'        => 'Failed to update user message',
-						);
-						continue;
-					}
-				}
-
-				$detail = array(
-					'flow_id'      => $flow_id,
-					'flow_name'    => $flow_name,
-					'flow_step_id' => $flow_step_id,
-					'handler_slug' => $effective_handler_slug,
-				);
-				if ( $is_switching ) {
-					$detail['switched_from'] = $existing_handler_slug;
-				}
-				$updated_details[] = $detail;
-			}
-		}
-
-		// Check for flow_ids in flow_configs that weren't found in pipeline
-		foreach ( array_keys( $flow_configs_by_id ) as $requested_flow_id ) {
-			if ( ! in_array( $requested_flow_id, $pipeline_flow_ids, true ) ) {
-				$skipped[] = array(
-					'flow_id' => $requested_flow_id,
-					'error'   => 'Flow not found in pipeline',
-				);
-			}
-		}
-
-		$flows_updated  = count( array_unique( array_column( $updated_details, 'flow_id' ) ) );
-		$steps_modified = count( $updated_details );
-
-		if ( 0 === $steps_modified && ! empty( $errors ) ) {
-			return array(
-				'success'   => false,
-				'error'     => 'No steps were updated. ' . count( $errors ) . ' error(s) occurred.',
-				'errors'    => $errors,
-				'skipped'   => $skipped,
-				'tool_name' => 'configure_flow_steps',
-			);
-		}
-
-		if ( 0 === $steps_modified ) {
-			return array(
-				'success'   => false,
-				'error'     => 'No matching steps found for the specified criteria',
-				'skipped'   => $skipped,
-				'tool_name' => 'configure_flow_steps',
-			);
-		}
-
-		$message = sprintf( 'Updated %d step(s) across %d flow(s).', $steps_modified, $flows_updated );
-		if ( ! empty( $skipped ) ) {
-			$message .= sprintf( ' %d flow_id(s) skipped.', count( $skipped ) );
-		}
-
-		$response = array(
-			'success'   => true,
-			'data'      => array(
-				'pipeline_id'    => $pipeline_id,
-				'flows_updated'  => $flows_updated,
-				'steps_modified' => $steps_modified,
-				'details'        => $updated_details,
-				'message'        => $message,
-			),
-			'tool_name' => 'configure_flow_steps',
-		);
-
-		if ( ! empty( $errors ) ) {
-			$response['data']['errors'] = $errors;
-		}
-
-		if ( ! empty( $skipped ) ) {
-			$response['data']['skipped'] = $skipped;
-		}
-
-		return $response;
-	}
-
-	/**
-	 * Validate handler_config fields against handler schema.
-	 *
-	 * @param string $handler_slug Handler slug
-	 * @param array  $handler_config Configuration to validate
-	 * @return true|string True if valid, error message if invalid
-	 */
-	private function validateHandlerConfig( string $handler_slug, array $handler_config ): bool|string {
-		$handler_service = new HandlerService();
-		$valid_fields    = array_keys( $handler_service->getConfigFields( $handler_slug ) );
-
-		if ( empty( $valid_fields ) ) {
-			// No settings class = no validation possible, allow through
-			return true;
-		}
-
-		$unknown_fields = array_diff( array_keys( $handler_config ), $valid_fields );
-
-		if ( ! empty( $unknown_fields ) ) {
-			return sprintf(
-				'Unknown handler_config fields for %s: %s. Valid fields: %s',
-				$handler_slug,
-				implode( ', ', $unknown_fields ),
-				implode( ', ', $valid_fields )
-			);
-		}
-
-		return true;
-	}
-
-	/**
-	 * Map handler config fields when switching handlers.
-	 *
-	 * Fields are mapped in this order:
-	 * 1. Explicit mapping via field_map parameter
-	 * 2. Auto-map fields with matching names in target handler
-	 * 3. Drop fields that don't exist in target handler
-	 *
-	 * @param array  $existing_config Current handler_config
-	 * @param string $target_handler Target handler slug
-	 * @param array  $explicit_map Explicit field mappings (old_field => new_field)
-	 * @return array Mapped config with only valid target handler fields
-	 */
-	private function mapHandlerConfig( array $existing_config, string $target_handler, array $explicit_map ): array {
-		$handler_service = new HandlerService();
-		$target_fields   = array_keys( $handler_service->getConfigFields( $target_handler ) );
-
-		if ( empty( $target_fields ) ) {
-			return array();
-		}
-
-		$mapped_config = array();
-
-		foreach ( $existing_config as $field => $value ) {
-			// Check for explicit mapping first
-			if ( isset( $explicit_map[ $field ] ) ) {
-				$mapped_field = $explicit_map[ $field ];
-				if ( in_array( $mapped_field, $target_fields, true ) ) {
-					$mapped_config[ $mapped_field ] = $value;
-				}
-				continue;
+			if ( ! empty( $result['errors'] ) ) {
+				$result['data']['errors'] = $result['errors'];
 			}
 
-			// Auto-map if same field name exists in target handler
-			if ( in_array( $field, $target_fields, true ) ) {
-				$mapped_config[ $field ] = $value;
+			if ( ! empty( $result['skipped'] ) ) {
+				$result['data']['skipped'] = $result['skipped'];
 			}
-			// Otherwise drop the field (not valid in target handler)
+
+			unset( $result['pipeline_id'], $result['flows_updated'], $result['steps_modified'], $result['updated_steps'], $result['message'], $result['errors'], $result['skipped'] );
 		}
 
-		return $mapped_config;
+		return $result;
 	}
 }

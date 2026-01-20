@@ -5,15 +5,21 @@
  * Syncs with user preferences and URL parameters.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { usePipelines } from '../../queries/pipelines';
 import { useUIStore } from '../../stores/uiStore';
 
 /**
  * Pipeline dropdown selector
  *
- * @returns {React.ReactElement|null} Selector component or null if no pipelines
+ * @return {React.ReactElement|null} Selector component or null if no pipelines
  */
 export default function PipelineSelector() {
 	// Use TanStack Query for data
@@ -30,7 +36,7 @@ export default function PipelineSelector() {
 	// Map pipelines to SelectControl options format
 	const options = pipelines.map( ( pipeline ) => ( {
 		label:
-			pipeline.pipeline_name || __( 'Untitled Pipeline', 'datamachine' ),
+			pipeline.pipeline_name || __( 'Untitled Pipeline', 'data-machine' ),
 		value: String( pipeline.pipeline_id ),
 	} ) );
 
@@ -46,7 +52,7 @@ export default function PipelineSelector() {
 	return (
 		<div className="datamachine-pipeline-selector-wrapper datamachine-spacing--margin-bottom-20">
 			<SelectControl
-				label={ __( 'Select Pipeline', 'datamachine' ) }
+				label={ __( 'Select Pipeline', 'data-machine' ) }
 				value={ selectedPipelineId || options[ 0 ]?.value || '' }
 				options={ options }
 				onChange={ handleChange }

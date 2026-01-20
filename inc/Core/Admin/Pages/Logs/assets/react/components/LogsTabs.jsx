@@ -4,8 +4,14 @@
  * Tabbed interface for per-agent-type log viewing.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { TabPanel } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useAgentTypes } from '../queries/logs';
 import LogsControls from './LogsControls';
 import LogsViewer from './LogsViewer';
@@ -16,7 +22,7 @@ const LogsTabs = () => {
 	if ( isLoading ) {
 		return (
 			<div className="datamachine-logs-tabs-loading">
-				{ __( 'Loading...', 'data-machine' ) }
+				{ __( 'Loading…', 'data-machine' ) }
 			</div>
 		);
 	}

@@ -5,9 +5,15 @@
  * @pattern Presentational - Receives pipeline and flows data as props
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useCallback } from '@wordpress/element';
 import { Card, CardBody, CardDivider } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useDeletePipelineStep } from '../../queries/pipelines';
 import { useUIStore } from '../../stores/uiStore';
 import PipelineHeader from './PipelineHeader';
@@ -18,14 +24,14 @@ import { MODAL_TYPES } from '../../utils/constants';
 /**
  * Pipeline Card Component
  *
- * @param {Object} props - Component props
- * @param {Object} props.pipeline - Pipeline data
- * @param {Array} props.flows - Associated flows
- * @param {number} props.flowsTotal - Total number of flows
- * @param {number} props.flowsPage - Current page
- * @param {number} props.flowsPerPage - Items per page
+ * @param {Object}   props                   - Component props
+ * @param {Object}   props.pipeline          - Pipeline data
+ * @param {Array}    props.flows             - Associated flows
+ * @param {number}   props.flowsTotal        - Total number of flows
+ * @param {number}   props.flowsPage         - Current page
+ * @param {number}   props.flowsPerPage      - Items per page
  * @param {Function} props.onFlowsPageChange - Page change handler
- * @returns {React.ReactElement} Pipeline card
+ * @return {React.ReactElement} Pipeline card
  */
 export default function PipelineCard( {
 	pipeline,
@@ -87,7 +93,7 @@ export default function PipelineCard( {
 				alert(
 					__(
 						'An error occurred while deleting the step',
-						'datamachine'
+						'data-machine'
 					)
 				);
 			}

@@ -1,3 +1,6 @@
+/**
+ * Internal dependencies
+ */
 import HandlerModel from './HandlerModel';
 
 const registry = new Map();

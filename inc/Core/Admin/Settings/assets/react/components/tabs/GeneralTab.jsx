@@ -4,7 +4,13 @@
  * General settings including enabled admin pages, cleanup options, and file retention.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useEffect } from '@wordpress/element';
+/**
+ * Internal dependencies
+ */
 import { useSettings, useUpdateSettings } from '../../queries/settings';
 
 const GeneralTab = () => {

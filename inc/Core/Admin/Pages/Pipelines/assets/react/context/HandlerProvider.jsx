@@ -1,4 +1,10 @@
+/**
+ * External dependencies
+ */
 import React, { createContext, useContext, useMemo } from 'react';
+/**
+ * Internal dependencies
+ */
 import { useHandlers, useHandlerDetails } from '../queries/handlers';
 import createModel, { registerHandlerModel } from '../models/HandlerFactory';
 import FilesHandlerModel from '../models/handlers/FilesHandlerModel';

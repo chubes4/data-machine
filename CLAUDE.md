@@ -20,7 +20,7 @@ Testing
 - PHPUnit tests located in `tests/Unit/` directory
 - Tests use `WP_UnitTestCase` with homeboy's WordPress test environment
 - Ability registration tests cover all abilities API primitives:
-  - `FlowAbilitiesTest.php` - Tests `datamachine/list-flows` ability
+  - `FlowAbilitiesTest.php` - Tests `datamachine/get-flows` ability
   - `LogAbilitiesTest.php` - Tests `datamachine/write-to-log` and `datamachine/clear-logs` abilities
   - `PostQueryAbilitiesTest.php` - Tests `datamachine/query-posts-by-handler`, `datamachine/query-posts-by-flow`, and `datamachine/query-posts-by-pipeline` abilities
 - Run tests: `homeboy test data-machine` (uses homeboy's WordPress installation)
@@ -30,7 +30,7 @@ Abilities API
 
 - WordPress 6.9 Abilities API provides standardized capability discovery and execution
 - Abilities registered in `inc/Abilities/`:
-  - `FlowAbilities` - Registers `datamachine/list-flows` ability with category `datamachine`
+  - `FlowAbilities` - Registers `datamachine/get-flows` ability with category `datamachine`
   - `LogAbilities` - Registers `datamachine/write-to-log` and `datamachine/clear-logs` abilities
   - `PostQueryAbilities` - Registers three query abilities for debugging Data Machine-created posts
 - Category registration: `datamachine` category registered via `wp_register_ability_category()` on `wp_abilities_api_categories_init` hook

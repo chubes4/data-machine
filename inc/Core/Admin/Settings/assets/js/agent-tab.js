@@ -3,7 +3,7 @@
  *
  * Handles dynamic provider and model selection in Data Machine settings.
  *
- * @package DataMachine\Core\Admin\Settings
+ * @package
  */
 
 ( function () {
@@ -63,6 +63,7 @@
 
 	/**
 	 * Populate provider dropdown options
+	 * @param defaults
 	 */
 	function populateProviderOptions( defaults = {} ) {
 		const providerSelect = document.getElementById( 'default_provider' );
@@ -90,6 +91,8 @@
 
 	/**
 	 * Update model options based on selected provider
+	 * @param selectedProvider
+	 * @param defaultModel
 	 */
 	function updateModelOptions( selectedProvider, defaultModel = '' ) {
 		const modelSelect = document.getElementById( 'default_model' );

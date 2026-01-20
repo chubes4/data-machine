@@ -5,14 +5,21 @@
  * Shows 5 most recent sessions with "Show more" option.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useRef, useEffect } from '@wordpress/element';
 import { Button } from '@wordpress/components';
 import { chevronDown, plus } from '@wordpress/icons';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useChatSessions } from '../../queries/chat';
 
 /**
  * Format relative time from date string
+ * @param dateString
  */
 function formatRelativeTime( dateString ) {
 	const date = new Date( dateString );
@@ -22,31 +29,32 @@ function formatRelativeTime( dateString ) {
 	const diffHours = Math.floor( diffMs / 3600000 );
 	const diffDays = Math.floor( diffMs / 86400000 );
 
-	if ( diffMins < 1 ) return __( 'just now', 'data-machine' );
+	if ( diffMins < 1 ) {return __( 'just now', 'data-machine' );}
 	if ( diffMins < 60 )
-		return `${ diffMins } ${
+		{return `${ diffMins } ${
 			diffMins === 1
 				? __( 'min ago', 'data-machine' )
 				: __( 'mins ago', 'data-machine' )
-		}`;
+		}`;}
 	if ( diffHours < 24 )
-		return `${ diffHours } ${
+		{return `${ diffHours } ${
 			diffHours === 1
 				? __( 'hour ago', 'data-machine' )
 				: __( 'hours ago', 'data-machine' )
-		}`;
+		}`;}
 	if ( diffDays < 7 )
-		return `${ diffDays } ${
+		{return `${ diffDays } ${
 			diffDays === 1
 				? __( 'day ago', 'data-machine' )
 				: __( 'days ago', 'data-machine' )
-		}`;
+		}`;}
 
 	return date.toLocaleDateString();
 }
 
 /**
  * Get display title for a session
+ * @param session
  */
 function getSessionTitle( session ) {
 	if ( session.title ) {

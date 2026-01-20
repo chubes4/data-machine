@@ -5,9 +5,15 @@
  * Displayed in the Pipelines page header.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { Button } from '@wordpress/components';
 import { comment } from '@wordpress/icons';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useUIStore } from '../../stores/uiStore';
 
 export default function ChatToggle() {

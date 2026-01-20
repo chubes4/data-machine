@@ -6,14 +6,21 @@
  * Groups tool messages by exchange into collapsible elements.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useRef, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import ChatMessage from './ChatMessage';
 import ToolMessage from './ToolMessage';
 
 /**
  * Pair consecutive tool_call and tool_result messages by tool name.
  * Returns array of { toolCall, toolResult } pairs.
+ * @param toolMessages
  */
 function pairToolMessages( toolMessages ) {
 	const pairs = [];
@@ -41,6 +48,7 @@ function pairToolMessages( toolMessages ) {
 /**
  * Build display items array with regular messages and tool groups in order.
  * Uses position-based grouping to keep tools within their exchange.
+ * @param messages
  */
 function buildDisplayItems( messages ) {
 	const items = [];

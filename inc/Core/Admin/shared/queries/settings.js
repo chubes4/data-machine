@@ -4,6 +4,9 @@
  * Shared TanStack Query hook for fetching plugin settings.
  */
 
+/**
+ * External dependencies
+ */
 import { useQuery } from '@tanstack/react-query';
 import { client } from '@shared/utils/api';
 
@@ -12,7 +15,7 @@ export const SETTINGS_KEY = [ 'settings' ];
 /**
  * Fetch plugin settings
  *
- * @returns {Object} Query result with settings data
+ * @return {Object} Query result with settings data
  */
 export const useSettings = () =>
 	useQuery( {

@@ -4,6 +4,9 @@
  * Centralized modal rendering logic for the pipelines page.
  * Eliminates repetitive conditional rendering in PipelinesApp.
  */
+/**
+ * Internal dependencies
+ */
 import { useUIStore } from '../../stores/uiStore';
 import { MODAL_TYPES } from '../../utils/constants';
 import ModalSwitch from './ModalSwitch';
@@ -23,7 +26,7 @@ export default function ModalManager( {
 } ) {
 	const { activeModal, modalData, closeModal } = useUIStore();
 
-	if ( ! activeModal ) return null;
+	if ( ! activeModal ) {return null;}
 
 	const baseProps = {
 		onClose: closeModal,

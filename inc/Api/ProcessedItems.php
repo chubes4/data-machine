@@ -3,6 +3,7 @@
  * Processed Items REST API Endpoint
  *
  * Provides REST API access to clear processed items tracking for deduplication.
+ * Delegates to ProcessedItemsAbilities for core logic.
  * Requires WordPress manage_options capability for all operations.
  *
  * Endpoints:
@@ -13,11 +14,22 @@
 
 namespace DataMachine\Api;
 
+use DataMachine\Abilities\ProcessedItemsAbilities;
+
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
 class ProcessedItems {
+
+	private static ?ProcessedItemsAbilities $abilities = null;
+
+	private static function getAbilities(): ProcessedItemsAbilities {
+		if ( null === self::$abilities ) {
+			self::$abilities = new ProcessedItemsAbilities();
+		}
+		return self::$abilities;
+	}
 
 	/**
 	 * Register REST API routes
@@ -80,16 +92,17 @@ class ProcessedItems {
 		$clear_type = $request->get_param( 'clear_type' );
 		$target_id  = (int) $request->get_param( 'target_id' );
 
-		$processed_items_manager = new \DataMachine\Services\ProcessedItemsManager();
+		$result = self::getAbilities()->executeClearProcessedItems(
+			array(
+				'clear_type' => $clear_type,
+				'target_id'  => $target_id,
+			)
+		);
 
-		$result = 'pipeline' === $clear_type
-			? $processed_items_manager->deleteForPipeline( $target_id )
-			: $processed_items_manager->deleteForFlow( $target_id );
-
-		if ( false === $result ) {
+		if ( ! $result['success'] ) {
 			return new \WP_Error(
 				'delete_failed',
-				__( 'Failed to delete processed items.', 'data-machine' ),
+				$result['error'] ?? __( 'Failed to delete processed items.', 'data-machine' ),
 				array( 'status' => 500 )
 			);
 		}
@@ -98,12 +111,8 @@ class ProcessedItems {
 			array(
 				'success'       => true,
 				'data'          => null,
-				'message'       => sprintf(
-					/* translators: %d: Number of processed items deleted */
-					__( 'Deleted %d processed items.', 'data-machine' ),
-					$result
-				),
-				'items_deleted' => $result,
+				'message'       => $result['message'],
+				'items_deleted' => $result['deleted_count'],
 			)
 		);
 	}

@@ -4,23 +4,26 @@
  * Status indicator showing OAuth connection state with styling.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { __ } from '@wordpress/i18n';
 
 /**
  * Connection Status Component
  *
- * @param {Object} props - Component props
+ * @param {Object}  props           - Component props
  * @param {boolean} props.connected - Connection state
- * @returns {React.ReactElement} Connection status indicator
+ * @return {React.ReactElement} Connection status indicator
  */
 export default function ConnectionStatus( { connected } ) {
 	const statusConfig = connected
 		? {
-				label: __( 'Connected', 'datamachine' ),
+				label: __( 'Connected', 'data-machine' ),
 				icon: '✓',
 		  }
 		: {
-				label: __( 'Not Connected', 'datamachine' ),
+				label: __( 'Not Connected', 'data-machine' ),
 				icon: '✗',
 		  };
 

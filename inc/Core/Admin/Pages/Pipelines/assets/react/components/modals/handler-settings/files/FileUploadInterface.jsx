@@ -4,23 +4,30 @@
  * Wrapper around reusable FileUploadDropzone for Files handler.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useFileUpload } from '../../../../hooks/useFormState';
 import FileUploadDropzone from '../../../shared/FileUploadDropzone';
 
 /**
  * File Upload Interface Component
  *
- * @param {Object} props - Component props
+ * @param {Object}   props                - Component props
  * @param {Function} props.onFileUploaded - File upload callback
- * @returns {React.ReactElement} File upload interface
+ * @return {React.ReactElement} File upload interface
  */
 export default function FileUploadInterface( { onFileUploaded } ) {
 	const fileUpload = useFileUpload();
 
 	/**
 	 * Handle file selection
+	 * @param file
 	 */
 	const handleFileSelected = ( file ) => {
 		fileUpload.upload( async () => {
@@ -36,7 +43,7 @@ export default function FileUploadInterface( { onFileUploaded } ) {
 				} );
 			}
 
-			return __( 'File uploaded successfully!', 'datamachine' );
+			return __( 'File uploaded successfully!', 'data-machine' );
 		} );
 	};
 
@@ -81,7 +88,7 @@ export default function FileUploadInterface( { onFileUploaded } ) {
 				disabled={ fileUpload.isUploading }
 				uploadText={
 					fileUpload.isUploading
-						? __( 'Uploading...', 'datamachine' )
+						? __( 'Uploading…', 'data-machine' )
 						: null
 				}
 			/>

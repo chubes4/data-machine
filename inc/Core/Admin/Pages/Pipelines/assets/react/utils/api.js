@@ -5,6 +5,9 @@
  * Uses wp.apiFetch from @wordpress/api-fetch.
  */
 
+/**
+ * WordPress dependencies
+ */
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
 
@@ -22,10 +25,10 @@ const getConfig = () => {
 /**
  * Core API Request Handler
  *
- * @param {string} path - Endpoint path (relative to namespace)
- * @param {string} method - HTTP method
- * @param {Object} data - Request body data (for JSON)
- * @param {Object} params - Query parameters
+ * @param {string} path         - Endpoint path (relative to namespace)
+ * @param {string} method       - HTTP method
+ * @param {Object} data         - Request body data (for JSON)
+ * @param {Object} params       - Query parameters
  * @param {Object} extraOptions - Additional fetch options (headers, body, etc.)
  */
 const request = async (
@@ -106,7 +109,7 @@ const client = {
  * Fetch all pipelines or a specific pipeline
  *
  * @param {number|null} pipelineId - Optional pipeline ID
- * @returns {Promise<Object>} Pipeline data
+ * @return {Promise<Object>} Pipeline data
  */
 export const fetchPipelines = async ( pipelineId = null ) => {
 	return await client.get(
@@ -119,7 +122,7 @@ export const fetchPipelines = async ( pipelineId = null ) => {
  * Create a new pipeline
  *
  * @param {string} name - Pipeline name
- * @returns {Promise<Object>} Created pipeline data
+ * @return {Promise<Object>} Created pipeline data
  */
 export const createPipeline = async ( name ) => {
 	return await client.post( '/pipelines', { pipeline_name: name } );
@@ -129,8 +132,8 @@ export const createPipeline = async ( name ) => {
  * Update pipeline title
  *
  * @param {number} pipelineId - Pipeline ID
- * @param {string} name - New pipeline name
- * @returns {Promise<Object>} Updated pipeline data
+ * @param {string} name       - New pipeline name
+ * @return {Promise<Object>} Updated pipeline data
  */
 export const updatePipelineTitle = async ( pipelineId, name ) => {
 	return await client.patch( `/pipelines/${ pipelineId }`, {
@@ -142,7 +145,7 @@ export const updatePipelineTitle = async ( pipelineId, name ) => {
  * Delete a pipeline
  *
  * @param {number} pipelineId - Pipeline ID
- * @returns {Promise<Object>} Deletion confirmation
+ * @return {Promise<Object>} Deletion confirmation
  */
 export const deletePipeline = async ( pipelineId ) => {
 	return await client.delete( `/pipelines/${ pipelineId }` );
@@ -151,10 +154,10 @@ export const deletePipeline = async ( pipelineId ) => {
 /**
  * Add a step to a pipeline
  *
- * @param {number} pipelineId - Pipeline ID
- * @param {string} stepType - Step type (fetch, ai, publish, update)
+ * @param {number} pipelineId     - Pipeline ID
+ * @param {string} stepType       - Step type (fetch, ai, publish, update)
  * @param {number} executionOrder - Step position
- * @returns {Promise<Object>} Created step data
+ * @return {Promise<Object>} Created step data
  */
 export const addPipelineStep = async (
 	pipelineId,
@@ -174,8 +177,8 @@ export const addPipelineStep = async (
  * Delete a pipeline step
  *
  * @param {number} pipelineId - Pipeline ID
- * @param {string} stepId - Pipeline step ID
- * @returns {Promise<Object>} Deletion confirmation
+ * @param {string} stepId     - Pipeline step ID
+ * @return {Promise<Object>} Deletion confirmation
  */
 export const deletePipelineStep = async ( pipelineId, stepId ) => {
 	return await client.delete(
@@ -186,9 +189,9 @@ export const deletePipelineStep = async ( pipelineId, stepId ) => {
 /**
  * Reorder pipeline steps
  *
- * @param {number} pipelineId - Pipeline ID
- * @param {Array<Object>} steps - Reordered steps array
- * @returns {Promise<Object>} Updated pipeline data
+ * @param {number}        pipelineId - Pipeline ID
+ * @param {Array<Object>} steps      - Reordered steps array
+ * @return {Promise<Object>} Updated pipeline data
  */
 export const reorderPipelineSteps = async ( pipelineId, steps ) => {
 	const stepOrder = steps.map( ( step, index ) => ( {
@@ -204,14 +207,14 @@ export const reorderPipelineSteps = async ( pipelineId, steps ) => {
 /**
  * Update system prompt for AI step
  *
- * @param {string} stepId - Pipeline step ID
- * @param {string} prompt - System prompt content
- * @param {string} provider - AI provider
- * @param {string} model - AI model
+ * @param {string}        stepId       - Pipeline step ID
+ * @param {string}        prompt       - System prompt content
+ * @param {string}        provider     - AI provider
+ * @param {string}        model        - AI model
  * @param {Array<string>} enabledTools - Enabled AI tools (optional)
- * @param {string} stepType - Step type (must be "ai")
- * @param {number} pipelineId - Pipeline ID for context
- * @returns {Promise<Object>} Updated step data
+ * @param {string}        stepType     - Step type (must be "ai")
+ * @param {number}        pipelineId   - Pipeline ID for context
+ * @return {Promise<Object>} Updated step data
  */
 export const updateSystemPrompt = async (
 	stepId,
@@ -225,8 +228,8 @@ export const updateSystemPrompt = async (
 	return await client.put( `/pipelines/steps/${ stepId }/config`, {
 		step_type: stepType,
 		pipeline_id: pipelineId,
-		provider: provider,
-		model: model,
+		provider,
+		model,
 		system_prompt: prompt,
 		enabled_tools: enabledTools,
 	} );
@@ -239,11 +242,11 @@ export const updateSystemPrompt = async (
 /**
  * Fetch flows for a pipeline with pagination
  *
- * @param {number} pipelineId - Pipeline ID
- * @param {Object} options - Pagination options
- * @param {number} options.page - Current page (1-indexed)
+ * @param {number} pipelineId      - Pipeline ID
+ * @param {Object} options         - Pagination options
+ * @param {number} options.page    - Current page (1-indexed)
  * @param {number} options.perPage - Items per page
- * @returns {Promise<Object>} Paginated flows response
+ * @return {Promise<Object>} Paginated flows response
  */
 export const fetchFlows = async (
 	pipelineId,
@@ -261,7 +264,7 @@ export const fetchFlows = async (
  * Fetch a specific flow
  *
  * @param {number} flowId - Flow ID
- * @returns {Promise<Object>} Flow data
+ * @return {Promise<Object>} Flow data
  */
 export const fetchFlow = async ( flowId ) => {
 	return await client.get( `/flows/${ flowId }` );
@@ -271,8 +274,8 @@ export const fetchFlow = async ( flowId ) => {
  * Create a new flow
  *
  * @param {number} pipelineId - Pipeline ID
- * @param {string} flowName - Flow name
- * @returns {Promise<Object>} Created flow data
+ * @param {string} flowName   - Flow name
+ * @return {Promise<Object>} Created flow data
  */
 export const createFlow = async ( pipelineId, flowName ) => {
 	return await client.post( '/flows', {
@@ -285,8 +288,8 @@ export const createFlow = async ( pipelineId, flowName ) => {
  * Update flow title
  *
  * @param {number} flowId - Flow ID
- * @param {string} name - New flow name
- * @returns {Promise<Object>} Updated flow data
+ * @param {string} name   - New flow name
+ * @return {Promise<Object>} Updated flow data
  */
 export const updateFlowTitle = async ( flowId, name ) => {
 	return await client.patch( `/flows/${ flowId }`, { flow_name: name } );
@@ -296,7 +299,7 @@ export const updateFlowTitle = async ( flowId, name ) => {
  * Delete a flow
  *
  * @param {number} flowId - Flow ID
- * @returns {Promise<Object>} Deletion confirmation
+ * @return {Promise<Object>} Deletion confirmation
  */
 export const deleteFlow = async ( flowId ) => {
 	return await client.delete( `/flows/${ flowId }` );
@@ -306,7 +309,7 @@ export const deleteFlow = async ( flowId ) => {
  * Duplicate a flow
  *
  * @param {number} flowId - Flow ID
- * @returns {Promise<Object>} Duplicated flow data
+ * @return {Promise<Object>} Duplicated flow data
  */
 export const duplicateFlow = async ( flowId ) => {
 	return await client.post( `/flows/${ flowId }/duplicate` );
@@ -316,7 +319,7 @@ export const duplicateFlow = async ( flowId ) => {
  * Run a flow immediately
  *
  * @param {number} flowId - Flow ID
- * @returns {Promise<Object>} Execution confirmation
+ * @return {Promise<Object>} Execution confirmation
  */
 export const runFlow = async ( flowId ) => {
 	return await client.post( '/execute', { flow_id: flowId } );
@@ -325,12 +328,14 @@ export const runFlow = async ( flowId ) => {
 /**
  * Update flow handler for a specific step
  *
- * @param {string} flowStepId - Flow step ID
- * @param {string} handlerSlug - Handler slug
- * @param {Object} settings - Handler settings
- * @param {number} pipelineId - Pipeline ID
- * @param {string} stepType - Step type
- * @returns {Promise<Object>} Updated flow step data
+ * @param {string} flowStepId         - Flow step ID
+ * @param {string} handlerSlug        - Handler slug
+ * @param {Object} settings           - Handler settings
+ * @param {number} pipelineId         - Pipeline ID
+ * @param {string} stepType           - Step type
+ * @param          flowConfig
+ * @param          pipelineStepConfig
+ * @return {Promise<Object>} Updated flow step data
  */
 export const updateFlowHandler = async (
 	flowStepId,
@@ -355,8 +360,8 @@ export const updateFlowHandler = async (
  * Update user message for AI step in flow
  *
  * @param {string} flowStepId - Flow step ID
- * @param {string} message - User message content
- * @returns {Promise<Object>} Updated flow step data
+ * @param {string} message    - User message content
+ * @return {Promise<Object>} Updated flow step data
  */
 export const updateUserMessage = async ( flowStepId, message ) => {
 	return await client.patch( `/flows/steps/${ flowStepId }/user-message`, {
@@ -367,7 +372,7 @@ export const updateUserMessage = async ( flowStepId, message ) => {
 /**
  * Get available scheduling intervals
  *
- * @returns {Promise<Object>} Array of scheduling intervals
+ * @return {Promise<Object>} Array of scheduling intervals
  */
 export const getSchedulingIntervals = async () => {
 	return await client.get( '/settings/scheduling-intervals' );
@@ -376,10 +381,10 @@ export const getSchedulingIntervals = async () => {
 /**
  * Update flow scheduling configuration
  *
- * @param {number} flowId - Flow ID
- * @param {Object} schedulingConfig - Scheduling configuration
+ * @param {number} flowId                    - Flow ID
+ * @param {Object} schedulingConfig          - Scheduling configuration
  * @param {string} schedulingConfig.interval - Interval (hourly, daily, weekly, etc.)
- * @returns {Promise<Object>} Updated flow data
+ * @return {Promise<Object>} Updated flow data
  */
 export const updateFlowSchedule = async ( flowId, schedulingConfig ) => {
 	return await client.patch( `/flows/${ flowId }`, {
@@ -395,7 +400,7 @@ export const updateFlowSchedule = async ( flowId, schedulingConfig ) => {
  * Export pipelines to CSV
  *
  * @param {Array<number>} pipelineIds - Array of pipeline IDs to export
- * @returns {Promise<Object>} Export data with CSV content
+ * @return {Promise<Object>} Export data with CSV content
  */
 export const exportPipelines = async ( pipelineIds ) => {
 	return await client.get( '/pipelines', {
@@ -408,7 +413,7 @@ export const exportPipelines = async ( pipelineIds ) => {
  * Import pipelines from CSV
  *
  * @param {string} csvContent - CSV file content
- * @returns {Promise<Object>} Import result with created pipeline IDs
+ * @return {Promise<Object>} Import result with created pipeline IDs
  */
 export const importPipelines = async ( csvContent ) => {
 	return await client.post( '/pipelines', {
@@ -426,7 +431,7 @@ export const importPipelines = async ( csvContent ) => {
  * Fetch context files for a pipeline
  *
  * @param {number} pipelineId - Pipeline ID
- * @returns {Promise<Object>} Array of context files
+ * @return {Promise<Object>} Array of context files
  */
 export const fetchContextFiles = async ( pipelineId ) => {
 	return await client.get( '/files', { pipeline_id: pipelineId } );
@@ -436,8 +441,8 @@ export const fetchContextFiles = async ( pipelineId ) => {
  * Upload context file for a pipeline
  *
  * @param {number} pipelineId - Pipeline ID
- * @param {File} file - File object to upload
- * @returns {Promise<Object>} Upload confirmation
+ * @param {File}   file       - File object to upload
+ * @return {Promise<Object>} Upload confirmation
  */
 export const uploadContextFile = async ( pipelineId, file ) => {
 	return await client.upload( '/files', file, { pipeline_id: pipelineId } );
@@ -447,7 +452,7 @@ export const uploadContextFile = async ( pipelineId, file ) => {
  * Delete context file
  *
  * @param {string} filename - Filename to delete
- * @returns {Promise<Object>} Deletion confirmation
+ * @return {Promise<Object>} Deletion confirmation
  */
 export const deleteContextFile = async ( filename ) => {
 	return await client.delete( `/files/${ filename }` );
@@ -457,7 +462,7 @@ export const deleteContextFile = async ( filename ) => {
  * Fetch complete handler details
  *
  * @param {string} handlerSlug - Handler slug (e.g., 'twitter', 'wordpress_publish')
- * @returns {Promise<Object>} Handler details including basic info, settings schema, and AI tool definition
+ * @return {Promise<Object>} Handler details including basic info, settings schema, and AI tool definition
  */
 export const fetchHandlerDetails = async ( handlerSlug ) => {
 	return await client.get( `/handlers/${ handlerSlug }` );
@@ -466,7 +471,7 @@ export const fetchHandlerDetails = async ( handlerSlug ) => {
 /**
  * Get available step types
  *
- * @returns {Promise<Object>} Step types configuration
+ * @return {Promise<Object>} Step types configuration
  */
 export const getStepTypes = async () => {
 	return await client.get( '/step-types' );
@@ -475,7 +480,7 @@ export const getStepTypes = async () => {
 /**
  * Get available providers
  *
- * @returns {Promise<Object>} Providers configuration
+ * @return {Promise<Object>} Providers configuration
  */
 export const getProviders = async () => {
 	return await client.get( '/providers' );
@@ -484,7 +489,7 @@ export const getProviders = async () => {
 /**
  * Get available tools
  *
- * @returns {Promise<Object>} Tools configuration
+ * @return {Promise<Object>} Tools configuration
  */
 export const getTools = async () => {
 	return await client.get( '/tools' );
@@ -494,7 +499,7 @@ export const getTools = async () => {
  * Get all handlers
  *
  * @param {string} stepType - Optional step type filter
- * @returns {Promise<Object>} Handlers configuration
+ * @return {Promise<Object>} Handlers configuration
  */
 export const getHandlers = async ( stepType = null ) => {
 	const params = stepType ? { step_type: stepType } : {};

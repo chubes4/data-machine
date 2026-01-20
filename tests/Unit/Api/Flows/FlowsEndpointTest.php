@@ -117,10 +117,10 @@ class FlowsEndpointTest extends WP_UnitTestCase {
 	}
 
 	public function test_ability_integration(): void {
-		$ability = wp_get_ability('datamachine/list-flows');
+		$ability = wp_get_ability('datamachine/get-flows');
 
 		$this->assertNotNull($ability);
-		$this->assertSame('datamachine/list-flows', $ability->get_name());
+		$this->assertSame('datamachine/get-flows', $ability->get_name());
 	}
 
 	public function test_permission_denied_for_non_admin(): void {

@@ -5,7 +5,13 @@
  * Allows setting site-wide default values for each handler.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState } from '@wordpress/element';
+/**
+ * Internal dependencies
+ */
 import {
 	useHandlerDefaults,
 	useUpdateHandlerDefaults,

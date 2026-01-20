@@ -4,9 +4,15 @@
  * Complete section for managing pipeline context files with upload and table display.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useEffect } from '@wordpress/element';
 import { Notice } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import {
 	fetchContextFiles,
 	uploadContextFile,
@@ -18,9 +24,9 @@ import ContextFilesTable from './context-files/ContextFilesTable';
 /**
  * Pipeline Context Files Section Component
  *
- * @param {Object} props - Component props
+ * @param {Object} props            - Component props
  * @param {number} props.pipelineId - Pipeline ID
- * @returns {React.ReactElement} Context files section
+ * @return {React.ReactElement} Context files section
  */
 export default function PipelineContextFiles( { pipelineId } ) {
 	const [ files, setFiles ] = useState( [] );
@@ -45,14 +51,14 @@ export default function PipelineContextFiles( { pipelineId } ) {
 			} else {
 				setError(
 					response.message ||
-						__( 'Failed to load context files', 'datamachine' )
+						__( 'Failed to load context files', 'data-machine' )
 				);
 			}
 		} catch ( err ) {
 			console.error( 'Load files error:', err );
 			setError(
 				err.message ||
-					__( 'An error occurred while loading files', 'datamachine' )
+					__( 'An error occurred while loading files', 'data-machine' )
 			);
 		} finally {
 			setLoading( false );
@@ -70,6 +76,7 @@ export default function PipelineContextFiles( { pipelineId } ) {
 
 	/**
 	 * Handle file upload
+	 * @param file
 	 */
 	const handleFileSelected = async ( file ) => {
 		setUploading( true );
@@ -81,21 +88,21 @@ export default function PipelineContextFiles( { pipelineId } ) {
 
 			if ( response.success ) {
 				setSuccess(
-					__( 'File uploaded successfully!', 'datamachine' )
+					__( 'File uploaded successfully!', 'data-machine' )
 				);
 				// Reload files list
 				await loadFiles();
 			} else {
 				setError(
 					response.message ||
-						__( 'Failed to upload file', 'datamachine' )
+						__( 'Failed to upload file', 'data-machine' )
 				);
 			}
 		} catch ( err ) {
 			console.error( 'Upload error:', err );
 			setError(
 				err.message ||
-					__( 'An error occurred during upload', 'datamachine' )
+					__( 'An error occurred during upload', 'data-machine' )
 			);
 		} finally {
 			setUploading( false );
@@ -104,6 +111,7 @@ export default function PipelineContextFiles( { pipelineId } ) {
 
 	/**
 	 * Handle file deletion
+	 * @param fileId
 	 */
 	const handleDelete = async ( fileId ) => {
 		setDeleting( true );
@@ -114,20 +122,20 @@ export default function PipelineContextFiles( { pipelineId } ) {
 			const response = await deleteContextFile( fileId );
 
 			if ( response.success ) {
-				setSuccess( __( 'File deleted successfully!', 'datamachine' ) );
+				setSuccess( __( 'File deleted successfully!', 'data-machine' ) );
 				// Reload files list
 				await loadFiles();
 			} else {
 				setError(
 					response.message ||
-						__( 'Failed to delete file', 'datamachine' )
+						__( 'Failed to delete file', 'data-machine' )
 				);
 			}
 		} catch ( err ) {
 			console.error( 'Delete error:', err );
 			setError(
 				err.message ||
-					__( 'An error occurred during deletion', 'datamachine' )
+					__( 'An error occurred during deletion', 'data-machine' )
 			);
 		} finally {
 			setDeleting( false );
@@ -144,12 +152,12 @@ export default function PipelineContextFiles( { pipelineId } ) {
 						fontWeight: '600',
 					} }
 				>
-					{ __( 'Context Files', 'datamachine' ) }
+					{ __( 'Context Files', 'data-machine' ) }
 				</h3>
 				<p className="datamachine-context-files-helper">
 					{ __(
 						'Upload files for AI context retrieval during pipeline execution.',
-						'datamachine'
+						'data-machine'
 					) }
 				</p>
 			</div>
@@ -185,7 +193,7 @@ export default function PipelineContextFiles( { pipelineId } ) {
 					) }
 					disabled={ uploading || loading }
 					uploadText={
-						uploading ? __( 'Uploading...', 'datamachine' ) : null
+						uploading ? __( 'Uploading…', 'data-machine' ) : null
 					}
 				/>
 			</div>
@@ -198,7 +206,7 @@ export default function PipelineContextFiles( { pipelineId } ) {
 						color: '#757575',
 					} }
 				>
-					{ __( 'Loading files...', 'datamachine' ) }
+					{ __( 'Loading files…', 'data-machine' ) }
 				</div>
 			) : (
 				<ContextFilesTable

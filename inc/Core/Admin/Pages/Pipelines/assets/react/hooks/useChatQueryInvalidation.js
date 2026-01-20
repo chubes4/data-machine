@@ -5,8 +5,17 @@
  * granular query invalidation for affected data.
  */
 
+/**
+ * External dependencies
+ */
 import { useQueryClient } from '@tanstack/react-query';
+/**
+ * WordPress dependencies
+ */
 import { useCallback } from '@wordpress/element';
+/**
+ * Internal dependencies
+ */
 import { normalizeId } from '../utils/ids';
 
 const PIPELINE_TOOLS = [
@@ -31,7 +40,7 @@ export function useChatQueryInvalidation() {
 
 	const invalidateFromToolCalls = useCallback(
 		( toolCalls, selectedPipelineId ) => {
-			if ( ! toolCalls?.length ) return;
+			if ( ! toolCalls?.length ) {return;}
 
 			let shouldInvalidatePipelines = false;
 			let shouldInvalidateHandlers = false;

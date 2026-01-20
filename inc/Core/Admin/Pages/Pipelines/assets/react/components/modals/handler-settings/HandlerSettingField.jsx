@@ -1,3 +1,6 @@
+/**
+ * WordPress dependencies
+ */
 import {
 	TextControl,
 	TextareaControl,
@@ -13,13 +16,14 @@ import { applyFilters } from '@wordpress/hooks';
  * Uses resolved field state from API (backend single source of truth).
  * Supports custom field components via 'datamachine.handlerSettings.fieldComponent' filter.
  *
- * @param {Object} props Component props
- * @param {string} props.fieldKey Schema field key
- * @param {Object} props.fieldConfig Resolved field configuration from API
- * @param {Function} props.onChange Change handler for single field
+ * @param {Object}   props               Component props
+ * @param {string}   props.fieldKey      Schema field key
+ * @param {Object}   props.fieldConfig   Resolved field configuration from API
+ * @param {Function} props.onChange      Change handler for single field
  * @param {Function} props.onBatchChange Change handler for multiple fields at once
- * @param {string} props.handlerSlug Current handler slug
- * @returns {React.ReactElement} Field control
+ * @param {string}   props.handlerSlug   Current handler slug
+ * @param            props.value
+ * @return {React.ReactElement} Field control
  */
 export default function HandlerSettingField( {
 	fieldKey,

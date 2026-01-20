@@ -1,3 +1,6 @@
+/**
+ * Internal dependencies
+ */
 import { resolveFieldValue } from '../utils/handlerSettings';
 
 export default class HandlerModel {

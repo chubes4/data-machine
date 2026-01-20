@@ -1,4 +1,10 @@
+/**
+ * External dependencies
+ */
 import { useMemo } from 'react';
+/**
+ * Internal dependencies
+ */
 import { useHandlerContext } from '../context/HandlerProvider';
 import { useHandlerDetails } from '../queries/handlers';
 

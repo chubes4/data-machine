@@ -3,6 +3,7 @@
  * REST API Flow Steps Endpoint
  *
  * Provides REST API access to flow step configuration operations.
+ * Delegates to FlowStepAbilities for core logic.
  * Requires WordPress manage_options capability.
  *
  * @package DataMachine\Api\Flows
@@ -10,6 +11,7 @@
 
 namespace DataMachine\Api\Flows;
 
+use DataMachine\Abilities\FlowStepAbilities;
 use DataMachine\Services\FlowStepManager;
 use DataMachine\Services\HandlerService;
 use DataMachine\Services\StepTypeService;
@@ -177,28 +179,35 @@ class FlowSteps {
 		$handler_config = $request->get_param( 'handler_config' ) ?? array();
 		$user_message   = $request->get_param( 'user_message' );
 
-		$manager = new FlowStepManager();
+		$abilities = new FlowStepAbilities();
+		$input     = array( 'flow_step_id' => $flow_step_id );
 
-		if ( null !== $handler_slug || ! empty( $handler_config ) ) {
-			// If handler_slug is provided, we use it. If not, manager uses existing.
-			$slug    = $handler_slug ? $handler_slug : '';
-			$success = $manager->updateHandler( $flow_step_id, $slug, $handler_config );
-			if ( ! $success ) {
-				return new \WP_Error( 'handler_update_failed', __( 'Failed to update handler config', 'data-machine' ), array( 'status' => 500 ) );
-			}
+		if ( null !== $handler_slug ) {
+			$input['handler_slug'] = $handler_slug;
+		}
+
+		if ( ! empty( $handler_config ) ) {
+			$input['handler_config'] = $handler_config;
 		}
 
 		if ( null !== $user_message ) {
-			$success = $manager->updateUserMessage( $flow_step_id, $user_message );
-			if ( ! $success ) {
-				return new \WP_Error( 'user_message_update_failed', __( 'Failed to update user message', 'data-machine' ), array( 'status' => 500 ) );
-			}
+			$input['user_message'] = $user_message;
+		}
+
+		$result = $abilities->executeUpdateFlowStep( $input );
+
+		if ( ! $result['success'] ) {
+			return new \WP_Error(
+				'update_failed',
+				$result['error'] ?? __( 'Failed to update flow step', 'data-machine' ),
+				array( 'status' => 500 )
+			);
 		}
 
 		return rest_ensure_response(
 			array(
 				'success' => true,
-				'message' => __( 'Flow step updated successfully', 'data-machine' ),
+				'message' => $result['message'] ?? __( 'Flow step updated successfully', 'data-machine' ),
 			)
 		);
 	}
@@ -224,19 +233,22 @@ class FlowSteps {
 	public static function handle_get_flow_config( $request ) {
 		$flow_id = (int) $request->get_param( 'flow_id' );
 
-		// Retrieve flow data via filter
-		$db_flows = new \DataMachine\Core\Database\Flows\Flows();
-		$flow     = $db_flows->get_flow( $flow_id );
+		$abilities = new FlowStepAbilities();
+		$result    = $abilities->executeGetFlowSteps( array( 'flow_id' => $flow_id ) );
 
-		if ( ! $flow ) {
+		if ( ! $result['success'] ) {
 			return new \WP_Error(
 				'flow_not_found',
-				__( 'Flow not found.', 'data-machine' ),
+				$result['error'] ?? __( 'Flow not found.', 'data-machine' ),
 				array( 'status' => 404 )
 			);
 		}
 
-		$flow_config = $flow['flow_config'] ?? array();
+		$flow_config = array();
+		foreach ( $result['steps'] as $step ) {
+			$flow_step_id                 = $step['flow_step_id'];
+			$flow_config[ $flow_step_id ] = $step;
+		}
 
 		return rest_ensure_response(
 			array(
@@ -263,13 +275,13 @@ class FlowSteps {
 			);
 		}
 
-		$manager     = new FlowStepManager();
-		$step_config = $manager->get( $flow_step_id );
+		$abilities = new FlowStepAbilities();
+		$result    = $abilities->executeGetFlowStep( array( 'flow_step_id' => $flow_step_id ) );
 
-		if ( empty( $step_config ) ) {
+		if ( ! $result['success'] ) {
 			return new \WP_Error(
 				'flow_step_not_found',
-				__( 'Flow step configuration not found.', 'data-machine' ),
+				$result['error'] ?? __( 'Flow step configuration not found.', 'data-machine' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -279,7 +291,7 @@ class FlowSteps {
 				'success' => true,
 				'data'    => array(
 					'flow_step_id' => $flow_step_id,
-					'step_config'  => $step_config,
+					'step_config'  => $result['step'],
 				),
 			)
 		);
@@ -328,13 +340,19 @@ class FlowSteps {
 		$pipeline_step_id = $parts['pipeline_step_id'];
 
 		try {
-			$manager = new FlowStepManager();
-			$success = $manager->updateHandler( $flow_step_id, $handler_slug, $handler_settings );
+			$abilities = new FlowStepAbilities();
+			$result    = $abilities->executeUpdateFlowStep(
+				array(
+					'flow_step_id'   => $flow_step_id,
+					'handler_slug'   => $handler_slug,
+					'handler_config' => $handler_settings,
+				)
+			);
 
-			if ( ! $success ) {
+			if ( ! $result['success'] ) {
 				return new \WP_Error(
 					'update_failed',
-					__( 'Failed to update handler for flow step', 'data-machine' ),
+					$result['error'] ?? __( 'Failed to update handler for flow step', 'data-machine' ),
 					array( 'status' => 500 )
 				);
 			}
@@ -399,13 +417,18 @@ class FlowSteps {
 		$flow_step_id = sanitize_text_field( $request->get_param( 'flow_step_id' ) );
 		$user_message = sanitize_textarea_field( $request->get_param( 'user_message' ) );
 
-		$manager = new FlowStepManager();
-		$success = $manager->updateUserMessage( $flow_step_id, $user_message );
+		$abilities = new FlowStepAbilities();
+		$result    = $abilities->executeUpdateFlowStep(
+			array(
+				'flow_step_id' => $flow_step_id,
+				'user_message' => $user_message,
+			)
+		);
 
-		if ( ! $success ) {
+		if ( ! $result['success'] ) {
 			return new \WP_Error(
 				'update_failed',
-				__( 'Failed to update user message.', 'data-machine' ),
+				$result['error'] ?? __( 'Failed to update user message.', 'data-machine' ),
 				array( 'status' => 500 )
 			);
 		}

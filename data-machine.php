@@ -140,16 +140,28 @@ function datamachine_run_datamachine_plugin() {
 	\DataMachine\Api\Chat\Chat::register();
 
 	// Load abilities
+	require_once __DIR__ . '/inc/Abilities/AuthAbilities.php';
+	require_once __DIR__ . '/inc/Abilities/FileAbilities.php';
 	require_once __DIR__ . '/inc/Abilities/FlowAbilities.php';
+	require_once __DIR__ . '/inc/Abilities/FlowStepAbilities.php';
+	require_once __DIR__ . '/inc/Abilities/JobAbilities.php';
 	require_once __DIR__ . '/inc/Abilities/LogAbilities.php';
 	require_once __DIR__ . '/inc/Abilities/PostQueryAbilities.php';
 	require_once __DIR__ . '/inc/Abilities/PipelineAbilities.php';
 	require_once __DIR__ . '/inc/Abilities/PipelineStepAbilities.php';
+	require_once __DIR__ . '/inc/Abilities/ProcessedItemsAbilities.php';
+	require_once __DIR__ . '/inc/Abilities/SettingsAbilities.php';
+	new \DataMachine\Abilities\AuthAbilities();
+	new \DataMachine\Abilities\FileAbilities();
 	new \DataMachine\Abilities\FlowAbilities();
+	new \DataMachine\Abilities\FlowStepAbilities();
+	new \DataMachine\Abilities\JobAbilities();
 	\DataMachine\Abilities\LogAbilities::register();
 	new \DataMachine\Abilities\PostQueryAbilities();
 	new \DataMachine\Abilities\PipelineAbilities();
 	new \DataMachine\Abilities\PipelineStepAbilities();
+	new \DataMachine\Abilities\ProcessedItemsAbilities();
+	new \DataMachine\Abilities\SettingsAbilities();
 }
 
 

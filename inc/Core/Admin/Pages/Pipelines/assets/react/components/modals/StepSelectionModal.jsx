@@ -4,8 +4,14 @@
  * Modal for selecting step type to add to pipeline.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { Modal, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useStepTypes } from '../../queries/config';
 import { useHandlers } from '../../queries/handlers';
 import { useAddPipelineStep } from '../../queries/pipelines';
@@ -14,12 +20,12 @@ import { useAsyncOperation } from '../../hooks/useFormState';
 /**
  * Step Selection Modal Component
  *
- * @param {Object} props - Component props
- * @param {Function} props.onClose - Close handler
- * @param {number} props.pipelineId - Pipeline ID
- * @param {number} props.nextExecutionOrder - Next execution order
- * @param {Function} props.onSuccess - Success callback
- * @returns {React.ReactElement|null} Step selection modal
+ * @param {Object}   props                    - Component props
+ * @param {Function} props.onClose            - Close handler
+ * @param {number}   props.pipelineId         - Pipeline ID
+ * @param {number}   props.nextExecutionOrder - Next execution order
+ * @param {Function} props.onSuccess          - Success callback
+ * @return {React.ReactElement|null} Step selection modal
  */
 export default function StepSelectionModal( {
 	onClose,
@@ -38,6 +44,7 @@ export default function StepSelectionModal( {
 
 	/**
 	 * Count handlers for each step type
+	 * @param stepType
 	 */
 	const getHandlerCount = ( stepType ) => {
 		return Object.values( handlers ).filter(
@@ -47,6 +54,7 @@ export default function StepSelectionModal( {
 
 	/**
 	 * Handle step type selection
+	 * @param stepType
 	 */
 	const handleSelectStep = ( stepType ) => {
 		addStepOperation.execute( async () => {
@@ -65,7 +73,7 @@ export default function StepSelectionModal( {
 
 	return (
 		<Modal
-			title={ __( 'Add Pipeline Step', 'datamachine' ) }
+			title={ __( 'Add Pipeline Step', 'data-machine' ) }
 			onRequestClose={ onClose }
 			className="datamachine-step-selection-modal"
 		>
@@ -79,7 +87,7 @@ export default function StepSelectionModal( {
 				<p className="datamachine-modal-header-text">
 					{ __(
 						'Select the type of step you want to add to your pipeline:',
-						'datamachine'
+						'data-machine'
 					) }
 				</p>
 
@@ -109,12 +117,12 @@ export default function StepSelectionModal( {
 										<span className="datamachine-modal-card-meta">
 											{ handlerCount }{ ' ' }
 											{ handlerCount === 1
-												? __( 'handler', 'datamachine' )
+												? __( 'handler', 'data-machine' )
 												: __(
 														'handlers',
-														'datamachine'
+														'data-machine'
 												  ) }{ ' ' }
-											{ __( 'available', 'datamachine' ) }
+											{ __( 'available', 'data-machine' ) }
 										</span>
 									) }
 								</button>
@@ -125,10 +133,10 @@ export default function StepSelectionModal( {
 
 				<div className="datamachine-modal-info-box">
 					<p>
-						<strong>{ __( 'Tip:', 'datamachine' ) }</strong>{ ' ' }
+						<strong>{ __( 'Tip:', 'data-machine' ) }</strong>{ ' ' }
 						{ __(
 							'Steps execute in order. You can configure each step after adding it.',
-							'datamachine'
+							'data-machine'
 						) }
 					</p>
 				</div>
@@ -139,7 +147,7 @@ export default function StepSelectionModal( {
 						onClick={ onClose }
 						disabled={ addStepOperation.isLoading }
 					>
-						{ __( 'Cancel', 'datamachine' ) }
+						{ __( 'Cancel', 'data-machine' ) }
 					</Button>
 				</div>
 			</div>

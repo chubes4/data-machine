@@ -4,26 +4,35 @@
  * Modal for configuring AI provider and model for AI steps.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useEffect, useMemo } from '@wordpress/element';
 import { Modal, Button, TextareaControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useTools } from '../../queries/config';
 import { useUpdateSystemPrompt } from '../../queries/pipelines';
 import { useFormState } from '../../hooks/useFormState';
+/**
+ * External dependencies
+ */
 import ProviderModelSelector from '@shared/components/ai/ProviderModelSelector';
 import AIToolsSelector from './configure-step/AIToolsSelector';
 
 /**
  * Configure Step Modal Component
  *
- * @param {Object} props - Component props
- * @param {Function} props.onClose - Close handler
- * @param {number} props.pipelineId - Pipeline ID
- * @param {string} props.pipelineStepId - Pipeline step ID
- * @param {string} props.stepType - Step type
- * @param {Object} props.currentConfig - Current configuration
- * @param {Function} props.onSuccess - Success callback
- * @returns {React.ReactElement|null} Configure step modal
+ * @param {Object}   props                - Component props
+ * @param {Function} props.onClose        - Close handler
+ * @param {number}   props.pipelineId     - Pipeline ID
+ * @param {string}   props.pipelineStepId - Pipeline step ID
+ * @param {string}   props.stepType       - Step type
+ * @param {Object}   props.currentConfig  - Current configuration
+ * @param {Function} props.onSuccess      - Success callback
+ * @return {React.ReactElement|null} Configure step modal
  */
 export default function ConfigureStepModal( {
 	onClose,
@@ -162,7 +171,7 @@ export default function ConfigureStepModal( {
 							formState.updateField( 'systemPrompt', value )
 						}
 						placeholder={ __(
-							'Enter system prompt for AI processing...',
+							'Enter system prompt for AI processing…',
 							'data-machine'
 						) }
 						rows={ 8 }
@@ -203,7 +212,7 @@ export default function ConfigureStepModal( {
 						isBusy={ formState.isSubmitting }
 					>
 						{ formState.isSubmitting
-							? __( 'Saving...', 'data-machine' )
+							? __( 'Saving…', 'data-machine' )
 							: __( 'Save Configuration', 'data-machine' ) }
 					</Button>
 				</div>

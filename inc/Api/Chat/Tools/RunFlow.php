@@ -3,6 +3,7 @@
  * Run Flow Tool
  *
  * Tool for executing existing flows immediately or scheduling delayed execution.
+ * Delegates to JobAbilities for core logic.
  *
  * @package DataMachine\Api\Chat\Tools
  */
@@ -13,10 +14,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use DataMachine\Abilities\JobAbilities;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class RunFlow {
 	use ToolRegistrationTrait;
+
+	private ?JobAbilities $abilities = null;
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'run_flow', array( $this, 'getToolDefinition' ) );
@@ -54,102 +58,43 @@ class RunFlow {
 	}
 
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
-		$flow_id = $parameters['flow_id'] ?? null;
+		if ( null === $this->abilities ) {
+			$this->abilities = new JobAbilities();
+		}
 
-		if ( ! is_numeric( $flow_id ) || (int) $flow_id <= 0 ) {
+		$input = array(
+			'flow_id'   => $parameters['flow_id'] ?? null,
+			'count'     => $parameters['count'] ?? 1,
+			'timestamp' => $parameters['timestamp'] ?? null,
+		);
+
+		$result = $this->abilities->executeRunFlow( $input );
+
+		if ( ! $result['success'] ) {
 			return array(
 				'success'   => false,
-				'error'     => 'flow_id is required and must be a positive integer',
+				'error'     => $result['error'],
 				'tool_name' => 'run_flow',
 			);
 		}
 
-		$flow_id        = (int) $flow_id;
-		$count          = $parameters['count'] ?? 1;
-		$count          = max( 1, min( 10, (int) $count ) );
-		$timestamp      = $parameters['timestamp'] ?? null;
-		$execution_type = 'immediate';
+		$response_data = array(
+			'flow_id'        => $result['flow_id'],
+			'execution_type' => $result['execution_type'],
+			'message'        => $result['message'],
+		);
 
-		if ( ! empty( $timestamp ) && is_numeric( $timestamp ) && (int) $timestamp > time() ) {
-			$timestamp      = (int) $timestamp;
-			$execution_type = 'delayed';
-
-			if ( $count > 1 ) {
-				return array(
-					'success'   => false,
-					'error'     => 'Cannot schedule multiple runs with a timestamp. Use count only for immediate execution.',
-					'tool_name' => 'run_flow',
-				);
-			}
-		} else {
-			$timestamp = null;
+		if ( isset( $result['flow_name'] ) ) {
+			$response_data['flow_name'] = $result['flow_name'];
 		}
 
-		$jobs      = array();
-		$flow_name = null;
-
-		for ( $i = 0; $i < $count; $i++ ) {
-			$body_params = array( 'flow_id' => $flow_id );
-			if ( null !== $timestamp ) {
-				$body_params['timestamp'] = $timestamp;
-			}
-
-			$request = new \WP_REST_Request( 'POST', '/datamachine/v1/execute' );
-			$request->set_body_params( $body_params );
-
-			$response = rest_do_request( $request );
-			$data     = $response->get_data();
-			$status   = $response->get_status();
-
-			if ( $status >= 400 ) {
-				$error_message = $data['message'] ?? 'Failed to execute flow';
-				if ( empty( $jobs ) ) {
-					return array(
-						'success'   => false,
-						'error'     => $error_message,
-						'tool_name' => 'run_flow',
-					);
-				}
-				break;
-			}
-
-			if ( isset( $data['data']['job_id'] ) ) {
-				$jobs[] = $data['data']['job_id'];
-			}
-			if ( null === $flow_name && isset( $data['data']['flow_name'] ) ) {
-				$flow_name = $data['data']['flow_name'];
-			}
+		if ( isset( $result['job_id'] ) ) {
+			$response_data['job_id'] = $result['job_id'];
 		}
 
-		if ( 1 === $count ) {
-			$response_data = array(
-				'flow_id'        => $flow_id,
-				'execution_type' => $execution_type,
-				'message'        => 'immediate' === $execution_type
-					? 'Flow queued for immediate background execution. It will start within seconds. Use job_id to check status.'
-					: 'Flow scheduled for delayed background execution at the specified time.',
-			);
-			if ( ! empty( $jobs ) ) {
-				$response_data['job_id'] = $jobs[0];
-			}
-			if ( null !== $flow_name ) {
-				$response_data['flow_name'] = $flow_name;
-			}
-		} else {
-			$response_data = array(
-				'flow_id'        => $flow_id,
-				'execution_type' => $execution_type,
-				'count'          => count( $jobs ),
-				'job_ids'        => $jobs,
-				'message'        => sprintf(
-					'Queued %d jobs for flow "%s". Each job will process one item independently.',
-					count( $jobs ),
-					$flow_name ?? "ID {$flow_id}"
-				),
-			);
-			if ( null !== $flow_name ) {
-				$response_data['flow_name'] = $flow_name;
-			}
+		if ( isset( $result['job_ids'] ) ) {
+			$response_data['job_ids'] = $result['job_ids'];
+			$response_data['count']   = $result['count'];
 		}
 
 		return array(

@@ -6,6 +6,9 @@
 
 /* eslint-disable jsdoc/check-line-alignment */
 
+/**
+ * External dependencies
+ */
 import { client } from '@shared/utils/api';
 
 /**

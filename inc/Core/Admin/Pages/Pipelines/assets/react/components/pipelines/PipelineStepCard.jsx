@@ -4,6 +4,9 @@
  * Display individual pipeline step with configuration.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useEffect, useCallback, useRef } from '@wordpress/element';
 import {
 	Card,
@@ -13,6 +16,9 @@ import {
 	Notice,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { updateSystemPrompt } from '../../utils/api';
 import { AUTO_SAVE_DELAY } from '../../utils/constants';
 import { useStepTypes, useTools } from '../../queries/config';
@@ -20,13 +26,13 @@ import { useStepTypes, useTools } from '../../queries/config';
 /**
  * Pipeline Step Card Component
  *
- * @param {Object} props - Component props
- * @param {Object} props.step - Step data
- * @param {number} props.pipelineId - Pipeline ID
- * @param {Object} props.pipelineConfig - AI configuration keyed by pipeline_step_id
- * @param {Function} props.onDelete - Delete handler
- * @param {Function} props.onConfigure - Configure handler
- * @returns {React.ReactElement} Pipeline step card
+ * @param {Object}   props                - Component props
+ * @param {Object}   props.step           - Step data
+ * @param {number}   props.pipelineId     - Pipeline ID
+ * @param {Object}   props.pipelineConfig - AI configuration keyed by pipeline_step_id
+ * @param {Function} props.onDelete       - Delete handler
+ * @param {Function} props.onConfigure    - Configure handler
+ * @return {React.ReactElement} Pipeline step card
  */
 export default function PipelineStepCard( {
 	step,
@@ -66,10 +72,10 @@ export default function PipelineStepCard( {
 	 */
 	const savePrompt = useCallback(
 		async ( prompt ) => {
-			if ( ! aiConfig ) return;
+			if ( ! aiConfig ) {return;}
 
 			const currentPrompt = aiConfig.system_prompt || '';
-			if ( prompt === currentPrompt ) return;
+			if ( prompt === currentPrompt ) {return;}
 
 			setIsSaving( true );
 			setError( null );
@@ -88,14 +94,14 @@ export default function PipelineStepCard( {
 				if ( ! response.success ) {
 					setError(
 						response.message ||
-							__( 'Failed to update prompt', 'datamachine' )
+							__( 'Failed to update prompt', 'data-machine' )
 					);
 					setLocalPrompt( currentPrompt ); // Revert on error
 				}
 			} catch ( err ) {
 				console.error( 'Prompt update error:', err );
 				setError(
-					err.message || __( 'An error occurred', 'datamachine' )
+					err.message || __( 'An error occurred', 'data-machine' )
 				);
 				setLocalPrompt( currentPrompt ); // Revert on error
 			} finally {
@@ -130,7 +136,7 @@ export default function PipelineStepCard( {
 	 */
 	const handleDelete = useCallback( () => {
 		const confirmed = window.confirm(
-			__( 'Are you sure you want to remove this step?', 'datamachine' )
+			__( 'Are you sure you want to remove this step?', 'data-machine' )
 		);
 
 		if ( confirmed && onDelete ) {
@@ -176,17 +182,17 @@ export default function PipelineStepCard( {
 					<div className="datamachine-ai-config-display datamachine-step-card-ai-config">
 						<div className="datamachine-step-card-ai-label">
 							<strong>
-								{ __( 'AI Provider:', 'datamachine' ) }
+								{ __( 'AI Provider:', 'data-machine' ) }
 							</strong>{ ' ' }
 							{ aiConfig.provider || 'Not configured' }
 							{ ' | ' }
 							<strong>
-								{ __( 'Model:', 'datamachine' ) }
+								{ __( 'Model:', 'data-machine' ) }
 							</strong>{ ' ' }
 							{ aiConfig.model || 'Not configured' }
 						</div>
 						<div className="datamachine-step-card-tools-label">
-							<strong>{ __( 'Tools:', 'datamachine' ) }</strong>{ ' ' }
+							<strong>{ __( 'Tools:', 'data-machine' ) }</strong>{ ' ' }
 							{ aiConfig.enabled_tools?.length > 0
 								? aiConfig.enabled_tools
 										.map(
@@ -195,21 +201,21 @@ export default function PipelineStepCard( {
 												toolId
 										)
 										.join( ', ' )
-								: __( 'No tools enabled', 'datamachine' ) }
+								: __( 'No tools enabled', 'data-machine' ) }
 						</div>
 
 						<TextareaControl
-							label={ __( 'System Prompt', 'datamachine' ) }
+							label={ __( 'System Prompt', 'data-machine' ) }
 							value={ localPrompt }
 							onChange={ handlePromptChange }
 							placeholder={ __(
-								'Enter system prompt for AI processing...',
-								'datamachine'
+								'Enter system prompt for AI processing…',
+								'data-machine'
 							) }
 							rows={ 6 }
 							help={
 								isSaving
-									? __( 'Saving...', 'datamachine' )
+									? __( 'Saving…', 'data-machine' )
 									: null
 							}
 						/>
@@ -224,7 +230,7 @@ export default function PipelineStepCard( {
 							size="small"
 							onClick={ () => onConfigure && onConfigure( step ) }
 						>
-							{ __( 'Configure', 'datamachine' ) }
+							{ __( 'Configure', 'data-machine' ) }
 						</Button>
 					) }
 
@@ -234,7 +240,7 @@ export default function PipelineStepCard( {
 						isDestructive
 						onClick={ handleDelete }
 					>
-						{ __( 'Delete', 'datamachine' ) }
+						{ __( 'Delete', 'data-machine' ) }
 					</Button>
 				</div>
 			</CardBody>

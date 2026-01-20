@@ -4,6 +4,9 @@
  * Modal form for configuring a tool that requires configuration.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useEffect, useMemo, useState } from '@wordpress/element';
 import {
 	Button,
@@ -13,6 +16,9 @@ import {
 	TextControl,
 } from '@wordpress/components';
 
+/**
+ * Internal dependencies
+ */
 import { useToolConfig, useSaveToolConfig } from '../queries/tools';
 
 const ToolConfigModal = ( { toolId, isOpen, onRequestClose } ) => {

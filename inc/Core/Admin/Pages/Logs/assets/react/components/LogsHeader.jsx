@@ -4,8 +4,14 @@
  * Page title and global actions for the logs page.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useClearAllLogs } from '../queries/logs';
 
 const LogsHeader = () => {
@@ -37,7 +43,7 @@ const LogsHeader = () => {
 					disabled={ clearAllMutation.isPending }
 				>
 					{ clearAllMutation.isPending
-						? __( 'Clearing...', 'data-machine' )
+						? __( 'Clearing…', 'data-machine' )
 						: __( 'Clear All Logs', 'data-machine' ) }
 				</Button>
 			</div>

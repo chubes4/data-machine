@@ -5,6 +5,9 @@
  * Renders fields based on the handler's field schema.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useEffect } from '@wordpress/element';
 
 const HandlerDefaultsForm = ( {

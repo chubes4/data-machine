@@ -4,7 +4,13 @@
  * Root container for the Settings admin page with tabbed navigation.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useEffect } from '@wordpress/element';
+/**
+ * Internal dependencies
+ */
 import GeneralTab from './components/tabs/GeneralTab';
 import AgentTab from './components/tabs/AgentTab';
 import ApiKeysTab from './components/tabs/ApiKeysTab';

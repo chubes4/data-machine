@@ -4,21 +4,24 @@
  * Individual AI tool checkbox with configuration status indicator.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { CheckboxControl } from '@wordpress/components';
 
 /**
  * Tool Checkbox Component
  *
- * @param {Object} props - Component props
- * @param {string} props.toolId - Tool ID
- * @param {string} props.label - Tool display label
- * @param {string} props.description - Tool description
- * @param {boolean} props.checked - Checked state
- * @param {boolean} props.configured - Configuration status
- * @param {boolean} props.globallyEnabled - Global enablement status
- * @param {Function} props.onChange - Change handler
- * @param {boolean} props.disabled - Disabled state
- * @returns {React.ReactElement} Tool checkbox
+ * @param {Object}   props                 - Component props
+ * @param {string}   props.toolId          - Tool ID
+ * @param {string}   props.label           - Tool display label
+ * @param {string}   props.description     - Tool description
+ * @param {boolean}  props.checked         - Checked state
+ * @param {boolean}  props.configured      - Configuration status
+ * @param {boolean}  props.globallyEnabled - Global enablement status
+ * @param {Function} props.onChange        - Change handler
+ * @param {boolean}  props.disabled        - Disabled state
+ * @return {React.ReactElement} Tool checkbox
  */
 export default function ToolCheckbox( {
 	toolId,

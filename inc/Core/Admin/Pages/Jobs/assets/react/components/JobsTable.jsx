@@ -4,6 +4,9 @@
  * Displays the jobs list in a table format with loading and empty states.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 

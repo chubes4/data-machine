@@ -5,20 +5,26 @@
  * @pattern Presentational - Receives handlers data as props
  */
 
+/**
+ * WordPress dependencies
+ */
 import { Modal, Button, Notice } from '@wordpress/components';
 import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useHandlerContext } from '../../context/HandlerProvider';
 
 /**
  * Handler Selection Modal Component
  *
- * @param {Object} props - Component props
- * @param {Function} props.onClose - Close handler
- * @param {string} props.stepType - Step type (fetch, publish, update)
+ * @param {Object}   props                 - Component props
+ * @param {Function} props.onClose         - Close handler
+ * @param {string}   props.stepType        - Step type (fetch, publish, update)
  * @param {Function} props.onSelectHandler - Handler selection callback
- * @param {Object} props.handlers - All available handlers
- * @returns {React.ReactElement|null} Handler selection modal
+ * @param {Object}   props.handlers        - All available handlers
+ * @return {React.ReactElement|null} Handler selection modal
  */
 export default function HandlerSelectionModal( {
 	onClose,
@@ -40,6 +46,7 @@ export default function HandlerSelectionModal( {
 
 	/**
 	 * Handle handler selection
+	 * @param handlerSlug
 	 */
 	const handleSelect = async ( handlerSlug ) => {
 		if ( onSelectHandler ) {
@@ -59,13 +66,13 @@ export default function HandlerSelectionModal( {
 
 	return (
 		<Modal
-			title={ __( 'Select Handler', 'datamachine' ) }
+			title={ __( 'Select Handler', 'data-machine' ) }
 			onRequestClose={ onClose }
 			className="datamachine-handler-selection-modal"
 		>
 			<div className="datamachine-modal-content">
 				<p className="datamachine-modal-header-text">
-					{ __( 'Choose the handler for this step:', 'datamachine' ) }
+					{ __( 'Choose the handler for this step:', 'data-machine' ) }
 				</p>
 
 				{ filteredHandlers.length === 0 && (
@@ -73,7 +80,7 @@ export default function HandlerSelectionModal( {
 						<p className="datamachine-text--margin-reset">
 							{ __(
 								'No handlers available for this step type.',
-								'datamachine'
+								'data-machine'
 							) }
 						</p>
 					</div>
@@ -110,7 +117,7 @@ export default function HandlerSelectionModal( {
 										<span className="datamachine-modal-badge">
 											{ __(
 												'Requires Auth',
-												'datamachine'
+												'data-machine'
 											) }
 										</span>
 									) }
@@ -130,7 +137,7 @@ export default function HandlerSelectionModal( {
 
 				<div className="datamachine-modal-actions">
 					<Button variant="secondary" onClick={ onClose }>
-						{ __( 'Cancel', 'datamachine' ) }
+						{ __( 'Cancel', 'data-machine' ) }
 					</Button>
 				</div>
 			</div>

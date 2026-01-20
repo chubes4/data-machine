@@ -52,7 +52,7 @@ class ListFlowsTest extends WP_UnitTestCase {
 
 	public function test_tool_calls_ability(): void {
 		$tool = new ListFlows();
-		$ability = wp_get_ability('datamachine/list-flows');
+		$ability = wp_get_ability('datamachine/get-flows');
 
 		$this->assertNotNull($ability);
 
@@ -71,7 +71,7 @@ class ListFlowsTest extends WP_UnitTestCase {
 
 	public function test_tool_passes_parameters(): void {
 		$tool = new ListFlows();
-		$ability = wp_get_ability('datamachine/list-flows');
+		$ability = wp_get_ability('datamachine/get-flows');
 
 		$result = $tool->handle_tool_call([
 			'pipeline_id' => $this->test_pipeline_id,

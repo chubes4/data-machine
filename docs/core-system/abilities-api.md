@@ -8,7 +8,7 @@ The Abilities API primitives in `inc/Abilities/` provide a unified interface for
 
 ## Registered Abilities
 
-### datamachine/list-flows
+### datamachine/get-flows
 
 Lists flows with optional filtering by pipeline ID or handler slug.
 
@@ -215,7 +215,7 @@ $this->storePostTrackingMeta($post_id, $handler_config);
 
 Unit tests in `tests/Unit/Abilities/` verify ability registration, schema validation, permission checks, and execution logic:
 
-- `FlowAbilitiesTest.php` - Tests `datamachine/list-flows` ability
+- `FlowAbilitiesTest.php` - Tests `datamachine/get-flows` ability
 - `LogAbilitiesTest.php` - Tests `datamachine/write-to-log` and `datamachine/clear-logs` abilities
 - `PostQueryAbilitiesTest.php` - Tests `datamachine/query-posts-by-handler`, `datamachine/query-posts-by-flow`, and `datamachine/query-posts-by-pipeline` abilities
 

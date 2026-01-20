@@ -7,6 +7,7 @@
  * - Consecutive no-items (source is slow/exhausted, consider lowering interval)
  *
  * Uses the problem_flow_threshold setting by default.
+ * Delegates to JobAbilities for core logic.
  *
  * @package DataMachine\Api\Chat\Tools
  */
@@ -17,11 +18,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Abilities\JobAbilities;
 use DataMachine\Core\PluginSettings;
+use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class GetProblemFlows {
 	use ToolRegistrationTrait;
+
+	private ?JobAbilities $abilities = null;
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'get_problem_flows', array( $this, 'getToolDefinition' ) );
@@ -57,80 +61,33 @@ class GetProblemFlows {
 	 * @return array Tool execution result
 	 */
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
-		$threshold = $parameters['threshold'] ?? null;
-
-		// Use setting if threshold not provided
-		if ( null === $threshold || ! is_numeric( $threshold ) || (int) $threshold <= 0 ) {
-			$threshold = PluginSettings::get( 'problem_flow_threshold', 3 );
+		if ( null === $this->abilities ) {
+			$this->abilities = new JobAbilities();
 		}
 
-		$threshold = (int) $threshold;
+		$input = array(
+			'threshold' => $parameters['threshold'] ?? null,
+		);
 
-		$db_flows      = new \DataMachine\Core\Database\Flows\Flows();
-		$problem_flows = $db_flows->get_problem_flows( $threshold );
+		$result = $this->abilities->executeGetProblemFlows( $input );
 
-		if ( empty( $problem_flows ) ) {
+		if ( ! $result['success'] ) {
 			return array(
-				'success'   => true,
-				'data'      => array(
-					'problem_flows' => array(),
-					'total'         => 0,
-					'threshold'     => $threshold,
-					'message'       => "No problem flows detected. All flows are below the threshold of {$threshold}.",
-				),
+				'success'   => false,
+				'error'     => $result['error'] ?? 'Failed to get problem flows',
 				'tool_name' => 'get_problem_flows',
 			);
 		}
 
-		// Categorize and build summary
-		$failing_flows = array();
-		$idle_flows    = array();
-
-		foreach ( $problem_flows as $flow ) {
-			$failures = $flow['consecutive_failures'] ?? 0;
-			$no_items = $flow['consecutive_no_items'] ?? 0;
-
-			if ( $failures >= $threshold ) {
-				$failing_flows[] = sprintf(
-					'%s (Flow #%d) - %d consecutive failures - investigate errors',
-					$flow['flow_name'],
-					$flow['flow_id'],
-					$failures
-				);
-			}
-
-			if ( $no_items >= $threshold ) {
-				$idle_flows[] = sprintf(
-					'%s (Flow #%d) - %d runs with no new items - consider lowering interval',
-					$flow['flow_name'],
-					$flow['flow_id'],
-					$no_items
-				);
-			}
-		}
-
-		// Build message
-		$message_parts = array();
-
-		if ( ! empty( $failing_flows ) ) {
-			$message_parts[] = "FAILING FLOWS ({$threshold}+ consecutive failures):\n- " . implode( "\n- ", $failing_flows );
-		}
-
-		if ( ! empty( $idle_flows ) ) {
-			$message_parts[] = "IDLE FLOWS ({$threshold}+ runs with no new items):\n- " . implode( "\n- ", $idle_flows );
-		}
-
-		$message = implode( "\n\n", $message_parts );
-
 		return array(
 			'success'   => true,
 			'data'      => array(
-				'problem_flows' => $problem_flows,
-				'total'         => count( $problem_flows ),
-				'failing_count' => count( $failing_flows ),
-				'idle_count'    => count( $idle_flows ),
-				'threshold'     => $threshold,
-				'message'       => $message,
+				'problem_flows' => array_merge( $result['failing'], $result['idle'] ),
+				'total'         => $result['count'],
+				'failing_count' => count( $result['failing'] ),
+				'idle_count'    => count( $result['idle'] ),
+				'threshold'     => $result['threshold'],
+				'message'       => $result['message'],
 			),
 			'tool_name' => 'get_problem_flows',
 		);

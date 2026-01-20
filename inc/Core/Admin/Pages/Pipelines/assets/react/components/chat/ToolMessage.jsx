@@ -5,6 +5,9 @@
  * Collapsed by default, shows tool names and success indicator.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState } from '@wordpress/element';
 import {
 	Icon,
@@ -22,7 +25,7 @@ function formatToolName( name ) {
 }
 
 function formatTimestamp( isoString ) {
-	if ( ! isoString ) return null;
+	if ( ! isoString ) {return null;}
 	const date = new Date( isoString );
 	return date.toLocaleTimeString( [], {
 		hour: '2-digit',

@@ -4,9 +4,15 @@
  * Modal for handling OAuth authentication with dual auth types support.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useEffect, useCallback } from '@wordpress/element';
 import { Modal, Button, Notice } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { useFormState, useAsyncOperation } from '../../hooks/useFormState';
 import ConnectionStatus from './oauth/ConnectionStatus';
 import AccountDetails from './oauth/AccountDetails';
@@ -17,12 +23,13 @@ import RedirectUrlDisplay from './oauth/RedirectUrlDisplay';
 /**
  * OAuth Authentication Modal Component
  *
- * @param {Object} props - Component props
- * @param {Function} props.onClose - Close handler
- * @param {string} props.handlerSlug - Handler slug
- * @param {Object} props.handlerInfo - Handler metadata
- * @param {Function} props.onSuccess - Success callback
- * @returns {React.ReactElement|null} OAuth authentication modal
+ * @param {Object}   props                  - Component props
+ * @param {Function} props.onClose          - Close handler
+ * @param {string}   props.handlerSlug      - Handler slug
+ * @param {Object}   props.handlerInfo      - Handler metadata
+ * @param {Function} props.onSuccess        - Success callback
+ * @param            props.onBackToSettings
+ * @return {React.ReactElement|null} OAuth authentication modal
  */
 export default function OAuthAuthenticationModal( {
 	onClose,
@@ -63,7 +70,7 @@ export default function OAuthAuthenticationModal( {
 						response?.message ||
 							__(
 								'Unable to load connection status.',
-								'datamachine'
+								'data-machine'
 							)
 					);
 				}
@@ -84,7 +91,7 @@ export default function OAuthAuthenticationModal( {
 						statusData.error_message ||
 							__(
 								'Authentication failed. Please try again.',
-								'datamachine'
+								'data-machine'
 							)
 					);
 				} else if ( ! silent ) {
@@ -98,7 +105,7 @@ export default function OAuthAuthenticationModal( {
 						statusError?.message ||
 							__(
 								'Unable to load connection status.',
-								'datamachine'
+								'data-machine'
 							)
 					);
 				}
@@ -124,7 +131,7 @@ export default function OAuthAuthenticationModal( {
 					setConnected( true );
 					setAccountData( { ...config } );
 					setSuccess(
-						__( 'Connected successfully!', 'datamachine' )
+						__( 'Connected successfully!', 'data-machine' )
 					);
 					try {
 						await fetchConnectionStatus( { silent: true } );
@@ -143,14 +150,14 @@ export default function OAuthAuthenticationModal( {
 					setSuccess(
 						__(
 							'Configuration saved! You can now connect your account.',
-							'datamachine'
+							'data-machine'
 						)
 					);
 				}
 			} catch ( error ) {
 				throw new Error(
 					error.message ||
-						__( 'Failed to save configuration.', 'datamachine' )
+						__( 'Failed to save configuration.', 'data-machine' )
 				);
 			}
 		},
@@ -196,13 +203,14 @@ export default function OAuthAuthenticationModal( {
 
 	/**
 	 * Handle OAuth success
+	 * @param account
 	 */
 	const handleOAuthSuccess = ( account ) => {
 		setConnected( true );
 		if ( account ) {
 			setAccountData( account );
 		}
-		setSuccess( __( 'Account connected successfully!', 'datamachine' ) );
+		setSuccess( __( 'Account connected successfully!', 'data-machine' ) );
 		setError( null );
 
 		fetchConnectionStatus( { silent: true } ).catch( () => {
@@ -216,6 +224,7 @@ export default function OAuthAuthenticationModal( {
 
 	/**
 	 * Handle OAuth error
+	 * @param errorMessage
 	 */
 	const handleOAuthError = ( errorMessage ) => {
 		setError( errorMessage );
@@ -237,7 +246,7 @@ export default function OAuthAuthenticationModal( {
 			! confirm(
 				__(
 					'Are you sure you want to disconnect this account? This will remove the access token but keep your API configuration.',
-					'datamachine'
+					'data-machine'
 				)
 			)
 		) {
@@ -253,7 +262,7 @@ export default function OAuthAuthenticationModal( {
 			if ( ! response?.success ) {
 				throw new Error(
 					response?.message ||
-						__( 'Failed to disconnect account.', 'datamachine' )
+						__( 'Failed to disconnect account.', 'data-machine' )
 				);
 			}
 
@@ -275,7 +284,7 @@ export default function OAuthAuthenticationModal( {
 				onSuccess();
 			}
 
-			return __( 'Account disconnected successfully!', 'datamachine' );
+			return __( 'Account disconnected successfully!', 'data-machine' );
 		} );
 	};
 
@@ -292,10 +301,10 @@ export default function OAuthAuthenticationModal( {
 			title={
 				handlerInfo.label
 					? sprintf(
-							__( 'Connect %s Account', 'datamachine' ),
+							__( 'Connect %s Account', 'data-machine' ),
 							handlerInfo.label
 					  )
-					: __( 'Connect Account', 'datamachine' )
+					: __( 'Connect Account', 'data-machine' )
 			}
 			onRequestClose={ onClose }
 			className="datamachine-oauth-modal"
@@ -336,7 +345,7 @@ export default function OAuthAuthenticationModal( {
 				<div className="datamachine-modal-spacing--mb-20">
 					<div className="datamachine-modal-header-section">
 						<div>
-							<strong>{ __( 'Handler:', 'datamachine' ) }</strong>{ ' ' }
+							<strong>{ __( 'Handler:', 'data-machine' ) }</strong>{ ' ' }
 							{ handlerInfo.label || handlerSlug }
 						</div>
 						<ConnectionStatus connected={ connected } />
@@ -345,8 +354,8 @@ export default function OAuthAuthenticationModal( {
 					{ isStatusLoading && (
 						<p className="description">
 							{ __(
-								'Checking current connection status...',
-								'datamachine'
+								'Checking current connection status…',
+								'data-machine'
 							) }
 						</p>
 					) }
@@ -355,11 +364,11 @@ export default function OAuthAuthenticationModal( {
 						{ authType === 'oauth2'
 							? __(
 									'Click "Connect Account" to authorize access via OAuth.',
-									'datamachine'
+									'data-machine'
 							  )
 							: __(
 									'Enter your API credentials to connect.',
-									'datamachine'
+									'data-machine'
 							  ) }
 					</p>
 				</div>
@@ -392,15 +401,15 @@ export default function OAuthAuthenticationModal( {
 										isBusy={ apiConfigForm.isSubmitting }
 									>
 										{ apiConfigForm.isSubmitting
-											? __( 'Saving...', 'datamachine' )
+											? __( 'Saving…', 'data-machine' )
 											: authType === 'simple'
 											? __(
 													'Save Credentials',
-													'datamachine'
+													'data-machine'
 											  )
 											: __(
 													'Save Configuration',
-													'datamachine'
+													'data-machine'
 											  ) }
 									</Button>
 
@@ -413,7 +422,7 @@ export default function OAuthAuthenticationModal( {
 											}
 											className="datamachine-modal-spacing--ml-10"
 										>
-											{ __( 'Cancel', 'datamachine' ) }
+											{ __( 'Cancel', 'data-machine' ) }
 										</Button>
 									) }
 								</div>
@@ -458,10 +467,10 @@ export default function OAuthAuthenticationModal( {
 								className="datamachine-button--destructive"
 							>
 								{ disconnectOperation.isLoading
-									? __( 'Disconnecting...', 'datamachine' )
+									? __( 'Disconnecting…', 'data-machine' )
 									: __(
 											'Disconnect Account',
-											'datamachine'
+											'data-machine'
 									  ) }
 							</Button>
 
@@ -474,7 +483,7 @@ export default function OAuthAuthenticationModal( {
 								>
 									{ __(
 										'Change API Configuration',
-										'datamachine'
+										'data-machine'
 									) }
 								</Button>
 							) }
@@ -492,7 +501,7 @@ export default function OAuthAuthenticationModal( {
 								disconnectOperation.isLoading
 							}
 						>
-							{ __( 'Back to Settings', 'datamachine' ) }
+							{ __( 'Back to Settings', 'data-machine' ) }
 						</Button>
 					) }
 					<Button
@@ -503,7 +512,7 @@ export default function OAuthAuthenticationModal( {
 							disconnectOperation.isLoading
 						}
 					>
-						{ __( 'Close', 'datamachine' ) }
+						{ __( 'Close', 'data-machine' ) }
 					</Button>
 				</div>
 			</div>

@@ -4,7 +4,13 @@
  * Query and mutation hooks for log operations.
  */
 
+/**
+ * External dependencies
+ */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+/**
+ * Internal dependencies
+ */
 import * as logsApi from '../api/logs';
 
 /**
@@ -43,6 +49,7 @@ export const useAgentTypes = () =>
 
 /**
  * Fetch log metadata for a specific agent type
+ * @param agentType
  */
 export const useLogMetadata = ( agentType ) =>
 	useQuery( {
@@ -61,6 +68,9 @@ export const useLogMetadata = ( agentType ) =>
 
 /**
  * Fetch log content for a specific agent type
+ * @param agentType
+ * @param mode
+ * @param limit
  */
 export const useLogContent = ( agentType, mode = 'recent', limit = 200 ) =>
 	useQuery( {

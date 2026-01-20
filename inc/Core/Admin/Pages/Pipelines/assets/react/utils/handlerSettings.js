@@ -38,8 +38,8 @@ export const getFieldHelpText = ( fieldConfig = {} ) => {
  * Ensures values are coerced to correct types based on field schema.
  * Critical for handlers that expect specific types (e.g., integer user IDs).
  *
- * @param {Object} settings Current settings values
+ * @param {Object} settings       Current settings values
  * @param {Object} settingsFields Field schema definitions
- * @returns {Object} Sanitized settings with proper types
+ * @return {Object} Sanitized settings with proper types
  */
 export default { resolveFieldValue, getFieldHelpText };

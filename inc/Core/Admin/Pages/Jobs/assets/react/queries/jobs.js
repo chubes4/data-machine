@@ -4,7 +4,13 @@
  * Query and mutation hooks for job operations.
  */
 
+/**
+ * External dependencies
+ */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+/**
+ * Internal dependencies
+ */
 import * as jobsApi from '../api/jobs';
 
 /**
@@ -19,6 +25,10 @@ export const jobsKeys = {
 
 /**
  * Fetch jobs list with pagination
+ * @param root0
+ * @param root0.page
+ * @param root0.perPage
+ * @param root0.status
  */
 export const useJobs = ( { page = 1, perPage = 50, status } = {} ) =>
 	useQuery( {
@@ -86,6 +96,7 @@ export const usePipelinesForDropdown = () =>
 
 /**
  * Fetch flows for a specific pipeline
+ * @param pipelineId
  */
 export const useFlowsForDropdown = ( pipelineId ) =>
 	useQuery( {

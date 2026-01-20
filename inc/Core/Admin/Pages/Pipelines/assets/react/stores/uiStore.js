@@ -5,8 +5,14 @@
  * Persists selectedPipelineId, isChatOpen, and chatSessionId to localStorage.
  */
 
+/**
+ * External dependencies
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+/**
+ * Internal dependencies
+ */
 import { isSameId, normalizeId } from '../utils/ids';
 
 export const useUIStore = create(

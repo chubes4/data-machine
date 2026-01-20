@@ -4,14 +4,17 @@
  * Displays the OAuth callback URL that users must configure in external app settings.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { __ } from '@wordpress/i18n';
 
 /**
  * Redirect URL Display Component
  *
- * @param {Object} props - Component props
+ * @param {Object} props     - Component props
  * @param {string} props.url - The redirect/callback URL to display
- * @returns {React.ReactElement|null} Redirect URL display or null if no URL
+ * @return {React.ReactElement|null} Redirect URL display or null if no URL
  */
 export default function RedirectUrlDisplay( { url } ) {
 	if ( ! url ) {
@@ -23,7 +26,7 @@ export default function RedirectUrlDisplay( { url } ) {
 			<p className="datamachine-redirect-url-label">
 				{ __(
 					'Redirect URL (configure in your app settings):',
-					'datamachine'
+					'data-machine'
 				) }
 			</p>
 			<code className="datamachine-redirect-url-value">{ url }</code>

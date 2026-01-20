@@ -4,8 +4,17 @@
  * AI provider API key configuration.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useEffect } from '@wordpress/element';
+/**
+ * Internal dependencies
+ */
 import { useSettings, useUpdateSettings } from '../../queries/settings';
+/**
+ * External dependencies
+ */
 import { useProviders } from '@shared/queries/providers';
 
 const ApiKeysTab = () => {

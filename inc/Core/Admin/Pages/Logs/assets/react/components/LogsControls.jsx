@@ -4,10 +4,19 @@
  * Per-tab controls for log level, clear, refresh, and copy.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState } from '@wordpress/element';
 import { Button, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * External dependencies
+ */
 import { useQueryClient } from '@tanstack/react-query';
+/**
+ * Internal dependencies
+ */
 import {
 	useLogMetadata,
 	useClearLogs,
@@ -106,7 +115,7 @@ const LogsControls = ( { agentType, agentLabel } ) => {
 					disabled={ clearMutation.isPending }
 				>
 					{ clearMutation.isPending
-						? __( 'Clearing...', 'data-machine' )
+						? __( 'Clearing…', 'data-machine' )
 						: __( 'Clear', 'data-machine' ) }
 				</Button>
 			</div>

@@ -14,11 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use DataMachine\Core\Database\Flows\Flows as FlowsDB;
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-use DataMachine\Services\FlowManager;
 use DataMachine\Services\FlowStepManager;
 use DataMachine\Services\HandlerService;
-use DataMachine\Core\Database\Flows\Flows as FlowsDB;
 
 class CreateFlow {
 	use ToolRegistrationTrait;
@@ -110,19 +109,27 @@ class CreateFlow {
 			}
 		}
 
-		$flow_manager = new FlowManager();
-		$result       = $flow_manager->create(
-			$pipeline_id,
-			$flow_name,
+		$ability = wp_get_ability( 'datamachine/create-flow' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Create flow ability not available',
+				'tool_name' => 'create_flow',
+			);
+		}
+
+		$result = $ability->execute(
 			array(
+				'pipeline_id'       => $pipeline_id,
+				'flow_name'         => $flow_name,
 				'scheduling_config' => $scheduling_config,
 			)
 		);
 
-		if ( ! $result ) {
+		if ( ! $result['success'] ) {
 			return array(
 				'success'   => false,
-				'error'     => 'Failed to create flow. Verify the pipeline_id exists and you have sufficient permissions.',
+				'error'     => $result['error'] ?? 'Failed to create flow. Verify the pipeline_id exists and you have sufficient permissions.',
 				'tool_name' => 'create_flow',
 			);
 		}
@@ -130,7 +137,6 @@ class CreateFlow {
 		$flow_config   = $result['flow_data']['flow_config'] ?? array();
 		$flow_step_ids = array_keys( $flow_config );
 
-		// Apply step configurations if provided
 		$config_results = array(
 			'applied' => array(),
 			'errors'  => array(),

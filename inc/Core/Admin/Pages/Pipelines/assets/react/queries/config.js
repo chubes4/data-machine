@@ -5,7 +5,13 @@
  * Provider queries have been moved to @shared/queries/providers.
  */
 
+/**
+ * External dependencies
+ */
 import { useQuery } from '@tanstack/react-query';
+/**
+ * Internal dependencies
+ */
 import { getStepTypes, getTools } from '../utils/api';
 
 export const useStepTypes = () =>

@@ -4,6 +4,9 @@
  * Centralized query client with optimized defaults for Data Machine admin pages.
  */
 
+/**
+ * External dependencies
+ */
 import { QueryClient } from '@tanstack/react-query';
 
 export const queryClient = new QueryClient( {
@@ -14,7 +17,7 @@ export const queryClient = new QueryClient( {
 			refetchOnWindowFocus: true, // Refetch when user returns to tab
 			retry: ( failureCount, error ) => {
 				// Don't retry on 4xx client errors
-				if ( error?.status >= 400 && error?.status < 500 ) return false;
+				if ( error?.status >= 400 && error?.status < 500 ) {return false;}
 				// Retry up to 3 times for other errors
 				return failureCount < 3;
 			},

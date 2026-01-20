@@ -4,6 +4,9 @@
  * Root container for the Logs admin page.
  */
 
+/**
+ * Internal dependencies
+ */
 import LogsHeader from './components/LogsHeader';
 import LogsTabs from './components/LogsTabs';
 

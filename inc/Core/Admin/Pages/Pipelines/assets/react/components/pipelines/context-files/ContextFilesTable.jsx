@@ -4,6 +4,9 @@
  * Table displaying uploaded context files with metadata and delete actions.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState } from '@wordpress/element';
 import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
@@ -11,11 +14,11 @@ import { __ } from '@wordpress/i18n';
 /**
  * Context Files Table Component
  *
- * @param {Object} props - Component props
- * @param {Array} props.files - Array of file objects
- * @param {Function} props.onDelete - Delete callback (fileId)
- * @param {boolean} props.isDeleting - Deleting state
- * @returns {React.ReactElement} Context files table
+ * @param {Object}   props            - Component props
+ * @param {Array}    props.files      - Array of file objects
+ * @param {Function} props.onDelete   - Delete callback (fileId)
+ * @param {boolean}  props.isDeleting - Deleting state
+ * @return {React.ReactElement} Context files table
  */
 export default function ContextFilesTable( {
 	files = [],
@@ -26,6 +29,7 @@ export default function ContextFilesTable( {
 
 	/**
 	 * Format date for display
+	 * @param dateString
 	 */
 	const formatDate = ( dateString ) => {
 		const date = new Date( dateString );
@@ -34,6 +38,7 @@ export default function ContextFilesTable( {
 
 	/**
 	 * Handle delete click
+	 * @param fileId
 	 */
 	const handleDelete = async ( fileId ) => {
 		setDeletingId( fileId );
@@ -47,7 +52,7 @@ export default function ContextFilesTable( {
 		return (
 			<div className="datamachine-modal-empty-state datamachine-modal-empty-state--bordered">
 				<p className="datamachine-text--margin-reset">
-					{ __( 'No context files uploaded yet.', 'datamachine' ) }
+					{ __( 'No context files uploaded yet.', 'data-machine' ) }
 				</p>
 			</div>
 		);
@@ -58,12 +63,12 @@ export default function ContextFilesTable( {
 			<table className="datamachine-pipeline-table">
 				<thead>
 					<tr className="datamachine-table-sticky-header">
-						<th>{ __( 'File Name', 'datamachine' ) }</th>
+						<th>{ __( 'File Name', 'data-machine' ) }</th>
 						<th className="datamachine-table-col--date">
-							{ __( 'Uploaded', 'datamachine' ) }
+							{ __( 'Uploaded', 'data-machine' ) }
 						</th>
 						<th className="datamachine-table-cell--center datamachine-table-col--compact">
-							{ __( 'Actions', 'datamachine' ) }
+							{ __( 'Actions', 'data-machine' ) }
 						</th>
 					</tr>
 				</thead>
@@ -92,8 +97,8 @@ export default function ContextFilesTable( {
 										className="datamachine-table-text-error"
 									>
 										{ isCurrentlyDeleting
-											? __( 'Deleting...', 'datamachine' )
-											: __( 'Delete', 'datamachine' ) }
+											? __( 'Deleting…', 'data-machine' )
+											: __( 'Delete', 'data-machine' ) }
 									</Button>
 								</td>
 							</tr>

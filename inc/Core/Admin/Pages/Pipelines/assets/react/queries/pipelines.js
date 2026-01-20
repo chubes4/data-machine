@@ -4,7 +4,13 @@
  * TanStack Query hooks for pipeline-related data operations.
  */
 
+/**
+ * External dependencies
+ */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+/**
+ * Internal dependencies
+ */
 import {
 	fetchPipelines,
 	createPipeline,

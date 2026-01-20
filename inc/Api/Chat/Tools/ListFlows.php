@@ -52,12 +52,12 @@ class ListFlows {
 	}
 
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
-		$ability = wp_get_ability( 'datamachine/list-flows' );
+		$ability = wp_get_ability( 'datamachine/get-flows' );
 
 		if ( ! $ability ) {
 			return array(
 				'success'   => false,
-				'error'     => 'datamachine/list-flows ability not found',
+				'error'     => 'datamachine/get-flows ability not found',
 				'tool_name' => 'list_flows',
 			);
 		}

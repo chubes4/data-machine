@@ -1,6 +1,15 @@
+/**
+ * External dependencies
+ */
 import React from 'react';
+/**
+ * WordPress dependencies
+ */
 import { Modal, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { MODAL_TYPES } from '../../utils/constants';
 import {
 	ImportExportModal,
@@ -14,7 +23,7 @@ import {
 } from '../modals';
 
 export default function ModalSwitch( { activeModal, baseProps } ) {
-	if ( ! activeModal ) return null;
+	if ( ! activeModal ) {return null;}
 
 	switch ( activeModal ) {
 		case MODAL_TYPES.IMPORT_EXPORT:

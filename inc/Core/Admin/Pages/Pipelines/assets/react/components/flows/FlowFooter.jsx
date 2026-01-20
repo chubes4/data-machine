@@ -5,14 +5,17 @@
  * Uses pre-formatted display strings from backend (no client-side date parsing).
  */
 
+/**
+ * WordPress dependencies
+ */
 import { __ } from '@wordpress/i18n';
 
 /**
  * Get CSS class for job status.
  *
- * @param {string|null} status - Job status string (may be compound like "agent_skipped - reason")
- * @param {boolean} isRunning - Whether the job is currently running
- * @returns {string} CSS class name
+ * @param {string|null} status    - Job status string (may be compound like "agent_skipped - reason")
+ * @param {boolean}     isRunning - Whether the job is currently running
+ * @return {string} CSS class name
  */
 const getStatusClass = ( status, isRunning = false ) => {
 	if ( isRunning ) {
@@ -35,7 +38,7 @@ const getStatusClass = ( status, isRunning = false ) => {
  * Format status for display.
  *
  * @param {string|null} status - Job status string
- * @returns {string|null} Formatted status or null
+ * @return {string|null} Formatted status or null
  */
 const formatStatus = ( status ) => {
 	if ( ! status ) {
@@ -50,15 +53,15 @@ const formatStatus = ( status ) => {
 /**
  * Flow Footer Component
  *
- * @param {Object} props - Component props
- * @param {number} props.flowId - Flow ID
- * @param {Object} props.scheduling - Scheduling display data
- * @param {string} props.scheduling.interval - Schedule interval
- * @param {string} props.scheduling.last_run_display - Pre-formatted last run display
- * @param {string} props.scheduling.last_run_status - Job status from last run
- * @param {boolean} props.scheduling.is_running - Whether a job is currently running
- * @param {string} props.scheduling.next_run_display - Pre-formatted next run display
- * @returns {React.ReactElement} Flow footer
+ * @param {Object}  props                             - Component props
+ * @param {number}  props.flowId                      - Flow ID
+ * @param {Object}  props.scheduling                  - Scheduling display data
+ * @param {string}  props.scheduling.interval         - Schedule interval
+ * @param {string}  props.scheduling.last_run_display - Pre-formatted last run display
+ * @param {string}  props.scheduling.last_run_status  - Job status from last run
+ * @param {boolean} props.scheduling.is_running       - Whether a job is currently running
+ * @param {string}  props.scheduling.next_run_display - Pre-formatted next run display
+ * @return {React.ReactElement} Flow footer
  */
 export default function FlowFooter( { flowId, scheduling } ) {
 	const {
@@ -72,27 +75,27 @@ export default function FlowFooter( { flowId, scheduling } ) {
 	const scheduleDisplay =
 		interval && interval !== 'manual'
 			? interval
-			: __( 'Manual', 'datamachine' );
+			: __( 'Manual', 'data-machine' );
 
 	// When running, show "Running" status; otherwise format the job status
 	const displayStatus = is_running
-		? __( 'Running', 'datamachine' )
+		? __( 'Running', 'data-machine' )
 		: formatStatus( last_run_status );
 
 	return (
 		<div className="datamachine-flow-footer">
 			<div className="datamachine-flow-meta-item datamachine-flow-meta-item--id">
-				<strong>{ __( 'Flow ID:', 'datamachine' ) }</strong> #{ flowId }
+				<strong>{ __( 'Flow ID:', 'data-machine' ) }</strong> #{ flowId }
 			</div>
 
 			<div className="datamachine-flow-meta-item">
-				<strong>{ __( 'Schedule:', 'datamachine' ) }</strong>{ ' ' }
+				<strong>{ __( 'Schedule:', 'data-machine' ) }</strong>{ ' ' }
 				{ scheduleDisplay }
 			</div>
 
 			<div className="datamachine-flow-meta-item">
-				<strong>{ __( 'Last Run:', 'datamachine' ) }</strong>{ ' ' }
-				{ last_run_display || __( 'Never', 'datamachine' ) }
+				<strong>{ __( 'Last Run:', 'data-machine' ) }</strong>{ ' ' }
+				{ last_run_display || __( 'Never', 'data-machine' ) }
 				{ displayStatus && (
 					<span
 						className={ getStatusClass(
@@ -108,8 +111,8 @@ export default function FlowFooter( { flowId, scheduling } ) {
 
 			{ interval && interval !== 'manual' && (
 				<div className="datamachine-flow-meta-item">
-					<strong>{ __( 'Next Run:', 'datamachine' ) }</strong>{ ' ' }
-					{ next_run_display || __( 'Never', 'datamachine' ) }
+					<strong>{ __( 'Next Run:', 'data-machine' ) }</strong>{ ' ' }
+					{ next_run_display || __( 'Never', 'data-machine' ) }
 				</div>
 			) }
 		</div>

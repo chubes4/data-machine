@@ -4,14 +4,20 @@
  * TanStack Query hooks for chat endpoint interactions.
  */
 
+/**
+ * WordPress dependencies
+ */
 import apiFetch from '@wordpress/api-fetch';
+/**
+ * External dependencies
+ */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 /**
  * Fetch existing chat session
  *
  * @param {string|null} sessionId - Session ID to fetch
- * @returns {object} TanStack Query object with session data
+ * @return {Object} TanStack Query object with session data
  */
 export function useChatSession( sessionId ) {
 	return useQuery( {
@@ -39,7 +45,7 @@ export function useChatSession( sessionId ) {
 /**
  * Send a chat message mutation
  *
- * @returns {object} TanStack Query mutation object
+ * @return {Object} TanStack Query mutation object
  */
 export function useChatMutation() {
 	const queryClient = useQueryClient();
@@ -80,9 +86,9 @@ export function useChatMutation() {
 /**
  * Fetch list of chat sessions for current user
  *
- * @param {number} limit - Maximum sessions to return
+ * @param {number} limit     - Maximum sessions to return
  * @param {string} agentType - Agent type filter (chat, cli)
- * @returns {object} TanStack Query object with sessions data
+ * @return {Object} TanStack Query object with sessions data
  */
 export function useChatSessions( limit = 20, agentType = 'chat' ) {
 	return useQuery( {
@@ -108,7 +114,7 @@ export function useChatSessions( limit = 20, agentType = 'chat' ) {
 /**
  * Delete a chat session mutation
  *
- * @returns {object} TanStack Query mutation object
+ * @return {Object} TanStack Query mutation object
  */
 export function useDeleteChatSession() {
 	const queryClient = useQueryClient();

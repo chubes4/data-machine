@@ -4,7 +4,7 @@
  * Handles settings page business logic following established architectural patterns.
  * All modals are pre-rendered in the page template.
  *
- * @package DataMachine\Core\Admin\Settings
+ * @package
  * @since 1.0.0
  */
 
@@ -20,7 +20,7 @@
 		/**
 		 * Initialize settings page functionality
 		 */
-		init: function () {
+		init () {
 			this.bindEvents();
 			this.initTabManager();
 			this.checkAuthCallback();
@@ -29,7 +29,7 @@
 		/**
 		 * Check for OAuth callback parameters and notify opener
 		 */
-		checkAuthCallback: function () {
+		checkAuthCallback () {
 			const urlParams = new URLSearchParams( window.location.search );
 			const authSuccess = urlParams.get( 'auth_success' );
 			const authError = urlParams.get( 'auth_error' );
@@ -38,7 +38,7 @@
 			if ( ( authSuccess || authError ) && window.opener ) {
 				const message = {
 					type: 'oauth_callback',
-					provider: provider,
+					provider,
 					success: !! authSuccess,
 					error: authError,
 				};
@@ -56,7 +56,7 @@
 		/**
 		 * Bind event handlers
 		 */
-		bindEvents: function () {
+		bindEvents () {
 			// Tool configuration save handler
 			document.addEventListener( 'click', ( e ) => {
 				if (
@@ -98,8 +98,9 @@
 
 		/**
 		 * Handle tool configuration save action
+		 * @param e
 		 */
-		handleToolConfigSave: function ( e ) {
+		handleToolConfigSave ( e ) {
 			e.preventDefault();
 
 			const button = e.target;
@@ -208,8 +209,9 @@
 
 		/**
 		 * Show error message in modal
+		 * @param message
 		 */
-		showError: function ( message ) {
+		showError ( message ) {
 			const modalBody = document.querySelector(
 				'.datamachine-modal[aria-hidden="false"] .datamachine-modal-body'
 			);
@@ -234,12 +236,12 @@
 		/**
 		 * Initialize tab management functionality
 		 */
-		initTabManager: function () {
+		initTabManager () {
 			this.tabManager = {
 				/**
 				 * Get active tab from URL or localStorage
 				 */
-				getActiveTab: function () {
+				getActiveTab () {
 					// First check URL parameter
 					const urlParams = new URLSearchParams(
 						window.location.search
@@ -263,8 +265,9 @@
 
 				/**
 				 * Set active tab in localStorage and URL
+				 * @param tab
 				 */
-				setActiveTab: function ( tab ) {
+				setActiveTab ( tab ) {
 					localStorage.setItem(
 						'datamachine_settings_active_tab',
 						tab
@@ -274,14 +277,15 @@
 					if ( history.pushState ) {
 						const newUrl = new URL( window.location );
 						newUrl.searchParams.set( 'tab', tab );
-						history.pushState( { tab: tab }, '', newUrl );
+						history.pushState( { tab }, '', newUrl );
 					}
 				},
 
 				/**
 				 * Show specific tab content
+				 * @param tab
 				 */
-				showTab: function ( tab ) {
+				showTab ( tab ) {
 					// Hide all tab content
 					const tabContents = document.querySelectorAll(
 						'.datamachine-tab-content'
@@ -332,8 +336,9 @@
 
 		/**
 		 * Handle tab navigation click
+		 * @param e
 		 */
-		handleTabClick: function ( e ) {
+		handleTabClick ( e ) {
 			e.preventDefault();
 
 			const tab = e.target;
@@ -347,8 +352,9 @@
 
 		/**
 		 * Handle form submission to preserve tab state
+		 * @param e
 		 */
-		handleFormSubmit: function ( e ) {
+		handleFormSubmit ( e ) {
 			const activeTab = this.tabManager.getActiveTab();
 
 			// Add hidden field with current tab to preserve state after form submission
@@ -383,9 +389,7 @@
 				window.dmSettingsPage.init();
 			}
 		} );
-	} else {
-		if ( typeof window.dmSettingsPage !== 'undefined' ) {
+	} else if ( typeof window.dmSettingsPage !== 'undefined' ) {
 			window.dmSettingsPage.init();
 		}
-	}
 } )();

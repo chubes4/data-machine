@@ -17,7 +17,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-use DataMachine\Services\FlowManager;
 
 class CopyFlow {
 	use ToolRegistrationTrait;
@@ -72,7 +71,6 @@ class CopyFlow {
 		$target_pipeline_id = $parameters['target_pipeline_id'] ?? null;
 		$flow_name          = $parameters['flow_name'] ?? null;
 
-		// Validate required parameters
 		if ( ! is_numeric( $source_flow_id ) || (int) $source_flow_id <= 0 ) {
 			return array(
 				'success'   => false,
@@ -97,29 +95,30 @@ class CopyFlow {
 			);
 		}
 
-		$source_flow_id     = (int) $source_flow_id;
-		$target_pipeline_id = (int) $target_pipeline_id;
-		$flow_name          = sanitize_text_field( $flow_name );
+		$ability = wp_get_ability( 'datamachine/duplicate-flow' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Duplicate flow ability not available',
+				'tool_name' => 'copy_flow',
+			);
+		}
 
-		// Build options
-		$options = array();
+		$input = array(
+			'source_flow_id'     => (int) $source_flow_id,
+			'target_pipeline_id' => (int) $target_pipeline_id,
+			'flow_name'          => sanitize_text_field( $flow_name ),
+		);
 
 		if ( ! empty( $parameters['scheduling_config'] ) ) {
-			$options['scheduling_config'] = $parameters['scheduling_config'];
+			$input['scheduling_config'] = $parameters['scheduling_config'];
 		}
 
 		if ( ! empty( $parameters['step_config_overrides'] ) ) {
-			$options['step_config_overrides'] = $parameters['step_config_overrides'];
+			$input['step_config_overrides'] = $parameters['step_config_overrides'];
 		}
 
-		// Execute copy
-		$flow_manager = new FlowManager();
-		$result       = $flow_manager->copyToPipeline(
-			$source_flow_id,
-			$target_pipeline_id,
-			$flow_name,
-			$options
-		);
+		$result = $ability->execute( $input );
 
 		if ( ! $result['success'] ) {
 			return array(
@@ -129,10 +128,7 @@ class CopyFlow {
 			);
 		}
 
-		$data = $result['data'];
-
-		// Build response message
-		$is_cross_pipeline = $data['source_pipeline_id'] !== $data['target_pipeline_id'];
+		$is_cross_pipeline = $result['source_pipeline_id'] !== $result['target_pipeline_id'];
 		$has_overrides     = ! empty( $parameters['step_config_overrides'] );
 
 		if ( $is_cross_pipeline && $has_overrides ) {
@@ -148,13 +144,13 @@ class CopyFlow {
 		return array(
 			'success'   => true,
 			'data'      => array(
-				'flow_id'            => $data['new_flow_id'],
-				'flow_name'          => $data['flow_name'],
-				'source_flow_id'     => $data['source_flow_id'],
-				'source_pipeline_id' => $data['source_pipeline_id'],
-				'target_pipeline_id' => $data['target_pipeline_id'],
-				'flow_step_ids'      => $data['flow_step_ids'],
-				'scheduling'         => $data['scheduling'],
+				'flow_id'            => $result['flow_id'],
+				'flow_name'          => $result['flow_name'],
+				'source_flow_id'     => $result['source_flow_id'],
+				'source_pipeline_id' => $result['source_pipeline_id'],
+				'target_pipeline_id' => $result['target_pipeline_id'],
+				'flow_step_ids'      => $result['flow_step_ids'],
+				'scheduling'         => $result['scheduling'],
 				'message'            => $message,
 			),
 			'tool_name' => 'copy_flow',

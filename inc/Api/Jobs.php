@@ -4,9 +4,11 @@
  *
  * Provides REST API access to job execution history.
  * Requires WordPress manage_options capability for all operations.
+ * Delegates to JobAbilities for core logic.
  *
  * Endpoints:
  * - GET /datamachine/v1/jobs - Retrieve jobs list with pagination and filtering
+ * - GET /datamachine/v1/jobs/{id} - Get specific job details
  * - DELETE /datamachine/v1/jobs - Clear jobs (all or failed)
  *
  * @package DataMachine\Api
@@ -14,13 +16,22 @@
 
 namespace DataMachine\Api;
 
-use DataMachine\Core\Admin\DateFormatter;
+use DataMachine\Abilities\JobAbilities;
 
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
 class Jobs {
+
+	private static ?JobAbilities $abilities = null;
+
+	private static function getAbilities(): JobAbilities {
+		if ( null === self::$abilities ) {
+			self::$abilities = new JobAbilities();
+		}
+		return self::$abilities;
+	}
 
 	/**
 	 * Register REST API routes
@@ -155,42 +166,32 @@ class Jobs {
 	 * GET /datamachine/v1/jobs
 	 */
 	public static function handle_get_jobs( $request ) {
-		// Get database service
-		$db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
-
-		// Build query args
-		$args = array(
+		$input = array(
 			'orderby'  => $request->get_param( 'orderby' ),
 			'order'    => $request->get_param( 'order' ),
 			'per_page' => $request->get_param( 'per_page' ),
 			'offset'   => $request->get_param( 'offset' ),
 		);
 
-		// Add optional filters
 		if ( $request->get_param( 'pipeline_id' ) ) {
-			$args['pipeline_id'] = (int) $request->get_param( 'pipeline_id' );
+			$input['pipeline_id'] = (int) $request->get_param( 'pipeline_id' );
 		}
 		if ( $request->get_param( 'flow_id' ) ) {
-			$args['flow_id'] = (int) $request->get_param( 'flow_id' );
+			$input['flow_id'] = (int) $request->get_param( 'flow_id' );
 		}
 		if ( $request->get_param( 'status' ) ) {
-			$args['status'] = sanitize_text_field( $request->get_param( 'status' ) );
+			$input['status'] = sanitize_text_field( $request->get_param( 'status' ) );
 		}
 
-		// Retrieve jobs
-		$jobs       = $db_jobs->get_jobs_for_list_table( $args );
-		$total_jobs = $db_jobs->get_jobs_count();
-
-		// Add display fields for timestamps
-		$jobs = array_map( array( self::class, 'add_display_fields' ), $jobs );
+		$result = self::getAbilities()->executeGetJobs( $input );
 
 		return rest_ensure_response(
 			array(
-				'success'  => true,
-				'data'     => $jobs,
-				'total'    => $total_jobs,
-				'per_page' => $args['per_page'],
-				'offset'   => $args['offset'],
+				'success'  => $result['success'],
+				'data'     => $result['jobs'],
+				'total'    => $result['total'],
+				'per_page' => $result['per_page'],
+				'offset'   => $result['offset'],
 			)
 		);
 	}
@@ -201,31 +202,22 @@ class Jobs {
 	 * GET /datamachine/v1/jobs/{id}
 	 */
 	public static function handle_get_job_by_id( $request ) {
-		$job_id = $request->get_param( 'id' );
+		$job_id = (int) $request->get_param( 'id' );
 
-		// Get job from database directly
-		$db_jobs = new \DataMachine\Core\Database\Jobs\Jobs();
-		$job     = $db_jobs->get_job( $job_id );
+		$result = self::getAbilities()->executeGetJob( array( 'job_id' => $job_id ) );
 
-		if ( ! $job ) {
+		if ( ! $result['success'] ) {
 			return new \WP_Error(
 				'job_not_found',
-				sprintf(
-				/* translators: %d: job ID */
-					__( 'Job %d not found.', 'data-machine' ),
-					$job_id
-				),
+				$result['error'],
 				array( 'status' => 404 )
 			);
 		}
 
-		// Add display fields for timestamps
-		$job = self::add_display_fields( $job );
-
 		return rest_ensure_response(
 			array(
 				'success' => true,
-				'data'    => $job,
+				'data'    => $result['job'],
 			)
 		);
 	}
@@ -237,61 +229,30 @@ class Jobs {
 	 */
 	public static function handle_clear( $request ) {
 		$type              = $request->get_param( 'type' );
-		$cleanup_processed = $request->get_param( 'cleanup_processed' );
+		$cleanup_processed = (bool) $request->get_param( 'cleanup_processed' );
 
-		$criteria = array();
-		if ( 'failed' === $type ) {
-			$criteria['failed'] = true;
-		} else {
-			$criteria['all'] = true;
-		}
-
-		$job_manager = new \DataMachine\Services\JobManager();
-		$result      = $job_manager->delete( $criteria, $cleanup_processed );
+		$result = self::getAbilities()->executeDeleteJobs(
+			array(
+				'type'              => $type,
+				'cleanup_processed' => $cleanup_processed,
+			)
+		);
 
 		if ( ! $result['success'] ) {
 			return new \WP_Error(
 				'delete_failed',
-				__( 'Failed to delete jobs.', 'data-machine' ),
+				$result['error'] ?? __( 'Failed to delete jobs.', 'data-machine' ),
 				array( 'status' => 500 )
 			);
 		}
 
-		$message_parts = array();
-		/* translators: %d: number of jobs deleted */
-		$message_parts[] = sprintf( esc_html__( 'Deleted %d jobs', 'data-machine' ), $result['jobs_deleted'] );
-
-		if ( $cleanup_processed && $result['processed_items_cleaned'] > 0 ) {
-			$message_parts[] = esc_html__( 'and their associated processed items', 'data-machine' );
-		}
-
-		$message = implode( ' ', $message_parts ) . '.';
-
 		return rest_ensure_response(
 			array(
 				'success'                 => true,
-				'message'                 => $message,
-				'jobs_deleted'            => $result['jobs_deleted'],
+				'message'                 => $result['message'],
+				'jobs_deleted'            => $result['deleted_count'],
 				'processed_items_cleaned' => $result['processed_items_cleaned'],
 			)
 		);
-	}
-
-	/**
-	 * Add formatted display fields for timestamps.
-	 *
-	 * @param array $job Job data
-	 * @return array Job data with *_display fields added
-	 */
-	private static function add_display_fields( array $job ): array {
-		if ( isset( $job['created_at'] ) ) {
-			$job['created_at_display'] = DateFormatter::format_for_display( $job['created_at'] );
-		}
-
-		if ( isset( $job['completed_at'] ) ) {
-			$job['completed_at_display'] = DateFormatter::format_for_display( $job['completed_at'] );
-		}
-
-		return $job;
 	}
 }

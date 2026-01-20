@@ -4,10 +4,19 @@
  * Initializes React application for pipelines admin interface.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { render } from '@wordpress/element';
 import domReady from '@wordpress/dom-ready';
+/**
+ * External dependencies
+ */
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@shared/lib/queryClient';
+/**
+ * Internal dependencies
+ */
 import PipelinesApp from './PipelinesApp';
 import { HandlerProvider } from './context/HandlerProvider';
 

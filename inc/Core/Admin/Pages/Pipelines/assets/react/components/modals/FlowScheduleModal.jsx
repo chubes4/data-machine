@@ -4,9 +4,15 @@
  * Modal for configuring flow scheduling interval.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useEffect } from '@wordpress/element';
 import { Modal, Button, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import { getSchedulingIntervals } from '../../utils/api';
 import { updateFlowSchedule } from '../../utils/api';
 import { useUpdateFlowSchedule } from '../../queries/flows';
@@ -15,13 +21,13 @@ import { useFormState, useAsyncOperation } from '../../hooks/useFormState';
 /**
  * Flow Schedule Modal Component
  *
- * @param {Object} props - Component props
- * @param {Function} props.onClose - Close handler
- * @param {number} props.flowId - Flow ID
- * @param {string} props.flowName - Flow name
- * @param {string} props.currentInterval - Current schedule interval
- * @param {Function} props.onSuccess - Success callback
- * @returns {React.ReactElement|null} Flow schedule modal
+ * @param {Object}   props                 - Component props
+ * @param {Function} props.onClose         - Close handler
+ * @param {number}   props.flowId          - Flow ID
+ * @param {string}   props.flowName        - Flow name
+ * @param {string}   props.currentInterval - Current schedule interval
+ * @param {Function} props.onSuccess       - Success callback
+ * @return {React.ReactElement|null} Flow schedule modal
  */
 export default function FlowScheduleModal( {
 	onClose,
@@ -44,7 +50,7 @@ export default function FlowScheduleModal( {
 					},
 				} );
 
-				if ( onSuccess ) onSuccess();
+				if ( onSuccess ) {onSuccess();}
 				onClose();
 			} catch ( error ) {
 				throw new Error( error.message || 'Failed to update schedule' );
@@ -69,7 +75,7 @@ export default function FlowScheduleModal( {
 					throw new Error(
 						__(
 							'Failed to load scheduling intervals. Please refresh the page and try again.',
-							'datamachine'
+							'data-machine'
 						)
 					);
 				}
@@ -86,7 +92,7 @@ export default function FlowScheduleModal( {
 
 	return (
 		<Modal
-			title={ __( 'Schedule Flow', 'datamachine' ) }
+			title={ __( 'Schedule Flow', 'data-machine' ) }
 			onRequestClose={ onClose }
 			className="datamachine-flow-schedule-modal"
 		>
@@ -98,12 +104,12 @@ export default function FlowScheduleModal( {
 				) }
 
 				<div className="datamachine-modal-spacing--mb-20">
-					<strong>{ __( 'Flow:', 'datamachine' ) }</strong>{ ' ' }
+					<strong>{ __( 'Flow:', 'data-machine' ) }</strong>{ ' ' }
 					{ flowName }
 				</div>
 
 				<SelectControl
-					label={ __( 'Schedule Interval', 'datamachine' ) }
+					label={ __( 'Schedule Interval', 'data-machine' ) }
 					value={ formState.data.selectedInterval }
 					options={ intervals }
 					onChange={ ( value ) =>
@@ -114,7 +120,7 @@ export default function FlowScheduleModal( {
 					}
 					help={ __(
 						'Choose how often this flow should run automatically.',
-						'datamachine'
+						'data-machine'
 					) }
 				/>
 
@@ -122,11 +128,11 @@ export default function FlowScheduleModal( {
 					<div className="datamachine-modal-info-box datamachine-modal-info-box--highlight">
 						<p>
 							<strong>
-								{ __( 'Manual Mode:', 'datamachine' ) }
+								{ __( 'Manual Mode:', 'data-machine' ) }
 							</strong>{ ' ' }
 							{ __(
 								'Flow will only run when triggered manually via the "Run Now" button.',
-								'datamachine'
+								'data-machine'
 							) }
 						</p>
 					</div>
@@ -136,11 +142,11 @@ export default function FlowScheduleModal( {
 					<div className="datamachine-modal-info-box datamachine-modal-info-box--note">
 						<p>
 							<strong>
-								{ __( 'Automatic Scheduling:', 'datamachine' ) }
+								{ __( 'Automatic Scheduling:', 'data-machine' ) }
 							</strong>{ ' ' }
 							{ __(
 								'Flow will run automatically based on the selected interval. You can still trigger it manually anytime.',
-								'datamachine'
+								'data-machine'
 							) }
 						</p>
 					</div>
@@ -152,7 +158,7 @@ export default function FlowScheduleModal( {
 						onClick={ onClose }
 						disabled={ formState.isSubmitting }
 					>
-						{ __( 'Cancel', 'datamachine' ) }
+						{ __( 'Cancel', 'data-machine' ) }
 					</Button>
 
 					<Button
@@ -164,8 +170,8 @@ export default function FlowScheduleModal( {
 						isBusy={ formState.isSubmitting }
 					>
 						{ formState.isSubmitting
-							? __( 'Saving...', 'datamachine' )
-							: __( 'Save Schedule', 'datamachine' ) }
+							? __( 'Saving…', 'data-machine' )
+							: __( 'Save Schedule', 'data-machine' ) }
 					</Button>
 				</div>
 			</div>

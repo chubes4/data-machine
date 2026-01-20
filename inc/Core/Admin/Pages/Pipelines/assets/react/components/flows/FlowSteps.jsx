@@ -4,8 +4,14 @@
  * Container for flow step list with data flow arrows.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import FlowStepCard from './FlowStepCard';
 import DataFlowArrow from '../shared/DataFlowArrow';
 import { isSameId } from '../../utils/ids';
@@ -85,7 +91,7 @@ export default function FlowSteps( {
 				<p>
 					{ __(
 						'No steps configured for this flow.',
-						'datamachine'
+						'data-machine'
 					) }
 				</p>
 			</div>

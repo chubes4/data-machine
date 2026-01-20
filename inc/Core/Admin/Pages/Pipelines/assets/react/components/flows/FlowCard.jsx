@@ -2,10 +2,19 @@
  * Flow card component.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useCallback, useState, useRef, useEffect } from '@wordpress/element';
+/**
+ * External dependencies
+ */
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardBody, CardDivider } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+/**
+ * Internal dependencies
+ */
 import FlowHeader from './FlowHeader';
 import FlowSteps from './FlowSteps';
 import FlowFooter from './FlowFooter';
@@ -93,7 +102,7 @@ function FlowCardContent( props ) {
 				alert(
 					__(
 						'An error occurred while deleting the flow',
-						'datamachine'
+						'data-machine'
 					)
 				);
 			}
@@ -122,7 +131,7 @@ function FlowCardContent( props ) {
 				alert(
 					__(
 						'An error occurred while duplicating the flow',
-						'datamachine'
+						'data-machine'
 					)
 				);
 			}
@@ -209,7 +218,7 @@ function FlowCardContent( props ) {
 			const token = reconcileTokenRef.current + 1;
 			reconcileTokenRef.current = token;
 
-			setOptimisticLastRunDisplay( __( 'Queued', 'datamachine' ) );
+			setOptimisticLastRunDisplay( __( 'Queued', 'data-machine' ) );
 
 			try {
 				await runFlowMutation.mutateAsync( flowId );
@@ -232,7 +241,7 @@ function FlowCardContent( props ) {
 				alert(
 					__(
 						'An error occurred while running the flow',
-						'datamachine'
+						'data-machine'
 					)
 				);
 			}

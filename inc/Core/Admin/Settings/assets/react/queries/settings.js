@@ -5,6 +5,9 @@
  * Provider queries have been moved to @shared/queries/providers.
  */
 
+/**
+ * External dependencies
+ */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { client } from '@shared/utils/api';
 

@@ -4,6 +4,9 @@
  * Shared TanStack Query hook for fetching AI providers and models.
  */
 
+/**
+ * External dependencies
+ */
 import { useQuery } from '@tanstack/react-query';
 import { client } from '@shared/utils/api';
 
@@ -12,7 +15,7 @@ export const PROVIDERS_KEY = [ 'config', 'providers' ];
 /**
  * Fetch AI providers with their models and defaults
  *
- * @returns {Object} Query result with providers data
+ * @return {Object} Query result with providers data
  */
 export const useProviders = () =>
 	useQuery( {

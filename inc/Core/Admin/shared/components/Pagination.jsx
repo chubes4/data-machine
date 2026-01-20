@@ -5,6 +5,9 @@
  * Per-page configuration is managed via Settings, not inline selectors.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 

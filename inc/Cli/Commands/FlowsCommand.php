@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
 class FlowsCommand extends WP_CLI_Command {
 
 	/**
-	 * List flows with optional filtering.
+	 * Get flows with optional filtering.
 	 *
 	 * ## OPTIONS
 	 *
@@ -43,6 +43,16 @@ class FlowsCommand extends WP_CLI_Command {
 	 * [--id=<flow_id>]
 	 * : Get a specific flow by ID.
 	 *
+	 * [--output=<mode>]
+	 * : Output mode for flow data.
+	 * ---
+	 * default: full
+	 * options:
+	 *   - full
+	 *   - summary
+	 *   - ids
+	 * ---
+	 *
 	 * [--format=<format>]
 	 * : Output format.
 	 * ---
@@ -54,7 +64,7 @@ class FlowsCommand extends WP_CLI_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     # List all flows
+	 *     # List all flows (full output)
 	 *     wp datamachine flows
 	 *
 	 *     # List flows for pipeline 5
@@ -68,6 +78,12 @@ class FlowsCommand extends WP_CLI_Command {
 	 *
 	 *     # List with pagination
 	 *     wp datamachine flows --per_page=10 --offset=20
+	 *
+	 *     # Summary output (key fields only)
+	 *     wp datamachine flows --output=summary
+	 *
+	 *     # IDs only output (for batch operations)
+	 *     wp datamachine flows --output=ids
 	 *
 	 *     # JSON output
 	 *     wp datamachine flows --format=json
@@ -99,6 +115,7 @@ class FlowsCommand extends WP_CLI_Command {
 		$handler_slug = $assoc_args['handler'] ?? null;
 		$per_page     = (int) ( $assoc_args['per_page'] ?? 20 );
 		$offset       = (int) ( $assoc_args['offset'] ?? 0 );
+		$output_mode  = $assoc_args['output'] ?? 'full';
 		$format       = $assoc_args['format'] ?? 'table';
 
 		if ( $per_page < 1 ) {
@@ -110,6 +127,9 @@ class FlowsCommand extends WP_CLI_Command {
 		if ( $offset < 0 ) {
 			$offset = 0;
 		}
+		if ( ! in_array( $output_mode, array( 'full', 'summary', 'ids' ), true ) ) {
+			$output_mode = 'full';
+		}
 
 		$ability = new \DataMachine\Abilities\FlowAbilities();
 		$result  = $ability->executeAbility(
@@ -119,21 +139,22 @@ class FlowsCommand extends WP_CLI_Command {
 				'handler_slug' => $handler_slug,
 				'per_page'     => $per_page,
 				'offset'       => $offset,
+				'output_mode'  => $output_mode,
 			)
 		);
 
 		if ( ! $result['success'] ) {
-			WP_CLI::error( $result['error'] ?? 'Failed to list flows' );
+			WP_CLI::error( $result['error'] ?? 'Failed to get flows' );
 			return;
 		}
 
-		$this->outputResult( $result, $format );
+		$this->outputResult( $result, $format, $output_mode );
 	}
 
 	/**
 	 * Output results in requested format.
 	 */
-	private function outputResult( array $result, string $format ): void {
+	private function outputResult( array $result, string $format, string $output_mode = 'full' ): void {
 		$flows           = $result['flows'] ?? array();
 		$total           = $result['total'] ?? 0;
 		$per_page        = $result['per_page'] ?? 20;
@@ -150,6 +171,37 @@ class FlowsCommand extends WP_CLI_Command {
 			return;
 		}
 
+		// Handle IDs-only output mode.
+		if ( 'ids' === $output_mode ) {
+			WP_CLI::log( implode( "\n", $flows ) );
+			WP_CLI::log( '' );
+			WP_CLI::log( "Total: {$total} flow(s)" );
+			return;
+		}
+
+		// Handle summary output mode.
+		if ( 'summary' === $output_mode ) {
+			$rows = array();
+			foreach ( $flows as $flow ) {
+				$rows[] = array(
+					'Flow ID'     => $flow['flow_id'],
+					'Flow Name'   => $flow['flow_name'],
+					'Pipeline ID' => $flow['pipeline_id'],
+					'Status'      => $flow['last_run_status'] ?? 'Never',
+				);
+			}
+
+			WP_CLI\Utils\format_items(
+				'table',
+				$rows,
+				array( 'Flow ID', 'Flow Name', 'Pipeline ID', 'Status' )
+			);
+
+			$this->outputPaginationInfo( $offset, count( $flows ), $total, $filters_applied );
+			return;
+		}
+
+		// Full output mode (default).
 		$rows = array();
 		foreach ( $flows as $flow ) {
 			$handlers = $this->extractHandlers( $flow );
@@ -176,7 +228,14 @@ class FlowsCommand extends WP_CLI_Command {
 			)
 		);
 
-		$end = $offset + count( $flows );
+		$this->outputPaginationInfo( $offset, count( $flows ), $total, $filters_applied );
+	}
+
+	/**
+	 * Output pagination and filter info.
+	 */
+	private function outputPaginationInfo( int $offset, int $count, int $total, array $filters_applied ): void {
+		$end = $offset + $count;
 		if ( $end < $total ) {
 			WP_CLI::log( "Showing {$offset} - {$end} of {$total} flows. Use --offset to see more." );
 		} else {

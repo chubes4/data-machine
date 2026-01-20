@@ -4,7 +4,13 @@
  * TanStack Query hooks for handler-related data operations.
  */
 
+/**
+ * External dependencies
+ */
 import { useQuery } from '@tanstack/react-query';
+/**
+ * Internal dependencies
+ */
 import { fetchHandlerDetails, getHandlers } from '../utils/api';
 
 export const useHandlers = () =>

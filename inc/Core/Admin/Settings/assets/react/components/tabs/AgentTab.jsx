@@ -4,10 +4,19 @@
  * AI agent settings including tools, system prompt, provider/model, and conversation limits.
  */
 
+/**
+ * WordPress dependencies
+ */
 import { useState, useEffect } from '@wordpress/element';
 import { Button } from '@wordpress/components';
+/**
+ * Internal dependencies
+ */
 import { useSettings, useUpdateSettings } from '../../queries/settings';
 import ToolConfigModal from '../ToolConfigModal';
+/**
+ * External dependencies
+ */
 import ProviderModelSelector from '@shared/components/ai/ProviderModelSelector';
 
 const AgentTab = () => {
