@@ -1,132 +1,118 @@
 # Abilities API
 
-WordPress 6.9 Abilities API provides standardized capability discovery and execution for Data Machine operations. Centralizes flow queries, logging operations, and post filtering through registered abilities.
+WordPress 6.9 Abilities API provides standardized capability discovery and execution for Data Machine operations. All REST API, CLI, and Chat tool operations delegate to registered abilities.
 
 ## Overview
 
-The Abilities API primitives in `inc/Abilities/` provide a unified interface for Data Machine operations across REST API, CLI, and Chat tools. Each ability implements `execute_callback` with `permission_callback` for consistent access control.
+The Abilities API in `inc/Abilities/` provides a unified interface for Data Machine operations. Each ability implements `execute_callback` with `permission_callback` for consistent access control across REST API, CLI commands, and Chat tools.
+
+**Total registered abilities**: 49
 
 ## Registered Abilities
 
-### datamachine/get-flows
+### Pipeline Management (8 abilities)
 
-Lists flows with optional filtering by pipeline ID or handler slug.
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/get-pipelines` | List pipelines with pagination | `PipelineAbilities.php` |
+| `datamachine/get-pipeline` | Get single pipeline by ID | `PipelineAbilities.php` |
+| `datamachine/create-pipeline` | Create new pipeline | `PipelineAbilities.php` |
+| `datamachine/update-pipeline` | Update pipeline properties | `PipelineAbilities.php` |
+| `datamachine/delete-pipeline` | Delete pipeline and associated flows | `PipelineAbilities.php` |
+| `datamachine/duplicate-pipeline` | Duplicate pipeline with flows | `PipelineAbilities.php` |
+| `datamachine/import-pipelines` | Import pipelines from JSON | `PipelineAbilities.php` |
+| `datamachine/export-pipelines` | Export pipelines to JSON | `PipelineAbilities.php` |
 
-**Category**: datamachine
+### Pipeline Steps (6 abilities)
 
-**Input Schema**:
-- `pipeline_id` (integer|null): Filter flows by pipeline ID
-- `handler_slug` (string|null): Filter flows using this handler slug (any step that uses this handler)
-- `per_page` (integer): Number of flows per page (default: 20, min: 1, max: 100)
-- `offset` (integer): Offset for pagination (default: 0)
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/get-pipeline-steps` | List steps for a pipeline | `PipelineStepAbilities.php` |
+| `datamachine/get-pipeline-step` | Get single pipeline step | `PipelineStepAbilities.php` |
+| `datamachine/add-pipeline-step` | Add step to pipeline | `PipelineStepAbilities.php` |
+| `datamachine/update-pipeline-step` | Update pipeline step config | `PipelineStepAbilities.php` |
+| `datamachine/delete-pipeline-step` | Remove step from pipeline | `PipelineStepAbilities.php` |
+| `datamachine/reorder-pipeline-steps` | Reorder pipeline steps | `PipelineStepAbilities.php` |
 
-**Output Schema**:
-- `flows` (array): Formatted flow data with latest job status
-- `total` (integer): Total flow count matching filters
-- `per_page` (integer): Items per page
-- `offset` (integer): Pagination offset
-- `filters_applied` (object): Active filter values
+### Flow Management (5 abilities)
 
-**Permission**: `manage_options` or WP_CLI
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/get-flows` | List flows with filtering | `FlowAbilities.php` |
+| `datamachine/create-flow` | Create new flow from pipeline | `FlowAbilities.php` |
+| `datamachine/update-flow` | Update flow properties | `FlowAbilities.php` |
+| `datamachine/delete-flow` | Delete flow and associated jobs | `FlowAbilities.php` |
+| `datamachine/duplicate-flow` | Duplicate flow within pipeline | `FlowAbilities.php` |
 
-**Location**: `inc/Abilities/FlowAbilities.php`
+### Flow Steps (4 abilities)
 
-### datamachine/write-to-log
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/get-flow-steps` | List steps for a flow | `FlowStepAbilities.php` |
+| `datamachine/get-flow-step` | Get single flow step | `FlowStepAbilities.php` |
+| `datamachine/update-flow-step` | Update flow step config | `FlowStepAbilities.php` |
+| `datamachine/configure-flow-steps` | Bulk configure flow steps | `FlowStepAbilities.php` |
 
-Write log entries with level routing to system, pipeline, or chat logs.
+### Job Execution (6 abilities)
 
-**Category**: datamachine
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/get-jobs` | List jobs with filtering | `JobAbilities.php` |
+| `datamachine/get-job` | Get single job details | `JobAbilities.php` |
+| `datamachine/delete-jobs` | Delete jobs by criteria | `JobAbilities.php` |
+| `datamachine/run-flow` | Execute flow immediately | `JobAbilities.php` |
+| `datamachine/get-flow-health` | Get flow health metrics | `JobAbilities.php` |
+| `datamachine/get-problem-flows` | List flows exceeding failure threshold | `JobAbilities.php` |
 
-**Input Schema**:
-- `level` (string, required): Log level severity - `debug`, `info`, `warning`, `error`, or `critical`
-- `message` (string, required): Log message content
-- `context` (object): Additional context including `agent_type`, `job_id`, `flow_id`, etc.
+### File Management (5 abilities)
 
-**Output Schema**:
-- `success` (boolean): Write operation status
-- `message` (string): Status message
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/list-files` | List files for a flow | `FileAbilities.php` |
+| `datamachine/get-file` | Get single file details | `FileAbilities.php` |
+| `datamachine/delete-file` | Delete specific file | `FileAbilities.php` |
+| `datamachine/cleanup-files` | Clean up orphaned files | `FileAbilities.php` |
+| `datamachine/upload-file` | Upload file to flow | `FileAbilities.php` |
 
-**Permission**: `manage_options` or WP_CLI
+### Processed Items (3 abilities)
 
-**Location**: `inc/Abilities/LogAbilities.php`
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/clear-processed-items` | Clear processed items for flow | `ProcessedItemsAbilities.php` |
+| `datamachine/check-processed-item` | Check if item was processed | `ProcessedItemsAbilities.php` |
+| `datamachine/has-processed-history` | Check if flow has processed history | `ProcessedItemsAbilities.php` |
 
-### datamachine/clear-logs
+### Settings (6 abilities)
 
-Clear log files for specified agent type or all logs.
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/get-settings` | Get plugin settings | `SettingsAbilities.php` |
+| `datamachine/update-settings` | Update plugin settings | `SettingsAbilities.php` |
+| `datamachine/get-scheduling-intervals` | Get available scheduling intervals | `SettingsAbilities.php` |
+| `datamachine/get-tool-config` | Get AI tool configuration | `SettingsAbilities.php` |
+| `datamachine/get-handler-defaults` | Get handler default settings | `SettingsAbilities.php` |
+| `datamachine/update-handler-defaults` | Update handler default settings | `SettingsAbilities.php` |
 
-**Category**: datamachine
+### Authentication (3 abilities)
 
-**Input Schema**:
-- `agent_type` (string, required): Agent type log to clear - `pipeline`, `chat`, `system`, or `all`
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/get-auth-status` | Get OAuth connection status | `AuthAbilities.php` |
+| `datamachine/disconnect-auth` | Disconnect OAuth provider | `AuthAbilities.php` |
+| `datamachine/save-auth-config` | Save OAuth API configuration | `AuthAbilities.php` |
 
-**Output Schema**:
-- `success` (boolean): Clear operation status
-- `message` (string): Status message
-- `files_cleared` (array): List of cleared agent types
+### Logging (2 abilities)
 
-**Permission**: `manage_options` or WP_CLI
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/write-to-log` | Write log entry with level routing | `LogAbilities.php` |
+| `datamachine/clear-logs` | Clear logs by agent type | `LogAbilities.php` |
 
-**Location**: `inc/Abilities/LogAbilities.php`
+### Post Query (1 ability)
 
-### datamachine/query-posts-by-handler
-
-Query posts by handler slug with pagination support.
-
-**Category**: datamachine
-
-**Input Schema**:
-- `handler_slug` (string, required): Handler slug to filter by (e.g., "universal_web_scraper")
-- `post_type` (string): Post type to query (default: "any")
-- `post_status` (string): Post status to query (default: "publish")
-- `per_page` (integer): Number of posts to return (default: 20, min: 1, max: 100)
-
-**Output Schema**:
-- `posts` (array): Array of post objects with ID, title, post_type, post_status, handler_slug, flow_id, pipeline_id, and post_date
-- `total` (integer): Total posts matching filter
-
-**Permission**: `manage_options` or WP_CLI
-
-**Location**: `inc/Abilities/PostQueryAbilities.php`
-
-### datamachine/query-posts-by-flow
-
-Query posts by flow ID with pagination support.
-
-**Category**: datamachine
-
-**Input Schema**:
-- `flow_id` (integer, required): Flow ID to filter by
-- `post_type` (string): Post type to query (default: "any")
-- `post_status` (string): Post status to query (default: "publish")
-- `per_page` (integer): Number of posts to return (default: 20, min: 1, max: 100)
-
-**Output Schema**:
-- `posts` (array): Array of post objects with ID, title, post_type, post_status, handler_slug, flow_id, pipeline_id, and post_date
-- `total` (integer): Total posts matching filter
-
-**Permission**: `manage_options` or WP_CLI
-
-**Location**: `inc/Abilities/PostQueryAbilities.php`
-
-### datamachine/query-posts-by-pipeline
-
-Query posts by pipeline ID with pagination support.
-
-**Category**: datamachine
-
-**Input Schema**:
-- `pipeline_id` (integer, required): Pipeline ID to filter by
-- `post_type` (string): Post type to query (default: "any")
-- `post_status` (string): Post status to query (default: "publish")
-- `per_page` (integer): Number of posts to return (default: 20, min: 1, max: 100)
-
-**Output Schema**:
-- `posts` (array): Array of post objects with ID, title, post_type, post_status, handler_slug, flow_id, pipeline_id, and post_date
-- `total` (integer): Total posts matching filter
-
-**Permission**: `manage_options` or WP_CLI
-
-**Location**: `inc/Abilities/PostQueryAbilities.php`
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/query-posts` | Query posts by handler, flow, or pipeline | `PostQueryAbilities.php` |
 
 ## Category Registration
 
@@ -155,44 +141,47 @@ All abilities support both WordPress admin and WP-CLI contexts:
 }
 ```
 
+## Architecture
+
+### Delegation Pattern
+
+REST API endpoints, CLI commands, and Chat tools delegate to abilities for business logic:
+
+```
+REST API Endpoint → Ability → Service Manager → Database
+CLI Command → Ability → Service Manager → Database
+Chat Tool → Ability → Service Manager → Database
+```
+
+### Ability Registration
+
+Each abilities class registers abilities on the `wp_abilities_api_init` hook:
+
+```php
+public function register(): void {
+    add_action( 'wp_abilities_api_init', array( $this, 'register_abilities' ) );
+}
+```
+
+## Testing
+
+Unit tests in `tests/Unit/Abilities/` verify ability registration, schema validation, permission checks, and execution logic:
+
+- `AuthAbilitiesTest.php` - Authentication abilities
+- `FileAbilitiesTest.php` - File management abilities
+- `FlowAbilitiesTest.php` - Flow CRUD abilities
+- `FlowStepAbilitiesTest.php` - Flow step abilities
+- `JobAbilitiesTest.php` - Job execution abilities
+- `LogAbilitiesTest.php` - Logging abilities
+- `PipelineAbilitiesTest.php` - Pipeline CRUD abilities
+- `PipelineStepAbilitiesTest.php` - Pipeline step abilities
+- `PostQueryAbilitiesTest.php` - Post query abilities
+- `ProcessedItemsAbilitiesTest.php` - Processed items abilities
+- `SettingsAbilitiesTest.php` - Settings abilities
+
 ## WP-CLI Integration
 
-### Posts Command
-
-The `PostsCommand` in `inc/Cli/Commands/PostsCommand.php` provides CLI access to post query abilities.
-
-**Available Commands**:
-
-- `wp datamachine posts by-handler <handler_slug>` - Query posts by handler
-- `wp datamachine posts by-flow <flow_id>` - Query posts by flow ID
-- `wp datamachine posts by-pipeline <pipeline_id>` - Query posts by pipeline ID
-
-**Options**:
-- `--post_type=<type>`: Post type to query (default: any)
-- `--post_status=<status>`: Post status to query (default: publish)
-- `--per_page=<number>`: Number of posts to return (default: 20, min: 1, max: 100)
-- `--format=<format>`: Output format - `table` or `json` (default: table)
-
-**Examples**:
-```bash
-# Query posts by handler
-wp datamachine posts by-handler universal_web_scraper
-
-# Query posts by handler with custom post type
-wp datamachine posts by-handler universal_web_scraper --post_type=datamachine_event
-
-# Query posts by handler with custom limit
-wp datamachine posts by-handler wordpress_publish --per_page=50
-
-# JSON output
-wp datamachine posts by-handler wordpress_publish --format=json
-
-# Query posts by flow
-wp datamachine posts by-flow 7
-
-# Query posts by pipeline
-wp datamachine posts by-pipeline 42
-```
+CLI commands execute abilities directly. See individual command files in `inc/Cli/Commands/` for available commands.
 
 ## Post Tracking
 
@@ -210,22 +199,3 @@ use PostTrackingTrait;
 // After creating a post
 $this->storePostTrackingMeta($post_id, $handler_config);
 ```
-
-## Testing
-
-Unit tests in `tests/Unit/Abilities/` verify ability registration, schema validation, permission checks, and execution logic:
-
-- `FlowAbilitiesTest.php` - Tests `datamachine/get-flows` ability
-- `LogAbilitiesTest.php` - Tests `datamachine/write-to-log` and `datamachine/clear-logs` abilities
-- `PostQueryAbilitiesTest.php` - Tests `datamachine/query-posts-by-handler`, `datamachine/query-posts-by-flow`, and `datamachine/query-posts-by-pipeline` abilities
-
-## System Log Type
-
-The `system` agent type is used for infrastructure operations including:
-- OAuth authentication flows
-- Database operations
-- File storage and retrieval
-- Credential refresh
-- Background task execution
-
-System logs are accessible via the logging system and can be cleared using the `datamachine/clear-logs` ability with `agent_type: 'system'`.

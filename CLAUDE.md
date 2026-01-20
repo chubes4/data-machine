@@ -19,23 +19,28 @@ Testing
 
 - PHPUnit tests located in `tests/Unit/` directory
 - Tests use `WP_UnitTestCase` with homeboy's WordPress test environment
-- Ability registration tests cover all abilities API primitives:
-  - `FlowAbilitiesTest.php` - Tests `datamachine/get-flows` ability
-  - `LogAbilitiesTest.php` - Tests `datamachine/write-to-log` and `datamachine/clear-logs` abilities
-  - `PostQueryAbilitiesTest.php` - Tests `datamachine/query-posts-by-handler`, `datamachine/query-posts-by-flow`, and `datamachine/query-posts-by-pipeline` abilities
+- Ability registration tests in `tests/Unit/Abilities/` cover all 49 registered abilities
 - Run tests: `homeboy test data-machine` (uses homeboy's WordPress installation)
 - Run build: `homeboy build data-machine` (runs tests, lints code, builds frontend assets, creates production ZIP)
 
 Abilities API
 
-- WordPress 6.9 Abilities API provides standardized capability discovery and execution
-- Abilities registered in `inc/Abilities/`:
-  - `FlowAbilities` - Registers `datamachine/get-flows` ability with category `datamachine`
-  - `LogAbilities` - Registers `datamachine/write-to-log` and `datamachine/clear-logs` abilities
-  - `PostQueryAbilities` - Registers three query abilities for debugging Data Machine-created posts
+- WordPress 6.9 Abilities API provides standardized capability discovery and execution for all Data Machine operations
+- **49 registered abilities** across 11 ability classes in `inc/Abilities/`:
+  - `PipelineAbilities` - 8 abilities for pipeline CRUD, import/export
+  - `PipelineStepAbilities` - 6 abilities for pipeline step management
+  - `FlowAbilities` - 5 abilities for flow CRUD and duplication
+  - `FlowStepAbilities` - 4 abilities for flow step configuration
+  - `JobAbilities` - 6 abilities for job execution, health monitoring, problem flow detection
+  - `FileAbilities` - 5 abilities for file management and uploads
+  - `ProcessedItemsAbilities` - 3 abilities for deduplication tracking
+  - `SettingsAbilities` - 6 abilities for plugin and handler settings
+  - `AuthAbilities` - 3 abilities for OAuth authentication management
+  - `LogAbilities` - 2 abilities for logging operations
+  - `PostQueryAbilities` - 1 ability for querying Data Machine-created posts
 - Category registration: `datamachine` category registered via `wp_register_ability_category()` on `wp_abilities_api_categories_init` hook
 - Ability execution: Each ability implements `execute_callback` with `permission_callback` (checks `manage_options` or WP_CLI)
-- Tests verify ability registration, schema validation, permission checks, and execution logic
+- REST API endpoints, CLI commands, and Chat tools delegate to abilities for business logic
 
 Engine & execution
 
