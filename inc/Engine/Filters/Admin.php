@@ -374,7 +374,7 @@ function datamachine_enqueue_page_assets( $assets, $page_slug ) {
 			if ( ! empty( $js_config['localize'] ) ) {
 				wp_add_inline_script(
 					$handle,
-					'const ' . $js_config['localize']['object'] . ' = ' . wp_json_encode( $js_config['localize']['data'] ) . ';',
+					'window.' . $js_config['localize']['object'] . ' = ' . wp_json_encode( $js_config['localize']['data'] ) . ';',
 					'before'
 				);
 			}
