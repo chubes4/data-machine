@@ -5,6 +5,18 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.4] - 2026-01-20
+
+### Added
+- ToolExecutor now validates required parameters before execution with clear error messages
+- LocalSearchAbilities class for WordPress 6.9 Abilities API
+
+### Changed
+- LocalSearch tool now delegates to LocalSearchAbilities (Abilities API integration)
+
+### Fixed
+- Log clearing functions renamed for clarity (datamachine_clear_log_files to datamachine_clear_all_log_files, datamachine_clear_log_file for single agent)
+
 ## [0.12.3] - 2026-01-20
 
 - Fix React admin pages blank due to const vs window. declaration mismatch
