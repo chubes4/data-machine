@@ -19,14 +19,14 @@ Testing
 
 - PHPUnit tests located in `tests/Unit/` directory
 - Tests use `WP_UnitTestCase` with homeboy's WordPress test environment
-- Ability registration tests in `tests/Unit/Abilities/` cover all 64 registered abilities
+- Ability registration tests in `tests/Unit/Abilities/` cover all 65 registered abilities
 - Run tests: `homeboy test data-machine` (uses homeboy's WordPress installation)
 - Run build: `homeboy build data-machine` (runs tests, lints code, builds frontend assets, creates production ZIP)
 
 Abilities API
 
 - WordPress 6.9 Abilities API provides standardized capability discovery and execution for all Data Machine operations
-- **64 registered abilities** across 13 ability classes in `inc/Abilities/`:
+- **65 registered abilities** across 14 ability classes in `inc/Abilities/`:
   - `PipelineAbilities` - 8 abilities for pipeline CRUD, import/export
   - `PipelineStepAbilities` - 6 abilities for pipeline step management
   - `FlowAbilities` - 6 abilities for flow CRUD and duplication
@@ -40,6 +40,7 @@ Abilities API
   - `HandlerAbilities` - 6 abilities for handler discovery and configuration
   - `StepTypeAbilities` - 3 abilities for step type discovery and validation
   - `PostQueryAbilities` - 1 ability for querying Data Machine-created posts
+  - `LocalSearchAbilities` - 1 ability for WordPress site search
 - Category registration: `datamachine` category registered via `wp_register_ability_category()` on `wp_abilities_api_categories_init` hook
 - Ability execution: Each ability implements `execute_callback` with `permission_callback` (checks `manage_options` or WP_CLI)
 - REST API endpoints, CLI commands, and Chat tools delegate to abilities for business logic

@@ -6,7 +6,7 @@ WordPress 6.9 Abilities API provides standardized capability discovery and execu
 
 The Abilities API in `inc/Abilities/` provides a unified interface for Data Machine operations. Each ability implements `execute_callback` with `permission_callback` for consistent access control across REST API, CLI commands, and Chat tools.
 
-**Total registered abilities**: 49
+**Total registered abilities**: 65
 
 ## Registered Abilities
 
@@ -34,12 +34,13 @@ The Abilities API in `inc/Abilities/` provides a unified interface for Data Mach
 | `datamachine/delete-pipeline-step` | Remove step from pipeline | `PipelineStepAbilities.php` |
 | `datamachine/reorder-pipeline-steps` | Reorder pipeline steps | `PipelineStepAbilities.php` |
 
-### Flow Management (5 abilities)
+### Flow Management (6 abilities)
 
 | Ability | Description | Location |
 |---------|-------------|----------|
-| `datamachine/get-flows` | List flows with filtering | `FlowAbilities.php` |
 | `datamachine/create-flow` | Create new flow from pipeline | `FlowAbilities.php` |
+| `datamachine/get-flows` | List flows with filtering | `FlowAbilities.php` |
+| `datamachine/get-flow` | Get single flow by ID | `FlowAbilities.php` |
 | `datamachine/update-flow` | Update flow properties | `FlowAbilities.php` |
 | `datamachine/delete-flow` | Delete flow and associated jobs | `FlowAbilities.php` |
 | `datamachine/duplicate-flow` | Duplicate flow within pipeline | `FlowAbilities.php` |
@@ -60,7 +61,7 @@ The Abilities API in `inc/Abilities/` provides a unified interface for Data Mach
 | `datamachine/get-jobs` | List jobs with filtering | `JobAbilities.php` |
 | `datamachine/get-job` | Get single job details | `JobAbilities.php` |
 | `datamachine/delete-jobs` | Delete jobs by criteria | `JobAbilities.php` |
-| `datamachine/run-flow` | Execute flow immediately | `JobAbilities.php` |
+| `datamachine/execute-workflow` | Execute workflow | `JobAbilities.php` |
 | `datamachine/get-flow-health` | Get flow health metrics | `JobAbilities.php` |
 | `datamachine/get-problem-flows` | List flows exceeding failure threshold | `JobAbilities.php` |
 
@@ -82,7 +83,7 @@ The Abilities API in `inc/Abilities/` provides a unified interface for Data Mach
 | `datamachine/check-processed-item` | Check if item was processed | `ProcessedItemsAbilities.php` |
 | `datamachine/has-processed-history` | Check if flow has processed history | `ProcessedItemsAbilities.php` |
 
-### Settings (6 abilities)
+### Settings (7 abilities)
 
 | Ability | Description | Location |
 |---------|-------------|----------|
@@ -90,6 +91,7 @@ The Abilities API in `inc/Abilities/` provides a unified interface for Data Mach
 | `datamachine/update-settings` | Update plugin settings | `SettingsAbilities.php` |
 | `datamachine/get-scheduling-intervals` | Get available scheduling intervals | `SettingsAbilities.php` |
 | `datamachine/get-tool-config` | Get AI tool configuration | `SettingsAbilities.php` |
+| `datamachine/save-tool-config` | Save AI tool configuration | `SettingsAbilities.php` |
 | `datamachine/get-handler-defaults` | Get handler default settings | `SettingsAbilities.php` |
 | `datamachine/update-handler-defaults` | Update handler default settings | `SettingsAbilities.php` |
 
@@ -101,18 +103,47 @@ The Abilities API in `inc/Abilities/` provides a unified interface for Data Mach
 | `datamachine/disconnect-auth` | Disconnect OAuth provider | `AuthAbilities.php` |
 | `datamachine/save-auth-config` | Save OAuth API configuration | `AuthAbilities.php` |
 
-### Logging (2 abilities)
+### Logging (6 abilities)
 
 | Ability | Description | Location |
 |---------|-------------|----------|
 | `datamachine/write-to-log` | Write log entry with level routing | `LogAbilities.php` |
 | `datamachine/clear-logs` | Clear logs by agent type | `LogAbilities.php` |
+| `datamachine/read-logs` | Read logs with filtering | `LogAbilities.php` |
+| `datamachine/get-log-metadata` | Get log file metadata | `LogAbilities.php` |
+| `datamachine/set-log-level` | Set logging level | `LogAbilities.php` |
+| `datamachine/get-log-level` | Get current logging level | `LogAbilities.php` |
 
 ### Post Query (1 ability)
 
 | Ability | Description | Location |
 |---------|-------------|----------|
 | `datamachine/query-posts` | Query posts by handler, flow, or pipeline | `PostQueryAbilities.php` |
+
+### Handler Discovery (6 abilities)
+
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/get-handlers` | List available handlers | `HandlerAbilities.php` |
+| `datamachine/get-handler` | Get single handler details | `HandlerAbilities.php` |
+| `datamachine/validate-handler` | Validate handler configuration | `HandlerAbilities.php` |
+| `datamachine/get-handler-config-fields` | Get handler configuration fields | `HandlerAbilities.php` |
+| `datamachine/apply-handler-defaults` | Apply default settings to handler | `HandlerAbilities.php` |
+| `datamachine/get-handler-site-defaults` | Get site-wide handler defaults | `HandlerAbilities.php` |
+
+### Step Types (3 abilities)
+
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/get-step-types` | List available step types | `StepTypeAbilities.php` |
+| `datamachine/get-step-type` | Get single step type details | `StepTypeAbilities.php` |
+| `datamachine/validate-step-type` | Validate step type configuration | `StepTypeAbilities.php` |
+
+### Local Search (1 ability)
+
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/local-search` | Search WordPress site for posts by title or content | `LocalSearchAbilities.php` |
 
 ## Category Registration
 
