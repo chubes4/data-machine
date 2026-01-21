@@ -107,6 +107,19 @@ class ToolExecutor {
 			);
 		}
 
+		$validation = self::validateRequiredParameters( $tool_parameters, $tool_def );
+		if ( ! $validation['valid'] ) {
+			return array(
+				'success'   => false,
+				'error'     => sprintf(
+					'%s requires the following parameters: %s. Please provide these parameters and try again.',
+					ucwords( str_replace( '_', ' ', $tool_name ) ),
+					implode( ', ', $validation['missing'] )
+				),
+				'tool_name' => $tool_name,
+			);
+		}
+
 		$complete_parameters = ToolParameters::buildParameters(
 			$tool_parameters,
 			$payload,
@@ -126,5 +139,39 @@ class ToolExecutor {
 		$tool_result  = $tool_handler->handle_tool_call( $complete_parameters, $tool_def );
 
 		return $tool_result;
+	}
+
+	/**
+	 * Validate that all required parameters are present.
+	 *
+	 * @param array $tool_parameters Parameters from AI
+	 * @param array $tool_def Tool definition with parameter specs
+	 * @return array Validation result with 'valid', 'required', and 'missing' keys
+	 */
+	private static function validateRequiredParameters( array $tool_parameters, array $tool_def ): array {
+		$required = array();
+		$missing  = array();
+
+		$param_defs = $tool_def['parameters'] ?? array();
+
+		foreach ( $param_defs as $param_name => $param_config ) {
+			if ( ! is_array( $param_config ) ) {
+				continue;
+			}
+
+			if ( ! empty( $param_config['required'] ) ) {
+				$required[] = $param_name;
+
+				if ( ! isset( $tool_parameters[ $param_name ] ) || '' === $tool_parameters[ $param_name ] ) {
+					$missing[] = $param_name;
+				}
+			}
+		}
+
+		return array(
+			'valid'    => empty( $missing ),
+			'required' => $required,
+			'missing'  => $missing,
+		);
 	}
 }

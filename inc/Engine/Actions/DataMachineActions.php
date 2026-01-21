@@ -193,7 +193,13 @@ function datamachine_register_core_actions() {
 			if ( in_array( $operation, $management_operations, true ) ) {
 				switch ( $operation ) {
 					case 'clear_all':
-						$result = datamachine_clear_log_files();
+						if ( class_exists( 'WP_Ability' ) ) {
+							$ability        = wp_get_ability( 'datamachine/clear-logs' );
+							$ability_result = $ability->execute( array( 'agent_type' => 'all' ) );
+							$result         = is_wp_error( $ability_result ) ? false : $ability_result['success'];
+						} else {
+							$result = datamachine_clear_all_log_files();
+						}
 						return $result;
 
 					case 'cleanup':

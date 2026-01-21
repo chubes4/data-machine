@@ -317,10 +317,10 @@ class LogAbilities {
 		$agent_type = $input['agent_type'];
 
 		if ( 'all' === $agent_type ) {
-			$cleared       = datamachine_clear_log_files();
+			$cleared       = datamachine_clear_all_log_files();
 			$files_cleared = array( 'all' );
 		} else {
-			$cleared       = datamachine_clear_log_files( $agent_type );
+			$cleared       = datamachine_clear_log_file( $agent_type );
 			$files_cleared = array( $agent_type );
 		}
 
