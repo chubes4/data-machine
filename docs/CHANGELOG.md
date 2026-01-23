@@ -5,7 +5,7 @@ All notable changes to Data Machine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.13.0] - 2026-01-22
 
 - BREAKING: Consolidate singular/plural abilities - remove 7 redundant singular abilities (get-flow, get-job, get-pipeline, get-pipeline-step, get-flow-step, get-handler, get-step-type) in favor of plural abilities with optional ID parameters for single lookups
 
