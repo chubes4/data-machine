@@ -43,7 +43,6 @@ class StepTypeAbilities {
 			'wp_abilities_api_init',
 			function () {
 				$this->registerGetStepTypesAbility();
-				$this->registerGetStepTypeAbility();
 				$this->registerValidateStepTypeAbility();
 			}
 		);
@@ -54,11 +53,16 @@ class StepTypeAbilities {
 			'datamachine/get-step-types',
 			array(
 				'label'               => __( 'Get Step Types', 'data-machine' ),
-				'description'         => __( 'Get all registered step types.', 'data-machine' ),
+				'description'         => __( 'Get all registered step types, or a single step type by slug.', 'data-machine' ),
 				'category'            => 'datamachine',
 				'input_schema'        => array(
 					'type'       => 'object',
-					'properties' => array(),
+					'properties' => array(
+						'step_type_slug' => array(
+							'type'        => array( 'string', 'null' ),
+							'description' => __( 'Get a specific step type by slug', 'data-machine' ),
+						),
+					),
 				),
 				'output_schema'       => array(
 					'type'       => 'object',
@@ -70,39 +74,6 @@ class StepTypeAbilities {
 					),
 				),
 				'execute_callback'    => array( $this, 'executeGetStepTypes' ),
-				'permission_callback' => array( $this, 'checkPermission' ),
-				'meta'                => array( 'show_in_rest' => true ),
-			)
-		);
-	}
-
-	private function registerGetStepTypeAbility(): void {
-		wp_register_ability(
-			'datamachine/get-step-type',
-			array(
-				'label'               => __( 'Get Step Type', 'data-machine' ),
-				'description'         => __( 'Get a single step type definition by slug.', 'data-machine' ),
-				'category'            => 'datamachine',
-				'input_schema'        => array(
-					'type'       => 'object',
-					'required'   => array( 'step_type' ),
-					'properties' => array(
-						'step_type' => array(
-							'type'        => 'string',
-							'description' => __( 'Step type slug to retrieve', 'data-machine' ),
-						),
-					),
-				),
-				'output_schema'       => array(
-					'type'       => 'object',
-					'properties' => array(
-						'success'   => array( 'type' => 'boolean' ),
-						'step_type' => array( 'type' => 'object' ),
-						'slug'      => array( 'type' => 'string' ),
-						'error'     => array( 'type' => 'string' ),
-					),
-				),
-				'execute_callback'    => array( $this, 'executeGetStepType' ),
 				'permission_callback' => array( $this, 'checkPermission' ),
 				'meta'                => array( 'show_in_rest' => true ),
 			)
@@ -160,45 +131,40 @@ class StepTypeAbilities {
 	 * @return array Result with step types data.
 	 */
 	public function executeGetStepTypes( array $input ): array {
+		$step_type_slug = $input['step_type_slug'] ?? null;
+
+		// Direct step type lookup by slug.
+		if ( $step_type_slug ) {
+			if ( ! is_string( $step_type_slug ) || empty( $step_type_slug ) ) {
+				return array(
+					'success' => false,
+					'error'   => 'step_type_slug must be a non-empty string',
+				);
+			}
+
+			$step_type = $this->getStepType( $step_type_slug );
+
+			if ( ! $step_type ) {
+				return array(
+					'success'    => true,
+					'step_types' => array(),
+					'count'      => 0,
+				);
+			}
+
+			return array(
+				'success'    => true,
+				'step_types' => array( $step_type_slug => $step_type ),
+				'count'      => 1,
+			);
+		}
+
 		$step_types = $this->getAllStepTypes();
 
 		return array(
 			'success'    => true,
 			'step_types' => $step_types,
 			'count'      => count( $step_types ),
-		);
-	}
-
-	/**
-	 * Execute get single step type ability.
-	 *
-	 * @param array $input Input parameters.
-	 * @return array Result with step type data.
-	 */
-	public function executeGetStepType( array $input ): array {
-		$slug = $input['step_type'] ?? null;
-
-		if ( empty( $slug ) ) {
-			return array(
-				'success' => false,
-				'error'   => 'step_type is required',
-			);
-		}
-
-		$step_type = $this->getStepType( $slug );
-
-		if ( ! $step_type ) {
-			$available = array_keys( $this->getAllStepTypes() );
-			return array(
-				'success' => false,
-				'error'   => "Step type '{$slug}' not found. Available: " . implode( ', ', $available ),
-			);
-		}
-
-		return array(
-			'success'   => true,
-			'step_type' => $step_type,
-			'slug'      => $slug,
 		);
 	}
 

@@ -43,7 +43,6 @@ class JobAbilities {
 			'wp_abilities_api_init',
 			function () {
 				$this->registerGetJobs();
-				$this->registerGetJob();
 				$this->registerDeleteJobs();
 				$this->registerExecuteWorkflow();
 				$this->registerGetFlowHealth();
@@ -60,11 +59,15 @@ class JobAbilities {
 			'datamachine/get-jobs',
 			array(
 				'label'               => __( 'Get Jobs', 'data-machine' ),
-				'description'         => __( 'List jobs with optional filtering by flow_id, pipeline_id, or status. Supports pagination and sorting.', 'data-machine' ),
+				'description'         => __( 'List jobs with optional filtering by flow_id, pipeline_id, or status. Supports pagination, sorting, and single job lookup via job_id.', 'data-machine' ),
 				'category'            => 'datamachine',
 				'input_schema'        => array(
 					'type'       => 'object',
 					'properties' => array(
+						'job_id'      => array(
+							'type'        => array( 'integer', 'null' ),
+							'description' => __( 'Get a specific job by ID (ignores pagination/filters when provided)', 'data-machine' ),
+						),
 						'flow_id'     => array(
 							'type'        => array( 'integer', 'string', 'null' ),
 							'description' => __( 'Filter jobs by flow ID (integer or "direct")', 'data-machine' ),
@@ -116,41 +119,6 @@ class JobAbilities {
 					),
 				),
 				'execute_callback'    => array( $this, 'executeGetJobs' ),
-				'permission_callback' => array( $this, 'checkPermission' ),
-				'meta'                => array( 'show_in_rest' => true ),
-			)
-		);
-	}
-
-	/**
-	 * Register datamachine/get-job ability.
-	 */
-	private function registerGetJob(): void {
-		wp_register_ability(
-			'datamachine/get-job',
-			array(
-				'label'               => __( 'Get Job', 'data-machine' ),
-				'description'         => __( 'Get a single job by ID with full details.', 'data-machine' ),
-				'category'            => 'datamachine',
-				'input_schema'        => array(
-					'type'       => 'object',
-					'required'   => array( 'job_id' ),
-					'properties' => array(
-						'job_id' => array(
-							'type'        => 'integer',
-							'description' => __( 'Job ID to retrieve', 'data-machine' ),
-						),
-					),
-				),
-				'output_schema'       => array(
-					'type'       => 'object',
-					'properties' => array(
-						'success' => array( 'type' => 'boolean' ),
-						'job'     => array( 'type' => 'object' ),
-						'error'   => array( 'type' => 'string' ),
-					),
-				),
-				'execute_callback'    => array( $this, 'executeGetJob' ),
 				'permission_callback' => array( $this, 'checkPermission' ),
 				'meta'                => array( 'show_in_rest' => true ),
 			)
@@ -377,6 +345,7 @@ class JobAbilities {
 	 * @return array Result with jobs list.
 	 */
 	public function executeGetJobs( array $input ): array {
+		$job_id      = $input['job_id'] ?? null;
 		$flow_id     = $input['flow_id'] ?? null;
 		$pipeline_id = $input['pipeline_id'] ?? null;
 		$status      = $input['status'] ?? null;
@@ -384,6 +353,40 @@ class JobAbilities {
 		$offset      = (int) ( $input['offset'] ?? 0 );
 		$orderby     = $input['orderby'] ?? 'j.job_id';
 		$order       = $input['order'] ?? 'DESC';
+
+		// Direct job lookup by ID - bypasses pagination and filters.
+		if ( $job_id ) {
+			if ( ! is_numeric( $job_id ) || (int) $job_id <= 0 ) {
+				return array(
+					'success' => false,
+					'error'   => 'job_id must be a positive integer',
+				);
+			}
+
+			$job = $this->db_jobs->get_job( (int) $job_id );
+
+			if ( ! $job ) {
+				return array(
+					'success'         => true,
+					'jobs'            => array(),
+					'total'           => 0,
+					'per_page'        => $per_page,
+					'offset'          => $offset,
+					'filters_applied' => array( 'job_id' => (int) $job_id ),
+				);
+			}
+
+			$job = $this->addDisplayFields( $job );
+
+			return array(
+				'success'         => true,
+				'jobs'            => array( $job ),
+				'total'           => 1,
+				'per_page'        => $per_page,
+				'offset'          => $offset,
+				'filters_applied' => array( 'job_id' => (int) $job_id ),
+			);
+		}
 
 		$args = array(
 			'orderby'  => $orderby,
@@ -421,40 +424,6 @@ class JobAbilities {
 			'per_page'        => $per_page,
 			'offset'          => $offset,
 			'filters_applied' => $filters_applied,
-		);
-	}
-
-	/**
-	 * Execute get-job ability.
-	 *
-	 * @param array $input Input parameters with job_id.
-	 * @return array Result with job data.
-	 */
-	public function executeGetJob( array $input ): array {
-		$job_id = $input['job_id'] ?? null;
-
-		if ( ! is_numeric( $job_id ) || (int) $job_id <= 0 ) {
-			return array(
-				'success' => false,
-				'error'   => 'job_id is required and must be a positive integer',
-			);
-		}
-
-		$job_id = (int) $job_id;
-		$job    = $this->db_jobs->get_job( $job_id );
-
-		if ( ! $job ) {
-			return array(
-				'success' => false,
-				'error'   => sprintf( 'Job %d not found', $job_id ),
-			);
-		}
-
-		$job = $this->addDisplayFields( $job );
-
-		return array(
-			'success' => true,
-			'job'     => $job,
 		);
 	}
 

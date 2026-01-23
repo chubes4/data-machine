@@ -51,11 +51,22 @@ class PipelineStepAbilitiesTest extends WP_UnitTestCase {
 		$this->assertSame( 'datamachine/get-pipeline-steps', $ability->get_name() );
 	}
 
-	public function test_get_pipeline_step_ability_registered(): void {
-		$ability = wp_get_ability( 'datamachine/get-pipeline-step' );
+	public function test_get_pipeline_steps_supports_single_step_lookup(): void {
+		$add_result = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'fetch',
+			)
+		);
+		$pipeline_step_id = $add_result['pipeline_step_id'];
 
-		$this->assertNotNull( $ability );
-		$this->assertSame( 'datamachine/get-pipeline-step', $ability->get_name() );
+		$result = $this->step_abilities->executeGetPipelineSteps(
+			array( 'pipeline_step_id' => $pipeline_step_id )
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertArrayHasKey( 'steps', $result );
+		$this->assertCount( 1, $result['steps'] );
 	}
 
 	public function test_add_pipeline_step_ability_registered(): void {
@@ -224,7 +235,7 @@ class PipelineStepAbilitiesTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'step_type', $result['error'] );
 	}
 
-	public function test_get_pipeline_step(): void {
+	public function test_get_pipeline_steps_with_step_id_returns_single_step(): void {
 		$add_result       = $this->step_abilities->executeAddPipelineStep(
 			array(
 				'pipeline_id' => $this->test_pipeline_id,
@@ -233,32 +244,36 @@ class PipelineStepAbilitiesTest extends WP_UnitTestCase {
 		);
 		$pipeline_step_id = $add_result['pipeline_step_id'];
 
-		$result = $this->step_abilities->executeGetPipelineStep(
+		$result = $this->step_abilities->executeGetPipelineSteps(
 			array( 'pipeline_step_id' => $pipeline_step_id )
 		);
 
 		$this->assertTrue( $result['success'] );
-		$this->assertArrayHasKey( 'step', $result );
-		$this->assertEquals( $pipeline_step_id, $result['step']['pipeline_step_id'] );
-		$this->assertEquals( 'fetch', $result['step']['step_type'] );
+		$this->assertArrayHasKey( 'steps', $result );
+		$this->assertCount( 1, $result['steps'] );
+		$this->assertEquals( $pipeline_step_id, $result['steps'][0]['pipeline_step_id'] );
+		$this->assertEquals( 'fetch', $result['steps'][0]['step_type'] );
 	}
 
-	public function test_get_pipeline_step_not_found(): void {
-		$result = $this->step_abilities->executeGetPipelineStep(
+	public function test_get_pipeline_steps_with_invalid_step_id_returns_empty_array(): void {
+		$result = $this->step_abilities->executeGetPipelineSteps(
 			array( 'pipeline_step_id' => '999999_nonexistent-uuid' )
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertArrayHasKey( 'steps', $result );
+		$this->assertEmpty( $result['steps'] );
+		$this->assertEquals( 0, $result['step_count'] );
+	}
+
+	public function test_get_pipeline_steps_with_empty_step_id_returns_error(): void {
+		$result = $this->step_abilities->executeGetPipelineSteps(
+			array( 'pipeline_step_id' => '' )
 		);
 
 		$this->assertFalse( $result['success'] );
 		$this->assertArrayHasKey( 'error', $result );
-		$this->assertStringContainsString( 'not found', $result['error'] );
-	}
-
-	public function test_get_pipeline_step_missing_id(): void {
-		$result = $this->step_abilities->executeGetPipelineStep( array() );
-
-		$this->assertFalse( $result['success'] );
-		$this->assertArrayHasKey( 'error', $result );
-		$this->assertStringContainsString( 'required', $result['error'] );
+		$this->assertStringContainsString( 'non-empty', $result['error'] );
 	}
 
 	public function test_update_pipeline_step_system_prompt(): void {
@@ -356,10 +371,11 @@ class PipelineStepAbilitiesTest extends WP_UnitTestCase {
 		$this->assertEquals( $pipeline_step_id, $result['pipeline_step_id'] );
 		$this->assertArrayHasKey( 'affected_flows', $result );
 
-		$get_result = $this->step_abilities->executeGetPipelineStep(
+		$get_result = $this->step_abilities->executeGetPipelineSteps(
 			array( 'pipeline_step_id' => $pipeline_step_id )
 		);
-		$this->assertFalse( $get_result['success'] );
+		$this->assertTrue( $get_result['success'] );
+		$this->assertEmpty( $get_result['steps'] );
 	}
 
 	public function test_delete_pipeline_step_not_found(): void {

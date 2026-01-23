@@ -72,11 +72,14 @@ class FlowStepAbilitiesTest extends WP_UnitTestCase {
 		$this->assertSame( 'datamachine/get-flow-steps', $ability->get_name() );
 	}
 
-	public function test_get_flow_step_ability_registered(): void {
-		$ability = wp_get_ability( 'datamachine/get-flow-step' );
+	public function test_get_flow_steps_supports_single_step_lookup(): void {
+		$result = $this->flow_step_abilities->executeGetFlowSteps(
+			array( 'flow_step_id' => $this->test_flow_step_id )
+		);
 
-		$this->assertNotNull( $ability );
-		$this->assertSame( 'datamachine/get-flow-step', $ability->get_name() );
+		$this->assertTrue( $result['success'] );
+		$this->assertArrayHasKey( 'steps', $result );
+		$this->assertCount( 1, $result['steps'] );
 	}
 
 	public function test_update_flow_step_ability_registered(): void {
@@ -132,31 +135,35 @@ class FlowStepAbilitiesTest extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'error', $result );
 	}
 
-	public function test_get_flow_step_success(): void {
-		$result = $this->flow_step_abilities->executeGetFlowStep(
+	public function test_get_flow_steps_with_step_id_returns_single_step(): void {
+		$result = $this->flow_step_abilities->executeGetFlowSteps(
 			array( 'flow_step_id' => $this->test_flow_step_id )
 		);
 
 		$this->assertTrue( $result['success'] );
-		$this->assertArrayHasKey( 'step', $result );
+		$this->assertArrayHasKey( 'steps', $result );
+		$this->assertCount( 1, $result['steps'] );
 	}
 
-	public function test_get_flow_step_not_found(): void {
-		$result = $this->flow_step_abilities->executeGetFlowStep(
+	public function test_get_flow_steps_with_invalid_step_id_returns_empty_array(): void {
+		$result = $this->flow_step_abilities->executeGetFlowSteps(
 			array( 'flow_step_id' => '999999_nonexistent_999' )
+		);
+
+		$this->assertTrue( $result['success'] );
+		$this->assertArrayHasKey( 'steps', $result );
+		$this->assertEmpty( $result['steps'] );
+		$this->assertEquals( 0, $result['step_count'] );
+	}
+
+	public function test_get_flow_steps_with_empty_step_id_returns_error(): void {
+		$result = $this->flow_step_abilities->executeGetFlowSteps(
+			array( 'flow_step_id' => '' )
 		);
 
 		$this->assertFalse( $result['success'] );
 		$this->assertArrayHasKey( 'error', $result );
-		$this->assertStringContainsString( 'not found', $result['error'] );
-	}
-
-	public function test_get_flow_step_missing_id(): void {
-		$result = $this->flow_step_abilities->executeGetFlowStep( array() );
-
-		$this->assertFalse( $result['success'] );
-		$this->assertArrayHasKey( 'error', $result );
-		$this->assertStringContainsString( 'required', $result['error'] );
+		$this->assertStringContainsString( 'non-empty', $result['error'] );
 	}
 
 	public function test_update_flow_step_handler_slug(): void {

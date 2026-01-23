@@ -57,11 +57,17 @@ class JobAbilitiesTest extends WP_UnitTestCase {
 		$this->assertSame( 'datamachine/get-jobs', $ability->get_name() );
 	}
 
-	public function test_get_job_ability_registered(): void {
-		$ability = wp_get_ability( 'datamachine/get-job' );
+	public function test_get_jobs_supports_single_job_lookup(): void {
+		$result = $this->job_abilities->executeGetJobs(
+			array(
+				'job_id' => $this->test_job_id,
+			)
+		);
 
-		$this->assertNotNull( $ability );
-		$this->assertSame( 'datamachine/get-job', $ability->get_name() );
+		$this->assertTrue( $result['success'] );
+		$this->assertArrayHasKey( 'jobs', $result );
+		$this->assertCount( 1, $result['jobs'] );
+		$this->assertEquals( $this->test_job_id, (int) $result['jobs'][0]['job_id'] );
 	}
 
 	public function test_delete_jobs_ability_registered(): void {
@@ -181,37 +187,39 @@ class JobAbilitiesTest extends WP_UnitTestCase {
 		$this->assertEquals( 1, $result2['offset'] );
 	}
 
-	public function test_get_job_returns_single_job(): void {
-		$result = $this->job_abilities->executeGetJob(
+	public function test_get_jobs_with_job_id_returns_single_job(): void {
+		$result = $this->job_abilities->executeGetJobs(
 			array(
 				'job_id' => $this->test_job_id,
 			)
 		);
 
 		$this->assertTrue( $result['success'] );
-		$this->assertArrayHasKey( 'job', $result );
+		$this->assertArrayHasKey( 'jobs', $result );
+		$this->assertCount( 1, $result['jobs'] );
 
-		$job = $result['job'];
+		$job = $result['jobs'][0];
 		$this->assertEquals( $this->test_job_id, (int) $job['job_id'] );
 		$this->assertArrayHasKey( 'status', $job );
 		$this->assertArrayHasKey( 'created_at', $job );
 		$this->assertArrayHasKey( 'created_at_display', $job );
 	}
 
-	public function test_get_job_with_invalid_id_returns_error(): void {
-		$result = $this->job_abilities->executeGetJob(
+	public function test_get_jobs_with_invalid_job_id_returns_empty_array(): void {
+		$result = $this->job_abilities->executeGetJobs(
 			array(
 				'job_id' => 999999,
 			)
 		);
 
-		$this->assertFalse( $result['success'] );
-		$this->assertArrayHasKey( 'error', $result );
-		$this->assertStringContainsString( 'not found', $result['error'] );
+		$this->assertTrue( $result['success'] );
+		$this->assertArrayHasKey( 'jobs', $result );
+		$this->assertEmpty( $result['jobs'] );
+		$this->assertEquals( 0, $result['total'] );
 	}
 
-	public function test_get_job_with_zero_id_returns_error(): void {
-		$result = $this->job_abilities->executeGetJob(
+	public function test_get_jobs_with_zero_job_id_returns_error(): void {
+		$result = $this->job_abilities->executeGetJobs(
 			array(
 				'job_id' => 0,
 			)

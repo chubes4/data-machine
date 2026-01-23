@@ -19,26 +19,26 @@ Testing
 
 - PHPUnit tests located in `tests/Unit/` directory
 - Tests use `WP_UnitTestCase` with homeboy's WordPress test environment
-- Ability registration tests in `tests/Unit/Abilities/` cover all 65 registered abilities
+- Ability registration tests in `tests/Unit/Abilities/` cover all 58 registered abilities
 - Run tests: `homeboy test data-machine` (uses homeboy's WordPress installation)
 - Run build: `homeboy build data-machine` (runs tests, lints code, builds frontend assets, creates production ZIP)
 
 Abilities API
 
 - WordPress 6.9 Abilities API provides standardized capability discovery and execution for all Data Machine operations
-- **65 registered abilities** across 14 ability classes in `inc/Abilities/`:
-  - `PipelineAbilities` - 8 abilities for pipeline CRUD, import/export
-  - `PipelineStepAbilities` - 6 abilities for pipeline step management
-  - `FlowAbilities` - 6 abilities for flow CRUD and duplication
-  - `FlowStepAbilities` - 4 abilities for flow step configuration
-  - `JobAbilities` - 6 abilities for unified workflow execution, job management, health monitoring, problem flow detection
+- **58 registered abilities** across 14 ability classes in `inc/Abilities/`:
+  - `PipelineAbilities` - 7 abilities for pipeline CRUD, import/export
+  - `PipelineStepAbilities` - 5 abilities for pipeline step management
+  - `FlowAbilities` - 5 abilities for flow CRUD and duplication
+  - `FlowStepAbilities` - 3 abilities for flow step configuration
+  - `JobAbilities` - 5 abilities for unified workflow execution, job management, health monitoring, problem flow detection
   - `FileAbilities` - 5 abilities for file management and uploads
   - `ProcessedItemsAbilities` - 3 abilities for deduplication tracking
   - `SettingsAbilities` - 7 abilities for plugin and handler settings
   - `AuthAbilities` - 3 abilities for OAuth authentication management
   - `LogAbilities` - 6 abilities for logging operations (write, clear, read, metadata, level management)
-  - `HandlerAbilities` - 6 abilities for handler discovery and configuration
-  - `StepTypeAbilities` - 3 abilities for step type discovery and validation
+  - `HandlerAbilities` - 5 abilities for handler discovery and configuration
+  - `StepTypeAbilities` - 2 abilities for step type discovery and validation
   - `PostQueryAbilities` - 1 ability for querying Data Machine-created posts
   - `LocalSearchAbilities` - 1 ability for WordPress site search
 - Category registration: `datamachine` category registered via `wp_register_ability_category()` on `wp_abilities_api_categories_init` hook

@@ -34,7 +34,6 @@ class FlowStepAbilities {
 			'wp_abilities_api_init',
 			function () {
 				$this->registerGetFlowStepsAbility();
-				$this->registerGetFlowStepAbility();
 				$this->registerUpdateFlowStepAbility();
 				$this->registerConfigureFlowStepsAbility();
 			}
@@ -46,15 +45,18 @@ class FlowStepAbilities {
 			'datamachine/get-flow-steps',
 			array(
 				'label'               => __( 'Get Flow Steps', 'data-machine' ),
-				'description'         => __( 'Get all step configurations for a flow.', 'data-machine' ),
+				'description'         => __( 'Get all step configurations for a flow, or a single step by ID.', 'data-machine' ),
 				'category'            => 'datamachine',
 				'input_schema'        => array(
 					'type'       => 'object',
-					'required'   => array( 'flow_id' ),
 					'properties' => array(
-						'flow_id' => array(
+						'flow_id'      => array(
 							'type'        => 'integer',
-							'description' => __( 'Flow ID to get steps for', 'data-machine' ),
+							'description' => __( 'Flow ID to get steps for (required unless flow_step_id provided)', 'data-machine' ),
+						),
+						'flow_step_id' => array(
+							'type'        => array( 'string', 'null' ),
+							'description' => __( 'Get a specific step by ID (ignores flow_id when provided)', 'data-machine' ),
 						),
 					),
 				),
@@ -69,38 +71,6 @@ class FlowStepAbilities {
 					),
 				),
 				'execute_callback'    => array( $this, 'executeGetFlowSteps' ),
-				'permission_callback' => array( $this, 'checkPermission' ),
-				'meta'                => array( 'show_in_rest' => true ),
-			)
-		);
-	}
-
-	private function registerGetFlowStepAbility(): void {
-		wp_register_ability(
-			'datamachine/get-flow-step',
-			array(
-				'label'               => __( 'Get Flow Step', 'data-machine' ),
-				'description'         => __( 'Get a single flow step configuration by ID.', 'data-machine' ),
-				'category'            => 'datamachine',
-				'input_schema'        => array(
-					'type'       => 'object',
-					'required'   => array( 'flow_step_id' ),
-					'properties' => array(
-						'flow_step_id' => array(
-							'type'        => 'string',
-							'description' => __( 'Flow step ID to retrieve (format: {pipeline_step_id}_{flow_id})', 'data-machine' ),
-						),
-					),
-				),
-				'output_schema'       => array(
-					'type'       => 'object',
-					'properties' => array(
-						'success' => array( 'type' => 'boolean' ),
-						'step'    => array( 'type' => 'object' ),
-						'error'   => array( 'type' => 'string' ),
-					),
-				),
-				'execute_callback'    => array( $this, 'executeGetFlowStep' ),
 				'permission_callback' => array( $this, 'checkPermission' ),
 				'meta'                => array( 'show_in_rest' => true ),
 			)
@@ -237,7 +207,36 @@ class FlowStepAbilities {
 	 * @return array Result with steps data.
 	 */
 	public function executeGetFlowSteps( array $input ): array {
-		$flow_id = $input['flow_id'] ?? null;
+		$flow_id      = $input['flow_id'] ?? null;
+		$flow_step_id = $input['flow_step_id'] ?? null;
+
+		// Direct step lookup by ID - bypasses flow_id requirement.
+		if ( $flow_step_id ) {
+			if ( ! is_string( $flow_step_id ) || empty( $flow_step_id ) ) {
+				return array(
+					'success' => false,
+					'error'   => 'flow_step_id must be a non-empty string',
+				);
+			}
+
+			$step_config = $this->db_flows->get_flow_step_config( $flow_step_id );
+
+			if ( empty( $step_config ) ) {
+				return array(
+					'success'    => true,
+					'steps'      => array(),
+					'flow_id'    => null,
+					'step_count' => 0,
+				);
+			}
+
+			return array(
+				'success'    => true,
+				'steps'      => array( $step_config ),
+				'flow_id'    => $step_config['flow_id'] ?? null,
+				'step_count' => 1,
+			);
+		}
 
 		if ( ! is_numeric( $flow_id ) || (int) $flow_id <= 0 ) {
 			return array(
@@ -259,8 +258,8 @@ class FlowStepAbilities {
 		$flow_config = $flow['flow_config'] ?? array();
 		$steps       = array();
 
-		foreach ( $flow_config as $flow_step_id => $step_data ) {
-			$step_data['flow_step_id'] = $flow_step_id;
+		foreach ( $flow_config as $step_id => $step_data ) {
+			$step_data['flow_step_id'] = $step_id;
 			$steps[]                   = $step_data;
 		}
 
@@ -276,38 +275,6 @@ class FlowStepAbilities {
 			'steps'      => $steps,
 			'flow_id'    => $flow_id,
 			'step_count' => count( $steps ),
-		);
-	}
-
-	/**
-	 * Execute get single flow step ability.
-	 *
-	 * @param array $input Input parameters.
-	 * @return array Result with step data.
-	 */
-	public function executeGetFlowStep( array $input ): array {
-		$flow_step_id = $input['flow_step_id'] ?? null;
-
-		if ( empty( $flow_step_id ) || ! is_string( $flow_step_id ) ) {
-			return array(
-				'success' => false,
-				'error'   => 'flow_step_id is required and must be a string',
-			);
-		}
-
-		$step_config = $this->db_flows->get_flow_step_config( $flow_step_id );
-		$step        = ! empty( $step_config ) ? $step_config : null;
-
-		if ( ! $step ) {
-			return array(
-				'success' => false,
-				'error'   => 'Flow step not found',
-			);
-		}
-
-		return array(
-			'success' => true,
-			'step'    => $step,
 		);
 	}
 

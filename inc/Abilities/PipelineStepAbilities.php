@@ -35,7 +35,6 @@ class PipelineStepAbilities {
 			'wp_abilities_api_init',
 			function () {
 				$this->registerGetPipelineStepsAbility();
-				$this->registerGetPipelineStepAbility();
 				$this->registerAddPipelineStepAbility();
 				$this->registerUpdatePipelineStepAbility();
 				$this->registerDeletePipelineStepAbility();
@@ -49,15 +48,18 @@ class PipelineStepAbilities {
 			'datamachine/get-pipeline-steps',
 			array(
 				'label'               => __( 'Get Pipeline Steps', 'data-machine' ),
-				'description'         => __( 'Get all steps for a pipeline.', 'data-machine' ),
+				'description'         => __( 'Get all steps for a pipeline, or a single step by ID.', 'data-machine' ),
 				'category'            => 'datamachine',
 				'input_schema'        => array(
 					'type'       => 'object',
-					'required'   => array( 'pipeline_id' ),
 					'properties' => array(
-						'pipeline_id' => array(
+						'pipeline_id'      => array(
 							'type'        => 'integer',
-							'description' => __( 'Pipeline ID to get steps for', 'data-machine' ),
+							'description' => __( 'Pipeline ID to get steps for (required unless pipeline_step_id provided)', 'data-machine' ),
+						),
+						'pipeline_step_id' => array(
+							'type'        => array( 'string', 'null' ),
+							'description' => __( 'Get a specific step by ID (ignores pipeline_id when provided)', 'data-machine' ),
 						),
 					),
 				),
@@ -72,38 +74,6 @@ class PipelineStepAbilities {
 					),
 				),
 				'execute_callback'    => array( $this, 'executeGetPipelineSteps' ),
-				'permission_callback' => array( $this, 'checkPermission' ),
-				'meta'                => array( 'show_in_rest' => true ),
-			)
-		);
-	}
-
-	private function registerGetPipelineStepAbility(): void {
-		wp_register_ability(
-			'datamachine/get-pipeline-step',
-			array(
-				'label'               => __( 'Get Pipeline Step', 'data-machine' ),
-				'description'         => __( 'Get a single pipeline step by ID.', 'data-machine' ),
-				'category'            => 'datamachine',
-				'input_schema'        => array(
-					'type'       => 'object',
-					'required'   => array( 'pipeline_step_id' ),
-					'properties' => array(
-						'pipeline_step_id' => array(
-							'type'        => 'string',
-							'description' => __( 'Pipeline step ID to retrieve (format: {pipeline_id}_{uuid4})', 'data-machine' ),
-						),
-					),
-				),
-				'output_schema'       => array(
-					'type'       => 'object',
-					'properties' => array(
-						'success' => array( 'type' => 'boolean' ),
-						'step'    => array( 'type' => 'object' ),
-						'error'   => array( 'type' => 'string' ),
-					),
-				),
-				'execute_callback'    => array( $this, 'executeGetPipelineStep' ),
 				'permission_callback' => array( $this, 'checkPermission' ),
 				'meta'                => array( 'show_in_rest' => true ),
 			)
@@ -305,7 +275,36 @@ class PipelineStepAbilities {
 	 * @return array Result with steps data.
 	 */
 	public function executeGetPipelineSteps( array $input ): array {
-		$pipeline_id = $input['pipeline_id'] ?? null;
+		$pipeline_id      = $input['pipeline_id'] ?? null;
+		$pipeline_step_id = $input['pipeline_step_id'] ?? null;
+
+		// Direct step lookup by ID - bypasses pipeline_id requirement.
+		if ( $pipeline_step_id ) {
+			if ( ! is_string( $pipeline_step_id ) || empty( $pipeline_step_id ) ) {
+				return array(
+					'success' => false,
+					'error'   => 'pipeline_step_id must be a non-empty string',
+				);
+			}
+
+			$step_config = $this->db_pipelines->get_pipeline_step_config( $pipeline_step_id );
+
+			if ( empty( $step_config ) ) {
+				return array(
+					'success'     => true,
+					'steps'       => array(),
+					'pipeline_id' => null,
+					'step_count'  => 0,
+				);
+			}
+
+			return array(
+				'success'     => true,
+				'steps'       => array( $step_config ),
+				'pipeline_id' => $step_config['pipeline_id'] ?? null,
+				'step_count'  => 1,
+			);
+		}
 
 		if ( ! is_numeric( $pipeline_id ) || (int) $pipeline_id <= 0 ) {
 			return array(
@@ -331,37 +330,6 @@ class PipelineStepAbilities {
 			'steps'       => $steps,
 			'pipeline_id' => $pipeline_id,
 			'step_count'  => count( $steps ),
-		);
-	}
-
-	/**
-	 * Execute get single pipeline step ability.
-	 *
-	 * @param array $input Input parameters.
-	 * @return array Result with step data.
-	 */
-	public function executeGetPipelineStep( array $input ): array {
-		$pipeline_step_id = $input['pipeline_step_id'] ?? null;
-
-		if ( empty( $pipeline_step_id ) || ! is_string( $pipeline_step_id ) ) {
-			return array(
-				'success' => false,
-				'error'   => 'pipeline_step_id is required and must be a string',
-			);
-		}
-
-		$step_config = $this->db_pipelines->get_pipeline_step_config( $pipeline_step_id );
-
-		if ( empty( $step_config ) ) {
-			return array(
-				'success' => false,
-				'error'   => 'Pipeline step not found',
-			);
-		}
-
-		return array(
-			'success' => true,
-			'step'    => $step_config,
 		);
 	}
 

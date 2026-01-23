@@ -48,11 +48,14 @@ class PipelineAbilitiesTest extends WP_UnitTestCase {
 		$this->assertSame( 'datamachine/get-pipelines', $ability->get_name() );
 	}
 
-	public function test_get_pipeline_ability_registered(): void {
-		$ability = wp_get_ability( 'datamachine/get-pipeline' );
+	public function test_get_pipelines_supports_single_pipeline_lookup(): void {
+		$result = $this->pipeline_abilities->executeGetPipelines(
+			array( 'pipeline_id' => $this->test_pipeline_id )
+		);
 
-		$this->assertNotNull( $ability );
-		$this->assertSame( 'datamachine/get-pipeline', $ability->get_name() );
+		$this->assertTrue( $result['success'] );
+		$this->assertArrayHasKey( 'pipelines', $result );
+		$this->assertCount( 1, $result['pipelines'] );
 	}
 
 	public function test_create_pipeline_ability_registered(): void {
@@ -199,29 +202,31 @@ class PipelineAbilitiesTest extends WP_UnitTestCase {
 		$this->assertIsInt( $first_pipeline );
 	}
 
-	public function test_get_single_pipeline(): void {
-		$result = $this->pipeline_abilities->executeGetPipeline(
+	public function test_get_pipelines_with_pipeline_id_returns_single_pipeline(): void {
+		$result = $this->pipeline_abilities->executeGetPipelines(
 			array( 'pipeline_id' => $this->test_pipeline_id )
 		);
 
 		$this->assertTrue( $result['success'] );
-		$this->assertArrayHasKey( 'pipeline', $result );
-		$this->assertArrayHasKey( 'flows', $result );
-		$this->assertEquals( $this->test_pipeline_id, $result['pipeline']['pipeline_id'] );
+		$this->assertArrayHasKey( 'pipelines', $result );
+		$this->assertCount( 1, $result['pipelines'] );
+		$this->assertArrayHasKey( 'pipeline_id', $result['pipelines'][0] );
+		$this->assertEquals( $this->test_pipeline_id, $result['pipelines'][0]['pipeline_id'] );
 	}
 
-	public function test_get_single_pipeline_not_found(): void {
-		$result = $this->pipeline_abilities->executeGetPipeline(
+	public function test_get_pipelines_with_invalid_pipeline_id_returns_empty_array(): void {
+		$result = $this->pipeline_abilities->executeGetPipelines(
 			array( 'pipeline_id' => 999999 )
 		);
 
-		$this->assertFalse( $result['success'] );
-		$this->assertArrayHasKey( 'error', $result );
-		$this->assertStringContainsString( 'not found', $result['error'] );
+		$this->assertTrue( $result['success'] );
+		$this->assertArrayHasKey( 'pipelines', $result );
+		$this->assertEmpty( $result['pipelines'] );
+		$this->assertEquals( 0, $result['total'] );
 	}
 
-	public function test_get_single_pipeline_with_invalid_id(): void {
-		$result = $this->pipeline_abilities->executeGetPipeline(
+	public function test_get_pipelines_with_zero_pipeline_id_returns_error(): void {
+		$result = $this->pipeline_abilities->executeGetPipelines(
 			array( 'pipeline_id' => 0 )
 		);
 

@@ -6,16 +6,15 @@ WordPress 6.9 Abilities API provides standardized capability discovery and execu
 
 The Abilities API in `inc/Abilities/` provides a unified interface for Data Machine operations. Each ability implements `execute_callback` with `permission_callback` for consistent access control across REST API, CLI commands, and Chat tools.
 
-**Total registered abilities**: 65
+**Total registered abilities**: 58
 
 ## Registered Abilities
 
-### Pipeline Management (8 abilities)
+### Pipeline Management (7 abilities)
 
 | Ability | Description | Location |
 |---------|-------------|----------|
-| `datamachine/get-pipelines` | List pipelines with pagination | `PipelineAbilities.php` |
-| `datamachine/get-pipeline` | Get single pipeline by ID | `PipelineAbilities.php` |
+| `datamachine/get-pipelines` | List pipelines with pagination, or get single by ID | `PipelineAbilities.php` |
 | `datamachine/create-pipeline` | Create new pipeline | `PipelineAbilities.php` |
 | `datamachine/update-pipeline` | Update pipeline properties | `PipelineAbilities.php` |
 | `datamachine/delete-pipeline` | Delete pipeline and associated flows | `PipelineAbilities.php` |
@@ -23,43 +22,39 @@ The Abilities API in `inc/Abilities/` provides a unified interface for Data Mach
 | `datamachine/import-pipelines` | Import pipelines from JSON | `PipelineAbilities.php` |
 | `datamachine/export-pipelines` | Export pipelines to JSON | `PipelineAbilities.php` |
 
-### Pipeline Steps (6 abilities)
+### Pipeline Steps (5 abilities)
 
 | Ability | Description | Location |
 |---------|-------------|----------|
-| `datamachine/get-pipeline-steps` | List steps for a pipeline | `PipelineStepAbilities.php` |
-| `datamachine/get-pipeline-step` | Get single pipeline step | `PipelineStepAbilities.php` |
+| `datamachine/get-pipeline-steps` | List steps for a pipeline, or get single by ID | `PipelineStepAbilities.php` |
 | `datamachine/add-pipeline-step` | Add step to pipeline | `PipelineStepAbilities.php` |
 | `datamachine/update-pipeline-step` | Update pipeline step config | `PipelineStepAbilities.php` |
 | `datamachine/delete-pipeline-step` | Remove step from pipeline | `PipelineStepAbilities.php` |
 | `datamachine/reorder-pipeline-steps` | Reorder pipeline steps | `PipelineStepAbilities.php` |
 
-### Flow Management (6 abilities)
+### Flow Management (5 abilities)
 
 | Ability | Description | Location |
 |---------|-------------|----------|
 | `datamachine/create-flow` | Create new flow from pipeline | `FlowAbilities.php` |
-| `datamachine/get-flows` | List flows with filtering | `FlowAbilities.php` |
-| `datamachine/get-flow` | Get single flow by ID | `FlowAbilities.php` |
+| `datamachine/get-flows` | List flows with filtering, or get single by ID | `FlowAbilities.php` |
 | `datamachine/update-flow` | Update flow properties | `FlowAbilities.php` |
 | `datamachine/delete-flow` | Delete flow and associated jobs | `FlowAbilities.php` |
 | `datamachine/duplicate-flow` | Duplicate flow within pipeline | `FlowAbilities.php` |
 
-### Flow Steps (4 abilities)
+### Flow Steps (3 abilities)
 
 | Ability | Description | Location |
 |---------|-------------|----------|
-| `datamachine/get-flow-steps` | List steps for a flow | `FlowStepAbilities.php` |
-| `datamachine/get-flow-step` | Get single flow step | `FlowStepAbilities.php` |
+| `datamachine/get-flow-steps` | List steps for a flow, or get single by ID | `FlowStepAbilities.php` |
 | `datamachine/update-flow-step` | Update flow step config | `FlowStepAbilities.php` |
 | `datamachine/configure-flow-steps` | Bulk configure flow steps | `FlowStepAbilities.php` |
 
-### Job Execution (6 abilities)
+### Job Execution (5 abilities)
 
 | Ability | Description | Location |
 |---------|-------------|----------|
-| `datamachine/get-jobs` | List jobs with filtering | `JobAbilities.php` |
-| `datamachine/get-job` | Get single job details | `JobAbilities.php` |
+| `datamachine/get-jobs` | List jobs with filtering, or get single by ID | `JobAbilities.php` |
 | `datamachine/delete-jobs` | Delete jobs by criteria | `JobAbilities.php` |
 | `datamachine/execute-workflow` | Execute workflow | `JobAbilities.php` |
 | `datamachine/get-flow-health` | Get flow health metrics | `JobAbilities.php` |
@@ -120,23 +115,21 @@ The Abilities API in `inc/Abilities/` provides a unified interface for Data Mach
 |---------|-------------|----------|
 | `datamachine/query-posts` | Query posts by handler, flow, or pipeline | `PostQueryAbilities.php` |
 
-### Handler Discovery (6 abilities)
+### Handler Discovery (5 abilities)
 
 | Ability | Description | Location |
 |---------|-------------|----------|
-| `datamachine/get-handlers` | List available handlers | `HandlerAbilities.php` |
-| `datamachine/get-handler` | Get single handler details | `HandlerAbilities.php` |
+| `datamachine/get-handlers` | List available handlers, or get single by slug | `HandlerAbilities.php` |
 | `datamachine/validate-handler` | Validate handler configuration | `HandlerAbilities.php` |
 | `datamachine/get-handler-config-fields` | Get handler configuration fields | `HandlerAbilities.php` |
 | `datamachine/apply-handler-defaults` | Apply default settings to handler | `HandlerAbilities.php` |
 | `datamachine/get-handler-site-defaults` | Get site-wide handler defaults | `HandlerAbilities.php` |
 
-### Step Types (3 abilities)
+### Step Types (2 abilities)
 
 | Ability | Description | Location |
 |---------|-------------|----------|
-| `datamachine/get-step-types` | List available step types | `StepTypeAbilities.php` |
-| `datamachine/get-step-type` | Get single step type details | `StepTypeAbilities.php` |
+| `datamachine/get-step-types` | List available step types, or get single by slug | `StepTypeAbilities.php` |
 | `datamachine/validate-step-type` | Validate step type configuration | `StepTypeAbilities.php` |
 
 ### Local Search (1 ability)

@@ -66,17 +66,17 @@ class GetHandlerDefaults {
 			$handler_slug = sanitize_key( $handler_slug );
 
 			// Validate handler exists via ability
-			$handler_ability = wp_get_ability( 'datamachine/get-handler' );
+			$handler_ability = wp_get_ability( 'datamachine/get-handlers' );
 			if ( ! $handler_ability ) {
 				return array(
 					'success'   => false,
-					'error'     => 'Get handler ability not available',
+					'error'     => 'Get handlers ability not available',
 					'tool_name' => 'get_handler_defaults',
 				);
 			}
 
 			$handler_result = $handler_ability->execute( array( 'handler_slug' => $handler_slug ) );
-			if ( ! ( $handler_result['success'] ?? false ) ) {
+			if ( ! ( $handler_result['success'] ?? false ) || empty( $handler_result['handlers'] ) ) {
 				return array(
 					'success'   => false,
 					'error'     => "Handler '{$handler_slug}' not found",
@@ -84,7 +84,7 @@ class GetHandlerDefaults {
 				);
 			}
 
-			$handler_info = $handler_result['handler'] ?? array();
+			$handler_info = $handler_result['handlers'][ $handler_slug ] ?? array();
 
 			// Get config fields via ability
 			$fields_ability = wp_get_ability( 'datamachine/get-handler-config-fields' );

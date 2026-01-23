@@ -360,16 +360,16 @@ class Flows {
 	public static function handle_get_single_flow( $request ) {
 		$flow_id = (int) $request->get_param( 'flow_id' );
 
-		$ability = wp_get_ability( 'datamachine/get-flow' );
+		$ability = wp_get_ability( 'datamachine/get-flows' );
 		if ( ! $ability ) {
 			return new \WP_Error( 'ability_not_found', 'Ability not found', array( 'status' => 500 ) );
 		}
 
 		$result = $ability->execute( array( 'flow_id' => $flow_id ) );
 
-		if ( ! $result['success'] ) {
+		if ( ! $result['success'] || empty( $result['flows'] ) ) {
 			$status = 400;
-			if ( false !== strpos( $result['error'] ?? '', 'not found' ) ) {
+			if ( false !== strpos( $result['error'] ?? '', 'not found' ) || empty( $result['flows'] ) ) {
 				$status = 404;
 			}
 
@@ -383,7 +383,7 @@ class Flows {
 		return rest_ensure_response(
 			array(
 				'success' => true,
-				'data'    => $result['flow'],
+				'data'    => $result['flows'][0],
 			)
 		);
 	}
@@ -425,14 +425,14 @@ class Flows {
 
 		$flow_id = $result['flow_id'];
 
-		$get_ability = wp_get_ability( 'datamachine/get-flow' );
+		$get_ability = wp_get_ability( 'datamachine/get-flows' );
 		if ( $get_ability ) {
 			$flow_result = $get_ability->execute( array( 'flow_id' => $flow_id ) );
-			if ( $flow_result['success'] ?? false ) {
+			if ( ( $flow_result['success'] ?? false ) && ! empty( $flow_result['flows'] ) ) {
 				return rest_ensure_response(
 					array(
 						'success' => true,
-						'data'    => $flow_result['flow'],
+						'data'    => $flow_result['flows'][0],
 						'message' => __( 'Flow updated successfully', 'data-machine' ),
 					)
 				);

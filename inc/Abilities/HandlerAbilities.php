@@ -72,7 +72,6 @@ class HandlerAbilities {
 			'wp_abilities_api_init',
 			function () {
 				$this->registerGetHandlersAbility();
-				$this->registerGetHandlerAbility();
 				$this->registerValidateHandlerAbility();
 				$this->registerGetHandlerConfigFieldsAbility();
 				$this->registerApplyHandlerDefaultsAbility();
@@ -86,12 +85,16 @@ class HandlerAbilities {
 			'datamachine/get-handlers',
 			array(
 				'label'               => __( 'Get Handlers', 'data-machine' ),
-				'description'         => __( 'Get all registered handlers, optionally filtered by step type.', 'data-machine' ),
+				'description'         => __( 'Get all registered handlers, optionally filtered by step type, or a single handler by slug.', 'data-machine' ),
 				'category'            => 'datamachine',
 				'input_schema'        => array(
 					'type'       => 'object',
 					'properties' => array(
-						'step_type' => array(
+						'handler_slug' => array(
+							'type'        => array( 'string', 'null' ),
+							'description' => __( 'Get a specific handler by slug (ignores step_type filter when provided)', 'data-machine' ),
+						),
+						'step_type'    => array(
 							'type'        => array( 'string', 'null' ),
 							'description' => __( 'Step type filter (fetch, publish, update, etc.)', 'data-machine' ),
 						),
@@ -108,43 +111,6 @@ class HandlerAbilities {
 					),
 				),
 				'execute_callback'    => array( $this, 'executeGetHandlers' ),
-				'permission_callback' => array( $this, 'checkPermission' ),
-				'meta'                => array( 'show_in_rest' => true ),
-			)
-		);
-	}
-
-	private function registerGetHandlerAbility(): void {
-		wp_register_ability(
-			'datamachine/get-handler',
-			array(
-				'label'               => __( 'Get Handler', 'data-machine' ),
-				'description'         => __( 'Get a single handler definition by slug.', 'data-machine' ),
-				'category'            => 'datamachine',
-				'input_schema'        => array(
-					'type'       => 'object',
-					'required'   => array( 'handler_slug' ),
-					'properties' => array(
-						'handler_slug' => array(
-							'type'        => 'string',
-							'description' => __( 'Handler slug to retrieve', 'data-machine' ),
-						),
-						'step_type'    => array(
-							'type'        => array( 'string', 'null' ),
-							'description' => __( 'Optional step type filter for targeted lookup', 'data-machine' ),
-						),
-					),
-				),
-				'output_schema'       => array(
-					'type'       => 'object',
-					'properties' => array(
-						'success'      => array( 'type' => 'boolean' ),
-						'handler'      => array( 'type' => 'object' ),
-						'handler_slug' => array( 'type' => 'string' ),
-						'error'        => array( 'type' => 'string' ),
-					),
-				),
-				'execute_callback'    => array( $this, 'executeGetHandler' ),
 				'permission_callback' => array( $this, 'checkPermission' ),
 				'meta'                => array( 'show_in_rest' => true ),
 			)
@@ -306,47 +272,44 @@ class HandlerAbilities {
 	 * @return array Result with handlers data.
 	 */
 	public function executeGetHandlers( array $input ): array {
-		$step_type = $input['step_type'] ?? null;
-		$handlers  = $this->getAllHandlers( $step_type );
+		$handler_slug = $input['handler_slug'] ?? null;
+		$step_type    = $input['step_type'] ?? null;
+
+		// Direct handler lookup by slug - bypasses step_type filter.
+		if ( $handler_slug ) {
+			if ( ! is_string( $handler_slug ) || empty( $handler_slug ) ) {
+				return array(
+					'success' => false,
+					'error'   => 'handler_slug must be a non-empty string',
+				);
+			}
+
+			$handler = $this->getHandler( $handler_slug );
+
+			if ( ! $handler ) {
+				return array(
+					'success'   => true,
+					'handlers'  => array(),
+					'count'     => 0,
+					'step_type' => null,
+				);
+			}
+
+			return array(
+				'success'   => true,
+				'handlers'  => array( $handler_slug => $handler ),
+				'count'     => 1,
+				'step_type' => null,
+			);
+		}
+
+		$handlers = $this->getAllHandlers( $step_type );
 
 		return array(
 			'success'   => true,
 			'handlers'  => $handlers,
 			'count'     => count( $handlers ),
 			'step_type' => $step_type,
-		);
-	}
-
-	/**
-	 * Execute get single handler ability.
-	 *
-	 * @param array $input Input parameters.
-	 * @return array Result with handler data.
-	 */
-	public function executeGetHandler( array $input ): array {
-		$handler_slug = $input['handler_slug'] ?? null;
-		$step_type    = $input['step_type'] ?? null;
-
-		if ( empty( $handler_slug ) ) {
-			return array(
-				'success' => false,
-				'error'   => 'handler_slug is required',
-			);
-		}
-
-		$handler = $this->getHandler( $handler_slug, $step_type );
-
-		if ( ! $handler ) {
-			return array(
-				'success' => false,
-				'error'   => "Handler '{$handler_slug}' not found",
-			);
-		}
-
-		return array(
-			'success'      => true,
-			'handler'      => $handler,
-			'handler_slug' => $handler_slug,
 		);
 	}
 

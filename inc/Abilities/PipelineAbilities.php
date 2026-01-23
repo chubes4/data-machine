@@ -53,7 +53,6 @@ class PipelineAbilities {
 			'wp_abilities_api_init',
 			function () {
 				$this->registerGetPipelinesAbility();
-				$this->registerGetPipelineAbility();
 				$this->registerCreatePipelineAbility();
 				$this->registerUpdatePipelineAbility();
 				$this->registerDeletePipelineAbility();
@@ -69,11 +68,15 @@ class PipelineAbilities {
 			'datamachine/get-pipelines',
 			array(
 				'label'               => __( 'Get Pipelines', 'data-machine' ),
-				'description'         => __( 'Get pipelines with optional pagination and filtering.', 'data-machine' ),
+				'description'         => __( 'Get pipelines with optional pagination and filtering, or a single pipeline by ID.', 'data-machine' ),
 				'category'            => 'datamachine',
 				'input_schema'        => array(
 					'type'       => 'object',
 					'properties' => array(
+						'pipeline_id' => array(
+							'type'        => array( 'integer', 'null' ),
+							'description' => __( 'Get a specific pipeline by ID (ignores pagination when provided)', 'data-machine' ),
+						),
 						'per_page'    => array(
 							'type'        => 'integer',
 							'default'     => self::DEFAULT_PER_PAGE,
@@ -108,39 +111,6 @@ class PipelineAbilities {
 					),
 				),
 				'execute_callback'    => array( $this, 'executeGetPipelines' ),
-				'permission_callback' => array( $this, 'checkPermission' ),
-				'meta'                => array( 'show_in_rest' => true ),
-			)
-		);
-	}
-
-	private function registerGetPipelineAbility(): void {
-		wp_register_ability(
-			'datamachine/get-pipeline',
-			array(
-				'label'               => __( 'Get Pipeline', 'data-machine' ),
-				'description'         => __( 'Get a single pipeline by ID with its flows.', 'data-machine' ),
-				'category'            => 'datamachine',
-				'input_schema'        => array(
-					'type'       => 'object',
-					'required'   => array( 'pipeline_id' ),
-					'properties' => array(
-						'pipeline_id' => array(
-							'type'        => 'integer',
-							'description' => __( 'Pipeline ID to retrieve', 'data-machine' ),
-						),
-					),
-				),
-				'output_schema'       => array(
-					'type'       => 'object',
-					'properties' => array(
-						'success'  => array( 'type' => 'boolean' ),
-						'pipeline' => array( 'type' => 'object' ),
-						'flows'    => array( 'type' => 'array' ),
-						'error'    => array( 'type' => 'string' ),
-					),
-				),
-				'execute_callback'    => array( $this, 'executeGetPipeline' ),
 				'permission_callback' => array( $this, 'checkPermission' ),
 				'meta'                => array( 'show_in_rest' => true ),
 			)
@@ -404,12 +374,47 @@ class PipelineAbilities {
 	 */
 	public function executeGetPipelines( array $input ): array {
 		try {
+			$pipeline_id = $input['pipeline_id'] ?? null;
 			$per_page    = (int) ( $input['per_page'] ?? self::DEFAULT_PER_PAGE );
 			$offset      = (int) ( $input['offset'] ?? 0 );
 			$output_mode = $input['output_mode'] ?? 'full';
 
 			if ( ! in_array( $output_mode, array( 'full', 'summary', 'ids' ), true ) ) {
 				$output_mode = 'full';
+			}
+
+			// Direct pipeline lookup by ID - bypasses pagination.
+			if ( $pipeline_id ) {
+				if ( ! is_numeric( $pipeline_id ) || (int) $pipeline_id <= 0 ) {
+					return array(
+						'success' => false,
+						'error'   => 'pipeline_id must be a positive integer',
+					);
+				}
+
+				$pipeline = $this->db_pipelines->get_pipeline( (int) $pipeline_id );
+
+				if ( ! $pipeline ) {
+					return array(
+						'success'     => true,
+						'pipelines'   => array(),
+						'total'       => 0,
+						'per_page'    => $per_page,
+						'offset'      => $offset,
+						'output_mode' => $output_mode,
+					);
+				}
+
+				$formatted_pipeline = $this->formatPipelineByMode( $pipeline, $output_mode );
+
+				return array(
+					'success'     => true,
+					'pipelines'   => array( $formatted_pipeline ),
+					'total'       => 1,
+					'per_page'    => $per_page,
+					'offset'      => $offset,
+					'output_mode' => $output_mode,
+				);
 			}
 
 			$all_pipelines = $this->db_pipelines->get_all_pipelines();
@@ -432,42 +437,6 @@ class PipelineAbilities {
 				'error'   => $e->getMessage(),
 			);
 		}
-	}
-
-	/**
-	 * Execute get single pipeline ability.
-	 *
-	 * @param array $input Input parameters with pipeline_id.
-	 * @return array Result with pipeline data.
-	 */
-	public function executeGetPipeline( array $input ): array {
-		$pipeline_id = $input['pipeline_id'] ?? null;
-
-		if ( ! is_numeric( $pipeline_id ) || (int) $pipeline_id <= 0 ) {
-			return array(
-				'success' => false,
-				'error'   => 'pipeline_id is required and must be a positive integer',
-			);
-		}
-
-		$pipeline_id = (int) $pipeline_id;
-		$pipeline    = $this->db_pipelines->get_pipeline( $pipeline_id );
-
-		if ( ! $pipeline ) {
-			return array(
-				'success' => false,
-				'error'   => 'Pipeline not found',
-			);
-		}
-
-		$pipeline = $this->addDisplayFields( $pipeline );
-		$flows    = $this->db_flows->get_flows_for_pipeline( $pipeline_id );
-
-		return array(
-			'success'  => true,
-			'pipeline' => $pipeline,
-			'flows'    => $flows,
-		);
 	}
 
 	/**

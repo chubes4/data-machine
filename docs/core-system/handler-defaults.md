@@ -94,8 +94,7 @@ The system is exposed via the following REST API endpoints:
 
 As of v0.11.7, `HandlerService` has been deleted and replaced by `HandlerAbilities`. All handler operations now use the WordPress 6.9 Abilities API:
 
-- `datamachine/get-handlers` - List handlers with optional step_type filter
-- `datamachine/get-handler` - Get single handler by slug
+- `datamachine/get-handlers` - List handlers with optional step_type filter, or get single by handler_slug
 - `datamachine/validate-handler` - Validate handler slug exists
 - `datamachine/get-handler-config-fields` - Get config field definitions
 - `datamachine/apply-handler-defaults` - Apply site defaults to handler config
