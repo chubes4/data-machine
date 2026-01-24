@@ -46,13 +46,16 @@ class StepTypeAbilities {
 	}
 
 	private function registerAbilities(): void {
-		add_action(
-			'wp_abilities_api_init',
-			function () {
-				$this->registerGetStepTypesAbility();
-				$this->registerValidateStepTypeAbility();
-			}
-		);
+		$register_callback = function () {
+			$this->registerGetStepTypesAbility();
+			$this->registerValidateStepTypeAbility();
+		};
+
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$register_callback();
+		} else {
+			add_action( 'wp_abilities_api_init', $register_callback );
+		}
 	}
 
 	private function registerGetStepTypesAbility(): void {

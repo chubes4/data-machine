@@ -55,71 +55,74 @@ class PostQueryAbilities {
 	}
 
 	private function registerAbility(): void {
-		add_action(
-			'wp_abilities_api_init',
-			function () {
-				wp_register_ability(
-					'datamachine/query-posts',
-					array(
-						'label'               => __( 'Query Posts', 'data-machine' ),
-						'description'         => __( 'Find posts created by Data Machine, filtered by handler, flow, or pipeline', 'data-machine' ),
-						'category'            => 'datamachine',
-						'input_schema'        => array(
-							'type'       => 'object',
-							'required'   => array( 'filter_by', 'filter_value' ),
-							'properties' => array(
-								'filter_by'    => array(
-									'type'        => 'string',
-									'enum'        => array( 'handler', 'flow', 'pipeline' ),
-									'description' => __( 'What to filter posts by', 'data-machine' ),
-								),
-								'filter_value' => array(
-									'type'        => array( 'string', 'integer' ),
-									'description' => __( 'Handler slug, flow ID, or pipeline ID', 'data-machine' ),
-								),
-								'post_type'    => array(
-									'type'        => 'string',
-									'default'     => 'any',
-									'description' => __( 'Post type to query', 'data-machine' ),
-								),
-								'post_status'  => array(
-									'type'        => 'string',
-									'default'     => 'publish',
-									'description' => __( 'Post status to query', 'data-machine' ),
-								),
-								'per_page'     => array(
-									'type'    => 'integer',
-									'default' => self::DEFAULT_PER_PAGE,
-									'minimum' => 1,
-									'maximum' => 100,
-								),
-								'offset'       => array(
-									'type'    => 'integer',
-									'default' => 0,
-								),
+		$register_callback = function () {
+			wp_register_ability(
+				'datamachine/query-posts',
+				array(
+					'label'               => __( 'Query Posts', 'data-machine' ),
+					'description'         => __( 'Find posts created by Data Machine, filtered by handler, flow, or pipeline', 'data-machine' ),
+					'category'            => 'datamachine',
+					'input_schema'        => array(
+						'type'       => 'object',
+						'required'   => array( 'filter_by', 'filter_value' ),
+						'properties' => array(
+							'filter_by'    => array(
+								'type'        => 'string',
+								'enum'        => array( 'handler', 'flow', 'pipeline' ),
+								'description' => __( 'What to filter posts by', 'data-machine' ),
+							),
+							'filter_value' => array(
+								'type'        => array( 'string', 'integer' ),
+								'description' => __( 'Handler slug, flow ID, or pipeline ID', 'data-machine' ),
+							),
+							'post_type'    => array(
+								'type'        => 'string',
+								'default'     => 'any',
+								'description' => __( 'Post type to query', 'data-machine' ),
+							),
+							'post_status'  => array(
+								'type'        => 'string',
+								'default'     => 'publish',
+								'description' => __( 'Post status to query', 'data-machine' ),
+							),
+							'per_page'     => array(
+								'type'    => 'integer',
+								'default' => self::DEFAULT_PER_PAGE,
+								'minimum' => 1,
+								'maximum' => 100,
+							),
+							'offset'       => array(
+								'type'    => 'integer',
+								'default' => 0,
 							),
 						),
-						'output_schema'       => array(
-							'type'       => 'object',
-							'properties' => array(
-								'posts'    => array( 'type' => 'array' ),
-								'total'    => array( 'type' => 'integer' ),
-								'per_page' => array( 'type' => 'integer' ),
-								'offset'   => array( 'type' => 'integer' ),
-							),
+					),
+					'output_schema'       => array(
+						'type'       => 'object',
+						'properties' => array(
+							'posts'    => array( 'type' => 'array' ),
+							'total'    => array( 'type' => 'integer' ),
+							'per_page' => array( 'type' => 'integer' ),
+							'offset'   => array( 'type' => 'integer' ),
 						),
-						'execute_callback'    => array( $this, 'executeQueryPosts' ),
-						'permission_callback' => function () {
-							if ( defined( 'WP_CLI' ) && WP_CLI ) {
-								return true;
-							}
-							return current_user_can( 'manage_options' );
-						},
-						'meta'                => array( 'show_in_rest' => true ),
-					)
-				);
-			}
-		);
+					),
+					'execute_callback'    => array( $this, 'executeQueryPosts' ),
+					'permission_callback' => function () {
+						if ( defined( 'WP_CLI' ) && WP_CLI ) {
+							return true;
+						}
+						return current_user_can( 'manage_options' );
+					},
+					'meta'                => array( 'show_in_rest' => true ),
+				)
+			);
+		};
+
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$register_callback();
+		} else {
+			add_action( 'wp_abilities_api_init', $register_callback );
+		}
 	}
 
 	public function getQueryPostsTool(): array {

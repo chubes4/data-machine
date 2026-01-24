@@ -44,18 +44,21 @@ class PipelineAbilities {
 	}
 
 	private function registerAbilities(): void {
-		add_action(
-			'wp_abilities_api_init',
-			function () {
-				$this->registerGetPipelinesAbility();
-				$this->registerCreatePipelineAbility();
-				$this->registerUpdatePipelineAbility();
-				$this->registerDeletePipelineAbility();
-				$this->registerDuplicatePipelineAbility();
-				$this->registerImportPipelinesAbility();
-				$this->registerExportPipelinesAbility();
-			}
-		);
+		$register_callback = function () {
+			$this->registerGetPipelinesAbility();
+			$this->registerCreatePipelineAbility();
+			$this->registerUpdatePipelineAbility();
+			$this->registerDeletePipelineAbility();
+			$this->registerDuplicatePipelineAbility();
+			$this->registerImportPipelinesAbility();
+			$this->registerExportPipelinesAbility();
+		};
+
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$register_callback();
+		} else {
+			add_action( 'wp_abilities_api_init', $register_callback );
+		}
 	}
 
 	private function registerGetPipelinesAbility(): void {

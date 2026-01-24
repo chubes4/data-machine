@@ -34,58 +34,61 @@ class LocalSearchAbilities {
 	}
 
 	private function registerAbility(): void {
-		add_action(
-			'wp_abilities_api_init',
-			function () {
-				wp_register_ability(
-					'datamachine/local-search',
-					array(
-						'label'               => __( 'Local Search', 'data-machine' ),
-						'description'         => __( 'Search WordPress site for posts by title or content', 'data-machine' ),
-						'category'            => 'datamachine',
-						'input_schema'        => array(
-							'type'       => 'object',
-							'required'   => array( 'query' ),
-							'properties' => array(
-								'query'      => array(
-									'type'        => 'string',
-									'description' => __( 'Search terms to find relevant posts', 'data-machine' ),
-								),
-								'post_types' => array(
-									'type'        => 'array',
-									'default'     => array( 'post', 'page' ),
-									'description' => __( 'Post types to search', 'data-machine' ),
-								),
-								'title_only' => array(
-									'type'        => 'boolean',
-									'default'     => false,
-									'description' => __( 'Search only post titles', 'data-machine' ),
-								),
+		$register_callback = function () {
+			wp_register_ability(
+				'datamachine/local-search',
+				array(
+					'label'               => __( 'Local Search', 'data-machine' ),
+					'description'         => __( 'Search WordPress site for posts by title or content', 'data-machine' ),
+					'category'            => 'datamachine',
+					'input_schema'        => array(
+						'type'       => 'object',
+						'required'   => array( 'query' ),
+						'properties' => array(
+							'query'      => array(
+								'type'        => 'string',
+								'description' => __( 'Search terms to find relevant posts', 'data-machine' ),
+							),
+							'post_types' => array(
+								'type'        => 'array',
+								'default'     => array( 'post', 'page' ),
+								'description' => __( 'Post types to search', 'data-machine' ),
+							),
+							'title_only' => array(
+								'type'        => 'boolean',
+								'default'     => false,
+								'description' => __( 'Search only post titles', 'data-machine' ),
 							),
 						),
-						'output_schema'       => array(
-							'type'       => 'object',
-							'properties' => array(
-								'message'             => array( 'type' => 'string' ),
-								'query'               => array( 'type' => 'string' ),
-								'results_count'       => array( 'type' => 'integer' ),
-								'post_types_searched' => array( 'type' => 'array' ),
-								'search_method'       => array( 'type' => 'string' ),
-								'results'             => array( 'type' => 'array' ),
-							),
+					),
+					'output_schema'       => array(
+						'type'       => 'object',
+						'properties' => array(
+							'message'             => array( 'type' => 'string' ),
+							'query'               => array( 'type' => 'string' ),
+							'results_count'       => array( 'type' => 'integer' ),
+							'post_types_searched' => array( 'type' => 'array' ),
+							'search_method'       => array( 'type' => 'string' ),
+							'results'             => array( 'type' => 'array' ),
 						),
-						'execute_callback'    => array( $this, 'executeLocalSearch' ),
-						'permission_callback' => function () {
-							if ( defined( 'WP_CLI' ) && WP_CLI ) {
-								return true;
-							}
-							return current_user_can( 'manage_options' );
-						},
-						'meta'                => array( 'show_in_rest' => true ),
-					)
-				);
-			}
-		);
+					),
+					'execute_callback'    => array( $this, 'executeLocalSearch' ),
+					'permission_callback' => function () {
+						if ( defined( 'WP_CLI' ) && WP_CLI ) {
+							return true;
+						}
+						return current_user_can( 'manage_options' );
+					},
+					'meta'                => array( 'show_in_rest' => true ),
+				)
+			);
+		};
+
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$register_callback();
+		} else {
+			add_action( 'wp_abilities_api_init', $register_callback );
+		}
 	}
 
 	public function executeLocalSearch( array $input ): array {
@@ -302,5 +305,3 @@ class LocalSearchAbilities {
 		);
 	}
 }
-
-new LocalSearchAbilities();

@@ -37,18 +37,21 @@ class SettingsAbilities {
 	}
 
 	private function registerAbilities(): void {
-		add_action(
-			'wp_abilities_api_init',
-			function () {
-				$this->registerGetSettings();
-				$this->registerUpdateSettings();
-				$this->registerGetSchedulingIntervals();
-				$this->registerGetToolConfig();
-				$this->registerSaveToolConfig();
-				$this->registerGetHandlerDefaults();
-				$this->registerUpdateHandlerDefaults();
-			}
-		);
+		$register_callback = function () {
+			$this->registerGetSettings();
+			$this->registerUpdateSettings();
+			$this->registerGetSchedulingIntervals();
+			$this->registerGetToolConfig();
+			$this->registerSaveToolConfig();
+			$this->registerGetHandlerDefaults();
+			$this->registerUpdateHandlerDefaults();
+		};
+
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$register_callback();
+		} else {
+			add_action( 'wp_abilities_api_init', $register_callback );
+		}
 	}
 
 	private function registerGetSettings(): void {

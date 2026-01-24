@@ -42,24 +42,25 @@ class FlowAbilities {
 	}
 
 	private function registerAbility(): void {
-		add_action(
-			'wp_abilities_api_categories_init',
-			function () {
-				wp_register_ability_category(
-					'datamachine',
-					array(
-						'label'       => __( 'Data Machine', 'data-machine' ),
-						'description' => __( 'Data Machine flow and pipeline operations', 'data-machine' ),
-					)
-				);
-			}
-		);
+		$category_callback = function () {
+			wp_register_ability_category(
+				'datamachine',
+				array(
+					'label'       => __( 'Data Machine', 'data-machine' ),
+					'description' => __( 'Data Machine flow and pipeline operations', 'data-machine' ),
+				)
+			);
+		};
 
-		add_action(
-			'wp_abilities_api_init',
-			function () {
-				wp_register_ability(
-					'datamachine/get-flows',
+		if ( did_action( 'wp_abilities_api_categories_init' ) ) {
+			$category_callback();
+		} else {
+			add_action( 'wp_abilities_api_categories_init', $category_callback );
+		}
+
+		$register_callback = function () {
+			wp_register_ability(
+				'datamachine/get-flows',
 					array(
 						'label'               => __( 'Get Flows', 'data-machine' ),
 						'description'         => __( 'Get flows with optional filtering by pipeline ID or handler slug. Supports single flow retrieval and flexible output modes.', 'data-machine' ),
@@ -297,8 +298,13 @@ class FlowAbilities {
 						'meta'                => array( 'show_in_rest' => true ),
 					)
 				);
-			}
-		);
+			};
+
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$register_callback();
+		} else {
+			add_action( 'wp_abilities_api_init', $register_callback );
+		}
 	}
 
 	/**

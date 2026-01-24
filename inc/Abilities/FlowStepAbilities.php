@@ -34,14 +34,17 @@ class FlowStepAbilities {
 	}
 
 	private function registerAbilities(): void {
-		add_action(
-			'wp_abilities_api_init',
-			function () {
-				$this->registerGetFlowStepsAbility();
-				$this->registerUpdateFlowStepAbility();
-				$this->registerConfigureFlowStepsAbility();
-			}
-		);
+		$register_callback = function () {
+			$this->registerGetFlowStepsAbility();
+			$this->registerUpdateFlowStepAbility();
+			$this->registerConfigureFlowStepsAbility();
+		};
+
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$register_callback();
+		} else {
+			add_action( 'wp_abilities_api_init', $register_callback );
+		}
 	}
 
 	private function registerGetFlowStepsAbility(): void {

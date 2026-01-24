@@ -38,14 +38,17 @@ class ProcessedItemsAbilities {
 	}
 
 	private function registerAbilities(): void {
-		add_action(
-			'wp_abilities_api_init',
-			function () {
-				$this->registerClearProcessedItems();
-				$this->registerCheckProcessedItem();
-				$this->registerHasProcessedHistory();
-			}
-		);
+		$register_callback = function () {
+			$this->registerClearProcessedItems();
+			$this->registerCheckProcessedItem();
+			$this->registerHasProcessedHistory();
+		};
+
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$register_callback();
+		} else {
+			add_action( 'wp_abilities_api_init', $register_callback );
+		}
 	}
 
 	/**

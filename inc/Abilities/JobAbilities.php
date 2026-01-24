@@ -43,16 +43,19 @@ class JobAbilities {
 	}
 
 	private function registerAbilities(): void {
-		add_action(
-			'wp_abilities_api_init',
-			function () {
-				$this->registerGetJobs();
-				$this->registerDeleteJobs();
-				$this->registerExecuteWorkflow();
-				$this->registerGetFlowHealth();
-				$this->registerGetProblemFlows();
-			}
-		);
+		$register_callback = function () {
+			$this->registerGetJobs();
+			$this->registerDeleteJobs();
+			$this->registerExecuteWorkflow();
+			$this->registerGetFlowHealth();
+			$this->registerGetProblemFlows();
+		};
+
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$register_callback();
+		} else {
+			add_action( 'wp_abilities_api_init', $register_callback );
+		}
 	}
 
 	/**

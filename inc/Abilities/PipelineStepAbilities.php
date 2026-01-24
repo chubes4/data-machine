@@ -35,16 +35,19 @@ class PipelineStepAbilities {
 	}
 
 	private function registerAbilities(): void {
-		add_action(
-			'wp_abilities_api_init',
-			function () {
-				$this->registerGetPipelineStepsAbility();
-				$this->registerAddPipelineStepAbility();
-				$this->registerUpdatePipelineStepAbility();
-				$this->registerDeletePipelineStepAbility();
-				$this->registerReorderPipelineStepsAbility();
-			}
-		);
+		$register_callback = function () {
+			$this->registerGetPipelineStepsAbility();
+			$this->registerAddPipelineStepAbility();
+			$this->registerUpdatePipelineStepAbility();
+			$this->registerDeletePipelineStepAbility();
+			$this->registerReorderPipelineStepsAbility();
+		};
+
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$register_callback();
+		} else {
+			add_action( 'wp_abilities_api_init', $register_callback );
+		}
 	}
 
 	private function registerGetPipelineStepsAbility(): void {

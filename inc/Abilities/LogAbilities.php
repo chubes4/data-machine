@@ -33,271 +33,274 @@ class LogAbilities {
 	}
 
 	private function registerAbilities(): void {
-		add_action(
-			'wp_abilities_api_init',
-			function () {
-				wp_register_ability(
-					'datamachine/write-to-log',
-					array(
-						'label'               => 'Write to Data Machine Logs',
-						'description'         => 'Write log entries with level routing to system, pipeline, or chat logs',
-						'category'            => 'datamachine',
-						'input_schema'        => array(
-							'type'       => 'object',
-							'properties' => array(
-								'level'   => array(
-									'type'        => 'string',
-									'enum'        => array( 'debug', 'info', 'warning', 'error', 'critical' ),
-									'description' => 'Log level (severity)',
-								),
-								'message' => array(
-									'type'        => 'string',
-									'description' => 'Log message content',
-								),
-								'context' => array(
-									'type'        => 'object',
-									'description' => 'Additional context (agent_type, job_id, flow_id, etc.)',
-								),
+		$register_callback = function () {
+			wp_register_ability(
+				'datamachine/write-to-log',
+				array(
+					'label'               => 'Write to Data Machine Logs',
+					'description'         => 'Write log entries with level routing to system, pipeline, or chat logs',
+					'category'            => 'datamachine',
+					'input_schema'        => array(
+						'type'       => 'object',
+						'properties' => array(
+							'level'   => array(
+								'type'        => 'string',
+								'enum'        => array( 'debug', 'info', 'warning', 'error', 'critical' ),
+								'description' => 'Log level (severity)',
 							),
-							'required'   => array( 'level', 'message' ),
-						),
-						'output_schema'       => array(
-							'type'       => 'object',
-							'properties' => array(
-								'success' => array( 'type' => 'boolean' ),
-								'message' => array( 'type' => 'string' ),
+							'message' => array(
+								'type'        => 'string',
+								'description' => 'Log message content',
+							),
+							'context' => array(
+								'type'        => 'object',
+								'description' => 'Additional context (agent_type, job_id, flow_id, etc.)',
 							),
 						),
-						'execute_callback'    => array( self::class, 'write' ),
-						'permission_callback' => function () {
-							if ( defined( 'WP_CLI' ) && WP_CLI ) {
-								return true;
-							}
-							return current_user_can( 'manage_options' );
-						},
-						'meta'                => array( 'show_in_rest' => true ),
-					)
-				);
+						'required'   => array( 'level', 'message' ),
+					),
+					'output_schema'       => array(
+						'type'       => 'object',
+						'properties' => array(
+							'success' => array( 'type' => 'boolean' ),
+							'message' => array( 'type' => 'string' ),
+						),
+					),
+					'execute_callback'    => array( self::class, 'write' ),
+					'permission_callback' => function () {
+						if ( defined( 'WP_CLI' ) && WP_CLI ) {
+							return true;
+						}
+						return current_user_can( 'manage_options' );
+					},
+					'meta'                => array( 'show_in_rest' => true ),
+				)
+			);
 
-				wp_register_ability(
-					'datamachine/clear-logs',
-					array(
-						'label'               => 'Clear Data Machine Logs',
-						'description'         => 'Clear log files for specified agent type or all logs',
-						'category'            => 'datamachine',
-						'input_schema'        => array(
-							'type'       => 'object',
-							'properties' => array(
-								'agent_type' => array(
-									'type'        => 'string',
-									'enum'        => array( 'pipeline', 'chat', 'system', 'all' ),
-									'description' => 'Agent type log to clear (or "all")',
-								),
-							),
-							'required'   => array( 'agent_type' ),
-						),
-						'output_schema'       => array(
-							'type'       => 'object',
-							'properties' => array(
-								'success'       => array( 'type' => 'boolean' ),
-								'message'       => array( 'type' => 'string' ),
-								'files_cleared' => array(
-									'type'  => 'array',
-									'items' => array( 'type' => 'string' ),
-								),
+			wp_register_ability(
+				'datamachine/clear-logs',
+				array(
+					'label'               => 'Clear Data Machine Logs',
+					'description'         => 'Clear log files for specified agent type or all logs',
+					'category'            => 'datamachine',
+					'input_schema'        => array(
+						'type'       => 'object',
+						'properties' => array(
+							'agent_type' => array(
+								'type'        => 'string',
+								'enum'        => array( 'pipeline', 'chat', 'system', 'all' ),
+								'description' => 'Agent type log to clear (or "all")',
 							),
 						),
-						'execute_callback'    => array( self::class, 'clear' ),
-						'permission_callback' => function () {
-							if ( defined( 'WP_CLI' ) && WP_CLI ) {
-								return true;
-							}
-							return current_user_can( 'manage_options' );
-						},
-						'meta'                => array( 'show_in_rest' => true ),
-					)
-				);
+						'required'   => array( 'agent_type' ),
+					),
+					'output_schema'       => array(
+						'type'       => 'object',
+						'properties' => array(
+							'success'       => array( 'type' => 'boolean' ),
+							'message'       => array( 'type' => 'string' ),
+							'files_cleared' => array(
+								'type'  => 'array',
+								'items' => array( 'type' => 'string' ),
+							),
+						),
+					),
+					'execute_callback'    => array( self::class, 'clear' ),
+					'permission_callback' => function () {
+						if ( defined( 'WP_CLI' ) && WP_CLI ) {
+							return true;
+						}
+						return current_user_can( 'manage_options' );
+					},
+					'meta'                => array( 'show_in_rest' => true ),
+				)
+			);
 
-				wp_register_ability(
-					'datamachine/read-logs',
-					array(
-						'label'               => 'Read Data Machine Logs',
-						'description'         => 'Read log content with optional filtering by job, pipeline, or flow',
-						'category'            => 'datamachine',
-						'input_schema'        => array(
-							'type'       => 'object',
-							'properties' => array(
-								'agent_type'  => array(
-									'type'        => 'string',
-									'enum'        => array( 'pipeline', 'chat', 'system' ),
-									'description' => 'Agent type to read logs for',
-								),
-								'mode'        => array(
-									'type'        => 'string',
-									'enum'        => array( 'full', 'recent' ),
-									'description' => 'Content mode: full or recent',
-								),
-								'limit'       => array(
-									'type'        => 'integer',
-									'description' => 'Number of entries when mode is recent',
-								),
-								'job_id'      => array(
-									'type'        => 'integer',
-									'description' => 'Filter by job ID',
-								),
-								'pipeline_id' => array(
-									'type'        => 'integer',
-									'description' => 'Filter by pipeline ID',
-								),
-								'flow_id'     => array(
-									'type'        => 'integer',
-									'description' => 'Filter by flow ID',
-								),
+			wp_register_ability(
+				'datamachine/read-logs',
+				array(
+					'label'               => 'Read Data Machine Logs',
+					'description'         => 'Read log content with optional filtering by job, pipeline, or flow',
+					'category'            => 'datamachine',
+					'input_schema'        => array(
+						'type'       => 'object',
+						'properties' => array(
+							'agent_type'  => array(
+								'type'        => 'string',
+								'enum'        => array( 'pipeline', 'chat', 'system' ),
+								'description' => 'Agent type to read logs for',
 							),
-							'required'   => array( 'agent_type' ),
-						),
-						'output_schema'       => array(
-							'type'       => 'object',
-							'properties' => array(
-								'success'        => array( 'type' => 'boolean' ),
-								'content'        => array( 'type' => 'string' ),
-								'total_lines'    => array( 'type' => 'integer' ),
-								'filtered_lines' => array( 'type' => 'integer' ),
-								'mode'           => array( 'type' => 'string' ),
-								'agent_type'     => array( 'type' => 'string' ),
-								'message'        => array( 'type' => 'string' ),
-								'error'          => array( 'type' => 'string' ),
+							'mode'        => array(
+								'type'        => 'string',
+								'enum'        => array( 'full', 'recent' ),
+								'description' => 'Content mode: full or recent',
+							),
+							'limit'       => array(
+								'type'        => 'integer',
+								'description' => 'Number of entries when mode is recent',
+							),
+							'job_id'      => array(
+								'type'        => 'integer',
+								'description' => 'Filter by job ID',
+							),
+							'pipeline_id' => array(
+								'type'        => 'integer',
+								'description' => 'Filter by pipeline ID',
+							),
+							'flow_id'     => array(
+								'type'        => 'integer',
+								'description' => 'Filter by flow ID',
 							),
 						),
-						'execute_callback'    => array( self::class, 'readLogs' ),
-						'permission_callback' => function () {
-							if ( defined( 'WP_CLI' ) && WP_CLI ) {
-								return true;
-							}
-							return current_user_can( 'manage_options' );
-						},
-						'meta'                => array( 'show_in_rest' => true ),
-					)
-				);
+						'required'   => array( 'agent_type' ),
+					),
+					'output_schema'       => array(
+						'type'       => 'object',
+						'properties' => array(
+							'success'        => array( 'type' => 'boolean' ),
+							'content'        => array( 'type' => 'string' ),
+							'total_lines'    => array( 'type' => 'integer' ),
+							'filtered_lines' => array( 'type' => 'integer' ),
+							'mode'           => array( 'type' => 'string' ),
+							'agent_type'     => array( 'type' => 'string' ),
+							'message'        => array( 'type' => 'string' ),
+							'error'          => array( 'type' => 'string' ),
+						),
+					),
+					'execute_callback'    => array( self::class, 'readLogs' ),
+					'permission_callback' => function () {
+						if ( defined( 'WP_CLI' ) && WP_CLI ) {
+							return true;
+						}
+						return current_user_can( 'manage_options' );
+					},
+					'meta'                => array( 'show_in_rest' => true ),
+				)
+			);
 
-				wp_register_ability(
-					'datamachine/get-log-metadata',
-					array(
-						'label'               => 'Get Log Metadata',
-						'description'         => 'Get log file metadata and configuration for agent type(s)',
-						'category'            => 'datamachine',
-						'input_schema'        => array(
-							'type'       => 'object',
-							'properties' => array(
-								'agent_type' => array(
-									'type'        => 'string',
-									'enum'        => array( 'pipeline', 'chat', 'system' ),
-									'description' => 'Agent type to get metadata for. If omitted, returns all.',
-								),
+			wp_register_ability(
+				'datamachine/get-log-metadata',
+				array(
+					'label'               => 'Get Log Metadata',
+					'description'         => 'Get log file metadata and configuration for agent type(s)',
+					'category'            => 'datamachine',
+					'input_schema'        => array(
+						'type'       => 'object',
+						'properties' => array(
+							'agent_type' => array(
+								'type'        => 'string',
+								'enum'        => array( 'pipeline', 'chat', 'system' ),
+								'description' => 'Agent type to get metadata for. If omitted, returns all.',
 							),
 						),
-						'output_schema'       => array(
-							'type'       => 'object',
-							'properties' => array(
-								'success'     => array( 'type' => 'boolean' ),
-								'agent_type'  => array( 'type' => 'string' ),
-								'agent_types' => array( 'type' => 'object' ),
-								'log_file'    => array( 'type' => 'object' ),
-								'error'       => array( 'type' => 'string' ),
-							),
+					),
+					'output_schema'       => array(
+						'type'       => 'object',
+						'properties' => array(
+							'success'     => array( 'type' => 'boolean' ),
+							'agent_type'  => array( 'type' => 'string' ),
+							'agent_types' => array( 'type' => 'object' ),
+							'log_file'    => array( 'type' => 'object' ),
+							'error'       => array( 'type' => 'string' ),
 						),
-						'execute_callback'    => array( self::class, 'getMetadata' ),
-						'permission_callback' => function () {
-							if ( defined( 'WP_CLI' ) && WP_CLI ) {
-								return true;
-							}
-							return current_user_can( 'manage_options' );
-						},
-						'meta'                => array( 'show_in_rest' => true ),
-					)
-				);
+					),
+					'execute_callback'    => array( self::class, 'getMetadata' ),
+					'permission_callback' => function () {
+						if ( defined( 'WP_CLI' ) && WP_CLI ) {
+							return true;
+						}
+						return current_user_can( 'manage_options' );
+					},
+					'meta'                => array( 'show_in_rest' => true ),
+				)
+			);
 
-				wp_register_ability(
-					'datamachine/set-log-level',
-					array(
-						'label'               => 'Set Log Level',
-						'description'         => 'Set the log level for a specific agent type',
-						'category'            => 'datamachine',
-						'input_schema'        => array(
-							'type'       => 'object',
-							'properties' => array(
-								'agent_type' => array(
-									'type'        => 'string',
-									'enum'        => array( 'pipeline', 'chat', 'system' ),
-									'description' => 'Agent type to set level for',
-								),
-								'level'      => array(
-									'type'        => 'string',
-									'enum'        => array( 'debug', 'error', 'none' ),
-									'description' => 'Log level to set',
-								),
+			wp_register_ability(
+				'datamachine/set-log-level',
+				array(
+					'label'               => 'Set Log Level',
+					'description'         => 'Set the log level for a specific agent type',
+					'category'            => 'datamachine',
+					'input_schema'        => array(
+						'type'       => 'object',
+						'properties' => array(
+							'agent_type' => array(
+								'type'        => 'string',
+								'enum'        => array( 'pipeline', 'chat', 'system' ),
+								'description' => 'Agent type to set level for',
 							),
-							'required'   => array( 'agent_type', 'level' ),
-						),
-						'output_schema'       => array(
-							'type'       => 'object',
-							'properties' => array(
-								'success'    => array( 'type' => 'boolean' ),
-								'agent_type' => array( 'type' => 'string' ),
-								'level'      => array( 'type' => 'string' ),
-								'message'    => array( 'type' => 'string' ),
-								'error'      => array( 'type' => 'string' ),
+							'level'      => array(
+								'type'        => 'string',
+								'enum'        => array( 'debug', 'error', 'none' ),
+								'description' => 'Log level to set',
 							),
 						),
-						'execute_callback'    => array( self::class, 'setLevel' ),
-						'permission_callback' => function () {
-							if ( defined( 'WP_CLI' ) && WP_CLI ) {
-								return true;
-							}
-							return current_user_can( 'manage_options' );
-						},
-						'meta'                => array( 'show_in_rest' => true ),
-					)
-				);
+						'required'   => array( 'agent_type', 'level' ),
+					),
+					'output_schema'       => array(
+						'type'       => 'object',
+						'properties' => array(
+							'success'    => array( 'type' => 'boolean' ),
+							'agent_type' => array( 'type' => 'string' ),
+							'level'      => array( 'type' => 'string' ),
+							'message'    => array( 'type' => 'string' ),
+							'error'      => array( 'type' => 'string' ),
+						),
+					),
+					'execute_callback'    => array( self::class, 'setLevel' ),
+					'permission_callback' => function () {
+						if ( defined( 'WP_CLI' ) && WP_CLI ) {
+							return true;
+						}
+						return current_user_can( 'manage_options' );
+					},
+					'meta'                => array( 'show_in_rest' => true ),
+				)
+			);
 
-				wp_register_ability(
-					'datamachine/get-log-level',
-					array(
-						'label'               => 'Get Log Level',
-						'description'         => 'Get the current log level for a specific agent type',
-						'category'            => 'datamachine',
-						'input_schema'        => array(
-							'type'       => 'object',
-							'properties' => array(
-								'agent_type' => array(
-									'type'        => 'string',
-									'enum'        => array( 'pipeline', 'chat', 'system' ),
-									'description' => 'Agent type to get level for',
-								),
-							),
-							'required'   => array( 'agent_type' ),
-						),
-						'output_schema'       => array(
-							'type'       => 'object',
-							'properties' => array(
-								'success'    => array( 'type' => 'boolean' ),
-								'agent_type' => array( 'type' => 'string' ),
-								'level'      => array( 'type' => 'string' ),
-								'error'      => array( 'type' => 'string' ),
+			wp_register_ability(
+				'datamachine/get-log-level',
+				array(
+					'label'               => 'Get Log Level',
+					'description'         => 'Get the current log level for a specific agent type',
+					'category'            => 'datamachine',
+					'input_schema'        => array(
+						'type'       => 'object',
+						'properties' => array(
+							'agent_type' => array(
+								'type'        => 'string',
+								'enum'        => array( 'pipeline', 'chat', 'system' ),
+								'description' => 'Agent type to get level for',
 							),
 						),
-						'execute_callback'    => array( self::class, 'getLevel' ),
-						'permission_callback' => function () {
-							if ( defined( 'WP_CLI' ) && WP_CLI ) {
-								return true;
-							}
-							return current_user_can( 'manage_options' );
-						},
-						'meta'                => array( 'show_in_rest' => true ),
-					)
-				);
-			}
-		);
+						'required'   => array( 'agent_type' ),
+					),
+					'output_schema'       => array(
+						'type'       => 'object',
+						'properties' => array(
+							'success'    => array( 'type' => 'boolean' ),
+							'agent_type' => array( 'type' => 'string' ),
+							'level'      => array( 'type' => 'string' ),
+							'error'      => array( 'type' => 'string' ),
+						),
+					),
+					'execute_callback'    => array( self::class, 'getLevel' ),
+					'permission_callback' => function () {
+						if ( defined( 'WP_CLI' ) && WP_CLI ) {
+							return true;
+						}
+						return current_user_can( 'manage_options' );
+					},
+					'meta'                => array( 'show_in_rest' => true ),
+				)
+			);
+		};
+
+		if ( did_action( 'wp_abilities_api_init' ) ) {
+			$register_callback();
+		} else {
+			add_action( 'wp_abilities_api_init', $register_callback );
+		}
 	}
 
 	public static function write( array $input ): array {

@@ -153,6 +153,7 @@ function datamachine_run_datamachine_plugin() {
 	require_once __DIR__ . '/inc/Abilities/SettingsAbilities.php';
 	require_once __DIR__ . '/inc/Abilities/HandlerAbilities.php';
 	require_once __DIR__ . '/inc/Abilities/StepTypeAbilities.php';
+	require_once __DIR__ . '/inc/Abilities/LocalSearchAbilities.php';
 	new \DataMachine\Abilities\AuthAbilities();
 	new \DataMachine\Abilities\FileAbilities();
 	new \DataMachine\Abilities\FlowAbilities();
@@ -166,6 +167,7 @@ function datamachine_run_datamachine_plugin() {
 	new \DataMachine\Abilities\SettingsAbilities();
 	new \DataMachine\Abilities\HandlerAbilities();
 	new \DataMachine\Abilities\StepTypeAbilities();
+	new \DataMachine\Abilities\LocalSearchAbilities();
 }
 
 
