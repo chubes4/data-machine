@@ -2,7 +2,7 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
-## Unreleased
+## [0.13.2] - 2026-01-24
 
 - Remove duplicate datamachine ability category registration
 
