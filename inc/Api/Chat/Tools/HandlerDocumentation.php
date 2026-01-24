@@ -99,7 +99,7 @@ class HandlerDocumentation {
 	 * @return bool True if cache is valid
 	 */
 	private static function isCacheValid(): bool {
-		if ( null === $cached_all_handlers ) {
+		if ( null === self::$cached_all_handlers ) {
 			return false;
 		}
 
