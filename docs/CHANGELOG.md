@@ -2,7 +2,7 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
-## Unreleased
+## [0.13.1] - 2026-01-24
 
 - Fix duplicate ability registrations during WP-CLI execution by adding static registration guards to all 14 ability classes
 
