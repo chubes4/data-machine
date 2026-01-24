@@ -2,7 +2,7 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
-## Unreleased
+## [0.13.5] - 2026-01-24
 
 ### Fixed
 - Fix WP Abilities API late registration warnings causing 'category string' notices in WP-CLI commands
