@@ -44,19 +44,6 @@ class PipelineAbilities {
 
 	private function registerAbilities(): void {
 		add_action(
-			'wp_abilities_api_categories_init',
-			function () {
-				wp_register_ability_category(
-					'datamachine',
-					array(
-						'label'       => __( 'Data Machine', 'data-machine' ),
-						'description' => __( 'Data Machine flow and pipeline operations', 'data-machine' ),
-					)
-				);
-			}
-		);
-
-		add_action(
 			'wp_abilities_api_init',
 			function () {
 				$this->registerGetPipelinesAbility();
