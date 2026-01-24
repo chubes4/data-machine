@@ -23,6 +23,8 @@ class ProcessedItemsAbilities {
 	private ProcessedItems $db_processed_items;
 
 	public function __construct() {
+		$this->db_processed_items = new ProcessedItems();
+
 		if ( ! class_exists( 'WP_Ability' ) ) {
 			return;
 		}
@@ -31,7 +33,6 @@ class ProcessedItemsAbilities {
 			return;
 		}
 
-		$this->db_processed_items = new ProcessedItems();
 		$this->registerAbilities();
 		self::$registered = true;
 	}

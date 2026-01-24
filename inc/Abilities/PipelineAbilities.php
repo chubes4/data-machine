@@ -28,6 +28,9 @@ class PipelineAbilities {
 	private Flows $db_flows;
 
 	public function __construct() {
+		$this->db_pipelines = new Pipelines();
+		$this->db_flows     = new Flows();
+
 		if ( ! class_exists( 'WP_Ability' ) ) {
 			return;
 		}
@@ -36,8 +39,6 @@ class PipelineAbilities {
 			return;
 		}
 
-		$this->db_pipelines = new Pipelines();
-		$this->db_flows     = new Flows();
 		$this->registerAbilities();
 		self::$registered = true;
 	}

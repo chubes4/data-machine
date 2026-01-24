@@ -22,16 +22,13 @@ class FlowStepAbilities {
 	private HandlerAbilities $handler_abilities;
 
 	public function __construct() {
-		if ( ! class_exists( 'WP_Ability' ) ) {
-			return;
-		}
-
-		if ( self::$registered ) {
-			return;
-		}
-
 		$this->db_flows          = new Flows();
 		$this->handler_abilities = new HandlerAbilities();
+
+		if ( ! class_exists( 'WP_Ability' ) || self::$registered ) {
+			return;
+		}
+
 		$this->registerAbilities();
 		self::$registered = true;
 	}

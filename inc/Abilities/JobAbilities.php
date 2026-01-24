@@ -30,17 +30,14 @@ class JobAbilities {
 	private ProcessedItems $db_processed_items;
 
 	public function __construct() {
-		if ( ! class_exists( 'WP_Ability' ) ) {
-			return;
-		}
-
-		if ( self::$registered ) {
-			return;
-		}
-
 		$this->db_jobs            = new Jobs();
 		$this->db_flows           = new Flows();
 		$this->db_processed_items = new ProcessedItems();
+
+		if ( ! class_exists( 'WP_Ability' ) || self::$registered ) {
+			return;
+		}
+
 		$this->registerAbilities();
 		self::$registered = true;
 	}

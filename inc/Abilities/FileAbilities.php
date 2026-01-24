@@ -27,6 +27,11 @@ class FileAbilities {
 	private Pipelines $db_pipelines;
 
 	public function __construct() {
+		$this->file_storage = new FileStorage();
+		$this->file_cleanup = new FileCleanup();
+		$this->db_flows     = new Flows();
+		$this->db_pipelines = new Pipelines();
+
 		if ( ! class_exists( 'WP_Ability' ) ) {
 			return;
 		}
@@ -35,10 +40,6 @@ class FileAbilities {
 			return;
 		}
 
-		$this->file_storage = new FileStorage();
-		$this->file_cleanup = new FileCleanup();
-		$this->db_flows     = new Flows();
-		$this->db_pipelines = new Pipelines();
 		$this->registerAbilities();
 		self::$registered = true;
 	}

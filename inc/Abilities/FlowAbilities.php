@@ -29,17 +29,14 @@ class FlowAbilities {
 	private Jobs $db_jobs;
 
 	public function __construct() {
-		if ( ! class_exists( 'WP_Ability' ) ) {
-			return;
-		}
-
-		if ( self::$registered ) {
-			return;
-		}
-
 		$this->db_flows     = new Flows();
 		$this->db_pipelines = new Pipelines();
 		$this->db_jobs      = new Jobs();
+
+		if ( ! class_exists( 'WP_Ability' ) || self::$registered ) {
+			return;
+		}
+
 		$this->registerAbility();
 		self::$registered = true;
 	}
