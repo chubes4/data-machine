@@ -2,7 +2,7 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
-## Unreleased
+## [0.13.4] - 2026-01-24
 
 ### Changed
 - Restructure documentation from api-reference to development/hooks directory
