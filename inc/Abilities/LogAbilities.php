@@ -17,12 +17,19 @@ defined( 'ABSPATH' ) || exit;
 
 class LogAbilities {
 
+	private static bool $registered = false;
+
 	public function __construct() {
 		if ( ! class_exists( 'WP_Ability' ) ) {
 			return;
 		}
 
+		if ( self::$registered ) {
+			return;
+		}
+
 		$this->registerAbilities();
+		self::$registered = true;
 	}
 
 	private function registerAbilities(): void {

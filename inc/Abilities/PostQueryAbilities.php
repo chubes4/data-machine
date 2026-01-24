@@ -23,6 +23,8 @@ class PostQueryAbilities {
 
 	private const DEFAULT_PER_PAGE = 20;
 
+	private static bool $registered = false;
+
 	private const FILTER_TYPES = array(
 		'handler'  => array(
 			'meta_key'   => DATAMACHINE_POST_HANDLER_META_KEY,
@@ -43,8 +45,13 @@ class PostQueryAbilities {
 			return;
 		}
 
+		if ( self::$registered ) {
+			return;
+		}
+
 		$this->registerAbility();
 		$this->registerTool( 'chat', 'query_posts', array( $this, 'getQueryPostsTool' ) );
+		self::$registered = true;
 	}
 
 	private function registerAbility(): void {

@@ -20,6 +20,8 @@ class HandlerAbilities {
 	 */
 	private const HANDLER_DEFAULTS_OPTION = 'datamachine_handler_defaults';
 
+	private static bool $registered = false;
+
 	/**
 	 * Cached handlers by step type.
 	 *
@@ -53,7 +55,12 @@ class HandlerAbilities {
 			return;
 		}
 
+		if ( self::$registered ) {
+			return;
+		}
+
 		$this->registerAbilities();
+		self::$registered = true;
 	}
 
 	/**

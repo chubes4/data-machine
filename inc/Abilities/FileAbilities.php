@@ -19,6 +19,8 @@ defined( 'ABSPATH' ) || exit;
 
 class FileAbilities {
 
+	private static bool $registered = false;
+
 	private FileStorage $file_storage;
 	private FileCleanup $file_cleanup;
 	private Flows $db_flows;
@@ -29,11 +31,16 @@ class FileAbilities {
 			return;
 		}
 
+		if ( self::$registered ) {
+			return;
+		}
+
 		$this->file_storage = new FileStorage();
 		$this->file_cleanup = new FileCleanup();
 		$this->db_flows     = new Flows();
 		$this->db_pipelines = new Pipelines();
 		$this->registerAbilities();
+		self::$registered = true;
 	}
 
 	private function registerAbilities(): void {

@@ -1,9 +1,10 @@
 # Changelog
 
-All notable changes to Data Machine will be documented in this file.
+All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## Unreleased
+
+- Fix duplicate ability registrations during WP-CLI execution by adding static registration guards to all 14 ability classes
 
 ## [0.13.0] - 2026-01-22
 

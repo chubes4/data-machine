@@ -18,6 +18,8 @@ defined( 'ABSPATH' ) || exit;
 
 class ProcessedItemsAbilities {
 
+	private static bool $registered = false;
+
 	private ProcessedItems $db_processed_items;
 
 	public function __construct() {
@@ -25,8 +27,13 @@ class ProcessedItemsAbilities {
 			return;
 		}
 
+		if ( self::$registered ) {
+			return;
+		}
+
 		$this->db_processed_items = new ProcessedItems();
 		$this->registerAbilities();
+		self::$registered = true;
 	}
 
 	private function registerAbilities(): void {

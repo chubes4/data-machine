@@ -15,6 +15,8 @@ defined( 'ABSPATH' ) || exit;
 
 class AuthAbilities {
 
+	private static bool $registered = false;
+
 	/**
 	 * Cached auth providers.
 	 *
@@ -31,7 +33,12 @@ class AuthAbilities {
 			return;
 		}
 
+		if ( self::$registered ) {
+			return;
+		}
+
 		$this->registerAbilities();
+		self::$registered = true;
 	}
 
 	/**

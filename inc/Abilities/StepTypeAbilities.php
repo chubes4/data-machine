@@ -15,6 +15,8 @@ defined( 'ABSPATH' ) || exit;
 
 class StepTypeAbilities {
 
+	private static bool $registered = false;
+
 	/**
 	 * Cached step types.
 	 *
@@ -27,7 +29,12 @@ class StepTypeAbilities {
 			return;
 		}
 
+		if ( self::$registered ) {
+			return;
+		}
+
 		$this->registerAbilities();
+		self::$registered = true;
 	}
 
 	/**

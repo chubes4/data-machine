@@ -16,6 +16,8 @@ defined( 'ABSPATH' ) || exit;
 
 class FlowStepAbilities {
 
+	private static bool $registered = false;
+
 	private Flows $db_flows;
 	private HandlerAbilities $handler_abilities;
 
@@ -24,9 +26,14 @@ class FlowStepAbilities {
 			return;
 		}
 
+		if ( self::$registered ) {
+			return;
+		}
+
 		$this->db_flows          = new Flows();
 		$this->handler_abilities = new HandlerAbilities();
 		$this->registerAbilities();
+		self::$registered = true;
 	}
 
 	private function registerAbilities(): void {

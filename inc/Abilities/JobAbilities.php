@@ -23,6 +23,8 @@ class JobAbilities {
 
 	private const DEFAULT_PER_PAGE = 50;
 
+	private static bool $registered = false;
+
 	private Jobs $db_jobs;
 	private Flows $db_flows;
 	private ProcessedItems $db_processed_items;
@@ -32,10 +34,15 @@ class JobAbilities {
 			return;
 		}
 
+		if ( self::$registered ) {
+			return;
+		}
+
 		$this->db_jobs            = new Jobs();
 		$this->db_flows           = new Flows();
 		$this->db_processed_items = new ProcessedItems();
 		$this->registerAbilities();
+		self::$registered = true;
 	}
 
 	private function registerAbilities(): void {

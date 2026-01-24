@@ -18,12 +18,19 @@ class LocalSearchAbilities {
 	private const MAX_RESULTS     = 10;
 	private const MAX_SPLIT_TERMS = 5;
 
+	private static bool $registered = false;
+
 	public function __construct() {
 		if ( ! class_exists( 'WP_Ability' ) ) {
 			return;
 		}
 
+		if ( self::$registered ) {
+			return;
+		}
+
 		$this->registerAbility();
+		self::$registered = true;
 	}
 
 	private function registerAbility(): void {

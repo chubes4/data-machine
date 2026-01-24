@@ -22,6 +22,8 @@ class PipelineAbilities {
 
 	private const DEFAULT_PER_PAGE = 20;
 
+	private static bool $registered = false;
+
 	private Pipelines $db_pipelines;
 	private Flows $db_flows;
 
@@ -30,9 +32,14 @@ class PipelineAbilities {
 			return;
 		}
 
+		if ( self::$registered ) {
+			return;
+		}
+
 		$this->db_pipelines = new Pipelines();
 		$this->db_flows     = new Flows();
 		$this->registerAbilities();
+		self::$registered = true;
 	}
 
 	private function registerAbilities(): void {
