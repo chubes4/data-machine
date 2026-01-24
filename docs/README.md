@@ -40,9 +40,12 @@ Complete user documentation for Data Machine, the AI-first WordPress plugin that
 - **Chat Tools**: AddPipelineStep, ApiQuery, ConfigureFlowSteps, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow, and other workflow management tools.
 
 ### API Reference
-- **API Overview**: Catalog of REST endpoints backed by the services layer.
-- **Auth, Execute, Files, Flows, Jobs, Logs**: Resource-specific reference pages.
-- **Handlers, Providers, Settings, Tools**: Metadata and configuration endpoints for admin UI consumption.
+- **API Overview**: Catalog of REST endpoints for API consumers.
+- **Endpoints**: Auth, Execute, Files, Flows, Jobs, Logs, and other REST resources.
+
+### Development
+- **Hooks**: Core actions, filters, and engine hooks for extension development.
+- **REST Integration**: Patterns for extending the REST API and custom endpoints.
 
 ### Admin Interface
 - **Pipeline Builder**: React-based page for creating pipelines, configuring steps, and enabling tools.
@@ -66,8 +69,13 @@ docs/
 ├── handlers/                          # Fetch, publish, and update handler specifics
 ├── ai-tools/                          # AI agent tools, workflows, and tool usage
 ├── admin-interface/                   # User guidance for admin pages
-├── api/                               # REST API usage and parameter documents
-├── api-reference/                     # Filters, actions, and extension hook reference
+├── api/                               # REST API for consumers
+│   ├── index.md                       # Complete API overview and common patterns
+│   ├── endpoints/                    # Individual REST endpoint documentation
+│   └── errors.md                      # Error handling reference
+├── development/                       # Developer-focused documentation
+│   ├── hooks/                         # Core actions, filters, and engine hooks
+│   └── rest-integration.md            # REST API extension patterns
 └── README.md                          # This navigation and orientation page
 ```
 

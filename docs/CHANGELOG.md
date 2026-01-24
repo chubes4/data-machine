@@ -2,6 +2,14 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## Unreleased
+
+### Changed
+- Restructure documentation from api-reference to development/hooks directory
+
+### Fixed
+- Fix undefined variable warnings in chat tools by adding missing self:: prefix to static property references
+
 ## [0.13.3] - 2026-01-24
 
 - Fix uninitialized property errors by initializing instance properties before static registration guard

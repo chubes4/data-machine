@@ -431,7 +431,6 @@ async function canUseGoogleSearch() {
 - [Chat](chat.md)
 - [Settings](settings.md)
 - [Providers](providers.md)
-- [Authentication](authentication.md)
 
 ---
 

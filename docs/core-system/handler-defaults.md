@@ -86,7 +86,7 @@ The system is exposed via the following REST API endpoints:
 
 ## Related Documentation
 
-- [Settings API](../api/settings.md) - REST API reference
+- [Settings API](../api/endpoints/settings.md) - REST API reference
 - [Services Layer](services-layer.md) - Architectural overview (migration in progress)
 - [Parameter Systems](../api/parameter-systems.md) - Data flow patterns
 

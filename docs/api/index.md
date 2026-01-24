@@ -15,35 +15,35 @@ Complete REST API reference for Data Machine
 ## Endpoint Categories
 
 ### Workflow Execution
-- [Execute](execute.md): Trigger flows and ephemeral workflows
-- [Scheduling Intervals](intervals.md): Available scheduling intervals and configuration
+- [Execute](endpoints/execute.md): Trigger flows and ephemeral workflows
+- [Scheduling Intervals](endpoints/intervals.md): Available scheduling intervals and configuration
 
 ### Pipeline & Flow Management
-- [Pipelines](pipelines.md)
-- [Flows](flows.md)
-- [Jobs](jobs.md)
+- [Pipelines](endpoints/pipelines.md)
+- [Flows](endpoints/flows.md)
+- [Jobs](endpoints/jobs.md)
 
 ### Content & Data
-- [Files](files.md)
-- [Processed Items](processed-items.md)
+- [Files](endpoints/files.md)
+- [Processed Items](endpoints/processed-items.md)
 
 ### AI & Chat
-- [Chat](chat.md)
-- [Chat Sessions](chat-sessions.md)
-- [Handlers](handlers.md)
-- [Providers](providers.md)
-- [Tools](tools.md)
+- [Chat](endpoints/chat.md)
+- [Chat Sessions](endpoints/chat-sessions.md)
+- [Handlers](endpoints/handlers.md)
+- [Providers](endpoints/providers.md)
+- [Tools](endpoints/tools.md)
 
 ### Configuration
-- [Settings](settings.md)
-- [Users](users.md)
-- [Auth](auth.md)
-- [Step Types](step-types.md)
+- [Settings](endpoints/settings.md)
+- [Users](endpoints/users.md)
+- [Auth](endpoints/auth.md)
+- [Step Types](endpoints/step-types.md)
 
 ### Monitoring
-- [Logs](logs.md)
+- [Logs](endpoints/logs.md)
 - [AI Directives](../core-system/ai-directives.md)
-- [Jobs](jobs.md)
+- [Jobs](endpoints/jobs.md)
 
 ## Common Patterns
 
@@ -54,7 +54,7 @@ Data Machine supports two authentication methods:
 1. **Application Password** (Recommended for external integrations)
 2. **Cookie Authentication** (WordPress admin sessions)
 
-See [Authentication](authentication.md).
+See [Authentication](endpoints/authentication.md).
 
 ### Error Handling
 
@@ -64,7 +64,7 @@ All endpoints return standardized error responses following WordPress REST API c
 - `rest_invalid_param` (400) - Invalid parameters
 - Resource-specific errors (404, 500)
 
-See Error Handling Reference documentation for complete error code documentation.
+See [Error Handling Reference](endpoints/errors.md) for complete error code documentation.
 
 ### Pagination
 
@@ -96,14 +96,15 @@ public function create_pipeline($request) {
 }
 ```
 
-For detailed implementation patterns, see Core Actions and Core Filters documentation in the api-reference directory.
+For detailed implementation patterns, see the [Development](../development/) section for hooks and extension guides.
 
 ## Related Documentation
 
-- [Authentication](authentication.md)
-- [Errors](errors.md)
+- [Authentication](endpoints/authentication.md)
+- [Errors](endpoints/errors.md)
 - [Engine Execution](../core-system/engine-execution.md)
-- [Settings](settings.md)
+- [Settings](endpoints/settings.md)
+- [Development Guides](../development/) - Extension development and hooks
 
 ---
 

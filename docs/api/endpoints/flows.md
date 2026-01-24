@@ -12,7 +12,7 @@ Flow endpoints manage flow instances (configured and scheduled executions of pip
 
 ## Authentication
 
-Requires `manage_options` capability. See [Authentication](authentication.md).
+Requires `manage_options` capability.
 
 ## Endpoints
 
@@ -436,7 +436,7 @@ const deletedJobs = await deleteFlow(flowId);
 - [Pipelines](pipelines.md)
 - [Execute](execute.md)
 - [Jobs](jobs.md)
-- [Authentication](authentication.md)
+
 
 ---
 
