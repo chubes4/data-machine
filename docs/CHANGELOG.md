@@ -2,6 +2,13 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## Unreleased
+
+### Fixed
+- Fix WordPress Abilities API usage - use wp_get_ability()->execute() instead of non-existent wp_execute_ability()
+- Fix malformed .gitignore entry that prevented build directory from being ignored
+- Clean up duplicate version targets in homeboy configuration for reliable version bumping
+
 ## [0.14.0] - 2026-01-25
 
 - Added System Agent Architecture - Hook-based system for infrastructure operations with automatic chat session title generation
