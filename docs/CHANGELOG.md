@@ -2,10 +2,6 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
-## [0.15.0] - 2026-01-25
-
-- Added System Agent Architecture - Hook-based system for infrastructure operations with automatic chat session title generation
-
 ## [0.14.0] - 2026-01-25
 
 - Added System Agent Architecture - Hook-based system for infrastructure operations with automatic chat session title generation
