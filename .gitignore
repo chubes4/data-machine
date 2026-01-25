@@ -66,4 +66,4 @@ plan.md
 .DS_Store 
 
 # Docs tooling
-docs/.docs-sync.json
+docs/.docs-sync.jsonbuild/
