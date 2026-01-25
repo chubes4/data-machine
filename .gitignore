@@ -66,4 +66,7 @@ plan.md
 .DS_Store 
 
 # Docs tooling
-docs/.docs-sync.jsonbuild/
+docs/.docs-sync.json
+
+# Build artifacts
+build/
