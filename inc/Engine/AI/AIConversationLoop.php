@@ -121,6 +121,9 @@ class AIConversationLoop {
 			if ( ! empty( $ai_content ) ) {
 				$ai_message = ConversationManager::buildConversationMessage( 'assistant', $ai_content, array( 'type' => 'text' ) );
 				$messages[] = $ai_message;
+
+				// Fire hook for AI response events (used for system operations like title generation)
+				do_action( 'datamachine_ai_response_received', $agent_type, $messages, $payload );
 			}
 
 			// Process tool calls

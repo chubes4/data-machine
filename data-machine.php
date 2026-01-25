@@ -21,7 +21,7 @@ if ( ! datamachine_check_requirements() ) {
 	return;
 }
 
-define( 'DATAMACHINE_VERSION', '0.12.0' );
+define( 'DATAMACHINE_VERSION', '0.13.6' );
 
 define( 'DATAMACHINE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'DATAMACHINE_URL', plugin_dir_url( __FILE__ ) );
@@ -138,6 +138,7 @@ function datamachine_run_datamachine_plugin() {
 	\DataMachine\Api\Settings::register();
 	\DataMachine\Api\Auth::register();
 	\DataMachine\Api\Chat\Chat::register();
+	\DataMachine\Api\System\System::register();
 
 	// Load abilities
 	require_once __DIR__ . '/inc/Abilities/AuthAbilities.php';
@@ -154,6 +155,7 @@ function datamachine_run_datamachine_plugin() {
 	require_once __DIR__ . '/inc/Abilities/HandlerAbilities.php';
 	require_once __DIR__ . '/inc/Abilities/StepTypeAbilities.php';
 	require_once __DIR__ . '/inc/Abilities/LocalSearchAbilities.php';
+	require_once __DIR__ . '/inc/Abilities/SystemAbilities.php';
 	new \DataMachine\Abilities\AuthAbilities();
 	new \DataMachine\Abilities\FileAbilities();
 	new \DataMachine\Abilities\FlowAbilities();
@@ -168,6 +170,7 @@ function datamachine_run_datamachine_plugin() {
 	new \DataMachine\Abilities\HandlerAbilities();
 	new \DataMachine\Abilities\StepTypeAbilities();
 	new \DataMachine\Abilities\LocalSearchAbilities();
+	new \DataMachine\Abilities\SystemAbilities();
 }
 
 

@@ -39,6 +39,7 @@ Complete REST API reference for Data Machine
 - [Users](endpoints/users.md)
 - [Auth](endpoints/auth.md)
 - [Step Types](endpoints/step-types.md)
+- [System](endpoints/system.md)
 
 ### Monitoring
 - [Logs](endpoints/logs.md)

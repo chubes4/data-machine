@@ -2,6 +2,10 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## Unreleased
+
+- Added System Agent Architecture - Hook-based system for infrastructure operations with automatic chat session title generation
+
 ## [0.13.6] - 2026-01-25
 
 ### Fixed

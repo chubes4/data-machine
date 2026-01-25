@@ -6,7 +6,7 @@ WordPress 6.9 Abilities API provides standardized capability discovery and execu
 
 The Abilities API in `inc/Abilities/` provides a unified interface for Data Machine operations. Each ability implements `execute_callback` with `permission_callback` for consistent access control across REST API, CLI commands, and Chat tools.
 
-**Total registered abilities**: 58
+**Total registered abilities**: 59
 
 ## Registered Abilities
 
@@ -137,6 +137,12 @@ The Abilities API in `inc/Abilities/` provides a unified interface for Data Mach
 | Ability | Description | Location |
 |---------|-------------|----------|
 | `datamachine/local-search` | Search WordPress site for posts by title or content | `LocalSearchAbilities.php` |
+
+### System Infrastructure (1 ability)
+
+| Ability | Description | Location |
+|---------|-------------|----------|
+| `datamachine/generate-session-title` | Generate descriptive titles for chat sessions | `SystemAbilities.php` |
 
 ## Category Registration
 

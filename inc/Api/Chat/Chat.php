@@ -23,7 +23,7 @@ use WP_REST_Request;
 use WP_Error;
 
 require_once __DIR__ . '/ChatPipelinesDirective.php';
-require_once __DIR__ . '/ChatTitleGenerator.php';
+require_once __DIR__ . '/ChatAgentDirective.php';
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -549,16 +549,6 @@ class Chat {
 		if ( ! $update_success ) {
 		}
 
-		// Schedule title generation for new sessions after first exchange
-		if ( $is_new_session && function_exists( 'as_schedule_single_action' ) ) {
-			as_schedule_single_action(
-				time(),
-				'datamachine_generate_chat_title',
-				array( $session_id ),
-				'datamachine-chat'
-			);
-		}
-
 		$response_data = array(
 			'session_id'   => $session_id,
 			'response'     => $final_content,
@@ -584,3 +574,36 @@ class Chat {
 		return rest_ensure_response( $response );
 	}
 }
+
+/**
+ * Hook listener for AI response events to trigger system operations
+ */
+add_action(
+	'datamachine_ai_response_received',
+	function ( $agent_type, $messages, $payload ) {
+		// Only handle chat agent responses for title generation
+		if ( 'chat' !== $agent_type || empty( $payload['session_id'] ) ) {
+			return;
+		}
+
+		$session_id = $payload['session_id'];
+
+		// Check if this is a new session (no title yet) by querying the database
+		$chat_db = new ChatDatabase();
+		$session = $chat_db->get_session( $session_id );
+
+		if ( ! $session || ! empty( $session['title'] ) ) {
+			return; // Session not found or already has title
+		}
+
+		// Call the system ability to generate title
+		if ( function_exists( 'wp_execute_ability' ) ) {
+			wp_execute_ability(
+				'datamachine/generate-session-title',
+				array( 'session_id' => $session_id )
+			);
+		}
+	},
+	10,
+	3
+);
