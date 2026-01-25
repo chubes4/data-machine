@@ -596,13 +596,11 @@ add_action(
 			return; // Session not found or already has title
 		}
 
-		// Call the system ability to generate title
-		if ( function_exists( 'wp_execute_ability' ) ) {
-			wp_execute_ability(
-				'datamachine/generate-session-title',
-				array( 'session_id' => $session_id )
-			);
-		}
+	// Call the system ability to generate title
+	$ability = wp_get_ability( 'datamachine/generate-session-title' );
+	if ( $ability ) {
+		$ability->execute( array( 'session_id' => $session_id ) );
+	}
 	},
 	10,
 	3
