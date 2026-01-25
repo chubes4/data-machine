@@ -2,7 +2,7 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
-## Unreleased
+## [0.14.1] - 2026-01-25
 
 ### Fixed
 - Fix WordPress Abilities API usage - use wp_get_ability()->execute() instead of non-existent wp_execute_ability()
