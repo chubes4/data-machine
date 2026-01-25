@@ -2,7 +2,7 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
-## Unreleased
+## [0.13.6] - 2026-01-25
 
 ### Fixed
 - Fix pipeline step deletion to sync flows and clean processed items
