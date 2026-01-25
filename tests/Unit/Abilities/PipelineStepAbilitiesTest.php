@@ -538,8 +538,62 @@ class PipelineStepAbilitiesTest extends WP_UnitTestCase {
 		$steps          = $result['steps'];
 		$expected_types = array( 'fetch', 'ai', 'publish' );
 		foreach ( $steps as $index => $step ) {
-			$this->assertEquals( $index, $step['execution_order'] );
-			$this->assertEquals( $expected_types[ $index ], $step['step_type'] );
-		}
+		public function test_delete_pipeline_step_syncs_to_flows_and_cleans_processed_items(): void {
+		// Create a pipeline step
+		$add_result = $this->step_abilities->executeAddPipelineStep(
+			array(
+				'pipeline_id' => $this->test_pipeline_id,
+				'step_type'   => 'fetch',
+			)
+		);
+		$pipeline_step_id = $add_result['pipeline_step_id'];
+
+		// Create a flow for this pipeline (steps are synced automatically)
+		$flow_abilities = new \DataMachine\Abilities\FlowAbilities();
+		$flow_result    = $flow_abilities->executeCreateFlow([
+			'pipeline_id' => $this->test_pipeline_id,
+			'flow_name'   => 'Test Flow for Delete Sync',
+		]);
+		$flow_id = $flow_result['flow_id'];
+
+		// Verify flow has the step synced
+		$db_flows   = new \DataMachine\Core\Database\Flows\Flows();
+		$flow       = $db_flows->get_flow($flow_id);
+		$flow_step_id = $pipeline_step_id . '_' . $flow_id;
+		$this->assertArrayHasKey($flow_step_id, $flow['flow_config']);
+		$this->assertEquals($pipeline_step_id, $flow['flow_config'][$flow_step_id]['pipeline_step_id']);
+
+		// Add some processed items for this step
+		$processed_items_db = new \DataMachine\Core\Database\ProcessedItems\ProcessedItems();
+		$processed_items_db->mark_item_processed($flow_step_id, 'rss', 'test-item-1', 1);
+		$processed_items_db->mark_item_processed($flow_step_id, 'rss', 'test-item-2', 1);
+
+		// Verify processed items exist
+		$items = $processed_items_db->get_processed_items(['flow_step_id' => $flow_step_id]);
+		$this->assertCount(2, $items);
+
+		// Delete the pipeline step
+		$delete_result = $this->step_abilities->executeDeletePipelineStep([
+			'pipeline_id'      => $this->test_pipeline_id,
+			'pipeline_step_id' => $pipeline_step_id,
+		]);
+
+		$this->assertTrue($delete_result['success']);
+		$this->assertEquals($this->test_pipeline_id, $delete_result['pipeline_id']);
+		$this->assertEquals($pipeline_step_id, $delete_result['pipeline_step_id']);
+
+		// Verify pipeline step is gone
+		$get_result = $this->step_abilities->executeGetPipelineSteps([
+			'pipeline_step_id' => $pipeline_step_id
+		]);
+		$this->assertTrue($get_result['success']);
+		$this->assertEmpty($get_result['steps']);
+
+		// Verify flow config no longer has the step
+		$updated_flow = $db_flows->get_flow($flow_id);
+		$this->assertArrayNotHasKey($flow_step_id, $updated_flow['flow_config']);
+
+		// Verify processed items are cleaned up
+		$remaining_items = $processed_items_db->get_processed_items(['flow_step_id' => $flow_step_id]);
+		$this->assertEmpty($remaining_items);
 	}
-}

@@ -168,6 +168,11 @@ class ProcessedItems {
 			$pattern = '%_' . $criteria['flow_id'];
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$result = $this->wpdb->query( $this->wpdb->prepare( 'DELETE FROM %i WHERE flow_step_id LIKE %s', $this->table_name, $pattern ) );
+		} elseif ( ! empty( $criteria['pipeline_step_id'] ) && empty( $criteria['flow_step_id'] ) ) {
+			// Handle pipeline_step_id (delete processed items for this pipeline step across all flows)
+			$pattern = $criteria['pipeline_step_id'] . '_%';
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$result = $this->wpdb->query( $this->wpdb->prepare( 'DELETE FROM %i WHERE flow_step_id LIKE %s', $this->table_name, $pattern ) );
 		} elseif ( ! empty( $criteria['pipeline_id'] ) && empty( $criteria['flow_step_id'] ) ) {
 			// Handle pipeline_id (get all flows for pipeline and delete their processed items)
 			// Get all flows for this pipeline using the existing filter

@@ -12,6 +12,7 @@ namespace DataMachine\Abilities;
 
 use DataMachine\Core\Database\Flows\Flows;
 use DataMachine\Core\Database\Pipelines\Pipelines;
+use DataMachine\Core\Database\ProcessedItems\ProcessedItems;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -21,10 +22,12 @@ class PipelineStepAbilities {
 
 	private Pipelines $db_pipelines;
 	private Flows $db_flows;
+	private ProcessedItems $db_processed_items;
 
 	public function __construct() {
 		$this->db_pipelines = new Pipelines();
 		$this->db_flows     = new Flows();
+		$this->db_processed_items = new ProcessedItems();
 
 		if ( ! class_exists( 'WP_Ability' ) || self::$registered ) {
 			return;
@@ -682,6 +685,25 @@ class PipelineStepAbilities {
 			);
 		}
 
+		// Sync deletions to flows
+		$affected_flows = $this->db_flows->get_flows_for_pipeline( $pipeline_id );
+		foreach ( $affected_flows as $flow ) {
+			$flow_config = $flow['flow_config'] ?? array();
+			$updated_flow_config = array();
+			foreach ( $flow_config as $flow_step_id => $flow_step ) {
+				if ( isset( $flow_step['pipeline_step_id'] ) && $flow_step['pipeline_step_id'] !== $pipeline_step_id ) {
+					$updated_flow_config[ $flow_step_id ] = $flow_step;
+				}
+			}
+			$this->db_flows->update_flow(
+				$flow['flow_id'],
+				array( 'flow_config' => $updated_flow_config )
+			);
+		}
+
+		// Clean processed items
+		$this->db_processed_items->delete_processed_items( array( 'pipeline_step_id' => $pipeline_step_id ) );
+
 		do_action(
 			'datamachine_log',
 			'info',
@@ -700,7 +722,7 @@ class PipelineStepAbilities {
 			'affected_flows'   => $flow_count,
 			'message'          => sprintf(
 				/* translators: 1: pipeline name, 2: number of flows affected */
-				esc_html__( 'Step deleted successfully from pipeline "%1$s". %2$d flows were affected.', 'data-machine' ),
+				esc_html__( 'Step deleted successfully from pipeline "%1$s". %2$d flows were updated and processed items cleaned.', 'data-machine' ),
 				$pipeline_name,
 				$flow_count
 			),
