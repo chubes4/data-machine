@@ -298,7 +298,7 @@ class FlowAbilities {
 						'meta'                => array( 'show_in_rest' => true ),
 					)
 				);
-			};
+		};
 
 		if ( did_action( 'wp_abilities_api_init' ) ) {
 			$register_callback();

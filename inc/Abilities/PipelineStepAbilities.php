@@ -25,8 +25,8 @@ class PipelineStepAbilities {
 	private ProcessedItems $db_processed_items;
 
 	public function __construct() {
-		$this->db_pipelines = new Pipelines();
-		$this->db_flows     = new Flows();
+		$this->db_pipelines       = new Pipelines();
+		$this->db_flows           = new Flows();
 		$this->db_processed_items = new ProcessedItems();
 
 		if ( ! class_exists( 'WP_Ability' ) || self::$registered ) {
@@ -688,7 +688,7 @@ class PipelineStepAbilities {
 		// Sync deletions to flows
 		$affected_flows = $this->db_flows->get_flows_for_pipeline( $pipeline_id );
 		foreach ( $affected_flows as $flow ) {
-			$flow_config = $flow['flow_config'] ?? array();
+			$flow_config         = $flow['flow_config'] ?? array();
 			$updated_flow_config = array();
 			foreach ( $flow_config as $flow_step_id => $flow_step ) {
 				if ( isset( $flow_step['pipeline_step_id'] ) && $flow_step['pipeline_step_id'] !== $pipeline_step_id ) {
