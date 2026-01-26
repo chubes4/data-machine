@@ -2,6 +2,14 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## Unreleased
+
+### Removed
+- Delete deprecated SessionTitleGenerator.php (superseded by SystemAbilities)
+
+### Fixed
+- Move chat session title generation after database persistence to fix stale data issue (#7)
+
 ## [0.14.1] - 2026-01-25
 
 ### Fixed
