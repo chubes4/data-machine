@@ -230,6 +230,54 @@ class WordPress extends PublishHandler {
 		);
 	}
 
+	/**
+	 * Build WordPress-specific dry-run preview.
+	 *
+	 * @param array      $parameters Tool parameters
+	 * @param array      $handler_config Handler configuration
+	 * @param EngineData $engine Engine data instance
+	 * @return array Dry-run preview response
+	 */
+	protected function buildDryRunPreview( array $parameters, array $handler_config, EngineData $engine ): array {
+		$this->log(
+			'info',
+			'WordPress Tool: Dry-run mode - returning preview without creating post',
+			array(
+				'post_title' => $parameters['title'] ?? '',
+				'post_type'  => $handler_config['post_type'] ?? '',
+			)
+		);
+
+		$content         = wp_unslash( $parameters['content'] ?? '' );
+		$content         = wp_filter_post_kses( $content );
+		$content_preview = strlen( $content ) > 500 ? substr( $content, 0, 500 ) . '...' : $content;
+
+		// Get taxonomy settings for preview
+		$taxonomies        = get_taxonomies( array( 'public' => true ), 'names' );
+		$taxonomy_settings = array();
+		foreach ( $taxonomies as $taxonomy ) {
+			if ( ! TaxonomyHandler::shouldSkipTaxonomy( $taxonomy ) ) {
+				$field_key                      = "taxonomy_{$taxonomy}_selection";
+				$taxonomy_settings[ $taxonomy ] = $handler_config[ $field_key ] ?? 'NOT_SET';
+			}
+		}
+
+		return $this->successResponse(
+			array(
+				'dry_run'           => true,
+				'preview'           => array(
+					'post_title'   => sanitize_text_field( wp_unslash( $parameters['title'] ?? '' ) ),
+					'post_content' => $content_preview,
+					'post_type'    => $handler_config['post_type'] ?? '',
+					'post_status'  => WordPressSettingsResolver::getPostStatus( $handler_config ),
+					'post_author'  => WordPressSettingsResolver::getPostAuthor( $handler_config ),
+				),
+				'taxonomy_settings' => $taxonomy_settings,
+				'source_url'        => $engine->getSourceUrl(),
+				'image_path'        => $engine->getImagePath(),
+			)
+		);
+	}
 
 	/**
 	 * Get the display label for the WordPress handler.

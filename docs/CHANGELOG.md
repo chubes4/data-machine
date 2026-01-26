@@ -2,6 +2,10 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## Unreleased
+
+- Add dry-run support to base PublishHandler class for all publish handlers
+
 ## [0.14.2] - 2026-01-25
 
 ### Removed

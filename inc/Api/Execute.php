@@ -56,6 +56,12 @@ class Execute {
 						'required'    => false,
 						'description' => 'Initial engine data to merge before workflow execution',
 					),
+					'dry_run'      => array(
+						'type'        => 'boolean',
+						'required'    => false,
+						'default'     => false,
+						'description' => 'Preview execution without creating posts (ephemeral workflows only)',
+					),
 				),
 			)
 		);
@@ -73,6 +79,7 @@ class Execute {
 		$workflow     = $request->get_param( 'workflow' );
 		$timestamp    = $request->get_param( 'timestamp' );
 		$initial_data = $request->get_param( 'initial_data' );
+		$dry_run      = $request->get_param( 'dry_run' );
 
 		$ability = wp_get_ability( 'datamachine/execute-workflow' );
 		if ( ! $ability ) {
@@ -96,6 +103,10 @@ class Execute {
 
 		if ( $initial_data && is_array( $initial_data ) ) {
 			$input['initial_data'] = $initial_data;
+		}
+
+		if ( $dry_run ) {
+			$input['dry_run'] = true;
 		}
 
 		$result = $ability->execute( $input );
@@ -137,6 +148,11 @@ class Execute {
 		// Ephemeral workflow fields
 		if ( isset( $result['step_count'] ) ) {
 			$response_data['step_count'] = $result['step_count'];
+		}
+
+		// Dry-run mode
+		if ( isset( $result['dry_run'] ) && $result['dry_run'] ) {
+			$response_data['dry_run'] = true;
 		}
 
 		// Delayed execution fields

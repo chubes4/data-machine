@@ -338,10 +338,15 @@ class FlowStepAbilities {
 			if ( ! empty( $handler_config ) ) {
 				$validation_result = $this->validateHandlerConfig( $effective_slug, $handler_config );
 				if ( true !== $validation_result ) {
-					return array(
+					$response = array(
 						'success' => false,
-						'error'   => $validation_result,
+						'error'   => is_array( $validation_result ) ? $validation_result['error'] : $validation_result,
 					);
+					if ( is_array( $validation_result ) ) {
+						$response['unknown_fields'] = $validation_result['unknown_fields'];
+						$response['field_specs']    = $validation_result['field_specs'];
+					}
+					return $response;
 				}
 			}
 
@@ -502,11 +507,16 @@ class FlowStepAbilities {
 				if ( ! empty( $merged_config ) ) {
 					$validation_result = $this->validateHandlerConfig( $effective_handler_slug, $merged_config );
 					if ( true !== $validation_result ) {
-						$errors[] = array(
+						$error_entry = array(
 							'flow_step_id' => $flow_step_id,
 							'flow_id'      => $flow_id,
-							'error'        => $validation_result,
+							'error'        => is_array( $validation_result ) ? $validation_result['error'] : $validation_result,
 						);
+						if ( is_array( $validation_result ) ) {
+							$error_entry['unknown_fields'] = $validation_result['unknown_fields'];
+							$error_entry['field_specs']    = $validation_result['field_specs'];
+						}
+						$errors[] = $error_entry;
 						continue;
 					}
 				}
@@ -614,12 +624,16 @@ class FlowStepAbilities {
 	/**
 	 * Validate handler_config fields against handler schema.
 	 *
+	 * Returns structured error data with field specs when validation fails,
+	 * enabling AI agents to self-correct without trial-and-error.
+	 *
 	 * @param string $handler_slug Handler slug.
 	 * @param array  $handler_config Configuration to validate.
-	 * @return true|string True if valid, error message if invalid.
+	 * @return true|array True if valid, structured error array if invalid.
 	 */
-	private function validateHandlerConfig( string $handler_slug, array $handler_config ): bool|string {
-		$valid_fields = array_keys( $this->handler_abilities->getConfigFields( $handler_slug ) );
+	private function validateHandlerConfig( string $handler_slug, array $handler_config ): bool|array {
+		$config_fields = $this->handler_abilities->getConfigFields( $handler_slug );
+		$valid_fields  = array_keys( $config_fields );
 
 		if ( empty( $valid_fields ) ) {
 			return true;
@@ -628,11 +642,31 @@ class FlowStepAbilities {
 		$unknown_fields = array_diff( array_keys( $handler_config ), $valid_fields );
 
 		if ( ! empty( $unknown_fields ) ) {
-			return sprintf(
-				'Unknown handler_config fields for %s: %s. Valid fields: %s',
-				$handler_slug,
-				implode( ', ', $unknown_fields ),
-				implode( ', ', $valid_fields )
+			$field_specs = array();
+			foreach ( $config_fields as $key => $field ) {
+				$spec = array(
+					'type'        => $field['type'] ?? 'text',
+					'required'    => $field['required'] ?? false,
+					'description' => $field['description'] ?? '',
+				);
+				if ( isset( $field['options'] ) ) {
+					$spec['options'] = array_keys( $field['options'] );
+				}
+				if ( isset( $field['default'] ) ) {
+					$spec['default'] = $field['default'];
+				}
+				$field_specs[ $key ] = $spec;
+			}
+
+			return array(
+				'error'          => sprintf(
+					'Unknown handler_config fields for %s: %s. Valid fields: %s',
+					$handler_slug,
+					implode( ', ', $unknown_fields ),
+					implode( ', ', $valid_fields )
+				),
+				'unknown_fields' => $unknown_fields,
+				'field_specs'    => $field_specs,
 			);
 		}
 

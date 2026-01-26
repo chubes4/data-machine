@@ -220,6 +220,11 @@ class JobAbilities {
 							'type'        => 'object',
 							'description' => __( 'Optional initial engine data to merge before workflow execution (ephemeral only)', 'data-machine' ),
 						),
+						'dry_run'      => array(
+							'type'        => 'boolean',
+							'default'     => false,
+							'description' => __( 'Preview execution without creating posts. Returns preview data instead of publishing (ephemeral only).', 'data-machine' ),
+						),
 					),
 				),
 				'output_schema'       => array(
@@ -234,6 +239,7 @@ class JobAbilities {
 						'job_ids'        => array( 'type' => 'array' ),
 						'step_count'     => array( 'type' => 'integer' ),
 						'count'          => array( 'type' => 'integer' ),
+						'dry_run'        => array( 'type' => 'boolean' ),
 						'message'        => array( 'type' => 'string' ),
 						'error'          => array( 'type' => 'string' ),
 					),
@@ -698,6 +704,11 @@ class JobAbilities {
 			$engine_data = array_merge( $engine_data, $initial_data );
 		}
 
+		// Set dry_run_mode flag for preview execution
+		if ( ! empty( $input['dry_run'] ) ) {
+			$engine_data['dry_run_mode'] = true;
+		}
+
 		$this->db_jobs->store_engine_data( $job_id, $engine_data );
 
 		// Find first step
@@ -713,6 +724,8 @@ class JobAbilities {
 		$step_count     = count( $workflow['steps'] ?? array() );
 		$execution_type = 'immediate';
 
+		$is_dry_run = ! empty( $input['dry_run'] );
+
 		// Immediate execution
 		if ( ! $timestamp || ! is_numeric( $timestamp ) || (int) $timestamp <= time() ) {
 			do_action( 'datamachine_schedule_next_step', $job_id, $first_step_id, array() );
@@ -726,17 +739,28 @@ class JobAbilities {
 					'execution_type' => 'immediate',
 					'job_id'         => $job_id,
 					'step_count'     => $step_count,
+					'dry_run'        => $is_dry_run,
 				)
 			);
 
-			return array(
+			$message = $is_dry_run
+				? 'Ephemeral workflow dry-run started. No posts will be created - preview data will be returned.'
+				: 'Ephemeral workflow execution started';
+
+			$response = array(
 				'success'        => true,
 				'execution_mode' => 'direct',
 				'execution_type' => 'immediate',
 				'job_id'         => $job_id,
 				'step_count'     => $step_count,
-				'message'        => 'Ephemeral workflow execution started',
+				'message'        => $message,
 			);
+
+			if ( $is_dry_run ) {
+				$response['dry_run'] = true;
+			}
+
+			return $response;
 		}
 
 		// Delayed execution

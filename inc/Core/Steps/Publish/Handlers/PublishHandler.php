@@ -57,12 +57,50 @@ abstract class PublishHandler {
 		$engine_data = $this->getEngineData( $job_id );
 		$engine      = new EngineData( $engine_data, $job_id );
 
+		// Dry-run mode: return preview without executing publish
+		if ( ! empty( $engine_data['dry_run_mode'] ) ) {
+			$handler_config = $tool_def['handler_config'] ?? array();
+			return $this->buildDryRunPreview( $parameters, $handler_config, $engine );
+		}
+
 		// Enhance parameters for subclasses
 		$parameters['job_id'] = $job_id;
 		$parameters['engine'] = $engine;
 
 		$handler_config = $tool_def['handler_config'] ?? array();
 		return $this->executePublish( $parameters, $handler_config );
+	}
+
+	/**
+	 * Build dry-run preview response.
+	 *
+	 * Subclasses can override to provide handler-specific preview data.
+	 *
+	 * @param array      $parameters Tool parameters
+	 * @param array      $handler_config Handler configuration
+	 * @param EngineData $engine Engine data instance
+	 * @return array Dry-run preview response
+	 */
+	protected function buildDryRunPreview( array $parameters, array $handler_config, EngineData $engine ): array {
+		$this->log(
+			'info',
+			'Dry-run mode - returning preview without publishing',
+			array(
+				'handler' => $this->handler_type,
+			)
+		);
+
+		return $this->successResponse(
+			array(
+				'dry_run'    => true,
+				'preview'    => array(
+					'handler'    => $this->handler_type,
+					'parameters' => array_keys( $parameters ),
+				),
+				'source_url' => $engine->getSourceUrl(),
+				'image_path' => $engine->getImagePath(),
+			)
+		);
 	}
 
 	/**

@@ -61,10 +61,15 @@ EXAMPLE:
 			'method'      => 'handle_tool_call',
 			'description' => $description,
 			'parameters'  => array(
-				'steps' => array(
+				'steps'   => array(
 					'type'        => 'array',
 					'required'    => true,
 					'description' => 'Step objects: {type, handler_slug, handler_config}. AI steps: {type: "ai", user_message}.',
+				),
+				'dry_run' => array(
+					'type'        => 'boolean',
+					'required'    => false,
+					'description' => 'Preview execution without creating posts. Returns what would be published instead of actually publishing.',
 				),
 			),
 		);
@@ -78,7 +83,8 @@ EXAMPLE:
 	 * @return array Execution result
 	 */
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
-		$steps = $parameters['steps'] ?? array();
+		$steps   = $parameters['steps'] ?? array();
+		$dry_run = $parameters['dry_run'] ?? false;
 
 		if ( empty( $steps ) ) {
 			return array(
@@ -100,6 +106,10 @@ EXAMPLE:
 		$input = array(
 			'workflow' => array( 'steps' => $steps ),
 		);
+
+		if ( $dry_run ) {
+			$input['dry_run'] = true;
+		}
 
 		$result = $ability->execute( $input );
 
