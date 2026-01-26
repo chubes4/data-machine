@@ -21,6 +21,15 @@ class SiteContext {
 	 */
 	public static function get_context(): array {
 		$cached = get_transient( self::CACHE_KEY );
+
+		// Clear stale cache if date has changed (ensures current_date is always accurate).
+		if ( false !== $cached && isset( $cached['site']['current_date'] ) ) {
+			if ( wp_date( 'Y-m-d' ) !== $cached['site']['current_date'] ) {
+				delete_transient( self::CACHE_KEY );
+				$cached = false;
+			}
+		}
+
 		if ( false !== $cached ) {
 			return $cached;
 		}
@@ -51,16 +60,17 @@ class SiteContext {
 	/**
 	 * Get site metadata.
 	 *
-	 * @return array Site name, URL, language, timezone
+	 * @return array Site name, URL, language, timezone, current_date
 	 */
 	private static function get_site_metadata(): array {
 		return array(
-			'name'      => get_bloginfo( 'name' ),
-			'tagline'   => get_bloginfo( 'description' ),
-			'url'       => home_url(),
-			'admin_url' => admin_url(),
-			'language'  => get_locale(),
-			'timezone'  => wp_timezone_string(),
+			'name'         => get_bloginfo( 'name' ),
+			'tagline'      => get_bloginfo( 'description' ),
+			'url'          => home_url(),
+			'admin_url'    => admin_url(),
+			'language'     => get_locale(),
+			'timezone'     => wp_timezone_string(),
+			'current_date' => wp_date( 'Y-m-d' ),
 		);
 	}
 
