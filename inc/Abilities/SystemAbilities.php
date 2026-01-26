@@ -38,51 +38,8 @@ class SystemAbilities {
 
 	private function registerAbilities(): void {
 		$register_callback = function () {
-			wp_register_ability(
-				'datamachine/generate-session-title',
-				array(
-					'label'               => 'Generate Session Title',
-					'description'         => 'Generate an AI-powered title for a chat session based on conversation content',
-					'category'            => 'datamachine',
-					'input_schema'        => array(
-						'type'       => 'object',
-						'properties' => array(
-							'session_id' => array(
-								'type'        => 'string',
-								'description' => 'UUID of the chat session to generate title for',
-							),
-							'force'      => array(
-								'type'        => 'boolean',
-								'description' => 'Force regeneration even if title already exists',
-								'default'     => false,
-							),
-						),
-						'required'   => array( 'session_id' ),
-					),
-					'output_schema'       => array(
-						'type'       => 'object',
-						'properties' => array(
-							'success' => array( 'type' => 'boolean' ),
-							'title'   => array( 'type' => 'string' ),
-							'method'  => array(
-								'type' => 'string',
-								'enum' => array( 'ai', 'fallback' ),
-							),
-							'message' => array( 'type' => 'string' ),
-							'error'   => array( 'type' => 'string' ),
-						),
-					),
-					'execute_callback'    => array( self::class, 'generateSessionTitle' ),
-					'permission_callback' => function () {
-						// Allow internal calls from system hooks, or admin access
-						if ( defined('WP_CLI') && WP_CLI ) {
-							return true;
-						}
-						return current_user_can('manage_options');
-					},
-					'meta'                => array( 'show_in_rest' => false ), // Internal system operation
-				)
-			);
+			$this->registerSessionTitleAbility();
+			$this->registerHealthCheckAbility();
 		};
 
 		if ( did_action('wp_abilities_api_init') ) {
@@ -90,6 +47,244 @@ class SystemAbilities {
 		} else {
 			add_action('wp_abilities_api_init', $register_callback);
 		}
+	}
+
+	private function registerSessionTitleAbility(): void {
+		wp_register_ability(
+			'datamachine/generate-session-title',
+			array(
+				'label'               => 'Generate Session Title',
+				'description'         => 'Generate an AI-powered title for a chat session based on conversation content',
+				'category'            => 'datamachine',
+				'input_schema'        => array(
+					'type'       => 'object',
+					'properties' => array(
+						'session_id' => array(
+							'type'        => 'string',
+							'description' => 'UUID of the chat session to generate title for',
+						),
+						'force'      => array(
+							'type'        => 'boolean',
+							'description' => 'Force regeneration even if title already exists',
+							'default'     => false,
+						),
+					),
+					'required'   => array( 'session_id' ),
+				),
+				'output_schema'       => array(
+					'type'       => 'object',
+					'properties' => array(
+						'success' => array( 'type' => 'boolean' ),
+						'title'   => array( 'type' => 'string' ),
+						'method'  => array(
+							'type' => 'string',
+							'enum' => array( 'ai', 'fallback' ),
+						),
+						'message' => array( 'type' => 'string' ),
+						'error'   => array( 'type' => 'string' ),
+					),
+				),
+				'execute_callback'    => array( self::class, 'generateSessionTitle' ),
+				'permission_callback' => function () {
+					if ( defined('WP_CLI') && WP_CLI ) {
+						return true;
+					}
+					return current_user_can('manage_options');
+				},
+				'meta'                => array( 'show_in_rest' => false ),
+			)
+		);
+	}
+
+	private function registerHealthCheckAbility(): void {
+		wp_register_ability(
+			'datamachine/system-health-check',
+			array(
+				'label'               => __( 'System Health Check', 'data-machine' ),
+				'description'         => __( 'Unified health diagnostics for Data Machine and extensions', 'data-machine' ),
+				'category'            => 'datamachine',
+				'input_schema'        => array(
+					'type'       => 'object',
+					'properties' => array(
+						'types'   => array(
+							'type'        => 'array',
+							'items'       => array( 'type' => 'string' ),
+							'description' => 'Check types to run. Use "all" for all default checks, or specific type IDs.',
+						),
+						'options' => array(
+							'type'        => 'object',
+							'description' => 'Type-specific options (scope, limit, url, etc.)',
+						),
+					),
+				),
+				'output_schema'       => array(
+					'type'       => 'object',
+					'properties' => array(
+						'success'   => array( 'type' => 'boolean' ),
+						'results'   => array( 'type' => 'object' ),
+						'summary'   => array( 'type' => 'string' ),
+						'available' => array(
+							'type'        => 'array',
+							'description' => 'List of available check types',
+						),
+					),
+				),
+				'execute_callback'    => array( $this, 'executeHealthCheck' ),
+				'permission_callback' => function () {
+					if ( defined('WP_CLI') && WP_CLI ) {
+						return true;
+					}
+					return current_user_can('manage_options');
+				},
+				'meta'                => array( 'show_in_rest' => true ),
+			)
+		);
+	}
+
+	/**
+	 * Get registered health check providers.
+	 *
+	 * Extensions register via filter:
+	 * add_filter( 'datamachine_system_health_checks', function( $checks ) {
+	 *     $checks['events'] = array(
+	 *         'label'    => 'Event Health',
+	 *         'callback' => array( EventHealthAbilities::class, 'executeHealthCheck' ),
+	 *         'default'  => true, // included in 'all'
+	 *     );
+	 *     return $checks;
+	 * } );
+	 *
+	 * @return array Registered health checks
+	 */
+	private function getRegisteredChecks(): array {
+		$checks = array(
+			'system' => array(
+				'label'    => __( 'System Diagnostics', 'data-machine' ),
+				'callback' => array( $this, 'runSystemDiagnostics' ),
+				'default'  => true,
+			),
+		);
+
+		return apply_filters( 'datamachine_system_health_checks', $checks );
+	}
+
+	/**
+	 * Execute unified health check.
+	 *
+	 * @param array $input Input with optional 'types' and 'options'
+	 * @return array Health check results
+	 */
+	public function executeHealthCheck( array $input ): array {
+		$requested_types = $input['types'] ?? array( 'all' );
+		$options         = $input['options'] ?? array();
+		$checks          = $this->getRegisteredChecks();
+		$results         = array();
+
+		if ( empty( $requested_types ) ) {
+			$requested_types = array( 'all' );
+		}
+
+		$run_all = in_array( 'all', $requested_types, true );
+
+		foreach ( $checks as $type_id => $check ) {
+			$should_run = $run_all
+				? ( $check['default'] ?? true )
+				: in_array( $type_id, $requested_types, true );
+
+			if ( ! $should_run ) {
+				continue;
+			}
+
+			$check_options       = $options[ $type_id ] ?? $options;
+			$results[ $type_id ] = array(
+				'label'  => $check['label'],
+				'result' => call_user_func( $check['callback'], $check_options ),
+			);
+		}
+
+		return array(
+			'success'   => true,
+			'results'   => $results,
+			'summary'   => $this->buildSummary( $results ),
+			'available' => array_keys( $checks ),
+		);
+	}
+
+	/**
+	 * Run core system diagnostics.
+	 *
+	 * @param array $options Optional check options
+	 * @return array System diagnostic results
+	 */
+	private function runSystemDiagnostics( array $options = array() ): array {
+		return array(
+			'version'     => defined( 'DATAMACHINE_VERSION' ) ? DATAMACHINE_VERSION : 'unknown',
+			'php_version' => PHP_VERSION,
+			'wp_version'  => get_bloginfo( 'version' ),
+			'abilities'   => $this->listRegisteredAbilities(),
+			'rest_status' => $this->checkRestApi(),
+		);
+	}
+
+	/**
+	 * List all datamachine abilities.
+	 *
+	 * @return array List of ability IDs
+	 */
+	private function listRegisteredAbilities(): array {
+		if ( ! function_exists( 'wp_get_abilities' ) ) {
+			return array();
+		}
+
+		$all = wp_get_abilities();
+
+		return array_values(
+			array_filter(
+				array_keys( $all ),
+				fn( $id ) => str_starts_with( $id, 'datamachine' )
+			)
+		);
+	}
+
+	/**
+	 * Check REST API status.
+	 *
+	 * @return array REST API status info
+	 */
+	private function checkRestApi(): array {
+		$server     = rest_get_server();
+		$namespaces = $server ? $server->get_namespaces() : array();
+
+		return array(
+			'namespace_registered' => in_array( 'datamachine/v1', $namespaces, true ),
+		);
+	}
+
+	/**
+	 * Build summary message from results.
+	 *
+	 * @param array $results Health check results
+	 * @return string Summary message
+	 */
+	private function buildSummary( array $results ): string {
+		$parts = array();
+
+		foreach ( $results as $type_id => $data ) {
+			$result = $data['result'] ?? array();
+
+			if ( isset( $result['error'] ) ) {
+				$parts[] = $data['label'] . ': error';
+				continue;
+			}
+
+			if ( isset( $result['message'] ) ) {
+				$parts[] = $data['label'] . ': ' . $result['message'];
+			} else {
+				$parts[] = $data['label'] . ': completed';
+			}
+		}
+
+		return implode( '; ', $parts );
 	}
 
 	public static function generateSessionTitle( array $input ): array {
