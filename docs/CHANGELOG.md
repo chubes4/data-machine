@@ -2,6 +2,11 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## [0.14.4] - 2026-01-26
+
+### Changed
+- Add current_date to SiteContext for AI date awareness
+
 ## [0.14.3] - 2026-01-26
 
 - Add dry-run support to base PublishHandler class for all publish handlers
