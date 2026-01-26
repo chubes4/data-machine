@@ -546,7 +546,15 @@ class Chat {
 			$model
 		);
 
-		if ( ! $update_success ) {
+		// After successful session update, trigger title generation for new sessions
+		if ( $update_success ) {
+			$session = $chat_db->get_session( $session_id );
+			if ( $session && empty( $session['title'] ) ) {
+				$ability = wp_get_ability( 'datamachine/generate-session-title' );
+				if ( $ability ) {
+					$ability->execute( array( 'session_id' => $session_id ) );
+				}
+			}
 		}
 
 		$response_data = array(
@@ -574,34 +582,3 @@ class Chat {
 		return rest_ensure_response( $response );
 	}
 }
-
-/**
- * Hook listener for AI response events to trigger system operations
- */
-add_action(
-	'datamachine_ai_response_received',
-	function ( $agent_type, $messages, $payload ) {
-		// Only handle chat agent responses for title generation
-		if ( 'chat' !== $agent_type || empty( $payload['session_id'] ) ) {
-			return;
-		}
-
-		$session_id = $payload['session_id'];
-
-		// Check if this is a new session (no title yet) by querying the database
-		$chat_db = new ChatDatabase();
-		$session = $chat_db->get_session( $session_id );
-
-		if ( ! $session || ! empty( $session['title'] ) ) {
-			return; // Session not found or already has title
-		}
-
-	// Call the system ability to generate title
-	$ability = wp_get_ability( 'datamachine/generate-session-title' );
-	if ( $ability ) {
-		$ability->execute( array( 'session_id' => $session_id ) );
-	}
-	},
-	10,
-	3
-);

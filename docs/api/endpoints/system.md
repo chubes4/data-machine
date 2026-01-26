@@ -50,7 +50,7 @@ System operations are exposed through the WordPress Abilities API for programmat
 
 **Purpose**: Generate a title for a chat session using AI or fallback methods
 
-**Implementation**: `inc/Api/System/SessionTitleGenerator.php`
+**Implementation**: `inc/Abilities/SystemAbilities.php`
 
 **Parameters**:
 - `session_id` (string, required): UUID of the chat session
@@ -90,7 +90,7 @@ System operations are exposed through the WordPress Abilities API for programmat
     },
     "method": {
       "type": "string",
-      "enum": ["ai", "truncated"],
+      "enum": ["ai", "fallback", "existing"],
       "description": "Method used to generate title"
     }
   }
@@ -115,7 +115,7 @@ Chat session titles are automatically generated when:
 
 1. **AI Titles Enabled**: Uses the configured AI provider to generate descriptive titles from conversation content
 2. **Fallback**: Uses truncated first user message when AI generation fails or is disabled
-3. **Trigger**: Automatically triggered after each AI response via `datamachine_ai_response_received` hook
+3. **Trigger**: Automatically triggered after session persistence when a new session has no title
 
 **Configuration**:
 - `chat_ai_titles_enabled` setting controls whether AI generation is used (default: true)
