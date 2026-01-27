@@ -2,6 +2,14 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## [0.14.11] - 2026-01-27
+
+### Changed
+- Remove orphaned ToolRegistrationTrait require
+
+### Fixed
+- Complete truncated test function
+
 ## [0.14.10] - 2026-01-27
 
 ### Changed
