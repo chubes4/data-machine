@@ -54,7 +54,6 @@ require_once __DIR__ . '/inc/Core/Admin/Pages/Logs/LogsFilters.php';
 require_once __DIR__ . '/inc/Core/Admin/Pages/Jobs/JobsFilters.php';
 require_once __DIR__ . '/inc/Core/WordPress/PostTrackingTrait.php';
 require_once __DIR__ . '/inc/Core/Steps/StepTypeRegistrationTrait.php';
-require_once __DIR__ . '/inc/Engine/AI/Tools/ToolRegistrationTrait.php';
 require_once __DIR__ . '/inc/Engine/AI/Tools/Global/GoogleSearch.php';
 require_once __DIR__ . '/inc/Engine/AI/Tools/Global/LocalSearch.php';
 require_once __DIR__ . '/inc/Engine/AI/Tools/Global/WebFetch.php';
