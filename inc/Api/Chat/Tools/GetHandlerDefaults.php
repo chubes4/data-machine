@@ -18,6 +18,7 @@ use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class GetHandlerDefaults {
 	use ToolRegistrationTrait;
+	use ChatToolErrorTrait;
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'get_handler_defaults', array( $this, 'getToolDefinition' ) );
@@ -51,12 +52,9 @@ class GetHandlerDefaults {
 		}
 
 		$defaults_result = $defaults_ability->execute( array( 'handler_slug' => $handler_slug ) );
-		if ( ! ( $defaults_result['success'] ?? false ) ) {
-			return array(
-				'success'   => false,
-				'error'     => $defaults_result['error'] ?? 'Failed to get handler defaults',
-				'tool_name' => 'get_handler_defaults',
-			);
+		if ( ! $this->isAbilitySuccess( $defaults_result ) ) {
+			$error = $this->getAbilityError( $defaults_result, 'Failed to get handler defaults' );
+			return $this->buildErrorResponse( $error, 'get_handler_defaults' );
 		}
 
 		$site_defaults = $defaults_result['defaults'] ?? array();
@@ -76,12 +74,8 @@ class GetHandlerDefaults {
 			}
 
 			$handler_result = $handler_ability->execute( array( 'handler_slug' => $handler_slug ) );
-			if ( ! ( $handler_result['success'] ?? false ) || empty( $handler_result['handlers'] ) ) {
-				return array(
-					'success'   => false,
-					'error'     => "Handler '{$handler_slug}' not found",
-					'tool_name' => 'get_handler_defaults',
-				);
+			if ( ! $this->isAbilitySuccess( $handler_result ) || empty( $handler_result['handlers'] ) ) {
+				return $this->buildErrorResponse( "Handler '{$handler_slug}' not found", 'get_handler_defaults' );
 			}
 
 			$handler_info = $handler_result['handlers'][ $handler_slug ] ?? array();
@@ -91,7 +85,7 @@ class GetHandlerDefaults {
 			$fields         = array();
 			if ( $fields_ability ) {
 				$fields_result = $fields_ability->execute( array( 'handler_slug' => $handler_slug ) );
-				if ( $fields_result['success'] ?? false ) {
+				if ( $this->isAbilitySuccess( $fields_result ) ) {
 					$fields = $fields_result['fields'] ?? array();
 				}
 			}
@@ -122,8 +116,12 @@ class GetHandlerDefaults {
 		}
 
 		$handlers_result = $handlers_ability->execute( array() );
-		$all_handlers    = $handlers_result['handlers'] ?? array();
-		$summary         = array();
+		if ( ! $this->isAbilitySuccess( $handlers_result ) ) {
+			$error = $this->getAbilityError( $handlers_result, 'Failed to get handlers' );
+			return $this->buildErrorResponse( $error, 'get_handler_defaults' );
+		}
+		$all_handlers = $handlers_result['handlers'] ?? array();
+		$summary      = array();
 
 		foreach ( $all_handlers as $slug => $info ) {
 			$handler_defaults = $site_defaults[ $slug ] ?? array();

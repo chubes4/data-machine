@@ -19,6 +19,7 @@ use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class ConfigurePipelineStep {
 	use ToolRegistrationTrait;
+	use ChatToolErrorTrait;
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'configure_pipeline_step', array( $this, 'getToolDefinition' ) );
@@ -77,10 +78,14 @@ class ConfigurePipelineStep {
 
 		$result = $ability->execute( $parameters );
 
+		if ( ! $this->isAbilitySuccess( $result ) ) {
+			$error = $this->getAbilityError( $result, 'Failed to configure pipeline step' );
+			return $this->buildErrorResponse( $error, 'configure_pipeline_step' );
+		}
+
 		return array(
-			'success'   => $result['success'] ?? false,
-			'data'      => ( $result['success'] ?? false ) ? $result : null,
-			'error'     => $result['error'] ?? null,
+			'success'   => true,
+			'data'      => $result,
 			'tool_name' => 'configure_pipeline_step',
 		);
 	}

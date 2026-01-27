@@ -20,6 +20,7 @@ use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class ConfigureFlowSteps {
 	use ToolRegistrationTrait;
+	use ChatToolErrorTrait;
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'configure_flow_steps', array( $this, 'getToolDefinition' ) );
@@ -135,12 +136,8 @@ class ConfigureFlowSteps {
 				);
 			}
 			$validation_result = $ability->execute( array( 'handler_slug' => $target_handler_slug ) );
-			if ( ! ( $validation_result['valid'] ?? false ) ) {
-				return array(
-					'success'   => false,
-					'error'     => "Target handler '{$target_handler_slug}' not found",
-					'tool_name' => 'configure_flow_steps',
-				);
+			if ( is_wp_error( $validation_result ) || ! ( $validation_result['valid'] ?? false ) ) {
+				return $this->buildErrorResponse( "Target handler '{$target_handler_slug}' not found", 'configure_flow_steps' );
 			}
 		}
 

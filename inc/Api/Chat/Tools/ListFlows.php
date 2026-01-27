@@ -16,6 +16,7 @@ defined( 'ABSPATH' ) || exit;
 
 class ListFlows {
 	use ToolRegistrationTrait;
+	use ChatToolErrorTrait;
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'list_flows', array( $this, 'getToolDefinition' ) );
@@ -64,12 +65,9 @@ class ListFlows {
 
 		$result = $ability->execute( $parameters );
 
-		if ( ! $result['success'] ) {
-			return array(
-				'success'   => false,
-				'error'     => $result['error'],
-				'tool_name' => 'list_flows',
-			);
+		if ( ! $this->isAbilitySuccess( $result ) ) {
+			$error = $this->getAbilityError( $result, 'Failed to list flows' );
+			return $this->buildErrorResponse( $error, 'list_flows' );
 		}
 
 		return array(

@@ -20,6 +20,7 @@ use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class CopyFlow {
 	use ToolRegistrationTrait;
+	use ChatToolErrorTrait;
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'copy_flow', array( $this, 'getToolDefinition' ) );
@@ -120,12 +121,9 @@ class CopyFlow {
 
 		$result = $ability->execute( $input );
 
-		if ( ! $result['success'] ) {
-			return array(
-				'success'   => false,
-				'error'     => $result['error'] ?? 'Failed to copy flow',
-				'tool_name' => 'copy_flow',
-			);
+		if ( ! $this->isAbilitySuccess( $result ) ) {
+			$error = $this->getAbilityError( $result, 'Failed to copy flow' );
+			return $this->buildErrorResponse( $error, 'copy_flow' );
 		}
 
 		$is_cross_pipeline = $result['source_pipeline_id'] !== $result['target_pipeline_id'];

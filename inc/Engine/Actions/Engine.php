@@ -336,9 +336,9 @@ function datamachine_register_execution_engine() {
 					'debug',
 					'Engine: status_override check',
 					array(
-						'job_id'               => $job_id,
-						'status_override'      => $status_override,
-						'has_override'         => ! empty( $status_override ),
+						'job_id'                 => $job_id,
+						'status_override'        => $status_override,
+						'has_override'           => ! empty( $status_override ),
 						'engine_data_job_status' => $refreshed_engine_data['job_status'] ?? 'not_set',
 					)
 				);

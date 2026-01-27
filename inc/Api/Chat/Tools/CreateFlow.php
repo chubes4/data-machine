@@ -20,6 +20,7 @@ use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class CreateFlow {
 	use ToolRegistrationTrait;
+	use ChatToolErrorTrait;
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'create_flow', array( $this, 'getToolDefinition' ) );
@@ -125,12 +126,9 @@ class CreateFlow {
 			)
 		);
 
-		if ( ! $result['success'] ) {
-			return array(
-				'success'   => false,
-				'error'     => $result['error'] ?? 'Failed to create flow. Verify the pipeline_id exists and you have sufficient permissions.',
-				'tool_name' => 'create_flow',
-			);
+		if ( ! $this->isAbilitySuccess( $result ) ) {
+			$error = $this->getAbilityError( $result, 'Failed to create flow. Verify the pipeline_id exists and you have sufficient permissions.' );
+			return $this->buildErrorResponse( $error, 'create_flow' );
 		}
 
 		$flow_config   = $result['flow_data']['flow_config'] ?? array();

@@ -18,6 +18,7 @@ use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class RunFlow {
 	use ToolRegistrationTrait;
+	use ChatToolErrorTrait;
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'run_flow', array( $this, 'getToolDefinition' ) );
@@ -72,12 +73,9 @@ class RunFlow {
 
 		$result = $ability->execute( $input );
 
-		if ( ! ( $result['success'] ?? false ) ) {
-			return array(
-				'success'   => false,
-				'error'     => $result['error'] ?? 'Failed to run flow',
-				'tool_name' => 'run_flow',
-			);
+		if ( ! $this->isAbilitySuccess( $result ) ) {
+			$error = $this->getAbilityError( $result, 'Failed to run flow' );
+			return $this->buildErrorResponse( $error, 'run_flow' );
 		}
 
 		$response_data = array(

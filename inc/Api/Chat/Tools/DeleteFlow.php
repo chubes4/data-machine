@@ -17,6 +17,7 @@ use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class DeleteFlow {
 	use ToolRegistrationTrait;
+	use ChatToolErrorTrait;
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'delete_flow', array( $this, 'getToolDefinition' ) );
@@ -65,13 +66,17 @@ class DeleteFlow {
 			)
 		);
 
+		if ( ! $this->isAbilitySuccess( $result ) ) {
+			$error = $this->getAbilityError( $result, 'Failed to delete flow' );
+			return $this->buildErrorResponse( $error, 'delete_flow' );
+		}
+
 		return array(
-			'success'   => $result['success'],
-			'data'      => $result['success'] ? array(
+			'success'   => true,
+			'data'      => array(
 				'flow_id' => $result['flow_id'],
 				'message' => $result['message'] ?? 'Flow deleted.',
-			) : null,
-			'error'     => $result['error'] ?? null,
+			),
 			'tool_name' => 'delete_flow',
 		);
 	}

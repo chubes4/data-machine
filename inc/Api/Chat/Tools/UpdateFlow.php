@@ -17,6 +17,7 @@ use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 
 class UpdateFlow {
 	use ToolRegistrationTrait;
+	use ChatToolErrorTrait;
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'update_flow', array( $this, 'getToolDefinition' ) );
@@ -106,12 +107,9 @@ class UpdateFlow {
 
 		$result = $ability->execute( $input );
 
-		if ( ! $result['success'] ) {
-			return array(
-				'success'   => false,
-				'error'     => $result['error'] ?? 'Failed to update flow',
-				'tool_name' => 'update_flow',
-			);
+		if ( ! $this->isAbilitySuccess( $result ) ) {
+			$error = $this->getAbilityError( $result, 'Failed to update flow' );
+			return $this->buildErrorResponse( $error, 'update_flow' );
 		}
 
 		$response_data = array(
