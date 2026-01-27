@@ -2,6 +2,12 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## [0.14.6] - 2026-01-26
+
+### Changed
+- add stuck job recovery feature with abilities-first architecture
+- made sure default model assigned to new pipeline ai steps (based on global settings)
+
 ## [0.14.5] - 2026-01-26
 
 ### Changed
