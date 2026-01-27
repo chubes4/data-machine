@@ -2,6 +2,11 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## [0.14.10] - 2026-01-27
+
+### Changed
+- Unified BaseTool architecture for all AI tools
+
 ## [0.14.9] - 2026-01-27
 
 ### Fixed
