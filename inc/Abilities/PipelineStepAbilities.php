@@ -13,6 +13,7 @@ namespace DataMachine\Abilities;
 use DataMachine\Core\Database\Flows\Flows;
 use DataMachine\Core\Database\Pipelines\Pipelines;
 use DataMachine\Core\Database\ProcessedItems\ProcessedItems;
+use DataMachine\Core\PluginSettings;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -398,6 +399,11 @@ class PipelineStepAbilities {
 			'pipeline_step_id' => $pipeline_id . '_' . wp_generate_uuid4(),
 			'label'            => $step_type_config['label'] ?? ucfirst( str_replace( '_', ' ', $step_type ) ),
 		);
+
+		if ( 'ai' === $step_type ) {
+			$new_step['provider'] = PluginSettings::get( 'default_provider', '' );
+			$new_step['model']    = PluginSettings::get( 'default_model', '' );
+		}
 
 		$pipeline_config = array();
 		foreach ( $current_steps as $step ) {
