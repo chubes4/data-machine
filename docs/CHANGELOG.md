@@ -2,6 +2,11 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## [0.14.8] - 2026-01-26
+
+### Changed
+- expand jobs.status column to varchar(255) for compound statuses with reasons
+
 ## [0.14.7] - 2026-01-26
 
 ### Added
