@@ -98,11 +98,12 @@ class Jobs {
 
 		// pipeline_id and flow_id are VARCHAR to support 'direct' execution mode
 		// where these values store the string 'direct' instead of numeric IDs
+		// status is VARCHAR(255) to support compound statuses with reasons
 		$sql = "CREATE TABLE $table_name (
             job_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             pipeline_id varchar(20) NOT NULL,
             flow_id varchar(20) NOT NULL,
-            status varchar(100) NOT NULL,
+            status varchar(255) NOT NULL,
             engine_data longtext NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             completed_at datetime NULL DEFAULT NULL,
@@ -132,7 +133,7 @@ class Jobs {
 	 * Migrate existing table columns to current schema.
 	 *
 	 * Handles:
-	 * - status column: varchar(20) -> varchar(100) for compound statuses
+	 * - status column: varchar(20/100) -> varchar(255) for compound statuses with reasons
 	 * - pipeline_id column: bigint -> varchar(20) for 'direct' execution support
 	 * - flow_id column: bigint -> varchar(20) for 'direct' execution support
 	 *
@@ -159,14 +160,14 @@ class Jobs {
 			return;
 		}
 
-		// Migrate status column: varchar(20) -> varchar(100)
-		if ( isset( $columns['status'] ) && (int) $columns['status']->CHARACTER_MAXIMUM_LENGTH < 100 ) {
+		// Migrate status column: varchar(20/100) -> varchar(255)
+		if ( isset( $columns['status'] ) && (int) $columns['status']->CHARACTER_MAXIMUM_LENGTH < 255 ) {
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange
-			$wpdb->query( "ALTER TABLE {$table_name} MODIFY status varchar(100) NOT NULL" );
+			$wpdb->query( "ALTER TABLE {$table_name} MODIFY status varchar(255) NOT NULL" );
 			do_action(
 				'datamachine_log',
 				'info',
-				'Migrated jobs.status column to varchar(100)',
+				'Migrated jobs.status column to varchar(255)',
 				array(
 					'agent_type'    => 'system',
 					'table_name'    => $table_name,
