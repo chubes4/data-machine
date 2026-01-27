@@ -2,6 +2,11 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## [0.14.12] - 2026-01-27
+
+### Fixed
+- Fix flows run CLI subcommand argument parsing
+
 ## [0.14.11] - 2026-01-27
 
 ### Changed
