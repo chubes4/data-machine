@@ -538,7 +538,11 @@ class PipelineStepAbilitiesTest extends WP_UnitTestCase {
 		$steps          = $result['steps'];
 		$expected_types = array( 'fetch', 'ai', 'publish' );
 		foreach ( $steps as $index => $step ) {
-		public function test_delete_pipeline_step_syncs_to_flows_and_cleans_processed_items(): void {
+			$this->assertEquals( $expected_types[ $index ], $step['step_type'] );
+		}
+	}
+
+	public function test_delete_pipeline_step_syncs_to_flows_and_cleans_processed_items(): void {
 		// Create a pipeline step
 		$add_result = $this->step_abilities->executeAddPipelineStep(
 			array(
@@ -597,3 +601,4 @@ class PipelineStepAbilitiesTest extends WP_UnitTestCase {
 		$remaining_items = $processed_items_db->get_processed_items(['flow_step_id' => $flow_step_id]);
 		$this->assertEmpty($remaining_items);
 	}
+}
