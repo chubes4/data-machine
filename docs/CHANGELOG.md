@@ -2,6 +2,11 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## [0.14.9] - 2026-01-27
+
+### Fixed
+- Add ChatToolErrorTrait for consistent WP_Error handling in chat tools with error_type classification to prevent AI infinite retry loops
+
 ## [0.14.8] - 2026-01-26
 
 ### Changed
