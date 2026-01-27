@@ -9,10 +9,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use DataMachine\Core\HttpClient;
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class WebFetch {
-	use ToolRegistrationTrait;
+class WebFetch extends BaseTool {
 
 	public function __construct() {
 		$this->registerGlobalTool( 'web_fetch', array( $this, 'getToolDefinition' ) );

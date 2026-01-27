@@ -14,11 +14,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 use DataMachine\Core\WordPress\TaxonomyHandler;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class MergeTaxonomyTerms {
-	use ToolRegistrationTrait;
+class MergeTaxonomyTerms extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'merge_taxonomy_terms', array( $this, 'getToolDefinition' ) );

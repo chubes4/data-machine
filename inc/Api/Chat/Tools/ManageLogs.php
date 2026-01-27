@@ -15,10 +15,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class ManageLogs {
-	use ToolRegistrationTrait;
+class ManageLogs extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'manage_logs', array( $this, 'getToolDefinition' ) );

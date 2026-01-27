@@ -14,11 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class RunFlow {
-	use ToolRegistrationTrait;
-	use ChatToolErrorTrait;
+class RunFlow extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'run_flow', array( $this, 'getToolDefinition' ) );

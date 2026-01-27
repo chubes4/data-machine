@@ -9,10 +9,9 @@ namespace DataMachine\Engine\AI\Tools\Global;
 
 defined( 'ABSPATH' ) || exit;
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class WordPressPostReader {
-	use ToolRegistrationTrait;
+class WordPressPostReader extends BaseTool {
 
 	public function __construct() {
 		$this->registerGlobalTool( 'wordpress_post_reader', array( $this, 'getToolDefinition' ) );

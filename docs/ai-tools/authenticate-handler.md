@@ -109,4 +109,4 @@ Remove authentication and credentials for a handler.
 The tool integrates with:
 - **Auth Providers**: Uses the `datamachine_auth_providers` filter to access authentication instances.
 - **REST API**: Mirrors functionality available via the `/datamachine/v1/auth` endpoints.
-- **Tool Manager**: Registered via `ToolRegistrationTrait` for discovery by the AI engine.
+- **Tool Manager**: Extends `BaseTool` for discovery by the AI engine.

@@ -15,10 +15,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use DataMachine\Abilities\HandlerAbilities;
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class SetHandlerDefaults {
-	use ToolRegistrationTrait;
+class SetHandlerDefaults extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'set_handler_defaults', array( $this, 'getToolDefinition' ) );

@@ -12,10 +12,9 @@ namespace DataMachine\Engine\AI\Tools\Global;
 
 defined( 'ABSPATH' ) || exit;
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class LocalSearch {
-	use ToolRegistrationTrait;
+class LocalSearch extends BaseTool {
 
 	public function __construct() {
 		$this->registerGlobalTool( 'local_search', array( $this, 'getToolDefinition' ) );

@@ -16,11 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use DataMachine\Abilities\HandlerAbilities;
 use DataMachine\Core\Database\Flows\Flows as FlowsDB;
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class CreateFlow {
-	use ToolRegistrationTrait;
-	use ChatToolErrorTrait;
+class CreateFlow extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'create_flow', array( $this, 'getToolDefinition' ) );

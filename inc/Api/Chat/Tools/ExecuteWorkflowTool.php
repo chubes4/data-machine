@@ -11,14 +11,13 @@
 
 namespace DataMachine\Api\Chat\Tools;
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class ExecuteWorkflowTool {
-	use ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
+
+class ExecuteWorkflowTool extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'execute_workflow', array( $this, 'getToolDefinition' ) );

@@ -8,7 +8,7 @@ The Universal Engine is a shared AI infrastructure layer that provides consisten
 
 Prior to v0.2.0, Pipeline AI and Chat agents maintained separate implementations of conversation loops, tool execution, and request building. This architectural duplication created maintenance overhead and potential behavioral drift between agent types.
 
-The Universal Engine consolidates this shared functionality into a centralized layer at `/inc/Engine/AI/`, enabling both agent types to leverage identical AI infrastructure while maintaining their specialized behaviors through filter-based integration. Since v0.2.2, it includes ToolManager for centralized tool management and ToolRegistrationTrait for standardized tool registration patterns.
+The Universal Engine consolidates this shared functionality into a centralized layer at `/inc/Engine/AI/`, enabling both agent types to leverage identical AI infrastructure while maintaining their specialized behaviors through filter-based integration. Since v0.2.2, it includes ToolManager for centralized tool management and BaseTool for unified tool inheritance.
 
 ## Architecture
 
@@ -35,9 +35,9 @@ The Universal Engine consolidates this shared functionality into a centralized l
 │  └──────────────────┘      └──────────────────┘   │
 │                                                      │
 │  ┌──────────────────┐      ┌──────────────────┐   │
-│  │ConversationManager│      │ ToolRegistration│   │
-│  │ Message utilities│      │ Trait            │   │
-│  │ and validation   │      │ (@since v0.2.2)  │   │
+│  │ConversationManager│      │ BaseTool         │   │
+│  │ Message utilities│      │ (@since v0.14.10)│   │
+│  │ and validation   │      │                  │   │
 │  └──────────────────┘      └──────────────────┘   │
 └─────────────────────────────────────────────────────┘
                         │
@@ -70,7 +70,7 @@ The Universal Engine consists of eight core components that provide shared AI in
 - **ToolParameters** - Standardized parameter building for tool handlers
 - **ConversationManager** - Message formatting, validation, and conversation utilities
 - **ToolResultFinder** - Universal tool result search and interpretation
-- **ToolRegistrationTrait** - Agent-agnostic tool registration pattern (@since v0.2.2)
+- **BaseTool** - Unified base class for all AI tools with registration and error handling (@since v0.14.10)
 
 Each component is documented individually in the core system documentation.
 
@@ -142,52 +142,61 @@ $ui_data = $tool_manager->getToolsForUI();
 
 See Tool Manager for complete documentation.
 
-### ToolRegistrationTrait (@since v0.2.2)
+### BaseTool (@since v0.14.10)
 
-**Location**: `/inc/Engine/AI/Tools/ToolRegistrationTrait.php`
+**Location**: `/inc/Engine/AI/Tools/BaseTool.php`
 
-Agent-agnostic tool registration pattern for global tools that provides standardized registration with dynamic filter creation.
+Unified abstract base class for all AI tools (global and chat) that provides standardized error handling and tool registration through inheritance.
 
 #### Key Features
 
-- **Dynamic Filter Creation**: Automatically creates filter callbacks based on agent type
-- **Future-Proof**: Supports current and future agent types (pipeline, chat, frontend, supportbot)
-- **Consistent Patterns**: Standardized registration across all global tools
+- **Unified Inheritance**: Single base class for all tools (global and chat)
+- **Agent-Agnostic Registration**: `registerTool()` method handles all agent types
+- **Dynamic Filter Creation**: Automatically creates `datamachine_{agentType}_tools` filters
+- **Error Handling**: Standardized error response building with classification
 - **Configuration Integration**: Automatic configuration handler registration
 
-#### Usage in Global Tools
+#### Usage in Tools
 
 ```php
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class GoogleSearchFilters {
-    use ToolRegistrationTrait;
+class GoogleSearch extends BaseTool {
 
-    public static function register(): void {
-        self::registerTool(
-            'google_search',
-            GoogleSearch::class,
-            __('Google Search', 'datamachine'),
-            __('Web search with Custom Search API', 'datamachine'),
-            'datamachine_google_search_tool',
-            GoogleSearchConfigHandler::class
-        );
+    public function __construct() {
+        $this->registerGlobalTool('google_search', [$this, 'getToolDefinition']);
+        $this->registerConfigurationHandlers('google_search');
+    }
+
+    public function getToolDefinition(): array {
+        return [
+            'class' => self::class,
+            'method' => 'handle_tool_call',
+            'description' => 'Search the web using Google Custom Search API',
+            'parameters' => [
+                'query' => ['type' => 'string', 'description' => 'Search query'],
+            ]
+        ];
     }
 }
 ```
 
-#### Global Tools Using Trait
+#### Tools Using BaseTool
 
+**Global Tools:**
 - **GoogleSearch** - Web search with Custom Search API
 - **LocalSearch** - WordPress internal search
 - **WebFetch** - Web page content retrieval
 - **WordPressPostReader** - Single post analysis
 
+**Chat Tools:** All chat tools in `/inc/Api/Chat/Tools/` extend BaseTool.
+
 #### Benefits
 
+- **Unified Architecture**: One base class for all tools eliminates trait usage
 - **Agent Agnostic**: Dynamic filter creation per agent type
+- **Error Handling**: Standardized error classification (not_found, validation, permission, system)
 - **Extensibility**: Easy to add new agent types without updating tools
-- **Consistency**: Uniform registration patterns across global tools
-- **Maintainability**: Centralized registration logic for all global tools
+- **Maintainability**: Centralized registration and error handling logic
 
-See individual tool documentation in `/docs/ai-tools/` for usage examples.
+See [BaseTool documentation](base-tool.md) for complete details.

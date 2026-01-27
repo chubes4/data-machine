@@ -19,10 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use DataMachine\Core\PluginSettings;
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class GetProblemFlows {
-	use ToolRegistrationTrait;
+class GetProblemFlows extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'get_problem_flows', array( $this, 'getToolDefinition' ) );

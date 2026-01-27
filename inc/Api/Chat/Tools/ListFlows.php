@@ -10,13 +10,11 @@
 
 namespace DataMachine\Api\Chat\Tools;
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
-
 defined( 'ABSPATH' ) || exit;
 
-class ListFlows {
-	use ToolRegistrationTrait;
-	use ChatToolErrorTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
+
+class ListFlows extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'list_flows', array( $this, 'getToolDefinition' ) );

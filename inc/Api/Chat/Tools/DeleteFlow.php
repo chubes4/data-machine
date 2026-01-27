@@ -13,11 +13,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class DeleteFlow {
-	use ToolRegistrationTrait;
-	use ChatToolErrorTrait;
+class DeleteFlow extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'delete_flow', array( $this, 'getToolDefinition' ) );

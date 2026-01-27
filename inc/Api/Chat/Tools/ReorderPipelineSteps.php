@@ -14,10 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class ReorderPipelineSteps {
-	use ToolRegistrationTrait;
+class ReorderPipelineSteps extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'reorder_pipeline_steps', array( $this, 'getToolDefinition' ) );

@@ -21,7 +21,7 @@ Core architecture
 - EngineData provides platform-agnostic data access (single source of truth for engine parameters).
 - WordPressPublishHelper provides WordPress-specific publishing operations (image attachment, source attribution).
 - WordPressSettingsResolver provides centralized settings resolution with system defaults override.
-- Handler and Tool registration use standardized traits (`HandlerRegistrationTrait`, `StepTypeRegistrationTrait`, `ToolRegistrationTrait`) to auto-register services via WordPress filters.
+- Handler and Step registration use standardized traits (`HandlerRegistrationTrait`, `StepTypeRegistrationTrait`) to auto-register services via WordPress filters. Tools extend `BaseTool` for unified registration.
 - Cache Management: Each ability class provides its own `clearCache()` method for domain-specific invalidation. `SiteContext` handles site metadata caching. Admin UI uses TanStack Query for client-side state.
 - Prompt and directive management is centralized via a PromptBuilder with ordered directives (site, pipeline, flow, context).
 - Providers are pluggable and configured by site administrators (OpenAI, Anthropic, Google, Grok, OpenRouter).

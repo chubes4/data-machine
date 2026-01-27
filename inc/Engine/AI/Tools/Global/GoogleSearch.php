@@ -10,10 +10,9 @@ namespace DataMachine\Engine\AI\Tools\Global;
 defined( 'ABSPATH' ) || exit;
 
 use DataMachine\Core\HttpClient;
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class GoogleSearch {
-	use ToolRegistrationTrait;
+class GoogleSearch extends BaseTool {
 
 	public function __construct() {
 		$this->registerConfigurationHandlers( 'google_search' );

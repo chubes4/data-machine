@@ -16,11 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class CopyFlow {
-	use ToolRegistrationTrait;
-	use ChatToolErrorTrait;
+class CopyFlow extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'copy_flow', array( $this, 'getToolDefinition' ) );

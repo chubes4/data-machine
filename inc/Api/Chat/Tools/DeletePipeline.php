@@ -14,10 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class DeletePipeline {
-	use ToolRegistrationTrait;
+class DeletePipeline extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'delete_pipeline', array( $this, 'getToolDefinition' ) );

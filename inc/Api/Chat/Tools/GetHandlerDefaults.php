@@ -14,11 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class GetHandlerDefaults {
-	use ToolRegistrationTrait;
-	use ChatToolErrorTrait;
+class GetHandlerDefaults extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'get_handler_defaults', array( $this, 'getToolDefinition' ) );

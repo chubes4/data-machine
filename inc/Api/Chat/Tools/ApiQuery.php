@@ -16,13 +16,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
 /**
  * API Query Tool
  */
-class ApiQuery {
-	use ToolRegistrationTrait;
+class ApiQuery extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'api_query', array( $this, 'getToolDefinition' ) );

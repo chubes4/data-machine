@@ -15,13 +15,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
 /**
  * Authenticate Handler Tool
  */
-class AuthenticateHandler {
-	use ToolRegistrationTrait;
+class AuthenticateHandler extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'authenticate_handler', array( $this, 'getToolDefinition' ) );

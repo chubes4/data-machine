@@ -11,7 +11,6 @@
 
 namespace DataMachine\Abilities;
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
 use const DataMachine\Core\WordPress\DATAMACHINE_POST_HANDLER_META_KEY;
 use const DataMachine\Core\WordPress\DATAMACHINE_POST_FLOW_ID_META_KEY;
 use const DataMachine\Core\WordPress\DATAMACHINE_POST_PIPELINE_ID_META_KEY;
@@ -19,7 +18,6 @@ use const DataMachine\Core\WordPress\DATAMACHINE_POST_PIPELINE_ID_META_KEY;
 defined( 'ABSPATH' ) || exit;
 
 class PostQueryAbilities {
-	use ToolRegistrationTrait;
 
 	private const DEFAULT_PER_PAGE = 20;
 
@@ -50,7 +48,7 @@ class PostQueryAbilities {
 		}
 
 		$this->registerAbility();
-		$this->registerTool( 'chat', 'query_posts', array( $this, 'getQueryPostsTool' ) );
+		$this->registerChatTool();
 		self::$registered = true;
 	}
 
@@ -123,6 +121,16 @@ class PostQueryAbilities {
 		} else {
 			add_action( 'wp_abilities_api_init', $register_callback );
 		}
+	}
+
+	private function registerChatTool(): void {
+		add_filter(
+			'datamachine_chat_tools',
+			function ( $tools ) {
+				$tools['query_posts'] = array( $this, 'getQueryPostsTool' );
+				return $tools;
+			}
+		);
 	}
 
 	public function getQueryPostsTool(): array {

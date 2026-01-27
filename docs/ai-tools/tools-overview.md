@@ -169,7 +169,7 @@ Handler-specific tools registered via `chubes_ai_tools` filter using HandlerRegi
 - `is_tool_configured()` - Check configuration requirements
 - `get_opt_out_defaults()` - WordPress-native tools (no config needed)
 
-**ToolRegistrationTrait** provides standardized registration for global tools with dynamic filter creation supporting current and future agent types.
+**BaseTool** (`/inc/Engine/AI/Tools/BaseTool.php`) provides unified base class for all AI tools with standardized registration and error handling.
 
 **Chat-Specific Tools** (available only to chat AI agents):
 ```php

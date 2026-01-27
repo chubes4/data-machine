@@ -16,10 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use DataMachine\Abilities\StepTypeAbilities;
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class AddPipelineStep {
-	use ToolRegistrationTrait;
+class AddPipelineStep extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'add_pipeline_step', array( $this, 'getToolDefinition' ) );

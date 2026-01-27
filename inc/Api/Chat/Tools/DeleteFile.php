@@ -14,10 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use DataMachine\Engine\AI\Tools\ToolRegistrationTrait;
+use DataMachine\Engine\AI\Tools\BaseTool;
 
-class DeleteFile {
-	use ToolRegistrationTrait;
+class DeleteFile extends BaseTool {
 
 	public function __construct() {
 		$this->registerTool( 'chat', 'delete_file', array( $this, 'getToolDefinition' ) );
