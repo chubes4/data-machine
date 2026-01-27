@@ -93,6 +93,24 @@ class FlowsCommand extends WP_CLI_Command {
 	 *
 	 *     # Alias: flows get <id>
 	 *     wp datamachine flows get 42
+	 *
+	 *     # Run a flow immediately
+	 *     wp datamachine flows run 42
+	 *
+	 *     # Run a flow 3 times (creates 3 independent jobs)
+	 *     wp datamachine flows run 42 --count=3
+	 *
+	 *     # Schedule a flow for later execution
+	 *     wp datamachine flows run 42 --timestamp=1735689600
+	 *
+	 * [--count=<number>]
+	 * : Number of times to run the flow (1-10, immediate execution only).
+	 * ---
+	 * default: 1
+	 * ---
+	 *
+	 * [--timestamp=<unix>]
+	 * : Unix timestamp for delayed execution (future time required).
 	 */
 	public function __invoke( array $args, array $assoc_args ): void {
 		$flow_id     = null;
@@ -103,6 +121,14 @@ class FlowsCommand extends WP_CLI_Command {
 			if ( isset( $args[1] ) ) {
 				$flow_id = (int) $args[1];
 			}
+		} elseif ( ! empty( $args ) && 'run' === $args[0] ) {
+			// Handle 'run' subcommand: `flows run 42`.
+			if ( ! isset( $args[1] ) ) {
+				WP_CLI::error( 'Usage: wp datamachine flows run <flow_id> [--count=N] [--timestamp=T]' );
+				return;
+			}
+			$this->runFlow( (int) $args[1], $assoc_args );
+			return;
 		} elseif ( ! empty( $args ) && 'list' !== $args[0] ) {
 			$pipeline_id = (int) $args[0];
 		}
@@ -149,6 +175,47 @@ class FlowsCommand extends WP_CLI_Command {
 		}
 
 		$this->outputResult( $result, $format, $output_mode );
+	}
+
+	/**
+	 * Run a flow immediately or with scheduling.
+	 *
+	 * @param int   $flow_id    Flow ID to execute.
+	 * @param array $assoc_args Associative arguments (count, timestamp).
+	 */
+	private function runFlow( int $flow_id, array $assoc_args ): void {
+		$count     = isset( $assoc_args['count'] ) ? (int) $assoc_args['count'] : 1;
+		$timestamp = isset( $assoc_args['timestamp'] ) ? (int) $assoc_args['timestamp'] : null;
+
+		// Validate count range (1-10).
+		if ( $count < 1 || $count > 10 ) {
+			WP_CLI::error( 'Count must be between 1 and 10.' );
+			return;
+		}
+
+		$ability = new \DataMachine\Abilities\JobAbilities();
+		$result  = $ability->executeWorkflow(
+			array(
+				'flow_id'   => $flow_id,
+				'count'     => $count,
+				'timestamp' => $timestamp,
+			)
+		);
+
+		if ( ! $result['success'] ) {
+			WP_CLI::error( $result['error'] ?? 'Failed to run flow' );
+			return;
+		}
+
+		// Output success message.
+		WP_CLI::success( $result['message'] ?? 'Flow execution scheduled.' );
+
+		// Show job ID(s) for follow-up.
+		if ( isset( $result['job_id'] ) ) {
+			WP_CLI::log( sprintf( 'Job ID: %d', $result['job_id'] ) );
+		} elseif ( isset( $result['job_ids'] ) ) {
+			WP_CLI::log( sprintf( 'Job IDs: %s', implode( ', ', $result['job_ids'] ) ) );
+		}
 	}
 
 	/**

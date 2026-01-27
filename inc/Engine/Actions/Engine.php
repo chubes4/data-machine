@@ -324,13 +324,38 @@ function datamachine_register_execution_engine() {
 				$step_success = ! empty( $dataPackets );
 
 				// Refresh engine data to capture any changes made during step execution (e.g., job_status from skip_item)
-				$engine = new \DataMachine\Core\EngineData( datamachine_get_engine_data( $job_id ), $job_id );
+				$refreshed_engine_data = datamachine_get_engine_data( $job_id );
+				$engine                = new \DataMachine\Core\EngineData( $refreshed_engine_data, $job_id );
 
 				// Check for status override from tools (e.g., skip_item sets agent_skipped)
 				// If set, complete the job immediately without scheduling next step
 				$status_override = $engine->get( 'job_status' );
+
+				do_action(
+					'datamachine_log',
+					'debug',
+					'Engine: status_override check',
+					array(
+						'job_id'               => $job_id,
+						'status_override'      => $status_override,
+						'has_override'         => ! empty( $status_override ),
+						'engine_data_job_status' => $refreshed_engine_data['job_status'] ?? 'not_set',
+					)
+				);
+
 				if ( $status_override ) {
-					$db_jobs->complete_job( $job_id, $status_override );
+					$complete_result = $db_jobs->complete_job( $job_id, $status_override );
+
+					do_action(
+						'datamachine_log',
+						'debug',
+						'Engine: complete_job called with status_override',
+						array(
+							'job_id' => $job_id,
+							'status' => $status_override,
+							'result' => $complete_result,
+						)
+					);
 					$cleanup = new \DataMachine\Core\FilesRepository\FileCleanup();
 					$context = datamachine_get_file_context( $flow_id );
 					$cleanup->cleanup_job_data_packets( $job_id, $context );
