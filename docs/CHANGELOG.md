@@ -2,6 +2,11 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## [0.14.7] - 2026-01-26
+
+### Added
+- Add 'flows run' CLI subcommand for immediate/scheduled flow execution (#13)
+
 ## [0.14.6] - 2026-01-26
 
 ### Changed
