@@ -22,8 +22,8 @@ class FlowsCommand extends WP_CLI_Command {
 	 *
 	 * ## OPTIONS
 	 *
-	 * [<pipeline_id>]
-	 * : Filter flows by pipeline ID.
+	 * [<args>...]
+	 * : Subcommand and arguments. Accepts: list [pipeline_id], get <flow_id>, run <flow_id>.
 	 *
 	 * [--handler=<slug>]
 	 * : Filter flows using this handler slug (any step that uses this handler).
