@@ -1273,8 +1273,13 @@ class PipelineAbilities {
 		$valid_types         = array_keys( $step_type_abilities->getAllStepTypes() );
 
 		foreach ( $steps as $index => $step ) {
+			// Accept shorthand: "event_import" → {"step_type": "event_import"}
+			if ( is_string( $step ) ) {
+				$step = array( 'step_type' => $step );
+			}
+
 			if ( ! is_array( $step ) ) {
-				return "Step at index {$index} must be an object";
+				return "Step at index {$index} must be a string or object";
 			}
 
 			$step_type = $step['step_type'] ?? null;

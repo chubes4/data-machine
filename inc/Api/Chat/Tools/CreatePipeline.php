@@ -167,8 +167,8 @@ class CreatePipeline extends BaseTool {
 				'flow_step_ids' => $flow_step_ids,
 				'scheduling'    => $scheduling_config['interval'],
 				'message'       => 0 === $steps_created
-					? "Pipeline and flow (ID: {$flow_id}) created. Do NOT call create_flow - a flow already exists. Use add_pipeline_step to add steps, then configure_flow_steps to configure handlers."
-					: "Pipeline and flow (ID: {$flow_id}) created with {$steps_created} steps. Do NOT call create_flow - a flow already exists. Use configure_flow_steps with the flow_step_ids to set handler configurations.",
+					? "Pipeline and flow (ID: {$flow_id}) created. Use add_pipeline_step to add steps, then configure_flow_steps to configure handlers."
+					: "Pipeline and flow (ID: {$flow_id}) created with {$steps_created} steps. Use configure_flow_steps with the flow_step_ids to set handler configurations.",
 			),
 			'tool_name' => 'create_pipeline',
 		);
@@ -287,8 +287,13 @@ class CreatePipeline extends BaseTool {
 
 	private function validateSteps( array $steps ): bool|string {
 		foreach ( $steps as $index => $step ) {
+			// Accept shorthand: "event_import" → {"step_type": "event_import"}
+			if ( is_string( $step ) ) {
+				$step = array( 'step_type' => $step );
+			}
+
 			if ( ! is_array( $step ) ) {
-				return "Step at index {$index} must be an object";
+				return "Step at index {$index} must be a string or object";
 			}
 
 			$step_type = $step['step_type'] ?? null;
@@ -308,6 +313,11 @@ class CreatePipeline extends BaseTool {
 	private function normalizeSteps( array $steps ): array {
 		$normalized = array();
 		foreach ( $steps as $index => $step ) {
+			// Accept shorthand: "event_import" → {"step_type": "event_import"}
+			if ( is_string( $step ) ) {
+				$step = array( 'step_type' => $step );
+			}
+
 			$normalized_step = array(
 				'step_type'       => $step['step_type'],
 				'execution_order' => $step['execution_order'] ?? $index,
