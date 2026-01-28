@@ -28,4 +28,4 @@ When a direct execution workflow is triggered via the `/execute` REST endpoint, 
 
 ## Example Payload
 
-See the [Execute Endpoint Documentation](../api/execute.md) for detailed payload examples.
+See the [Execute Endpoint Documentation](../api/endpoints/execute.md) for detailed payload examples.

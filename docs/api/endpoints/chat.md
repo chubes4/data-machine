@@ -235,7 +235,7 @@ The Chat endpoint uses the Universal Engine architecture at `/inc/Engine/AI/` fo
 **Purpose**: Registers chat-specific behavior with Universal Engine
 
 **Chat Pipelines Inventory** (@since v0.7.0):
-The chat agent receives a lightweight inventory of all pipelines, their configured steps (ID, name, type), and flow summaries (ID, name, handlers) via the [ChatPipelinesDirective](../core-system/ai-directives.md#chatpipelinesdirective-priority-45). When `selected_pipeline_id` is provided (e.g., from the Integrated Chat Sidebar), the agent prioritizes and expands context for that specific pipeline.
+The chat agent receives a lightweight inventory of all pipelines, their configured steps (ID, name, type), and flow summaries (ID, name, handlers) via the [ChatPipelinesDirective](../../core-system/ai-directives.md#chatpipelinesdirective-priority-45). When `selected_pipeline_id` is provided (e.g., from the Integrated Chat Sidebar), the agent prioritizes and expands context for that specific pipeline.
 
 **Tool Enablement** (chat-specific):
 ```php

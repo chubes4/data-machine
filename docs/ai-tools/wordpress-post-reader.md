@@ -1,6 +1,6 @@
 # WordPress Post Reader AI Tool
 
-**File Location**: `inc/Engine/AI/Tools/WordPressPostReader.php`
+**File Location**: `inc/Engine/AI/Tools/Global/WordPressPostReader.php`
 
 **Registration**: `datamachine_global_tools` filter (available to all AI agents - pipeline + chat)
 

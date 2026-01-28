@@ -1,6 +1,6 @@
 # Google Search Tool
 
-**File Location**: `inc/Engine/AI/Tools/GoogleSearch.php`
+**File Location**: `inc/Engine/AI/Tools/Global/GoogleSearch.php`
 
 **Registration**: `datamachine_global_tools` filter (available to all AI agents - pipeline + chat)
 

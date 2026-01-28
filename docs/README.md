@@ -71,8 +71,8 @@ docs/
 ├── admin-interface/                   # User guidance for admin pages
 ├── api/                               # REST API for consumers
 │   ├── index.md                       # Complete API overview and common patterns
-│   ├── endpoints/                    # Individual REST endpoint documentation
-│   └── errors.md                      # Error handling reference
+│   └── endpoints/                     # Individual REST endpoint documentation
+│       └── errors.md                  # Error handling reference
 ├── development/                       # Developer-focused documentation
 │   ├── hooks/                         # Core actions, filters, and engine hooks
 │   └── rest-integration.md            # REST API extension patterns

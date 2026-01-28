@@ -2,65 +2,99 @@
 
 Contributors: extrachill
 Tags: ai, automation, content, workflow, pipeline, chat
-Requires at least: 6.2
+Requires at least: 6.9
 Tested up to: 6.8
 Requires PHP: 8.2
-Stable tag: 0.10.2
+Stable tag: 0.15.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-AI-first WordPress plugin for content processing workflows with a visual pipeline builder, conversational chat agent, REST API, and handler/tool extensibility.
+Automate WordPress content workflows with AI — fetch from anywhere, enhance with AI, publish everywhere.
 
-## Overview
+## What It Does
 
-- **Pipeline + Flow architecture** that separates reusable pipeline templates from scheduled flow instances and job executions.
-- **Modern React admin** that relies exclusively on the REST API, TanStack Query, and Zustand for caching, optimistic updates, and client state isolation. Page visibility is controlled through the "Admin Pages" settings or the `datamachine_admin_pages` filter. Features a collapsible **Integrated Chat Sidebar** for context-aware pipeline automation, a centralized **Logs interface**, and a **React-based Jobs dashboard** for real-time monitoring.
-- **Tool-first AI agents** that discover enabling providers, call contextual tools, and persist conversations via a universal engine shared by chat and pipelines.
-- **Abilities API** for business logic (FlowAbilities, PipelineAbilities, FlowStepAbilities, PipelineStepAbilities, ProcessedItemsAbilities, JobAbilities, SettingsAbilities, etc.) with remaining utilities (JobManager, LogsManager, CacheManager) for cross-cutting concerns.
-- **Global handler tooling** with modular fetch, publish, and update adapters backed by centralized registration traits and field schemas.
-- **Centralized Cache Invalidation** via CacheManager to ensure dynamic handler and step type registrations are immediately reflected across the system. Site context metadata is also cached and automatically invalidated on content changes.
+Data Machine turns WordPress into an AI-powered content automation hub:
+
+- **Build visual pipelines** that fetch content from any source, process it with AI, and publish or update automatically
+- **Chat with an AI agent** to configure and run workflows conversationally
+- **Schedule recurring automation** or trigger workflows on-demand
+
+No coding required. Connect your sources, configure AI processing, set your schedule, and let it run.
+
+## Example Workflows
+
+**Content Syndication**
+RSS feed → AI rewrites for your voice → Publish to WordPress
+
+**Social Media Automation**
+WordPress posts → AI summarizes → Post to Twitter/Threads/Bluesky
+
+**Content Aggregation**
+Reddit/Google Sheets → AI filters and enhances → Create draft posts
+
+**Site Maintenance**
+Local posts → AI improves SEO/readability → Update existing content
+
+## Quick Links
+
+[Documentation](docs/) · [Changelog](docs/CHANGELOG.md) · [REST API](docs/api/)
+
+## How It Works
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│    FETCH    │ ──▶ │     AI      │ ──▶ │   PUBLISH   │
+│  RSS, API,  │     │  Enhance,   │     │  WordPress, │
+│  Sheets...  │     │  Filter,    │     │  Social,    │
+│             │     │  Transform  │     │  Sheets...  │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+Pipelines define your workflow template. Flows schedule when they run. Jobs track each execution.
 
 ## Key Features
 
-- **Clean execution pipeline**: Reliability-first **Single Item Execution Model** where Fetch → AI → Publish/Update handlers process exactly one normalized data packet per job execution cycle. Engine parameters remain accessible through centralized filters (`datamachine_engine_data`).
-- **Deduplication tracking** via processed items and job-scoped per-agent logging.
-- **Multi-provider AI** support (OpenAI, Anthropic, Google, Grok, OpenRouter) with tool orchestration and directive management through PromptBuilder and RequestBuilder.
-- **Unified tool architecture** covering global search/fetch tools and chat-specific workflow tools. Focused Tools (CreatePipeline, RunFlow, etc.) handle mutation while ApiQuery provides read-only discovery.
-- **Granular Job Monitoring**: Real-time status tracking including `completed_no_items` to differentiate between empty fetches and failures. Automated "Problem Flow" flagging based on consecutive failures or empty results.
-- **HTTP client standardization** with HttpClient for consistent headers, browser simulation, timeout handling, and logging integrations.
-- **Extension-ready systems** using WordPress filters for handlers, tools, authentication providers, and step types.
+- **Visual Pipeline Builder** — React admin UI for creating multi-step workflows
+- **Chat Agent** — Conversational workflow configuration via integrated sidebar
+- **Multi-Provider AI** — OpenAI, Anthropic, Google, Grok, OpenRouter
+- **Deduplication** — Never process the same item twice
+- **Scheduled Execution** — Recurring intervals via Action Scheduler or on-demand
+- **Problem Flow Monitoring** — Automatic flagging of failing workflows
+
+## Handlers & Tools
+
+**Fetch**: RSS, Reddit, Google Sheets, WordPress API, Files, WordPress Media
+
+**Publish**: Twitter, Threads, Bluesky, Facebook, WordPress, Google Sheets
+
+**Update**: WordPress posts with AI enhancement
+
+**AI Tools**: Google Search, Local Search, Web Fetch, WordPress Post Reader
 
 ## Requirements
 
-- WordPress 6.2 or higher and PHP 8.2 or higher.
-- Composer for dependency management and vendor autoloading.
-- Action Scheduler for scheduled flow execution when jobs rely on cron.
+- WordPress 6.9+ (Abilities API dependency)
+- PHP 8.2+
+- Composer for dependency management
+- Action Scheduler for scheduled execution
 
-## Architecture highlights
+## Architecture
 
-- **EngineData** serves as the platform-agnostic data source, streaming normalized packets and metadata to handlers and tools while shared helpers (WordPressPublishHelper, TaxonomyHandler, WordPressSettingsResolver) address WordPress-specific needs.
-- **FilesRepository** modules (DirectoryManager, FileStorage, FileCleanup, ImageValidator, RemoteFileDownloader, FileRetrieval) ensure flow-scoped file handling, validation, and cleanup.
-- **Step Navigator** and **Tool Result Finder** keep executions ordered and AI interactions traceable.
-- **Prompt/Directive system** centralizes system prompts and directives via `datamachine_directives`, with priorities that layer workflow context, tool definitions, and site information to every request.
+Data Machine uses an abilities-first architecture built on the WordPress 6.9 Abilities API. All operations flow through a single REST API at `/wp-json/datamachine/v1/`.
 
-## REST API surface
+The engine processes exactly one item per job execution cycle (Single Item Execution Model), ensuring failures are isolated and never cascade.
 
-All data flows through `/wp-json/datamachine/v1/`, exposing endpoints for auth, execute, files, flows, pipelines, jobs, logs, processed items, handlers, providers, settings, step types, tools, and other infrastructure needs. Service managers handle validation, sanitation, and error handling before responses reach the REST layer.
+Extensions integrate via WordPress filters for handlers, tools, authentication providers, and step types.
 
-## Handler & tool coverage
+See [CLAUDE.md](CLAUDE.md) for technical contributor documentation.
 
-- **Fetch handlers**: Files, RSS, Reddit, Google Sheets, WordPress Local, WordPress Media, WordPress API.
-- **Publish handlers**: Twitter, Threads, Bluesky, Facebook, WordPress Publish, Google Sheets Output.
-- **Update handlers**: WordPress Update with engine parameter support for existing posts.
-- **Global AI tools**: Google Search, Local Search, Web Fetch, WordPress Post Reader.
-- **Chat/workflow tools**: ExecuteWorkflow, AddPipelineStep, ApiQuery, ConfigureFlowSteps, ConfigurePipelineStep, CreateFlow, CreatePipeline, RunFlow, UpdateFlow.
+## Development
 
-## Development notes
+- Build: `homeboy build data-machine` — runs tests, lints, builds frontend, creates ZIP
+- Test: `homeboy test data-machine` — runs PHPUnit via homeboy's WordPress environment
+- Lint: `homeboy lint data-machine` — PHP CodeSniffer with WordPress standards
 
-- Composer scripts define PHPUnit suites (`test`, `test:unit`, `test:integration`, `test:coverage`, `test:verbose`).
-- `build.sh` bundles production artifacts into a distributable ZIP with production dependencies.
+## Resources
 
-## Additional resources
-
-- [CLAUDE.md](CLAUDE.md) provides a concise reference for contributors.
-- `/docs/` houses user-facing documentation covering architecture, handlers, AI tools, admin interface guidance, and API references.
+- [CLAUDE.md](CLAUDE.md) — Technical reference for contributors
+- [/docs/](docs/) — User documentation

@@ -48,7 +48,7 @@ Abilities are the single source of truth for REST endpoints, CLI commands, and C
 ## Scheduling & Jobs
 
 - **Action Scheduler** drives scheduled flow execution while REST endpoints handle immediate runs.
-- **Flow schedules** support manual runs, one-time execution, and recurring intervals (from 5 minutes to weekly). See [Scheduling Intervals](api/intervals.md) for available options.
+- **Flow schedules** support manual runs, one-time execution, and recurring intervals (from 5 minutes to weekly). See [Scheduling Intervals](api/endpoints/intervals.md) for available options.
 - **JobManager** updates statuses, emits extensibility actions (`datamachine_update_job_status`), and links jobs to logs and processed items for auditing.
 
 ## Admin Interface

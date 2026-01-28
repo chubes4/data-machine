@@ -39,7 +39,7 @@ Clears log files.
 
 ## Implementation
 
-For technical details on the logging architecture and the service layer, see the [Logger System Documentation](../core-system/logger.md).
+For technical details on the logging architecture and the service layer, see the [Logger System Documentation](../../core-system/logger.md).
 
 ### LogsManager Service
 

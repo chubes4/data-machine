@@ -1,6 +1,6 @@
 # Logger System
 
-**Implementation**: `\DataMachine\Services\LogsManager`
+**Implementation**: `inc/Engine/Logger.php` and `inc/Abilities/LogAbilities.php`
 **Since**: 0.4.0 (Unified Logging System)
 **React Admin**: `inc/Core/Admin/Pages/Logs/` (@since v0.8.0)
 
@@ -10,14 +10,14 @@ Data Machine uses a centralized file-based logging system managed by Monolog for
 
 ## Architecture
 
-**Design Pattern**: Service-based logging with Monolog file persistence.
+**Design Pattern**: Abilities-based logging with Monolog file persistence.
 **Integration**: Custom WordPress action `datamachine_log` for decoupled logging from any component.
 **Log Storage**: Per-agent log files in uploads directory with Monolog StreamHandler.
 **Agent Context**: Automatically captures the executing agent type (Pipeline, Chat, System, CLI) and associated job/session context.
 
-## LogsManager Service
+## LogAbilities
 
-The `LogsManager` is the primary interface for interacting with the logging system.
+The `LogAbilities` class provides the WordPress 6.9 Abilities API interface for logging operations.
 
 ### Methods
 
@@ -79,6 +79,6 @@ The logging system is multisite-aware, maintaining separate log files per site w
 
 ---
 
-**Implementation**: `inc/Services/LogsManager.php`
+**Implementation**: `inc/Engine/Logger.php`, `inc/Abilities/LogAbilities.php`
 **API Endpoints**: `/wp-json/datamachine/v1/logs`
-**Related**: [Logs API](../api/logs.md)
+**Related**: [Logs API](../api/endpoints/logs.md)

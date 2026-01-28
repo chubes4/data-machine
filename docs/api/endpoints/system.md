@@ -126,8 +126,8 @@ Chat session titles are automatically generated when:
 
 - [Chat Endpoint](chat.md) - Main chat API
 - [Chat Sessions](chat-sessions.md) - Session management
-- [Abilities API](../core-system/abilities-api.md) - WordPress Abilities API usage
-- [AI Directives](../core-system/ai-directives.md) - AI integration patterns
+- [Abilities API](../../core-system/abilities-api.md) - WordPress Abilities API usage
+- [AI Directives](../../core-system/ai-directives.md) - AI integration patterns
 
 ---
 

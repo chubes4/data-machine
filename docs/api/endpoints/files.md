@@ -169,7 +169,7 @@ Files are stored under the `datamachine-files` uploads directory.
 - **Flow scope**: files are grouped by pipeline + flow.
 - **Pipeline scope**: context files are grouped by pipeline.
 
-See [FilesRepository](../core-system/files-repository.md) for the current directory structure.
+See [FilesRepository](../../core-system/files-repository.md) for the current directory structure.
 wp-content/uploads/datamachine-files/
 └── {flow_step_id}/
     ├── document_1234567890.pdf

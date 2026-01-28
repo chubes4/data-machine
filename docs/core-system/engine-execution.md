@@ -70,7 +70,7 @@ do_action('datamachine_run_flow_now', $flow_id, $job_id);
 
 ## 4. Deferred Execution (`datamachine_run_flow_later`)
 
-**Purpose**: Manages future or recurring execution logic via the [Scheduling System](../api/intervals.md).
+**Purpose**: Manages future or recurring execution logic via the [Scheduling System](../api/endpoints/intervals.md).
 
 **Parameters**:
 - `$flow_id` (int) - Flow to schedule.
