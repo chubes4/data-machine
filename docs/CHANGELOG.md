@@ -2,6 +2,20 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## [0.15.2] - 2026-01-28
+
+### Changed
+- Improve create_pipeline UX for AI agents
+- Update documentation for clarity and accuracy
+
+### Fixed
+- Fix array alignment per WordPress coding standards
+- Fix system prompt not appearing in Configure Step modal
+- Fix taxonomy selection mismatch between card and modal
+- Fix React/API synchronization for step creation and chat invalidation
+- Fix chat timestamps incorrectly showing "just now"
+- Fix chat loading state bleeding across sessions
+
 ## [0.15.1] - 2026-01-28
 
 - Add BaseCommand class with standard WP-CLI format options (table, json, csv, yaml, ids, count)
