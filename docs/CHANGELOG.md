@@ -2,6 +2,15 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## [0.15.0] - 2026-01-27
+
+### Changed
+- Add async turn-by-turn chat execution
+- Add bulk mode to pipeline and flow creation abilities
+- improved error handling for chat tools
+- Remove PHPUnit from composer dependencies
+- Update @wordpress/scripts to fix lodash vulnerabilities
+
 ## [0.14.12] - 2026-01-27
 
 ### Fixed
