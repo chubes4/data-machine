@@ -41,12 +41,12 @@ class CreatePipeline extends BaseTool {
 		return array(
 			'class'       => self::class,
 			'method'      => 'handle_tool_call',
-			'description' => 'Create a pipeline with optional steps. Automatically creates a flow - do NOT call create_flow afterward.',
+			'description' => 'Create a pipeline with optional steps. Automatically creates a flow - do NOT call create_flow afterward. Supports bulk mode via pipelines array.',
 			'parameters'  => array(
 				'pipeline_name'     => array(
 					'type'        => 'string',
-					'required'    => true,
-					'description' => 'Pipeline name',
+					'required'    => false,
+					'description' => 'Pipeline name (single mode - required unless using bulk mode)',
 				),
 				'steps'             => array(
 					'type'        => 'array',
@@ -63,11 +63,31 @@ class CreatePipeline extends BaseTool {
 					'required'    => false,
 					'description' => 'Schedule: {interval: value}. Valid intervals:' . "\n" . SchedulingDocumentation::getIntervalsJson(),
 				),
+				'pipelines'         => array(
+					'type'        => 'array',
+					'required'    => false,
+					'description' => 'Bulk mode: create multiple pipelines. Each item: {name, steps?, flow_name?, scheduling_config?}. Uses template for shared config.',
+				),
+				'template'          => array(
+					'type'        => 'object',
+					'required'    => false,
+					'description' => 'Shared config for bulk mode: {steps, scheduling_config}. Individual pipeline configs override template.',
+				),
+				'validate_only'     => array(
+					'type'        => 'boolean',
+					'required'    => false,
+					'description' => 'Dry-run mode: validate configuration without creating. Returns what would be created.',
+				),
 			),
 		);
 	}
 
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
+		// Check for bulk mode
+		if ( ! empty( $parameters['pipelines'] ) && is_array( $parameters['pipelines'] ) ) {
+			return $this->handleBulkMode( $parameters );
+		}
+
 		$pipeline_name = $parameters['pipeline_name'] ?? null;
 
 		if ( empty( $pipeline_name ) || ! is_string( $pipeline_name ) ) {
@@ -152,6 +172,90 @@ class CreatePipeline extends BaseTool {
 			),
 			'tool_name' => 'create_pipeline',
 		);
+	}
+
+	/**
+	 * Handle bulk pipeline creation mode.
+	 *
+	 * @param array $parameters Tool parameters including pipelines array.
+	 * @return array Tool response.
+	 */
+	private function handleBulkMode( array $parameters ): array {
+		$pipelines     = $parameters['pipelines'];
+		$template      = $parameters['template'] ?? array();
+		$validate_only = ! empty( $parameters['validate_only'] );
+
+		// Normalize template steps if provided
+		$template_steps = $template['steps'] ?? array();
+		if ( ! empty( $template_steps ) ) {
+			$steps_validation = $this->validateSteps( $template_steps );
+			if ( true !== $steps_validation ) {
+				return array(
+					'success'   => false,
+					'error'     => 'Template steps validation failed: ' . $steps_validation,
+					'tool_name' => 'create_pipeline',
+				);
+			}
+			$template['steps'] = $this->normalizeSteps( $template_steps );
+		}
+
+		// Validate and normalize per-pipeline steps
+		foreach ( $pipelines as $index => &$pipeline_config ) {
+			if ( ! empty( $pipeline_config['steps'] ) ) {
+				$steps_validation = $this->validateSteps( $pipeline_config['steps'] );
+				if ( true !== $steps_validation ) {
+					return array(
+						'success'   => false,
+						'error'     => "Pipeline at index {$index} steps validation failed: " . $steps_validation,
+						'tool_name' => 'create_pipeline',
+					);
+				}
+				$pipeline_config['steps'] = $this->normalizeSteps( $pipeline_config['steps'] );
+			}
+		}
+		unset( $pipeline_config );
+
+		$ability = wp_get_ability( 'datamachine/create-pipeline' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Create pipeline ability not available',
+				'tool_name' => 'create_pipeline',
+			);
+		}
+
+		$result = $ability->execute(
+			array(
+				'pipelines'     => $pipelines,
+				'template'      => $template,
+				'validate_only' => $validate_only,
+			)
+		);
+
+		$result['tool_name'] = 'create_pipeline';
+
+		if ( $result['success'] ?? false ) {
+			if ( $validate_only ) {
+				$result['data'] = array(
+					'mode'         => 'validate_only',
+					'would_create' => $result['would_create'] ?? array(),
+					'message'      => $result['message'] ?? 'Validation passed.',
+				);
+				unset( $result['would_create'], $result['valid'], $result['mode'] );
+			} else {
+				$result['data'] = array(
+					'created_count' => $result['created_count'],
+					'failed_count'  => $result['failed_count'],
+					'created'       => $result['created'],
+					'errors'        => $result['errors'] ?? array(),
+					'partial'       => $result['partial'] ?? false,
+					'message'       => $result['message'] ?? 'Bulk creation completed.',
+				);
+				unset( $result['created_count'], $result['failed_count'], $result['created'], $result['errors'], $result['partial'], $result['creation_mode'] );
+			}
+		}
+
+		return $result;
 	}
 
 	private function validateSchedulingConfig( array $config ): bool|string {

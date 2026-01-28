@@ -138,15 +138,14 @@ class FlowStepAbilities {
 			'datamachine/configure-flow-steps',
 			array(
 				'label'               => __( 'Configure Flow Steps', 'data-machine' ),
-				'description'         => __( 'Bulk configure flow steps across a pipeline. Supports handler switching with field mapping.', 'data-machine' ),
+				'description'         => __( 'Bulk configure flow steps across a pipeline or multiple flows. Supports handler switching with field mapping.', 'data-machine' ),
 				'category'            => 'datamachine',
 				'input_schema'        => array(
 					'type'       => 'object',
-					'required'   => array( 'pipeline_id' ),
 					'properties' => array(
 						'pipeline_id'         => array(
 							'type'        => 'integer',
-							'description' => __( 'Pipeline ID to configure steps for', 'data-machine' ),
+							'description' => __( 'Pipeline ID for same-settings bulk mode', 'data-machine' ),
 						),
 						'step_type'           => array(
 							'type'        => 'string',
@@ -175,6 +174,18 @@ class FlowStepAbilities {
 						'user_message'        => array(
 							'type'        => 'string',
 							'description' => __( 'User message for AI steps', 'data-machine' ),
+						),
+						'updates'             => array(
+							'type'        => 'array',
+							'description' => __( 'Cross-pipeline mode: configure multiple flows with different settings. Each item: {flow_id, step_configs (keyed by step_type)}', 'data-machine' ),
+						),
+						'shared_config'       => array(
+							'type'        => 'object',
+							'description' => __( 'Shared step config for updates mode applied before per-flow overrides (keyed by step_type)', 'data-machine' ),
+						),
+						'validate_only'       => array(
+							'type'        => 'boolean',
+							'description' => __( 'Dry-run mode: validate without executing', 'data-machine' ),
 						),
 					),
 				),
@@ -543,12 +554,22 @@ class FlowStepAbilities {
 	}
 
 	/**
-	 * Execute configure flow steps ability (bulk mode).
+	 * Execute configure flow steps ability.
+	 *
+	 * Supports three modes:
+	 * - Single step: via update-flow-step ability
+	 * - Same-settings bulk: pipeline_id for all flows in one pipeline
+	 * - Cross-pipeline bulk: updates array for different settings across flows
 	 *
 	 * @param array $input Input parameters.
 	 * @return array Result with configuration status.
 	 */
 	public function executeConfigureFlowSteps( array $input ): array {
+		// Check for cross-pipeline mode
+		if ( ! empty( $input['updates'] ) && is_array( $input['updates'] ) ) {
+			return $this->executeConfigureFlowStepsCrossPipeline( $input );
+		}
+
 		$pipeline_id         = $input['pipeline_id'] ?? null;
 		$step_type           = $input['step_type'] ?? null;
 		$handler_slug        = $input['handler_slug'] ?? null;
@@ -815,6 +836,258 @@ class FlowStepAbilities {
 
 		if ( ! empty( $skipped ) ) {
 			$response['skipped'] = $skipped;
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Execute cross-pipeline flow step configuration.
+	 *
+	 * Configures multiple flows across different pipelines with different settings per flow.
+	 *
+	 * @param array $input Input parameters including updates array and optional shared_config.
+	 * @return array Result with configuration status.
+	 */
+	private function executeConfigureFlowStepsCrossPipeline( array $input ): array {
+		$updates       = $input['updates'];
+		$shared_config = $input['shared_config'] ?? array();
+		$validate_only = ! empty( $input['validate_only'] );
+
+		// Pre-validation: validate all flow entries
+		$validation_errors = array();
+		$flow_cache        = array();
+
+		foreach ( $updates as $index => $update_config ) {
+			$flow_id = $update_config['flow_id'] ?? null;
+
+			if ( ! is_numeric( $flow_id ) || (int) $flow_id <= 0 ) {
+				$validation_errors[] = array(
+					'index'       => $index,
+					'error'       => 'flow_id is required and must be a positive integer',
+					'remediation' => 'Provide a valid flow_id for each update in the updates array',
+				);
+				continue;
+			}
+
+			$flow_id = (int) $flow_id;
+
+			// Cache flow lookups
+			if ( ! isset( $flow_cache[ $flow_id ] ) ) {
+				$flow_cache[ $flow_id ] = $this->db_flows->get_flow( $flow_id );
+			}
+
+			if ( ! $flow_cache[ $flow_id ] ) {
+				$validation_errors[] = array(
+					'index'       => $index,
+					'flow_id'     => $flow_id,
+					'error'       => "Flow {$flow_id} not found",
+					'remediation' => 'Use api_query tool to find valid flow IDs',
+				);
+				continue;
+			}
+
+			$step_configs = $update_config['step_configs'] ?? array();
+			if ( empty( $step_configs ) && empty( $shared_config ) ) {
+				$validation_errors[] = array(
+					'index'       => $index,
+					'flow_id'     => $flow_id,
+					'error'       => 'No step_configs provided and no shared_config available',
+					'remediation' => 'Provide step_configs or shared_config to configure steps',
+				);
+			}
+		}
+
+		if ( ! empty( $validation_errors ) ) {
+			return array(
+				'success' => false,
+				'error'   => 'Validation failed for ' . count( $validation_errors ) . ' update(s)',
+				'errors'  => $validation_errors,
+			);
+		}
+
+		// Validate-only mode: return preview without executing
+		if ( $validate_only ) {
+			$preview = array();
+			foreach ( $updates as $index => $update_config ) {
+				$flow_id      = (int) $update_config['flow_id'];
+				$flow         = $flow_cache[ $flow_id ];
+				$step_configs = $update_config['step_configs'] ?? array();
+
+				// Merge shared config with per-flow config
+				$merged_step_configs = array_merge( $shared_config, $step_configs );
+
+				$preview[] = array(
+					'flow_id'            => $flow_id,
+					'flow_name'          => $flow['flow_name'] ?? '',
+					'pipeline_id'        => $flow['pipeline_id'] ?? null,
+					'step_configs_count' => count( $merged_step_configs ),
+					'step_types'         => array_keys( $merged_step_configs ),
+				);
+			}
+
+			return array(
+				'success'      => true,
+				'valid'        => true,
+				'mode'         => 'validate_only',
+				'would_update' => $preview,
+				'message'      => sprintf( 'Validation passed. Would configure %d flow(s).', count( $updates ) ),
+			);
+		}
+
+		// Execute cross-pipeline configuration
+		$updated_details = array();
+		$errors          = array();
+		$flows_updated   = 0;
+		$steps_modified  = 0;
+
+		foreach ( $updates as $index => $update_config ) {
+			$flow_id      = (int) $update_config['flow_id'];
+			$flow         = $flow_cache[ $flow_id ];
+			$flow_name    = $flow['flow_name'] ?? '';
+			$flow_config  = $flow['flow_config'] ?? array();
+			$step_configs = $update_config['step_configs'] ?? array();
+
+			// Merge shared config with per-flow config (per-flow takes precedence)
+			$merged_step_configs = array_merge( $shared_config, $step_configs );
+
+			// Build step_type to flow_step_id mapping
+			$step_type_to_flow_step = array();
+			foreach ( $flow_config as $flow_step_id => $step_data ) {
+				$step_type = $step_data['step_type'] ?? '';
+				if ( ! empty( $step_type ) ) {
+					$step_type_to_flow_step[ $step_type ] = $flow_step_id;
+				}
+			}
+
+			$flow_updated    = false;
+			$flow_step_count = 0;
+
+			foreach ( $merged_step_configs as $step_type => $config ) {
+				$flow_step_id = $step_type_to_flow_step[ $step_type ] ?? null;
+
+				if ( ! $flow_step_id ) {
+					$errors[] = array(
+						'flow_id'   => $flow_id,
+						'step_type' => $step_type,
+						'error'     => "No step of type '{$step_type}' found in flow",
+					);
+					continue;
+				}
+
+				$handler_slug   = $config['handler_slug'] ?? null;
+				$handler_config = $config['handler_config'] ?? array();
+				$user_message   = $config['user_message'] ?? null;
+
+				$effective_slug = $handler_slug ?? ( $flow_config[ $flow_step_id ]['handler_slug'] ?? null );
+
+				if ( ! empty( $handler_config ) && ! empty( $effective_slug ) ) {
+					$validation_result = $this->validateHandlerConfig( $effective_slug, $handler_config );
+					if ( true !== $validation_result ) {
+						$error_entry = array(
+							'flow_id'      => $flow_id,
+							'flow_step_id' => $flow_step_id,
+							'step_type'    => $step_type,
+							'error'        => is_array( $validation_result ) ? $validation_result['error'] : $validation_result,
+						);
+						if ( is_array( $validation_result ) && isset( $validation_result['unknown_fields'] ) ) {
+							$error_entry['unknown_fields'] = $validation_result['unknown_fields'];
+						}
+						$errors[] = $error_entry;
+						continue;
+					}
+				}
+
+				$has_update = ! empty( $handler_slug ) || ! empty( $handler_config ) || null !== $user_message;
+				if ( ! $has_update ) {
+					continue;
+				}
+
+				if ( ! empty( $handler_slug ) || ! empty( $handler_config ) ) {
+					$success = $this->updateHandler( $flow_step_id, $effective_slug ?? '', $handler_config );
+					if ( ! $success ) {
+						$errors[] = array(
+							'flow_id'      => $flow_id,
+							'flow_step_id' => $flow_step_id,
+							'step_type'    => $step_type,
+							'error'        => 'Failed to update handler',
+						);
+						continue;
+					}
+				}
+
+				if ( null !== $user_message ) {
+					$success = $this->updateUserMessage( $flow_step_id, $user_message );
+					if ( ! $success ) {
+						$errors[] = array(
+							'flow_id'      => $flow_id,
+							'flow_step_id' => $flow_step_id,
+							'step_type'    => $step_type,
+							'error'        => 'Failed to update user message',
+						);
+						continue;
+					}
+				}
+
+				$updated_details[] = array(
+					'flow_id'      => $flow_id,
+					'flow_name'    => $flow_name,
+					'flow_step_id' => $flow_step_id,
+					'step_type'    => $step_type,
+					'handler_slug' => $effective_slug,
+				);
+
+				$flow_updated = true;
+				++$flow_step_count;
+			}
+
+			if ( $flow_updated ) {
+				++$flows_updated;
+				$steps_modified += $flow_step_count;
+			}
+		}
+
+		if ( 0 === $steps_modified && ! empty( $errors ) ) {
+			return array(
+				'success' => false,
+				'error'   => 'No steps were updated. ' . count( $errors ) . ' error(s) occurred.',
+				'errors'  => $errors,
+			);
+		}
+
+		if ( 0 === $steps_modified ) {
+			return array(
+				'success' => false,
+				'error'   => 'No steps were updated. Check that step_configs keys match flow step types.',
+			);
+		}
+
+		do_action(
+			'datamachine_log',
+			'info',
+			'Cross-pipeline flow steps configured via ability',
+			array(
+				'flows_updated'  => $flows_updated,
+				'steps_modified' => $steps_modified,
+			)
+		);
+
+		$message = sprintf( 'Updated %d step(s) across %d flow(s).', $steps_modified, $flows_updated );
+		if ( ! empty( $errors ) ) {
+			$message .= sprintf( ' %d error(s) occurred.', count( $errors ) );
+		}
+
+		$response = array(
+			'success'        => true,
+			'flows_updated'  => $flows_updated,
+			'steps_modified' => $steps_modified,
+			'updated_steps'  => $updated_details,
+			'message'        => $message,
+			'mode'           => 'cross_pipeline',
+		);
+
+		if ( ! empty( $errors ) ) {
+			$response['errors'] = $errors;
 		}
 
 		return $response;

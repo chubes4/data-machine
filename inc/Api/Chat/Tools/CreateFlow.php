@@ -34,33 +34,53 @@ class CreateFlow extends BaseTool {
 		return array(
 			'class'       => self::class,
 			'method'      => 'handle_tool_call',
-			'description' => 'Create a new flow for a pipeline with optional step configurations. Query existing flows first to learn established patterns. Use pipeline_step_ids from the pipeline response for step_configs keys.',
+			'description' => 'Create a new flow for a pipeline with optional step configurations. Query existing flows first to learn established patterns. Supports bulk mode via flows array.',
 			'parameters'  => array(
-				'pipeline_id'       => array(
+				'pipeline_id'        => array(
 					'type'        => 'integer',
-					'required'    => true,
-					'description' => 'Pipeline ID',
+					'required'    => false,
+					'description' => 'Pipeline ID (single mode - required unless using bulk mode)',
 				),
-				'flow_name'         => array(
+				'flow_name'          => array(
 					'type'        => 'string',
 					'required'    => false,
 					'description' => 'Flow name (defaults to "Flow")',
 				),
-				'scheduling_config' => array(
+				'scheduling_config'  => array(
 					'type'        => 'object',
 					'required'    => false,
 					'description' => 'Schedule: {interval: value}. Valid intervals:' . "\n" . SchedulingDocumentation::getIntervalsJson(),
 				),
-				'step_configs'      => array(
+				'step_configs'       => array(
 					'type'        => 'object',
 					'required'    => false,
-					'description' => 'Step configurations keyed by pipeline_step_id: {handler_slug?, handler_config?, user_message?}',
+					'description' => 'Step configurations keyed by step_type: {handler_slug?, handler_config?, user_message?}',
+				),
+				'flows'              => array(
+					'type'        => 'array',
+					'required'    => false,
+					'description' => 'Bulk mode: create multiple flows. Each item: {pipeline_id, flow_name, step_configs?, scheduling_config?}. Uses shared_step_config as base.',
+				),
+				'shared_step_config' => array(
+					'type'        => 'object',
+					'required'    => false,
+					'description' => 'Shared step config for bulk mode (keyed by step_type). Per-flow step_configs override these.',
+				),
+				'validate_only'      => array(
+					'type'        => 'boolean',
+					'required'    => false,
+					'description' => 'Dry-run mode: validate configuration without creating. Returns what would be created.',
 				),
 			),
 		);
 	}
 
 	public function handle_tool_call( array $parameters, array $tool_def = array() ): array {
+		// Check for bulk mode
+		if ( ! empty( $parameters['flows'] ) && is_array( $parameters['flows'] ) ) {
+			return $this->handleBulkMode( $parameters );
+		}
+
 		$pipeline_id = $parameters['pipeline_id'] ?? null;
 
 		if ( ! is_numeric( $pipeline_id ) || (int) $pipeline_id <= 0 ) {
@@ -168,6 +188,60 @@ class CreateFlow extends BaseTool {
 			'data'      => $response_data,
 			'tool_name' => 'create_flow',
 		);
+	}
+
+	/**
+	 * Handle bulk flow creation mode.
+	 *
+	 * @param array $parameters Tool parameters including flows array.
+	 * @return array Tool response.
+	 */
+	private function handleBulkMode( array $parameters ): array {
+		$flows              = $parameters['flows'];
+		$shared_step_config = $parameters['shared_step_config'] ?? array();
+		$validate_only      = ! empty( $parameters['validate_only'] );
+
+		$ability = wp_get_ability( 'datamachine/create-flow' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Create flow ability not available',
+				'tool_name' => 'create_flow',
+			);
+		}
+
+		$result = $ability->execute(
+			array(
+				'flows'              => $flows,
+				'shared_step_config' => $shared_step_config,
+				'validate_only'      => $validate_only,
+			)
+		);
+
+		$result['tool_name'] = 'create_flow';
+
+		if ( $result['success'] ?? false ) {
+			if ( $validate_only ) {
+				$result['data'] = array(
+					'mode'         => 'validate_only',
+					'would_create' => $result['would_create'] ?? array(),
+					'message'      => $result['message'] ?? 'Validation passed.',
+				);
+				unset( $result['would_create'], $result['valid'], $result['mode'] );
+			} else {
+				$result['data'] = array(
+					'created_count' => $result['created_count'],
+					'failed_count'  => $result['failed_count'],
+					'created'       => $result['created'],
+					'errors'        => $result['errors'] ?? array(),
+					'partial'       => $result['partial'] ?? false,
+					'message'       => $result['message'] ?? 'Bulk creation completed.',
+				);
+				unset( $result['created_count'], $result['failed_count'], $result['created'], $result['errors'], $result['partial'], $result['creation_mode'] );
+			}
+		}
+
+		return $result;
 	}
 
 	/**

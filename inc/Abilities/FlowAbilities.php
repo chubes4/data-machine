@@ -10,6 +10,7 @@
 
 namespace DataMachine\Abilities;
 
+use DataMachine\Abilities\FlowStepAbilities;
 use DataMachine\Api\Flows\FlowScheduling;
 use DataMachine\Core\Admin\FlowFormatter;
 use DataMachine\Core\Database\Flows\Flows;
@@ -154,22 +155,21 @@ class FlowAbilities {
 					'datamachine/create-flow',
 					array(
 						'label'               => __( 'Create Flow', 'data-machine' ),
-						'description'         => __( 'Create a new flow for a pipeline.', 'data-machine' ),
+						'description'         => __( 'Create a new flow for a pipeline. Supports bulk mode via flows array.', 'data-machine' ),
 						'category'            => 'datamachine',
 						'input_schema'        => array(
 							'type'       => 'object',
-							'required'   => array( 'pipeline_id' ),
 							'properties' => array(
-								'pipeline_id'       => array(
+								'pipeline_id'        => array(
 									'type'        => 'integer',
-									'description' => __( 'Pipeline ID to create flow for', 'data-machine' ),
+									'description' => __( 'Pipeline ID to create flow for (single mode)', 'data-machine' ),
 								),
-								'flow_name'         => array(
+								'flow_name'          => array(
 									'type'        => 'string',
 									'default'     => 'Flow',
 									'description' => __( 'Name for the new flow', 'data-machine' ),
 								),
-								'scheduling_config' => array(
+								'scheduling_config'  => array(
 									'type'        => 'object',
 									'description' => __( 'Scheduling configuration with interval property', 'data-machine' ),
 									'properties'  => array(
@@ -179,22 +179,40 @@ class FlowAbilities {
 										),
 									),
 								),
-								'flow_config'       => array(
+								'flow_config'        => array(
 									'type'        => 'object',
 									'description' => __( 'Initial flow configuration', 'data-machine' ),
+								),
+								'flows'              => array(
+									'type'        => 'array',
+									'description' => __( 'Bulk mode: create multiple flows. Each item: {pipeline_id, flow_name, step_configs?, scheduling_config?}', 'data-machine' ),
+								),
+								'shared_step_config' => array(
+									'type'        => 'object',
+									'description' => __( 'Shared step config for bulk mode applied to all flows (keyed by step_type)', 'data-machine' ),
+								),
+								'validate_only'      => array(
+									'type'        => 'boolean',
+									'description' => __( 'Dry-run mode: validate without executing', 'data-machine' ),
 								),
 							),
 						),
 						'output_schema'       => array(
 							'type'       => 'object',
 							'properties' => array(
-								'success'      => array( 'type' => 'boolean' ),
-								'flow_id'      => array( 'type' => 'integer' ),
-								'flow_name'    => array( 'type' => 'string' ),
-								'pipeline_id'  => array( 'type' => 'integer' ),
-								'synced_steps' => array( 'type' => 'integer' ),
-								'flow_data'    => array( 'type' => 'object' ),
-								'error'        => array( 'type' => 'string' ),
+								'success'       => array( 'type' => 'boolean' ),
+								'flow_id'       => array( 'type' => 'integer' ),
+								'flow_name'     => array( 'type' => 'string' ),
+								'pipeline_id'   => array( 'type' => 'integer' ),
+								'synced_steps'  => array( 'type' => 'integer' ),
+								'flow_data'     => array( 'type' => 'object' ),
+								'created_count' => array( 'type' => 'integer' ),
+								'failed_count'  => array( 'type' => 'integer' ),
+								'created'       => array( 'type' => 'array' ),
+								'errors'        => array( 'type' => 'array' ),
+								'partial'       => array( 'type' => 'boolean' ),
+								'message'       => array( 'type' => 'string' ),
+								'error'         => array( 'type' => 'string' ),
 							),
 						),
 						'execute_callback'    => array( $this, 'executeCreateFlow' ),
@@ -560,10 +578,19 @@ class FlowAbilities {
 	/**
 	 * Execute create flow ability.
 	 *
+	 * Supports two modes:
+	 * - Single mode: Create one flow (pipeline_id required)
+	 * - Bulk mode: Create multiple flows (flows array provided)
+	 *
 	 * @param array $input Input parameters with pipeline_id, optional flow_name and scheduling_config.
 	 * @return array Result with flow data on success.
 	 */
 	public function executeCreateFlow( array $input ): array {
+		// Check for bulk mode
+		if ( ! empty( $input['flows'] ) && is_array( $input['flows'] ) ) {
+			return $this->executeCreateFlowsBulk( $input );
+		}
+
 		$pipeline_id = $input['pipeline_id'] ?? null;
 
 		if ( ! is_numeric( $pipeline_id ) || (int) $pipeline_id <= 0 ) {
@@ -661,6 +688,270 @@ class FlowAbilities {
 			'pipeline_id'  => $pipeline_id,
 			'flow_data'    => $flow,
 			'synced_steps' => $synced_steps,
+		);
+	}
+
+	/**
+	 * Execute bulk flow creation.
+	 *
+	 * @param array $input Input parameters including flows array and optional shared_step_config.
+	 * @return array Result with created flows data and error tracking.
+	 */
+	private function executeCreateFlowsBulk( array $input ): array {
+		$flows              = $input['flows'];
+		$shared_step_config = $input['shared_step_config'] ?? array();
+		$validate_only      = ! empty( $input['validate_only'] );
+
+		// Pre-validation: validate all flow entries and pipeline existence
+		$validation_errors = array();
+		$pipeline_cache    = array();
+
+		foreach ( $flows as $index => $flow_config ) {
+			$pipeline_id = $flow_config['pipeline_id'] ?? null;
+			$flow_name   = $flow_config['flow_name'] ?? null;
+
+			if ( ! is_numeric( $pipeline_id ) || (int) $pipeline_id <= 0 ) {
+				$validation_errors[] = array(
+					'index'       => $index,
+					'error'       => 'pipeline_id is required and must be a positive integer',
+					'remediation' => 'Provide a valid pipeline_id for each flow in the flows array',
+				);
+				continue;
+			}
+
+			if ( empty( $flow_name ) || ! is_string( $flow_name ) ) {
+				$validation_errors[] = array(
+					'index'       => $index,
+					'error'       => 'flow_name is required and must be a non-empty string',
+					'remediation' => 'Provide a "flow_name" property for each flow in the flows array',
+				);
+				continue;
+			}
+
+			$pipeline_id = (int) $pipeline_id;
+
+			// Cache pipeline lookups
+			if ( ! isset( $pipeline_cache[ $pipeline_id ] ) ) {
+				$pipeline_cache[ $pipeline_id ] = $this->db_pipelines->get_pipeline( $pipeline_id );
+			}
+
+			if ( ! $pipeline_cache[ $pipeline_id ] ) {
+				$validation_errors[] = array(
+					'index'       => $index,
+					'flow_name'   => $flow_name,
+					'error'       => "Pipeline {$pipeline_id} not found",
+					'remediation' => 'Use list_pipelines tool to find valid pipeline IDs',
+				);
+			}
+		}
+
+		if ( ! empty( $validation_errors ) ) {
+			return array(
+				'success' => false,
+				'error'   => 'Validation failed for ' . count( $validation_errors ) . ' flow(s)',
+				'errors'  => $validation_errors,
+			);
+		}
+
+		// Validate-only mode: return preview without executing
+		if ( $validate_only ) {
+			$preview = array();
+			foreach ( $flows as $index => $flow_config ) {
+				$pipeline_id       = (int) $flow_config['pipeline_id'];
+				$flow_name         = $flow_config['flow_name'];
+				$scheduling_config = $flow_config['scheduling_config'] ?? array( 'interval' => 'manual' );
+				$step_configs      = $flow_config['step_configs'] ?? array();
+
+				// Merge shared config
+				$merged_step_configs = array_merge( $shared_step_config, $step_configs );
+
+				$preview[] = array(
+					'pipeline_id'        => $pipeline_id,
+					'pipeline_name'      => $pipeline_cache[ $pipeline_id ]['pipeline_name'] ?? '',
+					'flow_name'          => $flow_name,
+					'scheduling'         => $scheduling_config['interval'] ?? 'manual',
+					'step_configs_count' => count( $merged_step_configs ),
+				);
+			}
+
+			return array(
+				'success'      => true,
+				'valid'        => true,
+				'mode'         => 'validate_only',
+				'would_create' => $preview,
+				'message'      => sprintf( 'Validation passed. Would create %d flow(s).', count( $flows ) ),
+			);
+		}
+
+		// Execute bulk creation
+		$created       = array();
+		$errors        = array();
+		$created_count = 0;
+		$failed_count  = 0;
+
+		$flow_step_abilities = new FlowStepAbilities();
+
+		foreach ( $flows as $index => $flow_config ) {
+			$pipeline_id       = (int) $flow_config['pipeline_id'];
+			$flow_name         = $flow_config['flow_name'];
+			$scheduling_config = $flow_config['scheduling_config'] ?? array( 'interval' => 'manual' );
+			$step_configs      = $flow_config['step_configs'] ?? array();
+
+			// Merge shared config with per-flow config (per-flow takes precedence)
+			$merged_step_configs = array_merge( $shared_step_config, $step_configs );
+
+			// Create the flow
+			$single_result = $this->executeCreateFlow(
+				array(
+					'pipeline_id'       => $pipeline_id,
+					'flow_name'         => $flow_name,
+					'scheduling_config' => $scheduling_config,
+				)
+			);
+
+			if ( ! $single_result['success'] ) {
+				++$failed_count;
+				$errors[] = array(
+					'index'       => $index,
+					'pipeline_id' => $pipeline_id,
+					'flow_name'   => $flow_name,
+					'error'       => $single_result['error'],
+					'remediation' => 'Check the error message and fix the flow configuration',
+				);
+				continue;
+			}
+
+			$flow_id       = $single_result['flow_id'];
+			$flow_step_ids = array_keys( $single_result['flow_data']['flow_config'] ?? array() );
+
+			// Apply step configs if provided
+			$config_results = array( 'applied' => array(), 'errors' => array() );
+			if ( ! empty( $merged_step_configs ) ) {
+				$config_results = $this->applyStepConfigsToFlow( $flow_id, $merged_step_configs, $flow_step_abilities );
+			}
+
+			++$created_count;
+			$created_entry = array(
+				'pipeline_id'   => $pipeline_id,
+				'flow_id'       => $flow_id,
+				'flow_name'     => $single_result['flow_name'],
+				'synced_steps'  => $single_result['synced_steps'],
+				'flow_step_ids' => $flow_step_ids,
+			);
+
+			if ( ! empty( $config_results['applied'] ) ) {
+				$created_entry['configured_steps'] = $config_results['applied'];
+			}
+
+			if ( ! empty( $config_results['errors'] ) ) {
+				$created_entry['configuration_errors'] = $config_results['errors'];
+			}
+
+			$created[] = $created_entry;
+		}
+
+		$partial = $created_count > 0 && $failed_count > 0;
+
+		do_action(
+			'datamachine_log',
+			'info',
+			'Bulk flow creation completed',
+			array(
+				'created_count' => $created_count,
+				'failed_count'  => $failed_count,
+				'partial'       => $partial,
+			)
+		);
+
+		if ( 0 === $created_count ) {
+			return array(
+				'success'       => false,
+				'error'         => 'All flow creations failed',
+				'created_count' => 0,
+				'failed_count'  => $failed_count,
+				'errors'        => $errors,
+			);
+		}
+
+		$message = sprintf( 'Created %d flow(s).', $created_count );
+		if ( $failed_count > 0 ) {
+			$message .= sprintf( ' %d failed.', $failed_count );
+		}
+
+		return array(
+			'success'       => true,
+			'created_count' => $created_count,
+			'failed_count'  => $failed_count,
+			'created'       => $created,
+			'errors'        => $errors,
+			'partial'       => $partial,
+			'message'       => $message,
+			'creation_mode' => 'bulk',
+		);
+	}
+
+	/**
+	 * Apply step configurations to a newly created flow.
+	 *
+	 * @param int                $flow_id Flow ID.
+	 * @param array              $step_configs Configs keyed by step_type.
+	 * @param FlowStepAbilities $flow_step_abilities FlowStepAbilities instance.
+	 * @return array{applied: array, errors: array}
+	 */
+	private function applyStepConfigsToFlow( int $flow_id, array $step_configs, FlowStepAbilities $flow_step_abilities ): array {
+		$applied = array();
+		$errors  = array();
+
+		$flow        = $this->db_flows->get_flow( $flow_id );
+		$flow_config = $flow['flow_config'] ?? array();
+
+		// Build a mapping from step_type to flow_step_id
+		$step_type_to_flow_step = array();
+		foreach ( $flow_config as $flow_step_id => $step_data ) {
+			$step_type = $step_data['step_type'] ?? '';
+			if ( ! empty( $step_type ) ) {
+				$step_type_to_flow_step[ $step_type ] = $flow_step_id;
+			}
+		}
+
+		foreach ( $step_configs as $step_type => $config ) {
+			$flow_step_id = $step_type_to_flow_step[ $step_type ] ?? null;
+			if ( ! $flow_step_id ) {
+				$errors[] = array(
+					'step_type' => $step_type,
+					'error'     => "No step of type '{$step_type}' found in flow",
+				);
+				continue;
+			}
+
+			$update_input = array( 'flow_step_id' => $flow_step_id );
+
+			if ( ! empty( $config['handler_slug'] ) ) {
+				$update_input['handler_slug'] = $config['handler_slug'];
+			}
+			if ( ! empty( $config['handler_config'] ) ) {
+				$update_input['handler_config'] = $config['handler_config'];
+			}
+			if ( ! empty( $config['user_message'] ) ) {
+				$update_input['user_message'] = $config['user_message'];
+			}
+
+			$result = $flow_step_abilities->executeUpdateFlowStep( $update_input );
+
+			if ( $result['success'] ) {
+				$applied[] = $flow_step_id;
+			} else {
+				$errors[] = array(
+					'step_type'    => $step_type,
+					'flow_step_id' => $flow_step_id,
+					'error'        => $result['error'] ?? 'Failed to update step',
+				);
+			}
+		}
+
+		return array(
+			'applied' => $applied,
+			'errors'  => $errors,
 		);
 	}
 
