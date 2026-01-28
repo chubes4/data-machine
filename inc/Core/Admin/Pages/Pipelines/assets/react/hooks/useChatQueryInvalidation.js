@@ -35,16 +35,62 @@ const FLOW_TOOLS = [
 
 const HANDLER_TOOLS = [ 'authenticate_handler' ];
 
+/**
+ * Extract flow IDs from configure_flow_steps parameters.
+ *
+ * Handles multiple parameter formats:
+ * - Single mode: flow_step_id format is {pipeline_step_id}_{flow_id}
+ * - Cross-pipeline mode: updates array contains flow_id
+ * - Bulk mode: flow_configs array contains flow_id
+ *
+ * @param {Object} params - Tool call parameters
+ * @return {Set<string>} Set of flow IDs
+ */
+const extractFlowIdsFromParams = ( params ) => {
+	const flowIds = new Set();
+
+	// Single mode: flow_step_id format is {pipeline_step_id}_{flow_id}
+	if ( params.flow_step_id ) {
+		const parts = params.flow_step_id.split( '_' );
+		if ( parts.length >= 2 ) {
+			flowIds.add( parts[ parts.length - 1 ] );
+		}
+	}
+
+	// Cross-pipeline mode: updates array contains flow_id
+	if ( Array.isArray( params.updates ) ) {
+		params.updates.forEach( ( update ) => {
+			if ( update.flow_id ) {
+				flowIds.add( String( update.flow_id ) );
+			}
+		} );
+	}
+
+	// Bulk mode with flow_configs
+	if ( Array.isArray( params.flow_configs ) ) {
+		params.flow_configs.forEach( ( config ) => {
+			if ( config.flow_id ) {
+				flowIds.add( String( config.flow_id ) );
+			}
+		} );
+	}
+
+	return flowIds;
+};
+
 export function useChatQueryInvalidation() {
 	const queryClient = useQueryClient();
 
 	const invalidateFromToolCalls = useCallback(
 		( toolCalls, selectedPipelineId ) => {
-			if ( ! toolCalls?.length ) {return;}
+			if ( ! toolCalls?.length ) {
+				return;
+			}
 
 			let shouldInvalidatePipelines = false;
 			let shouldInvalidateHandlers = false;
 			const pipelineIdsToInvalidate = new Set();
+			const flowIdsToInvalidate = new Set();
 
 			for ( const toolCall of toolCalls ) {
 				const toolName = toolCall.name;
@@ -62,7 +108,18 @@ export function useChatQueryInvalidation() {
 						pipelineIdsToInvalidate.add(
 							normalizeId( pipelineId )
 						);
-					} else if ( selectedPipelineId ) {
+					}
+
+					// Extract flow IDs from configure_flow_steps
+					if ( toolName === 'configure_flow_steps' ) {
+						const flowIds = extractFlowIdsFromParams( params );
+						flowIds.forEach( ( id ) =>
+							flowIdsToInvalidate.add( id )
+						);
+					}
+
+					// Fallback to selected pipeline
+					if ( ! pipelineId && selectedPipelineId ) {
 						pipelineIdsToInvalidate.add(
 							normalizeId( selectedPipelineId )
 						);
@@ -81,6 +138,13 @@ export function useChatQueryInvalidation() {
 			for ( const pipelineId of pipelineIdsToInvalidate ) {
 				queryClient.invalidateQueries( {
 					queryKey: [ 'flows', pipelineId ],
+				} );
+			}
+
+			// Invalidate specific flow queries
+			for ( const flowId of flowIdsToInvalidate ) {
+				queryClient.invalidateQueries( {
+					queryKey: [ 'flows', 'single', normalizeId( flowId ) ],
 				} );
 			}
 

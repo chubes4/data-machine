@@ -128,7 +128,54 @@ export const useAddPipelineStep = () => {
 	return useMutation( {
 		mutationFn: ( { pipelineId, stepType, executionOrder } ) =>
 			addPipelineStep( pipelineId, stepType, executionOrder ),
-		onSuccess: ( _, { pipelineId } ) => {
+		onSuccess: ( response, { pipelineId } ) => {
+			// Update cache with response data immediately (API is source of truth)
+			if ( response?.data?.step_data ) {
+				const stepData = response.data.step_data;
+				const pipelineStepId = response.data.pipeline_step_id;
+
+				queryClient.setQueryData( [ 'pipelines' ], ( old ) => {
+					if ( ! old ) {
+						return old;
+					}
+					return old.map( ( pipeline ) => {
+						if (
+							! isSameId( pipeline.pipeline_id, pipelineId )
+						) {
+							return pipeline;
+						}
+						// Build config entry for AI steps
+						const configEntry = {};
+						if ( stepData.provider ) {
+							configEntry.provider = stepData.provider;
+						}
+						if ( stepData.model ) {
+							configEntry.model = stepData.model;
+						}
+						if ( stepData.enabled_tools ) {
+							configEntry.enabled_tools = stepData.enabled_tools;
+						}
+
+						return {
+							...pipeline,
+							pipeline_steps: [
+								...( pipeline.pipeline_steps || [] ),
+								stepData,
+							],
+							pipeline_config: {
+								...( pipeline.pipeline_config || {} ),
+								[ pipelineStepId ]: {
+									...( pipeline.pipeline_config?.[
+										pipelineStepId
+									] || {} ),
+									...configEntry,
+								},
+							},
+						};
+					} );
+				} );
+			}
+			// Still invalidate for eventual consistency
 			queryClient.invalidateQueries( { queryKey: [ 'pipelines' ] } );
 			queryClient.invalidateQueries( {
 				queryKey: [ 'flows', pipelineId ],
