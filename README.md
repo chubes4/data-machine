@@ -9,7 +9,7 @@ Stable tag: 0.15.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Automate WordPress content workflows with AI — fetch from anywhere, enhance with AI, publish everywhere.
+Automate WordPress content workflows with AI — fetch from anywhere, process with AI, publish everywhere.
 
 ## What It Does
 
