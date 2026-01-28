@@ -16,58 +16,7 @@ import { __ } from '@wordpress/i18n';
  * Internal dependencies
  */
 import { useChatSessions } from '../../queries/chat';
-
-/**
- * Format relative time from date string
- * @param dateString
- */
-function formatRelativeTime( dateString ) {
-	const date = new Date( dateString );
-	const now = new Date();
-	const diffMs = now - date;
-	const diffMins = Math.floor( diffMs / 60000 );
-	const diffHours = Math.floor( diffMs / 3600000 );
-	const diffDays = Math.floor( diffMs / 86400000 );
-
-	if ( diffMins < 1 ) {return __( 'just now', 'data-machine' );}
-	if ( diffMins < 60 )
-		{return `${ diffMins } ${
-			diffMins === 1
-				? __( 'min ago', 'data-machine' )
-				: __( 'mins ago', 'data-machine' )
-		}`;}
-	if ( diffHours < 24 )
-		{return `${ diffHours } ${
-			diffHours === 1
-				? __( 'hour ago', 'data-machine' )
-				: __( 'hours ago', 'data-machine' )
-		}`;}
-	if ( diffDays < 7 )
-		{return `${ diffDays } ${
-			diffDays === 1
-				? __( 'day ago', 'data-machine' )
-				: __( 'days ago', 'data-machine' )
-		}`;}
-
-	return date.toLocaleDateString();
-}
-
-/**
- * Get display title for a session
- * @param session
- */
-function getSessionTitle( session ) {
-	if ( session.title ) {
-		return session.title;
-	}
-	if ( session.first_message ) {
-		const truncated = session.first_message.substring( 0, 50 );
-		return truncated.length < session.first_message.length
-			? `${ truncated }...`
-			: truncated;
-	}
-	return __( 'Untitled conversation', 'data-machine' );
-}
+import { formatRelativeTime, getSessionTitle } from '../../utils/formatters';
 
 export default function ChatSessionSwitcher( {
 	currentSessionId,

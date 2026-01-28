@@ -118,4 +118,25 @@ class DateFormatter {
 
 		return wp_date( "{$date_format} {$time_format}", $timestamp );
 	}
+
+	/**
+	 * Format a MySQL datetime string for REST API responses.
+	 *
+	 * Returns ISO 8601 format with UTC indicator (Z suffix) for proper
+	 * JavaScript Date parsing regardless of browser timezone.
+	 *
+	 * @param string|null $mysql_datetime MySQL datetime string (Y-m-d H:i:s in UTC)
+	 * @return string|null ISO 8601 datetime string or null if invalid
+	 */
+	public static function format_for_api( ?string $mysql_datetime ): ?string {
+		if ( empty( $mysql_datetime ) || '0000-00-00 00:00:00' === $mysql_datetime ) {
+			return null;
+		}
+		try {
+			$datetime = new \DateTime( $mysql_datetime, new \DateTimeZone( 'UTC' ) );
+			return $datetime->format( 'Y-m-d\TH:i:s\Z' );
+		} catch ( \Exception $e ) {
+			return null;
+		}
+	}
 }

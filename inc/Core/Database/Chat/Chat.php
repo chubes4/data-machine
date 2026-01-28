@@ -11,6 +11,8 @@
 
 namespace DataMachine\Core\Database\Chat;
 
+use DataMachine\Core\Admin\DateFormatter;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -391,8 +393,8 @@ class Chat {
 				'title'         => $session['title'] ?? null,
 				'first_message' => mb_substr( $first_message, 0, 100 ),
 				'message_count' => count( $messages ),
-				'created_at'    => $session['created_at'] ?? null,
-				'updated_at'    => $session['updated_at'] ?? $session['created_at'] ?? null,
+				'created_at'    => DateFormatter::format_for_api( $session['created_at'] ?? null ),
+				'updated_at'    => DateFormatter::format_for_api( $session['updated_at'] ?? $session['created_at'] ?? null ),
 			);
 		}
 
