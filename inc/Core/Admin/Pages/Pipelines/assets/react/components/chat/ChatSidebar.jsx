@@ -79,8 +79,9 @@ export default function ChatSidebar() {
 	const chatMutation = useChatMutation();
 	const sessionQuery = useChatSession( chatSessionId );
 	const { invalidateFromToolCalls } = useChatQueryInvalidation();
-	const { processToCompletion, isProcessing, turnCount } = useChatTurn();
+	const { processToCompletion, isProcessing, processingSessionId, turnCount } = useChatTurn();
 	const isCreatingSessionRef = useRef( false );
+	const loadingSessionRef = useRef( null );
 
 	useEffect( () => {
 		if ( sessionQuery.data?.conversation ) {
@@ -110,6 +111,9 @@ export default function ChatSidebar() {
 
 			const userMessage = { role: 'user', content: message };
 			setMessages( ( prev ) => [ ...prev, userMessage ] );
+
+			// Track which session is loading for session-aware UI
+			loadingSessionRef.current = chatSessionId || 'new';
 
 			try {
 				// Initial request executes first turn
@@ -163,6 +167,7 @@ export default function ChatSidebar() {
 					clearChatSession();
 				}
 			} finally {
+				loadingSessionRef.current = null;
 				if ( isNewSession ) {
 					isCreatingSessionRef.current = false;
 				}
@@ -213,7 +218,10 @@ export default function ChatSidebar() {
 		setTimeout( () => setIsCopied( false ), 2000 );
 	}, [ messages ] );
 
-	const isLoading = chatMutation.isPending || sessionQuery.isLoading || isProcessing;
+	// Session-aware loading state - only show loading for the session that initiated the request
+	const isMutationLoading = chatMutation.isPending && loadingSessionRef.current === ( chatSessionId || 'new' );
+	const isProcessingThisSession = isProcessing && processingSessionId === chatSessionId;
+	const isLoading = sessionQuery.isLoading || isMutationLoading || isProcessingThisSession;
 
 	return (
 		<aside className="datamachine-chat-sidebar">
@@ -256,7 +264,7 @@ export default function ChatSidebar() {
 						isLoading={ isLoading }
 					/>
 
-					{ isProcessing && (
+					{ isProcessingThisSession && (
 						<div className="datamachine-chat-sidebar__processing">
 							{ __( 'Processing turn', 'data-machine' ) }{ ' ' }
 							{ turnCount }...

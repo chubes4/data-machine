@@ -25,6 +25,7 @@ import { useChatQueryInvalidation } from './useChatQueryInvalidation';
  */
 export function useChatTurn() {
 	const [ isProcessing, setIsProcessing ] = useState( false );
+	const [ processingSessionId, setProcessingSessionId ] = useState( null );
 	const [ turnCount, setTurnCount ] = useState( 0 );
 	const { invalidateFromToolCalls } = useChatQueryInvalidation();
 
@@ -73,6 +74,7 @@ export function useChatTurn() {
 	 */
 	const processToCompletion = useCallback(
 		async ( sessionId, onNewMessages, maxTurns, selectedPipelineId ) => {
+			setProcessingSessionId( sessionId );
 			setIsProcessing( true );
 			setTurnCount( 0 );
 
@@ -100,6 +102,7 @@ export function useChatTurn() {
 				return { completed, turns };
 			} finally {
 				setIsProcessing( false );
+				setProcessingSessionId( null );
 			}
 		},
 		[ continueTurn ]
@@ -109,6 +112,7 @@ export function useChatTurn() {
 		continueTurn,
 		processToCompletion,
 		isProcessing,
+		processingSessionId,
 		turnCount,
 	};
 }
