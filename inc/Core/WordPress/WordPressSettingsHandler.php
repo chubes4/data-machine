@@ -143,7 +143,7 @@ class WordPressSettingsHandler {
 			if ( in_array( $raw_value, $config['allowed_values'], true ) ) {
 				$sanitized[ $field_key ] = $raw_value;
 			} else {
-				// Must be a term ID - validate it exists in this taxonomy
+				// First try as numeric term ID
 				$term_id = absint( $raw_value );
 				if ( $term_id > 0 ) {
 					$term_name = TaxonomyHandler::getTermName( $term_id, $taxonomy->name );
@@ -154,8 +154,14 @@ class WordPressSettingsHandler {
 						$sanitized[ $field_key ] = $config['default_value'];
 					}
 				} else {
-					// Invalid value - use default
-					$sanitized[ $field_key ] = $config['default_value'];
+					// Try to resolve as term name or slug (case-insensitive)
+					$resolved_term = self::resolve_term_by_name_or_slug( $raw_value, $taxonomy->name );
+					if ( $resolved_term ) {
+						$sanitized[ $field_key ] = $resolved_term->term_id;
+					} else {
+						// Invalid value - use default
+						$sanitized[ $field_key ] = $config['default_value'];
+					}
 				}
 			}
 		}
@@ -292,5 +298,45 @@ class WordPressSettingsHandler {
 		}
 
 		return $sanitized;
+	}
+
+	/**
+	 * Resolve a term by name or slug with case-insensitive matching.
+	 *
+	 * @param string $value    The term name or slug to resolve.
+	 * @param string $taxonomy The taxonomy name.
+	 * @return \WP_Term|null The resolved term object or null if not found.
+	 */
+	private static function resolve_term_by_name_or_slug( string $value, string $taxonomy ): ?\WP_Term {
+		// Try exact name match first
+		$term = get_term_by( 'name', $value, $taxonomy );
+		if ( $term instanceof \WP_Term ) {
+			return $term;
+		}
+
+		// Try case-insensitive name match
+		$terms = get_terms(
+			array(
+				'taxonomy'   => $taxonomy,
+				'hide_empty' => false,
+				'name__like' => $value,
+				'number'     => 10,
+			)
+		);
+		if ( ! is_wp_error( $terms ) && ! empty( $terms ) ) {
+			foreach ( $terms as $candidate ) {
+				if ( strcasecmp( $candidate->name, $value ) === 0 ) {
+					return $candidate;
+				}
+			}
+		}
+
+		// Try slug match
+		$term = get_term_by( 'slug', $value, $taxonomy );
+		if ( $term instanceof \WP_Term ) {
+			return $term;
+		}
+
+		return null;
 	}
 }
