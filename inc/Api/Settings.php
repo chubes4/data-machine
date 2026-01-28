@@ -12,6 +12,7 @@
 namespace DataMachine\Api;
 
 use DataMachine\Abilities\SettingsAbilities;
+use WP_REST_Response;
 use WP_REST_Server;
 
 if ( ! defined( 'WPINC' ) ) {
@@ -260,7 +261,8 @@ class Settings {
 	 *
 	 * Returns all settings needed for the React settings page.
 	 *
-	 * @return WP_REST_Response Settings data
+	 * @param \WP_REST_Request $request
+	 * @return WP_REST_Response|\WP_Error Settings data or error
 	 */
 	public static function handle_get_settings( $request ) {
 		$result = self::getAbilities()->executeGetSettings( array() );

@@ -51,8 +51,8 @@ class Pipelines {
 		$data = array(
 			'pipeline_name'   => $pipeline_name,
 			'pipeline_config' => $pipeline_config_json,
-			'created_at'      => current_time( 'mysql', 1 ),
-			'updated_at'      => current_time( 'mysql', 1 ),
+			'created_at'      => current_time( 'mysql', true ),
+			'updated_at'      => current_time( 'mysql', true ),
 		);
 
 		$format = array( '%s', '%s', '%s', '%s' );
@@ -169,7 +169,7 @@ class Pipelines {
 		}
 
 		// Always update the updated_at timestamp
-		$update_data['updated_at'] = current_time( 'mysql', 1 );
+		$update_data['updated_at'] = current_time( 'mysql', true );
 		$format[]                  = '%s';
 
 		if ( empty( $update_data ) ) {

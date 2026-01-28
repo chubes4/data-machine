@@ -57,10 +57,6 @@ function datamachine_get_engine_data( int $job_id ): array {
 	$db_jobs     = new \DataMachine\Core\Database\Jobs\Jobs();
 	$engine_data = $db_jobs->retrieve_engine_data( $job_id );
 
-	if ( ! is_array( $engine_data ) ) {
-		$engine_data = array();
-	}
-
 	wp_cache_set( $job_id, $engine_data, 'datamachine_engine_data' );
 
 	return $engine_data;

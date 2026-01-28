@@ -277,7 +277,7 @@ class LocalSearchAbilities {
 				'excerpt'      => $excerpt,
 				'post_type'    => get_post_type( $post->ID ),
 				'publish_date' => get_the_date( 'Y-m-d H:i:s', $post->ID ),
-				'author'       => get_the_author_meta( 'display_name', $post->post_author ),
+				'author'       => get_the_author_meta( 'display_name', (int) $post->post_author ),
 			);
 		}
 

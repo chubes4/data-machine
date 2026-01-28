@@ -597,7 +597,7 @@ class LogAbilities {
 	private static function filterByJobId( array $lines, int $job_id ): array {
 		$filtered = array();
 		foreach ( $lines as $line ) {
-			if ( preg_match( '/"job_id"\s*:\s*' . preg_quote( $job_id, '/' ) . '(?:[,\}])/', $line ) ) {
+			if ( preg_match( '/"job_id"\s*:\s*' . preg_quote( (string) $job_id, '/' ) . '(?:[,\}])/', $line ) ) {
 				$filtered[] = $line;
 			}
 		}
@@ -607,7 +607,7 @@ class LogAbilities {
 	private static function filterByPipelineId( array $lines, int $pipeline_id ): array {
 		$filtered = array();
 		foreach ( $lines as $line ) {
-			if ( preg_match( '/"pipeline_id"\s*:\s*' . preg_quote( $pipeline_id, '/' ) . '(?:[,\}])/', $line ) ) {
+			if ( preg_match( '/"pipeline_id"\s*:\s*' . preg_quote( (string) $pipeline_id, '/' ) . '(?:[,\}])/', $line ) ) {
 				$filtered[] = $line;
 			}
 		}
@@ -617,7 +617,7 @@ class LogAbilities {
 	private static function filterByFlowId( array $lines, int $flow_id ): array {
 		$filtered = array();
 		foreach ( $lines as $line ) {
-			if ( preg_match( '/"flow_id"\s*:\s*' . preg_quote( $flow_id, '/' ) . '(?:[,\}])/', $line ) ) {
+			if ( preg_match( '/"flow_id"\s*:\s*' . preg_quote( (string) $flow_id, '/' ) . '(?:[,\}])/', $line ) ) {
 				$filtered[] = $line;
 			}
 		}

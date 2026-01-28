@@ -55,7 +55,7 @@ class WordPressPostReader extends BaseTool {
 		$post_type    = get_post_type( $post_id );
 		$post_status  = $post->post_status;
 		$publish_date = get_the_date( 'Y-m-d H:i:s', $post_id );
-		$author_name  = get_the_author_meta( 'display_name', $post->post_author );
+		$author_name  = get_the_author_meta( 'display_name', (int) $post->post_author );
 
 		$content_length     = strlen( $content );
 		$content_word_count = str_word_count( wp_strip_all_tags( $content ) );

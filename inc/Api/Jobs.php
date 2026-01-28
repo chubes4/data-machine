@@ -204,12 +204,12 @@ class Jobs {
 	public static function handle_get_job_by_id( $request ) {
 		$job_id = (int) $request->get_param( 'id' );
 
-		$result = self::getAbilities()->executeGetJob( array( 'job_id' => $job_id ) );
+		$result = self::getAbilities()->executeGetJobs( array( 'job_id' => $job_id ) );
 
-		if ( ! $result['success'] ) {
+		if ( ! $result['success'] || empty( $result['jobs'] ) ) {
 			return new \WP_Error(
 				'job_not_found',
-				$result['error'],
+				$result['error'] ?? __( 'Job not found.', 'data-machine' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -217,7 +217,7 @@ class Jobs {
 		return rest_ensure_response(
 			array(
 				'success' => true,
-				'data'    => $result['job'],
+				'data'    => $result['jobs'][0],
 			)
 		);
 	}

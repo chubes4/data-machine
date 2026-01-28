@@ -209,7 +209,7 @@ function datamachine_register_core_actions() {
 						return $result;
 
 					case 'set_level':
-						$result = datamachine_set_log_level( $param2 );
+						$result = datamachine_set_log_level( $param2, $param3 );
 						return $result;
 				}
 			}

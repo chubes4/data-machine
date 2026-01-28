@@ -32,8 +32,8 @@ class Jobs {
 	}
 
 
-	public function get_jobs_count(): int {
-		return $this->operations->get_jobs_count();
+	public function get_jobs_count( array $args = array() ): int {
+		return $this->operations->get_jobs_count( $args );
 	}
 
 	public function get_jobs_for_list_table( array $args ): array {

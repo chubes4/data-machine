@@ -85,7 +85,7 @@ class JobsStatus {
 
 		$update_data = array(
 			'status'       => $status,
-			'completed_at' => current_time( 'mysql', 1 ),
+			'completed_at' => current_time( 'mysql', true ),
 		);
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching

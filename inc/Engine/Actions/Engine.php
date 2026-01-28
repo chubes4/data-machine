@@ -246,21 +246,7 @@ function datamachine_register_execution_engine() {
 				$context = datamachine_get_file_context( $flow_id );
 
 				$retrieval = new \DataMachine\Core\FilesRepository\FileRetrieval();
-				/** @var array $dataPackets */
 				$dataPackets = $retrieval->retrieve_data_by_job_id( $job_id, $context );
-
-				if ( ! $flow_step_config ) {
-					do_action(
-						'datamachine_fail_job',
-						$job_id,
-						'step_execution_failure',
-						array(
-							'flow_step_id' => $flow_step_id,
-							'reason'       => 'failed_to_load_flow_step_configuration',
-						)
-					);
-					return false;
-				}
 
 				if ( ! isset( $flow_step_config['step_type'] ) || empty( $flow_step_config['step_type'] ) ) {
 					do_action(
@@ -299,7 +285,7 @@ function datamachine_register_execution_engine() {
 				$payload = array(
 					'job_id'       => $job_id,
 					'flow_step_id' => $flow_step_id,
-					'data'         => is_array( $dataPackets ) ? $dataPackets : array(),
+					'data'         => $dataPackets,
 					'engine'       => $engine,
 				);
 

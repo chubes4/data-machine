@@ -377,7 +377,7 @@ class FlowStepAbilities {
 
 		// Direct step lookup by ID - bypasses flow_id requirement.
 		if ( $flow_step_id ) {
-			if ( ! is_string( $flow_step_id ) || empty( $flow_step_id ) ) {
+			if ( ! is_string( $flow_step_id ) ) {
 				return array(
 					'success' => false,
 					'error'   => 'flow_step_id must be a non-empty string',
@@ -494,15 +494,12 @@ class FlowStepAbilities {
 			if ( ! empty( $handler_config ) ) {
 				$validation_result = $this->validateHandlerConfig( $effective_slug, $handler_config );
 				if ( true !== $validation_result ) {
-					$response = array(
-						'success' => false,
-						'error'   => is_array( $validation_result ) ? $validation_result['error'] : $validation_result,
+					return array(
+						'success'        => false,
+						'error'          => $validation_result['error'],
+						'unknown_fields' => $validation_result['unknown_fields'],
+						'field_specs'    => $validation_result['field_specs'],
 					);
-					if ( is_array( $validation_result ) ) {
-						$response['unknown_fields'] = $validation_result['unknown_fields'];
-						$response['field_specs']    = $validation_result['field_specs'];
-					}
-					return $response;
 				}
 			}
 
@@ -706,16 +703,13 @@ class FlowStepAbilities {
 				if ( ! empty( $merged_config ) ) {
 					$validation_result = $this->validateHandlerConfig( $effective_handler_slug, $merged_config );
 					if ( true !== $validation_result ) {
-						$error_entry = array(
-							'flow_step_id' => $flow_step_id,
-							'flow_id'      => $flow_id,
-							'error'        => is_array( $validation_result ) ? $validation_result['error'] : $validation_result,
+						$errors[] = array(
+							'flow_step_id'   => $flow_step_id,
+							'flow_id'        => $flow_id,
+							'error'          => $validation_result['error'],
+							'unknown_fields' => $validation_result['unknown_fields'],
+							'field_specs'    => $validation_result['field_specs'],
 						);
-						if ( is_array( $validation_result ) ) {
-							$error_entry['unknown_fields'] = $validation_result['unknown_fields'];
-							$error_entry['field_specs']    = $validation_result['field_specs'];
-						}
-						$errors[] = $error_entry;
 						continue;
 					}
 				}
@@ -984,16 +978,13 @@ class FlowStepAbilities {
 				if ( ! empty( $handler_config ) && ! empty( $effective_slug ) ) {
 					$validation_result = $this->validateHandlerConfig( $effective_slug, $handler_config );
 					if ( true !== $validation_result ) {
-						$error_entry = array(
-							'flow_id'      => $flow_id,
-							'flow_step_id' => $flow_step_id,
-							'step_type'    => $step_type,
-							'error'        => is_array( $validation_result ) ? $validation_result['error'] : $validation_result,
+						$errors[] = array(
+							'flow_id'        => $flow_id,
+							'flow_step_id'   => $flow_step_id,
+							'step_type'      => $step_type,
+							'error'          => $validation_result['error'],
+							'unknown_fields' => $validation_result['unknown_fields'] ?? array(),
 						);
-						if ( is_array( $validation_result ) && isset( $validation_result['unknown_fields'] ) ) {
-							$error_entry['unknown_fields'] = $validation_result['unknown_fields'];
-						}
-						$errors[] = $error_entry;
 						continue;
 					}
 				}
@@ -1232,16 +1223,13 @@ class FlowStepAbilities {
 				if ( ! empty( $merged_config ) ) {
 					$validation_result = $this->validateHandlerConfig( $effective_handler_slug, $merged_config );
 					if ( true !== $validation_result ) {
-						$error_entry = array(
-							'flow_step_id' => $flow_step_id,
-							'flow_id'      => $flow_id,
-							'error'        => is_array( $validation_result ) ? $validation_result['error'] : $validation_result,
+						$validation_errors[] = array(
+							'flow_step_id'   => $flow_step_id,
+							'flow_id'        => $flow_id,
+							'error'          => $validation_result['error'],
+							'unknown_fields' => $validation_result['unknown_fields'],
+							'field_specs'    => $validation_result['field_specs'],
 						);
-						if ( is_array( $validation_result ) ) {
-							$error_entry['unknown_fields'] = $validation_result['unknown_fields'];
-							$error_entry['field_specs']    = $validation_result['field_specs'];
-						}
-						$validation_errors[] = $error_entry;
 						continue;
 					}
 				}
@@ -1326,7 +1314,7 @@ class FlowStepAbilities {
 	 * @param array  $handler_config Configuration to validate.
 	 * @return true|array True if valid, structured error array if invalid.
 	 */
-	private function validateHandlerConfig( string $handler_slug, array $handler_config ): bool|array {
+	private function validateHandlerConfig( string $handler_slug, array $handler_config ): true|array {
 		$config_fields = $this->handler_abilities->getConfigFields( $handler_slug );
 		$valid_fields  = array_keys( $config_fields );
 

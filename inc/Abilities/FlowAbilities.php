@@ -409,7 +409,7 @@ class FlowAbilities {
 				'output_mode'     => $output_mode,
 				'filters_applied' => $filters_applied,
 			);
-		} catch ( Exception $e ) {
+		} catch ( \Exception $e ) {
 			return array(
 				'success' => false,
 				'error'   => $e->getMessage(),
@@ -473,10 +473,6 @@ class FlowAbilities {
 	}
 
 	private function formatFlowByMode( array $flow, string $output_mode ): array {
-		if ( 'ids' === $output_mode ) {
-			return (int) $flow['flow_id'];
-		}
-
 		if ( 'summary' === $output_mode ) {
 			return $this->formatSummary( $flow );
 		}

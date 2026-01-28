@@ -1207,7 +1207,7 @@ class JobAbilities {
 					$table,
 					array(
 						'status'       => $status,
-						'completed_at' => current_time( 'mysql', 1 ),
+						'completed_at' => current_time( 'mysql', true ),
 					),
 					array( 'job_id' => $job->job_id ),
 					array( '%s', '%s' ),

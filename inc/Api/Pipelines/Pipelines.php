@@ -240,9 +240,14 @@ class Pipelines {
 		}
 
 		if ( $pipeline_id ) {
-			$result = $abilities->executeGetPipeline( array( 'pipeline_id' => (int) $pipeline_id ) );
+			$result = $abilities->executeGetPipelines(
+				array(
+					'pipeline_id' => (int) $pipeline_id,
+					'output_mode' => 'full',
+				)
+			);
 
-			if ( ! $result['success'] ) {
+			if ( ! $result['success'] || empty( $result['pipelines'] ) ) {
 				return new \WP_Error(
 					'pipeline_not_found',
 					$result['error'] ?? __( 'Pipeline not found.', 'data-machine' ),
@@ -250,8 +255,10 @@ class Pipelines {
 				);
 			}
 
-			$pipeline = $result['pipeline'];
-			$flows    = $result['flows'];
+			$pipeline_data = $result['pipelines'][0];
+			$flows         = $pipeline_data['flows'] ?? array();
+			unset( $pipeline_data['flows'] );
+			$pipeline = $pipeline_data;
 
 			if ( ! empty( $requested_fields ) ) {
 				$pipeline = array_intersect_key( $pipeline, array_flip( $requested_fields ) );

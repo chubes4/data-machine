@@ -683,22 +683,20 @@ class FileAbilities {
 			return __( 'Invalid file name detected.', 'data-machine' );
 		}
 
-		$finfo = new \finfo( FILEINFO_MIME_TYPE );
-		if ( $finfo ) {
-			$detected_mime = $finfo->file( $file['tmp_name'] );
+		$finfo         = new \finfo( FILEINFO_MIME_TYPE );
+		$detected_mime = $finfo->file( $file['tmp_name'] );
 
-			if ( $detected_mime && $wp_filetype['type'] && $detected_mime !== $wp_filetype['type'] ) {
-				$allowed_mime_variations = array(
-					'text/plain'               => array( 'text/csv', 'text/tab-separated-values' ),
-					'application/octet-stream' => array( 'application/zip', 'application/x-zip-compressed' ),
-				);
+		if ( $detected_mime && $wp_filetype['type'] && $detected_mime !== $wp_filetype['type'] ) {
+			$allowed_mime_variations = array(
+				'text/plain'               => array( 'text/csv', 'text/tab-separated-values' ),
+				'application/octet-stream' => array( 'application/zip', 'application/x-zip-compressed' ),
+			);
 
-				$is_allowed_variation = isset( $allowed_mime_variations[ $wp_filetype['type'] ] ) &&
-										in_array( $detected_mime, $allowed_mime_variations[ $wp_filetype['type'] ], true );
+			$is_allowed_variation = isset( $allowed_mime_variations[ $wp_filetype['type'] ] ) &&
+									in_array( $detected_mime, $allowed_mime_variations[ $wp_filetype['type'] ], true );
 
-				if ( ! $is_allowed_variation ) {
-					return __( 'File content does not match file type.', 'data-machine' );
-				}
+			if ( ! $is_allowed_variation ) {
+				return __( 'File content does not match file type.', 'data-machine' );
 			}
 		}
 

@@ -275,7 +275,7 @@ class FlowSteps {
 		}
 
 		$abilities = new FlowStepAbilities();
-		$result    = $abilities->executeGetFlowStep( array( 'flow_step_id' => $flow_step_id ) );
+		$result    = $abilities->executeGetFlowSteps( array( 'flow_step_id' => $flow_step_id ) );
 
 		if ( ! $result['success'] ) {
 			return new \WP_Error(

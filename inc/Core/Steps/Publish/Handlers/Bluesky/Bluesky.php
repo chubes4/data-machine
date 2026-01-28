@@ -9,6 +9,7 @@ use DataMachine\Abilities\AuthAbilities;
 use DataMachine\Core\EngineData;
 use DataMachine\Core\Steps\Publish\Handlers\PublishHandler;
 use DataMachine\Core\Steps\HandlerRegistrationTrait;
+use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

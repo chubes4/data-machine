@@ -18,6 +18,7 @@ use DataMachine\Engine\AI\AIConversationLoop;
 use DataMachine\Engine\AI\Tools\ToolManager;
 use DataMachine\Engine\AI\AgentType;
 use DataMachine\Engine\AI\AgentContext;
+use WP_REST_Response;
 use WP_REST_Server;
 use WP_REST_Request;
 use WP_Error;
@@ -199,7 +200,7 @@ class Chat {
 	 * List all chat sessions for current user
 	 *
 	 * @param WP_REST_Request $request Request object
-	 * @return array|WP_Error Response data or error
+	 * @return WP_REST_Response|WP_Error Response data or error
 	 */
 	public static function list_sessions( WP_REST_Request $request ) {
 		$user_id    = get_current_user_id();
@@ -229,7 +230,7 @@ class Chat {
 	 * Delete a chat session
 	 *
 	 * @param WP_REST_Request $request Request object
-	 * @return array|WP_Error Response data or error
+	 * @return WP_REST_Response|WP_Error Response data or error
 	 */
 	public static function delete_session( WP_REST_Request $request ) {
 		$session_id = sanitize_text_field( $request->get_param( 'session_id' ) );
@@ -279,7 +280,7 @@ class Chat {
 	 * Get existing chat session
 	 *
 	 * @param WP_REST_Request $request Request object
-	 * @return array|WP_Error Response data or error
+	 * @return WP_REST_Response|WP_Error Response data or error
 	 */
 	public static function get_session( WP_REST_Request $request ) {
 		$session_id = sanitize_text_field( $request->get_param( 'session_id' ) );
@@ -320,7 +321,7 @@ class Chat {
 	 * Handle chat request
 	 *
 	 * @param WP_REST_Request $request Request object
-	 * @return array|WP_Error Response data or error
+	 * @return WP_REST_Response|WP_Error Response data or error
 	 */
 	public static function handle_chat( WP_REST_Request $request ) {
 		$request_id = $request->get_header( 'X-Request-ID' );
@@ -612,6 +613,7 @@ class Chat {
 		);
 
 		if ( $request_id ) {
+			$cache_key = 'datamachine_chat_request_' . $request_id;
 			set_transient( $cache_key, $response, 60 );
 		}
 
@@ -626,7 +628,7 @@ class Chat {
 	 *
 	 * @since 0.12.0
 	 * @param WP_REST_Request $request Request object
-	 * @return array|WP_Error Response data or error
+	 * @return WP_REST_Response|WP_Error Response data or error
 	 */
 	public static function handle_continue( WP_REST_Request $request ) {
 		$session_id = sanitize_text_field( $request->get_param( 'session_id' ) );
