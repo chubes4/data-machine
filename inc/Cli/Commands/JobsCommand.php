@@ -12,13 +12,25 @@
 namespace DataMachine\Cli\Commands;
 
 use WP_CLI;
-use WP_CLI_Command;
+use DataMachine\Cli\BaseCommand;
 use DataMachine\Abilities\JobAbilities;
 
 defined( 'ABSPATH' ) || exit;
 
-class JobsCommand extends WP_CLI_Command {
+class JobsCommand extends BaseCommand {
 
+	/**
+	 * Default fields for job list output.
+	 *
+	 * @var array
+	 */
+	private array $default_fields = array( 'id', 'flow', 'status', 'created', 'completed' );
+
+	/**
+	 * Job abilities instance.
+	 *
+	 * @var JobAbilities
+	 */
 	private JobAbilities $abilities;
 
 	public function __construct() {
@@ -88,12 +100,14 @@ class JobsCommand extends WP_CLI_Command {
 				WP_CLI::warning( sprintf( 'Job %d: %s', $job['job_id'], $job['reason'] ?? 'Unknown reason' ) );
 			} elseif ( 'would_recover' === $job['status'] ) {
 				$display_status = strlen( $job['target_status'] ) > 60 ? substr( $job['target_status'], 0, 60 ) . '...' : $job['target_status'];
-				WP_CLI::log( sprintf(
-					'Would update job %d (flow %d) to: %s',
-					$job['job_id'],
-					$job['flow_id'],
-					$display_status
-				) );
+				WP_CLI::log(
+					sprintf(
+						'Would update job %d (flow %d) to: %s',
+						$job['job_id'],
+						$job['flow_id'],
+						$display_status
+					)
+				);
 			} elseif ( 'recovered' === $job['status'] ) {
 				$display_status = strlen( $job['target_status'] ) > 60 ? substr( $job['target_status'], 0, 60 ) . '...' : $job['target_status'];
 				WP_CLI::log( sprintf( 'Updated job %d to: %s', $job['job_id'], $display_status ) );
@@ -127,7 +141,14 @@ class JobsCommand extends WP_CLI_Command {
 	 * options:
 	 *   - table
 	 *   - json
+	 *   - csv
+	 *   - yaml
+	 *   - ids
+	 *   - count
 	 * ---
+	 *
+	 * [--fields=<fields>]
+	 * : Limit output to specific fields (comma-separated).
 	 *
 	 * ## EXAMPLES
 	 *
@@ -139,6 +160,15 @@ class JobsCommand extends WP_CLI_Command {
 	 *
 	 *     # List jobs for a specific flow
 	 *     wp datamachine jobs list --flow=98 --limit=50
+	 *
+	 *     # Output as CSV
+	 *     wp datamachine jobs list --format=csv
+	 *
+	 *     # Output only IDs (space-separated)
+	 *     wp datamachine jobs list --format=ids
+	 *
+	 *     # Count total jobs
+	 *     wp datamachine jobs list --format=count
 	 *
 	 *     # JSON output
 	 *     wp datamachine jobs list --format=json
@@ -183,31 +213,30 @@ class JobsCommand extends WP_CLI_Command {
 		$jobs = $result['jobs'] ?? array();
 
 		if ( empty( $jobs ) ) {
-			WP_CLI::log( 'No jobs found.' );
+			WP_CLI::warning( 'No jobs found.' );
 			return;
 		}
 
-		if ( 'json' === $format ) {
-			WP_CLI::log( wp_json_encode( $jobs, JSON_PRETTY_PRINT ) );
-			return;
-		}
-
+		// Transform jobs to flat row format.
 		$items = array_map(
 			function ( $j ) {
 				$status_display = strlen( $j['status'] ?? '' ) > 40 ? substr( $j['status'], 0, 40 ) . '...' : ( $j['status'] ?? '' );
 				return array(
-					'ID'        => $j['job_id'] ?? '',
-					'Flow'      => $j['flow_name'] ?? ( isset( $j['flow_id'] ) ? "Flow {$j['flow_id']}" : '' ),
-					'Status'    => $status_display,
-					'Created'   => $j['created_at'] ?? '',
-					'Completed' => $j['completed_at'] ?? '-',
+					'id'        => $j['job_id'] ?? '',
+					'flow'      => $j['flow_name'] ?? ( isset( $j['flow_id'] ) ? "Flow {$j['flow_id']}" : '' ),
+					'status'    => $status_display,
+					'created'   => $j['created_at'] ?? '',
+					'completed' => $j['completed_at'] ?? '-',
 				);
 			},
 			$jobs
 		);
 
-		WP_CLI\Utils\format_items( 'table', $items, array( 'ID', 'Flow', 'Status', 'Created', 'Completed' ) );
-		WP_CLI::log( sprintf( 'Showing %d jobs.', count( $jobs ) ) );
+		$this->format_items( $items, $this->default_fields, $assoc_args, 'id' );
+
+		if ( 'table' === $format ) {
+			WP_CLI::log( sprintf( 'Showing %d jobs.', count( $jobs ) ) );
+		}
 	}
 
 	/**
@@ -222,12 +251,20 @@ class JobsCommand extends WP_CLI_Command {
 	 * options:
 	 *   - table
 	 *   - json
+	 *   - csv
+	 *   - yaml
 	 * ---
+	 *
+	 * [--fields=<fields>]
+	 * : Limit output to specific fields (comma-separated).
 	 *
 	 * ## EXAMPLES
 	 *
 	 *     # Show status summary
 	 *     wp datamachine jobs summary
+	 *
+	 *     # Output as CSV
+	 *     wp datamachine jobs summary --format=csv
 	 *
 	 *     # JSON output
 	 *     wp datamachine jobs summary --format=json
@@ -235,8 +272,6 @@ class JobsCommand extends WP_CLI_Command {
 	 * @subcommand summary
 	 */
 	public function summary( array $args, array $assoc_args ): void {
-		$format = $assoc_args['format'] ?? 'table';
-
 		$result = $this->abilities->executeGetJobsSummary( array() );
 
 		if ( ! $result['success'] ) {
@@ -246,19 +281,20 @@ class JobsCommand extends WP_CLI_Command {
 
 		$summary = $result['summary'] ?? array();
 
-		if ( 'json' === $format ) {
-			WP_CLI::log( wp_json_encode( $summary, JSON_PRETTY_PRINT ) );
+		if ( empty( $summary ) ) {
+			WP_CLI::warning( 'No job summary data available.' );
 			return;
 		}
 
+		// Transform summary to row format.
 		$items = array();
 		foreach ( $summary as $status => $count ) {
 			$items[] = array(
-				'Status' => $status,
-				'Count'  => $count,
+				'status' => $status,
+				'count'  => $count,
 			);
 		}
 
-		WP_CLI\Utils\format_items( 'table', $items, array( 'Status', 'Count' ) );
+		$this->format_items( $items, array( 'status', 'count' ), $assoc_args );
 	}
 }

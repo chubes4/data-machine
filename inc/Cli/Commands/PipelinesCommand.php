@@ -11,11 +11,18 @@
 namespace DataMachine\Cli\Commands;
 
 use WP_CLI;
-use WP_CLI_Command;
+use DataMachine\Cli\BaseCommand;
 
 defined( 'ABSPATH' ) || exit;
 
-class PipelinesCommand extends WP_CLI_Command {
+class PipelinesCommand extends BaseCommand {
+
+	/**
+	 * Default fields for pipeline list output.
+	 *
+	 * @var array
+	 */
+	private array $default_fields = array( 'id', 'name', 'steps', 'step_types', 'flows', 'updated' );
 
 	/**
 	 * Get pipelines with optional filtering.
@@ -37,16 +44,6 @@ class PipelinesCommand extends WP_CLI_Command {
 	 * default: 0
 	 * ---
 	 *
-	 * [--output=<mode>]
-	 * : Output mode for pipeline data.
-	 * ---
-	 * default: full
-	 * options:
-	 *   - full
-	 *   - summary
-	 *   - ids
-	 * ---
-	 *
 	 * [--format=<format>]
 	 * : Output format.
 	 * ---
@@ -54,7 +51,14 @@ class PipelinesCommand extends WP_CLI_Command {
 	 * options:
 	 *   - table
 	 *   - json
+	 *   - csv
+	 *   - yaml
+	 *   - ids
+	 *   - count
 	 * ---
+	 *
+	 * [--fields=<fields>]
+	 * : Limit output to specific fields (comma-separated).
 	 *
 	 * ## EXAMPLES
 	 *
@@ -70,11 +74,17 @@ class PipelinesCommand extends WP_CLI_Command {
 	 *     # List with pagination
 	 *     wp datamachine pipelines --per_page=10 --offset=20
 	 *
-	 *     # Summary output (key fields only)
-	 *     wp datamachine pipelines --output=summary
+	 *     # Output as CSV
+	 *     wp datamachine pipelines --format=csv
 	 *
-	 *     # IDs only output (for batch operations)
-	 *     wp datamachine pipelines --output=ids
+	 *     # Output only IDs (space-separated)
+	 *     wp datamachine pipelines --format=ids
+	 *
+	 *     # Count total pipelines
+	 *     wp datamachine pipelines --format=count
+	 *
+	 *     # Select specific fields
+	 *     wp datamachine pipelines --fields=id,name,flows
 	 *
 	 *     # JSON output
 	 *     wp datamachine pipelines --format=json
@@ -91,10 +101,9 @@ class PipelinesCommand extends WP_CLI_Command {
 			$pipeline_id = (int) $args[0];
 		}
 
-		$per_page    = (int) ( $assoc_args['per_page'] ?? 20 );
-		$offset      = (int) ( $assoc_args['offset'] ?? 0 );
-		$output_mode = $assoc_args['output'] ?? 'full';
-		$format      = $assoc_args['format'] ?? 'table';
+		$per_page = (int) ( $assoc_args['per_page'] ?? 20 );
+		$offset   = (int) ( $assoc_args['offset'] ?? 0 );
+		$format   = $assoc_args['format'] ?? 'table';
 
 		if ( $per_page < 1 ) {
 			$per_page = 20;
@@ -105,38 +114,80 @@ class PipelinesCommand extends WP_CLI_Command {
 		if ( $offset < 0 ) {
 			$offset = 0;
 		}
-		if ( ! in_array( $output_mode, array( 'full', 'summary', 'ids' ), true ) ) {
-			$output_mode = 'full';
-		}
 
 		$ability = new \DataMachine\Abilities\PipelineAbilities();
 
 		if ( $pipeline_id ) {
-			$result = $ability->executeGetPipeline( array( 'pipeline_id' => $pipeline_id ) );
+			$result = $ability->executeGetPipelines(
+				array(
+					'pipeline_id' => $pipeline_id,
+					'output_mode' => 'full',
+				)
+			);
+
+			if ( ! $result['success'] || empty( $result['pipelines'] ) ) {
+				WP_CLI::error( $result['error'] ?? 'Pipeline not found' );
+				return;
+			}
+
+			$pipeline_data = $result['pipelines'][0];
+			$flows         = $pipeline_data['flows'] ?? array();
+			unset( $pipeline_data['flows'] );
+			$single_result = array(
+				'success'  => true,
+				'pipeline' => $pipeline_data,
+				'flows'    => $flows,
+			);
+			$this->outputSinglePipeline( $single_result, $format );
 		} else {
 			$result = $ability->executeGetPipelines(
 				array(
 					'per_page'    => $per_page,
 					'offset'      => $offset,
-					'output_mode' => $output_mode,
+					'output_mode' => 'full',
 				)
 			);
-		}
 
-		if ( ! $result['success'] ) {
-			WP_CLI::error( $result['error'] ?? 'Failed to get pipelines' );
-			return;
-		}
+			if ( ! $result['success'] ) {
+				WP_CLI::error( $result['error'] ?? 'Failed to get pipelines' );
+				return;
+			}
 
-		if ( $pipeline_id ) {
-			$this->outputSinglePipeline( $result, $format );
-		} else {
-			$this->outputResult( $result, $format, $output_mode );
+			$pipelines = $result['pipelines'] ?? array();
+			$total     = $result['total'] ?? 0;
+
+			if ( empty( $pipelines ) ) {
+				WP_CLI::warning( 'No pipelines found.' );
+				return;
+			}
+
+			// Transform pipelines to flat row format.
+			$items = array_map(
+				function ( $pipeline ) {
+					$config = $pipeline['pipeline_config'] ?? array();
+					$flows  = $pipeline['flows'] ?? array();
+					return array(
+						'id'         => $pipeline['pipeline_id'],
+						'name'       => $pipeline['pipeline_name'],
+						'steps'      => count( $config ),
+						'step_types' => $this->extractStepTypes( $config ),
+						'flows'      => count( $flows ),
+						'updated'    => $pipeline['updated_at_display'] ?? $pipeline['updated_at'] ?? 'N/A',
+					);
+				},
+				$pipelines
+			);
+
+			$this->format_items( $items, $this->default_fields, $assoc_args, 'id' );
+			$this->output_pagination( $offset, count( $pipelines ), $total, $format, 'pipelines' );
 		}
 	}
 
 	/**
 	 * Output single pipeline result.
+	 *
+	 * @param array  $result Result with pipeline and flows.
+	 * @param string $format Output format.
 	 */
 	private function outputSinglePipeline( array $result, string $format ): void {
 		$pipeline = $result['pipeline'] ?? array();
@@ -152,14 +203,14 @@ class PipelinesCommand extends WP_CLI_Command {
 			return;
 		}
 
-		// Output pipeline info
+		// Output pipeline info.
 		WP_CLI::log( sprintf( 'Pipeline ID: %d', $pipeline['pipeline_id'] ) );
 		WP_CLI::log( sprintf( 'Name: %s', $pipeline['pipeline_name'] ) );
 		WP_CLI::log( sprintf( 'Created: %s', $pipeline['created_at_display'] ?? $pipeline['created_at'] ?? 'N/A' ) );
 		WP_CLI::log( sprintf( 'Updated: %s', $pipeline['updated_at_display'] ?? $pipeline['updated_at'] ?? 'N/A' ) );
 		WP_CLI::log( '' );
 
-		// Output steps
+		// Output steps.
 		$config = $pipeline['pipeline_config'] ?? array();
 		if ( ! empty( $config ) ) {
 			WP_CLI::log( 'Steps:' );
@@ -179,7 +230,7 @@ class PipelinesCommand extends WP_CLI_Command {
 
 		WP_CLI::log( '' );
 
-		// Output flows
+		// Output flows.
 		if ( ! empty( $flows ) ) {
 			WP_CLI::log( sprintf( 'Flows (%d):', count( $flows ) ) );
 			$flow_rows = array();
@@ -197,99 +248,10 @@ class PipelinesCommand extends WP_CLI_Command {
 	}
 
 	/**
-	 * Output results in requested format.
-	 */
-	private function outputResult( array $result, string $format, string $output_mode = 'full' ): void {
-		$pipelines = $result['pipelines'] ?? array();
-		$total     = $result['total'] ?? 0;
-		$per_page  = $result['per_page'] ?? 20;
-		$offset    = $result['offset'] ?? 0;
-
-		if ( empty( $pipelines ) ) {
-			WP_CLI::warning( 'No pipelines found.' );
-			return;
-		}
-
-		if ( 'json' === $format ) {
-			WP_CLI::log( wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
-			return;
-		}
-
-		// Handle IDs-only output mode.
-		if ( 'ids' === $output_mode ) {
-			WP_CLI::log( implode( "\n", $pipelines ) );
-			WP_CLI::log( '' );
-			WP_CLI::log( "Total: {$total} pipeline(s)" );
-			return;
-		}
-
-		// Handle summary output mode.
-		if ( 'summary' === $output_mode ) {
-			$rows = array();
-			foreach ( $pipelines as $pipeline ) {
-				$rows[] = array(
-					'Pipeline ID' => $pipeline['pipeline_id'],
-					'Name'        => $pipeline['pipeline_name'],
-					'Flows'       => $pipeline['flow_count'] ?? 0,
-				);
-			}
-
-			\WP_CLI\Utils\format_items(
-				'table',
-				$rows,
-				array( 'Pipeline ID', 'Name', 'Flows' )
-			);
-
-			$this->outputPaginationInfo( $offset, count( $pipelines ), $total );
-			return;
-		}
-
-		// Full output mode (default).
-		$rows = array();
-		foreach ( $pipelines as $pipeline ) {
-			$config     = $pipeline['pipeline_config'] ?? array();
-			$flows      = $pipeline['flows'] ?? array();
-			$step_types = $this->extractStepTypes( $config );
-			$rows[]     = array(
-				'Pipeline ID' => $pipeline['pipeline_id'],
-				'Name'        => $pipeline['pipeline_name'],
-				'Steps'       => count( $config ),
-				'Step Types'  => $step_types,
-				'Flows'       => count( $flows ),
-				'Updated'     => $pipeline['updated_at_display'] ?? $pipeline['updated_at'] ?? 'N/A',
-			);
-		}
-
-		\WP_CLI\Utils\format_items(
-			'table',
-			$rows,
-			array(
-				'Pipeline ID',
-				'Name',
-				'Steps',
-				'Step Types',
-				'Flows',
-				'Updated',
-			)
-		);
-
-		$this->outputPaginationInfo( $offset, count( $pipelines ), $total );
-	}
-
-	/**
-	 * Output pagination info.
-	 */
-	private function outputPaginationInfo( int $offset, int $count, int $total ): void {
-		$end = $offset + $count;
-		if ( $end < $total ) {
-			WP_CLI::log( "Showing {$offset} - {$end} of {$total} pipelines. Use --offset to see more." );
-		} else {
-			WP_CLI::log( "Showing {$offset} - {$end} of {$total} pipelines." );
-		}
-	}
-
-	/**
 	 * Extract step types from pipeline config.
+	 *
+	 * @param array $config Pipeline configuration.
+	 * @return string Comma-separated step types.
 	 */
 	private function extractStepTypes( array $config ): string {
 		$types = array();

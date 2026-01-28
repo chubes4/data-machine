@@ -11,11 +11,18 @@
 namespace DataMachine\Cli\Commands;
 
 use WP_CLI;
-use WP_CLI_Command;
+use DataMachine\Cli\BaseCommand;
 
 defined( 'ABSPATH' ) || exit;
 
-class FlowsCommand extends WP_CLI_Command {
+class FlowsCommand extends BaseCommand {
+
+	/**
+	 * Default fields for flow list output.
+	 *
+	 * @var array
+	 */
+	private array $default_fields = array( 'id', 'name', 'pipeline_id', 'handlers', 'status', 'next_run' );
 
 	/**
 	 * Get flows with optional filtering.
@@ -43,16 +50,6 @@ class FlowsCommand extends WP_CLI_Command {
 	 * [--id=<flow_id>]
 	 * : Get a specific flow by ID.
 	 *
-	 * [--output=<mode>]
-	 * : Output mode for flow data.
-	 * ---
-	 * default: full
-	 * options:
-	 *   - full
-	 *   - summary
-	 *   - ids
-	 * ---
-	 *
 	 * [--format=<format>]
 	 * : Output format.
 	 * ---
@@ -60,11 +57,27 @@ class FlowsCommand extends WP_CLI_Command {
 	 * options:
 	 *   - table
 	 *   - json
+	 *   - csv
+	 *   - yaml
+	 *   - ids
+	 *   - count
 	 * ---
+	 *
+	 * [--fields=<fields>]
+	 * : Limit output to specific fields (comma-separated).
+	 *
+	 * [--count=<number>]
+	 * : Number of times to run the flow (1-10, immediate execution only).
+	 * ---
+	 * default: 1
+	 * ---
+	 *
+	 * [--timestamp=<unix>]
+	 * : Unix timestamp for delayed execution (future time required).
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     # List all flows (full output)
+	 *     # List all flows
 	 *     wp datamachine flows
 	 *
 	 *     # List flows for pipeline 5
@@ -79,11 +92,17 @@ class FlowsCommand extends WP_CLI_Command {
 	 *     # List with pagination
 	 *     wp datamachine flows --per_page=10 --offset=20
 	 *
-	 *     # Summary output (key fields only)
-	 *     wp datamachine flows --output=summary
+	 *     # Output as CSV
+	 *     wp datamachine flows --format=csv
 	 *
-	 *     # IDs only output (for batch operations)
-	 *     wp datamachine flows --output=ids
+	 *     # Output only IDs (space-separated)
+	 *     wp datamachine flows --format=ids
+	 *
+	 *     # Count total flows
+	 *     wp datamachine flows --format=count
+	 *
+	 *     # Select specific fields
+	 *     wp datamachine flows --fields=id,name
 	 *
 	 *     # JSON output
 	 *     wp datamachine flows --format=json
@@ -102,15 +121,6 @@ class FlowsCommand extends WP_CLI_Command {
 	 *
 	 *     # Schedule a flow for later execution
 	 *     wp datamachine flows run 42 --timestamp=1735689600
-	 *
-	 * [--count=<number>]
-	 * : Number of times to run the flow (1-10, immediate execution only).
-	 * ---
-	 * default: 1
-	 * ---
-	 *
-	 * [--timestamp=<unix>]
-	 * : Unix timestamp for delayed execution (future time required).
 	 */
 	public function __invoke( array $args, array $assoc_args ): void {
 		$flow_id     = null;
@@ -141,7 +151,6 @@ class FlowsCommand extends WP_CLI_Command {
 		$handler_slug = $assoc_args['handler'] ?? null;
 		$per_page     = (int) ( $assoc_args['per_page'] ?? 20 );
 		$offset       = (int) ( $assoc_args['offset'] ?? 0 );
-		$output_mode  = $assoc_args['output'] ?? 'full';
 		$format       = $assoc_args['format'] ?? 'table';
 
 		if ( $per_page < 1 ) {
@@ -153,9 +162,6 @@ class FlowsCommand extends WP_CLI_Command {
 		if ( $offset < 0 ) {
 			$offset = 0;
 		}
-		if ( ! in_array( $output_mode, array( 'full', 'summary', 'ids' ), true ) ) {
-			$output_mode = 'full';
-		}
 
 		$ability = new \DataMachine\Abilities\FlowAbilities();
 		$result  = $ability->executeAbility(
@@ -165,7 +171,7 @@ class FlowsCommand extends WP_CLI_Command {
 				'handler_slug' => $handler_slug,
 				'per_page'     => $per_page,
 				'offset'       => $offset,
-				'output_mode'  => $output_mode,
+				'output_mode'  => 'full',
 			)
 		);
 
@@ -174,7 +180,32 @@ class FlowsCommand extends WP_CLI_Command {
 			return;
 		}
 
-		$this->outputResult( $result, $format, $output_mode );
+		$flows = $result['flows'] ?? array();
+		$total = $result['total'] ?? 0;
+
+		if ( empty( $flows ) ) {
+			WP_CLI::warning( 'No flows found matching your criteria.' );
+			return;
+		}
+
+		// Transform flows to flat row format.
+		$items = array_map(
+			function ( $flow ) {
+				return array(
+					'id'          => $flow['flow_id'],
+					'name'        => $flow['flow_name'],
+					'pipeline_id' => $flow['pipeline_id'],
+					'handlers'    => $this->extractHandlers( $flow ),
+					'status'      => $flow['last_run_status'] ?? 'Never',
+					'next_run'    => $flow['next_run_display'] ?? 'Not scheduled',
+				);
+			},
+			$flows
+		);
+
+		$this->format_items( $items, $this->default_fields, $assoc_args, 'id' );
+		$this->output_pagination( $offset, count( $flows ), $total, $format, 'flows' );
+		$this->outputFilters( $result['filters_applied'] ?? array(), $format );
 	}
 
 	/**
@@ -219,94 +250,14 @@ class FlowsCommand extends WP_CLI_Command {
 	}
 
 	/**
-	 * Output results in requested format.
+	 * Output filter info (table format only).
+	 *
+	 * @param array  $filters_applied Applied filters.
+	 * @param string $format          Current output format.
 	 */
-	private function outputResult( array $result, string $format, string $output_mode = 'full' ): void {
-		$flows           = $result['flows'] ?? array();
-		$total           = $result['total'] ?? 0;
-		$per_page        = $result['per_page'] ?? 20;
-		$offset          = $result['offset'] ?? 0;
-		$filters_applied = $result['filters_applied'] ?? array();
-
-		if ( empty( $flows ) ) {
-			WP_CLI::warning( 'No flows found matching your criteria.' );
+	private function outputFilters( array $filters_applied, string $format ): void {
+		if ( 'table' !== $format ) {
 			return;
-		}
-
-		if ( 'json' === $format ) {
-			WP_CLI::log( wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
-			return;
-		}
-
-		// Handle IDs-only output mode.
-		if ( 'ids' === $output_mode ) {
-			WP_CLI::log( implode( "\n", $flows ) );
-			WP_CLI::log( '' );
-			WP_CLI::log( "Total: {$total} flow(s)" );
-			return;
-		}
-
-		// Handle summary output mode.
-		if ( 'summary' === $output_mode ) {
-			$rows = array();
-			foreach ( $flows as $flow ) {
-				$rows[] = array(
-					'Flow ID'     => $flow['flow_id'],
-					'Flow Name'   => $flow['flow_name'],
-					'Pipeline ID' => $flow['pipeline_id'],
-					'Status'      => $flow['last_run_status'] ?? 'Never',
-				);
-			}
-
-			WP_CLI\Utils\format_items(
-				'table',
-				$rows,
-				array( 'Flow ID', 'Flow Name', 'Pipeline ID', 'Status' )
-			);
-
-			$this->outputPaginationInfo( $offset, count( $flows ), $total, $filters_applied );
-			return;
-		}
-
-		// Full output mode (default).
-		$rows = array();
-		foreach ( $flows as $flow ) {
-			$handlers = $this->extractHandlers( $flow );
-			$rows[]   = array(
-				'Flow ID'         => $flow['flow_id'],
-				'Flow Name'       => $flow['flow_name'],
-				'Pipeline ID'     => $flow['pipeline_id'],
-				'Handlers'        => $handlers,
-				'Last Run Status' => $flow['last_run_status'] ?? 'Never',
-				'Next Run'        => $flow['next_run_display'] ?? 'Not scheduled',
-			);
-		}
-
-		WP_CLI\Utils\format_items(
-			'table',
-			$rows,
-			array(
-				'Flow ID',
-				'Flow Name',
-				'Pipeline ID',
-				'Handlers',
-				'Last Run Status',
-				'Next Run',
-			)
-		);
-
-		$this->outputPaginationInfo( $offset, count( $flows ), $total, $filters_applied );
-	}
-
-	/**
-	 * Output pagination and filter info.
-	 */
-	private function outputPaginationInfo( int $offset, int $count, int $total, array $filters_applied ): void {
-		$end = $offset + $count;
-		if ( $end < $total ) {
-			WP_CLI::log( "Showing {$offset} - {$end} of {$total} flows. Use --offset to see more." );
-		} else {
-			WP_CLI::log( "Showing {$offset} - {$end} of {$total} flows." );
 		}
 
 		if ( $filters_applied['flow_id'] ?? null ) {
@@ -322,6 +273,9 @@ class FlowsCommand extends WP_CLI_Command {
 
 	/**
 	 * Extract handler slugs from flow config.
+	 *
+	 * @param array $flow Flow data.
+	 * @return string Comma-separated handler slugs.
 	 */
 	private function extractHandlers( array $flow ): string {
 		$flow_config = $flow['flow_config'] ?? array();

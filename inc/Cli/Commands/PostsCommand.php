@@ -11,11 +11,18 @@
 namespace DataMachine\Cli\Commands;
 
 use WP_CLI;
-use WP_CLI_Command;
+use DataMachine\Cli\BaseCommand;
 
 defined( 'ABSPATH' ) || exit;
 
-class PostsCommand extends WP_CLI_Command {
+class PostsCommand extends BaseCommand {
+
+	/**
+	 * Default fields for post list output.
+	 *
+	 * @var array
+	 */
+	private array $default_fields = array( 'id', 'title', 'post_type', 'status', 'handler', 'flow_id', 'pipeline_id', 'date' );
 
 	/**
 	 * Query posts by handler slug.
@@ -50,7 +57,14 @@ class PostsCommand extends WP_CLI_Command {
 	 * options:
 	 *   - table
 	 *   - json
+	 *   - csv
+	 *   - yaml
+	 *   - ids
+	 *   - count
 	 * ---
+	 *
+	 * [--fields=<fields>]
+	 * : Limit output to specific fields (comma-separated).
 	 *
 	 * ## EXAMPLES
 	 *
@@ -63,8 +77,16 @@ class PostsCommand extends WP_CLI_Command {
 	 *     # Query posts by handler with custom limit
 	 *     wp datamachine posts by-handler wordpress_publish --per_page=50
 	 *
+	 *     # Output as CSV
+	 *     wp datamachine posts by-handler wordpress_publish --format=csv
+	 *
+	 *     # Output only IDs (space-separated)
+	 *     wp datamachine posts by-handler wordpress_publish --format=ids
+	 *
 	 *     # JSON output
 	 *     wp datamachine posts by-handler wordpress_publish --format=json
+	 *
+	 * @subcommand by-handler
 	 */
 	public function by_handler( array $args, array $assoc_args ): void {
 		if ( empty( $args[0] ) ) {
@@ -86,55 +108,17 @@ class PostsCommand extends WP_CLI_Command {
 		}
 
 		$ability = new \DataMachine\Abilities\PostQueryAbilities();
-		$result  = $ability->executeByHandler(
+		$result  = $ability->executeQueryPosts(
 			array(
-				'handler_slug' => $handler_slug,
+				'filter_by'    => 'handler',
+				'filter_value' => $handler_slug,
 				'post_type'    => $post_type,
 				'post_status'  => $post_status,
 				'per_page'     => $per_page,
 			)
 		);
 
-		if ( ! $result['posts'] ) {
-			WP_CLI::warning( 'No posts found for this handler.' );
-			return;
-		}
-
-		if ( 'json' === $format ) {
-			WP_CLI::log( wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
-			return;
-		}
-
-		$rows = array();
-		foreach ( $result['posts'] as $post ) {
-			$rows[] = array(
-				'ID'          => $post['id'],
-				'Title'       => $post['title'],
-				'Post Type'   => $post['post_type'],
-				'Status'      => $post['post_status'],
-				'Handler'     => $post['handler_slug'] ? $post['handler_slug'] : 'N/A',
-				'Flow ID'     => $post['flow_id'] ? $post['flow_id'] : 'N/A',
-				'Pipeline ID' => $post['pipeline_id'] ? $post['pipeline_id'] : 'N/A',
-				'Date'        => $post['post_date'],
-			);
-		}
-
-		WP_CLI\Utils\format_items(
-			'table',
-			$rows,
-			array(
-				'ID',
-				'Title',
-				'Post Type',
-				'Status',
-				'Handler',
-				'Flow ID',
-				'Pipeline ID',
-				'Date',
-			)
-		);
-
-		WP_CLI::log( "Found {$result['total']} posts (showing " . count( $result['posts'] ) . ').' );
+		$this->outputPostResult( $result, $assoc_args, $format );
 	}
 
 	/**
@@ -170,7 +154,14 @@ class PostsCommand extends WP_CLI_Command {
 	 * options:
 	 *   - table
 	 *   - json
+	 *   - csv
+	 *   - yaml
+	 *   - ids
+	 *   - count
 	 * ---
+	 *
+	 * [--fields=<fields>]
+	 * : Limit output to specific fields (comma-separated).
 	 *
 	 * ## EXAMPLES
 	 *
@@ -179,6 +170,14 @@ class PostsCommand extends WP_CLI_Command {
 	 *
 	 *     # Query posts by flow with custom post type
 	 *     wp datamachine posts by-flow 7 --post_type=datamachine_event
+	 *
+	 *     # Output as CSV
+	 *     wp datamachine posts by-flow 7 --format=csv
+	 *
+	 *     # Output only IDs (space-separated)
+	 *     wp datamachine posts by-flow 7 --format=ids
+	 *
+	 * @subcommand by-flow
 	 */
 	public function by_flow( array $args, array $assoc_args ): void {
 		if ( empty( $args[0] ) ) {
@@ -200,55 +199,17 @@ class PostsCommand extends WP_CLI_Command {
 		}
 
 		$ability = new \DataMachine\Abilities\PostQueryAbilities();
-		$result  = $ability->executeByFlow(
+		$result  = $ability->executeQueryPosts(
 			array(
-				'flow_id'     => $flow_id,
-				'post_type'   => $post_type,
-				'post_status' => $post_status,
-				'per_page'    => $per_page,
+				'filter_by'    => 'flow',
+				'filter_value' => $flow_id,
+				'post_type'    => $post_type,
+				'post_status'  => $post_status,
+				'per_page'     => $per_page,
 			)
 		);
 
-		if ( ! $result['posts'] ) {
-			WP_CLI::warning( 'No posts found for this flow.' );
-			return;
-		}
-
-		if ( 'json' === $format ) {
-			WP_CLI::log( wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
-			return;
-		}
-
-		$rows = array();
-		foreach ( $result['posts'] as $post ) {
-			$rows[] = array(
-				'ID'          => $post['id'],
-				'Title'       => $post['title'],
-				'Post Type'   => $post['post_type'],
-				'Status'      => $post['post_status'],
-				'Handler'     => $post['handler_slug'] ? $post['handler_slug'] : 'N/A',
-				'Flow ID'     => $post['flow_id'] ? $post['flow_id'] : 'N/A',
-				'Pipeline ID' => $post['pipeline_id'] ? $post['pipeline_id'] : 'N/A',
-				'Date'        => $post['post_date'],
-			);
-		}
-
-		WP_CLI\Utils\format_items(
-			'table',
-			$rows,
-			array(
-				'ID',
-				'Title',
-				'Post Type',
-				'Status',
-				'Handler',
-				'Flow ID',
-				'Pipeline ID',
-				'Date',
-			)
-		);
-
-		WP_CLI::log( "Found {$result['total']} posts (showing " . count( $result['posts'] ) . ').' );
+		$this->outputPostResult( $result, $assoc_args, $format );
 	}
 
 	/**
@@ -284,7 +245,14 @@ class PostsCommand extends WP_CLI_Command {
 	 * options:
 	 *   - table
 	 *   - json
+	 *   - csv
+	 *   - yaml
+	 *   - ids
+	 *   - count
 	 * ---
+	 *
+	 * [--fields=<fields>]
+	 * : Limit output to specific fields (comma-separated).
 	 *
 	 * ## EXAMPLES
 	 *
@@ -296,6 +264,14 @@ class PostsCommand extends WP_CLI_Command {
 	 *
 	 *     # Query posts by pipeline with custom limit
 	 *     wp datamachine posts by-pipeline 42 --per_page=50
+	 *
+	 *     # Output as CSV
+	 *     wp datamachine posts by-pipeline 42 --format=csv
+	 *
+	 *     # Output only IDs (space-separated)
+	 *     wp datamachine posts by-pipeline 42 --format=ids
+	 *
+	 * @subcommand by-pipeline
 	 */
 	public function by_pipeline( array $args, array $assoc_args ): void {
 		if ( empty( $args[0] ) ) {
@@ -317,54 +293,53 @@ class PostsCommand extends WP_CLI_Command {
 		}
 
 		$ability = new \DataMachine\Abilities\PostQueryAbilities();
-		$result  = $ability->executeByPipeline(
+		$result  = $ability->executeQueryPosts(
 			array(
-				'pipeline_id' => $pipeline_id,
-				'post_type'   => $post_type,
-				'post_status' => $post_status,
-				'per_page'    => $per_page,
+				'filter_by'    => 'pipeline',
+				'filter_value' => $pipeline_id,
+				'post_type'    => $post_type,
+				'post_status'  => $post_status,
+				'per_page'     => $per_page,
 			)
 		);
 
+		$this->outputPostResult( $result, $assoc_args, $format );
+	}
+
+	/**
+	 * Output post query result using standardized formatting.
+	 *
+	 * @param array  $result     Query result from ability.
+	 * @param array  $assoc_args Command arguments.
+	 * @param string $format     Output format.
+	 */
+	private function outputPostResult( array $result, array $assoc_args, string $format ): void {
 		if ( ! $result['posts'] ) {
-			WP_CLI::warning( 'No posts found for this pipeline.' );
+			WP_CLI::warning( 'No posts found.' );
 			return;
 		}
 
-		if ( 'json' === $format ) {
-			WP_CLI::log( wp_json_encode( $result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) );
-			return;
-		}
-
-		$rows = array();
-		foreach ( $result['posts'] as $post ) {
-			$rows[] = array(
-				'ID'          => $post['id'],
-				'Title'       => $post['title'],
-				'Post Type'   => $post['post_type'],
-				'Status'      => $post['post_status'],
-				'Handler'     => $post['handler_slug'] ? $post['handler_slug'] : 'N/A',
-				'Flow ID'     => $post['flow_id'] ? $post['flow_id'] : 'N/A',
-				'Pipeline ID' => $post['pipeline_id'] ? $post['pipeline_id'] : 'N/A',
-				'Date'        => $post['post_date'],
-			);
-		}
-
-		WP_CLI\Utils\format_items(
-			'table',
-			$rows,
-			array(
-				'ID',
-				'Title',
-				'Post Type',
-				'Status',
-				'Handler',
-				'Flow ID',
-				'Pipeline ID',
-				'Date',
-			)
+		// Transform posts to flat row format.
+		$items = array_map(
+			function ( $post ) {
+				return array(
+					'id'          => $post['id'],
+					'title'       => $post['title'],
+					'post_type'   => $post['post_type'],
+					'status'      => $post['post_status'],
+					'handler'     => $post['handler_slug'] ? $post['handler_slug'] : 'N/A',
+					'flow_id'     => $post['flow_id'] ? $post['flow_id'] : 'N/A',
+					'pipeline_id' => $post['pipeline_id'] ? $post['pipeline_id'] : 'N/A',
+					'date'        => $post['post_date'],
+				);
+			},
+			$result['posts']
 		);
 
-		WP_CLI::log( "Found {$result['total']} posts (showing " . count( $result['posts'] ) . ').' );
+		$this->format_items( $items, $this->default_fields, $assoc_args, 'id' );
+
+		if ( 'table' === $format ) {
+			WP_CLI::log( "Found {$result['total']} posts (showing " . count( $result['posts'] ) . ').' );
+		}
 	}
 }

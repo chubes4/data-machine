@@ -11,7 +11,7 @@
 namespace DataMachine\Cli\Commands;
 
 use WP_CLI;
-use WP_CLI_Command;
+use DataMachine\Cli\BaseCommand;
 use DataMachine\Core\PluginSettings;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -32,7 +32,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *     # List all settings
  *     wp datamachine settings list
  */
-class SettingsCommand extends WP_CLI_Command {
+class SettingsCommand extends BaseCommand {
 
 	/**
 	 * Get a setting value.

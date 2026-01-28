@@ -12,7 +12,7 @@
 namespace DataMachine\Cli\Commands;
 
 use WP_CLI;
-use WP_CLI_Command;
+use DataMachine\Cli\BaseCommand;
 use DataMachine\Engine\AI\AgentType;
 use DataMachine\Engine\AI\AgentContext;
 use DataMachine\Engine\AI\AIConversationLoop;
@@ -41,7 +41,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *     # Output raw markdown instead of JSON
  *     wp datamachine agent "hello" --format=text
  */
-class AgentCommand extends WP_CLI_Command {
+class AgentCommand extends BaseCommand {
 
 	/**
 	 * Send a message to the Data Machine AI agent.
