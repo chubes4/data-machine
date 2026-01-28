@@ -2,6 +2,11 @@
 
 All notable changes to Data Machine will be documented in this file. Also viewable at: 
 
+## [0.15.1] - 2026-01-28
+
+- Add BaseCommand class with standard WP-CLI format options (table, json, csv, yaml, ids, count)
+- Fix type safety and code quality issues across codebase
+
 ## [0.15.0] - 2026-01-27
 
 ### Changed
