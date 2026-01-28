@@ -35,6 +35,7 @@ class AIConversationLoop {
 	 * @param string $agent_type     Agent type: 'pipeline' or 'chat'
 	 * @param array  $payload        Step payload (job_id, flow_step_id, data, flow_step_config)
 	 * @param int    $max_turns      Maximum conversation turns (default 12)
+	 * @param bool   $single_turn    Execute exactly one turn and return (default false)
 	 * @return array {
 	 *     @type array  $messages        Final conversation state
 	 *     @type string $final_content   Last AI text response
@@ -50,7 +51,8 @@ class AIConversationLoop {
 		string $model,
 		string $agent_type,
 		array $payload = array(),
-		int $max_turns = 12
+		int $max_turns = 12,
+		bool $single_turn = false
 	): array {
 		// Ensure max_turns is within reasonable bounds
 		$max_turns              = max( 1, min( 50, $max_turns ) );
@@ -265,6 +267,11 @@ class AIConversationLoop {
 				// No tool calls = conversation complete
 				$conversation_complete = true;
 			}
+
+			// Single-turn mode: break after first turn regardless of tool calls
+			if ( $single_turn ) {
+				break;
+			}
 		} while ( ! $conversation_complete && $turn_count < $max_turns );
 
 		// Log if max turns reached
@@ -284,17 +291,28 @@ class AIConversationLoop {
 			);
 		}
 
+		// In single-turn mode, completed reflects whether there are pending tools
+		$is_completed = $single_turn
+			? ( $conversation_complete && empty( $last_tool_calls ) )
+			: $conversation_complete;
+
 		$result = array(
 			'messages'               => $messages,
 			'final_content'          => $final_content,
 			'turn_count'             => $turn_count,
-			'completed'              => $conversation_complete,
+			'completed'              => $is_completed,
 			'last_tool_calls'        => $last_tool_calls,
 			'tool_execution_results' => $tool_execution_results,
+			'has_pending_tools'      => ! empty( $last_tool_calls ) && ! $conversation_complete,
 		);
 
 		if ( $turn_count >= $max_turns && ! $conversation_complete ) {
 			$result['warning'] = 'Maximum conversation turns (' . $max_turns . ') reached. Response may be incomplete.';
+		}
+
+		// Add max_turns_reached flag for single-turn mode
+		if ( $single_turn && $turn_count >= $max_turns ) {
+			$result['max_turns_reached'] = true;
 		}
 
 		return $result;

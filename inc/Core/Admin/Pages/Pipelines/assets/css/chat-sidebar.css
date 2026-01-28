@@ -695,3 +695,25 @@
 .datamachine-chat-session-list__item-delete:disabled {
 	opacity: 0.5;
 }
+
+/* ===== PROCESSING INDICATOR ===== */
+
+.datamachine-chat-sidebar__processing {
+	padding: 8px 16px;
+	background: #f9f9f9;
+	border-top: 1px solid #eee;
+	font-size: 12px;
+	color: #757575;
+	text-align: center;
+	flex-shrink: 0;
+	animation: datamachine-processing-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes datamachine-processing-pulse {
+	0%, 100% {
+		opacity: 0.7;
+	}
+	50% {
+		opacity: 1;
+	}
+}

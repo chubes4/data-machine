@@ -19,6 +19,7 @@ import { __ } from '@wordpress/i18n';
 import { useUIStore } from '../../stores/uiStore';
 import { useChatMutation, useChatSession } from '../../queries/chat';
 import { useChatQueryInvalidation } from '../../hooks/useChatQueryInvalidation';
+import { useChatTurn } from '../../hooks/useChatTurn';
 import ChatMessages from './ChatMessages';
 import ChatInput from './ChatInput';
 import ChatSessionSwitcher from './ChatSessionSwitcher';
@@ -78,6 +79,7 @@ export default function ChatSidebar() {
 	const chatMutation = useChatMutation();
 	const sessionQuery = useChatSession( chatSessionId );
 	const { invalidateFromToolCalls } = useChatQueryInvalidation();
+	const { processToCompletion, isProcessing, turnCount } = useChatTurn();
 	const isCreatingSessionRef = useRef( false );
 
 	useEffect( () => {
@@ -110,6 +112,7 @@ export default function ChatSidebar() {
 			setMessages( ( prev ) => [ ...prev, userMessage ] );
 
 			try {
+				// Initial request executes first turn
 				const response = await chatMutation.mutateAsync( {
 					message,
 					sessionId: chatSessionId,
@@ -132,6 +135,17 @@ export default function ChatSidebar() {
 					response.tool_calls,
 					selectedPipelineId
 				);
+
+				// Continue processing if not complete (turn-by-turn polling)
+				if ( ! response.completed && response.session_id ) {
+					await processToCompletion(
+						response.session_id,
+						( newMessages ) =>
+							setMessages( ( prev ) => [ ...prev, ...newMessages ] ),
+						response.max_turns,
+						selectedPipelineId
+					);
+				}
 			} catch ( error ) {
 				const errorContent =
 					error.message ||
@@ -161,6 +175,7 @@ export default function ChatSidebar() {
 			chatMutation,
 			selectedPipelineId,
 			invalidateFromToolCalls,
+			processToCompletion,
 		]
 	);
 
@@ -198,7 +213,7 @@ export default function ChatSidebar() {
 		setTimeout( () => setIsCopied( false ), 2000 );
 	}, [ messages ] );
 
-	const isLoading = chatMutation.isPending || sessionQuery.isLoading;
+	const isLoading = chatMutation.isPending || sessionQuery.isLoading || isProcessing;
 
 	return (
 		<aside className="datamachine-chat-sidebar">
@@ -240,6 +255,13 @@ export default function ChatSidebar() {
 						messages={ messages }
 						isLoading={ isLoading }
 					/>
+
+					{ isProcessing && (
+						<div className="datamachine-chat-sidebar__processing">
+							{ __( 'Processing turn', 'data-machine' ) }{ ' ' }
+							{ turnCount }...
+						</div>
+					) }
 
 					<ChatInput onSend={ handleSend } isLoading={ isLoading } />
 				</>
