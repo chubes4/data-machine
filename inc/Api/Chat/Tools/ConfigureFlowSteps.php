@@ -99,6 +99,11 @@ class ConfigureFlowSteps extends BaseTool {
 					'required'    => false,
 					'description' => 'User message/prompt for AI steps',
 				),
+				'validate_only'       => array(
+					'type'        => 'boolean',
+					'required'    => false,
+					'description' => 'Dry-run mode: validate configuration without executing. Returns what would be updated.',
+				),
 			),
 		);
 	}
@@ -113,6 +118,7 @@ class ConfigureFlowSteps extends BaseTool {
 		$handler_config      = $parameters['handler_config'] ?? array();
 		$flow_configs        = $parameters['flow_configs'] ?? array();
 		$user_message        = $parameters['user_message'] ?? null;
+		$validate_only       = ! empty( $parameters['validate_only'] );
 
 		// Validation: One of flow_step_id OR pipeline_id required
 		if ( empty( $flow_step_id ) && empty( $pipeline_id ) ) {
@@ -121,6 +127,11 @@ class ConfigureFlowSteps extends BaseTool {
 				'error'     => 'Either flow_step_id (single mode) or pipeline_id (bulk mode) is required',
 				'tool_name' => 'configure_flow_steps',
 			);
+		}
+
+		// Handle validate_only mode for bulk operations
+		if ( $validate_only && ! empty( $pipeline_id ) ) {
+			return $this->handleValidateOnly( $pipeline_id, $step_type, $handler_slug, $target_handler_slug, $handler_config, $flow_configs );
 		}
 
 		// Validation: target_handler_slug requires valid handler
@@ -280,6 +291,55 @@ class ConfigureFlowSteps extends BaseTool {
 
 			unset( $result['pipeline_id'], $result['flows_updated'], $result['steps_modified'], $result['updated_steps'], $result['message'], $result['errors'], $result['skipped'] );
 		}
+
+		return $result;
+	}
+
+	/**
+	 * Handle validate_only mode - dry-run validation without execution.
+	 */
+	private function handleValidateOnly(
+		int $pipeline_id,
+		?string $step_type,
+		?string $handler_slug,
+		?string $target_handler_slug,
+		array $handler_config,
+		array $flow_configs
+	): array {
+		$ability = wp_get_ability( 'datamachine/validate-flow-steps-config' );
+		if ( ! $ability ) {
+			return array(
+				'success'   => false,
+				'error'     => 'Validate flow steps config ability not available',
+				'tool_name' => 'configure_flow_steps',
+			);
+		}
+
+		$input = array( 'pipeline_id' => $pipeline_id );
+
+		if ( ! empty( $step_type ) ) {
+			$input['step_type'] = $step_type;
+		}
+
+		if ( ! empty( $handler_slug ) ) {
+			$input['handler_slug'] = $handler_slug;
+		}
+
+		if ( ! empty( $target_handler_slug ) ) {
+			$input['target_handler_slug'] = $target_handler_slug;
+		}
+
+		if ( ! empty( $handler_config ) ) {
+			$input['handler_config'] = $handler_config;
+		}
+
+		if ( ! empty( $flow_configs ) ) {
+			$input['flow_configs'] = $flow_configs;
+		}
+
+		$result              = $ability->execute( $input );
+		$result['tool_name'] = 'configure_flow_steps';
+		$result['mode']      = 'validate_only';
 
 		return $result;
 	}

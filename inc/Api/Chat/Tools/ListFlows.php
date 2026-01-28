@@ -68,10 +68,30 @@ class ListFlows extends BaseTool {
 			return $this->buildErrorResponse( $error, 'list_flows' );
 		}
 
-		return array(
+		$response = array(
 			'success'   => true,
 			'data'      => $result,
 			'tool_name' => 'list_flows',
 		);
+
+		$flows       = $result['flows'] ?? array();
+		$pipeline_id = $parameters['pipeline_id'] ?? null;
+
+		if ( empty( $flows ) && ! empty( $pipeline_id ) ) {
+			$response['guidance'] = array(
+				'status'    => 'empty_result',
+				'next_step' => 'Pipeline has no flows. Create a flow to configure workflow sources.',
+				'tool_hint' => 'create_flow',
+				'example'   => array(
+					'tool'       => 'create_flow',
+					'parameters' => array(
+						'pipeline_id' => (int) $pipeline_id,
+						'flow_name'   => 'New Flow',
+					),
+				),
+			);
+		}
+
+		return $response;
 	}
 }

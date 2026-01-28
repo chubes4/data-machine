@@ -11,6 +11,7 @@
 namespace DataMachine\Abilities;
 
 use DataMachine\Core\Database\Flows\Flows;
+use DataMachine\Core\Database\Pipelines\Pipelines;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -19,10 +20,12 @@ class FlowStepAbilities {
 	private static bool $registered = false;
 
 	private Flows $db_flows;
+	private Pipelines $db_pipelines;
 	private HandlerAbilities $handler_abilities;
 
 	public function __construct() {
 		$this->db_flows          = new Flows();
+		$this->db_pipelines      = new Pipelines();
 		$this->handler_abilities = new HandlerAbilities();
 
 		if ( ! class_exists( 'WP_Ability' ) || self::$registered ) {
@@ -38,6 +41,7 @@ class FlowStepAbilities {
 			$this->registerGetFlowStepsAbility();
 			$this->registerUpdateFlowStepAbility();
 			$this->registerConfigureFlowStepsAbility();
+			$this->registerValidateFlowStepsConfigAbility();
 		};
 
 		if ( did_action( 'wp_abilities_api_init' ) ) {
@@ -195,6 +199,61 @@ class FlowStepAbilities {
 		);
 	}
 
+	private function registerValidateFlowStepsConfigAbility(): void {
+		wp_register_ability(
+			'datamachine/validate-flow-steps-config',
+			array(
+				'label'               => __( 'Validate Flow Steps Config', 'data-machine' ),
+				'description'         => __( 'Dry-run validation for configure_flow_steps operations. Validates without executing.', 'data-machine' ),
+				'category'            => 'datamachine',
+				'input_schema'        => array(
+					'type'       => 'object',
+					'required'   => array( 'pipeline_id' ),
+					'properties' => array(
+						'pipeline_id'         => array(
+							'type'        => 'integer',
+							'description' => __( 'Pipeline ID to validate configuration for', 'data-machine' ),
+						),
+						'step_type'           => array(
+							'type'        => 'string',
+							'description' => __( 'Filter by step type (fetch, publish, update, ai)', 'data-machine' ),
+						),
+						'handler_slug'        => array(
+							'type'        => 'string',
+							'description' => __( 'Filter by existing handler slug', 'data-machine' ),
+						),
+						'target_handler_slug' => array(
+							'type'        => 'string',
+							'description' => __( 'Handler to switch TO', 'data-machine' ),
+						),
+						'handler_config'      => array(
+							'type'        => 'object',
+							'description' => __( 'Handler configuration to validate', 'data-machine' ),
+						),
+						'flow_configs'        => array(
+							'type'        => 'array',
+							'description' => __( 'Per-flow configurations: [{flow_id: int, handler_config: object}]', 'data-machine' ),
+						),
+					),
+				),
+				'output_schema'       => array(
+					'type'       => 'object',
+					'properties' => array(
+						'valid'             => array( 'type' => 'boolean' ),
+						'flow_count'        => array( 'type' => 'integer' ),
+						'matching_steps'    => array( 'type' => 'integer' ),
+						'would_update'      => array( 'type' => 'array' ),
+						'validation_errors' => array( 'type' => 'array' ),
+						'warnings'          => array( 'type' => 'array' ),
+					),
+				),
+				'execute_callback'    => array( $this, 'executeValidateFlowStepsConfig' ),
+				'permission_callback' => array( $this, 'checkPermission' ),
+				'meta'                => array( 'show_in_rest' => true ),
+			)
+		);
+	}
+
 	/**
 	 * Permission callback for abilities.
 	 *
@@ -205,6 +264,94 @@ class FlowStepAbilities {
 			return true;
 		}
 		return current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * Validate a flow_step_id and return diagnostic context if invalid.
+	 *
+	 * @param string $flow_step_id Flow step ID to validate.
+	 * @return array{valid: bool, step_config?: array, error_response?: array}
+	 */
+	private function validateFlowStepId( string $flow_step_id ): array {
+		$parts = apply_filters( 'datamachine_split_flow_step_id', null, $flow_step_id );
+
+		if ( ! $parts || empty( $parts['flow_id'] ) ) {
+			return array(
+				'valid'          => false,
+				'error_response' => array(
+					'success'     => false,
+					'error'       => 'Invalid flow_step_id format',
+					'error_type'  => 'validation',
+					'diagnostic'  => array(
+						'flow_step_id'    => $flow_step_id,
+						'expected_format' => '{pipeline_step_id}_{flow_id}',
+					),
+					'remediation' => array(
+						'action'    => 'get_valid_step_ids',
+						'message'   => 'Use get_flow_steps with flow_id to retrieve valid flow_step_ids.',
+						'tool_hint' => 'api_query',
+					),
+				),
+			);
+		}
+
+		$flow_id = (int) $parts['flow_id'];
+		$flow    = $this->db_flows->get_flow( $flow_id );
+
+		if ( ! $flow ) {
+			return array(
+				'valid'          => false,
+				'error_response' => array(
+					'success'     => false,
+					'error'       => 'Flow not found',
+					'error_type'  => 'not_found',
+					'diagnostic'  => array(
+						'flow_step_id' => $flow_step_id,
+						'flow_id'      => $flow_id,
+					),
+					'remediation' => array(
+						'action'    => 'verify_flow_id',
+						'message'   => sprintf( 'Flow %d does not exist. Use list_flows to find valid flow IDs.', $flow_id ),
+						'tool_hint' => 'list_flows',
+					),
+				),
+			);
+		}
+
+		$flow_config = $flow['flow_config'] ?? array();
+
+		if ( ! isset( $flow_config[ $flow_step_id ] ) ) {
+			$available_step_ids = array_keys( $flow_config );
+
+			return array(
+				'valid'          => false,
+				'error_response' => array(
+					'success'     => false,
+					'error'       => 'Flow step not found in flow configuration',
+					'error_type'  => 'not_found',
+					'diagnostic'  => array(
+						'flow_step_id'       => $flow_step_id,
+						'flow_id'            => $flow_id,
+						'flow_name'          => $flow['flow_name'] ?? '',
+						'pipeline_id'        => $flow['pipeline_id'] ?? null,
+						'available_step_ids' => $available_step_ids,
+						'step_count'         => count( $available_step_ids ),
+					),
+					'remediation' => array(
+						'action'    => 'use_available_step_id',
+						'message'   => empty( $available_step_ids )
+							? 'Flow has no steps configured. The flow may need pipeline step synchronization.'
+							: sprintf( 'Use one of the available step IDs: %s', implode( ', ', $available_step_ids ) ),
+						'tool_hint' => 'configure_flow_steps',
+					),
+				),
+			);
+		}
+
+		return array(
+			'valid'       => true,
+			'step_config' => $flow_config[ $flow_step_id ],
+		);
 	}
 
 	/**
@@ -314,14 +461,12 @@ class FlowStepAbilities {
 			);
 		}
 
-		$step_config   = $this->db_flows->get_flow_step_config( $flow_step_id );
-		$existing_step = ! empty( $step_config ) ? $step_config : null;
-		if ( ! $existing_step ) {
-			return array(
-				'success' => false,
-				'error'   => 'Flow step not found',
-			);
+		$validation = $this->validateFlowStepId( $flow_step_id );
+		if ( ! $validation['valid'] ) {
+			return $validation['error_response'];
 		}
+
+		$existing_step = $validation['step_config'];
 
 		$updated_fields = array();
 
@@ -431,9 +576,42 @@ class FlowStepAbilities {
 
 		$flows = $this->db_flows->get_flows_for_pipeline( $pipeline_id );
 		if ( empty( $flows ) ) {
+			$pipeline = $this->db_pipelines->get_pipeline( $pipeline_id );
+
+			if ( ! $pipeline ) {
+				return array(
+					'success'     => false,
+					'error'       => 'Pipeline not found',
+					'error_type'  => 'not_found',
+					'diagnostic'  => array(
+						'pipeline_id' => $pipeline_id,
+					),
+					'remediation' => array(
+						'action'    => 'verify_pipeline_id',
+						'message'   => 'Pipeline does not exist. Use list_pipelines to find valid pipeline IDs.',
+						'tool_hint' => 'api_query',
+					),
+				);
+			}
+
+			$pipeline_config = $pipeline['pipeline_config'] ?? array();
+			$step_count      = count( $pipeline_config );
+
 			return array(
-				'success' => false,
-				'error'   => 'No flows found for pipeline_id ' . $pipeline_id,
+				'success'     => false,
+				'error'       => 'Pipeline has no flows yet',
+				'error_type'  => 'prerequisite_missing',
+				'diagnostic'  => array(
+					'pipeline_id'   => $pipeline_id,
+					'pipeline_name' => $pipeline['pipeline_name'] ?? '',
+					'step_count'    => $step_count,
+					'has_steps'     => $step_count > 0,
+				),
+				'remediation' => array(
+					'action'    => 'create_flow',
+					'message'   => 'Create a flow for this pipeline first using create_flow tool.',
+					'tool_hint' => 'create_flow',
+				),
 			);
 		}
 
@@ -558,10 +736,31 @@ class FlowStepAbilities {
 
 		foreach ( array_keys( $flow_configs_by_id ) as $requested_flow_id ) {
 			if ( ! in_array( $requested_flow_id, $pipeline_flow_ids, true ) ) {
-				$skipped[] = array(
+				$skip_entry = array(
 					'flow_id' => $requested_flow_id,
 					'error'   => 'Flow not found in pipeline',
 				);
+
+				$flow = $this->db_flows->get_flow( $requested_flow_id );
+				if ( $flow ) {
+					$actual_pipeline_id            = (int) ( $flow['pipeline_id'] ?? 0 );
+					$skip_entry['actual_pipeline'] = $actual_pipeline_id;
+					$skip_entry['remediation']     = sprintf(
+						'Flow %d belongs to pipeline %d, not %d. Use pipeline_id=%d or remove from flow_configs.',
+						$requested_flow_id,
+						$actual_pipeline_id,
+						$pipeline_id,
+						$actual_pipeline_id
+					);
+				} else {
+					$skip_entry['remediation'] = sprintf(
+						'Flow %d does not exist. Use list_flows with pipeline_id=%d to see available flows.',
+						$requested_flow_id,
+						$pipeline_id
+					);
+				}
+
+				$skipped[] = $skip_entry;
 			}
 		}
 
@@ -616,6 +815,229 @@ class FlowStepAbilities {
 
 		if ( ! empty( $skipped ) ) {
 			$response['skipped'] = $skipped;
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Execute validation of flow steps configuration (dry-run mode).
+	 *
+	 * Validates all parameters without executing changes, enabling AI agents
+	 * to preview what would happen before committing.
+	 *
+	 * @param array $input Input parameters.
+	 * @return array Validation result with would_update and validation_errors.
+	 */
+	public function executeValidateFlowStepsConfig( array $input ): array {
+		$pipeline_id         = $input['pipeline_id'] ?? null;
+		$step_type           = $input['step_type'] ?? null;
+		$handler_slug        = $input['handler_slug'] ?? null;
+		$target_handler_slug = $input['target_handler_slug'] ?? null;
+		$handler_config      = $input['handler_config'] ?? array();
+		$flow_configs        = $input['flow_configs'] ?? array();
+
+		if ( ! is_numeric( $pipeline_id ) || (int) $pipeline_id <= 0 ) {
+			return array(
+				'valid'             => false,
+				'validation_errors' => array(
+					array(
+						'field' => 'pipeline_id',
+						'error' => 'pipeline_id is required and must be a positive integer',
+					),
+				),
+			);
+		}
+
+		$pipeline_id = (int) $pipeline_id;
+		$pipeline    = $this->db_pipelines->get_pipeline( $pipeline_id );
+
+		if ( ! $pipeline ) {
+			return array(
+				'valid'             => false,
+				'validation_errors' => array(
+					array(
+						'field'       => 'pipeline_id',
+						'error'       => 'Pipeline not found',
+						'remediation' => 'Use list_pipelines (api_query) to find valid pipeline IDs.',
+					),
+				),
+			);
+		}
+
+		if ( ! empty( $target_handler_slug ) && ! $this->handler_abilities->handlerExists( $target_handler_slug ) ) {
+			return array(
+				'valid'             => false,
+				'validation_errors' => array(
+					array(
+						'field'       => 'target_handler_slug',
+						'error'       => "Target handler '{$target_handler_slug}' not found",
+						'remediation' => 'Use list_handlers (api_query) to find valid handler slugs.',
+					),
+				),
+			);
+		}
+
+		$flows = $this->db_flows->get_flows_for_pipeline( $pipeline_id );
+
+		if ( empty( $flows ) ) {
+			$pipeline_config = $pipeline['pipeline_config'] ?? array();
+
+			return array(
+				'valid'             => false,
+				'flow_count'        => 0,
+				'matching_steps'    => 0,
+				'would_update'      => array(),
+				'validation_errors' => array(
+					array(
+						'field'       => 'pipeline_id',
+						'error'       => 'Pipeline has no flows yet',
+						'diagnostic'  => array(
+							'pipeline_name' => $pipeline['pipeline_name'] ?? '',
+							'step_count'    => count( $pipeline_config ),
+						),
+						'remediation' => 'Create a flow first using create_flow tool.',
+					),
+				),
+			);
+		}
+
+		$flow_configs_by_id = array();
+		foreach ( $flow_configs as $fc ) {
+			if ( isset( $fc['flow_id'] ) ) {
+				$flow_configs_by_id[ (int) $fc['flow_id'] ] = $fc['handler_config'] ?? array();
+			}
+		}
+
+		$pipeline_flow_ids    = array_column( $flows, 'flow_id' );
+		$would_update         = array();
+		$validation_errors    = array();
+		$warnings             = array();
+		$total_matching_steps = 0;
+
+		foreach ( $flows as $flow ) {
+			$flow_id     = (int) $flow['flow_id'];
+			$flow_name   = $flow['flow_name'] ?? __( 'Unnamed Flow', 'data-machine' );
+			$flow_config = $flow['flow_config'] ?? array();
+
+			foreach ( $flow_config as $flow_step_id => $step_config ) {
+				if ( ! empty( $step_type ) ) {
+					$config_step_type = $step_config['step_type'] ?? null;
+					if ( $config_step_type !== $step_type ) {
+						continue;
+					}
+				}
+
+				if ( ! empty( $handler_slug ) ) {
+					$config_handler_slug = $step_config['handler_slug'] ?? null;
+					if ( $config_handler_slug !== $handler_slug ) {
+						continue;
+					}
+				}
+
+				++$total_matching_steps;
+
+				$existing_handler_slug  = $step_config['handler_slug'] ?? null;
+				$effective_handler_slug = $target_handler_slug ?? $existing_handler_slug;
+
+				if ( empty( $effective_handler_slug ) ) {
+					$validation_errors[] = array(
+						'flow_step_id' => $flow_step_id,
+						'flow_id'      => $flow_id,
+						'error'        => 'Step has no handler_slug configured and no target_handler_slug provided',
+					);
+					continue;
+				}
+
+				$is_switching  = ! empty( $target_handler_slug ) && $target_handler_slug !== $existing_handler_slug;
+				$merged_config = $handler_config;
+
+				if ( isset( $flow_configs_by_id[ $flow_id ] ) ) {
+					$merged_config = array_merge( $merged_config, $flow_configs_by_id[ $flow_id ] );
+				}
+
+				if ( ! empty( $merged_config ) ) {
+					$validation_result = $this->validateHandlerConfig( $effective_handler_slug, $merged_config );
+					if ( true !== $validation_result ) {
+						$error_entry = array(
+							'flow_step_id' => $flow_step_id,
+							'flow_id'      => $flow_id,
+							'error'        => is_array( $validation_result ) ? $validation_result['error'] : $validation_result,
+						);
+						if ( is_array( $validation_result ) ) {
+							$error_entry['unknown_fields'] = $validation_result['unknown_fields'];
+							$error_entry['field_specs']    = $validation_result['field_specs'];
+						}
+						$validation_errors[] = $error_entry;
+						continue;
+					}
+				}
+
+				$update_preview = array(
+					'flow_id'      => $flow_id,
+					'flow_name'    => $flow_name,
+					'flow_step_id' => $flow_step_id,
+					'handler_slug' => $effective_handler_slug,
+				);
+				if ( $is_switching ) {
+					$update_preview['would_switch_from'] = $existing_handler_slug;
+				}
+				if ( ! empty( $merged_config ) ) {
+					$update_preview['config_fields'] = array_keys( $merged_config );
+				}
+				$would_update[] = $update_preview;
+			}
+		}
+
+		foreach ( array_keys( $flow_configs_by_id ) as $requested_flow_id ) {
+			if ( ! in_array( $requested_flow_id, $pipeline_flow_ids, true ) ) {
+				$flow = $this->db_flows->get_flow( $requested_flow_id );
+				if ( $flow ) {
+					$actual_pipeline_id  = (int) ( $flow['pipeline_id'] ?? 0 );
+					$validation_errors[] = array(
+						'flow_id'     => $requested_flow_id,
+						'error'       => 'Flow belongs to different pipeline',
+						'diagnostic'  => array(
+							'actual_pipeline_id' => $actual_pipeline_id,
+							'requested_pipeline' => $pipeline_id,
+						),
+						'remediation' => sprintf( 'Use pipeline_id=%d or remove flow %d from flow_configs.', $actual_pipeline_id, $requested_flow_id ),
+					);
+				} else {
+					$validation_errors[] = array(
+						'flow_id'     => $requested_flow_id,
+						'error'       => 'Flow does not exist',
+						'remediation' => sprintf( 'Use list_flows with pipeline_id=%d to see available flows.', $pipeline_id ),
+					);
+				}
+			}
+		}
+
+		$is_valid = empty( $validation_errors );
+
+		$response = array(
+			'valid'          => $is_valid,
+			'pipeline_id'    => $pipeline_id,
+			'pipeline_name'  => $pipeline['pipeline_name'] ?? '',
+			'flow_count'     => count( $flows ),
+			'matching_steps' => $total_matching_steps,
+			'would_update'   => $would_update,
+		);
+
+		if ( ! empty( $validation_errors ) ) {
+			$response['validation_errors'] = $validation_errors;
+		}
+
+		if ( ! empty( $warnings ) ) {
+			$response['warnings'] = $warnings;
+		}
+
+		if ( $is_valid && ! empty( $would_update ) ) {
+			$response['message'] = sprintf(
+				'Validation passed. Would update %d step(s) across %d flow(s).',
+				count( $would_update ),
+				count( array_unique( array_column( $would_update, 'flow_id' ) ) )
+			);
 		}
 
 		return $response;

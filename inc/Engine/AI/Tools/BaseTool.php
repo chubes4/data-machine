@@ -163,4 +163,43 @@ abstract class BaseTool {
 			'tool_name'  => $tool_name,
 		);
 	}
+
+	/**
+	 * Build error response with diagnostic context and remediation hints.
+	 *
+	 * Provides AI agents with actionable information to self-correct:
+	 * - diagnostic: Current state (what exists, IDs involved)
+	 * - remediation: Suggested next action with tool hints
+	 *
+	 * @param string $error       Error message.
+	 * @param string $error_type  Error type (prerequisite_missing, not_found, validation, etc.).
+	 * @param string $tool_name   Tool name for response.
+	 * @param array  $diagnostic  Current state information.
+	 * @param array  $remediation Suggested fix with action, message, and tool_hint.
+	 * @return array
+	 */
+	protected function buildDiagnosticErrorResponse(
+		string $error,
+		string $error_type,
+		string $tool_name,
+		array $diagnostic = array(),
+		array $remediation = array()
+	): array {
+		$response = array(
+			'success'    => false,
+			'error'      => $error,
+			'error_type' => $error_type,
+			'tool_name'  => $tool_name,
+		);
+
+		if ( ! empty( $diagnostic ) ) {
+			$response['diagnostic'] = $diagnostic;
+		}
+
+		if ( ! empty( $remediation ) ) {
+			$response['remediation'] = $remediation;
+		}
+
+		return $response;
+	}
 }
