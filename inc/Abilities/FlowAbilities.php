@@ -821,7 +821,10 @@ class FlowAbilities {
 			$flow_step_ids = array_keys( $single_result['flow_data']['flow_config'] ?? array() );
 
 			// Apply step configs if provided
-			$config_results = array( 'applied' => array(), 'errors' => array() );
+			$config_results = array(
+				'applied' => array(),
+				'errors'  => array(),
+			);
 			if ( ! empty( $merged_step_configs ) ) {
 				$config_results = $this->applyStepConfigsToFlow( $flow_id, $merged_step_configs, $flow_step_abilities );
 			}

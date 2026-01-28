@@ -245,7 +245,7 @@ function datamachine_register_execution_engine() {
 				/** @var array $context */
 				$context = datamachine_get_file_context( $flow_id );
 
-				$retrieval = new \DataMachine\Core\FilesRepository\FileRetrieval();
+				$retrieval   = new \DataMachine\Core\FilesRepository\FileRetrieval();
 				$dataPackets = $retrieval->retrieve_data_by_job_id( $job_id, $context );
 
 				if ( ! isset( $flow_step_config['step_type'] ) || empty( $flow_step_config['step_type'] ) ) {
