@@ -33,7 +33,12 @@ export default function ModalSwitch( { activeModal, baseProps } ) {
 			return <StepSelectionModal { ...baseProps } />;
 
 		case MODAL_TYPES.CONFIGURE_STEP:
-			return <ConfigureStepModal { ...baseProps } />;
+			return (
+				<ConfigureStepModal
+					key={ baseProps.pipelineStepId }
+					{ ...baseProps }
+				/>
+			);
 
 		case MODAL_TYPES.FLOW_SCHEDULE:
 			return <FlowScheduleModal { ...baseProps } />;
